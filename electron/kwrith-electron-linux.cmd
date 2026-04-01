@@ -1,1 +1,1 @@
-wsl /mnt/c/Users/julio.fernandezvila/source/repos/jfvilas/kwirth/electron/dist/kwirth-magnify-1.0.0.AppImage
+wsl /mnt/c/Users/julio.fernandezvila/source/repos/jfvilas/kwirth/electron/dist/kwirth-magnify-0.5.21.AppImage
