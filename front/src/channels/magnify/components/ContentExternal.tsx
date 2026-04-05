@@ -80,7 +80,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 
             switch(contentExternalData.channelId) {
                 case 'log':
-                    setChannelConfig({ lines: 5000, showNames:false, timestamp:false })
+                    setChannelConfig({ lines: 5000, showNames:false, timestamp:false, startDiagnostics: false })
                     setLogConfig(contentExternalData.content)
                     break
                 case 'metrics':
@@ -298,7 +298,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
             follow: true,
             showNames: false,
             maxMessages: contentExternalData.settings.logLines,
-            maxPerPodMessages: 5000,
+            maxPerPodMessages: 500,
             sortOrder: ELogSortOrder.TIME
         }
         let logInstanceConfig:ILogInstanceConfig = {
@@ -466,7 +466,6 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
             contentExternalData.content.ws.send(JSON.stringify(instanceConfig))
             contentExternalData.content.externalChannelStarted = true
             contentExternalData.content.externalChannelPaused = false
-
         }
         forceUpdate()
     }
@@ -607,22 +606,23 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
         setChannelConfig(values)
         switch(contentExternalData.channelId) {
             case 'log':
-                let lConf = contentExternalData.content!.externalChannelObject!.config as ILogConfig
-                lConf.maxMessages = values.lines
-                lConf.showNames = values.showNames
-                let lIConf = contentExternalData.content!.externalChannelObject!.instanceConfig as ILogInstanceConfig
-                lIConf.timestamp = values.timestamp
+                let logConfig = contentExternalData.content!.externalChannelObject!.config as ILogConfig
+                logConfig.maxMessages = values.lines
+                logConfig.showNames = values.showNames
+                logConfig.startDiagnostics = values.startDiagnostics
+                let logInstanceConfig = contentExternalData.content!.externalChannelObject!.instanceConfig as ILogInstanceConfig
+                logInstanceConfig.timestamp = values.timestamp
                 stop()
                 play()
                 break
             case 'metrics':
-                let metricsConf = contentExternalData.content!.externalChannelObject!.config as IMetricsConfig
-                let metricsIConf = contentExternalData.content!.externalChannelObject!.instanceConfig as IMetricsInstanceConfig
-                metricsConf.width = values.width
-                metricsConf.merge = values.merge
-                metricsConf.depth = values.depth
-                metricsConf.legend = values.legend
-                metricsIConf.aggregate = values.aggregate
+                let metricsConfig = contentExternalData.content!.externalChannelObject!.config as IMetricsConfig
+                let metricsInstanceConfig = contentExternalData.content!.externalChannelObject!.instanceConfig as IMetricsInstanceConfig
+                metricsConfig.width = values.width
+                metricsConfig.merge = values.merge
+                metricsConfig.depth = values.depth
+                metricsConfig.legend = values.legend
+                metricsInstanceConfig.aggregate = values.aggregate
                 stop()
                 play()
                 break
@@ -631,12 +631,12 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
             case 'fileman':
                 break
             case 'trivy':
-                let trivyConf = contentExternalData.content!.externalChannelObject!.config as IMetricsConfig
-                let trivyIConf = contentExternalData.content!.externalChannelObject!.instanceConfig as IMetricsInstanceConfig
-                trivyConf.width = values.width
-                trivyConf.merge = values.merge
-                trivyConf.depth = values.depth
-                trivyIConf.aggregate = values.aggregate
+                let trivyConfig = contentExternalData.content!.externalChannelObject!.config as IMetricsConfig
+                let trivyInstanceConfig = contentExternalData.content!.externalChannelObject!.instanceConfig as IMetricsInstanceConfig
+                trivyConfig.width = values.width
+                trivyConfig.merge = values.merge
+                trivyConfig.depth = values.depth
+                trivyInstanceConfig.aggregate = values.aggregate
                 break
         }
     }

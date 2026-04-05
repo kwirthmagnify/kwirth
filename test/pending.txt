@@ -2,11 +2,10 @@
 RFM
 
 MAGNIFY FRONT
-  startdiagnostics
-  logs de namespaces y logs de controllers
-  💖💖💖 portforward con smart proxy
-  running, just manage to detect rootpath in order to enable/disable forwarding
-  portforward con electron
+startdiagnostics
+💖💖💖 portforward con smart proxy
+running, just manage to detect rootpath in order to enable/disable forwarding
+portforward con electron
 
 MAGNIFY BACK
 
