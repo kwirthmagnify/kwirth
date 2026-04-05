@@ -535,7 +535,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 isElectron: props.isElectron,
                 data: undefined,
                 instanceConfig: undefined,
-                //xchannel: newChannel,  //+++ remove when not using is ensured
                 channelId: newChannel.channelId
             },
             channelStarted: false,

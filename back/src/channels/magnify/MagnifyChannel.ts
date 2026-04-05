@@ -100,7 +100,7 @@ class MagnifyChannel implements IChannel {
 
     */
 
-    //+++ add dispose/destroy (conterpart of initChannel) to IChannel (and implement in this channel a remove from "events subscription")
+    // +++ add dispose/destroy (conterpart of initChannel) to IChannel (and implement in this channel a remove from "events subscription")
 
     constructor (clusterInfo:ClusterInfo, kwirthData : KwirthData) {
         this.clusterInfo = clusterInfo
@@ -410,7 +410,7 @@ class MagnifyChannel implements IChannel {
                             await podEvict(this.clusterInfo.coreApi, magnifyMessage.params![1], magnifyMessage.params![2])
                             break
                         case 'work':
-                            // +++ this is expectoed to be used for KubeWorks
+                            // +++ this is expected to be used for KubeWorks
                             let podName = await podWork(this.clusterInfo.coreApi, magnifyMessage.params![1])
                             this.sendDataMessage(webSocket, instance, '1', EMagnifyCommand.POD, JSON.stringify(['work',podName]))
                             break

@@ -1176,10 +1176,6 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
 
 const processHttpChannelRequest = async (channel: IChannel, endpointName:string, aka:ApiKeyApi, req:Request, res:Response) : Promise<void> => {
     try {
-        // +++ ¿?
-        // console.log('*********************************************')
-        // console.log('AccessKey should not be validated on electron')
-        // console.log('*********************************************')
         let accessKey = await AuthorizationManagement.getKey(req, res, aka)
         if (accessKey) {
             channel.endpointRequest(endpointName, req, res, accessKey)
@@ -1520,7 +1516,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                         if (contextName) {
                             let ri = runningInstances.find(r => r.electronContext === contextName)
                             if (ri) {
-                                // +++ implement remove runninginstance
+                                // +++ implement remove runninginstance? or left them started?
                                 res.status(200).json({})
                             }
                             else {

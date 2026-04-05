@@ -98,7 +98,7 @@ class MagnifyChannel implements IChannel {
                                     case 'work':
                                         // response should be received when pod is in running phase
                                         // so we will launch shell from 'poddata[1]'
-                                        // +++  we are now testing status in front (reviewing files for specifica classes)
+                                        // +++  we are now testing status in front (reviewing files for specific classes)
                                         break
                                 }
                                 break

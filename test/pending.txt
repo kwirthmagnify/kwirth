@@ -1,16 +1,12 @@
 ******************ERRORES
 RFM
-search input colores
-categories inexsitentes
-tamaños de ficheros en filedata
-sort de columnas en filedata
-
 
 MAGNIFY FRONT
+  startdiagnostics
+  logs de namespaces y logs de controllers
   💖💖💖 portforward con smart proxy
   running, just manage to detect rootpath in order to enable/disable forwarding
   portforward con electron
-  revisar ui de contentdetails (typograpgy body2)
 
 MAGNIFY BACK
 
@@ -22,6 +18,7 @@ exit no cierra todos los ejecutables
 
 KWIRTH FRONT-BACK
 gestionar el store de cmap y secrets de kwirth en los 3 envs: docker, electron y external
+revisar el store de users en kwirth odcker y kwirth external
 
 ==============================================================================
 *********V2*********

@@ -5,8 +5,6 @@ import { IInstanceConfig, EInstanceMessageAction, EInstanceMessageChannel, EInst
 import { IContentProps } from '../IChannel'
 import { ESwitchKey, IOpsConfig } from './OpsConfig'
 import { v4 as uuid } from 'uuid'
-import { TerminalInstance } from './Terminal/TerminalInstance'
-import { SelectTerminal } from './Terminal/SelectTerminal'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxYesNo } from '../../tools/MsgBox'
 import { Delete, Home, MoreVert, RestartAlt, Terminal } from '@mui/icons-material'
 import { defaultStyles, JsonView } from 'react-json-view-lite'
@@ -16,6 +14,8 @@ import { IResourceSelected } from '../../components/ResourceSelector'
 import { ILogConfig, ILogInstanceConfig, ELogSortOrder } from '../log/LogConfig'
 import { IMetricsConfig, IMetricsInstanceConfig } from '../metrics/MetricsConfig'
 import { EChartType } from '../metrics/MenuChart'
+import { SelectTerminal } from './Terminal/SelectTerminal'
+import { TerminalInstance } from './Terminal/TerminalInstance'
 
 const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let opsData:IOpsData = props.channelObject.data

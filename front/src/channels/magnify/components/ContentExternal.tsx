@@ -12,7 +12,6 @@ import { IMetricsData } from '../../metrics/MetricsData'
 import { EChartType } from '../../metrics/MenuChart'
 import { IOpsData } from '../../ops/OpsData'
 import { ESwitchKey, IOpsConfig, IOpsInstanceConfig } from '../../ops/OpsConfig'
-import { TerminalManager } from '../../ops/Terminal/TerminalManager'
 import { MagnifyUserPreferences } from './MagnifyUserPreferences'
 import { IFilemanData } from '../../fileman/FilemanData'
 import { IFilemanConfig } from '../../fileman/FilemanConfig'
@@ -24,6 +23,7 @@ import { ITrivyInstanceConfig } from '../../trivy/TrivyConfig'
 import { ITrivyData } from '../../trivy/TrivyData'
 import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
+import { TerminalManager } from '../../ops/Terminal/TerminalManager'
 
 export interface IContentExternalOptions {
     pauseable: boolean
@@ -62,14 +62,14 @@ export interface IContentExternalObject {
 }
 
 const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternalProps) => {
-    const [msgBox, setMsgBox] = useState(<></>)
+    let contentExternalData:IContentExternalData = props.data
+    const [ msgBox, setMsgBox ] = useState(<></>)
     const [ anchorHelp, setAnchorHelp ] = useState<undefined | HTMLElement>(undefined)
     const [ anchorConfig, setAnchorConfig ] = useState<undefined | HTMLElement>(undefined)
+    const [ isMaximized, setIsMaximized ] = useState(props.isMaximized)
+    const [ channelConfig, setChannelConfig ] = useState<any>()
     const [ , setRefreshTick] = useState(0);
     const forceUpdate = () => setRefreshTick(tick => tick + 1);
-    const [isMaximized, setIsMaximized] = useState(props.isMaximized)
-    const [ channelConfig, setChannelConfig ] = useState<any>()
-    let contentExternalData:IContentExternalData = props.data
 
     useEffect( () => {
         if (!contentExternalData.isInitialized) {
@@ -96,7 +96,6 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                     setFilemanConfig(contentExternalData.content)
                     break
                 case 'trivy':
-                    console.log('xx')
                     setChannelConfig({
                         'Status': {
                             text: 'Status',
@@ -232,14 +231,14 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 clusterName: contentExternalData.channelObject?.clusterName!,
                 instanceId: '',
                 view: contentExternalData.contentView,
-                namespace: [...new Set(props.selectedFiles.map(n => n.data.origin.metadata.namespace))].join(','),
-                group: contentExternalData.contentView === EInstanceConfigView.GROUP ? props.selectedFiles.map(g => 'Deployment+' + g.data.origin.metadata.name).join(',') : '',
+                // for namespaces, we can create a list of selected namespaces or just a list of namespaced referenced boy objects (in another view)
+                namespace: contentExternalData.contentView === EInstanceConfigView.NAMESPACE ? props.selectedFiles.map(f=> f.data.origin.metadata.name).join(',') : [...new Set(props.selectedFiles.map(n => n.data.origin.metadata.namespace))].join(','),
+                group: contentExternalData.contentView === EInstanceConfigView.GROUP ? props.selectedFiles.map(g => g.data.origin.kind + '+' + g.data.origin.metadata.name).join(',') : '',
                 pod: contentExternalData.contentView === EInstanceConfigView.POD ? props.selectedFiles.map(p => p.data.origin.metadata.name).join(',') : '',
                 container: contentExternalData.contentView === EInstanceConfigView.CONTAINER ? props.selectedFiles[0].data.origin.metadata.name + '+' + props.container : '',
                 config: undefined,
                 data: undefined,
                 instanceConfig: undefined,
-                //xchannel: newChannel,
                 channelId: newChannel.channelId
             } satisfies IChannelObject,
             externalChannelStarted: false,
@@ -456,7 +455,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 accessKey: contentExternalData.channelObject?.accessString!,
                 scope: EInstanceConfigScope.NONE,
                 view: contentExternalData.contentView,
-                namespace: [...new Set(props.selectedFiles.map(n => n.data.origin.metadata.namespace))].join(','),
+                namespace: contentExternalData.contentView === EInstanceConfigView.NAMESPACE ? props.selectedFiles.map(n => n.data.origin.metadata.name).join(',') : [...new Set(props.selectedFiles.map(n => n.data.origin.metadata.namespace))].join(','),
                 group: contentExternalData.contentView === EInstanceConfigView.GROUP? props.selectedFiles.map(g => g.data.origin.kind+'+'+g.data.origin.metadata.name).join(',') : '',
                 pod: contentExternalData.contentView === EInstanceConfigView.POD? props.selectedFiles.map(p => p.data.origin.metadata.name).join(',') : '',
                 container: contentExternalData.contentView === EInstanceConfigView.CONTAINER? props.selectedFiles[0].data.origin.metadata.name + '+' + props.container : '',

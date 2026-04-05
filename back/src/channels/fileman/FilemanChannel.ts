@@ -130,7 +130,7 @@ class FilemanChannel implements IChannel {
     processObjectEvent(type:string, obj:any) : void {
     }
 
-    // +++ review expired keys (user is receiving no message)
+    // +++ review expired keys mangement (user is receiving no message)
     async endpointRequest(endpoint:string, req:Request, res:Response, accessKey:AccessKey) : Promise<void> {
         console.log('Received endpointRequest:', endpoint, req.method, req.url)
 
@@ -237,7 +237,6 @@ class FilemanChannel implements IChannel {
     }
 
     async websocketRequest(newWebSocket:WebSocket) : Promise<void> {
-        // +++ is this method needed? is it handled by kwirth main process?
     }  
 
     containsInstance = (instanceId: string): boolean => {

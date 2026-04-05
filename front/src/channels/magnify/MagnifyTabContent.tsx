@@ -30,7 +30,6 @@ import { ICustomAction } from './components/UserPreferences'
 import { MenuNotification } from '../../components/MenuNotification'
 const yamlParser = require('js-yaml')
 
-//type WindowClass = 'ContentDetails' | 'ArtifactSearch' | 'ContentEdit' | 'ContentBrowse' | 'ContentExternal';
 const ICON_WINDOW : Record<string, JSX.Element> = {
     ContentDetails: <List />,
     ArtifactSearch: <Search />,
@@ -545,7 +544,6 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             visible: true,
             atTop: false,
             atFront: true,
-            //startTime: Date.now(),
             title: 'Search...',
             isMaximized: false,
             x: 100,
@@ -598,6 +596,15 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             setLeftItem(spcNode,'cordon', launchNodeCordon)
             setLeftItem(spcNode,'uncordon', launchNodeUnCordon)
             setLeftItem(spcNode,'drain', launchNodeDrain)
+
+            // Namespace
+            let spcNamespace = spaces.get('Namespace')!
+            ;['log','metrics'].map(channelid => 
+                setLeftItem(spcNamespace,channelid, (p:string[]) => {
+                    let f = magnifyData.files.filter(f => p.includes(f.path))
+                    launchObjectExternal(channelid, f, EInstanceConfigView.NAMESPACE, undefined)
+                })
+            )
 
             let spcImage = spaces.get('Image')!
             setLeftItem(spcImage,'delete', launchImageDelete)

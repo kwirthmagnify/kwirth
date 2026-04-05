@@ -784,42 +784,52 @@ class TrivyChannel implements IChannel {
     //     return score
     // }
 
-    executeCommand = async (instanceMessage: ITrivyMessage, instance:IInstance): Promise<ITrivyMessageResponse>=> {
+    removeReport = async(plural:string, trivyMessage:ITrivyMessage) : Promise<string|undefined> => {
+        let crdName = await this.getCrdName(trivyMessage.namespace, trivyMessage.pod, trivyMessage.container)
+        if (crdName) {
+            try {
+                await this.clusterInfo.crdApi.deleteNamespacedCustomObject({ group:TRIVY_API_GROUP, version:TRIVY_API_VERSION, namespace:trivyMessage.namespace, plural, name:crdName })
+                return undefined
+            }
+            catch (err) {
+                console.log(err)
+                return `Error removing vulnerability report: `+err
+            }
+        }
+        else {
+            return `Couldn't get CRD name`
+        }
+    }
+
+    executeCommand = async (trivyMessage: ITrivyMessage, instance:IInstance): Promise<ITrivyMessageResponse>=> {
         let resp:ITrivyMessageResponse = {
             msgtype: 'trivymessageresponse',
             id: '',
-            namespace: instanceMessage.namespace,
-            group: instanceMessage.group,
-            pod: instanceMessage.pod,
-            container: instanceMessage.container,
-            action: instanceMessage.action,
+            namespace: trivyMessage.namespace,
+            group: trivyMessage.group,
+            pod: trivyMessage.pod,
+            container: trivyMessage.container,
+            action: trivyMessage.action,
             flow: EInstanceMessageFlow.RESPONSE,
             type: EInstanceMessageType.DATA,
-            channel: instanceMessage.channel,
-            instance: instanceMessage.instance,
+            channel: trivyMessage.channel,
+            instance: trivyMessage.instance,
             data: undefined
         }
 
-        switch (instanceMessage.command) {
-            case ETrivyCommand.RESCAN: //+++ rescan of different reports (not only vuln)
-                let crdName = await this.getCrdName(instanceMessage.namespace, instanceMessage.pod, instanceMessage.container)
-                if (crdName) {
-                    try {
-                        await this.clusterInfo.crdApi.deleteNamespacedCustomObject({ group:TRIVY_API_GROUP, version:TRIVY_API_VERSION, namespace:instanceMessage.namespace, plural:TRIVY_API_VULN_PLURAL, name:crdName })
-                    }
-                    catch (err) {
-                        console.log(err)
-                        resp.data = `Error removing vulnerability report: `+err
-                        return resp
-                    }
-                }
-                else {
-                    resp.data = `Couldn't get CRD name`
+        switch (trivyMessage.command) {
+            case ETrivyCommand.RESCAN: //+++ TEST
+                let resultVuln = await this.removeReport(TRIVY_API_VULN_PLURAL, trivyMessage)
+                let resultAudit = await this.removeReport(TRIVY_API_AUDIT_PLURAL, trivyMessage)
+                let resultExposed = await this.removeReport(TRIVY_API_EXPOSED_PLURAL, trivyMessage)
+                let resultSbom = await this.removeReport(TRIVY_API_SBOM_PLURAL, trivyMessage)
+                if (resultVuln || resultAudit || resultExposed || resultSbom) {
+                    resp.data = resultVuln || resultAudit || resultExposed || resultSbom
                     return resp
                 }
                 break
             default:
-                console.log('Invalid command received:', instanceMessage.command)
+                console.log('Invalid command received:', trivyMessage.command)
         }
         return resp
     }
