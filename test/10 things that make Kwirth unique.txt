@@ -1,92 +1,111 @@
-10 things that make Kwirth unique
+Aquí tienes una versión corregida y pulida de tus textos. He mejorado la fluidez en inglés, corregido errores tipográficos y ajustado la terminología técnica para que suene más profesional, manteniendo exactamente la estructura que solicitaste.
 
-Last weeks we have been talking about #Kwirth, explaining how its real-time live-streaming infrastructure can provide devops/SRE/cyber/admins with very accurate data inside a powerful management tool for operating Kubernetes clusters. We start now a fine-grained series about things that make #Kwirth a unique tool.
+---
 
-1/10 Object search
-Situation: you are looking for the objects that depend-on or are using a specific resource, like a config map.
-Solving: enter Kwirth, launch a magnify channel (or just launch Kwirth Desktop), select 'Cluster > Overview > Search', enter the name of the config map, and see the results.
-Time to solve: 3 seconds.
-NOTES: You can search for any Kubernetes artifact, not just config maps or eny other type of configuration items.
+## 10 Amazing Things That Make Kwirth Unique
 
-[VIDEO]
+Over the last few weeks, we’ve been discussing **#Kwirth**, explaining how its real-time live-streaming infrastructure provides DevOps, SREs, and Admins with high-precision data through a powerful management tool for Kubernetes clusters. 
 
+Today, we begin a deep-dive series on the specific features that make **#Kwirth** a unique tool in the ecosystem.
 
-2/10 Secret search
-Situation: you have detected in yout database (PostgreSQL, MongoDB, Oracle, SQLServer... no matter which) denied accesses coming from your Kubernetes cluster, using 'dbappuser' user credentials.
-Solving: launch a Magnify channel, access 'Cluster > Overview > Search', enter the id of the user you are looking for and see the results.
-Time to solve: 3 seconds
-NOTES: If you have your secrets stored on an external secrets manager (Azure KV, AWS Secrets Manager, KeyVault...), a finding like this one can take as much as several hours.
+---
 
-[VIDEO]
-
-
-3/10 Real-time log filtering
-Situation: you are looking for a specific message in a pod logstream
-Solving: launch a log channel (or launch Magnify and open a log window), type-in the text to filter out and enjoy results.
-Time to solve: 2 seconds.
-NOTES: You can filter for logging data that comes from different sources at the same time. When you filter out data, you are filtering past messages as well as future incoming messages.
+### 1/10 Object Search
+**Situation:** You need to find objects that depend on or use a specific resource, such as a ConfigMap.
+**Solution:** Launch a Magnify channel (or open Kwirth Desktop), go to **'Cluster > Overview > Search'**, enter the ConfigMap name, and instantly see the results.
+**Time to solve:** 3 seconds.
+**NOTES:** You can search for any Kubernetes artifact, not just ConfigMaps or standard configuration items.
 
 [VIDEO]
 
-4/10 Real-time log aggregation
-Situation: You need to debug log information coming from different source pods in your cluster, they all belong to different namespaces but they form part of the same application.
-Solving: Select all the pods/controllers/namespaces you want to review, launch a log channel (or do equivalent things inside a Magnify log window).
-Time to solve: 5 seconds
-NOTES: You can use different views when aggregating logs. You can, fo rinstance, select a NAMESPACE view, and aggregate logstreams comming from all the pods in selected namespaces. Or just select some controllers, or even a reduced set ofc ontainers.
+---
+
+### 2/10 Secret Search
+**Situation:** You’ve detected unauthorized access to your database (PostgreSQL, MongoDB, Oracle, SQL Server, etc.) originating from your Kubernetes cluster using the 'dbappuser' credentials.
+**Solution:** Launch a Magnify channel, access **'Cluster > Overview > Search'**, enter the user ID you’re looking for, and view the results.
+**Time to solve:** 3 seconds.
+**NOTES:** If your secrets are stored in an external manager (Azure KV, AWS Secrets Manager, HashiCorp Vault...), finding this link manually can often take several hours.
 
 [VIDEO]
 
+---
 
-5/10 Metrics aggregation
-Situation: You want to kown the resource consumption of a specific set of computing resources of your workload.
-Solving: The same way configure for aggregating logstreams, you can configure for building metrics dashboards that merge or aggregate data from different origins.
-Time to solve: 20 seconds.
-NOTES: You can configure the type of chart, the data depth or the content of the dashboard.
-
-[VIDEO]
-
-
-6/10 Start diagnostics
-Situation: A pod (or a set of them) write too much log after starting due to a connectivity/credentials/database problem. You cannot get access to the very first messages.
-Solving: Laucnh a log channel (or a log window inside Magnify), select 'Start Diagnostics', configure limits and start the channel.
-Time to solve: 10 seconds
-NOTES: Log will stop running when message limits are reached for all pods. You can aggregate as many pods as you need.
+### 3/10 Real-time Log Filtering
+**Situation:** You are looking for a specific message within a Pod log stream.
+**Solution:** Launch a log channel (or open a log window in Magnify), type the text you want to filter, and see the results in real-time.
+**Time to solve:** 2 seconds.
+**NOTES:** You can filter logging data from multiple sources simultaneously. When you apply a filter, it processes both historical (past) messages and incoming (future) messages.
 
 [VIDEO]
 
+---
 
-7/10 Filesystem access
-Situation: you need to review the content of a '.env' file inside a living pod.
-Solving: launch a 'fileman' channel (or a Fileman window inside Magnify), wait for the file manager to load and just navigate the same you would do on your local file explorer. Donwload, view, edit, upload... so many files as you need.
-Time to solve: 15 seconds.
-NOTES: You can copy/move files between containers (#Kwirth will keep in charge of performing the right copy/move instrucionts for files or folders). You can download complete folder structures.
-
-[VIDEO]
-
-
-8/10 Cluster navigation
-Situation: You are looking for a problem in a volume of a pod. You need to check where the problem comes from.
-Solving: Launch a Magnify channel (or a Kwirth Desktop session), follow a simple sequence: 'Pod details > Storage > PVC > PV > Volume Attachment' 
-Time to solve: 5 seconds
-NOTES: Navigation is fully supported in all Kubernetes artifcats, even in CRD's and CRD instances.
+### 4/10 Real-time Log Aggregation
+**Situation:** You need to debug logs from multiple Pods across different namespaces that belong to the same application.
+**Solution:** Select all the Pods, Controllers, or Namespaces you want to review and launch a log channel (or the equivalent in a Magnify log window).
+**Time to solve:** 5 seconds.
+**NOTES:** Use different views for aggregation. For example, use the **NAMESPACE** view to aggregate streams from all Pods in a namespace, or select specific Controllers and containers.
 
 [VIDEO]
 
+---
 
-9/10 Customization
-Situation: You, devops/SRE/admin, usually launch pods for performing diagnostics, for launching clean shell sessions or for debugging and troubleshooting purposes.
-Solving: Configure a 'Custom action' that waits for a pod to be ready and launch a shell session. The custom action will always be there for you, it is not a temporary work.
-Time to solve: 20 seconds
-NOTES: You can configure as many actions as you need. Teh action can wait for different states after launching a custom pod, like an HTTP/HTTPS server, not just shell.
-
-[VIDEO]
-
-
-10/10 Architectural flexibility
-Situation: I have a (1) #Backstage deployment, and want to use #Kwirth plugins (log, metrics & fileman). Or, I want to (2) test a Kwirth server locally without deploying it to my Kubernetes cluster. Or, I want to (3) use an end-user experience in my local machine. Or, due to latencies and performance issues, I want to use a (4) #Kwirth Kuberentes for optimizing user experience.
-Solving: You can (1) deploy a #Kwirth External in the same machine or docker image where your #Backstage instance is installed. You can start a dockerized verison of #Kwirth for local test like in (2). For (3), you just need to install Kwirth Desktop (a specific #Kwirth #Magnify build) designed for being used directly in Windows & Linux end-user machines. Finally, for delivering an in-cluser #Kwirth solution, just deploy #Kwirth to Kubernetes using its manifests or its Helm installation procedures.
-NOTES: Different combinations ok #Kwirth deployment can be achieved according to your needs and your requiriments and limitations. For example, yo can connect a #Kwirth Desktop to a #Kwirth Kubernetes, or a #Kwirth External to a #Kwirth Docker.
+### 5/10 Metrics Aggregation
+**Situation:** You need to monitor the resource consumption of a specific set of computing resources within your workload.
+**Solution:** Just like log aggregation, you can configure metrics dashboards that merge and aggregate data from various origins.
+**Time to solve:** 20 seconds.
+**NOTES:** You can fully customize the chart type, data retention depth, and dashboard content.
 
 [VIDEO]
 
+---
 
+### 6/10 Start Diagnostics
+**Situation:** A Pod (or set of Pods) generates excessive logs immediately upon startup due to connectivity, credential, or database issues, making it impossible to catch the initial error messages.
+**Solution:** Launch a log channel, select **'Start Diagnostics'**, configure the limits, and start the channel.
+**Time to solve:** 10 seconds.
+**NOTES:** The log stream will automatically pause once the message limits are reached for all Pods, allowing you to analyze the boot sequence.
+
+[VIDEO]
+
+---
+
+### 7/10 Filesystem Access
+**Situation:** You need to review or edit the content of a `.env` file inside a running Pod.
+**Solution:** Launch a **'Fileman'** channel, wait for the file manager to load, and navigate just as you would in your local file explorer. Download, view, edit, or upload as many files as needed.
+**Time to solve:** 15 seconds.
+**NOTES:** You can copy/move files between containers (**#Kwirth** handles the underlying instructions). You can also download entire folder structures.
+
+[VIDEO]
+
+---
+
+### 8/10 Cluster Navigation
+**Situation:** You are troubleshooting a volume issue in a Pod and need to trace the underlying resource chain.
+**Solution:** In Magnify or Kwirth Desktop, follow a simple visual sequence: **'Pod details > Storage > PVC > PV > Volume Attachment'**.
+**Time to solve:** 5 seconds.
+**NOTES:** Full navigation is supported for all Kubernetes artifacts, including CRDs and CRD instances.
+
+[VIDEO]
+
+---
+
+### 9/10 Customization
+**Situation:** As a DevOps/SRE, you frequently launch Pods for diagnostics, shell sessions, or troubleshooting.
+**Solution:** Configure a **'Custom Action'** that waits for a Pod to be ready and automatically launches a shell session. This action is saved for permanent use.
+**Time to solve:** 20 seconds.
+**NOTES:** You can configure unlimited actions. Actions can wait for various states (like an active HTTP/HTTPS server) before triggering, not just a shell.
+
+[VIDEO]
+
+---
+
+### 10/10 Architectural Flexibility
+**Situation:** You have diverse needs, such as: (1) Integrating with **#Backstage**, (2) Running a local server without a cluster, (3) Using a native desktop experience, or (4) Optimizing for low latency.
+**Solution:** 1. Deploy **Kwirth External** alongside your **#Backstage** instance.
+2. Use the **Dockerized version** of Kwirth for local development.
+3. Install **Kwirth Desktop** (available for Windows & Linux).
+4. For in-cluster performance, deploy **Kwirth** directly via Helm or manifests.
+**NOTES:** **#Kwirth** components are modular. You can connect Kwirth Desktop to a Kubernetes-based Kwirth instance, or Kwirth External to a Dockerized setup, depending on your requirements.
+
+[VIDEO]

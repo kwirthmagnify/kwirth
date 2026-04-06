@@ -2,7 +2,6 @@
 RFM
 
 MAGNIFY FRONT
-startdiagnostics
 💖💖💖 portforward con smart proxy
 running, just manage to detect rootpath in order to enable/disable forwarding
 portforward con electron
@@ -23,7 +22,6 @@ revisar el store de users en kwirth odcker y kwirth external
 *********V2*********
 KWIRTH
 implement pinocchio channel using google's aistudio
-add a new deployment: "EXTERNAL" (in addition to "Electron" and "inCluster").
 add shortcuts on RFM (right item. for instacne: "pod" -> changefolder('/workload/pod',)), user-configurable
 el "/usage" de hompage, pasarlo a un websocket
 en los last tabs deberiamos poder saber a que nos vamos a conectar antes de conectarnos (un tooltip o asin)
@@ -31,27 +29,26 @@ añadir logging selectivo en el backend de kwirth: SEC, METRICS, CHANNEL...., pa
 channel metrics: añadir metricas sinteticas: numero de pods en nodo, percentage de pods
 añadir gestion centralizada de timeouts e intervasl en front y en back [codigo mas abajo]
 fileman: mantener la conexion con el pod abierta para que la navegacion por el filesystem sea mas fluida
-en App.tsx/Homepage:  no añadir a last ni fav un tab que se carag desde una accion de homepage
+en App.tsx/Homepage: no añadir a last ni fav un tab que se carga desde una accion de homepage
 
 MAGNIFY FRONT
   kwirthworks, kubeworks
   palette al arrancar magnify
   window arrange (left-right, small on bottom, 4 windows, etc...)
   content external, poder hacer restart del content (por si se deconecta o lo que sea)
-  headers ajustables en ancho y presencia
   improve DetailsObject
     always use rootObj, and just change the path, so trace-back can be used ofr detecting data changed origin
   en data management deberia poder seleccionarse CRDi (decidir si nos intenreasn las instancias de CRD o no)
   details
     cm/secret: textarea, > tamaño inicial fijo (no todo el contenido)
     servaccnt: tokens ifpresent
-    add keys to existing CM or secret 
+    create keys to existing CM or secret 
 
 MAGNIFY BACK
 
 RFM
   en los fileitem, cuando le fila es muy alta, el nombre del fileitem se esta alineando arriab, y deberia ir al centro
-  añadir ... en leftmenu cuando ha mas de xx opciones (xx configurable, con valor por defecto)
+  añadir ... en leftmenu cuando hay mas de xx opciones (xx configurable, con valor por defecto)
   en los right items añadir enabled/disabled (onDraw ya es como visible/noVisibe)
   añadir regex y caps al search (ya esta implementado pero no en el UI)
   revisar ajuste de columnas (config, resize, add, remove....)

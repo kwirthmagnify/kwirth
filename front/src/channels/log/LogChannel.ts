@@ -6,6 +6,7 @@ import { LogTabContent } from './LogTabContent'
 import { LogData, ILogLine, ILogData } from './LogData'
 import { ILogConfig, LogInstanceConfig, ELogSortOrder, LogConfig } from './LogConfig'
 import { ENotifyLevel } from '../../tools/Global'
+import { buffer } from 'stream/consumers'
 
 export class LogChannel implements IChannel {
     private setupVisible = false
@@ -49,16 +50,16 @@ export class LogChannel implements IChannel {
             case EInstanceMessageType.DATA:
                 action = EChannelRefreshAction.REFRESH
 
-                let bname = logMessage.namespace+'/'+logMessage.pod+'/'+logMessage.container
+                let bufferName = logMessage.namespace+'/'+logMessage.pod+'/'+logMessage.container
                 let text = logMessage.text
-                if (logData.buffers.get(bname)) {
-                    text = logData.buffers.get(bname) + text
-                    logData.buffers.set(bname,'')
+                if (logData.buffers.get(bufferName)) {
+                    text = logData.buffers.get(bufferName) + text
+                    logData.buffers.set(bufferName,'')
                 }
                 if (!text.endsWith('\n')) {
                     let i = text.lastIndexOf('\n')
                     let next = text.substring(i)
-                    logData.buffers.set(bname, next)
+                    logData.buffers.set(bufferName, next)
                     text = text.substring(0,i)
                 }
 
@@ -74,9 +75,9 @@ export class LogChannel implements IChannel {
                     }
                     if (logConfig.startDiagnostics) {
                         if (logData.messages.length < logConfig.maxMessages) {
-                            let cnt = logData.counters.get(bname)
+                            let cnt = logData.counters.get(bufferName)
                             if (!cnt) {
-                                logData.counters.set(bname,0)
+                                logData.counters.set(bufferName,0)
                                 cnt = 0
                             }
                             if (cnt < logConfig.maxPerPodMessages) {
@@ -93,7 +94,11 @@ export class LogChannel implements IChannel {
                                         logData.messages.push(logLine)
                                         break
                                 }
-                                logData.counters.set(bname, ++cnt)
+                                logData.counters.set(bufferName, ++cnt)
+                            }
+                            else {
+                                let text='Max messages reached for ' + bufferName
+                                if (! logData.messages.some(m => m.text === text)) logData.messages.push({ ...logLine, text })
                             }
                             if ([...logData.counters.values()].reduce((prev,acc) => prev+acc, 0) > logConfig.maxMessages) {
                                 action = EChannelRefreshAction.STOP

@@ -253,7 +253,7 @@ class AlertChannel implements IChannel {
 
         if (socket.instances.find(i => i.instanceId === instanceConfig.instance)) {
             this.removeInstance(webSocket, instanceConfig.instance)
-            this.sendInstanceConfigMessage(webSocket,EInstanceMessageAction.STOP, EInstanceMessageFlow.RESPONSE, EInstanceMessageChannel.ALERT, instanceConfig, 'Log instance stopped')
+            this.sendInstanceConfigMessage(webSocket,EInstanceMessageAction.STOP, EInstanceMessageFlow.RESPONSE, EInstanceMessageChannel.ALERT, instanceConfig, 'Alert channel instance stopped')
         }
         else {
             this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Instance not found`, instanceConfig)
