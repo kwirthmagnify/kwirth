@@ -2,6 +2,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { SnackbarProvider } from 'notistack'
 import { BrowserRouter } from 'react-router-dom'
+// @ts-ignore
 import './index.css'
 
 //const isElectron = true

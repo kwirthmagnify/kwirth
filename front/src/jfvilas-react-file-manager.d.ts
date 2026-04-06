@@ -174,6 +174,7 @@ declare module '@jfvilas/react-file-manager' {
         maxNavigationPaneLevel: number
         minFileActionsLevel: number
         formatDate? : string | number
+        openMode : 'default'|'none'
     }
 
     export const FileManager: React.ForwardRefExoticComponent<

@@ -167,7 +167,7 @@ export class AuthorizationManagement {
         return valid
     }
 
-    public static validAuth = (req:Request, res:Response, channels:Map<string, IChannel>, reqScope:string, instanceConfig: IInstanceConfig, namespace:string, group:string, pod:string, container:string): boolean => {
+    public static validAuth = (req:Request, res:Response, channels:Map<string, IChannel>, reqScope:string, instanceConfig: IInstanceConfig, namespace:string, controller:string, pod:string, container:string): boolean => {
         if (!req.headers.authorization) return false
         
         let key = req.headers.authorization.replaceAll('Bearer ','').trim()
@@ -186,8 +186,8 @@ export class AuthorizationManagement {
             console.log('Insufficient namespace capabilities')
             return false
         }
-        if ((group !== '') && (group !== resId.groups)) {
-            console.log('Insufficient group capabilities')
+        if ((controller !== '') && (controller !== resId.groups)) {
+            console.log('Insufficient controller capabilities')
             return false
         }
         if ((pod !== '') && (pod !== resId.pods)) {

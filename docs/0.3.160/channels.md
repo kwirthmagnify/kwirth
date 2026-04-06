@@ -36,8 +36,8 @@ What follows is a zoomed view of Kwirth core.
 ## Existing channels
 Starting with Kwirth 0.4 these are the channels you will find integrated inside Kwirth core:
 
-  - Log. You can open log streams for receiving contaner/pod/group/namespace aggregated log streams  in real time.
-  - Metrics. You can receive metrics information related to contaner/pod/group/namespace aggregated objects.
+  - Log. You can open log streams for receiving contaner/pod/controller/namespace aggregated log streams  in real time.
+  - Metrics. You can receive metrics information related to contaner/pod/controller/namespace aggregated objects.
   - Alert. Client can configure alerts for filtering aggregated log streams at origin.
 
 It is important to note that **Kwirth always includes a basic front React applicaton**, but you can integrate Kwirth with your own clients. 
@@ -118,7 +118,7 @@ And this is what each property means:
  - **scope**. This is the scope the client is requesting.
  - **view**. This indicates at which level the instance will be working. Values are the ones in this list: 'container', 'pod', 'group', 'namespace'.
  - **namespace**. Is a comma-separated list of namespaces (or blank).
- - **group**.  Is a comma-separated list of groups (a group can be a deployment, replica set, a daemon set and a stateful set) (or blank).
+ - **group**.  Is a comma-separated list of controllers (a controller can be a deployment, replica set, a daemon set and a stateful set) (or blank).
  - **pod**.  Is a comma-separated list of pod names (or blank).
  - **container**.  Is a comma-separated list of container names (or blank).
  - **reconnectKey**. Is a reconnect key (obtained when starting an instance) that you can use to reconnect a broken web socket connection.

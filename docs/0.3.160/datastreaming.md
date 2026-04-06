@@ -43,7 +43,7 @@ A typical 'start instance' message would contain this information:
   - **access key**, previously obtaind using different methods (manually creating, creating via API...)
   - scope, indicating the action you want to perform (snapshot, stream...)
   - the view, indicating how to group streaming data
-  - the resource spec (namespace, group, pod, container)
+  - the resource spec (namespace, controller, pod, container)
   - specific data for configuring the streaming service according to the type of service the client is starting, that is, log streaming requires specific configuration that is different from the one used in metrics streaming.
 
 ## Channels

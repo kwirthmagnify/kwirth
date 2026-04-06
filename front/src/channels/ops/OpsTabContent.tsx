@@ -8,6 +8,7 @@ import { v4 as uuid } from 'uuid'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxYesNo } from '../../tools/MsgBox'
 import { Delete, Home, MoreVert, RestartAlt, Terminal } from '@mui/icons-material'
 import { defaultStyles, JsonView } from 'react-json-view-lite'
+// @ts-ignore
 import 'react-json-view-lite/dist/index.css';
 import { MenuObject, EMenuObjectOption } from './MenuObject'
 import { IResourceSelected } from '../../components/ResourceSelector'

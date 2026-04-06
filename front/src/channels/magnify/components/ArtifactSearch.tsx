@@ -4,6 +4,7 @@ import { ChangeEvent, useEffect, useState } from 'react'
 import { Close, Fullscreen, FullscreenExit, Minimize, PinDrop, Place, Search } from '@mui/icons-material'
 import { objectClone, objectSearch } from '../Tools'
 import { getIconFromKind } from '../../../tools/Constants-React'
+// @ts-ignore
 import './ResizableDialog.css'
 import { ResizableDialog } from './ResizableDialog'
 import { IContentWindow } from '../MagnifyTabContent'

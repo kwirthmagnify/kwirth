@@ -21,8 +21,8 @@ An API key requires following information to be created:
     - restart: this scope allows the owner of the key restartin pods or deployments in the cluster where de key has been created
     - view: this scope allows viewing logs (is the more basic scope)
 - **Namespace**. It's  **a comma separated list** of namespaces (or just a single one, or nothing).
-- **Group Type**. It's the type of set (replica, stateful or daemon) that you want to give access.
-- **Group Name**. It's a comma separated list of sets the API can have access to, these can be replica sets, stateful sets or daemon sets.
+- **Controller Type**. It's the type of set (replica, stateful or daemon) that you want to give access.
+- **Controller Name**. It's a comma separated list of sets the API can have access to, these can be replica sets, stateful sets or daemon sets.
 - **Pod**. A comma separated list of pods.
 - **Container**. A comma separated list of container inside a pod that an API key can access.
 

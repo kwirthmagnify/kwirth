@@ -19,7 +19,9 @@ import { MenuContainers } from './components/MenuContainers'
 import { buildPath } from './MagnifyChannel'
 import { InputBox } from '../../tools/FrontTools'
 import { templates } from './components/Templates'
+// @ts-ignore
 import '@jfvilas/react-file-manager/dist/style.css'
+// @ts-ignore
 import './custom-fm-magnify.css'
 import { ArtifactSearch, IArtifactSearchData } from './components/ArtifactSearch'
 import { rfmSetup, setLeftItem, setPropertyFunction } from './components/RFMSetup'
@@ -1093,7 +1095,8 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     categories={categories}
                     maxNavigationPaneLevel={2}
                     minFileActionsLevel={2}
-                    />
+                    openMode='none'
+                />
                 {
                     menuContainersAnchorParent && <MenuContainers channel={menuContainersChannel} file={menuContainersFile} onClose={() => setMenuContainersAnchorParent(undefined)} onContainerSelected={onContainerSelected} anchorParent={menuContainersAnchorParent} includeAllContainers={menuContainersIncludeAllContainers} />
                 }

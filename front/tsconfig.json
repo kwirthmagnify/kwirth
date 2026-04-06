@@ -16,8 +16,10 @@
     "module":"CommonJS",
     "isolatedModules": true,
     "jsx": "react-jsx",
+    "moduleResolution": "node10"
   },
   "include": [
-    "src"
+    "src",
+    "src/*.d.ts"
   ]
 }

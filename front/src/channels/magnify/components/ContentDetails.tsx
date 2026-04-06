@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { DialogTitle, DialogContent, DialogActions, Button, Typography, Stack, Tooltip, IconButton, Box } from '@mui/material'
 import { Close, ContentCopy, FullscreenExit, Fullscreen, Minimize, PinDrop, Place } from '@mui/icons-material'
+// @ts-ignore
 import './ResizableDialog.css'
 import { ResizableDialog } from './ResizableDialog'
 import { IContentWindow } from '../MagnifyTabContent'

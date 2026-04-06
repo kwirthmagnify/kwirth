@@ -62,7 +62,6 @@ const fs = require('fs')
 //     return originalFetch(...args);
 // }
 
-//const isElectron = true
 const runningEnv = {
   isElectron: !!(process.versions && process.versions.electron),
   isDocker: fs.existsSync('/.dockerenv'),
@@ -1798,7 +1797,7 @@ showLogo()
 startNodeTasks()
 
 getExecutionEnvironment(envContext).then( async (exenv:string) => {
-    console.log('Kubernetes context:', envContext || 'default kubeconffig cluster')
+    console.log('Kubernetes context:', envContext || 'default kubeconfig cluster')
 
     let kwirthData:KwirthData
     switch (exenv) {

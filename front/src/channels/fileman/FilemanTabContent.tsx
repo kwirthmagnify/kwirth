@@ -9,7 +9,9 @@ import { v4 as uuid } from 'uuid'
 import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { MsgBoxOk } from '../../tools/MsgBox'
 import { ENotifyLevel } from '../../tools/Global'
+// @ts-ignore
 import '@jfvilas/react-file-manager/dist/style.css'
+// @ts-ignore
 import './custom-fm-fileman.css'
 import { getIconFromKind } from '../../tools/Constants-React'
 
@@ -271,6 +273,7 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     showBreadcrumb={true}
                     maxNavigationPaneLevel={3}
                     minFileActionsLevel={3}
+                    openMode='none'
                 />
                 { msgBox }
             </Box>

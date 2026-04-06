@@ -13,17 +13,19 @@ revisar el cambio o salida de cluster: parar las cosas antes de entrar en el otr
   en el backend, parar las cosas si se pierde la comunicacion con el front??
 cuando seleccionas un cluster no accesible entra a magnify, y no deberia
 exit no cierra todos los ejecutables
+cuando lanzo electron linux contra rioja, no arranca (parece qu eno descarga los metrics)
 
 KWIRTH FRONT-BACK
-gestionar el store de cmap y secrets de kwirth en los 3 envs: docker, electron y external
-revisar el store de users en kwirth odcker y kwirth external
+gestionar el store de cmap y secrets de kwirth en los 3 envs: docker, electron y external (creo que electron ya va)
+revisar el store de users en kwirth docker y kwirth external
+PROBAR TODO ESTO CON UN CLUSTER VACIO
 
 ==============================================================================
 *********V2*********
 KWIRTH
 implement pinocchio channel using google's aistudio
 add shortcuts on RFM (right item. for instacne: "pod" -> changefolder('/workload/pod',)), user-configurable
-el "/usage" de hompage, pasarlo a un websocket
+el "/usage" de homepage, pasarlo a un websocket
 en los last tabs deberiamos poder saber a que nos vamos a conectar antes de conectarnos (un tooltip o asin)
 añadir logging selectivo en el backend de kwirth: SEC, METRICS, CHANNEL...., para poder ver solo los mensajes que nos intenresan en el log de kwirth
 channel metrics: añadir metricas sinteticas: numero de pods en nodo, percentage de pods

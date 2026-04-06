@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "exit 1",
-    "build": "tsc && esbuild dist/index.js --bundle --platform=node --target=node24 --outfile=bundle/bundle.js",
+    "build": "tsc && esbuild dist/index.js --bundle --platform=node --target=node24 --outfile=bundle/bundle.js --external:cpu-features",
     "startold": "tsc && node dist/index.js",
     "start-wsl": "CHOKIDAR_USEPOLLING=true npx nodemon src/index.ts",
     "start": "set \"NODE_OPTIONS=--expose-gc --max-old-space-size=1024 --trace-warnings --unhandled-rejections=strict \" && npx nodemon src/index.ts",

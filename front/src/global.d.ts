@@ -1,3 +1,8 @@
+declare module "*.css" {
+  const content: { [className: string]: string };
+  export default content;
+}
+
 declare global {
   interface Array<T> {
     findLastIndex(
@@ -5,9 +10,6 @@ declare global {
       thisArg?: any
     ): number
   }
-}
-
-declare global {
   interface Window {
     __PUBLIC_PATH__?: string;
   }
