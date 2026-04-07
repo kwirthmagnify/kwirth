@@ -1,6 +1,6 @@
 import { FC } from 'react'
 import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '../IChannel'
-import { EAlertSeverity, IAlertMessage, IInstanceMessage, ISignalMessage, EInstanceMessageFlow, EInstanceMessageType, EInstanceMessageAction, EInstanceConfigScope } from '@jfvilas/kwirth-common'
+import { EAlertSeverity, IAlertMessage, IInstanceMessage, ISignalMessage, EInstanceMessageFlow, EInstanceMessageType, EInstanceMessageAction, EInstanceConfigScope } from '@kwirthmagnify/kwirth-common'
 import { AlertIcon, AlertSetup } from './AlertSetup'
 import { AlertTabContent } from './AlertTabContent'
 import { AlertData, IAlertData } from './AlertData'

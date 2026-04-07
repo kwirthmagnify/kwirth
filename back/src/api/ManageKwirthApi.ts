@@ -1,6 +1,6 @@
 import express, { Request, Response} from 'express'
 import { AppsV1Api, BatchV1Api, CoreV1Api } from '@kubernetes/client-node'
-import { KwirthData } from '@jfvilas/kwirth-common'
+import { KwirthData } from '@kwirthmagnify/kwirth-common'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 

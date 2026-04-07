@@ -1,6 +1,6 @@
 import { ApiKeyApi } from '../api/ApiKeyApi'
-import { AccessKey, accessKeyDeserialize, accessKeySerialize, IInstanceConfig, parseResource, parseResources, ResourceIdentifier } from '@jfvilas/kwirth-common'
-import { ApiKey } from '@jfvilas/kwirth-common'
+import { AccessKey, accessKeyDeserialize, accessKeySerialize, IInstanceConfig, parseResource, parseResources, ResourceIdentifier } from '@kwirthmagnify/kwirth-common'
+import { ApiKey } from '@kwirthmagnify/kwirth-common'
 import * as crypto from 'crypto'
 import { IChannel } from '../channels/IChannel'
 import { Request, Response } from 'express'

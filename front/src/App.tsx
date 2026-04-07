@@ -28,7 +28,7 @@ import { IWorkspace, IWorkspaceSummary } from './model/IWorkspace'
 
 import { SessionContext } from './model/SessionContext'
 import { addGetAuthorization, addDeleteAuthorization, addPostAuthorization } from './tools/AuthorizationManagement'
-import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize } from '@jfvilas/kwirth-common'
+import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize } from '@kwirthmagnify/kwirth-common'
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
@@ -1663,20 +1663,24 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                 >
                                     {   tabs.current.map((tab:ITabObject, index) => {
                                             return <Tab component='span' ref={(el) => tab.headerEl === el} key={index} label={formatTabName(tab)} value={index} 
-                                                style={{ borderLeft: `6px solid ${getTabColor(tab)}`, borderTop: '1px solid #d1d1d1', borderRight: '1px solid #d1d1d1', boxSizing: 'border-box'}}
+                                                style={{ borderLeft: `6px solid ${getTabColor(tab)}`, borderTop: '1px solid #888888', borderRight: '1px solid #888888', boxSizing: 'border-box'}}
                                                 icon={
-                                                tab === selectedTab.current ? 
-                                                    <IconButton onClick={(event) => setAnchorMenuTab(event.currentTarget)}>
-                                                        <SettingsIcon fontSize='small' color='primary'/>
-                                                    </IconButton>
-                                                    :
-                                                    <Box sx={{minWidth:'36px'}}/>} iconPosition='end' sx={{
-                                                        borderRadius: '10px 10px 0 0',
-                                                        backgroundColor:'#ebebeb',
-                                                        '& .MuiTouchRipple-root': {
-                                                            borderTopLeftRadius: '8px',
-                                                            borderTopRightRadius: '8px',
-                                                        }}}
+                                                    tab === selectedTab.current ? 
+                                                        <IconButton onClick={(event) => setAnchorMenuTab(event.currentTarget)}>
+                                                            <SettingsIcon fontSize='small' color='primary'/>
+                                                        </IconButton>
+                                                        :
+                                                        <Box sx={{minWidth:'36px'}}/>
+                                                } 
+                                                iconPosition='end'
+                                                sx={{
+                                                    borderRadius: '10px 10px 0 0',
+                                                    backgroundColor:'#ebebeb',
+                                                    '& .MuiTouchRipple-root': {
+                                                        borderTopLeftRadius: '8px',
+                                                        borderTopRightRadius: '8px',
+                                                    }}
+                                                }
                                             />
                                         })
                                     }

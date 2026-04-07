@@ -42,8 +42,8 @@ __exportStar(require("./MetricsMessage"), exports);
 __exportStar(require("./MetricsInstanceConfig"), exports);
 __exportStar(require("./OpsMessage"), exports);
 __exportStar(require("./OpsInstanceConfig"), exports);
-__exportStar(require("./TrivyMessage"), exports);
-__exportStar(require("./TrivyInstanceConfig"), exports);
+// export * from './TrivyMessage'
+// export * from './TrivyInstanceConfig'
 __exportStar(require("./RouteMessage"), exports);
 __exportStar(require("./SignalMessage"), exports);
 __exportStar(require("./ApiKey"), exports);

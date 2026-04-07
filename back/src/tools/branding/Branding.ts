@@ -1,4 +1,4 @@
-import { KwirthData, versionGreaterThan } from "@jfvilas/kwirth-common"
+import { KwirthData, versionGreaterThan } from "@kwirthmagnify/kwirth-common"
 
 export const getLastKwirthVersion = async (kwirthData:KwirthData) : Promise<string|undefined> => {
     kwirthData.lastVersion=kwirthData.version

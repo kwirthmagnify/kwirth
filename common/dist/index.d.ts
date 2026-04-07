@@ -11,8 +11,6 @@ export * from './MetricsMessage';
 export * from './MetricsInstanceConfig';
 export * from './OpsMessage';
 export * from './OpsInstanceConfig';
-export * from './TrivyMessage';
-export * from './TrivyInstanceConfig';
 export * from './RouteMessage';
 export * from './SignalMessage';
 export * from './ApiKey';

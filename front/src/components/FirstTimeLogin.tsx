@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography} from '@mui/material'
-import { AccessKey, accessKeySerialize, ApiKey } from '@jfvilas/kwirth-common'
+import { AccessKey, accessKeySerialize, ApiKey } from '@kwirthmagnify/kwirth-common'
 import { addPostAuthorization } from '../tools/AuthorizationManagement'
 import { MsgBoxOk } from '../tools/MsgBox'
 import { v4 as uuid } from 'uuid'

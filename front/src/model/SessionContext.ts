@@ -1,5 +1,5 @@
 import { createContext } from 'react'
-import { IUser } from '@jfvilas/kwirth-common'
+import { IUser } from '@kwirthmagnify/kwirth-common'
 
 export type SessionContextType = {
     user: IUser|undefined

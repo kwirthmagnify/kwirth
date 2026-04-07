@@ -3,7 +3,7 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextF
 import { MsgBoxOkError, MsgBoxOkWarning } from '../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addPostAuthorization } from '../tools/AuthorizationManagement'
-import { ILoginResponse, IUser } from '@jfvilas/kwirth-common'
+import { ILoginResponse, IUser } from '@kwirthmagnify/kwirth-common'
 
 interface ILoginProps {
     onClose:(user:IUser|undefined, firstTime:boolean) => void

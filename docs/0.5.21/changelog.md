@@ -43,7 +43,7 @@ The change log for this version is quite extensive. What follows is just an exce
   - **Versioned Documentation**: Documentation is now versioned; you can select the specific Kwirth version documentation from the sidebar.
 
 ## 0.3.160
-  - Created `@jfvilas/kwirth-common` for sharing data structures between clients and the Kwirth server.
+  - Created `@kwirthmagnify/kwirth-common` for sharing data structures between clients and the Kwirth server.
   - Added a new **version detector** on user login to identify backend versions.
   - Added **multi-streaming channels** to WebSockets (required for streaming data other than logs).
   - **New Security System**: Based on differentiating services (log, streaming, operation...) and scopes. By adding the "service" entity, we can now add different data streams like metrics (snapshot or stream) and signaling info (errors, warnings).

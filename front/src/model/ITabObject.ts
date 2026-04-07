@@ -1,4 +1,4 @@
-import { EInstanceConfigView } from "@jfvilas/kwirth-common"
+import { EInstanceConfigView } from "@kwirthmagnify/kwirth-common"
 import { IChannel, IChannelObject } from "../channels/IChannel"
 
 interface ITabObject {

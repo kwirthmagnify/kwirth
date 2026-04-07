@@ -10,7 +10,7 @@ Since this artifact is an npm package you need to previously have a NodeJS insta
 
 First install Kwirth:
 ```sh
-$ npm i -g @jfvilas/kwirth-external
+$ npm i -g @kwirthmagnify/kwirth-external
 ```
 
 Once installed (globally with '-g' optin) just launch it to check if everything is OK:

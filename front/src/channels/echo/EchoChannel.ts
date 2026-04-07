@@ -2,7 +2,7 @@ import { FC } from "react";
 import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from "../IChannel";
 import { EchoInstanceConfig, EchoConfig, IEchoConfig } from "./EchoConfig";
 import { EchoSetup, EchoIcon } from './EchoSetup';
-import { IEchoMessage, IInstanceMessage, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope } from "@jfvilas/kwirth-common";
+import { IEchoMessage, IInstanceMessage, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope } from "@kwirthmagnify/kwirth-common";
 import { EchoData, IEchoData } from "./EchoData";
 import { EchoTabContent } from "./EchoTabContent";
 

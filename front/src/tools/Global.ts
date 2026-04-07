@@ -1,4 +1,4 @@
-import { KwirthData } from '@jfvilas/kwirth-common'
+import { KwirthData } from '@kwirthmagnify/kwirth-common'
 import { MetricDefinition } from '../channels/metrics/MetricDefinition'
 import { Cluster, IClusterInfo } from '../model/Cluster'
 import { addGetAuthorization } from './AuthorizationManagement'

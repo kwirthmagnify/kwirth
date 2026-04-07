@@ -1,4 +1,4 @@
-import { IInstanceMessage } from "@jfvilas/kwirth-common"
+import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
 import { IFileObject } from "@jfvilas/react-file-manager"
 
 export interface IFilemanData {

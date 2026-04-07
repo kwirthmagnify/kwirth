@@ -1,4 +1,4 @@
-import { AccessKey } from "@jfvilas/kwirth-common"
+import { AccessKey } from "@kwirthmagnify/kwirth-common"
 
 // class User {
 //     public id: string=''

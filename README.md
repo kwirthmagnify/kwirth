@@ -76,7 +76,7 @@ If you want to run Kwirth as a standalone service on a host, you can download th
 
 Install with 'npm' (you need a NodeJS installation at recommended V24, although Kwirth can work with V22 and V20)
 ```bash
-npm i -g @jfvilas/kwirth-external
+npm i -g @kwirthmagnify/kwirth-external
 ```
 
 Get some help with `kwirth-external --help`, and launch it just typing:
@@ -102,7 +102,7 @@ The architecture of Kwirth is the one depicted below.
 
 ![kwirth architecture](https://raw.githubusercontent.com/jfvilas/kwirth/master/docs/0.5.21/_media/kwirth-kwirth-arch.png)
 
-There is only one pod with one only container needed to run Kwirth. Of course, you can create replicas and services and ingresses if you need to scale out, but, generally speaking, Kwirth has no computing needs, since the only function of the pod is extracting kubernetes data and re-sending it to Kwirth clients, wherever it be Kwirth frontend application or any other client like [Backstage Kubelog](https://www.npmjs.com/package/@jfvilas/plugin-kubelog) or [KwirthLog plugin for Backstage](https://www.npmjs.com/package/@jfvilas/plugin-kwirth-log).
+There is only one pod with one only container needed to run Kwirth. Of course, you can create replicas and services and ingresses if you need to scale out, but, generally speaking, Kwirth has no computing needs, since the only function of the pod is extracting kubernetes data and re-sending it to Kwirth clients, wherever it be Kwirth frontend application or any other client like [Backstage Kubelog](https://www.npmjs.com/package/@jfvilas/plugin-kubelog) or [KwirthLog plugin for Backstage](https://www.npmjs.com/package/@kwirthmagnify/plugin-kwirth-log).
 
 ## Kwirth features
 Each individual Kwirth feature is implemented via a [**channel**](https://jfvilas.github.io/kwirth/#/0.5.21/channels?id=channels). a channel serves, in fact, a specific type of information. These are currently existing channels:

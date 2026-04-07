@@ -2,7 +2,7 @@ import express, { Request, Response} from 'express'
 import { ApiKeyApi } from './ApiKeyApi'
 import { ClusterInfo } from '../model/ClusterInfo'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
-import { EClusterType, KwirthData } from '@jfvilas/kwirth-common'
+import { EClusterType, KwirthData } from '@kwirthmagnify/kwirth-common'
 import Docker from 'dockerode'
 
 export class ConfigApi {

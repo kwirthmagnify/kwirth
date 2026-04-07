@@ -74,8 +74,8 @@ declare module '@jfvilas/react-file-manager' {
         permission: boolean,    // required permission (for using 'filedata' space, that is, a file manager not an object manager)
         multi?: boolean,        // true if this action can be executed on several files at the same time
         onClick?: (paths:string[], currentTraget:Element) => void     // what to do when th euser clicks the action
-        isVisible?: (name:string, path:string) => boolean             // determine if the action is visible depending on name and path
-        isEnabled?: (name:string, path:string) => boolean             // determine if the action is enabled depending on name and path
+        isVisible?: (name:string, currentFolder:IFileObject, selectedItems:IFileObject[]) => boolean             // determine if the action is visible depending on name and path
+        isEnabled?: (name:string, currentFolder:IFileObject, selectedItems:IFileObject[]) => boolean             // determine if the action is enabled depending on name and path
     }
 
     export interface IFileManagerMenuItem {

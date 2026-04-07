@@ -1,4 +1,4 @@
-import { IOpsMessage, IOpsMessageResponse, EInstanceMessageType, EInstanceMessageFlow } from "@jfvilas/kwirth-common"
+import { IOpsMessage, IOpsMessageResponse, EInstanceMessageType, EInstanceMessageFlow } from "@kwirthmagnify/kwirth-common"
 import { ClusterInfo } from "../../model/ClusterInfo"
 
 export async function execCommandDescribe(clusterInfo: ClusterInfo, opsMessage:IOpsMessage): Promise<IOpsMessageResponse> {

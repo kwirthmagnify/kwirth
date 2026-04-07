@@ -3,7 +3,7 @@ import { Backdrop, Box, Button, Checkbox, CircularProgress, Dialog, DialogConten
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { InputBox } from '../tools/FrontTools'
 import { Delete } from '@mui/icons-material'
-import { AccessKey } from '@jfvilas/kwirth-common'
+import { AccessKey } from '@kwirthmagnify/kwirth-common'
 
 interface IContextSelectorProps {
     isElectron: boolean

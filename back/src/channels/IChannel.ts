@@ -1,4 +1,4 @@
-import { BackChannelData, IInstanceConfig, IInstanceMessage, AccessKey, EInstanceMessageAction } from '@jfvilas/kwirth-common'
+import { BackChannelData, IInstanceConfig, IInstanceMessage, AccessKey, EInstanceMessageAction } from '@kwirthmagnify/kwirth-common'
 import { Request, Response } from 'express'
 
 interface IChannel {

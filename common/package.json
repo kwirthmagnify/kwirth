@@ -1,6 +1,6 @@
 {
-  "name": "@jfvilas/kwirth-common",
-  "version": "0.4.48",
+  "name": "@kwirthmagnify/kwirth-common",
+  "version": "0.4.49",
   "description": "Common interfaces for integrating applications with Kwirth",
   "scripts": {
     "build": "del .\\dist\\* /s /q && tsc"
@@ -17,7 +17,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jfvilas/kwirth-common.git"
+    "url": "git+https://github.com/kwirthmagnify/kwirth-common.git"
   },
   "keywords": [
     "kwirth",
@@ -38,9 +38,9 @@
   "author": "Julio Fernandez",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jfvilas/kwirth-common/issues"
+    "url": "https://github.com/kwirthmagnify/kwirth-common/issues"
   },
-  "homepage": "https://github.com/jfvilas/kwirth-common#readme",
+  "homepage": "https://github.com/kwirthmagnify/kwirth-common#readme",
   "dependencies": {
     "uuid": "^11.1.0"
   },

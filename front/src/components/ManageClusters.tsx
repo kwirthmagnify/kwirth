@@ -4,7 +4,7 @@ import { Cluster } from '../model/Cluster'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxWaitCancel, MsgBoxYesNo } from '../tools/MsgBox'
 import { addGetAuthorization } from '../tools/AuthorizationManagement'
 import { ENotifyLevel, readClusterInfo } from '../tools/Global'
-import { KwirthData } from '@jfvilas/kwirth-common'
+import { KwirthData } from '@kwirthmagnify/kwirth-common'
 
 interface IManageClustersProps {
   onClose:(clusters:Cluster[]) => void

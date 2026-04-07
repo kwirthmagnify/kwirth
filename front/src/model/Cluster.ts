@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import { MetricDefinition } from '../channels/metrics/MetricDefinition'
-import { KwirthData } from '@jfvilas/kwirth-common'
+import { KwirthData } from '@kwirthmagnify/kwirth-common'
 
 export class Cluster {
     public id: string

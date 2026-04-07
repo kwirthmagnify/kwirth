@@ -45,7 +45,7 @@ If you want to run Kwirth as a standalone service on a host, you can download th
 
 Install with 'npm' (you need a NodeJS installation at recommended V24, although Kwirth can work with V22 and V20)
 ```bash
-npm i -g @jfvilas/kwirth-external
+npm i -g @kwirthmagnify/kwirth-external
 ```
 
 Get some help with `kwirth-external --help`, and launch it just typing:

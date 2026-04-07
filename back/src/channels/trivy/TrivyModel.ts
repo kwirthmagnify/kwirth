@@ -1,4 +1,4 @@
-import { IInstanceMessage } from "@jfvilas/kwirth-common"
+import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
 
 export enum ETrivyCommand {
     RESCAN = 'rescan'

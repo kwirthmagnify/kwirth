@@ -112,7 +112,7 @@ So, these are all the properties included in an 'start instance' message (an ins
  - `type`. The type fo message being sent ('signal' or 'data').
  - `data`. This is a generic holder for your channel specific data.
 
-This strucutre (and some others), as well as some 'enums', are included in the [**@jfvilas/kwirth-common**](https://www.npmjs.com/package/@jfvilas/kwirth-common) package.
+This strucutre (and some others), as well as some 'enums', are included in the [**@kwirthmagnify/kwirth-common**](https://www.npmjs.com/package/@kwirthmagnify/kwirth-common) package.
 
 
 ## Front Channel development

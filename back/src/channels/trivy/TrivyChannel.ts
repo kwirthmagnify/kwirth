@@ -1,10 +1,10 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, TrivyConfig, BackChannelData, ClusterTypeEnum, IKnown, IUnknown, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType } from '@jfvilas/kwirth-common';
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, ClusterTypeEnum, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType } from '@kwirthmagnify/kwirth-common';
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IChannel } from '../IChannel';
-import { Informer, KubernetesObject, makeInformer, ObjectCache } from '@kubernetes/client-node';
+import { IChannel } from '../IChannel'
+import { Informer, KubernetesObject, makeInformer, ObjectCache } from '@kubernetes/client-node'
 import { Request, Response } from 'express'
-import { applyAllResources, deleteAllResources, restartController } from '../../tools/KubernetesTools';
-import { ETrivyCommand, ITrivyMessage, ITrivyMessageResponse } from './TrivyModel';
+import { applyAllResources, deleteAllResources, restartController } from '../../tools/KubernetesTools'
+import { ETrivyCommand, IKnown, ITrivyMessage, ITrivyMessageResponse, IUnknown } from './TrivyModel'
 import * as path from 'path'
 const fs = require('fs')
 
@@ -243,7 +243,7 @@ class TrivyChannel implements IChannel {
             }
             instances.push(instance)
         }
-        let ic = instanceConfig.data as TrivyConfig
+        let ic = instanceConfig.data  // must match instanceConfig on Front
         instance.maxCritical = ic.maxCritical
         instance.maxHigh = ic.maxHigh
         instance.maxMedium = ic.maxMedium

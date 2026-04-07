@@ -1,4 +1,4 @@
-import { IInstanceMessage } from "@jfvilas/kwirth-common"
+import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
 
 export const TRIVY_API_VULN_PLURAL = 'vulnerabilityreports'
 export const TRIVY_API_AUDIT_PLURAL = 'configauditreports'

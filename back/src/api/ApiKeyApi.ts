@@ -1,5 +1,5 @@
 import express, { Request, Response} from 'express'
-import { AccessKey, accessKeySerialize, accessKeyBuild, ApiKey } from '@jfvilas/kwirth-common'
+import { AccessKey, accessKeySerialize, accessKeyBuild, ApiKey } from '@kwirthmagnify/kwirth-common'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { IConfigMaps } from '../tools/IConfigMap'
 import * as crypto from 'crypto'

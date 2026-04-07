@@ -2,7 +2,7 @@ import express, { Request, Response} from 'express'
 import { ClusterInfo } from '../model/ClusterInfo'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
-import { IClusterMetricsConfig } from '@jfvilas/kwirth-common'
+import { IClusterMetricsConfig } from '@kwirthmagnify/kwirth-common'
 import { NodeMetrics } from '../model/INodeMetrics'
 
 export class MetricsApi {

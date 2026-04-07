@@ -2,7 +2,7 @@ import { FC } from 'react'
 import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '../IChannel'
 import { MagnifyInstanceConfig, MagnifyConfig } from './MagnifyConfig'
 import { MagnifySetup, MagnifyIcon } from './MagnifySetup'
-import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageEvent, IInstanceMessage, ISignalMessage } from "@jfvilas/kwirth-common"
+import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageEvent, IInstanceMessage, ISignalMessage } from "@kwirthmagnify/kwirth-common"
 import { EMagnifyCommand, MagnifyData, IMagnifyMessageResponse, IMagnifyData } from './MagnifyData'
 import { MagnifyTabContent } from './MagnifyTabContent'
 import { v4 as uuid } from 'uuid'
@@ -700,7 +700,7 @@ class MagnifyChannel implements IChannel {
                 if (names.length===0) names = image.names
             }
             else {
-                names = ['unnamed-image']
+                names = ['*unnamed']
             }
 
             let existing = magnifyData.files.find(f => f.path === '/cluster/Image/'+names[0])

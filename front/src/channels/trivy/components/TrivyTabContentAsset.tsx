@@ -6,7 +6,7 @@ import { assetAvatarColor, getAvatarContent } from '../TrivyCommon'
 import { useState } from 'react'
 import { IChannelObject } from '../../IChannel'
 import { ITrivyInstanceConfig } from '../TrivyConfig'
-import { EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType } from '@jfvilas/kwirth-common'
+import { EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { ETrivyCommand, IAsset, ITrivyMessage, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_VULN_PLURAL } from '../TrivyData'
 
 interface ITrivyTabContentAssetProps {

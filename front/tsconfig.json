@@ -16,7 +16,7 @@
     "module":"CommonJS",
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "moduleResolution": "node10"
+    "moduleResolution": "node16"
   },
   "include": [
     "src",

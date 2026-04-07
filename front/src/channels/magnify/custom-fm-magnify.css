@@ -61,6 +61,12 @@
   transition: all 0.2s ease;
 }
 
+.file-explorer .toolbar .file-action-container .file-action-disabled {
+  background-color: var(--mui-palette-background-default) !important;
+  color: var(--mui-palette-action-disabled) !important;
+  transition: all 0.2s ease;
+}
+
 .file-explorer .toolbar .file-action-container .file-action:hover {
   background-color: var(--mui-palette-action-selected) !important;
   

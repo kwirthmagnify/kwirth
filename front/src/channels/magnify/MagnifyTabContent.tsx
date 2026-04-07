@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { IContentProps } from '../IChannel'
 import { EMagnifyCommand, IMagnifyMessage, IMagnifyData } from './MagnifyData'
 import { Box, Button, Stack, Tooltip, Typography } from '@mui/material'
-import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView } from '@jfvilas/kwirth-common'
+import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { ICategory, IError, IFileManagerHandle, IFileManagerMenuItem, IFileObject } from '@jfvilas/react-file-manager'
 import { FileManager } from '@jfvilas/react-file-manager'
 import { v4 as uuid } from 'uuid'
@@ -582,8 +582,8 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 if (b === MsgBoxButtons.Yes) props.channelObject.exit?.()
             }))
         },
-        (name:string,path:string) => props.channelObject.isElectron,
-        (name:string,path:string) => true
+        (name:string,currentFolder:IFileObject, selectedItems:IFileObject[]) => props.channelObject.isElectron,
+        (name:string,currentFolder:IFileObject, selectedItems:IFileObject[]) => true
     )
     setLeftItem(spcClassOverview, 'kwirthworks', (p:string[],
         currentTarget:Element) => setMenuKwirthWorksAnchorParent(currentTarget),
@@ -609,7 +609,9 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             )
 
             let spcImage = spaces.get('Image')!
-            setLeftItem(spcImage,'delete', launchImageDelete)
+            setLeftItem(spcImage,'delete', launchImageDelete, undefined, (name:string, currentFolder:IFileObject, selectedItems:IFileObject[]) => {
+                return !selectedItems.some(i => i.name.startsWith('*'))
+            })
 
             // Namespace
             let spcClassNamespace = spaces.get('classNamespace')!

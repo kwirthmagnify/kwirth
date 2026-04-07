@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react'
 import { Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, ListItemText, MenuItem, Select, Stack, TextField, Tooltip, Typography} from '@mui/material'
-import { EMetricsConfigMode, EInstanceConfigView } from '@jfvilas/kwirth-common'
+import { EMetricsConfigMode, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { ISetupProps } from '../IChannel'
 import { BarChart } from '@mui/icons-material'
 import { MetricsInstanceConfig, MetricsConfig } from './MetricsConfig'

@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, EClusterType, IInstanceConfigResponse, EAlertSeverity, IAlertMessage, IInstanceMessage, AlertConfig, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, EInstanceMessageType, ESignalMessageLevel } from '@jfvilas/kwirth-common'
+import { IInstanceConfig, ISignalMessage, EClusterType, IInstanceConfigResponse, EAlertSeverity, IAlertMessage, IInstanceMessage, AlertConfig, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, EInstanceMessageType, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { ClusterInfo } from '../../model/ClusterInfo'

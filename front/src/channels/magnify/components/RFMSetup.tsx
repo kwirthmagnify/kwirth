@@ -10,7 +10,7 @@ import { UserPreferences } from "./UserPreferences"
 import { requestList } from "../MagnifyChannel"
 import { objectSections, podsSection } from "./DetailsSections"
 import { v4 as uuid } from 'uuid'
-import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from "@jfvilas/kwirth-common"
+import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from "@kwirthmagnify/kwirth-common"
 
 const setPropertyFunction = (space:ISpace, propName:string, invoke:(p:string) => void) => {
     if (!space.properties) return
@@ -24,8 +24,8 @@ const setLeftItem = (
         space:ISpace,
         name:string,
         onClick:(paths:string[], target?:any) => void,
-        isVisible?:(name:string, path:string) => boolean,
-        isEnabled?:(name:string, path:string) => boolean
+        isVisible?:(name:string, currentFolder:IFileObject, selectedItems:IFileObject[]) => boolean,
+        isEnabled?:(name:string, currentFolder:IFileObject, selectedItems:IFileObject[]) => boolean
     ) => {
     let x = space.leftItems?.find(li => li.name===name)
     if (x) {

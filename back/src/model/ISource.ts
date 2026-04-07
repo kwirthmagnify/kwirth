@@ -1,4 +1,4 @@
-import { IInstanceConfig, ResourceIdentifier } from "@jfvilas/kwirth-common"
+import { IInstanceConfig, ResourceIdentifier } from "@kwirthmagnify/kwirth-common"
 import { V1Pod } from "@kubernetes/client-node"
 
 export interface ISource {

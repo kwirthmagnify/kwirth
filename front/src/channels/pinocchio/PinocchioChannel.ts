@@ -2,7 +2,7 @@ import { FC } from "react"
 import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from "../IChannel"
 import { PinocchioInstanceConfig, PinocchioConfig, IPinocchioConfig } from "./PinocchioConfig"
 import { PinocchioSetup, PinocchioIcon } from './PinocchioSetup'
-import { IInstanceMessage, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope } from "@jfvilas/kwirth-common"
+import { IInstanceMessage, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope } from "@kwirthmagnify/kwirth-common"
 import { PinocchioData, IPinocchioData, IPinocchioMessage } from "./PinocchioData"
 import { PinocchioTabContent } from "./PinocchioTabContent"
 

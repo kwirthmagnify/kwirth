@@ -4,7 +4,7 @@ import { Cluster } from '../model/Cluster'
 import { MsgBoxOkError } from '../tools/MsgBox'
 
 import { addGetAuthorization } from '../tools/AuthorizationManagement'
-import { BackChannelData, EClusterType, EInstanceConfigView, EInstanceMessageChannel } from '@jfvilas/kwirth-common'
+import { BackChannelData, EClusterType, EInstanceConfigView, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
 import { ITabObject } from '../model/ITabObject'
 import { getIconFromKind } from '../tools/Constants-React'
 

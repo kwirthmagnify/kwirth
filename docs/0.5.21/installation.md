@@ -86,7 +86,7 @@ docker run -d -p 3883:3883 \
 ## External: launch Kwirth locally (without docker)
 First install Kwirth:
 ```sh
-$ npm i -g @jfvilas/kwirth-external
+$ npm i -g @kwirthmagnify/kwirth-external
 ```
 
 Once installed (globally with '-g' optin) just launch it to check if everything is OK:

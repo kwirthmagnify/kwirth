@@ -9,7 +9,7 @@ import { GaugeComponent } from 'react-gauge-component'
 import { addGetAuthorization } from '../tools/AuthorizationManagement'
 import { getIconFromKind } from '../tools/Constants-React'
 import { Area, AreaChart } from 'recharts'
-import { EInstanceConfigView } from '@jfvilas/kwirth-common'
+import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 
 // svg optimizer: https://jakearchibald.github.io/svgomg/ (optmizes size and removes namespaces)
 // Open source icons: https://iconbuddy.com/
