@@ -63,20 +63,28 @@ const ArtifactSearch: React.FC<IArtifactSearchProps> = (props:IArtifactSearchPro
         props.data.merge = !props.data.merge
     }
 
-    function getDeepValue(obj:any, pathString:string) {
-        const parts = pathString.split('.')
+    function getDeepValue(obj: any, pathString: string) {
+        if (!obj || !pathString) return undefined
+
+        // "spec.containers[0].env[7].value" -> ["spec", "containers", "0", "env", "7", "value"]
+        const parts = pathString
+            .replace(/\[(\d+)\]/g, '.$1') // change [0] into .0
+            .split('.')
+            .filter(p => p !== "")      // remove empty points
+
         let current = obj
-        let pathBuffer = ''
 
-        for (let i = 0; i < parts.length; i++) {
-            pathBuffer = pathBuffer ? `${pathBuffer}.${parts[i]}` : parts[i]
-
-            if (current && current.hasOwnProperty(pathBuffer)) {
-            current = current[pathBuffer]
-            pathBuffer = ''
+        for (const part of parts) {
+            if (current === null || typeof current !== 'object') {
+                return undefined;
             }
+
+            if (part in current)
+                current = current[part]
+            else
+                return undefined
         }
-        return pathBuffer === '' ? current : undefined
+        return current
     }
 
     const getResults= (obj:any, text:string, includeStatus:boolean, matchCase:boolean, merge:boolean) => {
@@ -135,6 +143,7 @@ const ArtifactSearch: React.FC<IArtifactSearchProps> = (props:IArtifactSearchPro
                             let res = getResults(file.data?.origin, searchText, includeStatus, matchCase, merge)
                             return res.map((r,index) => {
                                 let val = getDeepValue(file.data.origin, r)
+                                if (!val) console.log(r)
                                 let link
                                 if (file.data.origin.metadata)
                                     link = <Typography variant='body2'><a href={`#`} onClick={() => artifactSearchData.onLink(file.data.origin.kind, file.data.origin.metadata.name, file.data.origin.metadata.namespace)}>{file.data.origin.metadata.name}</a></Typography>
@@ -144,7 +153,7 @@ const ArtifactSearch: React.FC<IArtifactSearchProps> = (props:IArtifactSearchPro
                                     {getIconFromKind(file.data?.origin?.kind, 32)}
                                     <Stack direction={'column'} sx={{ml:2}}>
                                         {link}
-                                        <Typography variant='body2' >{r}</Typography>
+                                        <Typography variant='body2'>{r}</Typography>
                                         <Typography variant='body2'>{String(val).substring(0,80)}{String(val).length>80?'...':''}</Typography>
                                     </Stack>
                                 </Stack>

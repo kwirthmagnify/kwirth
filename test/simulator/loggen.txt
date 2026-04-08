@@ -1,0 +1,1011 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: login-simulator-20-types
+  labels:
+    app: auth-mock
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Cargando 20 tipos de eventos de login... ---"
+        
+        while true; do
+          # Generación de variables dinámicas
+          ID="USR-$(($RANDOM % 9000 + 1000))"
+          IP="$((RANDOM%254 + 1)).$((RANDOM%254 + 1)).$((RANDOM%254 + 1)).$((RANDOM%254 + 1))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 20))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="User $ID successfully authenticated via web portal." ;;
+            1)  MSG="Failed login for $ID: Incorrect password provided from IP $IP"; LEVEL="WARN" ;;
+            2)  MSG="Account $ID locked due to 5 consecutive failed attempts."; LEVEL="ERROR" ;;
+            3)  MSG="MFA challenge (SMS) sent to registered device for user $ID." ;;
+            4)  MSG="User $ID completed multi-factor authentication successfully." ;;
+            5)  MSG="MFA challenge failed for $ID: Verification code expired."; LEVEL="WARN" ;;
+            6)  MSG="Password reset link requested for account $ID." ;;
+            7)  MSG="User $ID successfully updated their password." ;;
+            8)  MSG="New session token issued for $ID. Expiry: 24h." ;;
+            9)  MSG="Session for user $ID expired automatically after inactivity." ;;
+            10) MSG="User $ID explicitly logged out from all devices." ;;
+            11) MSG="Unauthorized access attempt by $ID to /api/v1/admin/settings."; LEVEL="ERROR" ;;
+            12) MSG="New login detected for $ID from unrecognized device/location: $IP"; LEVEL="WARN" ;;
+            13) MSG="JWT token refreshed for user $ID." ;;
+            14) MSG="Token refresh failed for $ID: Invalid or blacklisted refresh token."; LEVEL="ERROR" ;;
+            15) MSG="User $ID updated their profile information (email/avatar)." ;;
+            16) MSG="Terms and Conditions accepted by user $ID." ;;
+            17) MSG="Security audit: IP $IP blacklisted for brute force patterns."; LEVEL="ERROR" ;;
+            18) MSG="Health check: AuthService database connection pool is healthy." ;;
+            19) MSG="Administrative override: User $ID access revoked by system-admin." ;;
+          esac
+
+          # Imprimir mensaje formateado
+          echo "[$DATE] $LEVEL - [IdentitySvc] - $MSG"
+
+          # Espera aleatoria entre 1 y 4 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hotel-reservation-simulator
+  labels:
+    app: booking-svc
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Simulador de Hotel Booking iniciado: 1-3s ---"
+        
+        while true; do
+          # Generación de variables dinámicas para mayor realismo
+          RES="RES-$(($RANDOM % 90000 + 10000))"
+          USR="USR-$(($RANDOM % 5000 + 1000))"
+          CITY=$(echo "Madrid|Barcelona|Paris|London|New York|Tokyo|Roma" | tr '|' '\n' | shuf -n 1)
+          ROOM=$(echo "Single|Double|Suite|Deluxe|Penthouse" | tr '|' '\n' | shuf -n 1)
+          IP="$((RANDOM%254 + 1)).$((RANDOM%254 + 1)).$((RANDOM%254 + 1)).$((RANDOM%254 + 1))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 20))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="User $USR started searching for hotels in $CITY." ;;
+            1)  MSG="Room availability check for $ROOM room in $CITY: Status AVAILABLE." ;;
+            2)  MSG="User $USR selected $ROOM room for 3 nights in $CITY." ;;
+            3)  MSG="Reservation $RES: Booking process initiated for user $USR." ;;
+            4)  MSG="Payment processing via Stripe for reservation $RES. Amount: $(($RANDOM % 500 + 100)) EUR." ;;
+            5)  MSG="Payment SUCCESS: Transaction TX-$(($RANDOM % 10000)) completed for $RES." ;;
+            6)  MSG="Reservation $RES CONFIRMED for user $USR in $CITY ($ROOM)." ;;
+            7)  MSG="Confirmation email sent to user $USR for reservation $RES." ;;
+            8)  MSG="User $USR requested a date modification for $RES."; LEVEL="WARN" ;;
+            9)  MSG="Modification failed for $RES: Requested dates are fully booked."; LEVEL="WARN" ;;
+            10) MSG="Cancellation request received for $RES from user $USR." ;;
+            11) MSG="Reservation $RES CANCELLED. Refund processed to original payment method." ;;
+            12) MSG="User $USR applied promo code 'SUMMER2026' to reservation $RES." ;;
+            13) MSG="Late check-in notification received for reservation $RES." ;;
+            14) MSG="Failed payment: Card declined for user $USR on reservation $RES."; LEVEL="WARN" ;;
+            15) MSG="System Alert: Database latency detected in reservation cluster."; LEVEL="ERROR" ;;
+            16) MSG="Room upgrade offered to $USR for reservation $RES (Standard -> $ROOM)." ;;
+            17) MSG="Check-in completed: User $USR is now active in room 40$(($RANDOM % 9))." ;;
+            18) MSG="API Timeout: Hotel provider in $CITY not responding to price query."; LEVEL="ERROR" ;;
+            19) MSG="Security audit: Multiple failed booking attempts from IP $IP."; LEVEL="WARN" ;;
+          esac
+
+          # Imprimir mensaje formateado
+          echo "[$DATE] $LEVEL - [BookingService] - $MSG"
+
+          # Intervalo oscilando entre 1 y 3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+
+
+
+
+
+		
+		
+		
+		
+		
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bank-operations-simulator
+  labels:
+    app: core-banking-svc
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Core Banking System Simulator Active | Interval 1-3s ---"
+        
+        while true; do
+          # Variables dinámicas para realismo financiero
+          ACC="ACC-$(($RANDOM % 900000 + 100000))"
+          TRX="TXN-$(($RANDOM % 8000000 + 1000000))"
+          AMT="$(($RANDOM % 5000)).$(($RANDOM % 99))"
+          IP="$((RANDOM%254 + 1)).$((RANDOM%254 + 1)).$((RANDOM%254 + 1)).$((RANDOM%254 + 1))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 20))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="User session started for account $ACC via Mobile App." ;;
+            1)  MSG="Balance inquiry successful for account $ACC. Available: $AMT EUR." ;;
+            2)  MSG="Transfer $TRX initiated: $AMT EUR from $ACC to external IBAN." ;;
+            3)  MSG="Transfer $TRX completed successfully. Ledger updated." ;;
+            4)  MSG="ATM Withdrawal: $AMT EUR authorized for account $ACC at Branch 042." ;;
+            5)  MSG="Credit card authorization request: Merchant 'AMZN-MKT' - Amount: $AMT EUR." ;;
+            6)  MSG="Security Alert: Transaction $TRX flagged by Anti-Fraud AI for manual review."; LEVEL="WARN" ;;
+            7)  MSG="Fraud Prevention: Card linked to $ACC blocked due to suspicious activity at $IP."; LEVEL="ERROR" ;;
+            8)  MSG="New account $ACC successfully provisioned for customer." ;;
+            9)  MSG="Loan application received: ID-$(($RANDOM % 99999)) - Status: UNDER_REVIEW." ;;
+            10) MSG="Monthly interest credit of $AMT EUR applied to account $ACC." ;;
+            11) MSG="Direct Debit payment: 'Electric Co' - Amount: $AMT EUR - Account: $ACC." ;;
+            12) MSG="Credentials updated for account $ACC (Password change from $IP)." ;;
+            13) MSG="Overdraft warning: Account $ACC has reached 90% of credit limit."; LEVEL="WARN" ;;
+            14) MSG="Currency exchange: USD to EUR conversion for $TRX - Rate: 0.923." ;;
+            15) MSG="Digital statement generated for account $ACC and sent to secure inbox." ;;
+            16) MSG="Contactless payment successful via Apple/Google Pay for account $ACC." ;;
+            17) MSG="Critical Error: Database deadlock detected during batch processing of $TRX."; LEVEL="ERROR" ;;
+            18) MSG="API Gateway Timeout: Swift/SEPA network not responding."; LEVEL="ERROR" ;;
+            19) MSG="Identity Verification (KYC) documents approved for new client profile." ;;
+          esac
+
+          # Salida formateada
+          echo "[$DATE] $LEVEL - [CoreBankingSvc] - $MSG"
+
+          # Intervalo de 1 a 3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: card-payment-simulator
+  labels:
+    app: payment-gateway
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Card Processing Gateway Simulator Active ---"
+        
+        while true; do
+          # Variables dinámicas para transacciones de tarjeta
+          CARD="****-****-****-$(($RANDOM % 8999 + 1000))"
+          TXID="PAY-$(($RANDOM % 900000 + 100000))"
+          AUTH="AUTH-$(($RANDOM % 900000))"
+          AMT="$(($RANDOM % 800 + 1)).$(($RANDOM % 99))"
+          MERCHANT=$(echo "Amazon|Netflix|Starbucks|Uber|Steam|Zara|IKEA" | tr '|' '\n' | shuf -n 1)
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 20))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="Authorization request: Card $CARD at $MERCHANT for $AMT EUR." ;;
+            1)  MSG="Transaction $TXID: CVV validation successful." ;;
+            2)  MSG="Transaction $TXID: 3D-Secure challenge bypassed by trusted device." ;;
+            3)  MSG="Auth $AUTH approved by issuing bank for card $CARD." ;;
+            4)  MSG="Transaction $TXID: Payment settled. Funds reserved for $MERCHANT." ;;
+            5)  MSG="Card $CARD declined: Insufficient funds for transaction $TXID."; LEVEL="WARN" ;;
+            6)  MSG="Card $CARD declined: Incorrect CVV code entered."; LEVEL="WARN" ;;
+            7)  MSG="Security Alert: Multiple small transactions detected on card $CARD at $MERCHANT."; LEVEL="WARN" ;;
+            8)  MSG="EMV Chip read error on terminal T-$(($RANDOM % 999)). Fallback to magstripe denied."; LEVEL="ERROR" ;;
+            9)  MSG="Transaction $TXID: Refund of $AMT EUR processed for merchant $MERCHANT." ;;
+            10) MSG="Card $CARD: Expiry date validation failed (Card expired)."; LEVEL="WARN" ;;
+            11) MSG="Contactless payment (NFC) successful for card $CARD. Amount: $AMT EUR." ;;
+            12) MSG="Transaction $TXID flagged for high-risk: International purchase from $MERCHANT."; LEVEL="WARN" ;;
+            13) MSG="Network Error: Lost connection to VISA/Mastercard clearing house."; LEVEL="ERROR" ;;
+            14) MSG="Card $CARD added to digital wallet (Apple/Google Pay) successfully." ;;
+            15) MSG="Gateway Timeout: Merchant $MERCHANT plugin failed to respond to webhook."; LEVEL="ERROR" ;;
+            16) MSG="Transaction $TXID: Reversal sent due to customer cancellation." ;;
+            17) MSG="Card $CARD: Daily spending limit exceeded. Transaction $TXID blocked."; LEVEL="WARN" ;;
+            18) MSG="Hardware Security Module (HSM) latency detected during PIN encryption."; LEVEL="ERROR" ;;
+            19) MSG="Auth $AUTH: Transaction confirmed. Reference: $TXID." ;;
+          esac
+
+          # Salida formateada
+          echo "[$DATE] $LEVEL - [PaymentGateway] - $MSG"
+
+          # Intervalo de 1 a 3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+
+
+
+
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tour-booking-simulator
+  labels:
+    app: concierge-svc
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Tour & Excursion Booking System Active ---"
+        
+        while true; do
+          # Variables dinámicas
+          TOUR_ID="TR-$(($RANDOM % 500 + 100))"
+          BOOK_ID="BK-$(($RANDOM % 90000 + 10000))"
+          ROOM="ROOM-$(( (RANDOM % 500) + 101 ))"
+          GUESTS=$(( (RANDOM % 5) + 1 ))
+          DEST=$(echo "Isla_Tortuga|Volcan_Arenal|Ciudad_Antigua|Arrecife_Coral|Safari_Nocturno|Tour_Gastronomico|Viñedos" | tr '|' '\n' | shuf -n 1)
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 20))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="Guest from $ROOM is browsing the excursion catalog for $DEST." ;;
+            1)  MSG="Availability check: $TOUR_ID ($DEST) for $GUESTS persons. Status: AVAILABLE." ;;
+            2)  MSG="Booking $BOOK_ID: New reservation for '$DEST' created for $ROOM." ;;
+            3)  MSG="Payment $BOOK_ID: Charge of $(($RANDOM % 200 + 50)) EUR posted to room bill." ;;
+            4)  MSG="Voucher issued: $BOOK_ID for tour $TOUR_ID. Pickup time: 08:30 AM." ;;
+            5)  MSG="Inventory update: Tour $TOUR_ID ($DEST) is now FULL for tomorrow's session." ;;
+            6)  MSG="Booking $BOOK_ID: Guest requested a vegetarian meal option for the excursion." ;;
+            7)  MSG="Cancellation: $BOOK_ID ($DEST) cancelled by guest. 50% penalty applied."; LEVEL="WARN" ;;
+            8)  MSG="Weather Alert: Tour $TOUR_ID to $DEST is under observation due to rain."; LEVEL="WARN" ;;
+            9)  MSG="TOUR CANCELLED: $TOUR_ID ($DEST) cancelled due to unsafe weather conditions."; LEVEL="ERROR" ;;
+            10) MSG="Refund $BOOK_ID: Full refund processed for cancelled weather-dependent tour." ;;
+            11) MSG="Guide assigned: 'Carlos R.' will lead the $DEST group for booking $BOOK_ID." ;;
+            12) MSG="Transport update: Bus ID-$(($RANDOM % 50)) assigned to pickup guests for $TOUR_ID." ;;
+            13) MSG="Late arrival: Guests for $BOOK_ID are 10 min late for pickup at main lobby."; LEVEL="WARN" ;;
+            14) MSG="No-show: $BOOK_ID guests failed to arrive at pickup point. Booking expired."; LEVEL="ERROR" ;;
+            15) MSG="Review received: Guest from $ROOM rated '$DEST' with 5 stars." ;;
+            16) MSG="System: API sync with local tour operator 'AdventurePlus' successful." ;;
+            17) MSG="Error: Unable to process room charge for $BOOK_ID. PMS connection timed out."; LEVEL="ERROR" ;;
+            18) MSG="Discount applied: 10% Early Bird discount for booking $BOOK_ID." ;;
+            19) MSG="Excursion $TOUR_ID completed. All $GUESTS guests returned safely to the hotel." ;;
+          esac
+
+          # Salida formateada
+          echo "[$DATE] $LEVEL - [TourConciergeSvc] - $MSG"
+
+          # Intervalo de 1 a 3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+		
+		
+		
+		
+		
+		
+apiVersion: v1
+kind: Pod
+metadata:
+  name: flight-ops-simulator
+  labels:
+    app: airline-svc
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Airline Operations Simulator | 100+ Message Variations ---"
+        
+        # Listas de componentes para construir frases dinámicas
+        AIRLINES="Iberia|Vueling|Lufthansa|Emirates|Delta|Ryanair"
+        STATUS_TYPES="SUCCESS|PENDING|FAILED|DELAYED|CANCELLED"
+        
+        while true; do
+          # Variables base
+          FLIGHT="FL-$(($RANDOM % 900 + 100))"
+          SEAT="$(($RANDOM % 40 + 1))$(echo "ABCDEF" | fold -w1 | shuf -n1)"
+          GATE="G$(($RANDOM % 50 + 1))"
+          USR="PAX-$(($RANDOM % 9000 + 1000))"
+          AL=$(echo $AIRLINES | tr '|' '\n' | shuf -n 1)
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          
+          # Selector de categoría (10 categorías x 10 variaciones aprox = 100+ tipos)
+          CAT=$(($RANDOM % 10))
+          LEVEL="INFO"
+
+          case $CAT in
+            0) MSG="Booking $FLIGHT: Passenger $USR confirmed in seat $SEAT ($AL)." ;;
+            1) MSG="Check-in: $USR completed digital check-in for $FLIGHT. Boarding pass issued." ;;
+            2) MSG="Baggage: Item BAG-$(($RANDOM % 9999)) scanned and loaded onto $FLIGHT." ;;
+            3) MSG="Gate Change: $FLIGHT moved from Gate G12 to $GATE. Notifications sent."; LEVEL="WARN" ;;
+            4) MSG="Flight Status: $FLIGHT from $AL is delayed $(($RANDOM % 120)) min due to air traffic."; LEVEL="WARN" ;;
+            5) MSG="Security: $USR flagged for secondary screening at $GATE."; LEVEL="WARN" ;;
+            6) MSG="Boarding: Now boarding Group $(($RANDOM % 4 + 1)) for flight $FLIGHT." ;;
+            7) MSG="Technical: $FLIGHT maintenance check $(echo $STATUS_TYPES | tr '|' '\n' | shuf -n 1)." ;;
+            8) MSG="Crew: Pilot and $(($RANDOM % 6 + 2)) cabin crew assigned to $FLIGHT." ;;
+            9) MSG="Alert: $FLIGHT CANCELLED due to weather. Rebooking $USR on next available flight."; LEVEL="ERROR" ;;
+          esac
+
+          # Añadimos un sufijo aleatorio para llegar a los 100+ tipos de combinación total
+          VAR=$((RANDOM % 10))
+          case $VAR in
+            0) SUFFIX=" [Verified by System]" ;;
+            1) SUFFIX=" [Priority Boarding]" ;;
+            2) SUFFIX=" [Mobile App Source]" ;;
+            3) SUFFIX=" [Kiosk Check-in]" ;;
+            4) SUFFIX=" [API Sync: OK]" ;;
+            5) SUFFIX=" [Lounge Access Granted]" ;;
+            6) SUFFIX=" [Upgrade Processed]" ;;
+            7) SUFFIX=" [In-flight Meal: Selected]" ;;
+            8) SUFFIX=" [Frequent Flyer: Gold]" ;;
+            9) SUFFIX=" [Carbon Offset: Paid]" ;;
+          esac
+
+          echo "[$DATE] $LEVEL - [FlightCore] - $MSG$SUFFIX"
+
+          # Intervalo 1-3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+apiVersion: v1
+kind: Pod
+metadata:
+  name: restaurant-booking-simulator
+  labels:
+    app: table-res-svc
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Restaurant Management System Active | 50 Message Types ---"
+        
+        while true; do
+          # Variables para realismo
+          RES_ID="RSV-$(($RANDOM % 9000 + 1000))"
+          TABLE="$((RANDOM % 40 + 1))"
+          COVERS="$((RANDOM % 8 + 1))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 50))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="New reservation request received for $COVERS people." ;;
+            1)  MSG="Reservation $RES_ID confirmed for Table $TABLE." ;;
+            2)  MSG="Table $TABLE status changed to: OCCUPIED." ;;
+            3)  MSG="Guest $RES_ID requested a window seat." ;;
+            4)  MSG="Alert: High occupancy reached (90%)."; LEVEL="WARN" ;;
+            5)  MSG="Order sent to kitchen: 2x Ribeye, 1x Sea Bass for Table $TABLE." ;;
+            6)  MSG="Table $TABLE requested the bill." ;;
+            7)  MSG="Payment SUCCESS: $RES_ID settled via Credit Card." ;;
+            8)  MSG="Reservation $RES_ID cancelled by customer."; LEVEL="WARN" ;;
+            9)  MSG="Special Request: Anniversary decoration for Table $TABLE." ;;
+            10) MSG="Allergy Warning: Table $TABLE reported Peanut Allergy!"; LEVEL="ERROR" ;;
+            11) MSG="Kitchen: Order for Table $TABLE is ready for pickup." ;;
+            12) MSG="Stock Alert: 'Bluefin Tuna' is now out of stock."; LEVEL="WARN" ;;
+            13) MSG="No-show: Reservation $RES_ID failed to arrive after 20 mins."; LEVEL="WARN" ;;
+            14) MSG="Table $TABLE moved to terrace area." ;;
+            15) MSG="Reservation $RES_ID modified: Changed from $COVERS to $((COVERS+2)) people." ;;
+            16) MSG="Complimentary drink offered to Table $TABLE for waiting time." ;;
+            17) MSG="System: Daily menu updated by Chef." ;;
+            18) MSG="Error: POS terminal 02 lost connection to server."; LEVEL="ERROR" ;;
+            19) MSG="Table $TABLE requested a high chair for a toddler." ;;
+            20) MSG="VIP Guest arrived: $RES_ID assigned to private booth." ;;
+            21) MSG="Kitchen: Ticket #$(($RANDOM%999)) delayed due to high volume."; LEVEL="WARN" ;;
+            22) MSG="Wine bottle opened: 'Rioja Reserve' for Table $TABLE." ;;
+            23) MSG="Reservation $RES_ID: Pre-authorization of 50€ successful." ;;
+            24) MSG="Table $TABLE: Customer complained about air conditioning."; LEVEL="WARN" ;;
+            25) MSG="Feedback: $RES_ID left a 5-star review via QR code." ;;
+            26) MSG="Table $TABLE requested split check (3 ways)." ;;
+            27) MSG="Bar: 4x Gin Tonic prepared for Table $TABLE." ;;
+            28) MSG="Waitlist: $COVERS people added to the digital queue." ;;
+            29) MSG="Table $TABLE: Dessert order received (3x Cheesecake)." ;;
+            30) MSG="Reservation $RES_ID: SMS reminder sent to customer." ;;
+            31) MSG="Table $TABLE: Appetizers served." ;;
+            32) MSG="Kitchen: Special 'Vegan' menu requested for Table $TABLE." ;;
+            33) MSG="Manager: Table $TABLE bill discounted by 10% (Service delay)." ;;
+            34) MSG="Cleaning: Table $TABLE is being sanitized." ;;
+            35) MSG="Reservation $RES_ID: Deposit refunded after cancellation." ;;
+            36) MSG="Table $TABLE: Bottle of sparkling water served." ;;
+            37) MSG="Kitchen: Grill temperature alert!"; LEVEL="ERROR" ;;
+            38) MSG="Stock Update: 20kg of 'Wagyu Beef' received." ;;
+            39) MSG="Staff: Waiter #12 started shift (Floor Section A)." ;;
+            40) MSG="Table $TABLE: Customer requested to see the Sommelier." ;;
+            41) MSG="Reservation $RES_ID: Walk-in guest accepted (No previous booking)." ;;
+            42) MSG="Security: Lost item (Wallet) reported at Table $TABLE."; LEVEL="WARN" ;;
+            43) MSG="Kitchen: Deep cleaning cycle initiated." ;;
+            44) MSG="Table $TABLE status changed to: AVAILABLE." ;;
+            45) MSG="System: API sync with 'TheFork/OpenTable' successful." ;;
+            46) MSG="Order error: Table $TABLE received wrong side dish."; LEVEL="WARN" ;;
+            47) MSG="Table $TABLE: 2x Espresso served." ;;
+            48) MSG="Reservation $RES_ID: Late arrival (15 mins) noted." ;;
+            49) MSG="End of Day: Total 120 covers processed. Closing reports..." ;;
+          esac
+
+          # Salida final
+          echo "[$DATE] $LEVEL - [DiningCore] - $MSG"
+
+          # Intervalo 1-3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+
+
+
+
+
+
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: channel-manager-simulator
+  labels:
+    app: inventory-sync
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- ARI Sync Service Started | Sending to OTAs ---"
+        
+        while true; do
+          # Variables de entorno de distribución
+          OTA=$(echo "Booking.com|Expedia|Airbnb|Agoda|Hotelbeds|TripAdvisor" | tr '|' '\n' | shuf -n 1)
+          HOTEL_ID="H-$(($RANDOM % 500 + 100))"
+          ROOM_TYPE=$(echo "DBL|SNG|SUITE|FAM|DLX" | tr '|' '\n' | shuf -n 1)
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 50))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="Sync triggered for Hotel $HOTEL_ID: Delta update detected." ;;
+            1)  MSG="Inventory update: $ROOM_TYPE available units set to $((RANDOM%10)) for $OTA." ;;
+            2)  MSG="Pushing new rates to $OTA: $ROOM_TYPE at $((RANDOM%200+80)) EUR." ;;
+            3)  MSG="Restriction applied: Minimum Stay 3 nights for $ROOM_TYPE on $OTA." ;;
+            4)  MSG="Connection successful: Handshake with $OTA API Gateway v3." ;;
+            5)  MSG="Error 401: Invalid API Key for portal $OTA. Authentication failed."; LEVEL="ERROR" ;;
+            6)  MSG="Batch update: 365 days of availability sent to $OTA for $HOTEL_ID." ;;
+            7)  MSG="Stop Sell: $ROOM_TYPE is now closed on $OTA for upcoming weekend."; LEVEL="WARN" ;;
+            8)  MSG="Rate parity check: $HOTEL_ID price is consistent across all channels." ;;
+            9)  MSG="Conflict detected: $OTA reported a double booking for $ROOM_TYPE."; LEVEL="ERROR" ;;
+            10) MSG="XML Payload sent: 154KB to $OTA (Compression: Gzip)." ;;
+            11) MSG="ACK received: $OTA successfully processed inventory for $HOTEL_ID." ;;
+            12) MSG="Timeout: $OTA API not responding. Retrying in 5s (Attempt 1/3)."; LEVEL="WARN" ;;
+            13) MSG="Overbooking protection: Reducing inventory on $OTA by 1 unit." ;;
+            14) MSG="Mapping update: New room code 'PREM-01' linked to $OTA category 'Deluxe'." ;;
+            15) MSG="Policy update: Non-refundable rate pushed to $OTA for summer season." ;;
+            16) MSG="Latency alert: $OTA response time is above 1500ms."; LEVEL="WARN" ;;
+            17) MSG="Channel sync: $OTA requested a full refresh for $HOTEL_ID." ;;
+            18) MSG="Validation error: Price for $ROOM_TYPE is below minimum threshold on $OTA."; LEVEL="ERROR" ;;
+            19) MSG="Currency conversion: Updated rates in USD for $OTA market." ;;
+            20) MSG="Webhook received: New reservation from $OTA (Ref: $(($RANDOM%999999)))." ;;
+            21) MSG="Availability Alert: Last room remaining for $ROOM_TYPE on $OTA!"; LEVEL="WARN" ;;
+            22) MSG="Modification: $OTA updated dates for reservation RES-$(($RANDOM%999))." ;;
+            23) MSG="Cancellation: $OTA released 1 unit for $ROOM_TYPE on $HOTEL_ID." ;;
+            24) MSG="System: Global ARI sync paused for scheduled maintenance." ;;
+            25) MSG="Health check: Connection to Hotel PMS is stable." ;;
+            26) MSG="Restriction: 'Closed to Arrival' (CTA) set for $OTA on Sunday." ;;
+            27) MSG="Restriction: 'Closed to Departure' (CTD) lifted for $OTA." ;;
+            28) MSG="Price optimization: Increasing rates on $OTA by 5% due to high demand." ;;
+            29) MSG="Audit: Discrepancy found between PMS and $OTA for $HOTEL_ID."; LEVEL="ERROR" ;;
+            30) MSG="API Quota: $OTA rate limit at 75% capacity."; LEVEL="WARN" ;;
+            31) MSG="Success: 200 OK from $OTA 'RoomRateUpdate' endpoint." ;;
+            32) MSG="Skipping sync: No changes detected for $HOTEL_ID in the last 10 min." ;;
+            33) MSG="Bulk update: Copying $HOTEL_ID configuration to $OTA secondary account." ;;
+            34) MSG="Security: Rotating API credentials for $OTA integration." ;;
+            35) MSG="Alert: $OTA reported 'Invalid Room Code' during push."; LEVEL="ERROR" ;;
+            36) MSG="Child policy: Sending updated age brackets to $OTA." ;;
+            37) MSG="Tax update: VAT 10% included in all rates sent to $OTA." ;;
+            38) MSG="Connectivity: $OTA endpoint migrated to new AWS region." ;;
+            39) MSG="Sync Queue: 54 hotels waiting for ARI update to $OTA." ;;
+            40) MSG="Push failed: $OTA rejected payload (Malformed XML)."; LEVEL="ERROR" ;;
+            41) MSG="Success: Extra bed supplement added to $ROOM_TYPE on $OTA." ;;
+            42) MSG="Restriction: 'Min Stay Through' set to 2 nights for $HOTEL_ID." ;;
+            43) MSG="Data: Pushing 12 months of 'No-Refundable' rates to $OTA." ;;
+            44) MSG="Alert: $OTA portal is currently in Read-Only mode."; LEVEL="WARN" ;;
+            45) MSG="Logging: Detailed ARI payload stored in S3 bucket for audit." ;;
+            46) MSG="Success: Breakfast-included rate plan synced with $OTA." ;;
+            47) MSG="Error: Database lock preventing inventory update for $HOTEL_ID."; LEVEL="ERROR" ;;
+            48) MSG="Notification: $OTA sync completed in 342ms." ;;
+            49) MSG="Service: Inventory balancer redistributed units among $OTA and other portals." ;;
+          esac
+
+          echo "[$DATE] $LEVEL - [ChannelSync-ARI] - Portal: $OTA - $MSG"
+
+          # Intervalo 1 a 3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: erp-access-simulator
+  labels:
+    app: erp-gateway
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- ERP Corporate Gateway Service Active ---"
+        
+        while true; do
+          # Variables dinámicas para el entorno ERP
+          USR="EMP-$(($RANDOM % 8000 + 1000))"
+          SESSION="SID-$(($RANDOM % 90000 + 10000))"
+          MODULE=$(echo "Finance|HumanResources|SupplyChain|Manufacturing|SalesForce|Compliance" | tr '|' '\n' | shuf -n 1)
+          IP="10.$((RANDOM%5)).$((RANDOM%254)).$((RANDOM%254))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 50))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="SSO Authentication: User $USR login successful via AzureAD." ;;
+            1)  MSG="Session $SESSION established for $USR from internal IP $IP." ;;
+            2)  MSG="Access Granted: $USR authorized to enter module [$MODULE]." ;;
+            3)  MSG="Audit: $USR accessed sensitive financial records (Table: FAGLFLEXA)." ;;
+            4)  MSG="License Manager: User $USR is consuming 1 Professional User seat." ;;
+            5)  MSG="Login Failed: $USR entered invalid MFA token from $IP."; LEVEL="WARN" ;;
+            6)  MSG="Security Alert: Concurrent login detected for $USR (Session $SESSION)."; LEVEL="WARN" ;;
+            7)  MSG="Permission Denied: $USR attempted to modify payroll data in [$MODULE]."; LEVEL="ERROR" ;;
+            8)  MSG="Database: ERP core connection pool at 85% capacity."; LEVEL="WARN" ;;
+            9)  MSG="Role Sync: Updated permissions for $USR (Added: Manager_Global_Read)." ;;
+            10) MSG="Session $SESSION timeout after 30 minutes of inactivity." ;;
+            11) MSG="Data Export: $USR downloaded 500 records from [$MODULE] to CSV." ;;
+            12) MSG="Performance: Transaction SE16N execution time: 1450ms for $USR."; LEVEL="WARN" ;;
+            13) MSG="Token Refresh: OIDC token renewed for session $SESSION." ;;
+            14) MSG="User $USR explicitly logged out from [$MODULE]." ;;
+            15) MSG="Batch Job: Nightly reconciliation started by system user ERP_ADMIN." ;;
+            16) MSG="Integration Error: Failed to sync $MODULE data with external CRM API."; LEVEL="ERROR" ;;
+            17) MSG="Password Policy: $USR forced to change password at next login." ;;
+            18) MSG="Access Revoked: $USR account disabled due to offboarding status."; LEVEL="ERROR" ;;
+            19) MSG="VPN Check: Connection for $USR verified through SecureGateway." ;;
+            20) MSG="System Alert: Maintenance mode scheduled for Saturday 02:00 AM." ;;
+            21) MSG="Audit Trace: $USR modified vendor bank details (IBAN changed)." ;;
+            22) MSG="License Alert: Only 5 Professional User seats remaining."; LEVEL="WARN" ;;
+            23) MSG="Module $MODULE: Cache cleared for user $USR." ;;
+            24) MSG="Encryption: TLS 1.3 handshake successful for $IP." ;;
+            25) MSG="Warning: Account $USR locked after 3 failed MFA attempts."; LEVEL="ERROR" ;;
+            26) MSG="API Request: External BI tool fetching data from $MODULE (Query: Q-102)." ;;
+            27) MSG="PDF Generated: Invoice INV-$(($RANDOM%9999)) created by $USR." ;;
+            28) MSG="Approval Workflow: $USR approved Purchase Order PO-$(($RANDOM%500))." ;;
+            29) MSG="Security: Geo-fencing check passed for $USR (Location: HQ_Office)." ;;
+            30) MSG="Module $MODULE: Data integrity check completed (No errors)." ;;
+            31) MSG="Alert: Unusual data volume access by $USR in $MODULE."; LEVEL="WARN" ;;
+            32) MSG="Internal Error: Kernel panic in ERP dispatcher process."; LEVEL="ERROR" ;;
+            33) MSG="Session $SESSION: Language set to 'ES-ES' for user $USR." ;;
+            34) MSG="Compliance: GDPR-related data masking applied for $USR in RRHH." ;;
+            35) MSG="Database: Commit successful for transaction TX-$(($RANDOM%999))." ;;
+            36) MSG="Audit: $USR viewed employee social security numbers."; LEVEL="WARN" ;;
+            37) MSG="Performance: GUI rendering latency for $IP at 340ms." ;;
+            38) MSG="Role Sync: $USR removed from group 'Finance_Admin' (Policy change)." ;;
+            39) MSG="Update: New patch level applied to ERP $MODULE module." ;;
+            40) MSG="Critical: Unauthorized database access attempt from $IP!"; LEVEL="ERROR" ;;
+            41) MSG="Success: $USR uploaded expense report EXP-$(($RANDOM%99))." ;;
+            42) MSG="Session $SESSION: Connection switched to secondary cluster node." ;;
+            43) MSG="System: High CPU usage on ERP Application Server #04."; LEVEL="WARN" ;;
+            44) MSG="Workflow: $USR rejected approval request for travel expenses." ;;
+            45) MSG="Audit: $USR requested 'Forgot Password' link from $IP." ;;
+            46) MSG="License: $USR switched to 'Employee Self-Service' (ESS) license." ;;
+            47) MSG="Error: SAP_GUI_COMMUNICATION_FAILURE on $IP."; LEVEL="ERROR" ;;
+            48) MSG="Success: $USR synced personal calendar with ERP $MODULE." ;;
+            49) MSG="Session $SESSION: Final logout recorded. Cleanup complete." ;;
+          esac
+
+          echo "[$DATE] $LEVEL - [ERP-Access-Gateway] - User: $USR - Session: $SESSION - $MSG"
+
+          # Intervalo oscilando entre 1 y 3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+
+
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hrms-simulator
+  labels:
+    app: hr-management
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- HRMS Core Service Active | Employee Lifecycle Logging ---"
+        
+        while true; do
+          # Variables dinámicas para el entorno de RRHH
+          EMP_ID="EMP-$(($RANDOM % 5000 + 1000))"
+          CAND_ID="CAND-$(($RANDOM % 9000 + 1000))"
+          DEPT=$(echo "Engineering|Sales|Marketing|Legal|Finance|Product" | tr '|' '\n' | shuf -n 1)
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 50))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="Employee $EMP_ID requested 5 days of 'Annual Leave' for next month." ;;
+            1)  MSG="Manager approved vacation request for $EMP_ID in $DEPT department." ;;
+            2)  MSG="Payroll: Monthly salary calculation started for $DEPT cluster." ;;
+            3)  MSG="New Candidate $CAND_ID applied for 'Senior Developer' position." ;;
+            4)  MSG="Recruitment: Interview scheduled for $CAND_ID with $DEPT team." ;;
+            5)  MSG="Onboarding: Welcome package and credentials sent to new hire $EMP_ID." ;;
+            6)  MSG="Performance Review: $EMP_ID completed the self-assessment form." ;;
+            7)  MSG="Training: $EMP_ID enrolled in 'Cybersecurity Awareness' mandatory course." ;;
+            8)  MSG="Alert: $EMP_ID has not completed the mandatory compliance training."; LEVEL="WARN" ;;
+            9)  MSG="Benefit Update: $EMP_ID modified their health insurance plan." ;;
+            10) MSG="Promoted: $EMP_ID moved to a 'Lead' role in $DEPT." ;;
+            11) MSG="Payroll: Bonus payment of $(($RANDOM%1000+500)) EUR processed for $EMP_ID." ;;
+            12) MSG="Attendance: $EMP_ID clocked in at 08:55 AM (Remote)." ;;
+            13) MSG="Attendance: $EMP_ID clocked out at 06:05 PM (Office)." ;;
+            14) MSG="Document: $EMP_ID uploaded a new 'Professional Certificate' to their profile." ;;
+            15) MSG="Warning: Multiple failed attempts to access Payroll DB by $EMP_ID."; LEVEL="ERROR" ;;
+            16) MSG="Offboarding: $EMP_ID resignation received. Exit interview scheduled." ;;
+            17) MSG="Data Privacy: GDPR 'Right to Access' request initiated by $EMP_ID." ;;
+            18) MSG="System: Integration sync with LinkedIn Recruiter successful." ;;
+            19) MSG="Expense: $EMP_ID submitted a travel expense report for approval." ;;
+            20) MSG="Legal: $EMP_ID requested a copy of their employment contract." ;;
+            21) MSG="Finance: New tax bracket applied to $EMP_ID based on local regulations." ;;
+            22) MSG="Health: $EMP_ID reported a sick leave (Doctor's note attached)." ;;
+            23) MSG="Recruitment: Offer letter sent to $CAND_ID. Awaiting signature." ;;
+            24) MSG="Success: $CAND_ID accepted the offer for $DEPT." ;;
+            25) MSG="Audit: Admin modified the 'Remote Work' policy for $DEPT."; LEVEL="WARN" ;;
+            26) MSG="Error: Payroll API returned a timeout during bank transfer."; LEVEL="ERROR" ;;
+            27) MSG="Employee Survey: $EMP_ID submitted the 'Engagement & Culture' survey." ;;
+            28) MSG="System: Automatic backup of employee digital files completed." ;;
+            29) MSG="Badge: $EMP_ID requested a replacement for a lost physical office key."; LEVEL="WARN" ;;
+            30) MSG="Meeting: 1-on-1 feedback session logged between Manager and $EMP_ID." ;;
+            31) MSG="Skills: $EMP_ID updated their profile with 'Kubernetes' and 'Go'." ;;
+            32) MSG="HR-Bot: Automated answer sent to $EMP_ID regarding 'Parental Leave' policy." ;;
+            33) MSG="Relocation: $EMP_ID started the 'Office Transfer' process to Madrid." ;;
+            34) MSG="Safety: Incident report filed by $EMP_ID (Minor office accident)."; LEVEL="WARN" ;;
+            35) MSG="Compensation: Annual salary benchmark report generated for $DEPT." ;;
+            36) MSG="Work-Life: $EMP_ID requested a shift to 'Flexible Hours'." ;;
+            37) MSG="Compliance: All I-9/ID documents verified for $EMP_ID." ;;
+            38) MSG="Integration: Syncing $DEPT org chart with Slack/Teams." ;;
+            39) MSG="Contractor: $EMP_ID contract extension approved for 6 months." ;;
+            40) MSG="Critical: Unauthorized export of employee salary list detected!"; LEVEL="ERROR" ;;
+            41) MSG="Referral: $EMP_ID referred $CAND_ID for an open position." ;;
+            42) MSG="Stock Options: $EMP_ID vested 100 shares (Plan 2024)." ;;
+            43) MSG="Device: New laptop (MacBook Pro) assigned to hire $EMP_ID." ;;
+            44) MSG="Payroll: Tax withholding adjusted for $EMP_ID due to family change." ;;
+            45) MSG="Recruitment: Candidate $CAND_ID failed the technical background check."; LEVEL="WARN" ;;
+            46) MSG="Analytics: Headcount report for Q1 sent to Leadership." ;;
+            47) MSG="Success: $EMP_ID completed the 'Leadership Excellence' program." ;;
+            48) MSG="Internal: $EMP_ID applied for an internal transfer to $DEPT." ;;
+            49) MSG="Nightly Job: Archiving records of former employees older than 5 years." ;;
+          esac
+
+          # Salida formateada
+          echo "[$DATE] $LEVEL - [HR-Core-Service] - Dept: $DEPT - $MSG"
+
+          # Intervalo oscilando entre 1 y 3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+
+
+
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: intranet-server-simulator
+  labels:
+    app: corporate-intranet
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Corporate Intranet Server Active | Port 80/443 Simulation ---"
+        
+        while true; do
+          # Variables de tráfico de Intranet
+          USR="USER-$(($RANDOM % 5000 + 1000))"
+          DOC="DOC-$(($RANDOM % 9000 + 100))"
+          SECTION=$(echo "News|Benefits|IT-Support|ProjectSpace|CEO-Blog|Policies|Directory" | tr '|' '\n' | shuf -n 1)
+          IP="10.$((RANDOM%10 + 20)).$((RANDOM%254)).$((RANDOM%254))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 50))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="GET /index.php HTTP/1.1 - User $USR accessed Homepage." ;;
+            1)  MSG="Search request: $USR searched for 'expense policy' in /$SECTION." ;;
+            2)  MSG="Document Download: $USR downloaded $DOC.pdf from /Policies." ;;
+            3)  MSG="Wiki Edit: $USR updated page 'Onboarding_Process' in /ProjectSpace." ;;
+            4)  MSG="Access Denied: $USR tried to access /Finance/Payroll_Q1.xlsx without clearance."; LEVEL="ERROR" ;;
+            5)  MSG="News Feed: $USR liked the article 'New Office Opening' in /News." ;;
+            6)  MSG="IT Support: $USR submitted a ticket via /Helpdesk (ID: TKT-$((RANDOM%999)))." ;;
+            7)  MSG="Directory Lookup: $USR viewed contact details for $(($RANDOM%5000+1000))." ;;
+            8)  MSG="Cache Miss: Static assets for /CEO-Blog reloaded for $IP."; LEVEL="WARN" ;;
+            9)  MSG="Comment: $USR posted a comment on $SECTION forum." ;;
+            10) MSG="Security: $USR session token validated via Kerberos/NTLM." ;;
+            11) MSG="File Upload: $USR uploaded 'Presentation_Draft.pptx' to /Shared/$(($RANDOM%10))." ;;
+            12) MSG="Redirection: User $USR moved from /old-portal to /new-portal (301 Moved)." ;;
+            13) MSG="Error 404: $USR requested missing asset /images/header_v2_old.png."; LEVEL="WARN" ;;
+            14) MSG="Session Start: $USR authenticated from $IP (Browser: Chrome/Internal)." ;;
+            15) MSG="Policy Update: $USR confirmed reading 'Code_of_Conduct_2026.pdf'." ;;
+            16) MSG="System Alert: Intranet search indexer started full crawl."; LEVEL="INFO" ;;
+            17) MSG="Maintenance: CMS background worker cleared temporary files." ;;
+            18) MSG="API Request: Mobile App synced /News for user $USR." ;;
+            19) MSG="Database: Query for 'Employee of the Month' took $((RANDOM%2000))ms."; LEVEL="WARN" ;;
+            20) MSG="Permission Update: Admin added $USR to 'Manager-Only' group." ;;
+            21) MSG="Collaboration: $USR started a live document session for $DOC." ;;
+            22) MSG="Health Check: Intranet node #02 is READY (Load: 1.25)." ;;
+            23) MSG="Security: Potential SQL Injection attempt detected from $IP!"; LEVEL="ERROR" ;;
+            24) MSG="Survey: $USR completed the 'Canteen Satisfaction' poll." ;;
+            25) MSG="Document Lock: $DOC is currently being edited by another user."; LEVEL="WARN" ;;
+            26) MSG="Video Stream: $USR is watching 'Townhall_Live_Stream' in /$SECTION." ;;
+            27) MSG="Broken Link: $USR clicked a dead link in /Benefits/Health_Plan."; LEVEL="WARN" ;;
+            28) MSG="Theme Change: $USR switched to 'Dark Mode' UI." ;;
+            29) MSG="Language: $USR set portal language to 'Spanish (ES)'." ;;
+            30) MSG="Integrity: Checksum for critical policy $DOC verified successfully." ;;
+            31) MSG="Sync: User $USR profile photo updated from Active Directory." ;;
+            32) MSG="High Traffic: 150+ concurrent users active in /$SECTION."; LEVEL="WARN" ;;
+            33) MSG="Calendar: $USR added 'General Meeting' to their Intranet calendar." ;;
+            34) MSG="Plugin: PDF Viewer extension loaded for $USR." ;;
+            35) MSG="Error 500: Database connection lost in /ProjectSpace module."; LEVEL="ERROR" ;;
+            36) MSG="Search: No results found for 'free snacks' (User: $USR)." ;;
+            37) MSG="Audit: Admin exported access logs for /Legal section." ;;
+            38) MSG="Session Renewal: $USR extended session by 60 minutes." ;;
+            39) MSG="Shortcut: $USR added /$SECTION/Important_Tools to favorites." ;;
+            40) MSG="Critical: Intranet storage reaching 95% capacity."; LEVEL="ERROR" ;;
+            41) MSG="Branding: New corporate logo assets deployed to all pages." ;;
+            42) MSG="Performance: CSS/JS minification reduced page load by 300ms." ;;
+            43) MSG="Warning: Expired SSL certificate detected on internal test node."; LEVEL="ERROR" ;;
+            44) MSG="Success: $USR successfully booked Meeting Room 4A." ;;
+            45) MSG="API: Weather widget in /News updated successfully." ;;
+            46) MSG="Security: $USR changed their PIN for secure printing access." ;;
+            47) MSG="Document Versioning: $DOC reverted to v2.3 by $USR." ;;
+            48) MSG="Social: $USR mentioned @CEO in a $SECTION comment." ;;
+            49) MSG="Session End: $USR logged out. Cleanup successful." ;;
+          esac
+
+          # Salida formateada
+          echo "[$DATE] $LEVEL - [Intranet-CMS] - Client: $IP - $MSG"
+
+          # Intervalo 1-3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+
+
+
+
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: siem-platform-simulator
+  labels:
+    app: security-ops
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- SIEM Core Engine Active | Monitoring SOC Events ---"
+        
+        while true; do
+          # Variables de entorno de ciberseguridad
+          ALERT_ID="ALRT-$(($RANDOM % 9000 + 1000))"
+          SENSOR="SENSOR-$(( (RANDOM % 10) + 1 ))"
+          SOURCE_IP="$((RANDOM%254 + 1)).$((RANDOM%254 + 1)).$((RANDOM%254 + 1)).$((RANDOM%254 + 1))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 50))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="Correlation Rule 'Brute Force Detected' triggered for IP $SOURCE_IP." ;;
+            1)  MSG="Alert $ALERT_ID: Severity escalated to HIGH by Behavioral Analysis engine."; LEVEL="WARN" ;;
+            2)  MSG="Data Ingestion: Received 5000 EPS (Events Per Second) from Firewall-Cluster." ;;
+            3)  MSG="Threat Intelligence: IP $SOURCE_IP matched known 'C2_Botnet' blacklist." ;;
+            4)  MSG="Incident Created: INC-$(($RANDOM%999)) assigned to Analyst_L1." ;;
+            5)  MSG="Parser Error: Failed to normalize logs from legacy Mainframe at 10.0.0.5."; LEVEL="ERROR" ;;
+            6)  MSG="User $ALERT_ID: Impossible Travel detected (Login from Spain, then China in 10 min)."; LEVEL="WARN" ;;
+            7)  MSG="Index Status: Security_Logs_Hot-$(date +%d) optimized successfully." ;;
+            8)  MSG="Alert $ALERT_ID: False Positive marked by SOC Manager. Rule tuning suggested." ;;
+            9)  MSG="Log Forwarder: Connection lost with $SENSOR in DMZ."; LEVEL="ERROR" ;;
+            10) MSG="Detection: Lateral movement pattern detected from workstation 192.168.1.55."; LEVEL="WARN" ;;
+            11) MSG="SOAR Workflow: Automatic IP block initiated for $SOURCE_IP on Edge Firewall." ;;
+            12) MSG="Database: Global search for 'Mimikatz' strings completed in 4500ms." ;;
+            13) MSG="Compliance: Monthly PCI-DSS report generation started." ;;
+            14) MSG="Health Check: SIEM Storage at 80% capacity. Purge policy active."; LEVEL="WARN" ;;
+            15) MSG="Audit: Admin modified Correlation Rule 'Data_Exfiltration_Internal'." ;;
+            16) MSG="New Asset Discovered: Host-$(($RANDOM%999)) added to Vulnerability Scanner queue." ;;
+            17) MSG="API: Ingesting STIX/TAXII threat feed from external provider." ;;
+            18) MSG="Alert $ALERT_ID: DNS Tunneling detected via unusual TXT record queries."; LEVEL="WARN" ;;
+            19) MSG="Anomaly: 400% increase in 404 errors from WebServer-01."; LEVEL="WARN" ;;
+            20) MSG="Critical: Unauthorized access to SIEM Configuration Console from $SOURCE_IP!"; LEVEL="ERROR" ;;
+            21) MSG="User $ALERT_ID: Login with expired certificate detected."; LEVEL="WARN" ;;
+            22) MSG="Resource: CPU spike on Indexer-01 due to complex regex query."; LEVEL="WARN" ;;
+            23) MSG="Integrity: Kernel integrity check passed on all Linux $SENSOR nodes." ;;
+            24) MSG="Alert $ALERT_ID: PowerShell execution with Base64 encoded command."; LEVEL="WARN" ;;
+            25) MSG="Archiving: Cold storage migration for logs older than 90 days finished." ;;
+            26) MSG="Identity: Unusual privilege escalation (mimicking 'Domain Admin') detected."; LEVEL="ERROR" ;;
+            27) MSG="Malware Sandbox: File 'invoice.exe' analyzed. Result: MALICIOUS."; LEVEL="ERROR" ;;
+            28) MSG="Threat Hunting: No matches found for 'Log4Shell' exploit patterns in last 24h." ;;
+            29) MSG="Log Source: AWS CloudTrail integration successfully refreshed." ;;
+            30) MSG="System: $SENSOR memory usage stabilized after garbage collection." ;;
+            31) MSG="Notification: Alert $ALERT_ID sent to Slack channel #security-alerts." ;;
+            32) MSG="Alert $ALERT_ID: Ransomware-like file encryption activity detected on FileServer."; LEVEL="ERROR" ;;
+            33) MSG="Encryption: Certificate for SIEM Web Interface expires in 10 days."; LEVEL="WARN" ;;
+            34) MSG="Success: Rule $ALERT_ID successfully pushed to all 50 forwarders." ;;
+            35) MSG="Warning: Latency in event processing pipeline exceeded 30s."; LEVEL="WARN" ;;
+            36) MSG="Audit: $ALERT_ID session closed. Total 45 queries executed." ;;
+            37) MSG="Report: Executive dashboard updated for CISO review." ;;
+            38) MSG="Agent Update: $SENSOR updated to v4.5.2 Build 2026." ;;
+            39) MSG="API: Received request from SOAR for 'Full Host Details' on 10.5.5.1." ;;
+            40) MSG="Alert $ALERT_ID: Multiple 'Account Lockout' events in Active Directory."; LEVEL="WARN" ;;
+            41) MSG="Data Loss Prevention: $SOURCE_IP blocked from uploading PDF to personal cloud." ;;
+            42) MSG="Maintenance: Rebuilding metadata for 'Windows_Event_Log' index." ;;
+            43) MSG="Threat Intelligence: Malicious domain 'paypaI-secure.com' blocked globally." ;;
+            44) MSG="User Behavior: $ALERT_ID baseline updated. New 'normal' activity calculated." ;;
+            45) MSG="Error: Unexpected EOF in Syslog stream from $SENSOR."; LEVEL="ERROR" ;;
+            46) MSG="VPN: Failed tunnel negotiation from $SOURCE_IP (Invalid IKE Proposal)."; LEVEL="WARN" ;;
+            47) MSG="Audit: Data retention policy updated to 1 year for Legal compliance." ;;
+            48) MSG="Dashboard: High-frequency refresh enabled for 'Global Attack Map'." ;;
+            49) MSG="System Shutdown: SIEM Orchestrator node #03 restarting for patch." ;;
+          esac
+
+          # Salida formateada
+          echo "[$DATE] $LEVEL - [SIEM-Engine-X] - ID: $ALERT_ID - Origin: $SENSOR - $MSG"
+
+          # Intervalo 1-3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+
+
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: procurement-app-simulator
+  labels:
+    app: e-procurement
+spec:
+  containers:
+  - name: generator
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Corporate Procurement System Active | Flow: PR to Payment ---"
+        
+        while true; do
+          # Variables dinámicas de compras
+          PR_ID="PR-$(($RANDOM % 9000 + 1000))"
+          PO_ID="PO-$(($RANDOM % 8000 + 1000))"
+          SUPPLIER=$(echo "Dell|Global_Office|Fast_Logistics|Cloud_Systems|Iron_Steel_Co|OfficeDepot" | tr '|' '\n' | shuf -n 1)
+          USR="BUYER-$(($RANDOM % 500 + 100))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 50))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0)  MSG="Purchase Request $PR_ID created by $USR for 'IT Equipment'." ;;
+            1)  MSG="Budget Check: $PR_ID approved for Cost Center #$(($RANDOM%99+100))." ;;
+            2)  MSG="Workflow: $PR_ID pending approval from Finance Manager." ;;
+            3)  MSG="Purchase Order $PO_ID generated from $PR_ID for supplier $SUPPLIER." ;;
+            4)  MSG="PO $PO_ID sent to $SUPPLIER via Electronic Data Interchange (EDI)." ;;
+            5)  MSG="Inventory: Low stock alert for 'Laptops' (Threshold: 5 units)."; LEVEL="WARN" ;;
+            6)  MSG="Quote Request: $USR sent RFQ to 3 suppliers for project 'H1-Server-Refresh'." ;;
+            7)  MSG="Vendor Management: New supplier '$SUPPLIER' successfully onboarded." ;;
+            8)  MSG="Error: Unable to match Invoice INV-$((RANDOM%999)) with any open PO."; LEVEL="ERROR" ;;
+            9)  MSG="Approval: $PR_ID REJECTED due to 'Incorrect Cost Center assignment'."; LEVEL="WARN" ;;
+            10) MSG="Goods Receipt (GR): Items for $PO_ID received at Warehouse A." ;;
+            11) MSG="Quality Control: Items from $SUPPLIER for $PO_ID passed inspection." ;;
+            12) MSG="Three-Way Match: PO, GR, and Invoice matched for $PO_ID. Ready for payment." ;;
+            13) MSG="Payment: Wire transfer of $(($RANDOM%5000+500)) EUR authorized for $SUPPLIER." ;;
+            14) MSG="System: Supplier $SUPPLIER updated their bank account details." ;;
+            15) MSG="Alert: $SUPPLIER delivery for $PO_ID is 5 days overdue."; LEVEL="WARN" ;;
+            16) MSG="Audit: User $USR accessed confidential 'Master Pricing Agreement'." ;;
+            17) MSG="Catalog: 250 new items imported from $SUPPLIER digital catalog." ;;
+            18) MSG="Integration: Syncing $PO_ID data with Corporate ERP (SAP/Oracle)." ;;
+            19) MSG="Database: Deadlock detected during bulk PO processing (Retrying)."; LEVEL="ERROR" ;;
+            20) MSG="Contract Management: Service contract with $SUPPLIER expires in 30 days."; LEVEL="WARN" ;;
+            21) MSG="Security: $USR session revoked due to multiple failed transaction signs."; LEVEL="ERROR" ;;
+            22) MSG="User $USR applied 'SUMMER-CORP' discount code to $PR_ID." ;;
+            23) MSG="Workflow: Automatic escalation of $PR_ID (No action in 48h)."; LEVEL="WARN" ;;
+            24) MSG="Currency: Exchange rate updated (1 USD = 0.92 EUR) for international PO." ;;
+            25) MSG="Report: Quarterly 'Spending Analysis' generated by $USR." ;;
+            26) MSG="Vat Tax: Calculated $(($RANDOM%500)) EUR tax for $PO_ID." ;;
+            27) MSG="Attachment: $USR uploaded 'Technical_Specs.pdf' to $PR_ID." ;;
+            28) MSG="Supplier Portal: $SUPPLIER acknowledged receipt of $PO_ID." ;;
+            29) MSG="Warning: Price discrepancy (>10%) detected in $PO_ID vs Contract."; LEVEL="WARN" ;;
+            30) MSG="Category Manager: $USR updated 'Preferred Supplier' list for 'Furniture'." ;;
+            31) MSG="API: Fetching real-time shipping status for $PO_ID from $SUPPLIER." ;;
+            32) MSG="Compliance: Anti-corruption document signed by $SUPPLIER." ;;
+            33) MSG="Tax: $USR modified withholding tax category for $SUPPLIER." ;;
+            34) MSG="Success: Batch payment of 15 invoices completed (Total: 45,000 EUR)." ;;
+            35) MSG="Warehouse: Bin location B-12 assigned for $PO_ID storage." ;;
+            36) MSG="Error: $USR attempted to approve a PR above their 50,000€ limit."; LEVEL="ERROR" ;;
+            37) MSG="Maintenance: Re-indexing 'Supplier_Search' table." ;;
+            38) MSG="Mobile App: $USR approved $PR_ID via smartphone." ;;
+            39) MSG="Notification: Email sent to $USR: 'Your order $PO_ID has shipped'." ;;
+            40) MSG="Critical: ERP connector is DOWN. $PO_ID stuck in 'Pending Sync'."; LEVEL="ERROR" ;;
+            41) MSG="Negotiation: $USR marked $PR_ID for 'Strategic Sourcing' review." ;;
+            42) MSG="Supplier Risk: $SUPPLIER credit score downgraded by external agency."; LEVEL="WARN" ;;
+            43) MSG="Success: Refund of 120 EUR processed for returned items on $PO_ID." ;;
+            44) MSG="Workflow: $USR delegated approval authority to USER-999 (Out of office)." ;;
+            45) MSG="Internal: Cost center #105 budget exceeded by 2,000 EUR."; LEVEL="WARN" ;;
+            46) MSG="Security: Multi-signature required for payments > 100,000 EUR." ;;
+            47) MSG="Analytics: Top 5 Suppliers report sent to CFO." ;;
+            48) MSG="Success: Punch-out session with $SUPPLIER website completed." ;;
+            49) MSG="Session: $USR logged out. All pending PR drafts saved." ;;
+          esac
+
+          # Salida formateada para logs
+          echo "[$DATE] $LEVEL - [Procurement-Core] - Buyer: $USR - Ref: ${PR_ID:-$PO_ID} - $MSG"
+
+          # Intervalo 1 a 3 segundos
+          sleep $(( (RANDOM % 3) + 1 ))
+        done
+
+
+
+

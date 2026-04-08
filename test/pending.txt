@@ -1,3 +1,11 @@
+******************LONGTERM ROADMAP
+implment SSO
+implement IdP integration
+implement JWT
+Create a Taurin compatible build
+grafana plugins
+Pinocchio (Kubernetes autonomo)
+
 ******************ERRORES
 RFM
 

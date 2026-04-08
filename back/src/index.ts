@@ -62,6 +62,7 @@ const fs = require('fs')
 //     return originalFetch(...args);
 // }
 
+process.versions.electron = "si"
 const runningEnv = {
   isElectron: !!(process.versions && process.versions.electron),
   isDocker: fs.existsSync('/.dockerenv'),

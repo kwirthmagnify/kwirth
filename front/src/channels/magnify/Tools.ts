@@ -37,34 +37,75 @@ function objectEqual(obj1: any, obj2: any): boolean {
     return true
 }
 
-function objectSearch(obj: any, text: string, matchCase:boolean): string[] {
-    const paths: string[] = []
-    if (!text) return []
+// function objectSearch(obj: any, text: string, matchCase:boolean): string[] {
+//     const paths: string[] = []
+//     if (!text) return []
 
-    const searchTerm = matchCase? text : text.toLowerCase()
+//     const searchTerm = matchCase? text : text.toLowerCase()
+
+//     function search(value: any, currentPath: string) {
+//         if (value === null || value === undefined) return
+
+//         if (typeof value === 'object') {
+//             for (const key in value) {
+//                 if (Object.prototype.hasOwnProperty.call(value, key)) {
+//                     const newPath = Array.isArray(value) ? 
+//                         `${currentPath}[${key}]` : 
+//                         (currentPath ? `${currentPath}.${key}` : key)
+                    
+//                     search(value[key], newPath)
+//                 }
+//             }
+//         }
+//         else {
+//             if (String(value).toLowerCase().includes(searchTerm)) paths.push(currentPath)
+//         }
+//     }
+
+//     search(obj, "")
+
+//     return [...new Set(paths)].filter(p => p !== "")
+// }
+
+function objectSearch(obj: any, text: string, matchCase: boolean): string[] {
+    const paths: string[] = [];
+    if (!text) return [];
+
+    const searchTerm = matchCase ? text : text.toLowerCase();
 
     function search(value: any, currentPath: string) {
-        if (value === null || value === undefined) return
+        if (value === null || value === undefined) return;
 
         if (typeof value === 'object') {
             for (const key in value) {
                 if (Object.prototype.hasOwnProperty.call(value, key)) {
                     const newPath = Array.isArray(value) ? 
                         `${currentPath}[${key}]` : 
-                        (currentPath ? `${currentPath}.${key}` : key)
-                    
-                    search(value[key], newPath)
+                        (currentPath ? `${currentPath}.${key}` : key);
+
+                    // --- CAMBIO AQUÍ: Validar si la LLAVE coincide ---
+                    const keyToCompare = matchCase ? key : key.toLowerCase();
+                    if (keyToCompare.includes(searchTerm)) {
+                        paths.push(newPath);
+                    }
+
+                    search(value[key], newPath);
                 }
             }
-        }
-        else {
-            if (String(value).toLowerCase().includes(searchTerm)) paths.push(currentPath)
+        } else {
+            const valueStr = String(value);
+            const valueToCompare = matchCase ? valueStr : valueStr.toLowerCase();
+            
+            if (valueToCompare.includes(searchTerm)) {
+                paths.push(currentPath);
+            }
         }
     }
 
-    search(obj, "")
+    search(obj, "");
 
-    return [...new Set(paths)].filter(p => p !== "")
+    // Usamos Set para evitar duplicados si una llave y su valor coinciden
+    return [...new Set(paths)].filter(p => p !== "");
 }
 
 function convertBytesToSize(bytes: number, decimals: number = 2): string {
