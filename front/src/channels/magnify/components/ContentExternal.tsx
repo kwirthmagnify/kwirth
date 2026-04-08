@@ -1,10 +1,10 @@
+import { useEffect, useRef, useState } from 'react'
 import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EMetricsConfigMode, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelObject, IContentProps } from '../../IChannel'
 import { Box, DialogContent, DialogTitle, Divider, IconButton, Popover, Stack, Typography } from '@mui/material'
 import { Close, Fullscreen, FullscreenExit, Info, Minimize, PauseCircle, PinDrop, Place, PlayCircle, Settings, StopCircle } from '@mui/icons-material'
 import { ELogSortOrder, ILogConfig, ILogInstanceConfig } from '../../log/LogConfig'
 import { ILogData } from '../../log/LogData'
-import { useEffect, useState } from 'react'
 import { createChannelInstance } from '../../../tools/ChannelTools'
 import { ENotifyLevel } from '../../../tools/Global'
 import { IMetricsConfig, IMetricsInstanceConfig } from '../../metrics/MetricsConfig'
@@ -24,6 +24,7 @@ import { ITrivyData } from '../../trivy/TrivyData'
 import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
 import { TerminalManager } from '../../ops/Terminal/TerminalManager'
+import { channel } from 'diagnostics_channel'
 
 export interface IContentExternalOptions {
     pauseable: boolean
@@ -63,6 +64,7 @@ export interface IContentExternalObject {
 
 const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternalProps) => {
     let contentExternalData:IContentExternalData = props.data
+    const containerRef = useRef<HTMLDivElement>(null);
     const [ msgBox, setMsgBox ] = useState(<></>)
     const [ anchorHelp, setAnchorHelp ] = useState<undefined | HTMLElement>(undefined)
     const [ anchorConfig, setAnchorConfig ] = useState<undefined | HTMLElement>(undefined)
@@ -145,9 +147,12 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
     },[])
 
     useEffect(() => {
-        // this Effect must be executed after initial useEffect, because it uses content.current
         if (contentExternalData.channelId==='ops') {
             const handleNativeKey = async (e: KeyboardEvent) => {
+                if (!containerRef.current?.contains(document.activeElement)) {
+                    return;
+                }
+
                 if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) return
 
                 // we handle first start and restore (the id comes from a different source). This is needed because the id is included in the colusure of the keyboard handle)
@@ -163,11 +168,15 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 const key = e.key.toLowerCase();
                 let toSend: string | null = null;
 
+                if (e.ctrlKey && key === 'w') {
+                    // +++ close tab
+                }
+
                 // Ctrl + Shift + C = copy
                 if (e.ctrlKey && e.shiftKey && key === 'c') {
-                    e.preventDefault();
-                    const selectedText = terminalEntry.term ? terminalEntry.term.getSelection() : window.getSelection()?.toString();
-                    if (selectedText) await navigator.clipboard.writeText(selectedText);
+                    e.preventDefault()
+                    const selectedText = terminalEntry.term ? terminalEntry.term.getSelection() : window.getSelection()?.toString()
+                    if (selectedText) await navigator.clipboard.writeText(selectedText)
                     return
                 }
 
@@ -196,7 +205,6 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 }
             }
 
-            // Use 'true' for the capture phase
             window.addEventListener('keydown', handleNativeKey, true)
             
             return () => {
@@ -589,7 +597,13 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
         let channelProps:IContentProps = {
             channelObject: contentExternalData.content.externalChannelObject!
         }
-        return <ChannelTabContent {...channelProps}/>
+        // we need this ref for getting focus statis con terms. We need this for capturing keys ONLUY for terminal in focus (due to global keyboard listeners)
+        return channelProps.channelObject.channelId==='ops'?
+            <div ref={containerRef}>
+                <ChannelTabContent {...channelProps}/>
+            </div>
+            :
+            <ChannelTabContent {...channelProps}/>
     }
 
 	const onFocus = () => {

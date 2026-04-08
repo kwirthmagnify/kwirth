@@ -1,7 +1,7 @@
 <p align="center">
-    <img height=auto src="https://jfvilas.github.io/kwirth/_media/kwirth-logo-20.png" /><br/>
-    <a href='https://jfvilas.github.io/kwirth'><img src='https://img.shields.io/badge/contributions-welcome-orange.svg'/></a>
-    <a href='https://jfvilas.github.io/kwirth'><img src='https://img.shields.io/badge/project-homepage-8EA8D8.svg'/></a>
+    <img height=auto src="https://kwirthmagnify.github.io/kwirth/_media/kwirth-logo-20.png" /><br/>
+    <a href='https://kwirthmagnify.github.io/kwirth'><img src='https://img.shields.io/badge/contributions-welcome-orange.svg'/></a>
+    <a href='https://kwirthmagnify.github.io/kwirth'><img src='https://img.shields.io/badge/project-homepage-8EA8D8.svg'/></a>
 </p>
 
 # Kwirth project
@@ -11,7 +11,7 @@ But maybe these (and other tools) are too complex or ugly or uncomfortable or ex
 
 If this is the case, **Kwirth is what you need**.
 
-You can go to Kwirth site if you prefer a user-friendly (non-developer) web interface [here](https://jfvilas.github.io/kwirth) for reading Kwirth docs.
+You can go to Kwirth site if you prefer a user-friendly (non-developer) web interface [here](https://kwirthmagnify.github.io/kwirth) for reading Kwirth docs.
 
 ## What you can do with Kwirth
 Basically, Kwirth receives live streams of **observability data** that comes from one or more Kubernetes clusters in real-time, and with the data received you can perform several activities depending on your role and your needs.
@@ -41,7 +41,7 @@ Next sections will explain how to perform each one of these setup methods.
 
 ### Kubernetes (manifests and Helm chart)
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/jfvilas/kwirth/master/test/kwirth.yaml
+kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/test/kwirth.yaml
 ```
 
 If everything is ok, in no more than 8 to 10 seconds Kwirth should be up and running. So next step is accessing the front application of your fresh new logging system. You can access Kwirth via your Kubernetes management tool, via kubectl-port-forwarding, or even creating an ingress (which is the best way). By default, Kwirth listens on root path at port 3883.
@@ -89,7 +89,7 @@ kwirth-external start --front
 ### Desktop (for personal use)
 For a more integrated experience, download the native application for Windows or Linux. This allows you to manage your clusters with a dedicated UI without the need to deploy anything into the cluster itself during initial exploration.
 
-Binaries for Windows (including a Setup if you prefer) and Linux can be downloaded from the [Releases page at our GitHub project](https://github.com/jfvilas/kwirth/releases).
+Binaries for Windows (including a Setup if you prefer) and Linux can be downloaded from the [Releases page at our GitHub project](https://github.com/kwirthmagnify/kwirth/releases).
 
 ## How Kwirth works
 Kwirth is not Loki nor Grafana, Kwirth is not Elastic, Kwirth is not DataDog, Kwirth is not Azure Log Analytics... Kwirth can perform as much as all of the tasks you can do with these observability tools, but with a fraction of the cost (in terms of money, but also in terms of time and kubernetes resource usage).
@@ -100,12 +100,12 @@ It is important to understand that Kwirth *does not store* any logging, metrics 
 
 The architecture of Kwirth is the one depicted below.
 
-![kwirth architecture](https://raw.githubusercontent.com/jfvilas/kwirth/master/docs/0.5.21/_media/kwirth-kwirth-arch.png)
+![kwirth architecture](https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/docs/0.5.21/_media/kwirth-kwirth-arch.png)
 
 There is only one pod with one only container needed to run Kwirth. Of course, you can create replicas and services and ingresses if you need to scale out, but, generally speaking, Kwirth has no computing needs, since the only function of the pod is extracting kubernetes data and re-sending it to Kwirth clients, wherever it be Kwirth frontend application or any other client like [Backstage Kubelog](https://www.npmjs.com/package/@jfvilas/plugin-kubelog) or [KwirthLog plugin for Backstage](https://www.npmjs.com/package/@kwirthmagnify/plugin-kwirth-log).
 
 ## Kwirth features
-Each individual Kwirth feature is implemented via a [**channel**](https://jfvilas.github.io/kwirth/#/0.5.21/channels?id=channels). a channel serves, in fact, a specific type of information. These are currently existing channels:
+Each individual Kwirth feature is implemented via a [**channel**](https://kwirthmagnify.github.io/kwirth/#/0.5.21/channels?id=channels). a channel serves, in fact, a specific type of information. These are currently existing channels:
 
   - Log Channel, for receiving real-time logs or obtain **start diagnostics reviewing start-time logs**.
   - Metrics Channel, for viewing real-time metrics on your selected objects (CPU%, memory%, I/O, etc.). Please note that Kwirth doesn't need Prometheus for getting data, Kwirth implements its own metric-gathering system by accessing directly the cAdvisor running on your nodes' Kubelets.
@@ -131,4 +131,4 @@ What follows is an architectural view of the different ways you can deliver Kwir
 
 There exist no functional differences between these options; however, performance is significantly better when accessing the Kube API server from within the cluster (Kwirth Kubernetes Deployment) compared to accessing it from **OUTSIDE** (Magnify, Docker, or External) due to network latency and authentication overhead. Feel free to try them out and ask us for recommendations!
 
-![Kwirth family architecture](https://raw.githubusercontent.com/jfvilas/kwirth/master/docs/0.5.21/_media/kwirth-family.png)
+![Kwirth family architecture](https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/docs/0.5.21/_media/kwirth-family.png)

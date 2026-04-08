@@ -436,7 +436,7 @@ kind: IngressClass
 metadata:
   name: external-ic
 spec:
-  controller: jfvilas.github.io/sample-ingress-controller
+  controller: kwirthmagnify.github.io/sample-ingress-controller
   parameters:
     apiGroup: k8s.example.com
     kind: IngressParameters

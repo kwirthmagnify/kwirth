@@ -1,5 +1,5 @@
 {
-  "name": "@jfvilas/kwirth-external",
+  "name": "@kwirthmagnify/kwirth-external",
   "description": "An external option for deploying Kwirth on a server (not inside Kubernetes) for running as a proxy or server access (for Backstage, for instance)",
   "private": false,
   "version": "0.5.26",

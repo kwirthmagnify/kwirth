@@ -75,7 +75,7 @@ export const showLogo = () => {
     console.log('     @@@         @@@@          @@@@        *@@@      @     @@@      = @@@@             @@@@          @@@         @@@    ')
     console.log('  @@@@@@@@@     @@@@@@@@@       @@@         @@@      @@@@@@@@@@@@   @@@@@@@@@           @@@@@@@=  @@@@@@@@@   @@@@@@@@@ ')
     console.log('                                                                                                                        ')
-    console.log('                                              https://jfvilas.github.io/kwirth                                          ')
+    console.log('                                           https://kwirthmagnify.github.io/kwirth                                       ')
     console.log('                                                                                                                        ')
     console.log('                                                                                                                        ')    
 }

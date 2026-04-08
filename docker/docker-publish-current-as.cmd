@@ -3,7 +3,7 @@ set /p minor=<..\version\minor
 set /p level=<..\version\level
 set currentversion=%major%.%minor%.%level%
 
-docker build . -t kwirth -t xfvilasoutlook/kwirth:%currentversion% -t xfvilasoutlook/kwirth:%1 -t kwirthmagnify/kwirth:%currentversion% -t  kwirthmagnify/kwirth:%1
+docker build . -t kwirth -t kwirthmagnify/kwirth:%currentversion% -t  kwirthmagnify/kwirth:%1
 @REM docker push xfvilasoutlook/kwirth:%1
 @REM docker push xfvilasoutlook/kwirth:%currentversion%
 docker push kwirthmagnify/kwirth:%1

@@ -3,13 +3,13 @@ Kwirth is the final implementation of the idea of having a simple way to manage 
 
 If this is the case, **Kwirth is the answer to your needs**. Just *one pod to access all the observability you need* from your main Kubernetes cluster, or even **consolidate observability information from different clusters**. When we say 'observability' we mean 'logging', 'metrics', 'alerts', 'signals', etc.
 
-You can access the source code [**HERE**](https://github.com/jfvilas/kwirth).
+You can access the source code [**HERE**](https://github.com/kwirthmagnify/kwirth).
 
 ## Get started
 Yes, **one only command**, just a simple 'kubectl' is enough for deploying Kwirth to your cluster.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/jfvilas/kwirth/master/test/kwirth.yaml
+kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/test/kwirth.yaml
 ```
 
 If everything is ok, in no more than 8 to 10 seconds Kwirth should be **up and running**. So next step is to access the front application of your fresh new Kubernetes observability system. Several options exist here...
@@ -23,15 +23,15 @@ If everything is ok, in no more than 8 to 10 seconds Kwirth should be **up and r
 
     - With Headlamp...
       
-      ![Headlamp](https://jfvilas.github.io/kwirth/_media/pf-headlamp.png)
+      ![Headlamp](https://kwirthmagnify.github.io/kwirth/_media/pf-headlamp.png)
 
     - With Lens...
 
-      ![Lens](https://jfvilas.github.io/kwirth/_media/pf-lens.png)
+      ![Lens](https://kwirthmagnify.github.io/kwirth/_media/pf-lens.png)
 
     - With K9S. Just select the Kwirth pod and press **Caps+F**, then just accept (or change) the port sugegstions from K9s and navigate...
 
-      ![Lens](https://jfvilas.github.io/kwirth/_media/pf-k9s.png)
+      ![Lens](https://kwirthmagnify.github.io/kwirth/_media/pf-k9s.png)
 
 
 3. **Using an Ingress**. It is the best option if you plan to access your Kwirth from Internet and if you also plan to share Kwirth with the development team in your corporate private network. For publishing Kwirth to be accesible from outside the cluster, you must create an Ingress (be sure, you need to deploy an ingress controller before, you have info on how to perform a simple ingress installation [**HERE**](https://jfvilas.github.io/oberkorn/#/ingins)).
@@ -61,4 +61,4 @@ If everything is ok, in no more than 8 to 10 seconds Kwirth should be **up and r
                     port:
                     number: 3883
     ```
-    NOTE: You can **change the path** where to publish Kwirth, it is explained in [installation section](https://jfvilas.github.io/kwirth/#/installation).
+    NOTE: You can **change the path** where to publish Kwirth, it is explained in [installation section](https://kwirthmagnify.github.io/kwirth/#/installation).

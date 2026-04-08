@@ -914,6 +914,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         let index = magnifyData.windows.findIndex(w => w.id === id)
         if (index<0) return
         magnifyData.windows.splice(index, 1)
+        //+++ correct this in order to: bring to front the highest window THAT IS NOT MINIMIZED (not just the last)
         if (magnifyData.windows.length>0) bringWindowToFront(magnifyData.windows[magnifyData.windows.length-1].id)
         setTick(t=>t+1)
     }

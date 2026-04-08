@@ -33,11 +33,11 @@ Although Kwirth includes a front application for accessing the logs, you can dep
 
 One example for this is our [Backstage](https://backstage.io) plugin [Kubelog](https://github.com/jfvilas/kubelog). Kubelog allows viewing cluster logs inside a Backstage deployment by accessing log streams via Kwirth.
 
-Refer to [Kubelog](https://github.com/jfvilas/kubelog) and [KwirthLog](https://github.com/jfvilas/plugin-kwirth-log) for detailed info on the project and how to install the plugin.
+Refer to [Kubelog](https://github.com/jfvilas/kubelog) and [KwirthLog](https://github.com/kwirthmagnify/plugin-kwirth-log) for detailed info on the project and how to install the plugin.
 
 > Please take into account that **Kubelog will not evolve functionally speaking**, KwirthLog its a modern replacement for Kubelog.
 
 ### Observability
 Tha same way you proxy log streams from your kubernetes systems, you can proxy metrics to any front application, like the front Kwirth application, Kwrith Desktop or Backstage clientes.
 
-Refer to [KwirthMetrics](https://github.com/jfvilas/plugin-kwirth-metrics) for detailed info on the project and how to install the plugin.
+Refer to [KwirthMetrics](https://github.com/kwirthmagnify/plugin-kwirth-metrics) for detailed info on the project and how to install the plugin.

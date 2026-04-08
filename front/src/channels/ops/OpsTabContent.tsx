@@ -87,7 +87,6 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }, [])
     
     const onKeyDown = (event:any) => {
-        console.log('key', event.key)
         let key = event.key
         if (key.startsWith('F') && key.length>1) {
             switch(key) {

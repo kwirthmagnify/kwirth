@@ -14,9 +14,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@jfvilas/kwirth-common": "^0.4.48",
     "@jfvilas/parse-listing": "^1.0.1",
     "@kubernetes/client-node": "^1.4.0",
+    "@kwirthmagnify/kwirth-common": "^0.4.49",
     "@types/node": "^20.12.13",
     "body-parser": "^1.20.2",
     "cookie-parser": "^1.4.7",
