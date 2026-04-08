@@ -19,6 +19,7 @@ const reorderJsonYamlObject = (objetoJson: any): any => {
 }
 
 function objectClone(obj: any) : any {
+    if (!obj) return undefined
     return JSON.parse(JSON.stringify(obj))
 }
 

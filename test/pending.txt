@@ -4,7 +4,13 @@ implement IdP integration
 implement JWT
 Create a Taurin compatible build
 grafana plugins
-Pinocchio (Kubernetes autonomo)
+pinocchio (Kubernetes autonomo)
+  send log messages, metrics and events to LLM
+  get recommended actions
+  use vercel ai-sdk, add backend config for specific channels
+    envvars like... KWIRTH_CHANNEL_<chid>_<varname>='sssss'
+    channels will receive <varname>='sssss' upon creation when starting kwirth core
+create providers interface for extending kwirth core
 
 ******************ERRORES
 RFM
@@ -20,7 +26,7 @@ ELECTRON
 revisar el cambio o salida de cluster: parar las cosas antes de entrar en el otro
   en el backend, parar las cosas si se pierde la comunicacion con el front??
 cuando seleccionas un cluster no accesible entra a magnify, y no deberia
-exit no cierra todos los ejecutables
+exit no cierra todos los ejecutables en windows
 cuando lanzo electron linux contra rioja, no arranca (parece qu eno descarga los metrics)
 
 KWIRTH FRONT-BACK
@@ -59,7 +65,6 @@ MAGNIFY BACK
 RFM
   en los fileitem, cuando le fila es muy alta, el nombre del fileitem se esta alineando arriab, y deberia ir al centro
   añadir ... en leftmenu cuando hay mas de xx opciones (xx configurable, con valor por defecto)
-  en los right items añadir enabled/disabled (onDraw ya es como visible/noVisibe)
   añadir regex y caps al search (ya esta implementado pero no en el UI)
   revisar ajuste de columnas (config, resize, add, remove....)
 

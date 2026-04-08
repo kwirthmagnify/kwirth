@@ -146,7 +146,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                 diffMs -= hours * (1000 * 60 * 60)
                 const minutes = Math.floor(diffMs / (1000 * 60))
                 const duration = { days: days, hours: hours, minutes: minutes }
-                return <>{formatAgeCompact(duration)}</>
+                return <Typography variant='body2'>{formatAgeCompact(duration)}</Typography>
 
             case 'boolean':
                 let valBoolean = false
@@ -297,7 +297,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                     if (st2.length>0)
                         return <Typography color={st2[0].split(':')[1]} variant='body2'>{header}{val}</Typography>
                     else
-                        return <>{header}{val}</>
+                        return <Typography variant='body2'>{header}{val}</Typography>
                 }
                     
 

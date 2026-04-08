@@ -1,5 +1,5 @@
 import { ClusterInfo, INodeInfo } from "../model/ClusterInfo"
-import { EInstanceConfigView, InstanceConfigViewEnum } from "@kwirthmagnify/kwirth-common"
+import { EInstanceConfigView } from "@kwirthmagnify/kwirth-common"
 import { NodeMetrics } from "../model/INodeMetrics"
 
 export interface AssetData {

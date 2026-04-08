@@ -145,7 +145,6 @@ const ContentEdit: React.FC<IContentEditProps> = (props:IContentEditProps) => {
         let oldJson = yamlParser.load(contentEditData.oldCode)
         let newJson = yamlParser.load(newCode)
         let status=objectEqual(newJson, oldJson)
-        console.log(status)
         editorChanged.current = !status
     }
 

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: login-simulator-20-types
+  name: login
   labels:
     app: auth-mock
 spec:
@@ -70,7 +70,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: hotel-reservation-simulator
+  name: hotel
   labels:
     app: booking-svc
 spec:
@@ -80,8 +80,6 @@ spec:
     command: ["/bin/sh", "-c"]
     args:
       - |
-        echo "--- Simulador de Hotel Booking iniciado: 1-3s ---"
-        
         while true; do
           # Generación de variables dinámicas para mayor realismo
           RES="RES-$(($RANDOM % 90000 + 10000))"
@@ -135,7 +133,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: bank-operations-simulator
+  name: bank-operations-ator
   labels:
     app: core-banking-svc
 spec:
@@ -145,8 +143,6 @@ spec:
     command: ["/bin/sh", "-c"]
     args:
       - |
-        echo "--- Core Banking System Simulator Active | Interval 1-3s ---"
-        
         while true; do
           # Variables dinámicas para realismo financiero
           ACC="ACC-$(($RANDOM % 900000 + 100000))"
@@ -193,7 +189,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: card-payment-simulator
+  name: card-payment
   labels:
     app: payment-gateway
 spec:
@@ -203,8 +199,6 @@ spec:
     command: ["/bin/sh", "-c"]
     args:
       - |
-        echo "--- Card Processing Gateway Simulator Active ---"
-        
         while true; do
           # Variables dinámicas para transacciones de tarjeta
           CARD="****-****-****-$(($RANDOM % 8999 + 1000))"
@@ -255,7 +249,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: tour-booking-simulator
+  name: tour-booking
   labels:
     app: concierge-svc
 spec:
@@ -316,7 +310,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: flight-ops-simulator
+  name: flight-ops
   labels:
     app: airline-svc
 spec:
@@ -326,7 +320,6 @@ spec:
     command: ["/bin/sh", "-c"]
     args:
       - |
-        echo "--- Airline Operations Simulator | 100+ Message Variations ---"
         
         # Listas de componentes para construir frases dinámicas
         AIRLINES="Iberia|Vueling|Lufthansa|Emirates|Delta|Ryanair"
@@ -391,7 +384,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: restaurant-booking-simulator
+  name: restaurant-booking
   labels:
     app: table-res-svc
 spec:
@@ -483,7 +476,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: channel-manager-simulator
+  name: channel-manager
   labels:
     app: inventory-sync
 spec:
@@ -568,7 +561,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: erp-access-simulator
+  name: erp-access
   labels:
     app: erp-gateway
 spec:
@@ -656,7 +649,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: hrms-simulator
+  name: hrms
   labels:
     app: hr-management
 spec:
@@ -745,7 +738,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: intranet-server-simulator
+  name: intranet-server
   labels:
     app: corporate-intranet
 spec:
@@ -755,8 +748,6 @@ spec:
     command: ["/bin/sh", "-c"]
     args:
       - |
-        echo "--- Corporate Intranet Server Active | Port 80/443 Simulation ---"
-        
         while true; do
           # Variables de tráfico de Intranet
           USR="USER-$(($RANDOM % 5000 + 1000))"
@@ -836,7 +827,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: siem-platform-simulator
+  name: siem-platform
   labels:
     app: security-ops
 spec:
@@ -924,7 +915,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: procurement-app-simulator
+  name: procurement-app
   labels:
     app: e-procurement
 spec:

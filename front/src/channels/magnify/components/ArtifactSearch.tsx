@@ -1,6 +1,6 @@
 import { Checkbox, DialogContent, DialogTitle, FormControlLabel, IconButton, Stack, TextField, Typography } from '@mui/material'
 import { IFileObject } from '@jfvilas/react-file-manager'
-import { ChangeEvent, useEffect, useState } from 'react'
+import { ChangeEvent, useState } from 'react'
 import { Close, Fullscreen, FullscreenExit, Minimize, PinDrop, Place, Search } from '@mui/icons-material'
 import { objectClone, objectSearch } from '../Tools'
 import { getIconFromKind } from '../../../tools/Constants-React'
