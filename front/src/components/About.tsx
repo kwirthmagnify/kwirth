@@ -101,7 +101,7 @@ let brand = [
 '     @@@         @@@@          @@@@        *@@@      @     @@@      = @@@@             @@@@          @@@         @@@    ',
 '  @@@@@@@@@     @@@@@@@@@       @@@         @@@      @@@@@@@@@@@@   @@@@@@@@@           @@@@@@@=  @@@@@@@@@   @@@@@@@@@ ',
 '                                                                                                                        ',
-'                                              https://jfvilas.github.io/kwirth                                          ',
+'                                           https://kwirthmagnify.github.io/kwirth                                       ',
 '                                                                                                                        ',
 '                                                                                                                        ']
 export { About }
