@@ -9,6 +9,10 @@
 # testing
 /coverage
 
+# local
+kwirth.keys
+kwirth-users
+
 # production
 /**/dist
 /back/bundle

@@ -63,11 +63,10 @@ const fs = require('fs')
 // }
 
 const runningEnv = {
-  isElectron: !!(process.versions && process.versions.electron),
-  isDocker: fs.existsSync('/.dockerenv'),
-  isK8s: true || !!process.env.KUBERNETES_SERVICE_HOST,
-  isTTY: !!process.stdout.isTTY,
-  isCI: !!process.env.CI
+  isElectron: process.env.FORCE==='electron' || !!(process.versions && process.versions.electron),
+  isDocker: process.env.FORCE==='docker' || fs.existsSync('/.dockerenv'),
+  isK8s: process.env.FORCE==='k8s' || !!process.env.KUBERNETES_SERVICE_HOST,
+  isTTY: !!process.stdout.isTTY
 }
 const app : Application = express()
 
@@ -1790,6 +1789,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
 console.log(`Kwirth version is ${VERSION}`)
 console.log(`Kwirth started at ${new Date().toISOString()}`)
 console.log('Kwirth running environment:', runningEnv)
+console.log('Kwirth Auth:', envAuth)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 showLogo()
