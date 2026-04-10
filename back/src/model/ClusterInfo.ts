@@ -4,7 +4,7 @@ import { EClusterType, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
 import Docker from 'dockerode'
 import { DockerTools } from '../tools/DockerTools'
 import { NodeMetrics } from './INodeMetrics'
-import { EventsProvider } from '../providers/EventsProvider'
+//import { EventsProvider } from '../providers/EventsProvider'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
 import { IChannel } from '../channels/IChannel'
@@ -60,8 +60,8 @@ export class ClusterInfo {
     public apisApi!: ApisApi
     public saToken!: ServiceAccountToken
     public token: string|undefined   // needed just for connecting to kubelet and extract metrics
-    public metrics!: MetricsTools
-    public events!: EventsProvider
+    public metrics!: MetricsTools   // +++ will refactor to IProvider
+    //public events!: EventsProvider
     public providers!: IProvider[]
     public metricsInterval: number = 15
     public metricsIntervalRef: NodeJS.Timeout|undefined = undefined

@@ -1366,10 +1366,10 @@ const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthDat
             console.log('  Memory (GB):', localClusterInfo.memory/1024/1024/1024)
         }
 
-        if (eventsRequired) {
-            localClusterInfo.events = new EventsProvider(localClusterInfo)
-            localClusterInfo.events.startProvider()
-        }
+        // if (eventsRequired) {
+        //     localClusterInfo.events = new EventsProvider(localClusterInfo)
+        //     localClusterInfo.events.startProvider()
+        // }
 
         localClusterInfo.providers = []
         for(let provId of requiredProviders) {
@@ -1377,6 +1377,7 @@ const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthDat
             let prov:IProvider
             if (provId==='tick') prov = new TickProvider(localClusterInfo)
             if (provId==='validating') prov = new ValidatingProvider(localClusterInfo)
+            if (provId==='events') prov = new EventsProvider(localClusterInfo)
             prov!.startProvider()
             console.log(`Provider '${provId}' started`)
             localClusterInfo.providers.push(prov!)
