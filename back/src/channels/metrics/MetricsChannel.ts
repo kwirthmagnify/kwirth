@@ -37,6 +37,7 @@ class MetricsChannel implements IChannel {
             reconnectable: true,
             metrics: true,
             events: false,
+            providers: [],
             sources: [ ClusterTypeEnum.KUBERNETES ],
             endpoints: [],
             websocket: false,
@@ -48,7 +49,13 @@ class MetricsChannel implements IChannel {
         return ['','snapshot','stream','cluster'].indexOf(scope)
     }
 
+    startChannel = async () =>  {
+    }
+
     processObjectEvent(type:string, obj:any) : void {
+    }
+
+    processProviderEvent(providerId:string, obj:any) : void {
     }
 
     async endpointRequest(endpoint:string,req:Request, res:Response) : Promise<void> {

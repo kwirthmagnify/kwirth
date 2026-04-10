@@ -44,7 +44,7 @@ import { FilemanChannel } from './channels/fileman/FilemanChannel'
 
 import { IncomingMessage } from 'http'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
-import { EventsTools } from './tools/EventsTools'
+import { EventsProvider } from './providers/EventsProvider'
 
 import fileUpload from 'express-fileupload'
 import v8 from 'node:v8'
@@ -54,6 +54,9 @@ import cors from 'cors'
 import { Application } from 'express-serve-static-core'
 import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
 import * as crypto from 'crypto'
+import { ValidatingProvider } from './providers/ValidatingProvider'
+import { TickProvider } from './providers/TickProvider'
+import { IProvider } from './providers/IProvider'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -1194,6 +1197,18 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
         let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         riRouter.use(`/metrics`, metricsApi.route)
 
+        for (let provider of ri.clusterInfo.providers) {
+            if (provider.providesRouter) {
+                if (provider.router) {
+                    riRouter.use(`/provider/${provider.id}`, provider.router)
+                    console.error(`Provider ${provider.id} will listen HTTP requests at '/provider/${provider.id}'`)
+                }
+                else {
+                    console.error(`Provider ${provider.id} provides router but ruter doen't exist`)
+                }
+            }
+        }
+            
         ri.router = riRouter
         return true
     }
@@ -1288,6 +1303,10 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
             process.exit(1)
         }
         startChannelEndpoints(ri, expressApp)
+        for (let channel of ri.channels.values()) {
+            console.log(`Starting channel '${channel.getChannelData().id}'`)
+            channel.startChannel()
+        }
     }
     catch (err) {
         console.log('Error in startRunningInstance')
@@ -1329,7 +1348,7 @@ process.on('exit', async () => {
     await new Promise((resolve) => setTimeout(resolve, 10000))
 })
 
-const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthData, localClusterInfo:ClusterInfo, metricsRequired:boolean, eventsRequired: boolean) : Promise<void> => {
+const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthData, localClusterInfo:ClusterInfo, metricsRequired:boolean, eventsRequired: boolean, requiredProviders:string[]) : Promise<void> => {
     try {
         console.log('Node info loaded')
 
@@ -1348,15 +1367,99 @@ const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthDat
         }
 
         if (eventsRequired) {
-            localClusterInfo.events = new EventsTools(localClusterInfo)
-            localClusterInfo.events.startEvents()
+            localClusterInfo.events = new EventsProvider(localClusterInfo)
+            localClusterInfo.events.startProvider()
         }
+
+        localClusterInfo.providers = []
+        for(let provId of requiredProviders) {
+            //+++ refactorize like the pattern of constructor of front IChannel
+            let prov:IProvider
+            if (provId==='tick') prov = new TickProvider(localClusterInfo)
+            if (provId==='validating') prov = new ValidatingProvider(localClusterInfo)
+            prov!.startProvider()
+            console.log(`Provider '${provId}' started`)
+            localClusterInfo.providers.push(prov!)
+        }
+
     }
     catch (err) {
         console.log('Error setting up kubernetes requirements')
         console.log(err)
     }
 }
+
+// const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstance:IRunningInstance) : Promise<void> => {
+//     try {
+//         if (envChannelLogEnabled) runningInstance.channels.set('log', new LogChannel(runningInstance.clusterInfo))
+//         if (envChannelAlertEnabled) runningInstance.channels.set('alert', new AlertChannel(runningInstance.clusterInfo))
+//         if (envChannelMetricsEnabled) runningInstance.channels.set('metrics', new MetricsChannel(runningInstance.clusterInfo))
+//         if (envChannelOpsEnabled) runningInstance.channels.set('ops', new OpsChannel(runningInstance.clusterInfo))
+//         if (envChannelTrivyEnabled) runningInstance.channels.set('trivy', new TrivyChannel(runningInstance.clusterInfo))
+//         if (envChannelEchoEnabled) runningInstance.channels.set('echo', new EchoChannel(runningInstance.clusterInfo))
+//         if (envChannelFilemanEnabled) runningInstance.channels.set('fileman', new FilemanChannel(runningInstance.clusterInfo))
+//         if (envChannelMagnifyEnabled) runningInstance.channels.set('magnify', new MagnifyChannel(runningInstance.clusterInfo, localKwirthData))
+//         if (envChannelPinocchioEnabled) runningInstance.channels.set('pinocchio', new PinocchioChannel(runningInstance.clusterInfo))
+
+//         // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to
+//         localKwirthData.channels =  Array.from(runningInstance.channels.keys()).map(k => {
+//             return runningInstance.channels.get(k)?.getChannelData()!
+//         })
+
+//         // Detect if any channel requires metrics or events
+//         let eventsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().events}, false)
+//         console.log('Events required: ', eventsRequired)
+//         let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
+//         console.log('Metrics required: ', metricsRequired)
+//         if (!envChannelMetricsEnabled) console.log('❌ Metrics have not been enabled on Kwirth, so it will not be available.')
+//         if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) console.log('❌ An SA Token could not be obtained, so metrics will not be available.')
+//         metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
+
+//         let registerdProviders = ['tick','validating']  //+++ refactorize
+//         let requiredProviders = []
+//         for (let provId of registerdProviders) {
+//             let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)            
+//             if (required) requiredProviders.push(provId)
+//             console.log(`'${provId}' required:`, required)
+//         }
+
+//         await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, eventsRequired, requiredProviders)
+//         runningInstance.clusterInfo.type = localKwirthData.clusterType
+
+//         console.log(`Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(',')}`)
+//         console.log(`Detected own namespace: ${localKwirthData.namespace}`)
+//         if (localKwirthData.deployment !== '')
+//             console.log(`Detected own deployment: ${localKwirthData.deployment}`)
+//         else
+//             console.log(`No deployment detected. Kwirth is not running inside a cluster`)
+
+//         if (envForward) {
+//             console.log('Will try to configure FORWARDing...')
+//             if (runningInstance.kwirthData.inCluster) {
+//                 console.log('FORWARD for inCluster is being configured...')
+//                 if (envRootPath!=='') {
+//                     configureForward(runningInstance.clusterInfo, app)
+//                 }
+//                 else {
+//                     console.log('FORWARD for kubernetes Kwirth cannot be started since Kwirth must have a root path specified (like /kwirth, for example). Kwirth cannot FORWARD if it is running on root (/) path')
+//                 }
+//             }
+//             else if (runningInstance.kwirthData.isElectron) {
+//                 console.log('FORWARD for electron should be implemented')
+//             }
+//             else {
+//                 console.log('FORWARD not avialable (not inCluster and not isElectron)')
+//             }
+//         }
+//         else {
+//             console.log('No FORWARD mechanism will be available.')
+//         }
+//     }
+//     catch (err) {
+//         console.log('Error preparing kubernetes')
+//         console.log(err)
+//     }
+// }
 
 const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstance:IRunningInstance) : Promise<void> => {
     try {
@@ -1384,8 +1487,15 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) console.log('❌ An SA Token could not be obtained, so metrics will not be available.')
         metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
 
+        let registerdProviders = ['tick','validating']  //+++ refactorize
+        let requiredProviders = []
+        for (let provId of registerdProviders) {
+            let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)            
+            if (required) requiredProviders.push(provId)
+            console.log(`'${provId}' required:`, required)
+        }
 
-        await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, eventsRequired)
+        await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, eventsRequired, requiredProviders)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
 
         console.log(`Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(',')}`)

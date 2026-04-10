@@ -49,7 +49,6 @@ import { ContextSelector } from './components/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
 import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
-import { useAsync } from 'react-use'
 
 interface IAppProps {
     backendUrl:string

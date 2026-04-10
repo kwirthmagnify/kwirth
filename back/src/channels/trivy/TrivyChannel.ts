@@ -56,6 +56,7 @@ class TrivyChannel implements IChannel {
             reconnectable: false,
             metrics: false,
             events: false, 
+            providers: [],
             sources: [ ClusterTypeEnum.KUBERNETES ],
             endpoints: [ {
                 name: 'operator',
@@ -71,7 +72,13 @@ class TrivyChannel implements IChannel {
         return ['', 'trivy$workload', 'trivy$kubernetes', 'cluster'].indexOf(scope)
     }
 
+    startChannel = async () =>  {
+    }
+
     processObjectEvent(type:string, obj:any) : void {
+    }
+
+    processProviderEvent(providerId:string, obj:any) : void {
     }
 
     async endpointRequest(endpoint:string,req:Request, res:Response) : Promise<void> {

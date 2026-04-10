@@ -116,6 +116,7 @@ class MagnifyChannel implements IChannel {
             reconnectable: true,
             metrics: true,
             events: true,
+            providers: [],
             sources: [ ClusterTypeEnum.KUBERNETES ],
             endpoints: [],
             websocket: false,
@@ -125,6 +126,9 @@ class MagnifyChannel implements IChannel {
 
     getChannelScopeLevel = (scope: string): number => {
         return ['', 'magnify$read', 'cluster'].indexOf(scope)
+    }
+
+    startChannel = async () =>  {
     }
 
     processObjectEvent(type:string, obj:any) : void {
@@ -149,6 +153,9 @@ class MagnifyChannel implements IChannel {
                 socket.ws.send(JSON.stringify(magnifyMessage))
             }
         }
+    }
+
+    processProviderEvent(providerId:string, obj:any) : void {
     }
 
     async endpointRequest(endpoint:string, req:Request, res:Response, accessKey:AccessKey) : Promise<void> {
@@ -392,7 +399,7 @@ class MagnifyChannel implements IChannel {
                 
                 case EMagnifyCommand.SUBSCRIBE: {
                     console.log(`Do SUBSCRIBE`)
-                    this.clusterInfo.events.addSubscriber(this, magnifyMessage.params!, Boolean(magnifyMessage.params?.includes('CRD Instances')))
+                    this.clusterInfo.events.addSubscriber(this, { kinds: magnifyMessage.params!, syncInstances:Boolean(magnifyMessage.params?.includes('CRD Instances'))} )
                     return
                 }
                 

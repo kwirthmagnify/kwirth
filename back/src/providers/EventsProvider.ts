@@ -1,17 +1,22 @@
 import { IChannel } from '../channels/IChannel'
 import { ClusterInfo } from '../model/ClusterInfo'
 import { Watch } from '@kubernetes/client-node'
+import { IProvider } from '../providers/IProvider'
 
-export interface ISubscriber {
+export interface IEventsSubscriber {
     kinds: string[]
     crdInstances: string[]
     syncCrdInstances: boolean
 }
 
-export class EventsTools {
+export class EventsProvider implements IProvider {
+    public readonly id = 'events'
+    public readonly providesRouter = false
+    public router = undefined
+
     private resourceWatchers: Map<string, Watch>
     private clusterInfo: ClusterInfo
-    private subscribers: Map<IChannel, ISubscriber>
+    private subscribers: Map<IChannel, IEventsSubscriber>
 
     constructor(clusterInfo: ClusterInfo) {
         this.clusterInfo = clusterInfo
@@ -19,20 +24,20 @@ export class EventsTools {
         this.resourceWatchers = new Map()
     }
 
-    addSubscriber = (c: IChannel, kinds: string[], syncInstances:boolean) => {
-        let subscriber: ISubscriber = {
-            kinds,
+    addSubscriber = async (c: IChannel, data: { kinds: string[], syncInstances:boolean}) => {
+        let subscriber: IEventsSubscriber = {
+            kinds: data.kinds,
             crdInstances: [],
-            syncCrdInstances: syncInstances
+            syncCrdInstances: data.syncInstances
         }
         this.subscribers.set(c, subscriber)
     }
 
-    removeSubscriber = (c: IChannel) => {
+    removeSubscriber = async (c: IChannel) => {
         if (this.subscribers.has(c)) this.subscribers.delete(c)
     }
 
-    startResourceWatcher = async (resourcePath: string, eventHandler: (type: string, obj: any, subscribersList: Map<IChannel, ISubscriber>) => void) => {
+    private startResourceWatcher = async (resourcePath: string, eventHandler: (type: string, obj: any, subscribersList: Map<IChannel, IEventsSubscriber>) => void) => {
         if (this.resourceWatchers.has(resourcePath)) return
 
         const MAX_RETRIES = 6
@@ -87,7 +92,7 @@ export class EventsTools {
         this.resourceWatchers.set(resourcePath, watch)
     }
 
-    handleEvent = (type: string, obj: any, subscribersList: Map<IChannel, ISubscriber>) => {
+    private handleEvent = (type: string, obj: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
         if (obj.kind === 'CustomResourceDefinition') {
             if (type === 'DELETED') {
                 this.stopCrdInstanceWatcher(obj, subscribersList)
@@ -108,7 +113,7 @@ export class EventsTools {
         }
     }
 
-    startCrdInstanceWatcher = (crd: any, subscribersList: Map<IChannel, ISubscriber>) => {
+    private startCrdInstanceWatcher = (crd: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
         const kindName = crd.spec.names.kind
         const resourcePath = `/apis/${crd.spec.group}/${crd.spec.versions[0].name}/${crd.spec.names.plural}`
 
@@ -129,7 +134,7 @@ export class EventsTools {
         this.startResourceWatcher(resourcePath, this.handleEvent)
     }
     
-    stopCrdInstanceWatcher = (crd: any, subscribersList: Map<IChannel, ISubscriber>) => {
+    private stopCrdInstanceWatcher = (crd: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
         const kindName = crd.spec.names.kind;
         const resourcePath = `/apis/${crd.spec.group}/${crd.spec.versions[0].name}/${crd.spec.names.plural}`
         const watcher = this.resourceWatchers.get(resourcePath)
@@ -153,8 +158,8 @@ export class EventsTools {
         }
     }
 
-    startEvents = async () => {
-        console.log('Event reception started...')
+    startProvider = async () => {
+        console.log('Events reception started...')
 
         const coreResources = [
             '/api/v1/nodes',

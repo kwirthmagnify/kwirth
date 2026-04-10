@@ -25,10 +25,6 @@ export async function execCommandDescribe(clusterInfo: ClusterInfo, opsMessage:I
     try {
         if ((opsMessage.pod==='' || !opsMessage.pod) && (opsMessage.container==='' || !opsMessage.container)) {
             let nsresp = await clusterInfo.coreApi.readNamespace({ name: opsMessage.namespace })
-            // if (opsMessage.command === OpsCommandEnum.GET)
-            //     execResponse.data = { name:nsresp.body.metadata?.name, creationTimestamp: nsresp.body.metadata?.creationTimestamp }
-            // else 
-            //     execResponse.data = nsresp.body
             execResponse.data = nsresp
             execResponse.type = EInstanceMessageType.DATA
             return execResponse
@@ -36,21 +32,12 @@ export async function execCommandDescribe(clusterInfo: ClusterInfo, opsMessage:I
 
         let presp = await clusterInfo.coreApi.readNamespacedPod({ name:opsMessage.pod, namespace:opsMessage.namespace })
         if (opsMessage.container==='' || !opsMessage.container) {
-            // if (opsMessage.command === OpsCommandEnum.GET)
-            //     execResponse.data = { name:presp.body.metadata?.name, creationTimestamp: presp.body.metadata?.creationTimestamp, containers: presp.body.spec?.containers.map(c => c.name) }
-            // else
-            //     execResponse.data = presp.body
             execResponse.data = presp
             execResponse.type = EInstanceMessageType.DATA
         }
         else {
             let cont = presp.spec?.containers.find(container => container.name === opsMessage.container)
             if (cont) {
-                // if (opsMessage.command === OpsCommandEnum.GET)
-                //     execResponse.data =  JSON.stringify({ name: cont.name, image: cont.image }, null, 2)
-                // else {
-                //     execResponse.data = JSON.stringify(cont,null,2)
-                // }
                 execResponse.data = JSON.stringify(cont,null,2)
                 execResponse.type = EInstanceMessageType.DATA
             }

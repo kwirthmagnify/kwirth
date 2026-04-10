@@ -10,7 +10,7 @@ interface IColors {
 }
 
 const TABSELECTEDCOLORS: IColors = {
-    stop: '#dfd7df',
+    stop: '#666666',
     start: '#34d058',
     interrupt: 'red',
     pause: '#0000d0',
@@ -18,7 +18,7 @@ const TABSELECTEDCOLORS: IColors = {
 }
 
 const TABUNSELECTEDCOLORS: IColors = {
-    stop: '#2c353d',
+    stop: '#dddddd',
     start: '#084725',
     interrupt: '#500000',
     pause: '#000070',

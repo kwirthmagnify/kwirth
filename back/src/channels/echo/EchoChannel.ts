@@ -39,6 +39,7 @@ class EchoChannel implements IChannel {
             reconnectable: true,
             metrics: false,
             events: false,
+            providers: [],
             sources: [ EClusterType.KUBERNETES, EClusterType.DOCKER ],
             endpoints: [],
             websocket: false,
@@ -50,7 +51,13 @@ class EchoChannel implements IChannel {
         return ['', 'none', 'cluster'].indexOf(scope)
     }
 
+    startChannel = async () =>  {
+    }
+
     processObjectEvent(type:string, obj:any) : void {
+    }
+
+    processProviderEvent(providerId:string, obj:any) : void {
     }
 
     async endpointRequest(endpoint:string,req:Request, res:Response) : Promise<void> {

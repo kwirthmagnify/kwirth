@@ -1,11 +1,13 @@
 import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, DiscoveryV1Api, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
-import { MetricsTools } from "../tools/MetricsTools"
-import { EClusterType, IInstanceConfig } from "@kwirthmagnify/kwirth-common"
+import { MetricsTools } from '../tools/MetricsTools'
+import { EClusterType, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
 import Docker from 'dockerode'
-import { DockerTools } from "../tools/DockerTools"
-import { NodeMetrics } from "./INodeMetrics"
-import { EventsTools } from "../tools/EventsTools"
+import { DockerTools } from '../tools/DockerTools'
+import { NodeMetrics } from './INodeMetrics'
+import { EventsProvider } from '../providers/EventsProvider'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
+import { IProvider } from '../providers/IProvider'
+import { IChannel } from '../channels/IChannel'
 
 export interface INodeInfo {
     [x: string]: any;
@@ -59,15 +61,14 @@ export class ClusterInfo {
     public saToken!: ServiceAccountToken
     public token: string|undefined   // needed just for connecting to kubelet and extract metrics
     public metrics!: MetricsTools
-    public events!: EventsTools
+    public events!: EventsProvider
+    public providers!: IProvider[]
     public metricsInterval: number = 15
     public metricsIntervalRef: NodeJS.Timeout|undefined = undefined
     public vcpus: number = 0
     public memory: number = 0
     public type: EClusterType = EClusterType.KUBERNETES
     public flavour: string ='unknown'
-
-    stopMetricsInterval = () => clearTimeout(this.metricsIntervalRef)
 
     static executeTask(instance: ClusterInfo) {
         instance.metrics.readClusterMetrics(instance)
@@ -79,6 +80,27 @@ export class ClusterInfo {
             ClusterInfo.executeTask, 
             this.metricsInterval * 1000,
             this)
+    }
+    stopMetricsInterval = () => clearTimeout(this.metricsIntervalRef)
+
+    addSubscriber = (providerId: string, c:IChannel, data:any) => {
+        let prov = this.providers.find(p => p.id===providerId)
+        if (prov) {
+            prov.addSubscriber(c,data)
+            console.log(`Subscriber '${c.getChannelData().id}' added to provider '${providerId}'`)
+        }
+        else
+            console.error(`Cannot subscribe channel '${c.getChannelData().id}' to provider '${providerId}' (provider do not exist)`)
+    }
+
+    removeSubscriber = (providerId: string, c:IChannel) => {
+        let prov = this.providers.find(p => p.id===providerId)
+        if (prov) {
+            prov.removeSubscriber(c)
+            console.log(`Subscriber '${c.getChannelData().id}' removed from provider '${providerId}'`)
+        }
+        else
+            console.error(`Cannot remove subscription of channel '${c.getChannelData().id}' from provider ${providerId} (provider do not exist)`)
     }
 
     setKubernetesClusterName = async() => {

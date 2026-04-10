@@ -23,8 +23,7 @@ interface IInstance {
     assets: IAsset[]
 }
 
-class LogChannel implements IChannel {
-    
+class LogChannel implements IChannel {    
     clusterInfo : ClusterInfo
     webSockets: {
         ws:WebSocket,
@@ -36,7 +35,34 @@ class LogChannel implements IChannel {
         this.clusterInfo = clusterInfo
     }
 
+    getChannelData(): BackChannelData {
+        return {
+            id: 'log',
+            routable: false,
+            pauseable: true,
+            modifyable: false,
+            reconnectable: true,
+            metrics: false,
+            events: false,
+            providers: [],
+            sources: [ ClusterTypeEnum.DOCKER, ClusterTypeEnum.KUBERNETES ],
+            endpoints: [],
+            websocket: false,
+            cluster:false
+        }
+    }
+
+    getChannelScopeLevel(scope: string): number {
+        return ['', 'filter', 'view', 'cluster'].indexOf(scope)
+    }
+
+    startChannel = async () =>  {
+    }
+
     processObjectEvent(type:string, obj:any) : void {
+    }
+
+    processProviderEvent(providerId:string, obj:any) : void {
     }
 
     async processCommand (webSocket:WebSocket, instanceMessage:IInstanceMessage) : Promise<boolean> {
@@ -47,22 +73,6 @@ class LogChannel implements IChannel {
     }
 
     async websocketRequest(newWebSocket:WebSocket) : Promise<void> {
-    }
-
-    getChannelData(): BackChannelData {
-        return {
-            id: 'log',
-            routable: false,
-            pauseable: true,
-            modifyable: false,
-            reconnectable: true,
-            metrics: false,
-            events: false,
-            sources: [ ClusterTypeEnum.DOCKER, ClusterTypeEnum.KUBERNETES ],
-            endpoints: [],
-            websocket: false,
-            cluster:false
-        }
     }
 
     containsAsset = (webSocket:WebSocket, podNamespace:string, podName:string, containerName:string): boolean => {
@@ -352,10 +362,6 @@ class LogChannel implements IChannel {
         else {
             this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Instance not found`, instanceConfig)
         }
-    }
-
-    getChannelScopeLevel(scope: string): number {
-        return ['', 'filter', 'view', 'cluster'].indexOf(scope)
     }
 
     pauseContinueInstance(webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void {

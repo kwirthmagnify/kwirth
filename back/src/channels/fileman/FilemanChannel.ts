@@ -112,6 +112,7 @@ class FilemanChannel implements IChannel {
             reconnectable: true,
             metrics: false,
             events: false,
+            providers: [],
             sources: [ ClusterTypeEnum.KUBERNETES, ClusterTypeEnum.DOCKER ],
             endpoints: [
                 { name: 'download', methods: ['GET'], requiresAccessKey: true },
@@ -126,7 +127,13 @@ class FilemanChannel implements IChannel {
         return ['', 'fileman$read', 'fileman$write', 'cluster'].indexOf(scope)
     }
 
+    startChannel = async () =>  {
+    }
+
     processObjectEvent(type:string, obj:any) : void {
+    }
+
+    processProviderEvent(providerId:string, obj:any) : void {
     }
 
     // +++ review expired keys mangement (user is receiving no message)

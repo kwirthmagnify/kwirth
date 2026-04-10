@@ -49,6 +49,10 @@ class PinocchioChannel implements IChannel {
         this.clusterInfo = clusterInfo
     }
 
+    startChannel = async () =>  {
+        this.clusterInfo.addSubscriber('tick', this, undefined)
+    }
+
     getChannelData = (): BackChannelData => {
         return {
             id: 'pinocchio',
@@ -58,6 +62,7 @@ class PinocchioChannel implements IChannel {
             reconnectable: true,
             metrics: false,
             events: false,
+            providers: ['tick'],
             sources: [ EClusterType.KUBERNETES, EClusterType.DOCKER ],
             endpoints: [],
             websocket: false,
@@ -70,6 +75,19 @@ class PinocchioChannel implements IChannel {
     }
 
     processObjectEvent(type:string, obj:any) : void {
+    }
+
+    processProviderEvent(providerId:string, obj:any) : void {
+        switch(providerId) {
+            case 'validating':
+                console.log('Received Validating event')
+                break
+            case 'tick':
+                console.log('TICK')
+                break
+            default:
+                console.log(`Ignored provider event from ${providerId} to channel ${this.getChannelData().id}`)
+        }
     }
 
     async endpointRequest(endpoint:string,req:Request, res:Response) : Promise<void> {

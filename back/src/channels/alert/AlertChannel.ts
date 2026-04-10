@@ -42,6 +42,7 @@ class AlertChannel implements IChannel {
             reconnectable: true,
             metrics: false,
             events: false,
+            providers: [],
             sources: [ EClusterType.DOCKER, EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,
@@ -53,7 +54,13 @@ class AlertChannel implements IChannel {
         return ['','view','create','cluster'].indexOf(scope)
     }
 
+    startChannel = async () =>  {
+    }
+
     processObjectEvent(type:string, obj:any) : void {
+    }
+
+    processProviderEvent(providerId:string, obj:any) : void {
     }
 
     websocketRequest(newWebSocket: WebSocket, instanceId: string, instanceConfig: IInstanceConfig): void {
