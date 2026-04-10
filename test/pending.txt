@@ -11,6 +11,10 @@ pinocchio (Kubernetes autonomo)
     envvars like... KWIRTH_CHANNEL_<chid>_<varname>='sssss'
     channels will receive <varname>='sssss' upon creation when starting kwirth core
 create providers interface for extending kwirth core
+add function to shell to a node (via docker socket, I suppose)
+implement plugin system (front & back)
+implement provider system (currently just events & metrics)
+  we should use the 'events' architecture, with subscribers
 
 ******************ERRORES
 RFM

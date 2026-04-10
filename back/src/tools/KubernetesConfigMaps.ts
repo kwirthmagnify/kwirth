@@ -56,7 +56,7 @@ export class KubernetesConfigMaps implements IConfigMaps {
                 return defaultValue
             }
             else {
-                console.log('Error reading configMap',this.namespace,'/', name)
+                console.log('Error reading kubernetes configMap',this.namespace,'/', name)
                 return undefined
             }
         }

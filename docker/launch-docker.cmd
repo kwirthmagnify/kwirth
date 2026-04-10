@@ -1,0 +1,1 @@
+docker run -p 3883:3883 -v %USERPROFILE%\.kube\config:/root/.kube/config -v .:/root/.kwirth/configmaps -v .:/root/.kwirth/secrets -e CONFIGMAPPATH=/root/.kwirth/configmaps -e SECRETPATH=/root/.kwirth/secrets kwirth

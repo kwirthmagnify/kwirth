@@ -20,13 +20,11 @@ export class MetricsTools {
     private clusterInfo:ClusterInfo
     private metricsList: Map<string,MetricDefinition>
     private loadingClusterMetrics: boolean = false
-    private isElectron: boolean = false
     private inCluster: boolean = true
 
-    constructor (clusterInfo:ClusterInfo, isElectron:boolean, inCluster:boolean) {
+    constructor (clusterInfo:ClusterInfo, inCluster:boolean) {
         this.clusterInfo = clusterInfo
         this.metricsList = new Map()
-        this.isElectron = isElectron
         this.inCluster = inCluster
     }
 
@@ -156,7 +154,7 @@ export class MetricsTools {
     public readCAdvisorMetrics = async (node:INodeInfo): Promise<string> => {
         let text=''
         
-        if (this.isElectron) {
+        if (!this.inCluster) {
             // electronaccess with kubeconfig credentials
             let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
             const url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy/metrics/cadvisor`
@@ -247,7 +245,7 @@ export class MetricsTools {
     }
 
     public readCAdvisorSummary = async (node:INodeInfo): Promise<any> => {
-        if (this.isElectron || !this.inCluster) {
+        if (!this.inCluster) {
             let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
             const url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy/stats/summary`
             const fetchOptions: any = { method: 'GET' }

@@ -27,48 +27,48 @@ export class UserApi {
     }
 
     constructor (secrets: ISecrets, apiKeyApi: ApiKeyApi) {
-      this.secrets=secrets
+        this.secrets=secrets
 
-      this.route.route('/')
-        .all( async (req:Request,res:Response, next) => {
-            if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
-            next()
-        })
-        .get( (req:Request,res:Response) => {
-            UserApi.semaphore.use ( async () => {
-                try {
-                    let users = await this.readUsersSecret(this.secrets)
-                    if (users) {
-                        res.status(200).json(Object.keys(users))
-                    }
-                    else {
-                        res.status(400).json([])
-                    }
-                }
-                catch (err) {
-                    res.status(500).json()
-                    console.log(err)
-                }
+        this.route.route('/')
+            .all( async (req:Request,res:Response, next) => {
+                if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
+                next()
             })
-        })
-        .post( (req:Request,res:Response) => {
-            UserApi.semaphore.use ( async () => {
-                try {
-                    let users = await this.readUsersSecret(this.secrets)
-                    if (!users) {
-                        res.status(400).json([])
-                        return
+            .get( (req:Request,res:Response) => {
+                UserApi.semaphore.use ( async () => {
+                    try {
+                        let users = await this.readUsersSecret(this.secrets)
+                        if (users) {
+                            res.status(200).json(Object.keys(users))
+                        }
+                        else {
+                            res.status(400).json([])
+                        }
                     }
-                    users[req.body.id]=btoa(JSON.stringify(req.body))
-                    await this.secrets.write('kwirth-users',users)
-                    res.status(200).json()
-                }
-                catch (err) {
-                    res.status(500).json()
-                    console.log(err)
-                }
+                    catch (err) {
+                        res.status(500).json()
+                        console.log(err)
+                    }
+                })
             })
-        })
+            .post( (req:Request,res:Response) => {
+                UserApi.semaphore.use ( async () => {
+                    try {
+                        let users = await this.readUsersSecret(this.secrets)
+                        if (!users) {
+                            res.status(400).json([])
+                            return
+                        }
+                        users[req.body.id]=btoa(JSON.stringify(req.body))
+                        await this.secrets.write('kwirth-users',users)
+                        res.status(200).json()
+                    }
+                    catch (err) {
+                        res.status(500).json()
+                        console.log(err)
+                    }
+                })
+            })
 
       this.route.route('/:user')
         .all( async (req:Request,res:Response, next) => {

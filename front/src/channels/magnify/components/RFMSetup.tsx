@@ -47,6 +47,70 @@ const setLeftItem = (
 //     </Stack>
 // }
 
+type ContainerStateWaiting = {
+  reason?: string;
+  message?: string;
+};
+
+type ContainerStateRunning = {
+  startedAt?: string;
+};
+
+type ContainerStateTerminated = {
+  exitCode?: number;
+  reason?: string;
+};
+
+type ContainerState = {
+  waiting?: ContainerStateWaiting;
+  running?: ContainerStateRunning;
+  terminated?: ContainerStateTerminated;
+};
+
+type ContainerStatus = {
+  name: string;
+  ready: boolean;
+  restartCount?: number;
+  state?: ContainerState;
+};
+
+type Color = "green" | "gray" | "orange" | "red" | "blue";
+
+export function getContainerColor(container: ContainerStatus): Color {
+  const state = container.state ?? {};
+
+  // 🟢 Operativo
+  if (container.ready) {
+    return "green";
+  }
+
+  // ⚪ Terminado
+  if (state.terminated) {
+    return "gray";
+  }
+
+  // Estados de espera
+  if (state.waiting) {
+    const reason = state.waiting.reason ?? "";
+
+    // 🟡 Arrancando
+    const startingReasons = [
+      "ContainerCreating",
+      "PodInitializing",
+    ];
+
+    if (startingReasons.includes(reason)) {
+      return "orange";
+    }
+
+    // 🔴 Error
+    return "red";
+  }
+
+  // 🔵 Otros (ej: running pero no ready)
+  return "blue";
+}
+
 const rfmSetup = (
         theme: Theme,
         magnifyData:IMagnifyData,
@@ -338,15 +402,7 @@ const rfmSetup = (
 
                 const renderSet = (prefix:number, cStatuses:any) => {
                     cStatuses.map((c:any, index:number) => {
-                        let color='orange'
-                        if (c.started) {
-                            color='green'
-                            if (f?.data.origin.status.phase!== 'Running') color = 'blue'
-                        }
-                        else {
-                            if (c.state.terminated) color = 'gray'
-                        }
-                        result.push(<Box key={prefix*1000+index} sx={{ width: '8px', height: '8px', backgroundColor: color, margin: '1px', display: 'inline-block' }}/>)
+                        result.push(<Box key={prefix*1000+index} sx={{ width: '8px', height: '8px', backgroundColor: getContainerColor(c), margin: '1px', display: 'inline-block' }}/>)
                     })
                 }
                 if (f.data.origin.status.initContainerStatuses && f.data.origin.status.initContainerStatuses.length>0) renderSet(0, f.data.origin.status.initContainerStatuses)

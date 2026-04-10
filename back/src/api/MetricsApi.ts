@@ -51,7 +51,7 @@ export class MetricsApi {
                 }
                 catch (err) {
                     res.status(400).send()
-                    console.log('Error obtaining available metrics list')
+                    console.log('Error obtaining usage metrics')
                     console.log(err)
                 }
             })

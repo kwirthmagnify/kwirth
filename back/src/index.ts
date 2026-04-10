@@ -35,7 +35,7 @@ import { ISecrets } from './tools/ISecrets'
 import { IConfigMaps } from './tools/IConfigMap'
 import { DockerSecrets } from './tools/DockerSecrets'
 import { DockerConfigMaps } from './tools/DockerConfigMaps'
-import { DockerTools } from './tools/DockerTools'
+//import { DockerTools } from './tools/DockerTools'
 import { OpsChannel } from './channels/ops/OpsChannel'
 import { TrivyChannel } from './channels/trivy/TrivyChannel'
 import { IChannel } from './channels/IChannel'
@@ -62,11 +62,10 @@ const fs = require('fs')
 //     return originalFetch(...args);
 // }
 
-process.versions.electron = "si"
 const runningEnv = {
   isElectron: !!(process.versions && process.versions.electron),
   isDocker: fs.existsSync('/.dockerenv'),
-  isK8s: !!process.env.KUBERNETES_SERVICE_HOST,
+  isK8s: true || !!process.env.KUBERNETES_SERVICE_HOST,
   isTTY: !!process.stdout.isTTY,
   isCI: !!process.env.CI
 }
@@ -91,10 +90,13 @@ if (rootPath && !rootPath.startsWith('/')) rootPath = '/'+ rootPath
 const envRootPath = rootPath || ''
 const envCommand = process.env.COMMAND
 const envContext = process.env.CONTEXT || undefined
+const envAuth = process.env.AUTH || 'kwirth'  // kwirth | kubeconfig | b2c | entraid | cognito | keycloak | ...
 const envMasterKey = process.env.MASTERKEY || 'Kwirth4Ever'
 const envForward = (process.env.FORWARD || 'true').toLowerCase() === 'true'
 const envPort = +(process?.env?.PORT || '3883')
 const envFront = process.env.FRONT !== undefined ? process.env.FRONT === 'true' : true
+const envConfigMapPath = process.env.CONFIGMAPPATH !== undefined ? process.env.CONFIGMAPPATH : '.'
+const envSecretPath = process.env.SECRETPATH !== undefined ? process.env.SECRETPATH : '.'
 const envMetricsInterval = process.env.METRICSINTERVAL? +process.env.METRICSINTERVAL : 15
 const envChannelLogEnabled = (process.env.CHANNEL_LOG || 'true').toLowerCase() === 'true'
 const envChannelMetricsEnabled = (process.env.CHANNEL_METRICS || 'true').toLowerCase() === 'true'
@@ -178,50 +180,68 @@ if (envCommand!==undefined) {
 
 
 
+// const getExecutionEnvironment = async (context:string|undefined):Promise<string> => {
+//     console.log('Detecting execution environment...')
+
+//     console.log('Trying Electron...')    
+//     if (runningEnv.isElectron) return 'electron'
+
+//     // we keep this order of detection, since kubernetes also has a docker engine
+//     console.log('Trying Kubernetes...')
+//     try {
+//         let kubeConfig = new KubeConfig()
+//         kubeConfig.loadFromDefault()
+//         if (context) kubeConfig.setCurrentContext(context)
+//         let coreApi = kubeConfig.makeApiClient(CoreV1Api)
+//         await coreApi.listPodForAllNamespaces()
+//         return 'kubernetes'
+//     }
+//     catch (err) {
+//         console.log(err)
+//         console.log('================================================')
+//     }
+
+//     console.log('Trying Linux docker...')
+//     try {
+//         let dockerApiLinux = new Docker({ socketPath: '/var/run/docker.sock'})
+//         await dockerApiLinux.listContainers( { all:false } )
+//         return 'linuxdocker'
+//     }
+//     catch (err) {
+//         console.log(err)
+//         console.log('================================================')
+//     }
+
+//     console.log('Trying Windows docker...')
+//     try {
+//         let dockerApiWindows = new Docker({ socketPath: '//./pipe/docker_engine' })
+//         await dockerApiWindows.listContainers( { all:false } )
+//         return 'windowsdocker'
+//     }
+//     catch (err) {
+//         console.log(err)
+//         console.log('================================================')
+//     }
+//     return 'undetected'
+// }
+
 const getExecutionEnvironment = async (context:string|undefined):Promise<string> => {
     console.log('Detecting execution environment...')
 
     console.log('Trying Electron...')    
     if (runningEnv.isElectron) return 'electron'
 
-    // we keep this order of detection, since kubernetes also has a docker engine
     console.log('Trying Kubernetes...')
-    try {
-        let kubeConfig = new KubeConfig()
-        kubeConfig.loadFromDefault()
-        if (context) kubeConfig.setCurrentContext(context)
-        let coreApi = kubeConfig.makeApiClient(CoreV1Api)
-        await coreApi.listPodForAllNamespaces()
+    if (runningEnv.isK8s) {
         return 'kubernetes'
     }
-    catch (err) {
-        console.log(err)
-        console.log('================================================')
-    }
 
-    console.log('Trying Linux docker...')
-    try {
-        let dockerApiLinux = new Docker({ socketPath: '/var/run/docker.sock'})
-        await dockerApiLinux.listContainers( { all:false } )
-        return 'linuxdocker'
-    }
-    catch (err) {
-        console.log(err)
-        console.log('================================================')
-    }
+    console.log('Trying Docker...')
+    if (runningEnv.isDocker) return 'docker'
 
-    console.log('Trying Windows docker...')
-    try {
-        let dockerApiWindows = new Docker({ socketPath: '//./pipe/docker_engine' })
-        await dockerApiWindows.listContainers( { all:false } )
-        return 'windowsdocker'
-    }
-    catch (err) {
-        console.log(err)
-        console.log('================================================')
-    }
     return 'undetected'
 }
+
 
 const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthData|undefined> => {
     try {
@@ -264,6 +284,7 @@ const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthD
 const activateRunningInstance = (ri:IRunningInstance) => {
     runningInstances.forEach( r => r.active = false)
     ri.active = true
+    console.log('Activated RI:',ri.id, ri.clusterInfo.name)
 }
 
 const createRunningInstance = async (context:string|undefined, kwirthData:KwirthData):Promise<IRunningInstance|undefined> => {
@@ -271,6 +292,23 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         let kubeConfig = new KubeConfig()
         kubeConfig.loadFromDefault()
         if (context) kubeConfig.setCurrentContext(context)
+
+        const currentContextName = kubeConfig.getCurrentContext()
+        console.log(`Will use '${currentContextName}' context`)
+        const currentContext = kubeConfig.contexts.find(c => c.name === currentContextName)
+
+        if (currentContext) {
+            kubeConfig.clusters = kubeConfig.clusters.map(cluster => {
+                if (cluster.name === currentContext.cluster) {
+                    return {
+                        ...cluster,
+                        skipTLSVerify: true
+                    }
+                }
+                return cluster
+            })
+        }
+        
 
         let clusterInfo = new ClusterInfo()
         clusterInfo.kubeConfig = kubeConfig
@@ -294,18 +332,29 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         clusterInfo.logApi = new Log(clusterInfo.kubeConfig)
         clusterInfo.apisApi = kubeConfig.makeApiClient(ApisApi)
 
-        if (runningEnv.isElectron) {
+        if (runningEnv.isElectron || runningEnv.isDocker) {
             // do nothing, since we will use kubeconfig credentials
+            console.log('SA Token will not be created under isElectron or isDocker contexts')
         }
         else {
+            // let saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
+            // await saToken.createToken('kwirth-sa', kwirthData.namespace)
+            // let token:string|undefined = undefined
+            // let retries = 3
+            // while (!token && retries-- > 0) {
+            //     await new Promise((resolve) => setTimeout(resolve, 1000))
+            //     token = await saToken.extractToken('kwirth-sa', kwirthData.namespace)
+            // }
+            // if (token) {
+            //     console.log('Got token...')
+            //     clusterInfo.saToken = saToken
+            //     clusterInfo.token = token
+            // }
+            // else {
+            //     console.log('No SA Token, no metrics will be available.')
+            // }
             let saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
-            await saToken.createToken('kwirth-sa', kwirthData.namespace)
-            let token:string|undefined = undefined
-            let retries = 3
-            while (!token && retries-- > 0) {
-                await new Promise((resolve) => setTimeout(resolve, 1000))
-                token = await saToken.extractToken('kwirth-sa', kwirthData.namespace)
-            }
+            let token = await saToken.createToken('kwirth-sa', kwirthData.namespace)
             if (token) {
                 console.log('Got token...')
                 clusterInfo.saToken = saToken
@@ -318,13 +367,32 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
 
         clusterInfo.setKubernetesClusterName()
         clusterInfo.nodes = await clusterInfo.getNodes()
-        
+
+        let configMaps
+        let secrets
+        if (runningEnv.isDocker) {
+            console.log('Configuration paths:', envConfigMapPath, envSecretPath)
+            configMaps = new DockerConfigMaps(clusterInfo.coreApi, envConfigMapPath)
+            secrets = new DockerSecrets(clusterInfo.coreApi, envSecretPath)
+            let users:{ [username:string]:string } = await secrets.read('kwirth-users')
+            if (!users) {
+                console.log('Admin user will be created, since there is no users config map')
+                users = {
+                    admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXI6Ojo6In0='
+                }
+                await secrets.write('kwirth-users',users)
+            }
+        }
+        else {
+            secrets = new KubernetesSecrets(clusterInfo.coreApi, kwirthData.namespace)
+            configMaps = new KubernetesConfigMaps(clusterInfo.coreApi, kwirthData.namespace)
+        }
         let runningInstance:IRunningInstance = {
             id: uuid(),
             kwirthData: kwirthData,
             clusterInfo: clusterInfo,
-            secrets: new KubernetesSecrets(clusterInfo.coreApi, kwirthData.namespace),
-            configMaps: new KubernetesConfigMaps(clusterInfo.coreApi, kwirthData.namespace),
+            secrets,
+            configMaps,
             channels: new Map(),
             active: false,
             router: undefined,
@@ -1100,43 +1168,6 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
     }
 }
 
-const setUpRoutesOld = async (ri:IRunningInstance) : Promise<ApiKeyApi|undefined> => {
-    try {
-        const riRouter = express.Router()
-
-        let result = await ApiKeyApi.create(ri.configMaps, envMasterKey, runningEnv.isElectron)
-        if (!result) {
-            console.log('Could not get apikeyapi')
-            return
-        }
-        let apiKeyApi = result
-        riRouter.use(`/key`, apiKeyApi.route)
-        ri.apiKeyApi = apiKeyApi
-        let configApi:ConfigApi = new ConfigApi(apiKeyApi, ri.kwirthData, ri.clusterInfo)
-        riRouter.use(`/config`, configApi.route)
-        let storeApi:StoreApi = new StoreApi(ri.configMaps, apiKeyApi)
-        riRouter.use(`/store`, storeApi.route)
-        let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi)
-        riRouter.use(`/user`, userApi.route)
-        let loginApi:LoginApi = new LoginApi(ri.secrets, ri.configMaps, ri.apiKeyApi)
-        riRouter.use(`/login`, loginApi.route)
-        let manageKwirthApi:ManageKwirthApi = new ManageKwirthApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, apiKeyApi, ri.kwirthData)
-        riRouter.use(`/managekwirth`, manageKwirthApi.route)
-        let manageCluster:ManageClusterApi = new ManageClusterApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, apiKeyApi)
-        riRouter.use(`/managecluster`, manageCluster.route)
-        let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
-        riRouter.use(`/metrics`, metricsApi.route)
-
-        ri.router = riRouter
-        return apiKeyApi
-    }
-    catch (err) {
-        console.log('Error setting up routes')
-        console.log(err)
-    }
-    return undefined
-}
-
 const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
     try {
         const riRouter = express.Router()
@@ -1260,7 +1291,7 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
         startChannelEndpoints(ri, expressApp)
     }
     catch (err) {
-        console.log('Error in runKubernetes')
+        console.log('Error in startRunningInstance')
         console.log(err)
     }
 }
@@ -1310,7 +1341,7 @@ const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthDat
         console.log('  Nodes:', localClusterInfo.nodes.size)
 
         if (metricsRequired) {
-            localClusterInfo.metrics = new MetricsTools(localClusterInfo, localKwirthData.isElectron, localKwirthData.inCluster)
+            localClusterInfo.metrics = new MetricsTools(localClusterInfo, localKwirthData.inCluster)
             localClusterInfo.metricsInterval = envMetricsInterval // we set cluster metrics interval based on default metrics interval
             await localClusterInfo.metrics.startMetrics()
             console.log('  vCPU:', localClusterInfo.vcpus)
@@ -1351,8 +1382,9 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
         console.log('Metrics required: ', metricsRequired)
         if (!envChannelMetricsEnabled) console.log('❌ Metrics have not been enabled on Kwirth, so it will not be available.')
-        if (!runningEnv.isElectron && !runningInstance.clusterInfo.token) console.log('❌ An SA Token could not be obtained, so metrics will not be available.')
-        metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || Boolean(runningInstance.clusterInfo.token))
+        if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) console.log('❌ An SA Token could not be obtained, so metrics will not be available.')
+        metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
+
 
         await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, eventsRequired)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
@@ -1414,7 +1446,7 @@ const launchKubernetes = async (context:string|undefined, localKwirthData:Kwirth
             }
         }
         else {
-            console.log('Cannot get kwirthdata, exiting...')
+            console.log('Cannot get kwirthdata launching Kubernetes, exiting...')
         }
     }
     catch (err) {
@@ -1423,67 +1455,33 @@ const launchKubernetes = async (context:string|undefined, localKwirthData:Kwirth
     }
 }
 
-const runDocker = async (localDockerApi:Docker, localClusterInfo:ClusterInfo, localKwirthData:KwirthData) : Promise<void> => {
-    try {
-        let localSecrets = new DockerSecrets(localClusterInfo.coreApi, '/secrets')
-        let localConfigMaps = new DockerConfigMaps(localClusterInfo.coreApi, '/configmaps')
-
-        let lastVersion = await getLastKwirthVersion(localKwirthData)
-        if (lastVersion) localKwirthData.lastVersion = lastVersion
-        
-        let result = await  ApiKeyApi.create(localConfigMaps, envMasterKey, runningEnv.isElectron)
-        if (!result) {
-            console.log('Could not get apikeyapi')
-            return
-        }
-        let ka:ApiKeyApi = result
-        app.use(`${envRootPath}/key`, ka.route)
-        let ca:ConfigApi = new ConfigApi(ka, localKwirthData, localClusterInfo)
-        ca.setDockerApi(localDockerApi)
-        app.use(`${envRootPath}/config`, ca.route)
-        let sa:StoreApi = new StoreApi(localConfigMaps, ka)
-        app.use(`${envRootPath}/store`, sa.route)
-        let ua:UserApi = new UserApi(localSecrets, ka)
-        app.use(`${envRootPath}/user`, ua.route)
-        let la:LoginApi = new LoginApi(localSecrets, localConfigMaps, ka)
-        app.use(`${envRootPath}/login`, la.route)
-        let mk:ManageKwirthApi = new ManageKwirthApi(localClusterInfo.coreApi, localClusterInfo.appsApi, localClusterInfo.batchApi, ka, localKwirthData)
-        app.use(`${envRootPath}/managekwirth`, mk.route)
-        let mc:ManageClusterApi = new ManageClusterApi(localClusterInfo.coreApi, localClusterInfo.appsApi, ka)
-        app.use(`${envRootPath}/managecluster`, mc.route)
-
-        // +++ we need to add this channels into a runninginstance
-        let localChannels:Map<string,IChannel> = new Map()
-        let logChannel = new LogChannel(localClusterInfo)
-        localChannels.set('log', logChannel)
-    }
-    catch (err) {
-        console.log('Error in runDocker')
-        console.log(err)
-    }
-}
-
-const launchDocker = async(localKwirthData:KwirthData) : Promise<void> => {
+const launchDocker = async (context:string|undefined, localKwirthData:KwirthData, expressApp:Application) : Promise<void> => {    
     try {
         console.log('Start Docker Kwirth')
-        let localDockerApi =new Docker()
-        let localClusterInfo = new ClusterInfo()
-        localClusterInfo.nodes = new Map()
-        localClusterInfo.metrics = new MetricsTools(localClusterInfo, localKwirthData.isElectron, localKwirthData.inCluster)
-        localClusterInfo.metricsInterval = 15
-        localClusterInfo.token = ''
-        localClusterInfo.dockerApi = localDockerApi
-        localClusterInfo.dockerTools = new DockerTools(localClusterInfo)
-        localClusterInfo.name = 'docker'
-        localClusterInfo.type = EClusterType.DOCKER
-        localClusterInfo.flavour = 'docker'
-
-        await runDocker(localDockerApi, localClusterInfo, localKwirthData)
-        let localChannels = new Map()
-        console.log(`Enabled channels for this (docker) run are: ${Array.from(localChannels.keys()).map(c => `'${c}'`).join(',')}`)
+        if (localKwirthData) {
+            console.log('Initial kwirthData', localKwirthData)
+            try {
+                let runningInstance = await createRunningInstance(context, localKwirthData)
+                if (runningInstance) {
+                    await prepareRunningInstance(localKwirthData, runningInstance)
+                    runningInstances.push(runningInstance)
+                    activateRunningInstance(runningInstance)
+                    await startRunningInstance(runningInstance, expressApp)
+                }
+                else {
+                    console.log('Cannot get a running instance')
+                }
+            }
+            catch (err){
+                console.log(err)
+            }
+        }
+        else {
+            console.log('Cannot get kwirthdata launching Docker, exiting...')
+        }
     }
     catch (err) {
-        console.log('Error launching docker')
+        console.log('Error launching kubernetes')
         console.log(err)
     }
 }
@@ -1494,7 +1492,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
         if (localKwirthData) {
             console.log('Initial kwirthData', localKwirthData)
             try {
-                expressApp.get('/electron/kubeconfig', (req:Request,res:Response) => {
+                expressApp.get('/core/electron/kubeconfig', (req:Request,res:Response) => {
                     try {
                         let kubeConfig = new KubeConfig()
                         kubeConfig.loadFromDefault()
@@ -1510,7 +1508,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                         console.log(err)
                     }
                 })
-                expressApp.delete('/electron/kubeconfig', (req:Request,res:Response) => {
+                expressApp.delete('/core/electron/kubeconfig', (req:Request,res:Response) => {
                     try {
                         let contextName = req.body.context
                         if (contextName) {
@@ -1532,7 +1530,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                         console.log(err)
                     }
                 })
-                expressApp.post('/electron/kubeconfig', async (req:Request, res:Response) => {
+                expressApp.post('/core/electron/kubeconfig', async (req:Request, res:Response) => {
                     try {
                         let contextName:string = req.body.context
                         console.log('Activating context for electron use:', contextName)
@@ -1586,7 +1584,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
             }
         }
         else {
-            console.log('Cannot get kwirthdata, exiting...')
+            console.log('Cannot get kwirthdata launching Electron, exiting...')
         }    
     }
     catch (err) {
@@ -1798,7 +1796,7 @@ showLogo()
 startNodeTasks()
 
 getExecutionEnvironment(envContext).then( async (exenv:string) => {
-    console.log('Kubernetes context:', envContext || 'default kubeconfig cluster')
+    console.log('Kubernetes context:', envContext || 'default kubeconfig context')
 
     let kwirthData:KwirthData
     switch (exenv) {
@@ -1827,6 +1825,20 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
                 lastVersion: VERSION,
                 clusterName: 'inDocker',
                 clusterType: EClusterType.DOCKER,
+                metricsInterval:15,
+                channels: []
+            }
+            break
+        case 'docker':
+            kwirthData = {
+                namespace: '',
+                deployment: '',
+                isElectron: false,
+                inCluster: false,
+                version: VERSION,
+                lastVersion: VERSION,
+                clusterName: 'inDocker',
+                clusterType: EClusterType.KUBERNETES,
                 metricsInterval:15,
                 channels: []
             }
@@ -1860,7 +1872,8 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
     }
     app.use(`${envRootPath}`, (req, res, next) => {
         if (req.path.startsWith(`${envRootPath}/front`) || req.path === '/') return next()
-        if (runningEnv.isElectron && req.path.startsWith('/electron/')) return next()
+        if (runningEnv.isElectron && req.path.startsWith('/core/electron/')) return next()
+        if (req.path.startsWith('/core/auth/')) return next()
 
         const activeRI = runningInstances.find(r => r.active)
         if (activeRI && activeRI.router)
@@ -1868,6 +1881,10 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
         else
             return res.status(503).send('No active instance available')
     })
+    app.get('/core/auth/method', (req:Request,res:Response) => {
+        return res.status(200).json({ auth: envAuth })
+    })
+
     if (envFront) app.use(`${envRootPath}/front/`, express.static('./front'))
 
     if (kwirthData.inCluster) {
@@ -1892,13 +1909,16 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
             break
         case 'windowsdocker':
         case 'linuxdocker':
-            await launchDocker(kwirthData)
+            //await launchKwirthDocker(kwirthData)
+            break
+        case 'docker':
+            await launchDocker(envContext, kwirthData, app)
             break
         case 'kubernetes':
             await launchKubernetes(envContext, kwirthData, app)
             break
         default:
-            console.log('Unsupported execution environment. Exiting...')
+            console.log(`'Unsupported execution environment '${exenv}'. Exiting...`)
             process.exit()
     }
     console.log(`KWI1500I Control is being given to Kwirth`)

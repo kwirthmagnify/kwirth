@@ -37,7 +37,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
     useEffect(() => {
         const fetchData = async () => {
             try {
-                let resp = await fetch(backendUrl + '/electron/kubeconfig')
+                let resp = await fetch(backendUrl + '/core/electron/kubeconfig')
                 let contexts = await resp.json() as IContext[]
 
                 setLocalContexts(contexts)
@@ -120,7 +120,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
         setWaiting(true)
         try {
             let payload = JSON.stringify({ context:name })
-            let resp = await fetch(backendUrl+'/electron/kubeconfig', { method:'POST', body:payload, headers: {'Content-Type':'application/json'} } )
+            let resp = await fetch(backendUrl+'/core/electron/kubeconfig', { method:'POST', body:payload, headers: {'Content-Type':'application/json'} } )
             if (resp.status === 200) {
                 let jresp = await resp.json()
                 let sc = 0

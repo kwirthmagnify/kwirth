@@ -49,10 +49,12 @@ import { ContextSelector } from './components/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
 import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
+import { useAsync } from 'react-use'
 
 interface IAppProps {
     backendUrl:string
     isElectron: boolean
+    auth: string
 }
 
 const App: React.FC<IAppProps> = (props:IAppProps) => {
@@ -157,7 +159,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     const [frontChannels] = useState<Map<string, TChannelConstructor>>(new Map())
     const [user, setUser] = useState<IUser>()
-    const [logged,setLogged]=useState(false)
+    const [logged,setLogged] = useState(false)
     const [firstLogin,setFirstLogin]=useState(false)
     const [refresh,setRefresh]=useState(0)
 
@@ -1579,7 +1581,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
     
     if (!logged) {
-        if (props.isElectron) {
+        //if (props.isElectron) {
+        if (props.auth === 'kubeconfig') {
             return <div style={{ backgroundImage:`url('./turbo-pascal.png')`, backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', width: '100vw', height: '100vh' }} >
                 <SessionContext.Provider value={{ user, accessString: accessString, logged, backendUrl }}>
                     <ContextSelector onContextSelectorLocal={onContextSelectorLocal} onContextSelectorRemote={onContextSelectorRemote} isElectron={props.isElectron}/>

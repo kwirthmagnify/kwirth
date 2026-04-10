@@ -102,6 +102,7 @@ async function createMainWindow() {
 		const port = await portfinder.getPortPromise()
 		try {
 			process.env.PORT = String(port)
+			process.env.AUTH = 'kubeconfig'
 			process.env.NODE_ENV = 'production'
 			
 			const backendDir = path.join(__dirname, 'bundle')
@@ -111,7 +112,7 @@ async function createMainWindow() {
 			require('./bundle/bundle.js')
 		}
 		catch (err) {
-			console.error("Error loading backend:", err);
+			console.error('Error loading backend:', err);
 		}
 
 		const loadApp = () => {

@@ -906,7 +906,15 @@ class MagnifyChannel implements IChannel {
     private getUsage = async (scope:string) => {
         switch(scope) {
             case 'cluster':
-                return this.clusterInfo.metrics.getClusterUsage()
+                if (this.clusterInfo.metrics)
+                    return this.clusterInfo.metrics.getClusterUsage()
+                else
+                    return {
+                        cpu:0,
+                        memory:0,
+                        txmbps:0,
+                        rxmbps:0
+                    }
             default:
                 console.log('Invalid scope por getUsage:', scope)
         }

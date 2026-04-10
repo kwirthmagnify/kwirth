@@ -27,7 +27,7 @@ export class DockerConfigMaps implements IConfigMaps {
             return JSON.parse(data)
         }
         catch (err) {
-            console.log(`Error reading configMap ${name}. Return default value.`)
+            console.log(`Error reading docker configMap ${name}. Return default value.`)
             console.log(err)
             return defaultValue
         }

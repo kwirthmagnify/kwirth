@@ -1000,3 +1000,242 @@ spec:
 
 
 
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: network-security-sim
+  labels:
+    app: security-monitor
+spec:
+  containers:
+  - name: traffic-gen
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Cyber-Security Edge Monitor Active | Monitoring Traffic ---"
+        
+        while true; do
+          # Variables de red aleatorias
+          SRC_IP="$((RANDOM%255)).$((RANDOM%255)).$((RANDOM%255)).$((RANDOM%255))"
+          DEST_PORT=$(echo "80|443|22|3306|5432|8080" | tr '|' '\n' | shuf -n 1)
+          LATENCY="$((RANDOM%500 + 10))ms"
+          BYTES="$((RANDOM%10000))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          EVENT_TYPE=$(($RANDOM % 40))
+          LEVEL="INFO"
+
+          case $EVENT_TYPE in
+            0|1|2) MSG="Connection allowed from $SRC_IP to port $DEST_PORT. Bytes: $BYTES." ;;
+            3)     MSG="Intrusion Detection: Possible SQL Injection attempt from $SRC_IP."; LEVEL="WARN" ;;
+            4)     MSG="Firewall: DROPPED packet from $SRC_IP (Blacklisted Country)."; LEVEL="ERROR" ;;
+            5)     MSG="Load Balancer: Health check failed for node-03. Diverting traffic."; LEVEL="WARN" ;;
+            6)     MSG="SSL/TLS: Handshake successful with $SRC_IP (Cipher: AES-256)." ;;
+            7)     MSG="DDoS Protection: Rate-limit triggered for IP $SRC_IP (500 req/sec)."; LEVEL="WARN" ;;
+            8)     MSG="VPN: User 'admin-remote' established tunnel from $SRC_IP." ;;
+            9)     MSG="Port Scan: Multiple connection attempts from $SRC_IP on ports 20-1000."; LEVEL="ERROR" ;;
+            10)    MSG="WAF: Blocked XSS payload in 'User-Agent' header from $SRC_IP."; LEVEL="ERROR" ;;
+            11)    MSG="Traffic: High bandwidth usage detected on Interface eth0 ($BYTES KB/s)." ;;
+            *)     MSG="Standard keep-alive packet received from $SRC_IP. Latency: $LATENCY." ;;
+          esac
+
+          # Salida tipo Syslog/Netflow
+          echo "[$DATE] $LEVEL [Net-Guard] - SRC: $SRC_IP - DST_PORT: $DEST_PORT - $MSG"
+
+          # Intervalo rápido para simular tráfico real (0.5 a 1.5 seg)
+          sleep 1
+        done
+
+
+
+
+************************************************************************************************************************************************
+************************************************************************************************************************************************
+************************************************************************************************************************************************
+************************************************************************************************************************************************
+************************************************************************************************************************************************
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: procurement-app-stresser-cpu
+  labels:
+    app: e-procurement
+    tier: backend
+spec:
+  containers:
+  - name: generator
+    # Usamos la misma imagen, busybox es suficiente para esto
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    # Configuración de recursos: CLAVE para ver el efecto real
+    # Simulamos que el pod normalmente usa poco, pero permitimos picos.
+    resources:
+      requests:
+        cpu: "100m"    # 0.1 vCPU garantizada (carga normal)
+        memory: "64Mi"
+      limits:
+        cpu: "1000m"   # 1 vCPU máx (hasta donde llegará en el pico)
+        memory: "128Mi"
+    args:
+      - |
+        echo "--- Corporate Procurement System Active | Mode: Realistic Load & CPU Spikes ---"
+        
+        # --- Función de Estrés de CPU ---
+        # Ejecuta cálculos matemáticos rápidos en bucle durante X segundos
+        trigger_cpu_stress() {
+          DURATION=$1
+          END_TIME=$(( $(date +%s) + DURATION ))
+          
+          # Un log para indicar que empieza el estrés
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR - [System] - CRITICAL: High CPU utilization detected during bulk PO index recalculation! Duration: ${DURATION}s."
+          
+          # Bucle que consume CPU (mientras el tiempo actual sea menor que el final)
+          # 'yes' genera flujo infinito, 'sha256sum' calcula hashes sin parar.
+          # Corremos dos en paralelo para asegurar el consumo en múltiples núcleos si los hay.
+          yes | sha256sum > /dev/null & 
+          PID1=$!
+          yes | sha256sum > /dev/null &
+          PID2=$!
+          
+          # Esperar la duración del estrés
+          sleep $DURATION
+          
+          # Matar los procesos de estrés
+          kill $PID1 2>/dev/null
+          kill $PID2 2>/dev/null
+          
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] INFO - [System] - CPU load normalized."
+        }
+        # ---------------------------------
+
+        while true; do
+          # 1. GENERACIÓN DE VARIABLES DE LOG (Igual que antes)
+          PR_ID="PR-$(($RANDOM % 9000 + 1000))"
+          PO_ID="PO-$(($RANDOM % 8000 + 1000))"
+          SUPPLIER=$(echo "Dell|Global_Office|Fast_Logistics|Cloud_Systems|Iron_Steel_Co|OfficeDepot" | tr '|' '\n' | shuf -n 1)
+          USR="BUYER-$(($RANDOM % 500 + 100))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 50))
+          LEVEL="INFO"
+
+          case $TYPE in
+            0) MSG="Purchase Request $PR_ID created by $USR for 'IT Equipment'." ;;
+            1|2|3|4|6|7|10|11|12|13|14|17|18|22|24|25|26|27|28|30|31|32|33|34|35|37|38|39|41|43|44|46|47|48|49) MSG="Normal transaction: Processing $PR_ID / $PO_ID." ;;
+            5) MSG="Inventory: Low stock alert."; LEVEL="WARN" ;;
+            8) MSG="Error: Unable to match Invoice."; LEVEL="ERROR" ;;
+            9) MSG="Approval: $PR_ID REJECTED."; LEVEL="WARN" ;;
+            15) MSG="Alert: $SUPPLIER delivery overdue."; LEVEL="WARN" ;;
+            19) MSG="Database: Deadlock detected (Retrying)."; LEVEL="ERROR" ;;
+            20) MSG="Contract expires soon."; LEVEL="WARN" ;;
+            21) MSG="Security: $USR session revoked."; LEVEL="ERROR" ;;
+            29) MSG="Warning: Price discrepancy detected."; LEVEL="WARN" ;;
+            36) MSG="Error: $USR attempted to approve above limit."; LEVEL="ERROR" ;;
+            40) MSG="Critical: ERP connector is DOWN."; LEVEL="ERROR" ;;
+            42) MSG="Supplier Risk: $SUPPLIER downgraded."; LEVEL="WARN" ;;
+            *) MSG="System performing routine maintenance." ;;
+          esac
+
+          # 2. SALIDA DE LOGS NORMAL
+          echo "[$DATE] $LEVEL - [Procurement-Core] - Buyer: $USR - Ref: ${PR_ID:-$PO_ID} - $MSG"
+
+          # 3. LÓGICA DE ESTRÉS ALEATORIO
+          # Probabilidad de pico de CPU (ej: 5% de las veces)
+          STRESS_CHANCE=$(($RANDOM % 100))
+          # Definir el threshold (menor número = menos frecuente)
+          THRESHOLD=5 
+
+          if [ "$STRESS_CHANCE" -lt "$THRESHOLD" ]; then
+             # Duración aleatoria del pico (entre 10 y 30 segundos)
+             STRESS_DUR=$(( (RANDOM % 20) + 10 ))
+             trigger_cpu_stress $STRESS_DUR
+          fi
+
+          # 4. INTERVALO NORMAL (entre logs)
+          sleep $(( (RANDOM % 2) + 1 ))
+        done
+
+
+
+
+
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: procurement-advanced-simulator-memory
+  labels:
+    app: e-procurement
+spec:
+  containers:
+  - name: app-container
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "64Mi"
+      limits:
+        cpu: "500m"
+        memory: "256Mi"
+    args:
+      - |
+        echo "--- Corporate Procurement System v2.0 | Full Logs & RAM Stress Mode ---"
+        
+        # --- Función para simular carga pesada en RAM ---
+        trigger_memory_load() {
+          # Elegimos un tamaño aleatorio entre 80MB y 180MB
+          MB=$(( (RANDOM % 100) + 80 ))
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARN - [System-Memory] - High usage detected: Running 'Annual_Audit_Report' for CFO. Allocating ${MB}MB buffer."
+          
+          # Simulamos la carga llenando una variable en RAM
+          # (El base64 aumenta un 33% el tamaño de los datos originales, ojo con los límites)
+          STRESS_BUFFER=$(dd if=/dev/urandom bs=1M count=$MB 2>/dev/null | base64)
+          
+          # Mantenemos el reporte en memoria durante 15 segundos
+          sleep 15
+          
+          # Liberamos la memoria
+          unset STRESS_BUFFER
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] INFO - [System-Memory] - Report generated and sent. Memory buffer released."
+        }
+
+        while true; do
+          # 1. Variables Dinámicas (Log de Negocio)
+          PR_ID="PR-$(($RANDOM % 9000 + 1000))"
+          PO_ID="PO-$(($RANDOM % 8000 + 1000))"
+          SUPPLIER=$(echo "Dell|Global_Office|Fast_Logistics|Cloud_Systems|Iron_Steel_Co|OfficeDepot" | tr '|' '\n' | shuf -n 1)
+          USR="BUYER-$(($RANDOM % 500 + 100))"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          TYPE=$(($RANDOM % 50))
+          LEVEL="INFO"
+
+          # 2. Selector de Mensaje (Tu lógica original mejorada)
+          case $TYPE in
+            0)  MSG="Purchase Request $PR_ID created by $USR for 'IT Equipment'." ;;
+            1)  MSG="Budget Check: $PR_ID approved for Cost Center #$(($RANDOM%99+100))." ;;
+            3)  MSG="Purchase Order $PO_ID generated from $PR_ID for supplier $SUPPLIER." ;;
+            8)  MSG="Error: Unable to match Invoice INV-$((RANDOM%999)) with any open PO."; LEVEL="ERROR" ;;
+            13) MSG="Payment: Wire transfer of $(($RANDOM%5000+500)) EUR authorized for $SUPPLIER." ;;
+            19) MSG="Database: Deadlock detected during bulk PO processing (Retrying)."; LEVEL="ERROR" ;;
+            40) MSG="Critical: ERP connector is DOWN. $PO_ID stuck in 'Pending Sync'."; LEVEL="ERROR" ;;
+            *)  MSG="Standard transaction: Processed reference ${PR_ID:-$PO_ID} successfully." ;;
+          esac
+
+          # 3. Imprimir Log de Negocio
+          echo "[$DATE] $LEVEL - [Procurement-Core] - Buyer: $USR - Ref: ${PR_ID:-$PO_ID} - $MSG"
+
+          # 4. Probabilidad del 10% de generar consumo de memoria excesivo
+          if [ $((RANDOM % 100)) -lt 10 ]; then
+            trigger_memory_load
+          fi
+
+          # Intervalo entre logs
+          sleep $(( (RANDOM % 2) + 1 ))
+        done

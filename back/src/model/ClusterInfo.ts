@@ -149,7 +149,8 @@ export class ClusterInfo {
             }
         }
         catch (err) {
-            console.log('Cannot set cluster namne', err)
+            console.log('Cannot set cluster name')
+            console.log(err)
             return 'unnamed-err'
         }
     }
