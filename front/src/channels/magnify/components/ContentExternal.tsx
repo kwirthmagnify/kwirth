@@ -169,7 +169,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 let toSend: string | null = null;
 
                 if (e.ctrlKey && key === 'w') {
-                    // +++ close tab
+                    // +++ close tab, we should capture???
                 }
 
                 // Ctrl + Shift + C = copy

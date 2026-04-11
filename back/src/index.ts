@@ -54,9 +54,9 @@ import cors from 'cors'
 import { Application } from 'express-serve-static-core'
 import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
 import * as crypto from 'crypto'
+import { createProviderInstance, TProviderConstructor } from './providers/IProvider'
 import { ValidatingProvider } from './providers/ValidatingProvider'
 import { TickProvider } from './providers/TickProvider'
-import { IProvider } from './providers/IProvider'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -86,6 +86,11 @@ interface IRunningInstance {
     apiKeyApi: ApiKeyApi|undefined
 }
 var runningInstances:IRunningInstance[] = []
+
+var registeredProviders = new Map<string, TProviderConstructor>()
+registeredProviders.set('events', EventsProvider)
+registeredProviders.set('tick', TickProvider)
+registeredProviders.set('validating', ValidatingProvider)
 
 let rootPath = process.env.ROOTPATH
 if (rootPath && !rootPath.startsWith('/')) rootPath = '/'+ rootPath
@@ -277,8 +282,8 @@ const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthD
         }
     }
     catch (err) {
-        console.log('Error obatining KwirthData')
-        console.log(err)
+        console.error('Error obatining KwirthData')
+        console.error(err)
     }
     return undefined
 }
@@ -363,7 +368,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
                 clusterInfo.token = token
             }
             else {
-                console.log('No SA Token, no metrics will be available.')
+                console.warn('No SA Token, no metrics will be available.')
             }
         }
 
@@ -403,8 +408,8 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         return runningInstance
     }
     catch (err) {
-        console.log('Error creating running instance')
-        console.log(err)
+        console.error('Error creating running instance')
+        console.error(err)
     }
 }
 
@@ -422,8 +427,7 @@ const sendChannelSignal = (webSocket: WebSocket, level: ESignalMessageLevel, tex
         webSocket.send(JSON.stringify(signalMessage))
     }
     else {
-        console.log(localChannels)
-        console.log(`Unsupported channel '${instanceMessage.channel}' for sending signals`)
+        console.error(`Unsupported channel '${instanceMessage.channel}' for sending signals`)
     }
 }
 
@@ -445,7 +449,7 @@ const sendChannelSignalAsset = (webSocket: WebSocket, level: ESignalMessageLevel
         webSocket.send(JSON.stringify(signalMessage))
     }
     else {
-        console.log(`Channel '${instanceMessage.channel}' is unsupported sneding asset info`)
+        console.error(`Channel '${instanceMessage.channel}' is unsupported sneding asset info`)
         sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Channel '${instanceMessage.channel}' is unsupported sending asset info`, instanceMessage, ri.channels)
     }
 }
@@ -469,7 +473,7 @@ const addObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, po
 
         let valid = AuthorizationManagement.checkAkr(ri.channels, instanceConfig, podNamespace, podName, containerName)
         if (!valid) {
-            console.log(`No AKR found for object : ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
+            console.error(`No AKR found for object : ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
             return
         }
 
@@ -487,7 +491,7 @@ const addObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, po
             }
         }
         else {
-            console.log(`Invalid channel`, instanceConfig.channel)
+            console.error(`Invalid channel`, instanceConfig.channel)
         }
     }
     catch (err) {
@@ -501,7 +505,7 @@ const deleteObject = async (webSocket:WebSocket, _eventType:string, podNamespace
         sendChannelSignalAsset(webSocket, ESignalMessageLevel.INFO, ESignalMessageEvent.DELETE, `Container DELETED: ${podNamespace}/${podName}/${containerName}`, instanceConfig, ri, podNamespace, podName, containerName)
     }
     else {
-        console.log(`Invalid channel`, instanceConfig.channel)
+        console.error(`Invalid channel`, instanceConfig.channel)
     }
 }
 
@@ -554,7 +558,7 @@ const processEvent = async (eventType:string, obj: any, webSocket:WebSocket, ins
                         console.log(`Excluded container: ${containerName}`)
                         break
                     default:
-                        console.log('Invalid instanceConfig view')
+                        console.error('Invalid instanceConfig view')
                         break
                 }
             }
@@ -575,13 +579,13 @@ const processEvent = async (eventType:string, obj: any, webSocket:WebSocket, ins
             deleteObject(webSocket, eventType, podNamespace, podName, '', instanceConfig, ri)
         }
         else {
-            console.log(`Pod ${eventType} is unmanaged`)
+            console.error(`Pod ${eventType} is unmanaged`)
             sendChannelSignalAsset(webSocket, ESignalMessageLevel.INFO, ESignalMessageEvent.OTHER, `Received unmanaged event (${eventType}): ${podNamespace}/${podName}`, instanceConfig, ri, podNamespace, podName)
         }
     }
     catch (err) {
-        console.log('Error preceossing event')
-        console.log(err)
+        console.error('Error preceossing event')
+        console.error(err)
     }
 }
 
@@ -621,8 +625,8 @@ const watchDockerPods = async (ri:IRunningInstance, _apiPath:string, queryParams
         }
     }
     catch (err) {
-        console.log('Error watching docker pods')
-        console.log(err)
+        console.error('Error watching docker pods')
+        console.error(err)
     }
 }
 
@@ -639,8 +643,8 @@ const watchKubernetesPods = async (ri:IRunningInstance, apiPath:string, queryPar
         },
         (err) => {
             if (err !== null) {
-                console.log('Generic error starting watchPods')
-                console.log(err)
+                console.error('Generic error starting watchPods')
+                console.error(err)
                 sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, JSON.stringify(err), instanceConfig, ri.channels)
             }
             else {
@@ -649,8 +653,8 @@ const watchKubernetesPods = async (ri:IRunningInstance, apiPath:string, queryPar
         })
     }
     catch (err) {
-        console.log('Error watching kubernetes pods')
-        console.log(err)
+        console.error('Error watching kubernetes pods')
+        console.error(err)
     }        
 }
 
@@ -664,14 +668,14 @@ const watchPods = async (ri:IRunningInstance, apiPath:string, queryParams:any, w
                 await watchKubernetesPods(ri, apiPath, queryParams, webSocket, instanceConfig)
             }
             catch (err) {
-                console.log('Error starting to watch docker pods')
-                console.log(err)
+                console.error('Error starting to watch docker pods')
+                console.error(err)
             }
         }
     }
     catch (err) {
-        console.log('Error in generic watch pods')
-        console.log(err)
+        console.error('Error in generic watch pods')
+        console.error(err)
     }
 }
 
@@ -719,8 +723,8 @@ const getRequestedValidatedScopedPods = async (ri:IRunningInstance, instanceConf
         }
     }
     catch (err) {
-        console.log('Error getting requested validated scoped pods')
-        console.log(err)
+        console.error('Error getting requested validated scoped pods')
+        console.error(err)
     }
     return selectedPods
 }
@@ -797,8 +801,6 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
                     break
                 case EInstanceConfigView.POD:
                     for (let podName of instanceConfig.pod.split(',')) {
-                        console.log('requestedValidatedPods, podName')
-                        console.log(podName)
                         let validPod = requestedValidatedPods.find(p => p.metadata?.name === podName)
                         if (validPod) {
                             let metadataLabels = validPod.metadata?.labels
@@ -873,8 +875,8 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
         }
     }
     catch (err) {
-        console.log('Error starting instance')
-        console.log(err)
+        console.error('Error starting instance')
+        console.error(err)
     }
 }
 
@@ -883,7 +885,7 @@ const processStopInstanceConfig = async (webSocket: WebSocket, instanceConfig: I
         localChannels.get(instanceConfig.channel)?.stopInstance(webSocket, instanceConfig)
     }
     else {
-        console.log('Invalid channel on instance stop')
+        console.error('Invalid channel on instance stop')
     }
 }
 
@@ -941,7 +943,7 @@ const processChannelCommand = async (webSocket: WebSocket, instanceMessage: IIns
             }   
         }
         else {
-            console.log(`Channel not found`)
+            console.error(`Channel not found`)
             sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Socket has not been found')
         }
     }
@@ -963,21 +965,21 @@ const processChannelRoute = async (ri:IRunningInstance, webSocket: WebSocket, in
                     processClientMessage (webSocket, JSON.stringify(routeMessage.data), ri)
                 }
                 else {
-                    console.log(`Destination channel (${routeMessage.destChannel}) for 'route' command doesn't support routing`)
+                    console.error(`Destination channel (${routeMessage.destChannel}) for 'route' command doesn't support routing`)
                 }
             }
             else {
-                console.log(`Destination channel '${routeMessage.destChannel}' does not exist for instance '${instanceMessage.instance}'`)
+                console.error(`Destination channel '${routeMessage.destChannel}' does not exist for instance '${instanceMessage.instance}'`)
                 sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, `Dest channel ${routeMessage.destChannel} does not exist`)
             }
         }
         else {
-            console.log(`Instance '${instanceMessage.instance}' not found for route on channel ${channel.getChannelData().id}`)
+            console.error(`Instance '${instanceMessage.instance}' not found for route on channel ${channel.getChannelData().id}`)
             sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Instance has not been found for routing')
         }   
     }
     else {
-        console.log(`Socket not found for routing`)
+        console.error(`Socket not found for routing`)
         sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Socket has not been found')
     }
 }
@@ -1005,12 +1007,12 @@ const processChannelWebsocket = async (ri:IRunningInstance, webSocket: WebSocket
             webSocket.send(JSON.stringify(response))
         }
         else {
-            console.log(`Instance '${instanceConfig.instance}' not found for WebSocket on channel ${channel.getChannelData().id}`)
+            console.error(`Instance '${instanceConfig.instance}' not found for WebSocket on channel ${channel.getChannelData().id}`)
             sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceConfig.channel, instanceConfig, 'Instance has not been found for WEBSOCKET request')
         }   
     }
     else {
-        console.log(`Socket not found for routing`)
+        console.error(`Socket not found for routing`)
         sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceConfig.channel, instanceConfig, 'Socket has not been found')
     }
 }
@@ -1043,7 +1045,7 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
         if (instanceMessage.action === EInstanceMessageAction.RECONNECT) {
             console.log('Reconnect received')
             if (!ri.channels.get(instanceMessage.channel)?.getChannelData().reconnectable) {
-                console.log(`Reconnect capability not enabled for channel ${instanceMessage.channel} and instance ${instanceMessage.instance}`)
+                console.error(`Reconnect capability not enabled for channel ${instanceMessage.channel} and instance ${instanceMessage.instance}`)
                 sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Channel ${instanceMessage.channel} does not support reconnect`, instanceMessage, ri.channels)
                 return
             }
@@ -1160,13 +1162,13 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
                 }
                 break
             default:
-                console.log (`Invalid action in instance config: '${instanceConfig.action}'`)
+                console.error (`Invalid action in instance config: '${instanceConfig.action}'`)
                 break
         }
     }
     catch (err) {
-        console.log('Error processing clietn message')
-        console.log(err)
+        console.error('Error processing clietn message')
+        console.error(err)
     }
 }
 
@@ -1176,7 +1178,7 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
 
         let result = await ApiKeyApi.create(ri.configMaps, envMasterKey, runningEnv.isElectron)
         if (!result) {
-            console.log('Could not get apikeyapi')
+            console.error('Could not get apikeyapi setting up routes')
             return false
         }
         let apiKeyApi = result
@@ -1213,8 +1215,8 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
         return true
     }
     catch (err) {
-        console.log('Error setting up routes')
-        console.log(err)
+        console.error('Error setting up routes')
+        console.error(err)
     }
     return false
 }
@@ -1226,24 +1228,25 @@ const processHttpChannelRequest = async (channel: IChannel, endpointName:string,
             channel.endpointRequest(endpointName, req, res, accessKey)
         }
         else {
-            console.log('Could not get accessKey')
+            console.error('Could not get accessKey processing an HTTP channel request')
             res.status(400).send()
         }
     }
     catch (err) {
-        console.log('Error on GET endpoint')
-        console.log(err)
+        console.error('Error on GET endpoint')
+        console.error(err)
         res.status(400).send()
     }
 }
 
 const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
+    console.log(`Starting HTTP channel endpoints`)
     for (let channel of ri.channels.values()) {
         let channelData = channel.getChannelData()
         if (channelData.endpoints.length>0) {
-            channelData
+            console.log(`  Starting endpoints for channel '${channelData.id}'`)
             for (let endpoint of channelData.endpoints) {
-                console.log(`Will listen on ${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`)
+                console.log(`    ${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`)
                 const router = express.Router()
                 router.route('*')
                     .all( async (req:Request,res:Response, next) => {
@@ -1299,18 +1302,19 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
         })
 
         if (! (await setUpRoutes(ri))) {
-            console.log('Could not set up HTTP routes. Exiting')
+            console.error('Could not set up HTTP routes. Exiting')
             process.exit(1)
         }
         startChannelEndpoints(ri, expressApp)
+        console.log('Starting channels:')
         for (let channel of ri.channels.values()) {
-            console.log(`Starting channel '${channel.getChannelData().id}'`)
+            console.log(`  '${channel.getChannelData().id}'`)
             channel.startChannel()
         }
     }
     catch (err) {
-        console.log('Error in startRunningInstance')
-        console.log(err)
+        console.error('Error in startRunningInstance')
+        console.error(err)
     }
 }
 
@@ -1367,27 +1371,24 @@ const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthDat
             console.log('  Memory (GB):', localClusterInfo.memory/1024/1024/1024)
         }
 
-        // if (eventsRequired) {
-        //     localClusterInfo.events = new EventsProvider(localClusterInfo)
-        //     localClusterInfo.events.startProvider()
-        // }
-
         localClusterInfo.providers = []
         for(let provId of requiredProviders) {
-            //+++ refactorize like the pattern of constructor of front IChannel
-            let prov:IProvider
-            if (provId==='tick') prov = new TickProvider(localClusterInfo)
-            if (provId==='validating') prov = new ValidatingProvider(localClusterInfo)
-            if (provId==='events') prov = new EventsProvider(localClusterInfo)
-            prov!.startProvider()
-            console.log(`Provider '${provId}' started`)
-            localClusterInfo.providers.push(prov!)
+            let provider = registeredProviders.get(provId)
+            if (provider) {
+                let providerInstance = createProviderInstance(registeredProviders.get(provId), localClusterInfo)
+                providerInstance!.startProvider()
+                console.log(`Provider '${provId}' started`)
+                localClusterInfo.providers.push(providerInstance!)
+            }
+            else {
+                console.error(`Required provider '${provId}' is not registered`)
+            }
         }
 
     }
     catch (err) {
-        console.log('Error setting up kubernetes requirements')
-        console.log(err)
+        console.error('Error setting up kubernetes requirements')
+        console.error(err)
     }
 }
 
@@ -1417,7 +1418,7 @@ const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthDat
 //         if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) console.log('❌ An SA Token could not be obtained, so metrics will not be available.')
 //         metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
 
-//         let registerdProviders = ['tick','validating']  //+++ refactorize
+//         let registerdProviders = ['tick','validating']
 //         let requiredProviders = []
 //         for (let provId of registerdProviders) {
 //             let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)            
@@ -1480,28 +1481,28 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             return runningInstance.channels.get(k)?.getChannelData()!
         })
 
+        console.log('Required providers:')
         // Detect if any channel requires metrics or events
         // let eventsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().events}, false)
         // console.log('Events required: ', eventsRequired)
         let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
-        console.log('Metrics required: ', metricsRequired)
-        if (!envChannelMetricsEnabled) console.log('❌ Metrics have not been enabled on Kwirth, so it will not be available.')
-        if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) console.log('❌ An SA Token could not be obtained, so metrics will not be available.')
+        console.log(`  'metrics' required:`, metricsRequired)
+        if (!envChannelMetricsEnabled) console.error('❌ Metrics have not been enabled on Kwirth, so it will not be available.')
+        if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) console.error('❌ An SA Token could not be obtained, so metrics will not be available.')
         metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
 
-        let registerdProviders = ['events', 'tick','validating']  //+++ refactorize
         let requiredProviders = []
-        for (let provId of registerdProviders) {
+        for (let provId of registeredProviders.keys()) {
             let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)            
             if (required) requiredProviders.push(provId)
-            console.log(`'${provId}' required:`, required)
+            console.log(`  '${provId}' required:`, required)
         }
 
-        //await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, eventsRequired, requiredProviders)
         await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, requiredProviders)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
 
-        console.log(`Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(',')}`)
+        console.log(`Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(', ')}`)
+        console.log(`Enabled providers for this (kubernetes) run are: ${Array.from(runningInstance.clusterInfo.providers).map(p => `'${p.id}'`).join(', ')}`)
         console.log(`Detected own namespace: ${localKwirthData.namespace}`)
         if (localKwirthData.deployment !== '')
             console.log(`Detected own deployment: ${localKwirthData.deployment}`)
@@ -1531,8 +1532,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         }
     }
     catch (err) {
-        console.log('Error preparing kubernetes')
-        console.log(err)
+        console.error('Error preparing kubernetes')
+        console.error(err)
     }
 }
 
@@ -1550,20 +1551,20 @@ const launchKubernetes = async (context:string|undefined, localKwirthData:Kwirth
                     await startRunningInstance(runningInstance, expressApp)
                 }
                 else {
-                    console.log('Cannot get a running instance')
+                    console.error('Cannot get a running instance')
                 }
             }
             catch (err){
-                console.log(err)
+                console.error(err)
             }
         }
         else {
-            console.log('Cannot get kwirthdata launching Kubernetes, exiting...')
+            console.error('Cannot get kwirthdata launching Kubernetes, exiting...')
         }
     }
     catch (err) {
-        console.log('Error launching kubernetes')
-        console.log(err)
+        console.error('Error launching kubernetes')
+        console.error(err)
     }
 }
 
@@ -1581,20 +1582,20 @@ const launchDocker = async (context:string|undefined, localKwirthData:KwirthData
                     await startRunningInstance(runningInstance, expressApp)
                 }
                 else {
-                    console.log('Cannot get a running instance')
+                    console.error('Cannot get a running instance')
                 }
             }
             catch (err){
-                console.log(err)
+                console.error(err)
             }
         }
         else {
-            console.log('Cannot get kwirthdata launching Docker, exiting...')
+            console.error('Cannot get kwirthdata launching Docker, exiting...')
         }
     }
     catch (err) {
-        console.log('Error launching kubernetes')
-        console.log(err)
+        console.error('Error launching docker')
+        console.error(err)
     }
 }
 
@@ -1617,7 +1618,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                     }
                     catch (err) {
                         res.status(500).json({})
-                        console.log(err)
+                        console.error(err)
                     }
                 })
                 expressApp.delete('/core/electron/kubeconfig', (req:Request,res:Response) => {
@@ -1626,7 +1627,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                         if (contextName) {
                             let ri = runningInstances.find(r => r.electronContext === contextName)
                             if (ri) {
-                                // +++ implement remove runninginstance? or left them started?
+                                // +++ implement remove runninginstance? or keep them started?
                                 res.status(200).json({})
                             }
                             else {
@@ -1639,7 +1640,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                     }
                     catch (err) {
                         res.status(500).json({})
-                        console.log(err)
+                        console.error(err)
                     }
                 })
                 expressApp.post('/core/electron/kubeconfig', async (req:Request, res:Response) => {
@@ -1676,7 +1677,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                                     res.status(200).json({ accessKey })
                                 }
                                 else {
-                                    console.log('Could not get a running instance')
+                                    console.error('Could not get a running instance')
                                     res.status(400).json({})
                                 }
                             }
@@ -1687,21 +1688,21 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                     }
                     catch (err) {
                         res.status(500).json({})
-                        console.log(err)
+                        console.error(err)
                     }
                 })
             }
             catch (err){
-                console.log(err)
+                console.error(err)
             }
         }
         else {
-            console.log('Cannot get kwirthdata launching Electron, exiting...')
+            console.error('Cannot get kwirthdata launching Electron, exiting...')
         }    
     }
     catch (err) {
-        console.log('Error launching electron')
-        console.log(err)
+        console.error('Error launching electron')
+        console.error(err)
     }
 }
 
@@ -1796,8 +1797,8 @@ const configureForward = (localClusterInfo:ClusterInfo, expressApp:Application) 
                 return
             }
             catch (err) {
-                console.log('Error processing port-forward')
-                console.log(err)
+                console.error('Error processing port-forward')
+                console.error(err)
             }
         }
         next()
@@ -1824,7 +1825,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                 if (challenge) {
                     let ri = instances.find(r => r.active)
                     if (!ri) {
-                        console.log('No running Instance found on WS connection')
+                        console.error('No running Instance found on WS connection')
                         return
                     }
                     let websocketRequestIndex = ri.clusterInfo.pendingWebsocket.findIndex(i => i.challenge === challenge)
@@ -1833,7 +1834,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                         console.log('Websocket request received for channel', websocketRequest.channel)
                         if (!ri.channels.has(websocketRequest.channel)) {
                             webSocket.close()
-                            console.log('Channel not found', websocketRequest.channel)
+                            console.error('Channel not found', websocketRequest.channel)
                             return
                         }
                         let channel = ri.channels.get(websocketRequest.channel)!
@@ -1843,7 +1844,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                         return
                     }
                     else {
-                        console.log('Instance not found for completing webscoket request:', challenge)
+                        console.error('Instance not found for completing webscoket request:', challenge)
                         webSocket.close()
                         return
                     }
@@ -1853,7 +1854,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
             webSocket.onmessage = (event) => {
                 let ri = instances.find(r => r.active)
                 if (!ri) {
-                    console.log('No running Instance found on WS message')
+                    console.error('No running Instance found on WS message')
                     return
                 }
                 localProcessClientMessage(webSocket, event.data, ri)
@@ -1864,12 +1865,12 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                 console.log('Client disconnected')
                 let ri = instances.find(r => r.active)
                 if (!ri) {
-                    console.log('No running Instance found on WS close')
+                    console.error('No running Instance found on WS close')
                     return
                 }
                 for (let channel of ri.channels.values()) {
                     if (channel.containsConnection(webSocket)) {
-                        console.log(`Connection from IP ${ip} to channel ${channel.getChannelData().id} has been interrupted.`)
+                        console.error(`Connection from IP ${ip} to channel ${channel.getChannelData().id} has been interrupted.`)
                     }
                 }
                 if (runningEnv.isElectron) {
@@ -1890,8 +1891,8 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
         })
     }
     catch (err) {
-        console.log('Error creatinh HTTP/WS server')
-        console.log(err)
+        console.error('Error creatinh HTTP/WS server')
+        console.error(err)
     }
 }
 
@@ -1961,12 +1962,12 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
             if (kd)
                 kwirthData = kd
             else {
-                console.log('Cannot get KwirthData. Exiting')
+                console.error('Cannot get KwirthData. Exiting')
                 process.exit(1)
             }
             break
         default:
-            console.log(`Unsupported execution environment '${exenv}'. Exiting...`)
+            console.error(`Unsupported execution environment '${exenv}'. Exiting...`)
             process.exit()
     }
 
@@ -2006,12 +2007,12 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
     }
 
     const fs = require('fs')
-    fs.readdir('.', (err:any, archivos:any) => {
+    fs.readdir('.', (err:any, folderFiles:any) => {
         if (err) {
             console.error('Error reading folder data:', err)
             return
         }
-        console.log('File list at project root when launching environment:', archivos.join(', '))
+        console.log('File list at project root when launching environment:', folderFiles.join(', '))
     })
 
     createHttpServers(kwirthData, app, runningInstances, processClientMessage)
@@ -2031,13 +2032,13 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
             await launchKubernetes(envContext, kwirthData, app)
             break
         default:
-            console.log(`'Unsupported execution environment '${exenv}'. Exiting...`)
+            console.error(`'Unsupported execution environment '${exenv}'. Exiting...`)
             process.exit()
     }
     console.log(`KWI1500I Control is being given to Kwirth`)
  })
 .catch( (err) => {
-    console.log (err)
-    console.log ('Cannot determine execution environment')
+    console.error (err)
+    console.error ('Cannot determine execution environment')
     process.exit()
 })

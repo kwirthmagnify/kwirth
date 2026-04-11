@@ -1,11 +1,12 @@
 import { IChannel } from "../channels/IChannel"
 import { Router } from 'express'
+import { ClusterInfo } from "../model/ClusterInfo"
 
-type TProviderConstructor = (new () => IProvider)|undefined
+export type TProviderConstructor = (new (clusterInfo:ClusterInfo) => IProvider)|undefined
 
-export const createProviderInstance = (providerConstructor:TProviderConstructor): IProvider | null => {
-    if (!providerConstructor) throw  new Error('Error: channelConstructor is null')
-    return new providerConstructor()
+export const createProviderInstance = (providerConstructor:TProviderConstructor, clusterInfo: ClusterInfo): IProvider | null => {
+    if (!providerConstructor) throw  new Error('Error: providerConstructor is empty')
+    return new providerConstructor(clusterInfo)
 }
 
 export interface IProvider {

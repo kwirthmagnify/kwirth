@@ -89,6 +89,7 @@ class PinocchioChannel implements IChannel {
             case 'events':
                 if (obj.type==='ADDED') {
                     console.log('Pinocchio: added pod', obj.obj.metadata?.name)
+                    // Here invoke LLM through Vercel AI-SDK
                 }
                 break
             default:

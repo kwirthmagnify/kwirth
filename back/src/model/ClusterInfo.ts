@@ -61,7 +61,6 @@ export class ClusterInfo {
     public saToken!: ServiceAccountToken
     public token: string|undefined   // needed just for connecting to kubelet and extract metrics
     public metrics!: MetricsTools   // +++ will refactor to IProvider
-    //public events!: EventsProvider
     public providers!: IProvider[]
     public metricsInterval: number = 15
     public metricsIntervalRef: NodeJS.Timeout|undefined = undefined

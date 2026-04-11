@@ -1149,9 +1149,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             description,
             tabs: newTabs
         }
-        // +++ pending low priority change .../boards/... for .../workspaces/...
         let payload=JSON.stringify( workspace )
-        await fetch (`${backendUrl}/store/${user?.id}/boards/${name}`, addPostAuthorization(accessString, payload))
+        await fetch (`${backendUrl}/store/${user?.id}/workspaces/${name}`, addPostAuthorization(accessString, payload))
 
         if (currentWorkspaceName !== name) {
             setCurrentWorkspaceName(name)
@@ -1174,7 +1173,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (action === 'delete') {
             setMsgBox(MsgBoxYesNo('Delete workspace',`Are you sure you want to delete workspace ${name} (you cannot undo this action)?`, setMsgBox, (button) => {
                 if (button===MsgBoxButtons.Yes) {
-                    fetch (`${backendUrl}/store/${user?.id}/boards/${name}`, addDeleteAuthorization(accessString))
+                    fetch (`${backendUrl}/store/${user?.id}/workspaces/${name}`, addDeleteAuthorization(accessString))
                     if (name === currentWorkspaceName) {
                         setCurrentWorkspaceName('untitled')
                         setCurrentWorkspaceDescription('No description yet')                            
@@ -1194,7 +1193,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         let errors = ''
         clearTabs()
 
-        let workspaceDef = await (await fetch (`${backendUrl}/store/${user?.id}/boards/${name}`, addGetAuthorization(accessString))).json()
+        let workspaceDef = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces/${name}`, addGetAuthorization(accessString))).json()
         let newWorkspace:IWorkspace = JSON.parse(workspaceDef)
         if (newWorkspace?.tabs && newWorkspace.tabs.length>0) {
             for (let t of newWorkspace.tabs) {
@@ -1234,7 +1233,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const getWorkspaces = async () => {
-        let allWorkspaces:IWorkspace[] = await (await fetch (`${backendUrl}/store/${user?.id}/boards?full=true`, addGetAuthorization(accessString))).json()
+        let allWorkspaces:IWorkspace[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces?full=true`, addGetAuthorization(accessString))).json()
         if (allWorkspaces.length===0) {
             showNoWorkspaces()
             return undefined
@@ -1310,14 +1309,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 setShowUserSecurity(true)
                 break
             case MenuDrawerOption.ExportWorkspaces:
-                let workspacesToExport:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/boards`, addGetAuthorization(accessString))).json()
+                let workspacesToExport:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
                 if (workspacesToExport.length===0) {
                     showNoWorkspaces()
                 }
                 else {
                     let content:any={}
                     for (let workspaceName of workspacesToExport) {
-                        let readWorkspace = await (await fetch (`${backendUrl}/store/${user?.id}/boards/${workspaceName}`, addGetAuthorization(accessString))).json()
+                        let readWorkspace = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces/${workspaceName}`, addGetAuthorization(accessString))).json()
                         content[workspaceName]=JSON.parse(readWorkspace)
                     }
                     handleDownload(JSON.stringify(content),`${user?.id}-export-${new Date().toLocaleDateString()+'-'+new Date().toLocaleTimeString()}.kwirth.json`)
@@ -1370,7 +1369,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 let allWorkspaces=JSON.parse(event.target.result)
                 for (let workspaceName of Object.keys(allWorkspaces)) {
                     let payload=JSON.stringify(allWorkspaces[workspaceName])
-                    fetch (`${backendUrl}/store/${user?.id}/boards/${workspaceName}`, addPostAuthorization(accessString, payload))
+                    fetch (`${backendUrl}/store/${user?.id}/workspaces/${workspaceName}`, addPostAuthorization(accessString, payload))
                 }
             }
             reader.readAsText(file)
@@ -1699,9 +1698,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     }
                     { !selectedTab.current && 
                         <Box sx={{ display: 'flex', flexDirection: 'column', height:'100%', minHeight:0 }}>
-                            <Homepage lastTabs={lastTabs} favTabs={favTabs} lastWorkspaces={lastWorkspaces} favWorkspaces={favWorkspaces} onHomepageSelectTab={onHomepageSelectTab} onRestoreTabParameters={onHomepageRestoreParameters} onSelectWorkspace={onHomepageSelectWorkspace} frontChannels={frontChannels} onUpdateTabs={onHomepageUpdateTabs} cluster={clusters.find(c => c.name === selectedClusterName)} clusters={clusters} onUpdateWorkspaces={onHomepageUpdateWorkspaces} dataCpu={dataCpu.current} dataMemory={dataMemory.current} dataNetwork={dataNetwork.current
-
-                            }/>
+                            <Homepage lastTabs={lastTabs} favTabs={favTabs} lastWorkspaces={lastWorkspaces} favWorkspaces={favWorkspaces} onHomepageSelectTab={onHomepageSelectTab} onRestoreTabParameters={onHomepageRestoreParameters} onSelectWorkspace={onHomepageSelectWorkspace} frontChannels={frontChannels} onUpdateTabs={onHomepageUpdateTabs} cluster={clusters.find(c => c.name === selectedClusterName)} clusters={clusters} onUpdateWorkspaces={onHomepageUpdateWorkspaces} dataCpu={dataCpu.current} dataMemory={dataMemory.current} dataNetwork={dataNetwork.current}/>
                         </Box>
                     }
 
