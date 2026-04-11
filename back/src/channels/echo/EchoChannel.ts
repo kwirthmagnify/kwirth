@@ -38,7 +38,7 @@ class EchoChannel implements IChannel {
             modifyable: false,
             reconnectable: true,
             metrics: false,
-            events: false,
+            //events: false,
             providers: [],
             sources: [ EClusterType.KUBERNETES, EClusterType.DOCKER ],
             endpoints: [],
@@ -52,9 +52,6 @@ class EchoChannel implements IChannel {
     }
 
     startChannel = async () =>  {
-    }
-
-    processObjectEvent(type:string, obj:any) : void {
     }
 
     processProviderEvent(providerId:string, obj:any) : void {

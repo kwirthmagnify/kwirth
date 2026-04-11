@@ -25,12 +25,17 @@ export class EventsProvider implements IProvider {
     }
 
     addSubscriber = async (c: IChannel, data: { kinds: string[], syncInstances:boolean}) => {
-        let subscriber: IEventsSubscriber = {
-            kinds: data.kinds,
-            crdInstances: [],
-            syncCrdInstances: data.syncInstances
+        try {
+            let subscriber: IEventsSubscriber = {
+                kinds: data.kinds,
+                crdInstances: [],
+                syncCrdInstances: data.syncInstances
+            }
+            this.subscribers.set(c, subscriber)
         }
-        this.subscribers.set(c, subscriber)
+        catch(err) {
+            console.log(`Errors ocurred while adding subscriber ${c.getChannelData().id} to provider 'events'`)
+        }
     }
 
     removeSubscriber = async (c: IChannel) => {
@@ -104,11 +109,10 @@ export class EventsProvider implements IProvider {
 
         for (let [channel, subscriber] of subscribersList.entries()) {
             if (subscriber.kinds.includes(obj.kind) || (subscriber.crdInstances && subscriber.crdInstances.includes(obj.kind))) {
-                channel.processObjectEvent(type, obj)
+                channel.processProviderEvent(this.id, { type, obj })
             }
             else {
-                //+++ me conecte a un cluster que tenia ExternalSerets, luego me conecte a otro que no los tenia y empezó a dar esto como loco
-                console.log('********************notproroc', subscriber.crdInstances, obj.kind)
+                //console.log('********************notproroc', subscriber.crdInstances, obj.kind)
             }
         }
     }

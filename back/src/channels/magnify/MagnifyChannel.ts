@@ -115,7 +115,7 @@ class MagnifyChannel implements IChannel {
             modifyable: false,
             reconnectable: true,
             metrics: true,
-            events: true,
+            //events: true,
             providers: [],
             sources: [ ClusterTypeEnum.KUBERNETES ],
             endpoints: [],
@@ -131,31 +131,58 @@ class MagnifyChannel implements IChannel {
     startChannel = async () =>  {
     }
 
-    processObjectEvent(type:string, obj:any) : void {
-        for (let socket of this.webSockets) {
-            for (let instance of socket.instances) {
-                let magnifyMessage:IMagnifyMessageResponse = {
-                    msgtype: 'magnifymessageresponse',
-                    id: '1',
-                    command: EMagnifyCommand.K8EVENT,
-                    namespace: '',
-                    group: '',
-                    pod: '',
-                    container: '',
-                    action: EInstanceMessageAction.COMMAND,
-                    flow: EInstanceMessageFlow.UNSOLICITED,
-                    type: EInstanceMessageType.DATA,
-                    channel: 'magnify',
-                    instance: instance.instanceId,
-                    event: type,
-                    data: obj
-                }
-                socket.ws.send(JSON.stringify(magnifyMessage))
-            }
-        }
-    }
+    // processObjectEvent(type:string, obj:any) : void {
+    //     for (let socket of this.webSockets) {
+    //         for (let instance of socket.instances) {
+    //             let magnifyMessage:IMagnifyMessageResponse = {
+    //                 msgtype: 'magnifymessageresponse',
+    //                 id: '1',
+    //                 command: EMagnifyCommand.K8EVENT,
+    //                 namespace: '',
+    //                 group: '',
+    //                 pod: '',
+    //                 container: '',
+    //                 action: EInstanceMessageAction.COMMAND,
+    //                 flow: EInstanceMessageFlow.UNSOLICITED,
+    //                 type: EInstanceMessageType.DATA,
+    //                 channel: 'magnify',
+    //                 instance: instance.instanceId,
+    //                 event: type,
+    //                 data: obj
+    //             }
+    //             socket.ws.send(JSON.stringify(magnifyMessage))
+    //         }
+    //     }
+    // }
 
     processProviderEvent(providerId:string, obj:any) : void {
+        switch(providerId) {
+            case 'events':
+                for (let socket of this.webSockets) {
+                    for (let instance of socket.instances) {
+                        let magnifyMessage:IMagnifyMessageResponse = {
+                            msgtype: 'magnifymessageresponse',
+                            id: '1',
+                            command: EMagnifyCommand.K8EVENT,
+                            namespace: '',
+                            group: '',
+                            pod: '',
+                            container: '',
+                            action: EInstanceMessageAction.COMMAND,
+                            flow: EInstanceMessageFlow.UNSOLICITED,
+                            type: EInstanceMessageType.DATA,
+                            channel: 'magnify',
+                            instance: instance.instanceId,
+                            event: obj.type,
+                            data: obj.obj
+                        }
+                        socket.ws.send(JSON.stringify(magnifyMessage))
+                    }
+                }
+                break
+            default:
+                console.log(`Ignored provider event from ${providerId} to channel ${this.getChannelData().id}`)
+        }
     }
 
     async endpointRequest(endpoint:string, req:Request, res:Response, accessKey:AccessKey) : Promise<void> {
@@ -782,7 +809,7 @@ class MagnifyChannel implements IChannel {
         }
     }
 
-    getRes = (res:V1APIResourceList) => {
+    getResources = (res:V1APIResourceList) => {
         let result:V1APIResource[]=[]
         res.resources.forEach(r => {
             if (!r.name.includes('/')) result.push(r)
@@ -793,19 +820,19 @@ class MagnifyChannel implements IChannel {
     getApiResources = async () => {
         try {
             const allResources:V1APIResource[] = [];
-            allResources.push(...this.getRes(await this.clusterInfo.admissionApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.autoscalingApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.appsApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.batchApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.coordinationApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.coreApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.extensionApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.networkApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.nodeApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.storageApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.schedulingApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.policyApi.getAPIResources()))
-            allResources.push(...this.getRes(await this.clusterInfo.rbacApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.admissionApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.autoscalingApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.appsApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.batchApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.coordinationApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.coreApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.extensionApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.networkApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.nodeApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.storageApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.schedulingApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.policyApi.getAPIResources()))
+            allResources.push(...this.getResources(await this.clusterInfo.rbacApi.getAPIResources()))
             return {
                 kind: 'V1APIResourceList',
                 apiVersion: 'v1',
@@ -821,7 +848,6 @@ class MagnifyChannel implements IChannel {
             }
         }
     }    
-
 
     private async executeListCrd (webSocket:WebSocket, instance:IInstance, magnifyMessage:IMagnifyMessage) {
         try {

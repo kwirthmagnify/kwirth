@@ -36,7 +36,7 @@ class MetricsChannel implements IChannel {
             modifyable: true,
             reconnectable: true,
             metrics: true,
-            events: false,
+            //events: false,
             providers: [],
             sources: [ ClusterTypeEnum.KUBERNETES ],
             endpoints: [],
@@ -50,9 +50,6 @@ class MetricsChannel implements IChannel {
     }
 
     startChannel = async () =>  {
-    }
-
-    processObjectEvent(type:string, obj:any) : void {
     }
 
     processProviderEvent(providerId:string, obj:any) : void {

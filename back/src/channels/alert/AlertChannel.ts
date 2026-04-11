@@ -41,7 +41,7 @@ class AlertChannel implements IChannel {
             modifyable: false,
             reconnectable: true,
             metrics: false,
-            events: false,
+            //events: false,
             providers: [],
             sources: [ EClusterType.DOCKER, EClusterType.KUBERNETES ],
             endpoints: [],
@@ -55,9 +55,6 @@ class AlertChannel implements IChannel {
     }
 
     startChannel = async () =>  {
-    }
-
-    processObjectEvent(type:string, obj:any) : void {
     }
 
     processProviderEvent(providerId:string, obj:any) : void {

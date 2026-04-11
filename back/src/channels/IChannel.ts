@@ -9,7 +9,6 @@ interface IChannel {
     endpointRequest(endpoint:string,req:Request, res:Response, accessKey?:AccessKey) : void
     websocketRequest(newWebSocket:WebSocket, instanceId:string, instanceConfig:IInstanceConfig) : void
 
-    processObjectEvent(type:string, obj:any) : void
     processProviderEvent(providerId:string, obj:any) : void
 
     addObject (webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containerName:string) : Promise<boolean>

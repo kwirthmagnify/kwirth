@@ -111,7 +111,7 @@ class FilemanChannel implements IChannel {
             modifyable: false,
             reconnectable: true,
             metrics: false,
-            events: false,
+            //events: false,
             providers: [],
             sources: [ ClusterTypeEnum.KUBERNETES, ClusterTypeEnum.DOCKER ],
             endpoints: [
@@ -128,9 +128,6 @@ class FilemanChannel implements IChannel {
     }
 
     startChannel = async () =>  {
-    }
-
-    processObjectEvent(type:string, obj:any) : void {
     }
 
     processProviderEvent(providerId:string, obj:any) : void {

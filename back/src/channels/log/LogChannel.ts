@@ -43,7 +43,7 @@ class LogChannel implements IChannel {
             modifyable: false,
             reconnectable: true,
             metrics: false,
-            events: false,
+            //events: false,
             providers: [],
             sources: [ ClusterTypeEnum.DOCKER, ClusterTypeEnum.KUBERNETES ],
             endpoints: [],
@@ -57,9 +57,6 @@ class LogChannel implements IChannel {
     }
 
     startChannel = async () =>  {
-    }
-
-    processObjectEvent(type:string, obj:any) : void {
     }
 
     processProviderEvent(providerId:string, obj:any) : void {

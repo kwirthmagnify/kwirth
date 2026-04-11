@@ -1348,7 +1348,8 @@ process.on('exit', async () => {
     await new Promise((resolve) => setTimeout(resolve, 10000))
 })
 
-const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthData, localClusterInfo:ClusterInfo, metricsRequired:boolean, eventsRequired: boolean, requiredProviders:string[]) : Promise<void> => {
+//const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthData, localClusterInfo:ClusterInfo, metricsRequired:boolean, eventsRequired: boolean, requiredProviders:string[]) : Promise<void> => {
+const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthData, localClusterInfo:ClusterInfo, metricsRequired:boolean, requiredProviders:string[]) : Promise<void> => {
     try {
         console.log('Node info loaded')
 
@@ -1480,15 +1481,15 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         })
 
         // Detect if any channel requires metrics or events
-        let eventsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().events}, false)
-        console.log('Events required: ', eventsRequired)
+        // let eventsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().events}, false)
+        // console.log('Events required: ', eventsRequired)
         let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
         console.log('Metrics required: ', metricsRequired)
         if (!envChannelMetricsEnabled) console.log('❌ Metrics have not been enabled on Kwirth, so it will not be available.')
         if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) console.log('❌ An SA Token could not be obtained, so metrics will not be available.')
         metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
 
-        let registerdProviders = ['tick','validating']  //+++ refactorize
+        let registerdProviders = ['events', 'tick','validating']  //+++ refactorize
         let requiredProviders = []
         for (let provId of registerdProviders) {
             let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)            
@@ -1496,7 +1497,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             console.log(`'${provId}' required:`, required)
         }
 
-        await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, eventsRequired, requiredProviders)
+        //await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, eventsRequired, requiredProviders)
+        await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, requiredProviders)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
 
         console.log(`Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(',')}`)

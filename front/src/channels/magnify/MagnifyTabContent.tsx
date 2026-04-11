@@ -406,7 +406,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     const launchObjectCreate = (kind:string) => {
-        let template = templates.get(kind) || `apiVersion: v1\nKind: ${kind}\nejemplo: true`
+        let template = (templates.get(kind) || `apiVersion: v1\nKind: ${kind}\nejemplo: true`).trim()
         let winId = 'create-' + kind + '-' + uuid()
         let win:IContentWindow = {
             id: winId,

@@ -48,7 +48,7 @@ class OpsChannel implements IChannel {
             modifyable: false,
             reconnectable: false,
             metrics: false,
-            events: false,
+            //events: false,
             providers: [],
             sources: [ ClusterTypeEnum.KUBERNETES ],
             endpoints: [],
@@ -62,9 +62,6 @@ class OpsChannel implements IChannel {
     }
 
     startChannel = async () =>  {
-    }
-
-    processObjectEvent(type:string, obj:any) : void {
     }
 
     processProviderEvent(providerId:string, obj:any) : void {
