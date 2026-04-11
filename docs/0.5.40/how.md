@@ -17,7 +17,7 @@ What follows is a self-explaining architecture of a typical deployment of Kwirth
 As of Kwirth 0.5.21 Kwirth can be installed/deployed in several different ways:
 
   - Kubernetes (explained above)
-  - Docker: You can run Kwirth as a Docker container, it is in fact the same docker image you would use for Kubernetes depolyment.
+  - Docker: You can run Kwirth as a Docker container, it is in fact the same docker image you would use for Kubernetes deployment.
   - External (standalone): If you want to run Kwirth as a standalone service on a host, you can download the binary and run it directly. It will look for your local Kubernetes configuration automatically.
   - Desktop Application
 

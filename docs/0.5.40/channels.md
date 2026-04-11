@@ -3,7 +3,7 @@ As of Kwirth version 0.5.21, these are the existing channels:
 
   - **[Log](./channels?id=log)**. Real time log streaming from different source objects (a container, a pod, a namespace or a custom mix of any of them).
   - **[Metrics](./channels?id=metrics)**. Real-time metrics (CPU, memory, I/O, bandwidth...) on a set of objects.
-  - **[Alert](./channels?id=alert)**. Alerts based on los messages. Log messages are processed at Kwirth core, so you only receive alerts accordingn to your channel config.
+  - **[Alert](./channels?id=alert)**. Alerts based on los messages. Log messages are processed at Kwirth core, so you only receive alerts according to your channel config.
   - **[Echo](./channels?id=echo)**. This is a reference channel for channel implementers, it is not useful for real kubernetes operations.
   - **[Trivy](./channels?id=trivy)**. Get security-related information based on Trivy vulnerability analyzer.
   - **[Ops](./channels?id=ops)**. Perform day-to-day operations like shell, restarts, getting info, etc...
@@ -19,9 +19,9 @@ Log channel is the first channel we built inside Kwirth, it was its main purpose
 ### What for
 You can create log streams that show real time logs of a set of kubernetes objects. When you select the view you can decide what groups of objects you want to use:
 
-  - *Namespace*, view all the logs of a namespace in on stream. As it happens with all the views iniside Kwirth, you can selet more than one object, that is, you can have one stream consolidating all the logs of all the pods of a set of namespaces.
-  - *Group*, I mean, a Deployment, a Replicaset, a Statefulset or a Daemonset, or any combination of them.
-  - *Pod*, you kknow, a pod or a set of pods that belong to the same or different namespaces.
+  - *Namespace*, view all the logs of a namespace in on stream. As it happens with all the views inside Kwirth, you can select more than one object, that is, you can have one stream consolidating all the logs of all the pods of a set of namespaces.
+  - *Group*, I mean, a Deployment, a ReplicaSet, a StatefulSet or a DaemonSet, or any combination of them.
+  - *Pod*, you know, a pod or a set of pods that belong to the same or different namespaces.
   - *Container*, a set of containers that belong to the same or different pods, same or different groups and same or different namespaces.
 
 ### Features
@@ -39,13 +39,13 @@ When you start a Log Channel you see the setup card where you can decide what ki
 Start diagnostics, as mentioned, is real time streaming that **starts when the set of selected kubernetes objects first started**. The parameters you can configure are:
 
   - **Max Messages**, maximum number of messages to show on the browser. When maximum is reached **the stream will be stopped**.
-  - **Max per pod messages**, maximum number of messages per object to add to the screen. When an object reaches the maximum, Kwirth will show no more messages comming from that object, but other objects can add messages while "Max Messages" is not reached.
-  - **Message sort order**, depending on the investigation you are performing, you may be interested in viewing object messages in differnet orderings. These are possible orderings:
+  - **Max per pod messages**, maximum number of messages per object to add to the screen. When an object reaches the maximum, Kwirth will show no more messages coming from that object, but other objects can add messages while "Max Messages" is not reached.
+  - **Message sort order**, depending on the investigation you are performing, you may be interested in viewing object messages in different orderings. These are possible orderings:
     - *Show messages as they arrive*, nothing to add here.
-    - *Keep together messages from the same pod*, no matter when a messages has ocurred it will be displayed next to other messages form the same pod.
+    - *Keep together messages from the same pod*, no matter when a messages has occurred it will be displayed next to other messages form the same pod.
     - *Use message time for sorting*, messages will use message time, no matter the object that originated it.
 
-You can set your selected configuration as a default for future Log Channel startings.
+You can set your selected configuration as a default for future Log Channel starting.
 
 ![logsetup](./_media/ch-images/log-setup-sd.png ':class=imageclass40')
 
@@ -54,19 +54,19 @@ Log streaming is useful for viewing object current logs in real time starting fr
 
 The configuration for log streaming is as follows:
 
-  - **Max Messages**, maximum number of messags to show on the browser. When maximum is reached **oldest messages will start to desappear**.
+  - **Max Messages**, maximum number of messages to show on the browser. When maximum is reached **oldest messages will start to disappear**.
   - **Get messages from container start time**. You can receive messages form the very start of the object by activating this configuration option. If you don't activate it, you can decide the starting moment by selecting a date/time just below. The default is last 30 minutes.
   - **Get messages of previous container**. When they are available, you can review messages that have been produced by previous run of the same object.
   - **Add timestamp to messages**, activate it to prefix all messages with its occurrence datetime.
   - **Follow new messages**, when you activate this option, the browser will move to the very end when a new message arrives.
 
-You can set your selected configuration as a default for future Log Channel startings.
+You can set your selected configuration as a default for future Log Channel starting.
 
 ![logsetup](./_media/ch-images/log-setup-ls.png  ':class=imageclass40')
 
 
 #### Running
-When you start a log stream or a start diagnostic, messages will be prefixed according to the objects you selected. For example, if you did only selected a container, messages will have no prefix. But, if you selected 2 or more containers from the same or diffferent pod, messages will be prefixed with object information (pod name, group name, namespace name...) in order to have accurate information on the origin of the message.
+When you start a log stream or a start diagnostic, messages will be prefixed according to the objects you selected. For example, if you did only selected a container, messages will have no prefix. But, if you selected 2 or more containers from the same or different pod, messages will be prefixed with object information (pod name, group name, namespace name...) in order to have accurate information on the origin of the message.
 
 A log stream would look like this:
 
@@ -90,7 +90,7 @@ Main features of Metrics Channel are:
   - Gather metrics directly from cAdvisor/Kubelet (**no Prometheus required**)
   - Show metrics in real-time charts of different kinds: Line, Area, Bar chart or direct value
   - Group your objects to see them together in two different modes:
-    - **Agregate**: just sum up the values of same metrics from differnt objects and show it.
+    - **Aggregate**: just sum up the values of same metrics from different objects and show it.
     - **Merge**: do not sum up the values, just show the metrics from different objects in the same chart. If you want to merge objects you can also decide whether to **stack** or **overlay** them.
   - As any other channel inside Kwirth, Metrics can reconnect even after losing the websocket connection, so you can stream real-time metrics in a non-stop way.
 
@@ -98,18 +98,18 @@ Main features of Metrics Channel are:
 When you start the channel you must first setup how you want to receive the metrics and show them on the browser. These are the configuration items you must provide:
 
   - **Streaming mode**, default mode (not changeable right now) is 'Stream', that is, real time streaming.
-  - **Depth**, select the number of vlaues to show in the charts. When this limit is reached, oldest values will start to be removed.
-  - **Width**, typically you select several metrics to be shown in the screen, yo can decide how many charts to show on ecah line.
+  - **Depth**, select the number of values to show in the charts. When this limit is reached, oldest values will start to be removed.
+  - **Width**, typically you select several metrics to be shown in the screen, yo can decide how many charts to show on each line.
   - **Interval**, this is the refresh interval. Kwirth core will send you new values every *interval* seconds.
-  - **Metrics list**, you can add as many metrics as you want, just click on a metric name to add or remove it from the list. You can use the filter for simplify the selectin process. In addition to typical Kubernetes metrics exposed by cAdvisor, Kwirth adds some simple metrics whose names start with **kwirth_** and just show common usage metrics:
+  - **Metrics list**, you can add as many metrics as you want, just click on a metric name to add or remove it from the list. You can use the filter for simplify the selection process. In addition to typical Kubernetes metrics exposed by cAdvisor, Kwirth adds some simple metrics whose names start with **kwirth_** and just show common usage metrics:
     - *kwirth_container_memory_percentage*, % of memory used by **all the objects in scope**
     - *kwirth_container_cpu_percentage*, % of CPU used by **all the objects in scope**
-    - *kwirth_container_trnasmit_percentage*, % of data sent by **all the objects in scope**
+    - *kwirth_container_transmit_percentage*, % of data sent by **all the objects in scope**
     - *kwirth_container_receive_percentage*, % of data received by **all the objects in scope**
-    - *kwirth_container_random_conuter*, just for testing purposes.
+    - *kwirth_container_random_counter*, just for testing purposes.
     - *kwirth_container_random_gauge*, just for testing purposes.
   - **Drawing options**:
-    - *Aggregate*, when there ar miltiple objects in scope, you can **aggregate** metrics values in order to show one only vlaue for all the objects' values.
+    - *Aggregate*, when there ar multiple objects in scope, you can **aggregate** metrics values in order to show one only value for all the objects' values.
     - *Merge*, if you don't want to aggregate the values of the metrics, you can decide to **merge** the values, so same metric from different objects are shown in the same chart.
     - *Stack*, when you *merge* the values, you can decide whether to stack them or not.
     - *Chart*, select the chart type: Line, Area, Bar or Value.
@@ -143,9 +143,9 @@ You can configure an alert channel for detecting log messages from objects in sc
 You can add, for example, a tab containing all the namespaces in your cluster, this way you can detect veeeeery easily when an ERROR occurs anywhere. Please remember the way Kwirth tabs change its colour when new data is received, so a working alert tab will move from green to yellow when a new alert is received (as well as it occurs with other channels, for sure).
 
 ### Features
-Alert detection is **performed on the backend**, that is, your browser will only receive alerts accoding to your setup. When you start an Alert Channel this is the information you must prodvide:
+Alert detection is **performed on the backend**, that is, your browser will only receive alerts according to your setup. When you start an Alert Channel this is the information you must prodvide:
 
-  - **Max alerts**, maximum number of alerts to keep on screen, when the maximum is reached, oldest ones will start to disapear.
+  - **Max alerts**, maximum number of alerts to keep on screen, when the maximum is reached, oldest ones will start to disappear.
   - **INFO**, is a list of regex or texts that will be searched for matching INFO alerts.
   - **WARNING**, is a list of regex or texts that will be searched for matching WARNING alerts.
   - **ERROR**, is a list of regex or texts that will be searched for matching ERROR alerts.
@@ -156,7 +156,7 @@ When an alert is fired the log message will be shown on the browser according to
 
 To add expressions to ERROR alert list (it is the same for INFO and WARNING), you just type in the expression and click con Add. You can enter expressions like these:
 
-  - 'error' (without apostrophes), lines containing the word 'error' will be shon in red.
+  - 'error' (without apostrophes), lines containing the word 'error' will be shown in red.
   - '^ERR', for lines that start with 3 letters ERR.
   - 'OK$', lines ending in 'OK'.
   - '5[0-9][0-9]' lines containing a number between 500 and 599 (typical status code for server error).
@@ -175,9 +175,9 @@ Kwrith relies on Trivy to send real-time information about the vulnerabiities of
 ### What for
 With Trivy Channel you can:
 
-  - Have an score of the security compliance of your Kubernetes objects. As it always happens with Kwirth, you can calculate the Kwirth Security Score on a customized set of objects. Typically, you would use Trivy Channel to calculate a security exposure about all the ocmponents that comprise an application, no matter the namespace they are running on, no matter if they are pods, replica sets, or just individual containers.
-  - For each analyzed object, and based on the information provided by Trivy, you can review what vulnerabilities are present in your images (knowing the specific CVE identifier), which versions are impacted by a CVE, which version contains the ammendment, etc. (this information is, of course, provided by Trivy).
-  - You can define a dynamic way of calculating Kwirth Security Score by configuring the number of accepted vulnerabilities of each kind (critical, high, medium, low). Ideally, you would set up a fixed configuraiton for all of your items.
+  - Have an score of the security compliance of your Kubernetes objects. As it always happens with Kwirth, you can calculate the Kwirth Security Score on a customized set of objects. Typically, you would use Trivy Channel to calculate a security exposure about all the components that comprise an application, no matter the namespace they are running on, no matter if they are pods, replica sets, or just individual containers.
+  - For each analyzed object, and based on the information provided by Trivy, you can review what vulnerabilities are present in your images (knowing the specific CVE identifier), which versions are impacted by a CVE, which version contains the amendment, etc. (this information is, of course, provided by Trivy).
+  - You can define a dynamic way of calculating Kwirth Security Score by configuring the number of accepted vulnerabilities of each kind (critical, high, medium, low). Ideally, you would set up a fixed configuration for all of your items.
 
 ### Features
 These are key features of Trivy channel:
@@ -188,7 +188,7 @@ These are key features of Trivy channel:
   - Re-evaluate a vulnerability report for an specific object.
 
 ### Use
-When you start a Trivy Channel you must provide a few things for the vulnerabiity engine to run and show you some results:
+When you start a Trivy Channel you must provide a few things for the vulnerability engine to run and show you some results:
 
   - **Maximum number of accepted issues** of each category of vulnerability, or even just ignore a specific severity (that means accepting as "good" any number of vulnerabilities of a specific kind).
 
@@ -265,7 +265,7 @@ This way of referring objects is common to all commands inside Ops Channel. Avai
   - RESTART, this command enables you to **restart one container** inside a pod.
   - RESTARTPOD, restarts a pod.
   - RESTARTNS, restarts **a whole namespace**.
-  - DELETE, delete a pod, that is, if there is a controller in place, this is the same action as restarting a pod, but, if there is no controller controlling this pod, the pod will disapear.
+  - DELETE, delete a pod, that is, if there is a controller in place, this is the same action as restarting a pod, but, if there is no controller controlling this pod, the pod will disappear.
   - XTERM, well, you can **start shell sessions** to containers.
 
 What follows are some screen shots of the commands.
@@ -289,7 +289,7 @@ When you select a shell session you'll see a TTY shell like this one:
 ![opseshell](./_media/ch-images/ops-shell.png ':class=imageclass80')
 
 ## Echo
-This channel sends users realtime "echo" information on objects in scope. It has been built for channel implementers to have a simple channel implementtion to use as a starting point.
+This channel sends users realtime "echo" information on objects in scope. It has been built for channel implementers to have a simple channel implementation to use as a starting point.
 
 ### What for
 It's a reference implementation of a Kwirth channel, and  although that this is its main objective, Echo Channel can also be used to test Kwirth connectivity and to monitor the status of objects in scope.
@@ -297,14 +297,14 @@ It's a reference implementation of a Kwirth channel, and  although that this is 
 ### Features
 You can just configure two options prior to starting an Echo Channel:
 
-  - **Max lines**, maximum number of lines to keep on screen, when the maximum is reached, old lines will start to disapear.
+  - **Max lines**, maximum number of lines to keep on screen, when the maximum is reached, old lines will start to disappear.
   - **Interval**, seconds to wait before sending next echo from the backend to the frontend.
 
 This is how the Echo setup feels:
 
 ![echosetup](./_media/ch-images/echo-setup.png  ':class=imageclass40')
 
-You can set your selected configuration as a default for future Echo Channel startings.
+You can set your selected configuration as a default for future Echo Channel starting.
 
 ### Use
 When you add an Echo Channel to your Kwirth desktop, when you start it (after configuring echo interval), Kwirth will start sending information on added objects in a regular basis (your interval in seconds), as shown in next figure.
@@ -319,7 +319,7 @@ Fileman is a really easy-to-use file manager for accessing all your filesystems 
 ### What for
 With Fileman channel you can:
 
-  - Navigate through all your Kuberntes containers/pods/controllers/namespaces and view the contents of the filesystems.
+  - Navigate through all your Kubernetes containers/pods/controllers/namespaces and view the contents of the filesystems.
   - You can perform file operations like copy, move, delete or rename.
   - You can copy/move from different source and target containers.
   - You can download and upload items to/from your local machine.
@@ -352,7 +352,7 @@ As you navigate, some actions may appear on the navigation pane header, like 'Re
 
 ![filemanactions](./_media/ch-images/fileman-actions.png ':class=imageclass80')
 
-These actions are also available when right-clicking an object on the file list. When you righ-click an item a context-menu appears with actions according to the object selected.
+These actions are also available when right-clicking an object on the file list. When you right-click an item a context-menu appears with actions according to the object selected.
 
 ![filemancontextmenu](./_media/ch-images/fileman-contextmenu.png ':class=imageclassCenter :class=imageclass20')
 
@@ -362,7 +362,7 @@ Finally, for having a detailed view of a file or folder, you can switch the file
 
 
 ## Magnify
-Magnify is **the most incredible thing** that happent inside and outside Kwirth in the last two years. It is not just a Kwirth channel, it is a really complete *Kubernetes Management Tool*.  What we mean?
+Magnify is **the most incredible thing** that happened inside and outside Kwirth in the last two years. It is not just a Kwirth channel, it is a really complete *Kubernetes Management Tool*.  What we mean?
 
 We typically build Kwirth channels for providing a specific data stream for a specific type of information: logs, alerts, metrics, files, events... Magnify has been developed as a new Kwirth channel, in fact, it has a lot to do with data streaming as well as other Kwirth channels, but, what kind of data do Magnify streams to users?
 
@@ -381,12 +381,12 @@ Magnify integrates all the data that is received from the Kubernetes via the dat
   - Editors for working with Kubernetes objects.
   - Full Kubernetes object search.
   - Validation processes for **detecting inconsistences in your Kubernetes** cluster.
-  - A lot of fun stuf.
+  - A lot of fun stuff.
 
 
 ### What for
 With Magnify channel you can:
-  - Manage your/s Kubernetes (not just connect to a specific cluster, you can manage all your clusters from a centrral point).
+  - Manage your/s Kubernetes (not just connect to a specific cluster, you can manage all your clusters from a central point).
   - Work with all types of Kubernetes objects: browse, check, edit, cerate, delete...
   - Have real-time information, sync'ed with your Magnify installation as quick as it happens inside Kubernetes.
 
@@ -395,9 +395,9 @@ With Magnify channel you can:
 These are key features of Magnify channel:
 
   - Connect to your Kubernetes clusters and browse/edit all your Kubernetes artifacts (and apply changes) online.
-  - Launch log streams in a multi-windowed system, mixing differente log sources.
-  - Launch metrics streams (mixisng sources as you need) without the need of Prometheus.
-  - Launch a Trivy channel for analyzing your workload. Wiyh MAgnify you can also deploy Trivy Operator to your cluster if you have not deployed it previously.
+  - Launch log streams in a multi-windowed system, mixing different log sources.
+  - Launch metrics streams (mixing sources as you need) without the need of Prometheus.
+  - Launch a Trivy channel for analyzing your workload. With Magnify you can also deploy Trivy Operator to your cluster if you have not deployed it previously.
   - Launch Fileman for working visually with the filesystems of your living images.
   - Launch shell sessions against your living containers (part of the ops channel).
   - In addition to these basic and not-so-basic features you can:
@@ -410,7 +410,7 @@ These are key features of Magnify channel:
 ### Use
 Starting Magnify is **really simple**. Once you have configured your resource selector with **any existent resource (no matter which)** and added the new channel to the tabs, just go to tab "Settings" icon and start the channel. *No configuration is needed*.
 
-When the channel starts the **cluster overview** shows up, and in just some milliseconds the content will start arriving. You will see some cluster information, some global metrics, a magnificient cluster validation ribbon (showign you errors or warnings detected on your cluster artifactos), and the las cluster events:
+When the channel starts the **cluster overview** shows up, and in just some milliseconds the content will start arriving. You will see some cluster information, some global metrics, a magnificent cluster validation ribbon (showing you errors or warnings detected on your cluster artifacts), and the las cluster events:
 
 ![magnifyoverview](./_media/ch-images/magnify-cluster-overview.png  ':class=imageclass60')
 
@@ -422,7 +422,7 @@ Every time you select an item or a set of items you'll see the the action toolba
 
 ![magnifyoverview](./_media/ch-images/magnify-workload.png  ':class=imageclass60')
 
-Magnify is a **windowed tool**, so everytime you perform an action a Window may show up, and you can manage it (inside yor browser or your KiwrthMagnify desktop tool) as a regular window: minimize, full-screen, move, resize, pin... 
+Magnify is a **windowed tool**, so every time you perform an action a Window may show up, and you can manage it (inside yor browser or your KwirthMagnify desktop tool) as a regular window: minimize, full-screen, move, resize, pin... 
 
 ![magnifyoverview](./_media/ch-images/magnify-windowed.png)
 

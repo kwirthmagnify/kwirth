@@ -80,7 +80,7 @@ If everything is ok, in no more than 8 to 10 seconds Kwirth should be **up and r
     kubectl port-forward svc/kwirth-svc 3883
     ```
 
-2. **Using the port forwarding** option of your favourite Kubernetes management tool, like Lens, Headlamp, K9S, etc... (etc was not a Kubernetes tool when I wrote this article ;) ).
+2. **Using the port forwarding** option of your favorite Kubernetes management tool, like Lens, Headlamp, K9S, etc... (etc was not a Kubernetes tool when I wrote this article ;) ).
 
     - With Headlamp...
       
@@ -95,9 +95,9 @@ If everything is ok, in no more than 8 to 10 seconds Kwirth should be **up and r
       ![Lens](./_media/pf-k9s.png ':class=imageclass80')
 
 
-3. **Using an Ingress**. It is the best option if you plan to access your Kwirth from Internet and if you also plan to share Kwirth with the development team in your corporate private network. For publishing Kwirth to be accesible from outside the cluster, you must create an Ingress (be sure, you need to deploy an ingress controller before, you have info on how to perform a simple ingress installation [**HERE**](https://jfvilas.github.io/oberkorn/#/ingins)).
+3. **Using an Ingress**. It is the best option if you plan to access your Kwirth from Internet and if you also plan to share Kwirth with the development team in your corporate private network. For publishing Kwirth to be accessible from outside the cluster, you must create an Ingress (be sure, you need to deploy an ingress controller before, you have info on how to perform a simple ingress installation [**HERE**](https://jfvilas.github.io/oberkorn/#/ingins)).
 
-    It is a pending job to enable Kwirth to listen in a non-root path, so you could share the Ingress object with other applications, but for the momment Kwirth only works at root path. Next sample is for publishing external access like this (of course, you can rewrite the target URL's in your reverse-proxy or in the Ingress, stripping part of the local path).
+    It is a pending job to enable Kwirth to listen in a non-root path, so you could share the Ingress object with other applications, but for the moment Kwirth only works at root path. Next sample is for publishing external access like this (of course, you can rewrite the target URL's in your reverse-proxy or in the Ingress, stripping part of the local path).
 
     ```yaml
     apiVersion: networking.k8s.io/v1
@@ -127,7 +127,7 @@ If everything is ok, in no more than 8 to 10 seconds Kwirth should be **up and r
     NOTE: You can **change the path** where to publish Kwirth, it is explained in [installation section](installation?id=installation).
 
 ## Access Kwirth (Docker and external)
-Kwirth External is a standalone deployment of Kwirth taht you can start locally inside your Linux/Windows/Mac.
+Kwirth External is a standalone deployment of Kwirth that you can start locally inside your Linux/Windows/Mac.
 
 Once installed, you can access kwirth directly and easily from a browser at: http://localhost:3883
 

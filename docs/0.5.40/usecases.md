@@ -1,14 +1,14 @@
 # Use cases
 
 ### Cluster logging
-The original idea behind Kwirth was to deliver real-time logs out of your Kubernetes, but Kwirth is now a whole and complete observability tool. Anyway, with Kwirth you can consolidate real-time (not Loki, nor Elasti, nor Alloy, nor Azure monitor nor any other logging stuff like that). Logging informaiton is received via streaming channels (implemented through websockets) directly from the container to your browser.
+The original idea behind Kwirth was to deliver real-time logs out of your Kubernetes, but Kwirth is now a whole and complete observability tool. Anyway, with Kwirth you can consolidate real-time (not Loki, nor Elastic, nor Alloy, nor Azure monitor nor any other logging stuff like that). Logging information is received via streaming channels (implemented through websockets) directly from the container to your browser.
 
-You can, for example, receive one unique log stream consolidating all the logs from one specific application. In addition, teh reconncet feature allows keeping the strem alive even if you lose your communications.
+You can, for example, receive one unique log stream consolidating all the logs from one specific application. In addition, the reconnect feature allows keeping the stream alive even if you lose your communications.
 
 ### Cluster alerting
-The ability of Kwirth to manage channels in an independent way of how objects are managed makes Kwirth extremely usefult to implement a simple but powerful alerting system. That is, the relation between your object set and the channel features is orthogonal.
+The ability of Kwirth to manage channels in an independent way of how objects are managed makes Kwirth extremely useful to implement a simple but powerful alerting system. That is, the relation between your object set and the channel features is orthogonal.
 
-Similar to how you configure your logging channel, the alert channel is useful for monitoring, for example, an appliction, just by...:
+Similar to how you configure your logging channel, the alert channel is useful for monitoring, for example, an application, just by...:
 
   1. Adding all application containers as source objects in your channel.
   2. Configure regex to match exceptional conditions on log lines.
@@ -38,6 +38,6 @@ Refer to [Kubelog](https://github.com/jfvilas/kubelog) and [KwirthLog](https://g
 > Please take into account that **Kubelog will not evolve functionally speaking**, KwirthLog its a modern replacement for Kubelog.
 
 ### Observability
-Tha same way you proxy log streams from your kubernetes systems, you can proxy metrics to any front application, like the front Kwirth application, Kwrith Desktop or Backstage clientes.
+Tha same way you proxy log streams from your kubernetes systems, you can proxy metrics to any front application, like the front Kwirth application, Kwirth Desktop or Backstage clients.
 
 Refer to [KwirthMetrics](https://github.com/kwirthmagnify/plugin-kwirth-metrics) for detailed info on the project and how to install the plugin.

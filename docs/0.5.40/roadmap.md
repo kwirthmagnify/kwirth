@@ -20,5 +20,5 @@ We cite here some interesting capabilities that are missing today:
   - **Alerting metrics**. We want Kwirth to be able to alert you based on metrics thresholds, not just log messages.
   - **Session**. We need to manage frontend sessions and store access keys into the browser's `localStorage`.
   - ~~**Terminal**. Add xterm support (with dedicated websocket) for implementing real shell sessions (not just TTY in HTML).~~ DONE via Ops channel!
-  - ~~**Dashboards**. Add dashworkspace channel (grafana-like), and implement multi-channel websockets.~~ DONE via Magnify channel!
+  - ~~**Dashboards**. Add workspace channel (grafana-like), and implement multi-channel websockets.~~ DONE via Magnify channel!
   - **AI capabilities**. Integrate AI-driven insights for log analysis and anomaly detection.

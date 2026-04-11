@@ -19,7 +19,7 @@ Using Helm is simple and very advantageous due to its simplicity for configuring
      ```
      This command installs Kwirth on namespace 'kwirth' (and creates it if needed) using default Kwirth options.
 
-Now you can publish your Kwirth to outside thyour cluster by adding an Ingress as we explain below.
+Now you can publish your Kwirth to outside your cluster by adding an Ingress as we explain below.
 
 Installation can be tailored by changing some Kwirth installation options:
 
@@ -38,7 +38,7 @@ Installation can be tailored by changing some Kwirth installation options:
 | resources          | Pod resources in Kubernetes-like format | object | {}  | { limits: { cpu:1, memory:2Gi }, requests: {cpu:0, memory:256Mi } }|
 | ingress.enabled    | Set to true if you want to deploy an Ingress | boolean | true/false  | false |
 | ingress.controller | Specify what Ingress ctroller you are using | string | nginx / agic  | nginx |
-| agic.privateip     | Associate AGIC listner to private fronetend IP | boolean | true/false | false |
+| agic.privateip     | Associate AGIC listener to private frontend IP | boolean | true/false | false |
 | nginx.tls          | States that TLS should be used in ingress | boolean | true/false | false |
 | nginx.secret       | Name of the secret holding the CRT and the KEY | string | - | - |
 | ingress.hostname   | Name of the host in ithe Ingress | string | - | - |
@@ -89,13 +89,13 @@ First install Kwirth:
 $ npm i -g @kwirthmagnify/kwirth-external
 ```
 
-Once installed (globally with '-g' optin) just launch it to check if everything is OK:
+Once installed (globally with '-g' option) just launch it to check if everything is OK:
 ```sh
 $ kwirth-external --version
 ```
 
 ### Command Line options
-If you enter 'kwirth-external --help' you should see an explanatio with all the options of Kwirth External:
+If you enter 'kwirth-external --help' you should see an explanation with all the options of Kwirth External:
 
 ```sh
 $ kwirth-external --help 
@@ -142,7 +142,7 @@ Create a 1-day API Key and exit (acts like a normal command: creates teh API key
 
 
 ## Desktop: end-user experience
-Get the Desktop experiencie of Kwirth is simple, quick and straightforward. Just got to the [Releases page at our GitHub project](https://github.com/jfvilas/kwirth/releases) and download & install the edition that best suit your needs. There are three flavours:
+Get the Desktop experience of Kwirth is simple, quick and straightforward. Just got to the [Releases page at our GitHub project](https://github.com/jfvilas/kwirth/releases) and download & install the edition that best suit your needs. There are three flavours:
 
   - Windows application, with two options: direct download and installable setup.
   - Linux, and AppImage compatible with FUSE.
@@ -151,7 +151,7 @@ Get the Desktop experiencie of Kwirth is simple, quick and straightforward. Just
 # Access Kwirth
 
 ## Kubernetes
-The default installation of Kwirth publishes Kwirth access via 'http://your.dns.name/kwirth'. But you can change this behaviour by publishing Kwirth at any other path. Let's see a sample deploy creating (if needed) an ingress controller and creating an ingress resource.
+The default installation of Kwirth publishes Kwirth access via 'http://your.dns.name/kwirth'. But you can change this behavior by publishing Kwirth at any other path. Let's see a sample deploy creating (if needed) an ingress controller and creating an ingress resource.
 
 ### 1. Deploy an Ingress controller (not needed if you already have one)
 There are lots of options for doing this job. You can use a managed ingress controller if you are using a managed Kubernetes cluster (like EKS, AKS, GKE...), or you can deploy your own ingress controller (even if you are using a CaaS approach for deploying your Kubernetes cluster).
@@ -189,7 +189,7 @@ spec:
 
 Now Kwirth would be accessible at http://localhost/quirz (the ingress redirects requests to the Kwirth service at port 3883).
 
-### 3. Configure Kwirth to be accesible
+### 3. Configure Kwirth to be accessible
 For Kwirth to be served properly in the path you selected (/quirz), the Kwirth pod must be aware of this situation, so you need to modify the Kwirth installation to indicate which is the path. The way you can do this is by modifying an environment variable at pod deployment.
 
 The deployment should look like this:
@@ -241,10 +241,10 @@ http://localhost/quirz
 ```
 
 ## Docker & External
-Accessing Docker and External installations is very similar to accessing a Kubernetes deployed Kwirth, with the slight differnece of not to access via a ingress controller. Instead, you just access Kwirth at the port and path you have configured whne you started the Kwirth server:
+Accessing Docker and External installations is very similar to accessing a Kubernetes deployed Kwirth, with the slight difference of not to access via a ingress controller. Instead, you just access Kwirth at the port and path you have configured when you started the Kwirth server:
 
 ### Docker
-If your start comman dwas somethin similar to:
+If your start command was something similar to:
 
 ```bash
 docker run -d -p 8080:3883 \
@@ -257,17 +257,17 @@ docker run -d -p 8080:3883 \
 You just will access Kwirth at `http://localhost:8080/fantastic/tony`
 
 ### External
-Very similart to Docker, if you just started a Kwirth External with a command like this:
+Very similar to Docker, if you just started a Kwirth External with a command like this:
 ```sh
 kwirth-external start --front --port 8080 --rootpath /kwith/lovers
 ```
 
-You should be able to access your Kwirt External at `http://localhost:8080/kwirth/lovers`
+You should be able to access your Kwirth External at `http://localhost:8080/kwirth/lovers`
 
 ## Desktop
-Kwirth Desktop is the easiest to access beacause it has been designed with a specific interface for Desktop users (no matter they come from Windows, Linux or Mac).
+Kwirth Desktop is the easiest to access because it has been designed with a specific interface for Desktop users (no matter they come from Windows, Linux or Mac).
 
-When you launch Kwirth Magnify, just after showing the splash screen, you will see a 'context selector' dialog where you can decide which cluster to connect to. All context will be shown, and you can filter for viewing just active ones (the ones you can connect now). Active context will refresh automatically as clusters are becoming available or unavailable (by connecting VPN's, or just chaging kube API server state). The 'LOCAL' refers to all the contexts available in your local `kubeconfig` file, and REMOTE refers to clusters that can be reached through a Kwirth server (no matter it be External, Docker or Kubernetes).
+When you launch Kwirth Magnify, just after showing the splash screen, you will see a 'context selector' dialog where you can decide which cluster to connect to. All context will be shown, and you can filter for viewing just active ones (the ones you can connect now). Active context will refresh automatically as clusters are becoming available or unavailable (by connecting VPN's, or just changing kube API server state). The 'LOCAL' refers to all the contexts available in your local `kubeconfig` file, and REMOTE refers to clusters that can be reached through a Kwirth server (no matter it be External, Docker or Kubernetes).
 
 ![local cluster selection](./_media/context-selection-local.png ':class=imageclass40')
 
