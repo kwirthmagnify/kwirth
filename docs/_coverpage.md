@@ -12,7 +12,7 @@
 
 - **Kwirth means flexible Kubernetes Management in real-time.**
 
-[GitHub](https://github.com/jfvilas/kwirth/)
+[GitHub](https://github.com/kwirthmagnify/kwirth/)
 [Get Started](/0.5.40/index)
 
 ![color](#ffffff)
