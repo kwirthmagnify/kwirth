@@ -51,6 +51,9 @@ class PinocchioChannel implements IChannel {
 
     startChannel = async () =>  {
         this.clusterInfo.addSubscriber('tick', this, undefined)
+        this.clusterInfo.addSubscriber('validating', this, {
+            kinds: ['Pod']
+        })
         this.clusterInfo.addSubscriber('events', this, {
             kinds: ['Pod'],
             crdInstances: [],

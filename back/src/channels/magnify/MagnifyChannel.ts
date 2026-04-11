@@ -426,7 +426,6 @@ class MagnifyChannel implements IChannel {
                 
                 case EMagnifyCommand.SUBSCRIBE: {
                     console.log(`Do SUBSCRIBE`)
-                    //this.clusterInfo.events.addSubscriber(this, { kinds: magnifyMessage.params!, syncInstances:Boolean(magnifyMessage.params?.includes('CRD Instances'))} )
                     this.clusterInfo.addSubscriber('events', this, { kinds: magnifyMessage.params!, syncInstances:Boolean(magnifyMessage.params?.includes('CRD Instances'))} )
                     return
                 }
