@@ -1,6 +1,7 @@
 <center>
   Kwirth version:
   <select id="version" onchange="window.location.href = `/kwirth/#/${document.getElementById('version').value}/index`">
+    <option value="0.5.40" selected>0.5.40</option>
     <option value="0.5.21" selected>0.5.21</option>
     <option value="0.4.127">0.4.127</option>
     <option value="0.4.63">0.4.63</option>
