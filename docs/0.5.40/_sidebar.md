@@ -1,6 +1,6 @@
 <center>
   Kwirth version:
-  <select id="version" onchange="window.location.href = `/kwirth/#/${document.getElementById('version').value}/index`">
+  <select id="version" onchange="window.location.href = `/#/${document.getElementById('version').value}/index`">
     <option value="0.5.40" selected>0.5.40</option>
     <option value="0.5.21">0.5.21</option>
     <option value="0.4.127">0.4.127</option>
@@ -20,9 +20,9 @@
 * [Channels](channels)
 * [Security](security)
 * [Common tasks](commontasks)
-* [User mangement](usermanagement)
-* [Cluster mangement](clustermanagement)
-* [API mangement](apimanagement)
+* [User management](usermanagement)
+* [Cluster management](clustermanagement)
+* [API management](apimanagement)
 * [Use cases](usecases)
 * [Developing](developing)
 * [Change log](changelog)
