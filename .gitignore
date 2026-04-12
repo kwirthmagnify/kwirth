@@ -17,7 +17,7 @@ kwirth-users
 /**/dist
 #/back/bundle
 #/docker/bundle
-/**/bundle
+/**/bundle/
 /**/build
 /back/front
 
