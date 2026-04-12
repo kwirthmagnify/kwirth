@@ -10,11 +10,18 @@ In the first version for the provider subsystem there exist three providers:
   - **[Events](./providers?id=events)**. Real time log streaming from different source objects (a container, a pod, a namespace or a custom mix of any of them).
   - **[Validating](./providers?id=validating)**. Real-time metrics (CPU, memory, I/O, bandwidth...) on a set of objects.
 
-Please follow the links to get specific information on each channel.
+Just follow the links to get specific information on each provider.
 
 ## Architecture
-+++diagram
-+++explanation
+Providers is one of the data-streaming subsystems inside Kwirth, and it is very easy to understand. The provider subsystem offers a decoupling layer between KubeApi and the channel subsystem, what reports these benefits:
+
+  - **Isolation**, the channels are not tightly coupled to the kube API.
+  - **Efficiency**, th data streams can be instantiated once per provider and distribute data to different channels (subscribers in fact), so the overhead introduced into kube API server is minimal.
+  - **Enrichment**, you can build providers that introduce external data into the Kwirth ecosystem.
+
+Wha follows is an architectural view oft he provider/channel subsystem.
+
+![provider-arch](./_media/ch-images/providers-arch.png)
 
 
 ## Developing
