@@ -14,7 +14,6 @@ We cite here some interesting capabilities that are missing today:
   - ~~**Metrics**. We plan to add basic Kubernetes metrics monitoring in the future by checking pod/node status. The metrics will be propagated to customers through the websocket, so users can view real-time metrics and statuses.~~ DONE!
   - ~~**Helm**. Although Kwirth installation is simple and straightforward, we should create a Helm chart for installing Kwirth.~~ DONE!
   - ~~**Event streaming**. It seems interesting to have an event streaming service (like logging or metrics) for monitoring all events that take place inside the Kubernetes cluster (object lifecycle, admin commands...).~~ DONE!
-  - **IAM**. Add integration with common IAM systems; that is, implement SSO with Google, Azure, GitHub, etc.
   - ~~**Websocket multi-service**. Currently, we support exchanging information on a websocket that belongs to different services. We need to add a 'service instance id' to allow several instances of the same service to coexist in the same websocket.~~ DONE!
   - ~~**Helm**. Add Ingress support to Helm Charts.~~ DONE!
   - **Alerting metrics**. We want Kwirth to be able to alert you based on metrics thresholds, not just log messages.
