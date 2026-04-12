@@ -1,21 +1,3 @@
-******************LONGTERM ROADMAP
-implment SSO
-implement IdP integration
-implement JWT
-Create a Taurin compatible build
-grafana plugins
-pinocchio (Kubernetes autonomo)
-  send log messages, metrics and events to LLM
-  get recommended actions
-  use vercel ai-sdk, add backend config for specific channels
-    envvars like... KWIRTH_CHANNEL_<chid>_<varname>='sssss'
-    channels will receive <varname>='sssss' upon creation when starting kwirth core
-create providers interface for extending kwirth core
-add function to shell to a node (via docker socket, I suppose)
-implement plugin system (front & back)
-implement provider system (currently just events & metrics)
-  we should use the 'events' architecture, with subscribers
-
 ******************ERRORES
 RFM
 
@@ -41,7 +23,6 @@ PROBAR TODO ESTO CON UN CLUSTER VACIO
 ==============================================================================
 *********V2*********
 KWIRTH
-implement pinocchio channel using google's aistudio
 add shortcuts on RFM (right item. for instacne: "pod" -> changefolder('/workload/pod',)), user-configurable
 el "/usage" de homepage, pasarlo a un websocket
 en los last tabs deberiamos poder saber a que nos vamos a conectar antes de conectarnos (un tooltip o asin)

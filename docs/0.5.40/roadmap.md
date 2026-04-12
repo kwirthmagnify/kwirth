@@ -21,4 +21,13 @@ We cite here some interesting capabilities that are missing today:
   - **Session**. We need to manage frontend sessions and store access keys into the browser's `localStorage`.
   - ~~**Terminal**. Add xterm support (with dedicated websocket) for implementing real shell sessions (not just TTY in HTML).~~ DONE via Ops channel!
   - ~~**Dashboards**. Add workspace channel (grafana-like), and implement multi-channel websockets.~~ DONE via Magnify channel!
-  - **AI capabilities**. Integrate AI-driven insights for log analysis and anomaly detection.
+  - **AI capabilities**. Integrate AI-driven insights for log analysis, anomaly detection or artifact analysis.
+  - **SSO**, implement Single Sing-On capabilities.
+  - **IdP**, implement integrations with external Identity Providers (EntraID, AD, Cognito, Keycloak, LDAP...)
+  - **Standard tokens**, implement JWT support (with scopes that match the VIEW system implemented inside Kwirth)
+  - **Desktop**, create a Tauri compatible build for desktop versions.
+  - **Grafana**, develop grafana plugins for log streaming and aggregation.
+  - **Pinocchio**, evolve to autonomous Kubernetes system, bay adding AI capabilities like: processing logs metrics and events with AI, get recommendations, 
+  - **Channel config**, implement channel and provider external configuration via env vars (something like KWIRTH_CHANNEL_&lt;chid&gt;_ &lt;varname&gt;='sssss')
+  - **Node operations** ad a KwirthWork or a KubeWork to shell a node.
+  - **Extensibility**, implement a plugin system for front channels, back channels and providers, something like esm.sh`.

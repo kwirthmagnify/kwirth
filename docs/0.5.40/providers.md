@@ -43,7 +43,7 @@ Where:
   - `providesRouter`, if you need to receive HTTP request from outside Kwirth, you must enable this and provide an Express router.
   - `addSubscriber`, a function for adding subscriber to your provider.
   - `removeSubscriber`, a function for removing subscriber to your provider.
-  - `router` , if `providesRouter` is `true`, you must provide the Express router here. When you provide a router, the endpoint will be served at Kwirth HTTP endpoint: '/<rootPath>/<runningInstance>/provider/<providerId>', where
+  - `router` , if `providesRouter` is `true`, you must provide the Express router here. When you provide a router, the endpoint will be served at Kwirth HTTP endpoint: '/&lt;rootPath&gt;/&lt;runningInstance&gt;/provider/&lt;providerId&gt;', where
     - `rootPath` is the root path of Kwirth HTTP endpoints, typically / ot /kwirth.
     - `runningInstance` is the id of the cluster instance once it is started.
     - `providerId` si the id of your provider.
