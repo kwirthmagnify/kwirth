@@ -7,7 +7,7 @@
 - Work with several **kubernetes clusters** at the same time. 
 <p></p>
 
-- Create information channels according to your needs (logging, alerting, metrics, security, operations...)
+- Use the channels your need (logging, metrics, security, operations...)
 <p></p>
 
 - **Kwirth means flexible Kubernetes Management in real-time.**

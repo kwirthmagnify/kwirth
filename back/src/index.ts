@@ -1202,8 +1202,10 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
         for (let provider of ri.clusterInfo.providers) {
             if (provider.providesRouter) {
                 if (provider.router) {
-                    riRouter.use(`/provider/${provider.id}`, provider.router)
-                    console.error(`Provider ${provider.id} will listen HTTP requests at '/provider/${provider.id}'`)
+                    //riRouter.use(`/provider/${provider.id}`, provider.router)
+                    let path= `${envRootPath}/${ri.id}/provider/${provider.id}`
+                    riRouter.use(path, provider.router)
+                    console.error(`Provider ${provider.id} will listen HTTP requests at '${path}'`)
                 }
                 else {
                     console.error(`Provider ${provider.id} provides router but ruter doen't exist`)
