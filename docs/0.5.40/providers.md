@@ -6,9 +6,9 @@ As of Kwirth version 0.5.40, we have converted data sources (the ones we use for
 
 In the first version for the provider subsystem there exist three providers:
 
-  - **[Tick](./providers?id=tick)**. Alerts based on los messages. Log messages are processed at Kwirth core, so you only receive alerts according to your channel config.
-  - **[Events](./providers?id=events)**. Real time log streaming from different source objects (a container, a pod, a namespace or a custom mix of any of them).
-  - **[Validating](./providers?id=validating)**. Real-time metrics (CPU, memory, I/O, bandwidth...) on a set of objects.
+  - **[Tick](./providers?id=tick)**. Just a demo provider, it creates a heartbeat every 5 seconds.
+  - **[Events](./providers?id=events)**. Creates an evente whenever a kube cluster event takes place.
+  - **[Validating](./providers?id=validating)**. Creates an event whenever the kube api needs a validarion from a Validating webhook.
 
 Just follow the links to get specific information on each provider.
 
