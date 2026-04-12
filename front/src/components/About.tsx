@@ -37,7 +37,7 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
                 <Stack direction={'row'} alignItems={'center'} justifyContent={'space-between'}>
                     <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column'}} mt={2}>
                         <Typography><b>Version: </b>{VERSION}</Typography>
-                        <Typography><b>Homepage: </b><a href='https://kwirthmagnify.github.io/kwirth' target='_blank' rel='noreferrer'>https://kwirthmagnify.github.io/kwirth</a></Typography>
+                        <Typography><b>Homepage: </b><a href='https://kwirthmagnify.dev' target='_blank' rel='noreferrer'>https://kwirthmagnify.dev</a></Typography>
                         <Typography><b>Project: </b><a href='https://github.com/kwirthmagnify/kwirth' target='blank' rel='noreferer'>https://github.com/kwirthmagnify/kwirth</a></Typography>
                     </Stack>
                     <Stack height='400px' width='500px' ml={2}>
@@ -101,7 +101,7 @@ let brand = [
 '     @@@         @@@@          @@@@        *@@@      @     @@@      = @@@@             @@@@          @@@         @@@    ',
 '  @@@@@@@@@     @@@@@@@@@       @@@         @@@      @@@@@@@@@@@@   @@@@@@@@@           @@@@@@@=  @@@@@@@@@   @@@@@@@@@ ',
 '                                                                                                                        ',
-'                                           https://kwirthmagnify.github.io/kwirth                                       ',
+'                                                 https://kwirthmagnify.dev                                              ',
 '                                                                                                                        ',
 '                                                                                                                        ']
 export { About }
