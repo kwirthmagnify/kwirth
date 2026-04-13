@@ -1,0 +1,52 @@
+
+
+CONFIG
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: check-labels-webhook
+webhooks:
+  - name: validate-labels.example.com
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        resources: ["deployments"]
+    clientConfig:
+      service:
+        name: validation-webhook-service
+        namespace: default
+        path: "/validate"
+      caBundle: <BASE64_CA_CERT> # El certificado para que K8s confíe en tu server
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5
+
+
+EVENTO
+¿?
+
+
+
+RESPUESTA
+{
+  "apiVersion": "admission.k8s.io/v1",
+  "kind": "AdmissionReview",
+  "response": {
+    "uid": "<ID-de-la-peticion-original>",
+    "allowed": false,
+    "status": {
+      "code": 403,
+      "message": "Falta la etiqueta de costo obligatoria."
+    }
+  }
+}
+
+
+
+
+
+
+
+
+

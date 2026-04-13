@@ -11,10 +11,7 @@ spec:
     command: ["/bin/sh", "-c"]
     args:
       - |
-        echo "--- Cargando 20 tipos de eventos de login... ---"
-        
         while true; do
-          # Generación de variables dinámicas
           ID="USR-$(($RANDOM % 9000 + 1000))"
           IP="$((RANDOM%254 + 1)).$((RANDOM%254 + 1)).$((RANDOM%254 + 1)).$((RANDOM%254 + 1))"
           DATE=$(date '+%Y-%m-%d %H:%M:%S')

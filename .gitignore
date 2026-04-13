@@ -15,9 +15,7 @@ kwirth-users
 
 # production
 /**/dist
-#/back/bundle
-#/docker/bundle
-/**/bundle/
+/**/bundle
 /**/build
 /back/front
 
