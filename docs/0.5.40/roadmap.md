@@ -30,3 +30,5 @@ We cite here some interesting capabilities that are missing today:
   - **Channel config**, implement channel and provider external configuration via env vars (something like KWIRTH_CHANNEL_&lt;chid&gt;_ &lt;varname&gt;='sssss')
   - **Node operations** add a KwirthWork or a KubeWork to shell a node.
   - **Extensibility**, implement a plugin system for front channels, back channels and providers, something like esm.sh.
+  - **Data management**, for being able to work with big clusters, we should be able to filter data management by namespace.
+  - **Networking**, evaluate creation of a 'network diagnostics' channel.
