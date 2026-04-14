@@ -36,7 +36,6 @@ export class TickProvider implements IProvider {
     }
 
     stopProvider = async () => {
-        console.log(`Provider ${this.id} started`)
         clearInterval(this.interval)
     }
 }

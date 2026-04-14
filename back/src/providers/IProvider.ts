@@ -15,5 +15,6 @@ export interface IProvider {
     addSubscriber: (c:IChannel, data:any) => Promise<void>
     removeSubscriber: (c:IChannel) => Promise<void>
     startProvider: () => Promise<void>
+    stopProvider: () => Promise<void>
     router: Router|undefined
 }

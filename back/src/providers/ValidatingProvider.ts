@@ -45,7 +45,10 @@ export class ValidatingProvider implements IProvider {
         if (this.subscribers.has(c)) this.subscribers.delete(c)
     }
 
-    startProvider = async () => {
-        
+    startProvider = async () => {       
     }
+
+    stopProvider = async () => {
+    }
+
 }
