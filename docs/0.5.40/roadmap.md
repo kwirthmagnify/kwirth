@@ -26,7 +26,7 @@ We cite here some interesting capabilities that are missing today:
   - **Standard tokens**, implement JWT support (with scopes that match the VIEW system implemented inside Kwirth)
   - **Desktop**, create a Tauri compatible build for desktop versions.
   - **Grafana**, develop grafana plugins for log streaming and aggregation.
-  - **Pinocchio**, evolve to autonomous Kubernetes system, bay adding AI capabilities like: processing logs metrics and events with AI, get recommendations, 
+  - **Pinocchio**, evolve to autonomous Kubernetes system, by adding AI capabilities like: processing logs, metrics and events with AI, and get recommendations, 
   - **Channel config**, implement channel and provider external configuration via env vars (something like KWIRTH_CHANNEL_&lt;chid&gt;_ &lt;varname&gt;='sssss')
-  - **Node operations** ad a KwirthWork or a KubeWork to shell a node.
-  - **Extensibility**, implement a plugin system for front channels, back channels and providers, something like esm.sh`.
+  - **Node operations** add a KwirthWork or a KubeWork to shell a node.
+  - **Extensibility**, implement a plugin system for front channels, back channels and providers, something like esm.sh.
