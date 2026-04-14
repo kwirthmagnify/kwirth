@@ -11,7 +11,7 @@ Using Helm is simple and very advantageous due to its simplicity for configuring
 
   1. Add Kwirth repo to your local local Helm:
      ```
-     helm repo add kwirth https://github.com/jfvilas/kwirth/tree/master/deploy/helm
+     helm repo add kwirth https://github.com/kwirthmagnify/kwirth/tree/master/deploy/helm
      ```
   2. Install Kwirth on your cluster:
      ```
@@ -69,7 +69,7 @@ helm repo install kwirth kwirth/kwirth -n kwirth --create-namespace -f values.ya
 If you want an express setup of Kwirth, do not loose your time, just type-in this kubectl in your console:
 
 ```yaml
-kubectl apply -f https://raw.githubusercontent.com/jfvilas/kwirth/master/test/kwirth.yaml
+kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/test/kwirth.yaml
 ```
 
 If you need to change default Kwirth configuration you may need to edit the YAML files in order to customize the deployment.
@@ -142,7 +142,7 @@ Create a 1-day API Key and exit (acts like a normal command: creates teh API key
 
 
 ## Desktop: end-user experience
-Get the Desktop experience of Kwirth is simple, quick and straightforward. Just got to the [Releases page at our GitHub project](https://github.com/jfvilas/kwirth/releases) and download & install the edition that best suit your needs. There are three flavours:
+Get the Desktop experience of Kwirth is simple, quick and straightforward. Just got to the [Releases page at our GitHub project](https://github.com/kwirthmagnify/kwirth/releases) and download & install the edition that best suit your needs. There are three flavours:
 
   - Windows application, with two options: direct download and installable setup.
   - Linux, and AppImage compatible with FUSE.

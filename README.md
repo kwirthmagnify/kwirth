@@ -40,6 +40,8 @@ Next sections will explain how to perform each one of these setup methods.
 
 
 ### Kubernetes (manifests and Helm chart)
+
+#### Manifests
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/test/kwirth.yaml
 ```
@@ -60,6 +62,21 @@ When you first deploy Kwirth there will exist an admin account. The credentials 
   - Password: `password`
 
 Enjoy!!
+
+#### Helm
+Using Helm is simple and very advantageous due to its simplicity for configuring and deploying Kubernetes software. These are some simple steps to deploy Kwirth using Helm:
+
+  1. Add Kwirth repo to your local local Helm:
+     ```
+     helm repo add kwirth https://github.com/kwirthmagnify/kwirth/tree/master/deploy/helm
+     ```
+  2. Install Kwirth on your cluster:
+     ```
+     helm install kwirth kwirth/kwirth -n kwirth --create-namespace
+     ```
+     This command installs Kwirth on namespace 'kwirth' (and creates it if needed) using default Kwirth options.
+
+You can review configuration inside `values.yaml` [here](https://kwirthmagnify.dev/#/0.5.40/installation?id=installation).
 
 
 ### Docker

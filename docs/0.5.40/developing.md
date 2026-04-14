@@ -233,6 +233,6 @@ interface IChannelObject {
 As you may see, metricsList, accessString, webSocket and some others are optional, they depend on the above mentioned `requirements` object.
 
 ### Sample implementation
-For a simple implementation of a channel, please review [echo Back Channel](https://github.com/jfvilas/kwirth/tree/master/back/src/channels/echo) and [echo Front Channel](https://github.com/jfvilas/kwirth/tree/master/front/src/channels/echo) on GitHub.
+For a simple implementation of a channel, please review [echo Back Channel](https://github.com/kwirthmagnify/kwirth/tree/master/back/src/channels/echo) and [echo Front Channel](https://github.com/kwirthmagnify/kwirth/tree/master/front/src/channels/echo) on GitHub.
 
 This is a reference implementation that you can use as a starter pack for channel development.

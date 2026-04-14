@@ -506,6 +506,90 @@ async function setIngressClassAsDefault (networkApi: NetworkingV1Api, name:strin
 }
 
 async function imageDelete (appsApi:AppsV1Api, imageName:string) {
+    // +++ TEST
+
+    let uniqueName = 'kwirth-image-purger-'+uuid()
+
+    const daemonSet = {
+        metadata: {
+            name: uniqueName,
+            labels: { app: uniqueName }
+        },
+        spec: {
+            selector: { matchLabels: { app: uniqueName } },
+            template: {
+                metadata: { labels: { app: uniqueName } },
+                spec: {
+                    containers: [{
+                        name: 'worker',
+                        image: 'rancher/crictl:v1.19.0',
+                        command: ["/bin/sh", "-c"],
+                        args: [`
+                            SOCKETS="/run/containerd/containerd.sock 
+                                    /run/k3s/containerd/containerd.sock 
+                                    /run/crio/crio.sock 
+                                    /var/run/dockershim.sock 
+                                    /var/run/containerd/containerd.sock"
+
+                            for socket in $SOCKETS; do
+                                if [ -S "$socket" ]; then
+                                    export CONTAINER_RUNTIME_ENDPOINT="unix://$socket"
+                                    export IMAGE_SERVICE_ENDPOINT="unix://$socket"
+                                    echo "Socket detectado y configurado: $socket"
+                                    break
+                                fi
+                            done
+
+                            if [ -z "$CONTAINER_RUNTIME_ENDPOINT" ]; then
+                                echo "ERROR: No socket found."
+                                exit 1
+                            fi
+
+                            /usr/local/bin/crictl rmi ${imageName}
+                            sleep 10
+                        `],
+                        securityContext: { 
+                            privileged: true
+                        },
+                        volumeMounts: [
+                            { name: 'run-dir', mountPath: '/run' },
+                            { name: 'var-run-dir', mountPath: '/var/run' }
+                        ]
+                    }],
+                    volumes: [
+                        { 
+                            name: 'run-dir', 
+                            hostPath: { path: '/run', type: 'Directory' } 
+                        },
+                        { 
+                            name: 'var-run-dir', 
+                            hostPath: { path: '/var/run', type: 'Directory' } 
+                        }
+                    ],
+                    hostPID: true
+                }
+            }
+        }
+    }
+
+    try {
+        await appsApi.createNamespacedDaemonSet({
+            namespace: 'default',
+            body: daemonSet
+        })
+        console.log(`DaemonSet ${uniqueName} created for deleting image '${imageName}'`);
+        await new Promise((resolve) => setTimeout(resolve, 30000))
+        await appsApi.deleteNamespacedDaemonSet({
+            namespace: 'default',
+            name: uniqueName
+        })
+    }
+    catch (err:any) {
+        console.error('Error:', err.response ? err.response.body : err);
+    }
+}
+
+async function imageDeleteOld (appsApi:AppsV1Api, imageName:string) {
     // +++ TEST OTHER Kubes
 
     /*

@@ -3,7 +3,7 @@ Kwirth is the final implementation of the idea of having a simple way to manage 
 
 If this is the case, **Kwirth is the answer to your needs**. Just *one pod to access all the observability you need* from your main Kubernetes cluster, or even **consolidate observability information from different clusters**. When we say 'observability' we mean 'logging', 'metrics', 'alerts', 'signals', etc.
 
-You can access the source code [**HERE**](https://github.com/jfvilas/kwirth).
+You can access the source code [**HERE**](https://github.com/kwirthmagnify/kwirth).
 
 ## Get started
 Kwirth can be easily deployed using Kubernetes manifests or a Helm chart.
@@ -12,14 +12,14 @@ Kwirth can be easily deployed using Kubernetes manifests or a Helm chart.
 Yes, **one only command**, just a simple 'kubectl' is enough for deploying Kwirth to your cluster.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/jfvilas/kwirth/master/test/kwirth.yaml
+kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/test/kwirth.yaml
 ```
 
 #### Helm chart
 Helm is even more simple:
 
 ```bash
-helm repo add kwirth https://github.com/jfvilas/kwirth/tree/master/deploy/helm
+helm repo add kwirth https://github.com/kwirthmagnify/kwirth/tree/master/deploy/helm
 helm install kwirth kwirth/kwirth -n kwirth --create-namespace
 ```
 
