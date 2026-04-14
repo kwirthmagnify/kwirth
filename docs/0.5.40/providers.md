@@ -1,8 +1,8 @@
 # Providers
-As of Kwirth version 0.5.40, we have converted data sources (the ones we use for extracting data from Kubernetes) into a 'provider'. ths means:
+As of Kwirth version 0.5.40, we have converted data sources (the ones we use for extracting data from Kubernetes) into 'providers'. This means:
 
-  - Kwirth core can be extended adding new providers.
-  - Providers are now standardized, adn can be moved away form Kwirth core (converting them into plugins, for example).
+  - Kwirth core can be extended by adding new providers.
+  - Providers are now standardized, and they can be moved away from Kwirth core (converting them into plugins, for example).
 
 In the first version for the provider subsystem there exist three providers:
 
@@ -13,13 +13,13 @@ In the first version for the provider subsystem there exist three providers:
 Just follow the links to get specific information on each provider.
 
 ## Architecture
-Providers is one of the data-streaming subsystems inside Kwirth, and it is very easy to understand. The provider subsystem offers a decoupling layer between KubeApi and the channel subsystem, what reports these benefits:
+Providers is one of the data-streaming subsystems inside Kwirth, and it is very easy to understand. The provider subsystem offers a decoupling layer between kube api and the channel subsystem, what adds these benefits:
 
   - **Isolation**, the channels are not tightly coupled to the kube API.
-  - **Efficiency**, th data streams can be instantiated once per provider and distribute data to different channels (subscribers in fact), so the overhead introduced into kube API server is minimal.
+  - **Efficiency**, the data streams can be instantiated once per provider and distribute data to different channels (subscribers in fact), so the overhead introduced into kube API server is minimal.
   - **Enrichment**, you can build providers that introduce external data into the Kwirth ecosystem.
 
-Wha follows is an architectural view oft he provider/channel subsystem.
+What follows is an architectural view of the provider/channel subsystem.
 
 ![provider-arch](./_media/ch-images/providers-arch.png)
 
@@ -41,12 +41,12 @@ export interface IProvider {
 Where:
   - `id`, is the id of the provider, the one the channels will use for reference.
   - `providesRouter`, if you need to receive HTTP request from outside Kwirth, you must enable this and provide an Express router.
-  - `addSubscriber`, a function for adding subscriber to your provider.
+  - `addSubscriber`, a function for adding subscribers to your provider.
   - `removeSubscriber`, a function for removing subscriber to your provider.
   - `router` , if `providesRouter` is `true`, you must provide the Express router here. When you provide a router, the endpoint will be served at Kwirth HTTP endpoint: '/&lt;rootPath&gt;/&lt;runningInstance&gt;/provider/&lt;providerId&gt;', where
     - `rootPath` is the root path of Kwirth HTTP endpoints, typically / ot /kwirth.
     - `runningInstance` is the id of the cluster instance once it is started.
-    - `providerId` si the id of your provider.
+    - `providerId` is the id of your provider.
     - Example: /kwirth/23446-23446-23446-23446/provider/datastream (being 'datastream' the id of the provider).
 
 
@@ -62,15 +62,14 @@ Tick provider has no configuration, the interval for the Tick is fixed. The sour
 !> The source is linked to a running instance, not to Kwirth core, so you will have a unique Tick provider for each cluster.
 
 ### Use
-When initializing a channel or when starting a channel (or any other moment afterwards) you can add yourself as a subscriber to Tick channel, and you will start receiving the ticks every
-five seconds.
+When initializing a channel or when starting a channel (or any other moment afterwards) you can add yourself as a subscriber to Tick channel, and you will start receiving the ticks every five seconds.
 
 
 ## Events
-Events provider captures all events occurring inside Kubernetes and distribute them into all subscriber according to their subscription preferences. Kubernetes events are:
+Events provider captures all events occurring inside Kubernetes and distribute them into all subscribers according to their subscription preferences. Kubernetes events are:
 
   - ADDED/MODIFIED/DELETED events, just those ones.
-  - Eny Kubernetes object, including CRD's and their CRD instances.
+  - Any Kubernetes object, including CRD's and their CRD instances.
 
 ### What for
 It is intended to be used by the channels requiring information on what's taking place inside Kubernetes, since this providers captures **all** the activity of the cluster.
@@ -79,10 +78,10 @@ It is intended to be used by the channels requiring information on what's taking
 Main features of Events provider are:
 
   - Capture all ADDED/MODIFIED/DELETED events.
-  - Subscribers can set the list of objects they want to subscribe to. For example, `pinocchio` channel is just subscribed to 'Pod' kind events, while `magnify` channel is subscribed to all the kinds the user has selected inf `magnify` front.
+  - Subscribers can set the list of objects they want to subscribe to. For example, `pinocchio` channel is just subscribed to 'Pod' kind events, while `magnify` channel is subscribed to all the kinds the user has selected in `magnify` front.
 
 ### Use
-To subscribe `events` thou need to add yourself as a subscriber specifying just two parameters:
+To subscribe `events` you need to add yourself as a subscriber specifying just two parameters:
 { kinds: magnifyMessage.params!, syncInstances:Boolean(magnifyMessage.params?.includes('CRD Instances'))}
   - **kinds**, an array of Kubernetes kinds you want to subscribe.
   - **syncInstances**, a `boolean` indicating if you want to subscribe to CRD instances (whose CRD may be created after your subscription started).
@@ -101,10 +100,10 @@ this.clusterInfo.addSubscriber(
 ```
 
 ## Validating
-Validating providers receives Kubernetes **validating webhook** calls and send them to all subscribed channels. In the very first version no actions can be taking back to Kubernetes, so all responses form Kwirth to Kubernetes will always be `review: true`, this means Validation providers is only informative for channels.
+Validating providers receives Kubernetes **validating webhook** calls and send them to all subscribed channels. In the very first version no actions can be taking back to Kubernetes, so all responses from Kwirth to Kubernetes will always be `review: true`, this means Validation provider is only informative for channels.
 
 ### What for
-You can obtain information about object **before** they are ADDED/DELETED/MODIFIED. In near future channels will be able to answer `validating` channel regarding the review process, stating if the review is accepted or denied.
+You can obtain information about objects **before** they are ADDED/DELETED/MODIFIED. In near future channels will be able to answer `validating` channel regarding the review process, stating if the review is accepted or denied.
 
 ### Features
 Provider sends validating request to all subscribed channels according to the initial configuration:
