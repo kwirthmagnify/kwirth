@@ -29,4 +29,4 @@ The connection between **Roy Lichtenstein** and Kwirth Magnify is not accidental
 This is exactly how Kwirth works:
   - **Granularity**: We take the individual "dots" of Kubernetes (logs, metrics, events) and magnify them.
   - **Clarity from Complexity**: Just as Roy transformed "low-art" comic strips into "high-art" gallery pieces by enlarging the detail, Kwirth takes the raw, messy data of a cluster and presents it in a bold, clear, and "pop" visual style.
-  - **The "K" Icon**: Our new logo uses those iconic dots and thick black outlines, symbolizing that when you use Kwirth, you are looking at your cluster through a powerful magnifies that makes every detail pop.
+  - **The "K" Icon**: Our new logo uses those iconic dots and thick black outlines, symbolizing that when you use Kwirth, you are looking at your cluster through a powerful magnifier that makes every detail pop.
