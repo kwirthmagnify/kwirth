@@ -1815,6 +1815,13 @@ objectSections.set('Pod', [
                         style:['bold']
                     },
                     {
+                        name: 'id',
+                        text: 'Id',
+                        source: ['containerID'],
+                        format: 'string',
+                        style:['']
+                    },
+                    {
                         name: 'state',
                         text: 'State',
                         source: ['state'],

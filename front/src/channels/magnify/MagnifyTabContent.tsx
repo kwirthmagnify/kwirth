@@ -806,6 +806,8 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     const launchNodeCordon = (p:string[]) => {
+        let f = magnifyData.files.filter(x => p.includes(x.path))
+        sendCommand(EMagnifyCommand.NODE, ['cordon', f[0].data.origin.metadata.name])
     }
 
     const launchNodeUnCordon = (p:string[]) => {

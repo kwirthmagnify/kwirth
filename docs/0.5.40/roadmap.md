@@ -29,6 +29,8 @@ We cite here some interesting capabilities that are missing today:
   - **Pinocchio**, evolve to autonomous Kubernetes system, by adding AI capabilities like: processing logs, metrics and events with AI, and get recommendations, 
   - **Channel config**, implement channel and provider external configuration via env vars (something like KWIRTH_CHANNEL_&lt;chid&gt;_ &lt;varname&gt;='sssss')
   - **Node operations** add a KwirthWork or a KubeWork to shell a node.
+  - **Nerd operations**, since using fileman you can modify a container's filesystem, we need a tool to push the modified container back to a registry (nerdctl)
   - **Extensibility**, implement a plugin system for front channels, back channels and providers, something like esm.sh.
   - **Data management**, for being able to work with big clusters, we should be able to filter data management by namespace.
   - **Networking**, evaluate creation of a 'network diagnostics' channel.
+  - **Workspace**, workspaces should be exportable/importable by selecting a different than the one the workspace was builded for.

@@ -78,7 +78,6 @@ spec:
     args:
       - |
         while true; do
-          # Generación de variables dinámicas para mayor realismo
           RES="RES-$(($RANDOM % 90000 + 10000))"
           USR="USR-$(($RANDOM % 5000 + 1000))"
           CITY=$(echo "Madrid|Barcelona|Paris|London|New York|Tokyo|Roma" | tr '|' '\n' | shuf -n 1)

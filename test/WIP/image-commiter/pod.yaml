@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: image-committer
+spec:
+  nodeName: k3d-kwirth-agent-0
+  restartPolicy: Never
+  containers:
+  - name: worker
+    image: ghcr.io/containerd/nerdctl:latest
+    securityContext:
+      privileged: true
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        sleep infinity
+        nerdctl -n k8s.io commit $CONTAINER_ID $NEW_IMAGE
+        #nerdctl -n k8s.io push $NEW_IMAGE
+        nerdctl login -u USER -p PASSWORD registry.miempresa.com
+        nerdctl -n k8s.io images
+        
+        echo "PROCESO COMPLETADO"
+    volumeMounts:
+    - name: containerd-socket
+      mountPath: /run/containerd/containerd.sock
+  volumes:
+  - name: containerd-socket
+    hostPath:
+      path: /run/k3s/containerd/containerd.sock
+      type: Socket

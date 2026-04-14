@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Accordion, AccordionActions, AccordionDetails, AccordionSummary, Box, Button, Checkbox, FormControlLabel, MenuItem, Select, SelectChangeEvent, Stack, TextareaAutosize, TextField, Typography } from '@mui/material'
 import { ExpandMore } from '@mui/icons-material'
 import { allKinds, IKind, MagnifyUserPreferences } from './MagnifyUserPreferences'
@@ -16,10 +16,10 @@ interface IUserPreferencesProps {
 export interface ICustomAction {
     type: 'kwirth'|'kube'
     name: string
-    podYaml: string
-    onReady: 'shell'|'http'|'https'
+    onReady: 'nothing'|'shell'|'http'|'https'
     url?: string
     forward?: boolean
+    podYaml: string
 }
 
 const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferencesProps) => {
@@ -39,7 +39,21 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
     const filterRef = useRef<HTMLInputElement>(null)
 
     const [showAbout, setShowAbout] = useState(false)
+    const podExplanation = `Paste here a complete YAML of a pod that will be launched when a user selects this action in Magnify 'Overview' top menu ('Kwirth Works' action)`
 
+    useEffect( () => {
+        // this is needed because preferences are being shown INSIDE react-file-manager, so we don't want key to be propagated
+        // +++ change RFM for ignoring key if layout of type 'own' is being shown.
+        const handleKeyDown = (event: KeyboardEvent) => {
+            event.stopPropagation()
+        }
+
+        window.addEventListener('keydown', handleKeyDown, true)
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown, true)
+        }
+    })
+    
     const save = () => {
         if (!props.channelObject.writeChannelUserPreferences) return
         props.preferences.palette = palette
@@ -125,27 +139,28 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
                             <Stack key={'action'+index} direction={'column'} gap={1} sx={{mb:2}}>
                                 <Stack direction={'row'} gap={1} alignItems={'center'}>
                                     <Select value={ca.type} onChange={(event) => { ca.type = event.target.value; setCustomActions([...customActions])}} variant='standard' sx={{width:'100px'}}>
-                                        <MenuItem value='kwirth'>Kwirth</MenuItem>
+                                        <MenuItem value='kwirth' disabled>Kwirth</MenuItem>
                                         <MenuItem value='kube'>Kube</MenuItem>
                                     </Select>
-                                    <TextField value={ca.name} onChange={(event) => { ca.name = event.target.value; setCustomActions([...customActions])}} variant='standard'>Name</TextField>
-                                    <Select value={ca.onReady} onChange={(event) => { ca.onReady = event.target.value; setCustomActions([...customActions])}} variant='standard' sx={{width:'100px'}}>
+                                    <TextField value={ca.name} onChange={(event) => { ca.name = event.target.value; setCustomActions([...customActions])}} variant='standard' placeholder='Name' sx={{minWidth:'15%'}}/>
+                                    <Select value={ca.onReady} onChange={(event) => { ca.onReady = event.target.value; setCustomActions([...customActions])}} variant='standard' sx={{minWidth:'10%'}}>
+                                        <MenuItem value='nothing'>Nothing</MenuItem>
                                         <MenuItem value='shell'>Shell</MenuItem>
-                                        <MenuItem value='http'>HTTP</MenuItem>
-                                        <MenuItem value='https'>HTTPS</MenuItem>
+                                        <MenuItem value='http' disabled>HTTP</MenuItem>
+                                        <MenuItem value='https' disabled>HTTPS</MenuItem>
                                     </Select>
-                                    <FormControlLabel control={<Checkbox onChange={(event) => { ca.forward=event.target.checked; setCustomActions([...customActions])}} checked={ca.forward} disabled={ca.onReady==='shell'}/>} label={'Forward'}/>
-                                    <TextField value={ca.url} onChange={(event) => { ca.url=event.target.value; setCustomActions([...customActions])}} disabled={ca.onReady==='shell' || ca.forward} fullWidth variant='standard'>Url</TextField>
+                                    <FormControlLabel control={<Checkbox onChange={(event) => { ca.forward=event.target.checked; setCustomActions([...customActions])}} checked={ca.forward} disabled={'nothing shell'.includes(ca.onReady)}/>} label={'Forward'}/>
+                                    <TextField value={ca.url} onChange={(event) => { ca.url=event.target.value; setCustomActions([...customActions])}} disabled={'nothing shell'.includes(ca.onReady) || ca.forward} fullWidth variant='standard'>Url</TextField>
                                     <Typography sx={{flexGrow:1}}/>
                                     <Button onClick={() => removeCustomAction(index)}>Remove</Button>
                                 </Stack>
-                                <TextareaAutosize key={'yaml'+index} value={ca.podYaml} onChange={(event) => { ca.podYaml=event.target.value; setCustomActions([...customActions])}} style={{height: '100px'}}></TextareaAutosize>
+                                <TextareaAutosize key={'yaml'+index} value={ca.podYaml} onChange={(event) => { ca.podYaml=event.target.value; setCustomActions([...customActions])}} style={{height: '100px'}} placeholder={podExplanation}></TextareaAutosize>
                             </Stack>
                         )
                     })
                 }
                 <Stack direction={'row'} justifyContent={'end'}>
-                    <Button onClick={() => setCustomActions([...customActions, { type:'kube', name: '', podYaml: '', onReady: 'shell'}])}>Add</Button>
+                    <Button onClick={() => setCustomActions([...customActions, { type:'kube', name: '', podYaml: '', onReady: 'nothing'}])}>Add</Button>
                 </Stack>
             </AccordionDetails>
             <AccordionActions>
@@ -233,6 +248,6 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
 
         { showAbout && <About onClose={() => setShowAbout(false)}/>}
     </Box>
-    }
+}
 
 export { UserPreferences }

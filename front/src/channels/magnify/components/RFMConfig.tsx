@@ -3806,12 +3806,12 @@ spaces.set('classOverview', {
             //     text: 'Kwirth works',
             //     permission: true,
             // },
-            // {
-            //     name: 'kubeworks',
-            //     icon: <HomeRepairService fontSize='small'/>,
-            //     text: 'Kube works',
-            //     permission: true,
-            // },
+            {
+                name: 'kubeworks',
+                icon: <HomeRepairService fontSize='small'/>,
+                text: 'Kube works',
+                permission: true,
+            },
             {
                 name: 'exit',
                 text: 'Exit',

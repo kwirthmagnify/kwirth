@@ -201,4 +201,8 @@ export class EventsProvider implements IProvider {
 
         [...coreResources, ...apiResources].forEach(path => this.startResourceWatcher(path, this.handleEvent));
     }
+
+    stopProvider = async () => {
+    }
+
 }
