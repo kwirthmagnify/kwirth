@@ -1,1 +1,3 @@
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
+
+helm uninstall eg -n envoy-gateway-system

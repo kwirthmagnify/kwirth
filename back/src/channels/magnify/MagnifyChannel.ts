@@ -131,30 +131,6 @@ class MagnifyChannel implements IChannel {
     startChannel = async () =>  {
     }
 
-    // processObjectEvent(type:string, obj:any) : void {
-    //     for (let socket of this.webSockets) {
-    //         for (let instance of socket.instances) {
-    //             let magnifyMessage:IMagnifyMessageResponse = {
-    //                 msgtype: 'magnifymessageresponse',
-    //                 id: '1',
-    //                 command: EMagnifyCommand.K8EVENT,
-    //                 namespace: '',
-    //                 group: '',
-    //                 pod: '',
-    //                 container: '',
-    //                 action: EInstanceMessageAction.COMMAND,
-    //                 flow: EInstanceMessageFlow.UNSOLICITED,
-    //                 type: EInstanceMessageType.DATA,
-    //                 channel: 'magnify',
-    //                 instance: instance.instanceId,
-    //                 event: type,
-    //                 data: obj
-    //             }
-    //             socket.ws.send(JSON.stringify(magnifyMessage))
-    //         }
-    //     }
-    // }
-
     processProviderEvent(providerId:string, obj:any) : void {
         switch(providerId) {
             case 'events':

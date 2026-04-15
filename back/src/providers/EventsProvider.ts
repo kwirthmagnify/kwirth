@@ -34,7 +34,7 @@ export class EventsProvider implements IProvider {
             this.subscribers.set(c, subscriber)
         }
         catch(err) {
-            console.log(`Errors ocurred while adding subscriber ${c.getChannelData().id} to provider 'events'`)
+            console.log(`Errors occurred while adding subscriber ${c.getChannelData().id} to provider 'events'`)
         }
     }
 
@@ -98,23 +98,16 @@ export class EventsProvider implements IProvider {
     }
 
     private handleEvent = (type: string, obj: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
-        if (obj.kind === 'CustomResourceDefinition') {
-            if (type === 'DELETED') {
-                this.stopCrdInstanceWatcher(obj, subscribersList)
-            }
-            else if (type === 'ADDED') {
-                this.startCrdInstanceWatcher(obj, subscribersList)
+        if (obj.kind === 'CustomResourceDefinition' && type === 'ADDED') this.startCrdInstanceWatcher(obj, subscribersList)
+
+        for (let [channel, subscriber] of subscribersList.entries()) {
+            if (subscriber.kinds.includes(obj.kind) || (subscriber.crdInstances && subscriber.crdInstances.includes(obj.kind)) || subscriber.syncCrdInstances) {
+                channel.processProviderEvent(this.id, { type, obj })
             }
         }
 
-        for (let [channel, subscriber] of subscribersList.entries()) {
-            if (subscriber.kinds.includes(obj.kind) || (subscriber.crdInstances && subscriber.crdInstances.includes(obj.kind))) {
-                channel.processProviderEvent(this.id, { type, obj })
-            }
-            else {
-                //console.log('********************notproroc', subscriber.crdInstances, obj.kind)
-            }
-        }
+        if (obj.kind === 'CustomResourceDefinition' && type === 'DELETED') this.stopCrdInstanceWatcher(obj, subscribersList)
+
     }
 
     private startCrdInstanceWatcher = (crd: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
@@ -130,8 +123,7 @@ export class EventsProvider implements IProvider {
             console.warn(`Only version '${crd.spec.versions[0].name}' of '${kindName}' will be watched. All versions are: ${crd.spec.versions.map((v:any) => v.name).join(', ')}`);
         }
 
-        // Registrar el nuevo tipo de instancia en los suscriptores
-        for (let subscriber of subscribersList.values()) {
+        for (let [channel, subscriber] of subscribersList.entries()) {
             if (!subscriber.crdInstances.includes(kindName)) subscriber.crdInstances.push(kindName)
         }
 

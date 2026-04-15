@@ -165,11 +165,12 @@ class MagnifyChannel implements IChannel {
                                         magnifyData.files = [...magnifyData.files]
                                         break
                                     case 'DELETED':
-                                        //+++ if (response.data.kind==='Namespace' && magnifyData.updateNamespaces) magnifyData.updateNamespaces('DELETED', response.data.metadata.name)
                                         if ('Namespace Node'.includes(response.data.kind) && magnifyData.updateCategoryValues) magnifyData.updateCategoryValues(response.data.kind, 'DELETED', response.data.metadata.name)
                                         let path = buildPath(response.data.kind, response.data.metadata.name, response.data.metadata.namespace)
                                         if (path.startsWith('//')) {
                                             // no top level section found (like custom, workload, network...), so this could be a CRDi
+                                            console.log('toremove')
+                                            console.log('/custom/'+response.data.kind+'/'+response.data.metadata.name + (response.data.metadata.namespace? ':'+response.data.metadata.namespace : ''))
                                             magnifyData.files = magnifyData.files.filter(f => f.path !== '/custom/'+response.data.kind+'/'+response.data.metadata.name + (response.data.metadata.namespace? ':'+response.data.metadata.namespace : ''))
                                         }
                                         else {
