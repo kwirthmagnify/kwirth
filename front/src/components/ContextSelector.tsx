@@ -196,7 +196,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
 
             </DialogContent>
         </Dialog>
-        <InputBox title={inputBoxTitle} message={inputBoxMessage} onClose={() => setInputBoxTitle(undefined)} onResult={inputBoxResult}/>
+        <InputBox title={inputBoxTitle} message={inputBoxMessage} onClose={() => setInputBoxTitle(undefined)} onResult={inputBoxResult} width='300px'/>
         {waiting && <Backdrop
             sx={(theme) => ({ color: '#fff', zIndex: theme.zIndex.drawer + 10000 })}
             open={true}

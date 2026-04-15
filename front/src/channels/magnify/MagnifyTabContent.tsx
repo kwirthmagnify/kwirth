@@ -1134,10 +1134,11 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                         })
                     }
                 </Stack>
-                { msgBox }
-                <InputBox title={inputBoxTitle} default={inputBoxDefault} message={inputBoxMessage} onClose={() => setInputBoxTitle(undefined)} onResult={inputBoxResult}/>
             </Box>
         }
+
+        { msgBox }
+        <InputBox title={inputBoxTitle} default={inputBoxDefault} message={inputBoxMessage} onClose={() => setInputBoxTitle(undefined)} onResult={inputBoxResult} width='300px' password={true}/>
 
         { magnifyData.windows.map((w) => renderWindow(w, false, false)) }
         { magnifyData.windows.map((w) => renderWindow(w, true, false)) }
