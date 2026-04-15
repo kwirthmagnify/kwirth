@@ -553,6 +553,10 @@ class MagnifyChannel implements IChannel {
     loadPodDisruptionBudget(magnifyData:IMagnifyData, obj:any): void {
         obj.apiVersion = 'policy/v1'
         obj.kind = 'PodDisruptionBudget'
+
+        // if pod exist, we preserve cpu & data info
+        let existingPod = magnifyData.files.find(f => f.class==='Pod' && f.data.origin.metadata.name === obj.metadata.name && f.data.origin.metadata.namespace === obj.metadata.namespace)
+
         this.upsertObject(magnifyData, {
             name: obj.metadata.name+':'+obj.metadata.namespace,
             displayName: obj.metadata.name,
@@ -560,6 +564,7 @@ class MagnifyChannel implements IChannel {
             path: buildPath('PodDisruptionBudget', obj.metadata.name, obj.metadata.namespace),
             class: 'PodDisruptionBudget',
             data: {
+                ...(existingPod?.data ? { cpu: existingPod.data.cpu, memory: existingPod.data.memory} : {}), // +++ test
                 namespace: obj.metadata.namespace,
                 minAvailable: obj.spec.minAvailable || '',
                 maxUnavailable: obj.spec.maxUnavailable || '',
@@ -668,12 +673,17 @@ class MagnifyChannel implements IChannel {
         obj.status.allocatable.cpu = coresToNumber(obj.status.allocatable.cpu)
         obj.status.capacity.memory = convertSizeToBytes(obj.status.capacity.memory)
         obj.status.allocatable.memory = convertSizeToBytes(obj.status.allocatable.memory)
+
+        // if node exists we preserve cpu & memory data
+        let existingNode = magnifyData.files.find(f => f.class==='Node' && f.data.origin.metadata.name === obj.metadata?.name)
+
         this.upsertObject(magnifyData, {
             name: obj.metadata.name,
             isDirectory: false,
             path: buildPath('Node', obj.metadata.name, undefined),
             class: 'Node',
             data: {
+                ...(existingNode?.data ? { cpu: existingNode.data.cpu, memory: existingNode.data.memory } : {}),   // +++ test
                 creationTimestamp: obj.metadata.creationTimestamp,
                 taints: obj.spec.taints? obj.spec.taints.length : 0,
                 roles: roles.join(','),

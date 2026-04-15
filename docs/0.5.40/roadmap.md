@@ -34,3 +34,4 @@ We cite here some interesting capabilities that are missing today:
   - **Data management**, for being able to work with big clusters, we should be able to filter data management by namespace.
   - **Networking**, evaluate creation of a 'network diagnostics' channel.
   - **Workspace**, workspaces should be exportable/importable by selecting a different than the one the workspace was builded for.
+  - **UX/UI**, improve filtering (add node filters (and other) on RFM).
