@@ -9,8 +9,6 @@ We cite here some interesting capabilities that are missing today:
   - ~~**API Key expire**. We need to add something useful for humans in the API management at the front application when setting expiration.~~ DONE!
   - **Log Content**. In the LogContent component (the real viewer), we need to add a socket error management component so the user knows if an error has occurred when receiving data. Several types of information can be received: socket errors, pod creation/deletion, etc.
   - ~~**Ephemeral log**. When you use Kwirth for alerting, you don't really need to store all the messages; you just want to receive them, process them, and show alerts if something happens, without storing uninterested messages.~~ DONE!
-  - **Consolidated log object**. In addition to the ability to have config workspaces with content from more than one source cluster, it is desirable to create a log object (a tab, not a full config) in which you can consolidate logging from different source clusters into a single log stream.
-  - **Import/Export**. For the import/export process to be really useful, it is desirable that the user could select which config workspaces to export or import.
   - ~~**Metrics**. We plan to add basic Kubernetes metrics monitoring in the future by checking pod/node status. The metrics will be propagated to customers through the websocket, so users can view real-time metrics and statuses.~~ DONE!
   - ~~**Helm**. Although Kwirth installation is simple and straightforward, we should create a Helm chart for installing Kwirth.~~ DONE!
   - ~~**Event streaming**. It seems interesting to have an event streaming service (like logging or metrics) for monitoring all events that take place inside the Kubernetes cluster (object lifecycle, admin commands...).~~ DONE!
@@ -35,3 +33,4 @@ We cite here some interesting capabilities that are missing today:
   - **Networking**, evaluate creation of a 'network diagnostics' channel, or an item action for diagnosing a pod.
   - **Workspace**, workspaces should be exportable/importable by selecting a different than the one the workspace was builded for.
   - ~~**UX/UI**, improve filtering (add node filters (and other) on RFM).~~ DONE!
+  - **Mixed sources**, crete a channel (or any other mechanism) for aggregating data from different sources under the same channel.

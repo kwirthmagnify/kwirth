@@ -484,11 +484,22 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const launchObjectDelete = (p:string[]) => {
         let f = magnifyData.files.filter(x => p.includes(x.path))
-        setMsgBox(MsgBoxYesNo('Delete '+f[0].data.origin.kind,<Box>Are you sure you want to delete {f[0].data.origin.kind}<b> {f[0].displayName}</b>{p.length>1?` (and other ${p.length-1} items)`:''}?</Box>, setMsgBox, (a) => {
-            if (a === MsgBoxButtons.Yes) {
-                sendCommand(EMagnifyCommand.DELETE, f.map(o => yamlParser.dump(o.data.origin, { indent: 2 })))
+        if (f.length>0) {
+            if (f[0].class==='Image') {  // we just check the class of the first selected item
+                setMsgBox(MsgBoxYesNo('Delete '+f[0].data.origin.kind,<Box>Are you sure you want to delete image <b>{f[0].displayName}</b>{p.length>1?` (and other ${p.length-1} items)`:''} (take into account that removing images is an asynchronous process (a DaemonSet in fact) and may take up to 30 seconds)?</Box>, setMsgBox, (a) => {
+                    if (a === MsgBoxButtons.Yes) {
+                        sendCommand(EMagnifyCommand.IMAGE, ['delete',...f.map(image => image.data.origin.metadata.name)])
+                    }
+                }))
             }
-        }))
+            else {
+                setMsgBox(MsgBoxYesNo('Delete '+f[0].data.origin.kind,<Box>Are you sure you want to delete {f[0].data.origin.kind}<b> {f[0].displayName}</b>{p.length>1?` (and other ${p.length-1} items)`:''}?</Box>, setMsgBox, (a) => {
+                    if (a === MsgBoxButtons.Yes) {
+                        sendCommand(EMagnifyCommand.DELETE, f.map(o => yamlParser.dump(o.data.origin, { indent: 2 })))
+                    }
+                }))
+            }
+        }
     }
 
     const launchObjectEdit = (p:string[]) => launchObjectEditOrBrowse(p, true)
@@ -649,11 +660,6 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     launchObjectExternal(channelid, f, EInstanceConfigView.NAMESPACE, undefined)
                 })
             )
-
-            let spcImage = spaces.get('Image')!
-            setLeftItem(spcImage,'delete', launchImageDelete, undefined, (name:string, currentFolder:IFileObject, selectedItems:IFileObject[]) => {
-                return !selectedItems.some(i => i.name.startsWith('*'))
-            })
 
             // Namespace
             let spcClassNamespace = spaces.get('classNamespace')!
@@ -881,15 +887,14 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     // Image actions
-    const launchImageDelete = (p:string[]) => {
-        let f = magnifyData.files.filter(f => p.includes(f.path))
-        setMsgBox(MsgBoxYesNo('Delete '+f[0].data.origin.kind,<Box>Are you sure you want to delete image <b>{f[0].displayName}</b>{p.length>1?` (and other ${p.length-1} items)`:''} (take into account that removing images is an asynchronous process and may take up to 30 seconds)?</Box>, setMsgBox, (a) => {
-            if (a === MsgBoxButtons.Yes) {
-                sendCommand(EMagnifyCommand.IMAGE, ['delete',...f.map(image => image.data.origin.metadata.name)])
-            }
-        }))
-
-    }
+    // const launchImageDelete = (p:string[]) => {
+    //     let f = magnifyData.files.filter(f => p.includes(f.path))
+    //     setMsgBox(MsgBoxYesNo('Delete '+f[0].data.origin.kind,<Box>Are you sure you want to delete image <b>{f[0].displayName}</b>{p.length>1?` (and other ${p.length-1} items)`:''} (take into account that removing images is an asynchronous process and may take up to 30 seconds)?</Box>, setMsgBox, (a) => {
+    //         if (a === MsgBoxButtons.Yes) {
+    //             sendCommand(EMagnifyCommand.IMAGE, ['delete',...f.map(image => image.data.origin.metadata.name)])
+    //         }
+    //     }))
+    // }
 
     // Node actions
     const launchNodeDrain = (p:string[]) => {

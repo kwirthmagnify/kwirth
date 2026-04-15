@@ -551,6 +551,7 @@ const rfmSetup = (
         // Image ***************************************************************************
             let spcImage = spaces.get('Image')!
             setLeftItem(spcImage,'details', onObjectDetails)
+            setLeftItem(spcImage,'delete', onObjectDelete)
 
         // ClusterOverview ***************************************************************************
 
