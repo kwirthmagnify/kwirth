@@ -118,6 +118,7 @@ let conditions:IDetailsItem = {
                 'ContainersNotReady:red',
                 'NoVMEventScheduled:green',
                 'FilesystemIsNotReadOnly:orange',
+                'ApprovedAnnotation:green',
             ]
         },
         {

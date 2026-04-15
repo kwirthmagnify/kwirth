@@ -30,6 +30,7 @@ import {useTheme } from '@mui/material';
 import { MenuKwirthWorks } from './components/MenuKwirthWorks'
 import { ICustomAction } from './components/UserPreferences'
 import { MenuNotification } from '../../components/MenuNotification'
+import { generateMinimalFromCRD } from './Tools'
 const yamlParser = require('js-yaml')
 
 const ICON_WINDOW : Record<string, JSX.Element> = {
@@ -238,6 +239,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setControllerActions()
         setClusterActions()
         setNetworkActions()
+        setCrdActions()
 
         // we provide a mechanism for refreshing cluster usage charts
         magnifyData.refreshUsage = ()  => setTick(t=>t+1)
@@ -782,6 +784,56 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         return <Typography color={status==='Running'?'green':(status==='Scaling'?'orange':'red')} variant='body2'>{status}</Typography>
     }
 
+    const setCrdActions = () => {
+        const onCrdInstantiate = (p:string[], currentTarget:Element) => {
+            let f = magnifyData.files.filter(x => p.includes(x.path))
+            if (f.length>=1) {
+                let instance = generateMinimalFromCRD(f[0].data.origin)
+                let winId = 'create-' + f[0].data.origin.spec.names.kind + '-' + uuid()
+                let win:IContentWindow = {
+                    id: winId,
+                    class: 'ContentEdit',
+                    visible: true,
+                    atTop: false,
+                    atFront: true,
+                    title: 'Create ' + f[0].data.origin.spec.names.kind,
+                    isMaximized: false,
+                    x: 100,
+                    y: 50,
+                    width: 800,
+                    height: 600,
+                    data: {
+                        isInitialized: false,
+                        allowEdit: true,
+                        onOk: (code: string, source?: IFileObject): void => {
+                            sendCommand(EMagnifyCommand.APPLY, [code])
+                            onWindowClose(winId)
+                        },
+                        code: instance,
+                        oldCode: undefined
+                    } satisfies IContentEditData,
+                    onWindowChange: onWindowChange,
+                    onTop: onWindowTop,
+                    onMinimize: onWindowMinimize,
+                    onClose: onWindowClose,
+                    selectedFiles: []
+                }
+                magnifyData.windows.push(win)
+                setTick(t => t+1)
+
+
+
+
+
+
+
+
+
+            }
+        }
+        let spcCustomResourceDefinition = spaces.get('CustomResourceDefinition')!
+        setLeftItem(spcCustomResourceDefinition,'instantiate', onCrdInstantiate)
+    }
 
     // Controller actions
     const launchControllerRestart = (p:string[]) => {

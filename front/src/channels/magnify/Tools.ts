@@ -1,4 +1,5 @@
 import cronParser from 'cron-parser'
+const yamlParser = require('js-yaml')
 
 const reorderJsonYamlObject = (objetoJson: any): any => {
     try {
@@ -37,36 +38,6 @@ function objectEqual(obj1: any, obj2: any): boolean {
     }
     return true
 }
-
-// function objectSearch(obj: any, text: string, matchCase:boolean): string[] {
-//     const paths: string[] = []
-//     if (!text) return []
-
-//     const searchTerm = matchCase? text : text.toLowerCase()
-
-//     function search(value: any, currentPath: string) {
-//         if (value === null || value === undefined) return
-
-//         if (typeof value === 'object') {
-//             for (const key in value) {
-//                 if (Object.prototype.hasOwnProperty.call(value, key)) {
-//                     const newPath = Array.isArray(value) ? 
-//                         `${currentPath}[${key}]` : 
-//                         (currentPath ? `${currentPath}.${key}` : key)
-                    
-//                     search(value[key], newPath)
-//                 }
-//             }
-//         }
-//         else {
-//             if (String(value).toLowerCase().includes(searchTerm)) paths.push(currentPath)
-//         }
-//     }
-
-//     search(obj, "")
-
-//     return [...new Set(paths)].filter(p => p !== "")
-// }
 
 function objectSearch(obj: any, text: string, matchCase: boolean): string[] {
     const paths: string[] = [];
@@ -222,5 +193,89 @@ function getNextCronExecution(cronExpression: string): INextExecution|undefined 
     }
 }
 
+interface JSONSchemaProps {
+    type?: string;
+    properties?: Record<string, JSONSchemaProps>;
+    required?: string[];
+    items?: JSONSchemaProps;
+    default?: any;
+}
+
+interface CRDVersion {
+    name: string;
+    served: boolean;
+    schema: {
+        openAPIV3Schema: JSONSchemaProps;
+    };
+}
+
+interface CustomResourceDefinition {
+    apiVersion: string;
+    kind: string;
+    spec: {
+        group: string;
+        names: {
+        kind: string;
+        };
+        versions: CRDVersion[];
+    };
+}
+
+function generateMinimalFromCRD(crd: CustomResourceDefinition): string {
+    const activeVersion = crd.spec.versions.find((v:any) => v.served)
+    if (!activeVersion) return ''
+
+    const group = crd.spec.group
+    const kind = crd.spec.names.kind
+    const version = activeVersion.name
+    const schema = activeVersion.schema.openAPIV3Schema
+
+    function processSchema(node: JSONSchemaProps | undefined): any {
+        if (!node) return undefined;
+
+        if (node.type === 'object') {
+            const obj: Record<string, any> = {};
+            
+            if (node.required && node.properties) {
+                node.required.forEach((prop) => {
+                const value = processSchema(node.properties![prop]);
+                if (value !== undefined) {
+                    obj[prop] = value;
+                }
+                });
+            }
+            return Object.keys(obj).length > 0 ? obj : undefined;
+        }
+
+        if (node.type === 'array' && node.items) {
+            const itemSample = processSchema(node.items);
+            return itemSample !== undefined ? [itemSample] : [];
+        }
+
+        if (node.default !== undefined) return node.default;
+
+        const defaults: Record<string, any> = {
+            string: "example-value",
+            integer: 1,
+            number: 1.0,
+            boolean: true,
+        }
+
+        return node.type ? defaults[node.type] : "todo-value";
+    }
+
+    const minimalManifest = {
+        apiVersion: `${group}/${version}`,
+        kind: kind,
+        metadata: {
+            name: `minimal-${kind.toLowerCase()}`,
+            namespace: 'default'
+        },
+        spec: processSchema(schema.properties?.spec) || {}
+    }
+
+    return yamlParser.dump(minimalManifest, { indent: 2, noRefs: true })
+}
+
 export { type INextExecution }
-export { reorderJsonYamlObject, objectEqual, convertBytesToSize, convertSizeToBytes, getNextCronExecution, objectClone, objectSearch, coresToNumber }
+export { reorderJsonYamlObject, objectEqual, convertBytesToSize, convertSizeToBytes, getNextCronExecution, objectClone, objectSearch, coresToNumber, generateMinimalFromCRD }

@@ -31,7 +31,7 @@ We cite here some interesting capabilities that are missing today:
   - **Node operations** add a KwirthWork or a KubeWork to shell a node.
   - **Nerd operations**, since using fileman you can modify a container's filesystem, we need a tool to push the modified container back to a registry (nerdctl)
   - **Extensibility**, implement a plugin system for front channels, back channels and providers, something like esm.sh.
-  - **Data management**, for being able to work with big clusters, we should be able to filter data management by namespace.
-  - **Networking**, evaluate creation of a 'network diagnostics' channel.
+  - **Data management**, for being able to work with big clusters, we should be able to filter data management sync by namespace.
+  - **Networking**, evaluate creation of a 'network diagnostics' channel, or an item action for diagnosing a pod.
   - **Workspace**, workspaces should be exportable/importable by selecting a different than the one the workspace was builded for.
-  - **UX/UI**, improve filtering (add node filters (and other) on RFM).
+  - ~~**UX/UI**, improve filtering (add node filters (and other) on RFM).~~ DONE!

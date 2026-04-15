@@ -79,36 +79,27 @@ type Color = "green" | "gray" | "orange" | "red" | "blue";
 export function getContainerColor(container: ContainerStatus): Color {
   const state = container.state ?? {};
 
-  // 🟢 Operativo
-  if (container.ready) {
-    return "green";
-  }
+  // 🟢 running
+  if (container.ready) return "green"
 
-  // ⚪ Terminado
-  if (state.terminated) {
-    return "gray";
-  }
+  // ⚪ ended
+  if (state.terminated) return "gray"
 
-  // Estados de espera
+  // Waiting
   if (state.waiting) {
-    const reason = state.waiting.reason ?? "";
+    const reason = state.waiting.reason ?? ""
 
-    // 🟡 Arrancando
-    const startingReasons = [
-      "ContainerCreating",
-      "PodInitializing",
-    ];
+    // 🟡 Starting
+    const startingReasons = [ "ContainerCreating", "PodInitializing" ]
 
-    if (startingReasons.includes(reason)) {
-      return "orange";
-    }
+    if (startingReasons.includes(reason)) return "orange";
 
     // 🔴 Error
-    return "red";
+    return "red"
   }
 
-  // 🔵 Otros (ej: running pero no ready)
-  return "blue";
+  // 🔵 others
+  return "blue"
 }
 
 const rfmSetup = (
