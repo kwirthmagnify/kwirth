@@ -1,7 +1,9 @@
 {
     "cSpell.words": [
+        "fileman",
         "kubeconfig",
         "Kubelog",
-        "kwirthmagnify"
+        "kwirthmagnify",
+        "uncordon"
     ]
 }

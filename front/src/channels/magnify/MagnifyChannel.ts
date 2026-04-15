@@ -165,7 +165,8 @@ class MagnifyChannel implements IChannel {
                                         magnifyData.files = [...magnifyData.files]
                                         break
                                     case 'DELETED':
-                                        if (response.data.kind==='Namespace' && magnifyData.updateNamespaces) magnifyData.updateNamespaces('DELETED', response.data.metadata.name)
+                                        //+++ if (response.data.kind==='Namespace' && magnifyData.updateNamespaces) magnifyData.updateNamespaces('DELETED', response.data.metadata.name)
+                                        if ('Namespace Node'.includes(response.data.kind) && magnifyData.updateCategoryValues) magnifyData.updateCategoryValues(response.data.kind, 'DELETED', response.data.metadata.name)
                                         let path = buildPath(response.data.kind, response.data.metadata.name, response.data.metadata.namespace)
                                         if (path.startsWith('//')) {
                                             // no top level section found (like custom, workload, network...), so this could be a CRDi
@@ -456,7 +457,7 @@ class MagnifyChannel implements IChannel {
                 origin: obj
             }
         })
-        if (magnifyData.updateNamespaces) magnifyData.updateNamespaces('ADD', obj.metadata.name)
+        if (magnifyData.updateCategoryValues) magnifyData.updateCategoryValues('Namespace', 'ADD', obj.metadata.name)
     }
 
     loadConfigMap(magnifyData:IMagnifyData, obj:any): void {
@@ -692,6 +693,8 @@ class MagnifyChannel implements IChannel {
                 origin: obj
             }
         })
+        if (magnifyData.updateCategoryValues) magnifyData.updateCategoryValues('Node', 'ADD', obj.metadata.name)
+
 
         // we first remove all references from images to this node
         for (let image of magnifyData.files.filter(f => f.class==='Image')){
@@ -1319,7 +1322,7 @@ class MagnifyChannel implements IChannel {
         }
         this.upsertObject(magnifyData, file)
         
-        // for each CRD, we request the exsistent objects in that CRD (these are the CRD instances)
+        // for each CRD, we request the existent objects in that CRD (these are the CRD instances)
         // this is an initial sync. objects created afterward will be automatically synced
         if (obj.spec.versions && obj.spec.versions.length>0) {
             let magnifyMessage:IMagnifyMessage = {

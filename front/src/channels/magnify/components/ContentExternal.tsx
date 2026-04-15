@@ -24,11 +24,10 @@ import { ITrivyData } from '../../trivy/TrivyData'
 import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
 import { TerminalManager } from '../../ops/Terminal/TerminalManager'
-import { channel } from 'diagnostics_channel'
 
 export interface IContentExternalOptions {
     pauseable: boolean
-    stopable: boolean
+    stoppable: boolean
     autostart: boolean
     configurable: boolean
 }
@@ -665,7 +664,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                     <IconButton onClick={pause} disabled={!contentExternalData.options.pauseable || !contentExternalData.content?.externalChannelStarted || contentExternalData.content?.externalChannelPaused}>
                         <PauseCircle/>
                     </IconButton>
-                    <IconButton onClick={stop} disabled={!contentExternalData.options.stopable || !contentExternalData.content?.externalChannelStarted}>
+                    <IconButton onClick={stop} disabled={!contentExternalData.options.stoppable || !contentExternalData.content?.externalChannelStarted}>
                         <StopCircle/>
                     </IconButton>
                     <IconButton disabled={!contentExternalData.options.configurable} onClick={(event) => setAnchorConfig(event.target as HTMLElement)}>

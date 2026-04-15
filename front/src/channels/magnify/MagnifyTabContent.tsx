@@ -105,7 +105,10 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
         let valid=true
         switch(categoryKey) {
-            case 'namespace':
+            case 'Node':
+                valid = cat.selected.includes('all') || cat.selected.some(cat => f.data?.origin?.spec?.nodeName?.includes(cat))
+                break
+            case 'Namespace':
                 valid = cat.selected.includes('all') || cat.selected.some(cat => f.data?.origin?.metadata?.namespace?.includes(cat))
                 break
             case 'controller':
@@ -134,7 +137,16 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const [categories, setCategories] = useState<ICategory[]>([
         {
-            key:'namespace',
+            key:'Node',
+            text: 'Node',
+            all: [ {key:'all',text:'All...'}, {key:'-'} ],
+            selected: ['all'],
+            onCategoryValuesChange: onCategoryValuesChange,
+            onCategoryFilter: onCategoryFilter,
+            isFilterActive: isFilterActive
+        },
+        {
+            key:'Namespace',
             text: 'Namespace',
             all: [ {key:'all',text:'All...'}, {key:'-'} ],
             selected: ['all'],
@@ -231,22 +243,50 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         magnifyData.refreshUsage = ()  => setTick(t=>t+1)
 
         // we need to do this because category data is lost when magnify tab is unmounted (we could move this into magnifyData structure in order to preserve)
-        let namespaceCategory = categories.find(c => c.key==='namespace')
+        let namespaceCategory = categories.find(c => c.key==='Namespace')
         if (namespaceCategory) {
             for (let f of magnifyData.files.filter(f => f.data?.origin?.kind==='Namespace')) {
                 if (!namespaceCategory.all.some(cv => cv.key === f.name)) namespaceCategory.all.push({key:f.name, text:f.name})
             }
         }
+        let nodeCategory = categories.find(c => c.key==='Node')
+        if (nodeCategory) {
+            for (let f of magnifyData.files.filter(f => f.data?.origin?.kind==='Node')) {
+                if (!nodeCategory.all.some(cv => cv.key === f.name)) nodeCategory.all.push({key:f.name, text:f.name})
+            }
+        }
 
-        // we provide a mechanism for refreshing namespace list when there is a change in namespaces (added/deleted)
-        magnifyData.updateNamespaces = (action:string, namespace:string) => {
-            let namespaceCategory = categories.find(c => c.key==='namespace')
-            if (!namespaceCategory) return
+        // // we provide a mechanism for refreshing namespace list when there is a change in nodes (added/deleted)
+        // magnifyData.updateNodes = (action:string, node:string) => {
+        //     let nodeCategory = categories.find(c => c.key==='node')
+        //     if (!nodeCategory) return
+        //     if (action==='DELETED') {
+        //         nodeCategory.all = nodeCategory.all.filter(c => c.key !== node)
+        //     }
+        //     else {
+        //         if (!nodeCategory.all.some(c => c.key===node)) nodeCategory.all.push({ key:node })
+        //     }
+        // }
+
+        // // we provide a mechanism for refreshing namespace list when there is a change in namespaces (added/deleted)
+        // magnifyData.updateNamespaces = (action:string, namespace:string) => {
+        //     let namespaceCategory = categories.find(c => c.key==='namespace')
+        //     if (!namespaceCategory) return
+        //     if (action==='DELETED') {
+        //         namespaceCategory.all = namespaceCategory.all.filter(c => c.key !== namespace)
+        //     }
+        //     else {
+        //         if (!namespaceCategory.all.some(c => c.key===namespace)) namespaceCategory.all.push({ key:namespace })
+        //     }
+        // }
+        magnifyData.updateCategoryValues = (categoryName:string, action:string, value:string) => {
+            let category = categories.find(c => c.key===categoryName)
+            if (!category) return
             if (action==='DELETED') {
-                namespaceCategory.all = namespaceCategory.all.filter(c => c.key !== namespace)
+                category.all = category.all.filter(c => c.key !== value)
             }
             else {
-                if (!namespaceCategory.all.some(c => c.key===namespace)) namespaceCategory.all.push({ key:namespace })
+                if (!category.all.some(c => c.key===value)) category.all.push({ key:value })
             }
         }
 
@@ -287,7 +327,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     console.log(err)
                 }
             }, 1000)
-            setMsgBox (MsgBoxWaitCancel('Launch Work',`We are waiting for the ${ca.name} work to start (waitng for... ${url})...`, setMsgBox, (a:MsgBoxButtons) => {
+            setMsgBox (MsgBoxWaitCancel('Launch Work',`We are waiting for the ${ca.name} work to start (waiting for... ${url})...`, setMsgBox, (a:MsgBoxButtons) => {
                 if (a === MsgBoxButtons.Cancel) clearInterval(id)
             }))
         }
@@ -399,7 +439,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
         // we request a fresh events list
         if (f[0].data.origin.metadata) {
-            // objects APIResource doesnt contain metadata
+            // objects APIResource doesn't contain metadata
             if (f[0].data.events) delete f[0].data.events
             sendCommand(EMagnifyCommand.EVENTS, ['object', f[0].data.origin.metadata.namespace, f[0].data.origin.kind, f[0].data.origin.metadata.name])
         }
@@ -513,9 +553,9 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 onNotify: onComponentNotify,
                 onRefresh: onContentExternalRefresh,
                 options: channel === 'ops'?
-                    { autostart:true, pauseable:false, stopable:false, configurable:false}
+                    { autostart:true, pauseable:false, stoppable:false, configurable:false}
                     :
-                    { autostart:true, pauseable:true, stopable:true, configurable:(channel!=='fileman')}
+                    { autostart:true, pauseable:true, stoppable:true, configurable:(channel!=='fileman')}
             } satisfies IContentExternalData,
             selectedFiles: files,
             container: container,

@@ -23,7 +23,9 @@ export interface IMagnifyData {
     metricsPodDetail: any[]
 
     refreshUsage?: () => void
-    updateNamespaces?: (action:string, namespace:string) => void
+    // updateNamespaces?: (action:string, namespace:string) => void
+    // updateNodes?: (action:string, node:string) => void
+    updateCategoryValues?: (categoryName:string, action:string, value:string) => void
     userPreferences: MagnifyUserPreferences
 }
 
