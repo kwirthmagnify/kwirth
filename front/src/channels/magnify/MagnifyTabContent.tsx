@@ -216,6 +216,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }, [magnifyBoxRef.current])
 
     useEffect(() => {
+        props.channelObject.setPalette?.(magnifyData.userPreferences?.palette)
         if (!magnifyData.files.some(f => f.path ==='/overview')) {
             magnifyData.files.push(...menu)
         }
@@ -641,7 +642,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     setLeftItem(spcClassOverview, 'kwirthworks', (p:string[],
         currentTarget:Element) => setMenuKwirthWorksAnchorParent(currentTarget),
         () => true,
-        () => magnifyData.userPreferences.customActions && magnifyData.userPreferences.customActions.filter(ca => ca.type==='kwirth').length>0 )
+        () => magnifyData.userPreferences?.customActions && magnifyData.userPreferences.customActions.filter(ca => ca.type==='kwirth').length>0 )
     setLeftItem(spcClassOverview, 'kubeworks', (p:string[], currentTarget:Element) => setMenuKubeWorksAnchorParent(currentTarget) )
 
     // cluster actions
