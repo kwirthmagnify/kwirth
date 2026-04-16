@@ -3,6 +3,7 @@
 #
 - Manage your Kubernetes clusters from one only central point.
 <p></p>
+
 - Consolidate observability information from **all your Kubernetes artifacts**. 
 <p></p>
 
