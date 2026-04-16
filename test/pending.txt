@@ -13,7 +13,6 @@ revisar el cambio o salida de cluster: parar las cosas antes de entrar en el otr
   en el backend, parar las cosas si se pierde la comunicacion con el front??
 cuando seleccionas un cluster no accesible entra a magnify, y no deberia
 exit no cierra todos los ejecutables en windows
-cuando lanzo electron linux contra rioja, no arranca (parece qu eno descarga los metrics)
 
 KWIRTH FRONT-BACK
 gestionar el store de cmap y secrets de kwirth en los 3 envs: docker, electron y external (creo que electron ya va)
@@ -34,16 +33,14 @@ en App.tsx/Homepage: no añadir a last ni fav un tab que se carga desde una acci
 
 MAGNIFY FRONT
   kwirthworks, kubeworks
-  palette al arrancar magnify
   window arrange (left-right, small on bottom, 4 windows, etc...)
   content external, poder hacer restart del content (por si se deconecta o lo que sea)
   improve DetailsObject
     always use rootObj, and just change the path, so trace-back can be used ofr detecting data changed origin
-  en data management deberia poder seleccionarse CRDi (decidir si nos intenreasn las instancias de CRD o no)
   details
     cm/secret: textarea, > tamaño inicial fijo (no todo el contenido)
     servaccnt: tokens ifpresent
-    create keys to existing CM or secret 
+    create keys in an existing CM or secret (from details dialog)
 
 MAGNIFY BACK
 

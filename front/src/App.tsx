@@ -695,6 +695,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const getTabColor = (tab:ITabObject) => {
+        console.log(tab.channelStarted, tab.channelPending, tab.channelPaused, )
         let colorTable:IColors = TABUNSELECTEDCOLORS
         if (selectedTab.current === tab) colorTable = TABSELECTEDCOLORS
         if (tab.channelStarted) { 
@@ -706,8 +707,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     return colorTable.pending
                 }
                 else {
-                    if (selectedTab.current?.ws?.readyState) {
-                        if (selectedTab.current?.ws?.readyState === 1)
+                    if (tab.ws?.readyState) {
+                        if (tab.ws?.readyState === 1)
                             return colorTable.start
                         else
                             return colorTable.interrupt
@@ -715,6 +716,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     else {
                         return colorTable.start
                     }
+                    // if (selectedTab.current?.ws?.readyState) {
+                    //     if (selectedTab.current?.ws?.readyState === 1)
+                    //         return colorTable.start
+                    //     else
+                    //         return colorTable.interrupt
+                    // }
+                    // else {
+                    //     return colorTable.start
+                    // }
                 }
             }
         }

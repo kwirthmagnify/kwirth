@@ -505,68 +505,80 @@ async function setIngressClassAsDefault (networkApi: NetworkingV1Api, name:strin
     }        
 }
 
-async function imageDelete (appsApi:AppsV1Api, imageName:string) {
-    // +++ TEST
-
-    let uniqueName = 'kwirth-image-purger-'+uuid()
+async function imageDelete(appsApi: AppsV1Api, imageName: string) {
+    const safeImageName = imageName.replace(/[^a-zA-Z0-9.\/_:@-]/g, '');
+    const uniqueId = uuid().substring(0, 8);
+    const uniqueName = `kwirth-image-purger-${uniqueId}`;
 
     const daemonSet = {
         metadata: {
             name: uniqueName,
-            labels: { app: uniqueName }
+            labels: { app: 'image-purger', id: uniqueId }
         },
         spec: {
             selector: { matchLabels: { app: uniqueName } },
             template: {
                 metadata: { labels: { app: uniqueName } },
                 spec: {
+                    tolerations: [
+                        { operator: "Exists", effect: "NoSchedule" },
+                        { operator: "Exists", effect: "NoExecute" }
+                    ],
+                    hostPID: true, // Necesario para interactuar con procesos del host
                     containers: [{
                         name: 'worker',
                         image: 'rancher/crictl:v1.19.0',
                         command: ["/bin/sh", "-c"],
                         args: [`
-                            SOCKETS="/run/containerd/containerd.sock 
-                                    /run/k3s/containerd/containerd.sock 
-                                    /run/crio/crio.sock 
-                                    /var/run/dockershim.sock 
-                                    /var/run/containerd/containerd.sock"
+                            if [ -S "/host-run/k3s/containerd/containerd.sock" ]; then
+                                S="/host-run/k3s/containerd/containerd.sock"
+                            elif [ -S "/host-run/containerd/containerd.sock" ]; then
+                                S="/host-run/containerd/containerd.sock"
+                            elif [ -S "/host-run/crio/crio.sock" ]; then
+                                S="/host-run/crio/crio.sock"
+                            elif [ -S "/host-var-run/containerd/containerd.sock" ]; then
+                                S="/host-var-run/containerd/containerd.sock"
+                            fi
 
-                            for socket in $SOCKETS; do
-                                if [ -S "$socket" ]; then
-                                    export CONTAINER_RUNTIME_ENDPOINT="unix://$socket"
-                                    export IMAGE_SERVICE_ENDPOINT="unix://$socket"
-                                    echo "Socket detectado y configurado: $socket"
-                                    break
-                                fi
-                            done
-
-                            if [ -z "$CONTAINER_RUNTIME_ENDPOINT" ]; then
-                                echo "ERROR: No socket found."
+                            if [ -n "$S" ]; then
+                                export CONTAINER_RUNTIME_ENDPOINT="unix://$S"
+                                export IMAGE_SERVICE_ENDPOINT="unix://$S"
+                                echo "Socket detected in $S. Removing ${safeImageName}..."
+                                /usr/local/bin/crictl rmi "${safeImageName}" || echo "La imagen no existe en este nodo."
+                            else
+                                echo "ERROR: Runtime socket not found in /host-run nor /host-var-run"
                                 exit 1
                             fi
 
-                            /usr/local/bin/crictl rmi ${imageName}
-                            sleep 10
-                        `],
+                            sleep 50
+                        `.trim()],
                         securityContext: { 
-                            privileged: true
+                            privileged: true,
+                            runAsUser: 0 
                         },
                         volumeMounts: [
-                            { name: 'run-dir', mountPath: '/run' },
-                            { name: 'var-run-dir', mountPath: '/var/run' }
+                            { 
+                                name: 'run-host', 
+                                mountPath: '/host-run', 
+                                mountPropagation: 'HostToContainer' 
+                            },
+                            { 
+                                name: 'var-run-host', 
+                                mountPath: '/host-var-run', 
+                                mountPropagation: 'HostToContainer' 
+                            }
                         ]
                     }],
                     volumes: [
                         { 
-                            name: 'run-dir', 
+                            name: 'run-host', 
                             hostPath: { path: '/run', type: 'Directory' } 
                         },
                         { 
-                            name: 'var-run-dir', 
+                            name: 'var-run-host', 
                             hostPath: { path: '/var/run', type: 'Directory' } 
                         }
-                    ],
-                    hostPID: true
+                    ]
                 }
             }
         }
@@ -576,16 +588,27 @@ async function imageDelete (appsApi:AppsV1Api, imageName:string) {
         await appsApi.createNamespacedDaemonSet({
             namespace: 'default',
             body: daemonSet
-        })
-        console.log(`DaemonSet ${uniqueName} created for deleting image '${imageName}'`);
-        await new Promise((resolve) => setTimeout(resolve, 30000))
+        });
+        console.log(`[${uniqueName}] DaemonSet created, waiting for node cleaning...`);
+
+        await new Promise((resolve) => setTimeout(resolve, 60000));
+
         await appsApi.deleteNamespacedDaemonSet({
-            namespace: 'default',
-            name: uniqueName
-        })
-    }
-    catch (err:any) {
-        console.error('Error:', err.response ? err.response.body : err);
+            name: uniqueName,
+            namespace: 'default'
+        });
+        console.log(`[${uniqueName}] Image deleted and DaemonSet removed.`);
+        
+    } catch (err: any) {
+        console.error('Error running imageDelete:', err.response?.body || err.message);
+        
+        try {
+            await appsApi.deleteNamespacedDaemonSet({
+                name: uniqueName,
+                namespace: 'default'
+            });
+        }
+        catch { }
     }
 }
 
