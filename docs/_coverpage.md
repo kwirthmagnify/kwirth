@@ -1,13 +1,9 @@
 ![logo](./_media/kwirth-logo-30.png)
 
 #
+- Manage your Kubernetes clusters from one only central point.
+<p></p>
 - Consolidate observability information from **all your Kubernetes artifacts**. 
-<p></p>
-
-- Work with several **kubernetes clusters** at the same time. 
-<p></p>
-
-- Use the channels your need (logging, metrics, security, operations...)
 <p></p>
 
 - **Kwirth means flexible Kubernetes Management in real-time.**
