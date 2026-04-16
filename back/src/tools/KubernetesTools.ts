@@ -527,7 +527,9 @@ async function imageDelete(appsApi: AppsV1Api, imageName: string) {
                     hostPID: true, // Necesario para interactuar con procesos del host
                     containers: [{
                         name: 'worker',
-                        image: 'rancher/crictl:v1.19.0',
+                        //image: 'rancher/crictl:v1.19.0',
+                        //image: 'dojobits/crictl:v1.19.0',  
+                        image: 'kwirthmagnify/crictl',
                         command: ["/bin/sh", "-c"],
                         args: [`
                             if [ -S "/host-run/k3s/containerd/containerd.sock" ]; then
@@ -612,64 +614,64 @@ async function imageDelete(appsApi: AppsV1Api, imageName: string) {
     }
 }
 
-async function imageDeleteOld (appsApi:AppsV1Api, imageName:string) {
-    // +++ TEST OTHER Kubes
+// async function imageDeleteOld (appsApi:AppsV1Api, imageName:string) {
+//     // +++ TEST OTHER Kubes
 
-    /*
-        /run/containerd/containerd.sock
-        /run/k3s/containerd/containerd.sock
-        /var/snap/microk8s/common/run/containerd.sock
-        /run/containerd/containerd.sock (dentro del contenedor nodo)
-        /run/dockershim.sock
+//     /*
+//         /run/containerd/containerd.sock
+//         /run/k3s/containerd/containerd.sock
+//         /var/snap/microk8s/common/run/containerd.sock
+//         /run/containerd/containerd.sock (dentro del contenedor nodo)
+//         /run/dockershim.sock
 
-        export CONTAINER_RUNTIME_ENDPOINT=unix:///run/containerd/containerd.sock    
-    */
-    let uniqueName = 'kwirth-image-purger-'+uuid()
+//         export CONTAINER_RUNTIME_ENDPOINT=unix:///run/containerd/containerd.sock    
+//     */
+//     let uniqueName = 'kwirth-image-purger-'+uuid()
 
-    const daemonSet = {
-        metadata: {
-            name: uniqueName,
-            labels: { app: uniqueName }
-        },
-        spec: {
-            selector: { matchLabels: { app: uniqueName } },
-            template: {
-                metadata: { labels: { app: uniqueName } },
-                spec: {
-                    containers: [{
-                        name: 'worker',
-                        image: 'rancher/crictl:v1.19.0',
-                        command: ["/bin/sh", "-c"],
-                        args: [`/usr/local/bin/crictl rmi ${imageName} && sleep 10`],
-                        securityContext: { privileged: true },
-                        volumeMounts: [
-                            { name: 'cri-k3s-socket', mountPath: '/run/containerd/containerd.sock' }
-                        ]
-                    }],
-                    volumes: [
-                        { name: 'cri-k3s-socket', hostPath: { path: '/run/k3s/containerd/containerd.sock' } }
-                    ],
-                    hostPID: true
-                }
-            }
-        }
-    }
+//     const daemonSet = {
+//         metadata: {
+//             name: uniqueName,
+//             labels: { app: uniqueName }
+//         },
+//         spec: {
+//             selector: { matchLabels: { app: uniqueName } },
+//             template: {
+//                 metadata: { labels: { app: uniqueName } },
+//                 spec: {
+//                     containers: [{
+//                         name: 'worker',
+//                         image: 'rancher/crictl:v1.19.0',
+//                         command: ["/bin/sh", "-c"],
+//                         args: [`/usr/local/bin/crictl rmi ${imageName} && sleep 10`],
+//                         securityContext: { privileged: true },
+//                         volumeMounts: [
+//                             { name: 'cri-k3s-socket', mountPath: '/run/containerd/containerd.sock' }
+//                         ]
+//                     }],
+//                     volumes: [
+//                         { name: 'cri-k3s-socket', hostPath: { path: '/run/k3s/containerd/containerd.sock' } }
+//                     ],
+//                     hostPID: true
+//                 }
+//             }
+//         }
+//     }
 
-    try {
-        await appsApi.createNamespacedDaemonSet({
-            namespace: 'default',
-            body: daemonSet
-        })
-        console.log(`DaemonSet ${uniqueName} created for deleting image '${imageName}'`);
-        await new Promise((resolve) => setTimeout(resolve, 30000))
-        await appsApi.deleteNamespacedDaemonSet({
-            namespace: 'default',
-            name: uniqueName
-        })
-    }
-    catch (err:any) {
-        console.error('Error:', err.response ? err.response.body : err);
-    }
-}
+//     try {
+//         await appsApi.createNamespacedDaemonSet({
+//             namespace: 'default',
+//             body: daemonSet
+//         })
+//         console.log(`DaemonSet ${uniqueName} created for deleting image '${imageName}'`);
+//         await new Promise((resolve) => setTimeout(resolve, 30000))
+//         await appsApi.deleteNamespacedDaemonSet({
+//             namespace: 'default',
+//             name: uniqueName
+//         })
+//     }
+//     catch (err:any) {
+//         console.error('Error:', err.response ? err.response.body : err);
+//     }
+// }
 
 export { applyResource, applyAllResources, deleteAllResources, nodeDrain, nodeCordon, nodeUnCordon, throttleExcute, cronJobStatus, cronJobTrigger, podEvict, setIngressClassAsDefault, restartController, scaleController, imageDelete, podWork }
