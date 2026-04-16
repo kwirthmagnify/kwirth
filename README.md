@@ -144,7 +144,7 @@ What follows is an architectural view of the different ways you can deliver Kwir
 ### The ideas:
   - **There exist mainly 2 fronts:**
     - **Web browser**: Access the Kwirth UI from any browser once the backend is deployed.
-    - **Magnify**: A native Desktop installation for Windows or Linux specifically designed to use the Magnify channel as a standalone management tool.
+    - **Desktop**: A native Desktop installation for Windows or Linux specifically designed to use the **Magnify** channel as a standalone management tool.
   - **There exist several backend options:**
     - **A Node.js application**: A standalone installation (with or without the built-in frontend).
     - **A Docker deployment**: Containerized setup (with or without the frontend) created for serving Kwirth data-streams from **outside your Kubernetes cluster**.
