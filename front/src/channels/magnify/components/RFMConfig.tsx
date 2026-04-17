@@ -3825,11 +3825,11 @@ spaces.set('classOverview', {
                 text: 'Kube works',
                 permission: true,
             },
-            {
-                name: 'exit',
-                text: 'Exit',
-                permission: true
-            },
+            // {
+            //     name: 'exit',
+            //     text: 'Exit',
+            //     permission: true
+            // },
         ]
     }
 )

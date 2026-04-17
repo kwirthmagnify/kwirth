@@ -5,6 +5,7 @@ MAGNIFY FRONT
 💖💖💖 portforward con smart proxy
 running, just manage to detect rootpath in order to enable/disable forwarding
 portforward con electron
+strongtest node shell (running on k3s, review socket detection)
 
 MAGNIFY BACK
 

@@ -10,7 +10,7 @@ import { v4 as uuid } from 'uuid'
 import { ENotifyLevel } from '../../tools/Global'
 import { actions, icons, menu, spaces } from './components/RFMConfig'
 import { objectSections } from './components/DetailsSections'
-import { CloudOff, CloudQueue, Edit, EditOff, List, Notifications, NotificationsActive, Search } from '@mui/icons-material'
+import { CloudOff, CloudQueue, Edit, EditOff, ExitToApp, List, Notifications, NotificationsActive, Search } from '@mui/icons-material'
 import { MsgBoxButtons, MsgBoxOkError, MsgBoxWaitCancel, MsgBoxYesNo } from '../../tools/MsgBox'
 import { ContentExternal, IContentExternalData } from './components/ContentExternal'
 import { ContentDetails, IDetailsData } from './components/ContentDetails'
@@ -168,6 +168,8 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const drawRightItem = (name:string) => {
         switch(name) {
+            case 'exit':
+                return <ExitToApp sx={{color: 'gray'}}/>
             case 'notifications':
                 return props.channelObject.notifications!.length>0? <NotificationsActive sx={{color: 'green'}}/> : <Notifications sx={{color: 'gray'}}/>
             case 'cloud':
@@ -187,6 +189,11 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             case 'notifications':
                 setNotificationMenuAnchorParent(target)
                 break
+            case 'exit':
+                setMsgBox(MsgBoxYesNo('Exit cluster', 'Are you sure you want to leave this cluster and go back to initial cluster selection?', setMsgBox, (b:MsgBoxButtons)=> {
+                    if (b === MsgBoxButtons.Yes) props.channelObject.exit?.()
+                }))
+                break
         }
     }
 
@@ -198,6 +205,11 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         },
         {
             name: 'notifications',
+            onClick: (name:string, target:HTMLElement) => clickRightItem(name, target),
+            onDraw: (name:string) => drawRightItem(name)
+        },
+        {
+            name: 'exit',
             onClick: (name:string, target:HTMLElement) => clickRightItem(name, target),
             onDraw: (name:string) => drawRightItem(name)
         },
@@ -630,15 +642,15 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     // *********************************************************
 
     let spcClassOverview = spaces.get('classOverview')!
-    setLeftItem(spcClassOverview, 'exit', 
-        (p:string[], currentTarget:Element) => {
-            setMsgBox(MsgBoxYesNo('Exit cluster', 'Are you sure you leave this cluster and go back to initial cluster selection?', setMsgBox, (b:MsgBoxButtons)=> {
-                if (b === MsgBoxButtons.Yes) props.channelObject.exit?.()
-            }))
-        },
-        (name:string,currentFolder:IFileObject, selectedItems:IFileObject[]) => props.channelObject.isElectron,
-        (name:string,currentFolder:IFileObject, selectedItems:IFileObject[]) => true
-    )
+    // setLeftItem(spcClassOverview, 'exit', 
+    //     (p:string[], currentTarget:Element) => {
+    //         setMsgBox(MsgBoxYesNo('Exit cluster', 'Are you sure you leave this cluster and go back to initial cluster selection?', setMsgBox, (b:MsgBoxButtons)=> {
+    //             if (b === MsgBoxButtons.Yes) props.channelObject.exit?.()
+    //         }))
+    //     },
+    //     (name:string,currentFolder:IFileObject, selectedItems:IFileObject[]) => props.channelObject.isElectron,
+    //     (name:string,currentFolder:IFileObject, selectedItems:IFileObject[]) => true
+    // )
     setLeftItem(spcClassOverview, 'kwirthworks', (p:string[],
         currentTarget:Element) => setMenuKwirthWorksAnchorParent(currentTarget),
         () => true,
