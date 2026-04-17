@@ -5,16 +5,20 @@
 </p>
 
 # Kwirth project
-Kwirth is the final implementation of the idea of having a simple way to be able to **receive live-streaming observability data** from your kubernetes clusters (or even another container orchestration systems like Docker or Docker Compose) and have **the chance to interact** with your clusters. Maybe you feel comfortable with your DataDog or your Grafana and the Loki and the Promtrail, or any other observability tool for monitoring your kubernetes. You may even be happy with the high memory footprint of your Lens, or the poor UI interface of your K9s or your Headlamp.
+Kwirth is the final implementation of the idea of having a simple way to be able to **manage your Kubernetes cluster** and **receive live-streaming observability data** from your kubernetes clusters (or even another container orchestration systems like Docker or Docker Compose). With Kwirth you will have **the chance to interact** with your clusters. There are options for managing (K9s, Lens, Headlamp) or observing (Prometheus, Grafana...) your clusters, but maybe you just need a simple tool with extremely low footprint requirements
 
-But maybe these (and other tools) are too complex or ugly or uncomfortable or expensive for you. When working with Kubernetes the need for viewing real-time logs, metrics, alerts or whatever observability artifact without the need for storing them is a common scenario.
+When working with Kubernetes the need for viewing real-time logs, metrics, alerts or whatever observability artifact without the need for storing them is a common scenario.
 
-If this is the case, **Kwirth is what you need**.
+In addition, **managing Kubernetes with real-time data** improves the quality, effectiveness and efficiency of your decisions, helping you on performing the right action on the right instant. 
+
+**Kwirth is what you need**.
 
 You can go to Kwirth site if you prefer a user-friendly (non-developer) web interface [here](https://kwirthmagnify.github.io/kwirth) for reading Kwirth docs.
 
 ## What you can do with Kwirth
 Basically, Kwirth receives live streams of **observability data** that comes from one or more Kubernetes clusters in real-time, and with the data received you can perform several activities depending on your role and your needs.
+
+Live sata-streams empower cluster admins by providing a tool for managing Kubernetes with a simple and powerful tool that can be installed on your desktop or deployed inside ypur Kubernetes cluster.
 
   - Kwirth can be used for detecting exceptional situations (alerts) based on log messages (**Alert Channel**).
   - It can also be used by development teams for viewing real-time logs of the containers deployed to your Kubernetes cluster (**Log Channel**), aggregating and serving **together** logs that come from different origins.
@@ -140,7 +144,7 @@ What follows is an architectural view of the different ways you can deliver Kwir
 ### The ideas:
   - **There exist mainly 2 fronts:**
     - **Web browser**: Access the Kwirth UI from any browser once the backend is deployed.
-    - **Magnify**: A native Desktop installation for Windows or Linux specifically designed to use the Magnify channel as a standalone management tool.
+    - **Desktop**: A native Desktop installation for Windows or Linux specifically designed to use the **Magnify** channel as a standalone management tool.
   - **There exist several backend options:**
     - **A Node.js application**: A standalone installation (with or without the built-in frontend).
     - **A Docker deployment**: Containerized setup (with or without the frontend) created for serving Kwirth data-streams from **outside your Kubernetes cluster**.
