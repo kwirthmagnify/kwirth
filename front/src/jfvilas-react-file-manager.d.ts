@@ -59,18 +59,18 @@ declare module '@jfvilas/react-file-manager' {
         text?: string     // Text to show on the header of the 'name' column (th name of the object)
         source?: string   // name of the property of the JSON where the data would be found
         width?: number    // width fo the column in the 'list' view
-        sumSourceProperty?: string
-        sumReducer?: number
-        sumUnits?: string[]
+        sumSourceProperty?: string      // for gettinig totals when using 'filedata' space
+        sumReducer?: number             // for gettinig totals when using 'filedata' space
+        sumUnits?: string[]             // for gettinig totals when using 'filedata' space
         leftItems?: ISpaceMenuItem[]    // array of item actions
         configurable?: boolean,         // headers can be configurable (resize, add/remove...) or not
         properties?: ISpaceProperty[]   // properties of the object (like size, update date...)
     }
 
     export interface ISpaceMenuItem {
-        name?: string,    // name of the action
-        icon?: any,       // icon to show on the left
-        text: string,     // text of the action to show
+        name?: string,          // name of the action
+        icon?: any,             // icon to show on the left
+        text: string,           // text of the action to show
         permission: boolean,    // required permission (for using 'filedata' space, that is, a file manager not an object manager)
         multi?: boolean,        // true if this action can be executed on several files at the same time
         onClick?: (paths:string[], currentTraget:Element) => void     // what to do when th euser clicks the action
@@ -79,9 +79,9 @@ declare module '@jfvilas/react-file-manager' {
     }
 
     export interface IFileManagerMenuItem {
-        name: string,   // name of the filemanager action (show on file manager right side)
+        name: string,                                           // name of the filemanager action (show on file manager right side)
         onClick?: (name:string, target:HTMLElement) => void,    // what to do on click
-        onDraw?: (name:string) => void  // how to draw (or not to) it
+        onDraw?: (name:string) => void                          // how to draw (or not to) it
     }
 
     export interface ISpaceProperty {
