@@ -77,9 +77,8 @@ class OpsChannel implements IChannel {
             return
         }
         let asset = instance.assets.find(a => a.podNamespace === instanceConfig.namespace && a.podName === instanceConfig.pod && a.containerName === instanceConfig.container)
-        //let asset = instance.assets.find(a => a.podNamespace === instanceConfig.namespace && a.podName+'+'+a.containerName === instanceConfig.container)
         if (!asset) {
-            console.log('ops no asset for')
+            console.log('Ops: no asset for')
             console.log(instanceConfig)
             return
         }
@@ -104,11 +103,14 @@ class OpsChannel implements IChannel {
         stdoutStream.on('data', (chunk) => wso.send(chunk.toString('utf-8')))
         stderrStream.on('data', (chunk) => wso.send(chunk.toString('utf-8')))
 
+        let startCommand = ['/bin/sh']
+        if (instanceConfig.data) startCommand=instanceConfig.data
+
         await this.clusterInfo.execApi.exec(
             namespace,
             podName,
             containerName,
-            ['/bin/sh'],
+            startCommand,
             stdoutStream,
             stderrStream,
             stdinStream,

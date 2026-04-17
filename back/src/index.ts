@@ -1002,6 +1002,7 @@ const processChannelWebsocket = async (ri:IRunningInstance, webSocket: WebSocket
                 channel: channel.getChannelData().id,
                 instance: instanceConfig.instance,
                 challenge: response.data,
+                data: instanceConfig.data,
                 instanceConfig: instanceConfig
             })
             webSocket.send(JSON.stringify(response))

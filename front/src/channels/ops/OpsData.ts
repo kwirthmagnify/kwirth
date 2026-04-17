@@ -32,6 +32,7 @@ export interface IOpsData {
     terminalManager: TerminalManager
     selectedTerminal: string | undefined
     onDescribeResponse?: (data:any) => void
+    startCommand: string[]
 }
 
 export class OpsData implements IOpsData {
@@ -46,4 +47,5 @@ export class OpsData implements IOpsData {
         container: ''
     }
     scopedObjects = []
+    startCommand = ['/bin/sh']
 }

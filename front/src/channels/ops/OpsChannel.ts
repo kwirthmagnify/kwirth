@@ -56,7 +56,6 @@ export class OpsChannel implements IChannel {
                 terminal: undefined
             }
             opsData.terminalManager.createTerminal(`${newXterm.namespace+'/'+newXterm.pod+'/'+newXterm.container}`, newXterm.socket!)
-            //opsData.terminalManager.createTerminal(newXterm.namespace+'/'+newXterm.container.split('+')[0]+'/'+newXterm.container.split('+')[1], newXterm.socket!)
             refresh.action = EChannelRefreshAction.REFRESH
         }
         else {
@@ -159,7 +158,8 @@ export class OpsChannel implements IChannel {
             container: shell.container,
             objects: EInstanceConfigObject.PODS,
             scope: '',
-            view: EInstanceConfigView.CONTAINER
+            view: EInstanceConfigView.CONTAINER,
+            data: opsData.startCommand
         }
         opsData.websocketRequest = {
             namespace: shell.namespace,

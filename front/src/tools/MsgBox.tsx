@@ -32,7 +32,7 @@ const MsgBoxShow = (title:string, message:string|JSX.Element, onClose:Dispatch<S
                     {icon}
                     <Box sx={{width:'12px'}}/>
                     { typeof(message)==='string' ?
-                        <Typography ><div dangerouslySetInnerHTML={{__html: message}}/></Typography>
+                        <Typography component={'div'}><div dangerouslySetInnerHTML={{__html: message}}/></Typography>
                         :
                         message
                         }                        
@@ -60,7 +60,7 @@ const MsgBoxWaitShow = (title:string, message:string|JSX.Element, onClose:Dispat
                         <CircularProgress size={50} />
                     </Box>
                         { typeof(message)==='string' ?
-                            <Typography sx={{ml:4}}>
+                            <Typography sx={{ml:4}} component={'div'}>
                                 <div dangerouslySetInnerHTML={{__html: message}}/>
                             </Typography>
                             :

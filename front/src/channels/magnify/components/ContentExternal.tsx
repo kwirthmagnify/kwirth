@@ -30,6 +30,7 @@ export interface IContentExternalOptions {
     stoppable: boolean
     autostart: boolean
     configurable: boolean
+    data: any
 }
 
 export interface IContentExternalData {
@@ -63,12 +64,12 @@ export interface IContentExternalObject {
 
 const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternalProps) => {
     let contentExternalData:IContentExternalData = props.data
-    const containerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null)
     const [ msgBox, setMsgBox ] = useState(<></>)
     const [ anchorHelp, setAnchorHelp ] = useState<undefined | HTMLElement>(undefined)
     const [ anchorConfig, setAnchorConfig ] = useState<undefined | HTMLElement>(undefined)
     const [ isMaximized, setIsMaximized ] = useState(props.isMaximized)
-    const [ channelConfig, setChannelConfig ] = useState<any>()
+    const [ channelFormConfig, setChannelFormConfig ] = useState<any>()
     const [ , setRefreshTick] = useState(0);
     const forceUpdate = () => setRefreshTick(tick => tick + 1);
 
@@ -81,23 +82,23 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 
             switch(contentExternalData.channelId) {
                 case 'log':
-                    setChannelConfig({ lines: 5000, showNames:false, timestamp:false, startDiagnostics: false })
+                    setChannelFormConfig({ lines: 5000, showNames:false, timestamp:false, startDiagnostics: false })
                     setLogConfig(contentExternalData.content)
                     break
                 case 'metrics':
-                    setChannelConfig({ aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true})
+                    setChannelFormConfig({ aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true})
                     setMetricsConfig(contentExternalData.content)
                     break
                 case 'ops':
-                    setChannelConfig({})
+                    setChannelFormConfig({})
                     setOpsConfig(contentExternalData.content)
                     break
                 case 'fileman':
-                    setChannelConfig({})
+                    setChannelFormConfig({})
                     setFilemanConfig(contentExternalData.content)
                     break
                 case 'trivy':
-                    setChannelConfig({
+                    setChannelFormConfig({
                         'Status': {
                             text: 'Status',
                             asyncAction: async () => {
@@ -369,7 +370,8 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 container: ''
             },
             terminalManager: new TerminalManager(),
-            selectedTerminal: undefined
+            selectedTerminal: undefined,
+            startCommand: contentExternalData.options.data?.nodeShell? ['/bin/sh','-c','chroot /host /bin/sh'] : ['/bin/sh']
         }
         let onlyContName = c.externalChannelObject!.container.split('+')[1]
         let onlyPodName = c.externalChannelObject!.container.split('+')[0]
@@ -466,7 +468,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 group: contentExternalData.contentView === EInstanceConfigView.GROUP? props.selectedFiles.map(g => g.data.origin.kind+'+'+g.data.origin.metadata.name).join(',') : '',
                 pod: contentExternalData.contentView === EInstanceConfigView.POD? props.selectedFiles.map(p => p.data.origin.metadata.name).join(',') : '',
                 container: contentExternalData.contentView === EInstanceConfigView.CONTAINER? props.selectedFiles[0].data.origin.metadata.name + '+' + props.container : '',
-                type: EInstanceMessageType.SIGNAL,
+                type: EInstanceMessageType.SIGNAL
             }
             instanceConfig.scope = contentExternalData.content.externalChannel.getScope() || ''
             instanceConfig.data = contentExternalData.content.externalChannelObject.instanceConfig
@@ -616,7 +618,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 
     const onConfigApply = (values:any) => {
         setAnchorConfig(undefined)
-        setChannelConfig(values)
+        setChannelFormConfig(values)
         switch(contentExternalData.channelId) {
             case 'log':
                 let logConfig = contentExternalData.content!.externalChannelObject!.config as ILogConfig
@@ -699,7 +701,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
             </DialogContent>
         </ResizableDialog>        
         { anchorHelp && showHelp() }
-        { anchorConfig && <FormSimple anchorParent={anchorConfig} model={channelConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> }
+        { anchorConfig && <FormSimple anchorParent={anchorConfig} model={channelFormConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> }
         { msgBox }
     </>)
 }

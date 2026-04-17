@@ -300,13 +300,13 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }, [])
 
-    const onContainerSelected = (channel:string, file:IFileObject, container:string) => {
+    const onContainerSelected = (channelId:string, file:IFileObject, container:string) => {
         setMenuContainersAnchorParent(undefined)
         if (container==='*all') {
-            launchObjectExternal(channel, [file], EInstanceConfigView.POD, undefined)
+            launchObjectExternal(channelId, [file], EInstanceConfigView.POD, undefined, undefined)
         }
         else {
-            launchObjectExternal(channel, [file], EInstanceConfigView.CONTAINER, container)
+            launchObjectExternal(channelId, [file], EInstanceConfigView.CONTAINER, undefined, container)
         }
     }
 
@@ -343,7 +343,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                         if (status === 'Running') {
                             clearInterval(id)
                             setMsgBox(<></>)
-                            launchObjectExternal('ops',[pod],EInstanceConfigView.CONTAINER, pod.data.origin.spec.containers[0].name)
+                            launchObjectExternal('ops',[pod],EInstanceConfigView.CONTAINER, undefined, pod.data.origin.spec.containers[0].name)
                         }
                     }
                 }
@@ -428,7 +428,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     onApply: onContentDetailsApply,
                     onAction: onContentDetailsAction,
                     onLink: onMagnifyObjectDetailsLink,
-                    containerSelectionOptions: new Map([['log',2],['metrics',2],['fileman',2],['trivy',0],['ops',1],['evict',0],['cordon',0], ['uncordon',0], ['drain',0], ['scale',0], ['restart',0], ['trigger',0], ['suspend',0], ['resume',0],  ])
+                    containerSelectionOptions: new Map([['log',2],['metrics',2],['fileman',2],['trivy',0],['ops',1],['evict',0],['cordon',0],['uncordon',0],['drain',0], ['scale',0], ['restart',0], ['trigger',0], ['suspend',0], ['resume',0]  ])
                 } satisfies IDetailsData,
                 selectedFiles: [f[0]],
                 onWindowChange: onWindowChange,
@@ -541,7 +541,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setTick(t => t+1)
     }
 
-    const launchObjectExternal = (channel:string, files:IFileObject[], view: EInstanceConfigView, container: string|undefined ) => {
+    const launchObjectExternal = (channel:string, files:IFileObject[], view: EInstanceConfigView, data:any, container: string|undefined ) => {
         let width = channel==='trivy'? window.innerWidth * 0.9 : 800
         let height = channel==='trivy'? window.innerHeight * 0.9 : 600
         let win:IContentWindow = {
@@ -567,9 +567,9 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 onNotify: onComponentNotify,
                 onRefresh: onContentExternalRefresh,
                 options: channel === 'ops'?
-                    { autostart:true, pauseable:false, stoppable:false, configurable:false}
+                    { autostart:true, pauseable:false, stoppable:false, configurable:false, data }
                     :
-                    { autostart:true, pauseable:true, stoppable:true, configurable:(channel!=='fileman')}
+                    { autostart:true, pauseable:true, stoppable:true, configurable:(channel!=='fileman'), data}
             } satisfies IContentExternalData,
             selectedFiles: files,
             container: container,
@@ -649,6 +649,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const setClusterActions = () => {
             // Node
             let spcNode = spaces.get('Node')!
+            setLeftItem(spcNode,'shell', launchNodeShell)
             setLeftItem(spcNode,'cordon', launchNodeCordon)
             setLeftItem(spcNode,'uncordon', launchNodeUnCordon)
             setLeftItem(spcNode,'drain', launchNodeDrain)
@@ -658,7 +659,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             ;['log','metrics'].map(channelid => 
                 setLeftItem(spcNamespace,channelid, (p:string[]) => {
                     let f = magnifyData.files.filter(f => p.includes(f.path))
-                    launchObjectExternal(channelid, f, EInstanceConfigView.NAMESPACE, undefined)
+                    launchObjectExternal(channelid, f, EInstanceConfigView.NAMESPACE, undefined, undefined)
                 })
             )
 
@@ -683,13 +684,13 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     // workload actions
     const setPodActions = () => {
-        const podGroupAction = (action:string, p:string[], currentTarget:Element) => {
+        const podGroupAction = (channelId:string, p:string[], currentTarget:Element) => {
             let f = magnifyData.files.filter(x => p.includes(x.path))
             if (f.length>1) {
-                launchObjectExternal(action, f, EInstanceConfigView.POD, undefined)
+                launchObjectExternal(channelId, f, EInstanceConfigView.POD, undefined, undefined)
             }
             else {
-                setMenuContainersChannel(action)
+                setMenuContainersChannel(channelId)
                 setMenuContainersFile(f[0])
                 setMenuContainersIncludeAllContainers(true)
                 setMenuContainersAnchorParent(currentTarget)
@@ -866,19 +867,19 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const launchControllerLogs = (p:string[]) => {
         let f = magnifyData.files.filter(x => p.includes(x.path))
-        launchObjectExternal('log', f, EInstanceConfigView.GROUP, undefined)
+        launchObjectExternal('log', f, EInstanceConfigView.GROUP, undefined, undefined)
     }
 
     const launchControllerMetrics = (p:string[]) => {
         let f = magnifyData.files.filter(x => p.includes(x.path))
         // by default, we GROUP. User can change options in ContentExternal (after data is shown)
-        launchObjectExternal('metrics', f, EInstanceConfigView.GROUP, undefined)
+        launchObjectExternal('metrics', f, EInstanceConfigView.GROUP, undefined, undefined)
     }
 
     // Job actions
     const launchJobLogs = (p:string[]) => {
         let f = magnifyData.files.filter(x => p.includes(x.path))
-        launchObjectExternal('log', f, EInstanceConfigView.GROUP, undefined)
+        launchObjectExternal('log', f, EInstanceConfigView.GROUP, undefined, undefined)
     }
 
     // IngressClass actions
@@ -901,6 +902,33 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const launchNodeDrain = (p:string[]) => {
         let f = magnifyData.files.filter(x => p.includes(x.path))
         sendCommand(EMagnifyCommand.NODE, ['drain',f[0].data.origin.metadata.name])
+    }
+
+    const launchNodeShell = (p:string[]) => {
+        let f = magnifyData.files.filter(x => p.includes(x.path))
+        let podName = 'kwirth-node-shell'+'-'+f[0].name
+        let podNamespace = 'default'
+        sendCommand(EMagnifyCommand.NODE, ['shell', f[0].data.origin.metadata.name, podNamespace, podName])
+        let id = window.setInterval( async () => {
+            try {
+                let pod = magnifyData.files.find(p => p.class==='Pod' && p.data.origin.metadata.namespace === podNamespace && p.data.origin.metadata.name === podName)
+                if (pod) {
+                    let status = pod.data.origin.status.phase
+                    if (status === 'Running') {
+                        clearInterval(id)
+                        setMsgBox(<></>)
+                        launchObjectExternal('ops',[pod],EInstanceConfigView.CONTAINER, { nodeShell: true }, pod.data.origin.spec.containers[0].name)
+                    }
+                }
+            }
+            catch(err){
+                console.log(err)
+            }
+        }, 1000)
+        setMsgBox (MsgBoxWaitCancel('Launch Work',`We are waiting for the node shell to start (pod '${podName}' on namespace '${podNamespace}' is starting)...`, setMsgBox, (a:MsgBoxButtons) => {
+            if (a=== MsgBoxButtons.Cancel) clearInterval(id)
+        }))
+
     }
 
     const launchNodeCordon = (p:string[]) => {
@@ -1081,17 +1109,17 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 launchObjectBrowse([path])
                 break
             case 'ops':
-                launchObjectExternal('ops', [file], EInstanceConfigView.CONTAINER, container)
+                launchObjectExternal('ops', [file], EInstanceConfigView.CONTAINER, undefined, container)
                 break
             case 'log':
             case 'metrics':
             case 'fileman':
             case 'trivy':
                 if (container==='*all') {
-                    launchObjectExternal(action, [file], EInstanceConfigView.POD, undefined)
+                    launchObjectExternal(action, [file], EInstanceConfigView.POD, undefined, undefined)
                 }
                 else {
-                    launchObjectExternal(action, [file], EInstanceConfigView.CONTAINER, container)
+                    launchObjectExternal(action, [file], EInstanceConfigView.CONTAINER, undefined, container)
                 }
                 break
             case 'evict':

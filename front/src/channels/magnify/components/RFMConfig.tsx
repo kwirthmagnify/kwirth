@@ -1,6 +1,7 @@
 import { IFileObject, ISpace } from '@jfvilas/react-file-manager'
 import { Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@mui/icons-material'
 import { Cluster, Config, Customize, Kubernetes, Network, Pod, Security, Settings, Storage } from '../icons/Icons'
+import { Console } from 'console'
 
 const spaces = new Map<string, ISpace>()
 
@@ -1690,6 +1691,13 @@ spaces.set('Node',
                 name:'details',
                 icon: <Info fontSize='small'/>,
                 text: 'Details',
+                permission: true,
+            },
+            {
+                name: 'shell',
+                icon: <Terminal fontSize='small' />,
+                text: 'Shell',
+                multi: false,
                 permission: true,
             },
             {

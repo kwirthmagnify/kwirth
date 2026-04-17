@@ -267,6 +267,82 @@ async function nodeSetSchedulable(coreApi: CoreV1Api, nodeName: string, unschedu
     }
 }
 
+async function nodeShell(coreApi: CoreV1Api, nodeName: string, podNamespace:string, podName:string): Promise<void> {
+    try {
+        let podDefinition:V1Pod = {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "name": podName,
+                "namespace": podNamespace
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "name": "debugger",
+                        "image": "alpine",
+                        "command": [ "/bin/sh", "-c" ],
+                        "args": [
+                            "if [ -S \"/host-run/k3s/containerd/containerd.sock\" ]; then\n    S=\"/host-run/k3s/containerd/containerd.sock\"\nelif [ -S \"/host-run/containerd/containerd.sock\" ]; then\n    S=\"/host-run/containerd/containerd.sock\"\nelif [ -S \"/host-run/crio/crio.sock\" ]; then\n    S=\"/host-run/crio/crio.sock\"\nelif [ -S \"/host-var-run/containerd/containerd.sock\" ]; then\n    S=\"/host-var-run/containerd/containerd.sock\"\nfi\nif [ -n \"$S\" ]; then\n    export CONTAINER_RUNTIME_ENDPOINT=\"unix://$S\"\n    export IMAGE_SERVICE_ENDPOINT=\"unix://$S\"\n    echo \"Socket detected in $S.\"\nelse\n    echo \"ERROR: CRI runtime socket not found.\"\nfi\nsleep 3600\n"
+                        ],
+                        "securityContext": {
+                            "privileged": true
+                        },
+                        "volumeMounts": [
+                            {
+                                "name": "host-root",
+                                "mountPath": "/host"
+                            },
+                            {
+                                "name": "run-host",
+                                "mountPath": "/host-run"
+                            },
+                            {
+                                "name": "var-run-host",
+                                "mountPath": "/host-var-run"
+                            },
+                            {
+                                "name": "usr-bin",
+                                "mountPath": "/host-usr-bin"
+                            }
+                        ]
+                    }
+                ],
+                "nodeName": nodeName,
+                "hostNetwork": true,
+                "hostPID": true,
+                "hostIPC": true,
+                "volumes": [
+                    {
+                        "name": "host-root",
+                        "hostPath": { "path": "/" }
+                    },
+                    {
+                        "name": "run-host",
+                        "hostPath": { "path": "/run" }
+                    },
+                    {
+                        "name": "var-run-host",
+                        "hostPath": { "path": "/var/run" }
+                    },
+                    {
+                        "name": "usr-bin",
+                        "hostPath": { "path": "/usr/bin" }
+                    }
+                ]
+            }
+        }
+        const response = await coreApi.createNamespacedPod({
+            namespace: podNamespace,
+            body: podDefinition
+        })
+    }
+    catch (err) {
+        console.log('Error in cordon')
+        console.log(err)
+    }
+}
+
 async function nodeCordon(coreApi: CoreV1Api, nodeName: string): Promise<void> {
     try {
         await nodeSetSchedulable(coreApi, nodeName, true)
@@ -674,4 +750,4 @@ async function imageDelete(appsApi: AppsV1Api, imageName: string) {
 //     }
 // }
 
-export { applyResource, applyAllResources, deleteAllResources, nodeDrain, nodeCordon, nodeUnCordon, throttleExcute, cronJobStatus, cronJobTrigger, podEvict, setIngressClassAsDefault, restartController, scaleController, imageDelete, podWork }
+export { applyResource, applyAllResources, deleteAllResources, nodeShell, nodeDrain, nodeCordon, nodeUnCordon, throttleExcute, cronJobStatus, cronJobTrigger, podEvict, setIngressClassAsDefault, restartController, scaleController, imageDelete, podWork }

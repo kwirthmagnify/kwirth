@@ -28,6 +28,7 @@ export interface IPendingWebsocket {
     channel:string
     instance:string
     challenge:string
+    data: string
     instanceConfig: IInstanceConfig
 }
 

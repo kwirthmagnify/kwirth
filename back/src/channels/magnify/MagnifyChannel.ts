@@ -3,7 +3,7 @@ import { ClusterInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { CoreV1EventList, V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
-import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'
+import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'
 const yaml = require('js-yaml')
 
 export interface IMagnifyConfig {
@@ -451,6 +451,9 @@ class MagnifyChannel implements IChannel {
 
                 case EMagnifyCommand.NODE:
                     switch (magnifyMessage.params![0]) {
+                        case 'shell':
+                            await nodeShell(this.clusterInfo.coreApi, magnifyMessage.params![1], magnifyMessage.params![2], magnifyMessage.params![3])
+                            break
                         case 'cordon':
                             await nodeCordon(this.clusterInfo.coreApi, magnifyMessage.params![1])
                             break

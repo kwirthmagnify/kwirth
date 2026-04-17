@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: node-debugger
+spec:
+  containers:
+  - name: debugger
+    image: alpine
+    command: ["/bin/sh", "-c"]
+    args: 
+    - |
+      if [ -S "/host-run/k3s/containerd/containerd.sock" ]; then
+          S="/host-run/k3s/containerd/containerd.sock"
+      elif [ -S "/host-run/containerd/containerd.sock" ]; then
+          S="/host-run/containerd/containerd.sock"
+      elif [ -S "/host-run/crio/crio.sock" ]; then
+          S="/host-run/crio/crio.sock"
+      elif [ -S "/host-var-run/containerd/containerd.sock" ]; then
+          S="/host-var-run/containerd/containerd.sock"
+      fi
+      if [ -n "$S" ]; then
+          export CONTAINER_RUNTIME_ENDPOINT="unix://$S"
+          export IMAGE_SERVICE_ENDPOINT="unix://$S"
+          echo "Socket detected in $S."
+      else
+          echo "ERROR: CRI runtime socket not found."
+      fi
+      sleep infinity
+    securityContext:
+      privileged: true
+    volumeMounts:
+      - name: host-root
+        mountPath: /host
+      - name: 'run-host'
+        mountPath: '/host-run'
+      - name: 'var-run-host'
+        mountPath: '/host-var-run'
+      - name: 'usr-bin'
+        mountPath: '/host-usr-bin' # Para usar el crictl del nodo
+  hostNetwork: true
+  hostPID: true
+  hostIPC: true
+  volumes:
+    - name: host-root
+      hostPath:
+        path: /  
+    - name: 'run-host'
+      hostPath:
+        path: '/run'
+    - name: 'var-run-host'
+      hostPath: 
+        path: '/var/run'
+    - name: 'usr-bin'
+      hostPath:
+        path: '/usr/bin'
