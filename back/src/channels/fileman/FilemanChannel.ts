@@ -593,7 +593,7 @@ class FilemanChannel implements IChannel {
             if (result.stderr==='') {
                 let arr:IDirectoryEntry[] = []
                 ParseListing.parseEntries(result.stdout, (err:any, entryArray:IDirectoryEntry[]) => { entryArray.map(e => arr.push(e)) })
-                arr.map(e => e.name = homeDir + localDir + e.name)
+                arr.map(entry => entry.name = homeDir + localDir + entry.name)
                 this.sendUnsolicitedMessage(webSocket, instance.instanceId, EFilemanCommand.DIR, JSON.stringify({ metadata: { object: arr }, status: ExecutionStatus.SUCCESS}))
             }
             else {
@@ -848,17 +848,17 @@ class FilemanChannel implements IChannel {
             if (result.stderr==='') {
                 let arr :IDirectoryEntry[] = []
                 ParseListing.parseEntries(result.stdout, (err:any, entryArray:IDirectoryEntry[]) => { entryArray.map(e => arr.push(e)) })
-                let srcMetadata = arr.find(e => e.name === fname)
+                let srcMetadata = arr.find(entry => entry.name === fname)
                 if (arr.length===0 || !srcMetadata) return undefined
                 return srcMetadata
             }
             else {
-                console.log('launchCommand error', result.stderr)
+                console.log('fileeman getFileInfo error', result.stderr)
                 return undefined
             }
         }
         else {
-            console.log('launchCommand end', result.stdend)
+            console.log('fileman getFileInfo end', result.stdend)
             return undefined
         }
     }
@@ -916,7 +916,7 @@ class FilemanChannel implements IChannel {
 
             let arr:IDirectoryEntry[] = []
             ParseListing.parseEntries(result.stdout, (err:any, entryArray:IDirectoryEntry[]) => { entryArray.map(e => arr.push(e)) })
-            let srcMetadata = arr.find(e => e.name === fname)
+            let srcMetadata = arr.find(entry => entry.name === fname)
             if (arr.length===0 || !srcMetadata) {
                 console.log('**********NO CONTENT************ ', fname)
                 return
@@ -951,7 +951,7 @@ class FilemanChannel implements IChannel {
 
                     let fileList:IDirectoryEntry[] = []
                     ParseListing.parseEntries(result.stdout, (err:any, entryArray:IDirectoryEntry[]) => { entryArray.map(e => fileList.push(e)) })
-                    for (var e of fileList) {
+                    for (let e of fileList) {
                         switch(e.type) {
                             case 0: {
                                 let result = await this.clusterCopyOrMove(operation, srcNamespace, srcPod, srcContainer, srcLocalPath + '/' + fname+'/' + e.name, dstNamespace, dstPod, dstContainer, dstLocalPath + '/' + fname + '/' + e.name)
