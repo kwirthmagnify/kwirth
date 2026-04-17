@@ -7,7 +7,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: worker
-    image: ghcr.io/containerd/nerdctl:latest
+    image: kwirthmagnify/nerdctl
     securityContext:
       privileged: true
     command: ["/bin/sh", "-c"]
