@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, ClusterTypeEnum, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType } from '@kwirthmagnify/kwirth-common';
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IChannel } from '../IChannel'
+import { IBackChannelRequirements, IChannel } from '../IChannel'
 import { Informer, KubernetesObject, makeInformer, ObjectCache } from '@kubernetes/client-node'
 import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources, restartController } from '../../tools/KubernetesTools'
@@ -34,7 +34,10 @@ export interface IInstance {
 }
 
 class TrivyChannel implements IChannel {
-    readonly channelId: string = 'trivy'
+    readonly channelId = 'trivy'
+    readonly requirements: IBackChannelRequirements = {
+        storage: false
+    }
     clusterInfo : ClusterInfo
     informers: Map<string, TInformer> = new Map()
     webSockets: {

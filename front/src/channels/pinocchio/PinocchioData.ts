@@ -8,14 +8,29 @@ export interface IPinocchioMessage extends IInstanceMessage {
     text: string
 }
 
+interface IAnalysis {
+    findings: {
+        description: string
+        level: 'low'|'medium'|'high'|'critical'
+    }[],
+    globalRisk?: number
+    timestamp: number
+    usage?: {
+        input?:number,
+        output?:number
+    }
+    pod?: any
+    text?: string
+}
+
 export interface IPinocchioData {
-    lines: string[]
+    analysis: IAnalysis[]
     paused:boolean
     started:boolean
 }
 
 export class PinocchioData implements IPinocchioData {
-    lines: string[] = []
+    analysis: IAnalysis[] = []
     paused = false
     started = false
 }

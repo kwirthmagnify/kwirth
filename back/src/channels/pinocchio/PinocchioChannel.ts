@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IChannel } from '../IChannel';
+import { IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
 import { generateText, Output } from 'ai'
 import { google, GoogleLanguageModelOptions } from '@ai-sdk/google'
@@ -10,6 +10,18 @@ import { V1Pod } from '@kubernetes/client-node';
 enum EPinocchioCommand {
     STREAM = 'stream',
     INITIAL = 'initial',
+}
+
+interface ICommandConfigEvent {
+    kind: string
+    system: string
+    prompt: string
+    action: ('inform'|'cancel'|'repair')[]
+}
+
+interface ICommandConfigModel {
+    provider: string
+    model: string
 }
 
 interface IPinocchioMessage extends IInstanceMessage {
@@ -22,14 +34,7 @@ interface IPinocchioMessage extends IInstanceMessage {
     pod: string
     container: string
     command: EPinocchioCommand
-    params?: string[]
-}
-
-interface IPinocchioMessageResponse extends IInstanceMessage {
-    msgtype: 'pinocchiomessageresponse'
-}
-
-interface IAsset {
+    data: any
 }
 
 interface IInstance {
@@ -37,20 +42,34 @@ interface IInstance {
     accessKey: AccessKey
 }
 
+interface IPinocchioMessageResponse extends IInstanceMessage {
+    msgtype: 'pinocchiomessageresponse'
+    analysis: IAnalysis
+}
+
 interface IAnalysis {
     findings: {
         description: string
         level: 'low'|'medium'|'high'|'critical'
     }[],
-    globalRisk: number
+    globalRisk?: number
     timestamp: number
-    pod: V1Pod
+    usage?: {
+        input?:number,
+        output?:number
+    }
+    pod?: V1Pod
+    text?:string
 }
 
 class PinocchioChannel implements IChannel {
+    readonly channelId = 'pinocchio'
+    readonly requirements: IBackChannelRequirements = {
+        storage: true
+    }
     clusterInfo : ClusterInfo
-    webSockets: {
-        ws:WebSocket,
+    connections: {
+        webSocket:WebSocket,
         lastRefresh: number,
         instances: IInstance[] 
     }[] = []
@@ -61,15 +80,25 @@ class PinocchioChannel implements IChannel {
     }
 
     startChannel = async () =>  {
-        // this.clusterInfo.addSubscriber('tick', this, undefined)
-        // this.clusterInfo.addSubscriber('validating', this, {
-        //     kinds: ['Pod']
-        // })
         this.clusterInfo.addSubscriber('events', this, {
             kinds: ['Pod'],
             crdInstances: [],
             syncCrdInstances: false
         })
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`)
+        const data = await response.json()
+        let an:IAnalysis = {
+            text: 'Pinocchio channel available Gemini models',
+            findings: data.models.map( (m:any) => {
+                return { 
+                    description: m.name.startsWith('models/')? m.name.substring(7): m.name,
+                    level: 'low'
+                }
+            }),
+            timestamp: Date.now()
+        }
+        console.log(an)
+        this.analysis.push(an)
     }
 
     getChannelData = (): BackChannelData => {
@@ -84,7 +113,7 @@ class PinocchioChannel implements IChannel {
             sources: [ EClusterType.KUBERNETES, EClusterType.DOCKER ],
             endpoints: [],
             websocket: false,
-            cluster: false
+            cluster: true
         }
     }
 
@@ -94,44 +123,61 @@ class PinocchioChannel implements IChannel {
 
     async processProviderEvent(providerId:string, event:any) : Promise<void> {
         switch(providerId) {
-            case 'validating':
-                console.log('Received Validating event')
-                break
-            case 'tick':
-                console.log('TICK')
-                break
+            // case 'validating':
+            //     console.log('Received Validating event')
+            //     break
+            // case 'tick':
+            //     console.log('TICK')
+            //     break
             case 'events':
                 if (event.type==='ADDED') {
                     try {
                         console.log('Pinocchio: added pod', event.obj.metadata?.name)
-                        const { output } = await generateText({
-                            model: google('gemini-2.5-flash'),
-                            providerOptions: {
-                                google: {
-                                    structuredOutputs: true,
-                                } satisfies GoogleLanguageModelOptions,
-                            },
-                            output: Output.object({
-                                schema: z.object({
-                                    findings: z.array(
-                                        z.object({
-                                            description: z.string().min(1),
-                                            level: z.enum(['low', 'medium', 'high', 'critical']),
-                                        })
-                                    ),
-                                    globalRisk: z.number()
+                        try {
+                            const { output, usage } = await generateText({
+                                model: google('gemini-3.1-flash-lite-preview'),
+                                providerOptions: {
+                                    google: {
+                                        structuredOutputs: true,
+                                    } satisfies GoogleLanguageModelOptions,
+                                },
+                                output: Output.object({
+                                    schema: z.object({
+                                        findings: z.array(
+                                            z.object({
+                                                description: z.string().min(1),
+                                                level: z.enum(['low', 'medium', 'high', 'critical']),
+                                            })
+                                        ),
+                                        globalRisk: z.number()
+                                    }),
                                 }),
-                            }),
-                            system: 'You are a kubernetes admin expert, and you are in charge of deploying only workload that are secure. Generate a security analysis for this pod following the schema, y dámelo en español',
-                            prompt: JSON.stringify(event.obj),
-                        });
-                        console.log(output)
-                        this.analysis.push({
-                            findings: output.findings,
-                            globalRisk: output.globalRisk,
-                            timestamp: Date.now(),
-                            pod: event.obj
-                        })
+                                system: 'You are a kubernetes admin expert, and you are in charge of deploying only workload that are secure. Generate a security analysis for this pod following the schema, y dámelo en español',
+                                prompt: JSON.stringify(event.obj),
+                            })
+                            let an:IAnalysis = {
+                                text: `Starting pod '${event.obj.metadata.name}' in namespace '${event.obj.metadata.namespace}' (IN:${usage.inputTokens}, OUT:${usage.outputTokens})`,
+                                findings: output.findings,
+                                globalRisk: output.globalRisk,
+                                timestamp: Date.now(),
+                                usage: {
+                                    input: usage.inputTokens,
+                                    output: usage.outputTokens
+                                },
+                                pod: event.obj
+                            }
+                            this.analysis.push(an)
+                            this.broadcast(an)
+                        }
+                        catch (err) {
+                            let message = `Pinocchio analysis ended in error when analyzing '${event.obj.metadata.name}' in namespace '${event.obj.metadata.namespace}'`
+                            console.log(message, err)
+                            let an:IAnalysis = {
+                                findings: [{ description: message, level: 'critical'}],
+                                timestamp: Date.now()
+                            }
+                            this.broadcast(an)
+                        }
                     }
                     catch (err) {
                         console.error(err)
@@ -154,7 +200,7 @@ class PinocchioChannel implements IChannel {
     }
 
     containsInstance = (instanceId: string): boolean => {
-        return this.webSockets.some(socket => socket.instances.find(i => i.instanceId === instanceId))
+        return this.connections.some(socket => socket.instances.find(i => i.instanceId === instanceId))
     }
 
     processCommand = async (webSocket:WebSocket, instanceMessage:IInstanceMessage) : Promise<boolean> => {
@@ -181,12 +227,12 @@ class PinocchioChannel implements IChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        console.log(`Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
+        console.log(`Start ${this.getChannelData().id} instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
-        let socket = this.webSockets.find(s => s.ws === webSocket)
+        let socket = this.connections.find(s => s.webSocket === webSocket)
         if (!socket) {
-            let len = this.webSockets.push( {ws:webSocket, lastRefresh: Date.now(), instances:[]} )
-            socket = this.webSockets[len-1]
+            let len = this.connections.push( {webSocket:webSocket, lastRefresh: Date.now(), instances:[]} )
+            socket = this.connections[len-1]
         }
 
         let instances = socket.instances
@@ -198,6 +244,13 @@ class PinocchioChannel implements IChannel {
             }
             instances.push(instance)
         }
+        let analysis:IAnalysis = {
+            findings: [],
+            timestamp: Date.now(),
+            text: 'Pinocchio session accepted'
+        }
+        this.sendData(webSocket, instance, analysis)
+        this.sendBatch(webSocket, instance)
         return true
     }
 
@@ -209,7 +262,6 @@ class PinocchioChannel implements IChannel {
     }
 
     modifyInstance = (webSocket:WebSocket, instanceConfig: IInstanceConfig): void => {
-        console.log('Modify not supported')
     }
 
     stopInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig): void => {
@@ -224,15 +276,12 @@ class PinocchioChannel implements IChannel {
     }
 
     removeInstance = (webSocket: WebSocket, instanceId: string): void => {
-        let socket = this.webSockets.find(s => s.ws === webSocket)
+        let socket = this.connections.find(s => s.webSocket === webSocket)
         if (socket) {
             let instances = socket.instances
             if (instances) {
                 let pos = instances.findIndex(t => t.instanceId === instanceId)
-                if (pos>=0) {
-                    let instance = instances[pos]
-                    instances.splice(pos,1)
-                }
+                if (pos>=0) instances.splice(pos,1)
                 else {
                     console.log(`Instance ${instanceId} not found, cannot delete`)
                 }
@@ -247,17 +296,17 @@ class PinocchioChannel implements IChannel {
     }
 
     containsConnection = (webSocket:WebSocket): boolean => {
-        return Boolean (this.webSockets.find(s => s.ws === webSocket))
+        return Boolean (this.connections.find(s => s.webSocket === webSocket))
     }
 
     removeConnection = (webSocket: WebSocket): void => {
-        let socket = this.webSockets.find(s => s.ws === webSocket)
+        let socket = this.connections.find(s => s.webSocket === webSocket)
         if (socket) {
             for (let instance of socket.instances) {
                 this.removeInstance (webSocket, instance.instanceId)
             }
-            let pos = this.webSockets.findIndex(s => s.ws === webSocket)
-            this.webSockets.splice(pos,1)
+            let pos = this.connections.findIndex(s => s.webSocket === webSocket)
+            this.connections.splice(pos,1)
         }
         else {
             console.log('WebSocket not found on Pinocchio for remove')
@@ -265,7 +314,7 @@ class PinocchioChannel implements IChannel {
     }
 
     refreshConnection = (webSocket: WebSocket): boolean => {
-        let socket = this.webSockets.find(s => s.ws === webSocket)
+        let socket = this.connections.find(s => s.webSocket === webSocket)
         if (socket) {
             socket.lastRefresh = Date.now()
             return true
@@ -277,10 +326,10 @@ class PinocchioChannel implements IChannel {
     }
 
     updateConnection = (newWebSocket: WebSocket, instanceId: string): boolean => {
-        for (let entry of this.webSockets) {
+        for (let entry of this.connections) {
             let exists = entry.instances.find(i => i.instanceId === instanceId)
             if (exists) {
-                entry.ws = newWebSocket
+                entry.webSocket = newWebSocket
                 return true
             }
         }
@@ -291,7 +340,15 @@ class PinocchioChannel implements IChannel {
     // PRIVATE
     // *************************************************************************************
 
-    private sendData = (ws:WebSocket, instance:IInstance, asset:IAsset) => {
+    private broadcast = (an:IAnalysis) => {
+        for (let connection of this.connections) {
+            for (let instance of connection.instances) {
+                this.sendData(connection.webSocket, instance, an)
+            }
+        }
+    }
+
+    private sendData = (ws:WebSocket, instance:IInstance, analysis:IAnalysis) => {
         let msg:IPinocchioMessageResponse = {
             msgtype: 'pinocchiomessageresponse',
             channel: 'pinocchio',
@@ -299,9 +356,28 @@ class PinocchioChannel implements IChannel {
             flow: EInstanceMessageFlow.UNSOLICITED,
             type: EInstanceMessageType.DATA,
             instance: instance.instanceId,
-            //text: `${new Date()}: pinocchio channel is waiting for ${asset.name} to join Kwirth project`
+            analysis
         }
         ws.send(JSON.stringify(msg))
+    }
+
+    private sendBatch = (ws:WebSocket, instance:IInstance) => {
+        let msg:IPinocchioMessageResponse = {
+            msgtype: 'pinocchiomessageresponse',
+            channel: 'pinocchio',
+            action: EInstanceMessageAction.NONE,
+            flow: EInstanceMessageFlow.UNSOLICITED,
+            type: EInstanceMessageType.DATA,
+            instance: instance.instanceId,
+            analysis:{
+                findings: [],
+                timestamp: 0
+            }
+        }
+        for (let an of this.analysis) {
+            msg.analysis = an
+            ws.send(JSON.stringify(msg))
+        }
     }
 
     private sendSignalMessage = (ws:WebSocket, action:EInstanceMessageAction, flow: EInstanceMessageFlow, level: ESignalMessageLevel, instanceId:string, text:string): void => {
@@ -318,7 +394,7 @@ class PinocchioChannel implements IChannel {
     }
 
     getInstance(webSocket:WebSocket, instanceId: string) : IInstance | undefined{
-        let socket = this.webSockets.find(entry => entry.ws === webSocket)
+        let socket = this.connections.find(entry => entry.webSocket === webSocket)
         if (socket) {
             let instances = socket.instances
             if (instances) {

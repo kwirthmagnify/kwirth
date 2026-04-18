@@ -2,7 +2,7 @@ import { IInstanceConfig, InstanceMessageChannelEnum, InstanceMessageTypeEnum, I
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IChannel } from '../IChannel';
+import { IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
 
 interface IAsset {
@@ -24,6 +24,10 @@ interface IInstance {
 }
 
 class LogChannel implements IChannel {    
+    readonly channelId = 'log'
+    readonly requirements: IBackChannelRequirements = {
+        storage: false
+    }
     clusterInfo : ClusterInfo
     webSockets: {
         ws:WebSocket,
@@ -43,7 +47,6 @@ class LogChannel implements IChannel {
             modifyable: false,
             reconnectable: true,
             metrics: false,
-            //events: false,
             providers: [],
             sources: [ ClusterTypeEnum.DOCKER, ClusterTypeEnum.KUBERNETES ],
             endpoints: [],

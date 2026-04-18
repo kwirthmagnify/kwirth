@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, ClusterTypeEnum, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IChannel } from '../IChannel'
+import { IBackChannelRequirements, IChannel } from '../IChannel'
 import { Readable, Writable } from 'stream'
 import { Request, Response } from 'express'
 import { v4 as uuid } from 'uuid'
@@ -92,6 +92,10 @@ interface IDirectoryEntry {
 }
 
 class FilemanChannel implements IChannel {
+    readonly channelId = 'fileman'
+    readonly requirements: IBackChannelRequirements = {
+        storage: false
+    }
     clusterInfo : ClusterInfo
     webSockets: {
         ws:WebSocket,

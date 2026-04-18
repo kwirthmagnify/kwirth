@@ -2,7 +2,7 @@ import { IInstanceConfig, ISignalMessage, EClusterType, IInstanceConfigResponse,
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IChannel } from '../IChannel';
+import { IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
 
 interface IAsset {
@@ -22,6 +22,10 @@ interface IInstance {
 }
 
 class AlertChannel implements IChannel {    
+    readonly channelId = 'alert'
+    readonly requirements: IBackChannelRequirements = {
+        storage: false
+    }
     clusterInfo : ClusterInfo
     webSockets: {
         ws: WebSocket,

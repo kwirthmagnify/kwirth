@@ -695,7 +695,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const getTabColor = (tab:ITabObject) => {
-        console.log(tab.channelStarted, tab.channelPending, tab.channelPaused, )
         let colorTable:IColors = TABUNSELECTEDCOLORS
         if (selectedTab.current === tab) colorTable = TABSELECTEDCOLORS
         if (tab.channelStarted) { 

@@ -1480,6 +1480,16 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         if (envChannelMagnifyEnabled) runningInstance.channels.set('magnify', new MagnifyChannel(runningInstance.clusterInfo, localKwirthData))
         if (envChannelPinocchioEnabled) runningInstance.channels.set('pinocchio', new PinocchioChannel(runningInstance.clusterInfo))
 
+        for (let channel of runningInstance.channels.values()) {
+            if (channel.requirements.storage) {
+                channel.writeStorage = async (id:string, data:any) => {
+                    await runningInstance.configMaps.write('kwirth-store-channel-'+id, JSON.stringify(data))
+                }
+                channel.readStorage = async (id:string) => {
+                    return JSON.parse(await runningInstance.configMaps.read('kwirth-store-channel-'+id))
+                }
+            }
+        }
         // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to
         localKwirthData.channels =  Array.from(runningInstance.channels.keys()).map(k => {
             return runningInstance.channels.get(k)?.getChannelData()!

@@ -1,7 +1,13 @@
 import { BackChannelData, IInstanceConfig, IInstanceMessage, AccessKey, EInstanceMessageAction } from '@kwirthmagnify/kwirth-common'
 import { Request, Response } from 'express'
 
+export interface IBackChannelRequirements {
+    storage: boolean
+}
+
 interface IChannel {
+    readonly channelId: string
+    readonly requirements: IBackChannelRequirements
     getChannelData(): BackChannelData
     getChannelScopeLevel(scope:string) : number
 
@@ -27,6 +33,9 @@ interface IChannel {
     removeConnection (webSocket:WebSocket) : void
     refreshConnection (webSocket:WebSocket) : boolean
     updateConnection (webSocket:WebSocket, instanceId:string) : boolean
+
+    writeStorage?(id:string, data:any) : Promise<void>
+    readStorage?(id:string) : Promise<any>
 }
 
 export { IChannel }

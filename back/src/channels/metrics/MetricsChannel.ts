@@ -1,7 +1,7 @@
 import { IInstanceConfig, InstanceConfigViewEnum, InstanceMessageTypeEnum, ISignalMessage, SignalMessageLevelEnum, IInstanceConfigResponse, InstanceMessageFlowEnum, InstanceMessageActionEnum, InstanceMessageChannelEnum, IInstanceMessage, MetricsConfig, MetricsConfigModeEnum, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, ClusterTypeEnum, IMetricsMessageResponse, IMetricsAssets, MetricsMessage, IMetricsMessage, InstanceConfigObjectEnum, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { AssetData } from '../../tools/MetricsTools'
-import { IChannel } from '../IChannel'
+import { IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 
 interface IInstance {
@@ -15,6 +15,10 @@ interface IInstance {
 }
 
 class MetricsChannel implements IChannel {
+    readonly channelId = 'metrics'
+    readonly requirements: IBackChannelRequirements = {
+        storage: false
+    }
     clusterInfo: ClusterInfo
 
     // list of intervals (and its associated metrics) that produce metrics streams    
@@ -36,7 +40,6 @@ class MetricsChannel implements IChannel {
             modifyable: true,
             reconnectable: true,
             metrics: true,
-            //events: false,
             providers: [],
             sources: [ ClusterTypeEnum.KUBERNETES ],
             endpoints: [],

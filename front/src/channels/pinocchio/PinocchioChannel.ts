@@ -1,16 +1,37 @@
 import { FC } from "react"
 import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from "../IChannel"
-import { PinocchioInstanceConfig, PinocchioConfig, IPinocchioConfig } from "./PinocchioConfig"
+import { PinocchioInstanceConfig, PinocchioConfig } from "./PinocchioConfig"
 import { PinocchioSetup, PinocchioIcon } from './PinocchioSetup'
-import { IInstanceMessage, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope } from "@kwirthmagnify/kwirth-common"
-import { PinocchioData, IPinocchioData, IPinocchioMessage } from "./PinocchioData"
+import { IInstanceMessage, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope, IOpsMessageResponse, ISignalMessage } from "@kwirthmagnify/kwirth-common"
+import { PinocchioData, IPinocchioData } from "./PinocchioData"
 import { PinocchioTabContent } from "./PinocchioTabContent"
+import { ENotifyLevel } from "../../tools/Global"
+
+interface IPinocchioMessageResponse extends IInstanceMessage {
+    msgtype: 'pinocchiomessageresponse'
+    analysis: IAnalysis
+}
+
+interface IAnalysis {
+    findings: {
+        description: string
+        level: 'low'|'medium'|'high'|'critical'
+    }[],
+    globalRisk?: number
+    timestamp: number
+    usage?: {
+        input:number,
+        output:number
+    }
+    pod?: any
+    text?: string
+}
 
 export class PinocchioChannel implements IChannel {
+    channelId = 'pinocchio'
     private setupVisible = false
     SetupDialog: FC<ISetupProps> = PinocchioSetup
     TabContent: FC<IContentProps> = PinocchioTabContent
-    channelId = 'pinocchio'
     requirements:IChannelRequirements = {
         accessString: false,
         clusterUrl: false,
@@ -19,8 +40,8 @@ export class PinocchioChannel implements IChannel {
         frontChannels: false,
         metrics: false,
         notifier: true,
-        notifications: true,
-        setup: true,
+        notifications: false,
+        setup: false,
         settings: false,
         palette: false,
         userSettings: false,
@@ -34,22 +55,23 @@ export class PinocchioChannel implements IChannel {
     setSetupVisibility(visibility:boolean): void { this.setupVisible = visibility }
 
     processChannelMessage(channelObject: IChannelObject, wsEvent: MessageEvent): IChannelMessageAction {
-        let msg:IPinocchioMessage = JSON.parse(wsEvent.data)
+        let msg:IPinocchioMessageResponse = JSON.parse(wsEvent.data)
 
         let pinocchioData:IPinocchioData = channelObject.data
-        let pinocchioConfig:IPinocchioConfig = channelObject.config
         switch (msg.type) {
             case EInstanceMessageType.DATA:
-                pinocchioData.lines.push(msg.text)
+                if (msg.analysis) pinocchioData.analysis.push(msg.analysis)
                 return {
                     action: EChannelRefreshAction.REFRESH
                 }
             case EInstanceMessageType.SIGNAL:
-                let instanceMessage:IInstanceMessage = JSON.parse(wsEvent.data)
-                if (instanceMessage.flow === EInstanceMessageFlow.RESPONSE && instanceMessage.action === EInstanceMessageAction.START) {
-                    channelObject.instanceId = instanceMessage.instance
+                let signalMessage = JSON.parse(wsEvent.data) as ISignalMessage
+                if (signalMessage.flow === EInstanceMessageFlow.RESPONSE && signalMessage.action === EInstanceMessageAction.START) {
+                    channelObject.instanceId = signalMessage.instance
                 }
-                pinocchioData.lines.push('*** '+msg.text+' ***')
+                else {
+                    channelObject.notify?.(this.channelId, ENotifyLevel.ERROR, signalMessage.text || signalMessage.data)
+                }
                 return {
                     action: EChannelRefreshAction.REFRESH
                 }
@@ -66,13 +88,17 @@ export class PinocchioChannel implements IChannel {
         channelObject.config = new PinocchioConfig()
         channelObject.data = new PinocchioData()
         let pinocchioObject:IPinocchioData= channelObject.data
-        pinocchioObject.lines = []
+        pinocchioObject.analysis = []
         return false
     }
 
     startChannel(channelObject:IChannelObject): boolean {
         let pinocchioObject:IPinocchioData = channelObject.data
-        pinocchioObject.lines = [ 'Start']
+        pinocchioObject.analysis.push({
+            findings: [],
+            timestamp: Date.now(),
+            text: 'Local start pinocchio channel'
+        })
         pinocchioObject.paused = false
         pinocchioObject.started = true
         return true
@@ -92,7 +118,6 @@ export class PinocchioChannel implements IChannel {
 
     stopChannel(channelObject: IChannelObject): boolean {
         let pinocchioObject:IPinocchioData = channelObject.data
-        pinocchioObject.lines.push('==========================================================================')
         pinocchioObject.paused = false
         pinocchioObject.started = false
         return true

@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IEchoConfig, IEchoMessageResponse, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IChannel } from '../IChannel';
+import { IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
 
 export interface IAsset {
@@ -19,6 +19,10 @@ export interface IInstance {
 }
 
 class EchoChannel implements IChannel {
+    readonly channelId = 'echo'
+    readonly requirements: IBackChannelRequirements = {
+        storage: false
+    }
     clusterInfo : ClusterInfo
     webSockets: {
         ws:WebSocket,

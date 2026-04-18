@@ -1,7 +1,7 @@
 import { IInstanceConfig, InstanceMessageChannelEnum, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, IOpsMessage, IOpsMessageResponse, EOpsCommand, IRouteMessageResponse, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, ClusterTypeEnum, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common';
 import { WebSocket as NonNativeWebSocket } from 'ws'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IChannel } from '../IChannel';
+import { IBackChannelRequirements, IChannel } from '../IChannel';
 import { PassThrough, Readable, Writable } from 'stream';
 import { execCommandDescribe } from './GetCommand';
 import { execCommandRestart } from './RestartCommand';
@@ -29,6 +29,10 @@ export interface IInstance {
 }
 
 class OpsChannel implements IChannel {    
+    readonly channelId = 'ops'
+    readonly requirements: IBackChannelRequirements = {
+        storage: false
+    }
     clusterInfo : ClusterInfo
     webSockets: {
         ws:WebSocket,

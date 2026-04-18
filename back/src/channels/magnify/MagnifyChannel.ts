@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, ClusterTypeEnum, BackChannelData, KwirthData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel} from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IChannel } from '../IChannel'
+import { IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { CoreV1EventList, V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
 import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'
@@ -60,6 +60,10 @@ export interface IInstance {
 }
 
 class MagnifyChannel implements IChannel {
+    readonly channelId = 'magnify'
+    readonly requirements: IBackChannelRequirements = {
+        storage: false
+    }
     kwirthData : KwirthData
     clusterInfo : ClusterInfo
     webSockets: {
