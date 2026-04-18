@@ -2,39 +2,49 @@ import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKey
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../IChannel';
 import { Request, Response } from 'express'
+import { generateText, Output } from 'ai'
+import { google, GoogleLanguageModelOptions } from '@ai-sdk/google'
+import { z } from 'zod'
+import { V1Pod } from '@kubernetes/client-node';
 
-export interface IPinocchioMessage extends IInstanceMessage {
+enum EPinocchioCommand {
+    STREAM = 'stream',
+    INITIAL = 'initial',
+}
+
+interface IPinocchioMessage extends IInstanceMessage {
     msgtype: 'pinocchiomessage'
+    id: string
+    accessKey: string
+    instance: string
     namespace: string
+    group: string
     pod: string
     container: string
-    text: string
+    command: EPinocchioCommand
+    params?: string[]
 }
 
-export interface IPinocchioMessageResponse extends IInstanceMessage {
+interface IPinocchioMessageResponse extends IInstanceMessage {
     msgtype: 'pinocchiomessageresponse'
-    text: string
 }
 
-export interface IPinocchioConfig {
-    interval: number
-    name: string
+interface IAsset {
 }
 
-export interface IAsset {
-    podNamespace: string
-    podName: string
-    containerName: string
-    interval?: NodeJS.Timeout
-    name: string
-}
-
-export interface IInstance {
+interface IInstance {
     instanceId: string
     accessKey: AccessKey
-    configData: IPinocchioConfig
-    paused: boolean
-    assets: IAsset[]
+}
+
+interface IAnalysis {
+    findings: {
+        description: string
+        level: 'low'|'medium'|'high'|'critical'
+    }[],
+    globalRisk: number
+    timestamp: number
+    pod: V1Pod
 }
 
 class PinocchioChannel implements IChannel {
@@ -44,6 +54,7 @@ class PinocchioChannel implements IChannel {
         lastRefresh: number,
         instances: IInstance[] 
     }[] = []
+    analysis: IAnalysis[] = []
 
     constructor (clusterInfo:ClusterInfo) {
         this.clusterInfo = clusterInfo
@@ -54,11 +65,11 @@ class PinocchioChannel implements IChannel {
         // this.clusterInfo.addSubscriber('validating', this, {
         //     kinds: ['Pod']
         // })
-        // this.clusterInfo.addSubscriber('events', this, {
-        //     kinds: ['Pod'],
-        //     crdInstances: [],
-        //     syncCrdInstances: false
-        // })
+        this.clusterInfo.addSubscriber('events', this, {
+            kinds: ['Pod'],
+            crdInstances: [],
+            syncCrdInstances: false
+        })
     }
 
     getChannelData = (): BackChannelData => {
@@ -81,7 +92,7 @@ class PinocchioChannel implements IChannel {
         return ['', 'none', 'cluster'].indexOf(scope)
     }
 
-    processProviderEvent(providerId:string, obj:any) : void {
+    async processProviderEvent(providerId:string, event:any) : Promise<void> {
         switch(providerId) {
             case 'validating':
                 console.log('Received Validating event')
@@ -90,9 +101,41 @@ class PinocchioChannel implements IChannel {
                 console.log('TICK')
                 break
             case 'events':
-                if (obj.type==='ADDED') {
-                    console.log('Pinocchio: added pod', obj.obj.metadata?.name)
-                    // Here invoke LLM through Vercel AI-SDK
+                if (event.type==='ADDED') {
+                    try {
+                        console.log('Pinocchio: added pod', event.obj.metadata?.name)
+                        const { output } = await generateText({
+                            model: google('gemini-2.5-flash'),
+                            providerOptions: {
+                                google: {
+                                    structuredOutputs: true,
+                                } satisfies GoogleLanguageModelOptions,
+                            },
+                            output: Output.object({
+                                schema: z.object({
+                                    findings: z.array(
+                                        z.object({
+                                            description: z.string().min(1),
+                                            level: z.enum(['low', 'medium', 'high', 'critical']),
+                                        })
+                                    ),
+                                    globalRisk: z.number()
+                                }),
+                            }),
+                            system: 'You are a kubernetes admin expert, and you are in charge of deploying only workload that are secure. Generate a security analysis for this pod following the schema, y dámelo en español',
+                            prompt: JSON.stringify(event.obj),
+                        });
+                        console.log(output)
+                        this.analysis.push({
+                            findings: output.findings,
+                            globalRisk: output.globalRisk,
+                            timestamp: Date.now(),
+                            pod: event.obj
+                        })
+                    }
+                    catch (err) {
+                        console.error(err)
+                    }
                 }
                 break
             default:
@@ -107,11 +150,6 @@ class PinocchioChannel implements IChannel {
     }
 
     containsAsset = (webSocket:WebSocket, podNamespace:string, podName:string, containerName:string): boolean => {
-        let socket = this.webSockets.find(s => s.ws === webSocket)
-        if (socket) {
-            let instances = socket.instances
-            if (instances) return instances.some(i => i.assets.some(a => a.podNamespace===podNamespace && a.podName===podName && a.containerName===containerName))
-        }
         return false
     }
 
@@ -129,6 +167,14 @@ class PinocchioChannel implements IChannel {
                 this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, `Instance not found`)
                 console.log(`Instance ${instanceMessage.instance} not found`)
                 return false
+            }
+            let pinocchioMessage = instanceMessage as IPinocchioMessage
+            switch(pinocchioMessage.command) {
+                case EPinocchioCommand.STREAM:
+                    break
+                case EPinocchioCommand.INITIAL:
+                    break
+
             }
             return true
         }
@@ -148,26 +194,10 @@ class PinocchioChannel implements IChannel {
         if (!instance) {
             instance = {
                 accessKey: accessKeyDeserialize(instanceConfig.accessKey),
-                instanceId: instanceConfig.instance,
-                configData: instanceConfig.data,
-                paused: false,
-                assets: []
+                instanceId: instanceConfig.instance
             }
             instances.push(instance)
         }
-        let asset:IAsset = {
-            podNamespace,
-            podName,
-            containerName,
-            interval: undefined,
-            name: ''
-        }
-        asset.name = instance.configData.name
-        asset.interval = setInterval(
-            (ws:WebSocket, i:IInstance, a:IAsset) => this.sendData(ws,i,a),
-            instance.configData.interval*1000,
-            webSocket, instance, asset)
-        instance.assets.push(asset)
         return true
     }
 
@@ -176,14 +206,6 @@ class PinocchioChannel implements IChannel {
     }
     
     pauseContinueInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void => {
-        let instance = this.getInstance(webSocket, instanceConfig.instance)
-        if (instance) {
-            if (action === EInstanceMessageAction.PAUSE) instance.paused = true
-            if (action === EInstanceMessageAction.CONTINUE) instance.paused = false
-        }
-        else {
-            this.sendSignalMessage(webSocket,EInstanceMessageAction.PAUSE, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceConfig.instance, `Pinocchio instance not found`)
-        }
     }
 
     modifyInstance = (webSocket:WebSocket, instanceConfig: IInstanceConfig): void => {
@@ -209,9 +231,6 @@ class PinocchioChannel implements IChannel {
                 let pos = instances.findIndex(t => t.instanceId === instanceId)
                 if (pos>=0) {
                     let instance = instances[pos]
-                    for (let asset of instance.assets) {
-                        clearTimeout(asset.interval)
-                    }
                     instances.splice(pos,1)
                 }
                 else {
@@ -262,15 +281,6 @@ class PinocchioChannel implements IChannel {
             let exists = entry.instances.find(i => i.instanceId === instanceId)
             if (exists) {
                 entry.ws = newWebSocket
-                for (let instance of entry.instances) {
-                    for (let asset of instance.assets) {
-                        clearInterval(asset.interval)
-                        asset.interval = setInterval(
-                            (ws:WebSocket, i:IInstance, a:IAsset) => this.sendData(ws,i,a),
-                            instance.configData.interval*1000,
-                            newWebSocket, instance, asset)
-                    }
-                }
                 return true
             }
         }
@@ -282,7 +292,6 @@ class PinocchioChannel implements IChannel {
     // *************************************************************************************
 
     private sendData = (ws:WebSocket, instance:IInstance, asset:IAsset) => {
-        if (instance.paused) return
         let msg:IPinocchioMessageResponse = {
             msgtype: 'pinocchiomessageresponse',
             channel: 'pinocchio',
@@ -290,7 +299,7 @@ class PinocchioChannel implements IChannel {
             flow: EInstanceMessageFlow.UNSOLICITED,
             type: EInstanceMessageType.DATA,
             instance: instance.instanceId,
-            text: `${new Date()}: pinocchio channel is waiting for ${asset.name} to join Kwirth project`
+            //text: `${new Date()}: pinocchio channel is waiting for ${asset.name} to join Kwirth project`
         }
         ws.send(JSON.stringify(msg))
     }
