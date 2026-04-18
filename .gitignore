@@ -12,6 +12,7 @@
 # local
 kwirth.keys
 kwirth-users
+.env
 
 # production
 /**/dist

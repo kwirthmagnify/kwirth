@@ -1,5 +1,6 @@
+import 'dotenv/config';
 import { ApisApi, CoreV1Api, AppsV1Api, KubeConfig, KubernetesObjectApi, Log, Watch, Exec, V1Pod, CustomObjectsApi, RbacAuthorizationV1Api, ApiextensionsV1Api, VersionApi, NetworkingV1Api, StorageV1Api, BatchV1Api, AutoscalingV2Api, NodeV1Api, SchedulingV1Api, CoordinationV1Api, AdmissionregistrationV1Api, PolicyV1Api } from '@kubernetes/client-node'
-import Docker from 'dockerode'
+//import Docker from 'dockerode'
 import { ConfigApi } from './api/ConfigApi'
 import { KubernetesSecrets } from './tools/KubernetesSecrets'
 import { KubernetesConfigMaps } from './tools/KubernetesConfigMaps'
