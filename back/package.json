@@ -16,7 +16,7 @@
     "@ai-sdk/google": "^3.0.64",
     "@jfvilas/parse-listing": "^1.0.1",
     "@kubernetes/client-node": "^1.4.0",
-    "@kwirthmagnify/kwirth-common": "^0.4.49",
+    "@kwirthmagnify/kwirth-common": "^0.4.51",
     "@types/node": "^20.12.13",
     "ai": "^6.0.168",
     "body-parser": "^1.20.2",

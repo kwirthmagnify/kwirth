@@ -13,7 +13,7 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module":"CommonJS",
+    "module":"node16",
     "isolatedModules": true,
     "jsx": "react-jsx",
     "moduleResolution": "node16"

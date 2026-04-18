@@ -23,7 +23,7 @@ import { ITrivyInstanceConfig } from '../../trivy/TrivyConfig'
 import { ITrivyData } from '../../trivy/TrivyData'
 import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
-import { TerminalManager } from '../../ops/Terminal/TerminalManager'
+import { TerminalManager } from '../../ops/terminal/TerminalManager'
 
 export interface IContentExternalOptions {
     pauseable: boolean
