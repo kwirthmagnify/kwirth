@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Box, Card, CardContent, CardHeader, Stack, Typography } from '@mui/material'
+import { Box, Button, Card, CardContent, CardHeader, Stack, Typography } from '@mui/material'
 import { IChannelObject } from '../IChannel'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
 import { IPinocchioConfig, IPinocchioInstanceConfig } from './PinocchioConfig'
+import { PinocchioConfigKind } from './PinocchioConfigKind'
+import { PinocchioConfigLlm } from './PinocchioConfigLlm'
+import { MsgBoxOkError, MsgBoxOkWarning } from '../../tools/MsgBox'
 
 interface IContentProps {
     webSocket?: WebSocket
@@ -17,6 +20,9 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const pinocchioBoxRef = useRef<HTMLDivElement | null>(null)
     const messagesEndRef = useRef<HTMLSpanElement | null>(null)
     const [pinocchioBoxTop, setPinocchioBoxTop] = useState(0)
+    const [showConfigKind, setShowConfigKind] = useState(false)
+    const [showConfigLlm, setShowConfigLlm] = useState(false)
+    const [msgBox, setMsgBox] =useState(<></>)
 
     useEffect(() => {
         if (pinocchioBoxRef.current) setPinocchioBoxTop(pinocchioBoxRef.current.getBoundingClientRect().top)
@@ -68,13 +74,30 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         </>
     }
 
+    const pinocchioConfigClose = (pc:IPinocchioConfig|undefined) => {
+        if (pc) {
+            pinocchioData.pinocchioConfig = pc
+            //+++ send2back
+        }
+        setShowConfigKind(false)
+    }
+
+    const checkShowConfigKind = () => {
+        if (pinocchioData.pinocchioConfig.llms.length>0)
+            setShowConfigKind(true)
+        else
+            setMsgBox(MsgBoxOkWarning('Manage Kind', 'There exist no LLM, please create LLM resources prior to creating Kind associations', setMsgBox))
+    }
+    
     return <>
         { pinocchioData.started && 
         <Card sx={{flex:1, width:'98%', alignSelf:'center', margin:'8px'}}>
             <CardHeader title={
                 <Stack direction={'row'} alignItems={'center'}>
                     <Typography marginRight={'32px'}><b>Events:</b> {pinocchioData.analysis.length}</Typography>
-                    <Typography marginRight={'32px'}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {pinocchioData.paused?'paused':pinocchioData.started?'started':'stopped'}</Typography>
+                    <Typography marginRight={'32px'} flex={1}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {pinocchioData.paused?'paused':pinocchioData.started?'started':'stopped'}</Typography>
+                    <Button onClick={checkShowConfigKind}>Kind</Button>
+                    <Button onClick={() => setShowConfigLlm(true)}>LLM</Button>
                 </Stack>}>
             </CardHeader>
             <CardContent>
@@ -85,6 +108,9 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 </Box>
             </CardContent>
         </Card>}
+        { showConfigKind && <PinocchioConfigKind pinocchioConfig={pinocchioData.pinocchioConfig} onClose={pinocchioConfigClose} />}
+        { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.pinocchioConfig} onClose={pinocchioConfigClose} />}
+        { msgBox }
     </>    
 }
 export { PinocchioTabContent }

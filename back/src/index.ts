@@ -39,7 +39,7 @@ import { DockerConfigMaps } from './tools/DockerConfigMaps'
 //import { DockerTools } from './tools/DockerTools'
 import { OpsChannel } from './channels/ops/OpsChannel'
 import { TrivyChannel } from './channels/trivy/TrivyChannel'
-import { IChannel } from './channels/IChannel'
+import { IBackChannelObject, IChannel } from './channels/IChannel'
 import { EchoChannel } from './channels/echo/EchoChannel'
 import { FilemanChannel } from './channels/fileman/FilemanChannel'
 
@@ -1478,18 +1478,18 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         if (envChannelEchoEnabled) runningInstance.channels.set('echo', new EchoChannel(runningInstance.clusterInfo))
         if (envChannelFilemanEnabled) runningInstance.channels.set('fileman', new FilemanChannel(runningInstance.clusterInfo))
         if (envChannelMagnifyEnabled) runningInstance.channels.set('magnify', new MagnifyChannel(runningInstance.clusterInfo, localKwirthData))
-        if (envChannelPinocchioEnabled) runningInstance.channels.set('pinocchio', new PinocchioChannel(runningInstance.clusterInfo))
 
-        for (let channel of runningInstance.channels.values()) {
-            if (channel.requirements.storage) {
-                channel.writeStorage = async (id:string, data:any) => {
-                    await runningInstance.configMaps.write('kwirth-store-channel-'+id, JSON.stringify(data))
-                }
-                channel.readStorage = async (id:string) => {
-                    return JSON.parse(await runningInstance.configMaps.read('kwirth-store-channel-'+id))
-                }
+        // +++ refactor channels like providers (with constructor and registered)
+        let backChannelObject:IBackChannelObject = {
+            writeStorage : async (id:string, data:any) => {
+                await runningInstance.configMaps.write('kwirth-store-channel-'+id, JSON.stringify(data))
+            },
+            readStorage : async (id:string) => {
+                return JSON.parse(await runningInstance.configMaps.read('kwirth-store-channel-'+id))
             }
         }
+        if (envChannelPinocchioEnabled) runningInstance.channels.set('pinocchio', new PinocchioChannel(runningInstance.clusterInfo, backChannelObject))
+
         // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to
         localKwirthData.channels =  Array.from(runningInstance.channels.keys()).map(k => {
             return runningInstance.channels.get(k)?.getChannelData()!

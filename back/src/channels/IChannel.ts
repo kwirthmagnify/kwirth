@@ -5,6 +5,11 @@ export interface IBackChannelRequirements {
     storage: boolean
 }
 
+export interface IBackChannelObject {
+    writeStorage?(id:string, data:any) : Promise<void>
+    readStorage?(id:string) : Promise<any>
+}
+
 interface IChannel {
     readonly channelId: string
     readonly requirements: IBackChannelRequirements
@@ -33,9 +38,6 @@ interface IChannel {
     removeConnection (webSocket:WebSocket) : void
     refreshConnection (webSocket:WebSocket) : boolean
     updateConnection (webSocket:WebSocket, instanceId:string) : boolean
-
-    writeStorage?(id:string, data:any) : Promise<void>
-    readStorage?(id:string) : Promise<any>
 }
 
 export { IChannel }

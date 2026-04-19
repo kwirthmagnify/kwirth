@@ -1,4 +1,5 @@
 import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
+import { IPinocchioConfig } from "./PinocchioConfig"
 
 export interface IPinocchioMessage extends IInstanceMessage {
     msgtype: 'pinocchiomessageresponse'
@@ -24,12 +25,18 @@ interface IAnalysis {
 }
 
 export interface IPinocchioData {
+    pinocchioConfig: IPinocchioConfig
     analysis: IAnalysis[]
     paused:boolean
     started:boolean
 }
 
 export class PinocchioData implements IPinocchioData {
+    pinocchioConfig = {
+        providers:[],
+        kinds:[],
+        llms:[]
+    }
     analysis: IAnalysis[] = []
     paused = false
     started = false

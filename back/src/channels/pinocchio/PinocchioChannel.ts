@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelRequirements, IChannel } from '../IChannel';
+import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
 import { generateText, Output } from 'ai'
 import { google, GoogleLanguageModelOptions } from '@ai-sdk/google'
@@ -12,16 +12,25 @@ enum EPinocchioCommand {
     INITIAL = 'initial',
 }
 
-interface ICommandConfigEvent {
+interface IConfigKind {
     kind: string
     system: string
     prompt: string
     action: ('inform'|'cancel'|'repair')[]
+    llm: string
 }
 
-interface ICommandConfigModel {
+interface IConfigLlm {
+    id: string
     provider: string
     model: string
+    key: string
+    data: any
+}
+
+interface IChannelConfig {
+    kinds: IConfigKind[]
+    llm: IConfigLlm[]
 }
 
 interface IPinocchioMessage extends IInstanceMessage {
@@ -68,15 +77,21 @@ class PinocchioChannel implements IChannel {
         storage: true
     }
     clusterInfo : ClusterInfo
+    backChannelObject : IBackChannelObject
     connections: {
         webSocket:WebSocket,
         lastRefresh: number,
         instances: IInstance[] 
     }[] = []
     analysis: IAnalysis[] = []
+    channelConfig: IChannelConfig = {
+        kinds: [],
+        llm: []
+    }
 
-    constructor (clusterInfo:ClusterInfo) {
+    constructor (clusterInfo:ClusterInfo, backChannelObject:IBackChannelObject) {
         this.clusterInfo = clusterInfo
+        this.backChannelObject = backChannelObject
     }
 
     startChannel = async () =>  {
@@ -84,6 +99,7 @@ class PinocchioChannel implements IChannel {
             kinds: ['Pod'],
             crdInstances: [],
             syncCrdInstances: false
+        
         })
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`)
         const data = await response.json()
@@ -109,8 +125,8 @@ class PinocchioChannel implements IChannel {
             modifyable: false,
             reconnectable: true,
             metrics: false,
-            providers: ['tick', 'events'],
-            sources: [ EClusterType.KUBERNETES, EClusterType.DOCKER ],
+            providers: ['events'],
+            sources: [ EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,
             cluster: true
