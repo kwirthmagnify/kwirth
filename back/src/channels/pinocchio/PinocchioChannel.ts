@@ -6,69 +6,11 @@ import { generateText, Output } from 'ai'
 import { google, GoogleLanguageModelOptions } from '@ai-sdk/google'
 import { z } from 'zod'
 import { V1Pod } from '@kubernetes/client-node';
-
-enum EPinocchioCommand {
-    STREAM = 'stream',
-    INITIAL = 'initial',
-}
-
-interface IConfigKind {
-    kind: string
-    system: string
-    prompt: string
-    action: ('inform'|'cancel'|'repair')[]
-    llm: string
-}
-
-interface IConfigLlm {
-    id: string
-    provider: string
-    model: string
-    key: string
-    data: any
-}
-
-interface IChannelConfig {
-    kinds: IConfigKind[]
-    llm: IConfigLlm[]
-}
-
-interface IPinocchioMessage extends IInstanceMessage {
-    msgtype: 'pinocchiomessage'
-    id: string
-    accessKey: string
-    instance: string
-    namespace: string
-    group: string
-    pod: string
-    container: string
-    command: EPinocchioCommand
-    data: any
-}
+import { EPinocchioCommand, IAnalysis, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse } from './PinocchioConfig';
 
 interface IInstance {
     instanceId: string
     accessKey: AccessKey
-}
-
-interface IPinocchioMessageResponse extends IInstanceMessage {
-    msgtype: 'pinocchiomessageresponse'
-    analysis: IAnalysis
-}
-
-interface IAnalysis {
-    findings: {
-        description: string
-        level: 'low'|'medium'|'high'|'critical'
-    }[],
-    globalRisk?: number
-    timestamp: number
-    usage?: {
-        input?:number,
-        output?:number
-    }
-    pod?: V1Pod
-    text?:string
 }
 
 class PinocchioChannel implements IChannel {
@@ -84,9 +26,23 @@ class PinocchioChannel implements IChannel {
         instances: IInstance[] 
     }[] = []
     analysis: IAnalysis[] = []
-    channelConfig: IChannelConfig = {
+    channelConfig: IPinocchioConfig = {
+        providers: [
+            {
+                name: 'google',
+                models: ['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-2.0-flash-001','gemini-2.0-flash-lite-001','gemini-2.0-flash-lite','gemini-2.5-flash-preview-tts','gemini-2.5-ro-preview-tts','gemini-flash-latest','gemini-flash-lite-latest','gemini-pro-latest','gemini-2.5-flash-lite','gemini-2.5-flash-image','gemini-3-pro-preview','gemini-3-flash-review','gemini-3.1-pro-preview','gemini-3.1-pro-preview-customtools','gemini-3.1-flash-lite-preview','gemini-3-pro-image-preview','gemini-3.1-flash-image-preview','gemini-3.1-flash-tts-preview','gemini-robotics-er-1.5-preview','gemini-robotics-er-1.6-preview','gemini-2.5-computer-use-preview-10-2025','gemini-2.5-flash-native-audio-latest','gemini-2.5-flash-native-audio-preview-09-2025']
+            },
+            {
+                name: 'kwirth',
+                models: ['alberto-1-flash-gordon-lite', 'alberto-1.5-python-forever']
+            },
+            {
+                name: 'openai',
+                models: ['o1', 'o1-mini', 'o3-mini', 'gtp-4o', 'gtp-4o-mini', 'gtp-4', 'gtp-4-turbo', 'gtp-3.5-turbo']
+            }
+        ],
         kinds: [],
-        llm: []
+        llms: []
     }
 
     constructor (clusterInfo:ClusterInfo, backChannelObject:IBackChannelObject) {
@@ -232,6 +188,9 @@ class PinocchioChannel implements IChannel {
             }
             let pinocchioMessage = instanceMessage as IPinocchioMessage
             switch(pinocchioMessage.command) {
+                case EPinocchioCommand.CONFIG:
+                    this.sendConfig(webSocket, instance, this.channelConfig)
+                    break
                 case EPinocchioCommand.STREAM:
                     break
                 case EPinocchioCommand.INITIAL:
@@ -265,7 +224,7 @@ class PinocchioChannel implements IChannel {
             timestamp: Date.now(),
             text: 'Pinocchio session accepted'
         }
-        this.sendData(webSocket, instance, analysis)
+        this.sendAnalysis(webSocket, instance, analysis)
         this.sendBatch(webSocket, instance)
         return true
     }
@@ -359,12 +318,12 @@ class PinocchioChannel implements IChannel {
     private broadcast = (an:IAnalysis) => {
         for (let connection of this.connections) {
             for (let instance of connection.instances) {
-                this.sendData(connection.webSocket, instance, an)
+                this.sendAnalysis(connection.webSocket, instance, an)
             }
         }
     }
 
-    private sendData = (ws:WebSocket, instance:IInstance, analysis:IAnalysis) => {
+    private sendAnalysis = (ws:WebSocket, instance:IInstance, analysis:IAnalysis) => {
         let msg:IPinocchioMessageResponse = {
             msgtype: 'pinocchiomessageresponse',
             channel: 'pinocchio',
@@ -373,6 +332,19 @@ class PinocchioChannel implements IChannel {
             type: EInstanceMessageType.DATA,
             instance: instance.instanceId,
             analysis
+        }
+        ws.send(JSON.stringify(msg))
+    }
+
+    private sendConfig = (ws:WebSocket, instance:IInstance, config:IPinocchioConfig) => {
+        let msg:IPinocchioMessageResponse = {
+            msgtype: 'pinocchiomessageresponse',
+            channel: 'pinocchio',
+            action: EInstanceMessageAction.COMMAND,
+            flow: EInstanceMessageFlow.RESPONSE,
+            type: EInstanceMessageType.DATA,
+            instance: instance.instanceId,
+            config
         }
         ws.send(JSON.stringify(msg))
     }

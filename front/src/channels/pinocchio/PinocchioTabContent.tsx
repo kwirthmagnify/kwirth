@@ -6,7 +6,7 @@ import { Info } from '@mui/icons-material'
 import { IPinocchioConfig, IPinocchioInstanceConfig } from './PinocchioConfig'
 import { PinocchioConfigKind } from './PinocchioConfigKind'
 import { PinocchioConfigLlm } from './PinocchioConfigLlm'
-import { MsgBoxOkError, MsgBoxOkWarning } from '../../tools/MsgBox'
+import { MsgBoxOk, MsgBoxOkWarning } from '../../tools/MsgBox'
 
 interface IContentProps {
     webSocket?: WebSocket
@@ -80,15 +80,16 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             //+++ send2back
         }
         setShowConfigKind(false)
+        setShowConfigLlm(false)
     }
 
     const checkShowConfigKind = () => {
         if (pinocchioData.pinocchioConfig.llms.length>0)
             setShowConfigKind(true)
         else
-            setMsgBox(MsgBoxOkWarning('Manage Kind', 'There exist no LLM, please create LLM resources prior to creating Kind associations', setMsgBox))
+            setMsgBox(MsgBoxOk('Manage Kind', 'There exist no LLM, please create LLM resources prior to creating Kind associations', setMsgBox))
     }
-    
+
     return <>
         { pinocchioData.started && 
         <Card sx={{flex:1, width:'98%', alignSelf:'center', margin:'8px'}}>

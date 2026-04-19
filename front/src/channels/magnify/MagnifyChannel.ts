@@ -26,10 +26,10 @@ interface IMagnifyMessage extends IInstanceMessage {
 }
 
 class MagnifyChannel implements IChannel {
+    channelId = 'magnify'
     private setupVisible = false
     SetupDialog: FC<ISetupProps> = MagnifySetup
     TabContent: FC<IContentProps> = MagnifyTabContent
-    channelId = 'magnify'
     tasks: number[] = []
     
     requirements:IChannelRequirements = {
