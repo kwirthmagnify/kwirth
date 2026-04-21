@@ -3,14 +3,19 @@ import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
 import { generateText, Output } from 'ai'
-import { google, GoogleLanguageModelOptions } from '@ai-sdk/google'
+import { createGoogleGenerativeAI, GoogleLanguageModelOptions } from '@ai-sdk/google'
 import { z } from 'zod'
 import { V1Pod } from '@kubernetes/client-node';
-import { EPinocchioCommand, IAnalysis, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse } from './PinocchioConfig';
+import { EPinocchioCommand, IAnalysis, IConfigLlm, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse } from './PinocchioConfig';
 
 interface IInstance {
     instanceId: string
     accessKey: AccessKey
+}
+
+interface IProviderEvent {
+    type: 'ADDED'|'MODIFIED'|'DELETED'
+    obj:any
 }
 
 class PinocchioChannel implements IChannel {
@@ -26,21 +31,21 @@ class PinocchioChannel implements IChannel {
         instances: IInstance[] 
     }[] = []
     analysis: IAnalysis[] = []
-    channelConfig: IPinocchioConfig = {
-        providers: [
-            {
-                name: 'google',
-                models: ['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-2.0-flash-001','gemini-2.0-flash-lite-001','gemini-2.0-flash-lite','gemini-2.5-flash-preview-tts','gemini-2.5-ro-preview-tts','gemini-flash-latest','gemini-flash-lite-latest','gemini-pro-latest','gemini-2.5-flash-lite','gemini-2.5-flash-image','gemini-3-pro-preview','gemini-3-flash-review','gemini-3.1-pro-preview','gemini-3.1-pro-preview-customtools','gemini-3.1-flash-lite-preview','gemini-3-pro-image-preview','gemini-3.1-flash-image-preview','gemini-3.1-flash-tts-preview','gemini-robotics-er-1.5-preview','gemini-robotics-er-1.6-preview','gemini-2.5-computer-use-preview-10-2025','gemini-2.5-flash-native-audio-latest','gemini-2.5-flash-native-audio-preview-09-2025']
-            },
-            {
-                name: 'kwirth',
-                models: ['alberto-1-flash-gordon-lite', 'alberto-1.5-python-forever']
-            },
-            {
-                name: 'openai',
-                models: ['o1', 'o1-mini', 'o3-mini', 'gtp-4o', 'gtp-4o-mini', 'gtp-4', 'gtp-4-turbo', 'gtp-3.5-turbo']
-            }
-        ],
+    providers: IConfigProvider[] = [
+        {
+            name: 'google',
+            models: ['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-2.0-flash-001','gemini-2.0-flash-lite-001','gemini-2.0-flash-lite','gemini-2.5-flash-preview-tts','gemini-2.5-ro-preview-tts','gemini-flash-latest','gemini-flash-lite-latest','gemini-pro-latest','gemini-2.5-flash-lite','gemini-2.5-flash-image','gemini-3-pro-preview','gemini-3-flash-review','gemini-3.1-pro-preview','gemini-3.1-pro-preview-customtools','gemini-3.1-flash-lite-preview','gemini-3-pro-image-preview','gemini-3.1-flash-image-preview','gemini-3.1-flash-tts-preview','gemini-robotics-er-1.5-preview','gemini-robotics-er-1.6-preview','gemini-2.5-computer-use-preview-10-2025','gemini-2.5-flash-native-audio-latest','gemini-2.5-flash-native-audio-preview-09-2025']
+        },
+        {
+            name: 'kwirth',
+            models: ['alberto-1-flash-gordon-lite', 'alberto-1.5-python-forever']
+        },
+        {
+            name: 'openai',
+            models: ['o1', 'o1-mini', 'o3-mini', 'gtp-4o', 'gtp-4o-mini', 'gtp-4', 'gtp-4-turbo', 'gtp-3.5-turbo']
+        }
+    ]
+    pinocchioConfig: IPinocchioConfig = {
         kinds: [],
         llms: []
     }
@@ -52,25 +57,24 @@ class PinocchioChannel implements IChannel {
 
     startChannel = async () =>  {
         this.clusterInfo.addSubscriber('events', this, {
-            kinds: ['Pod'],
+            kinds: ['Pod'],  // +++ populate this according to channel config
             crdInstances: [],
             syncCrdInstances: false
         
         })
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`)
-        const data = await response.json()
-        let an:IAnalysis = {
-            text: 'Pinocchio channel available Gemini models',
-            findings: data.models.map( (m:any) => {
-                return { 
-                    description: m.name.startsWith('models/')? m.name.substring(7): m.name,
-                    level: 'low'
-                }
-            }),
-            timestamp: Date.now()
-        }
-        console.log(an)
-        this.analysis.push(an)
+        // this init code for providers should be moved away
+        // +++ this data should be added to 'providers'
+        const respGoogle = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`)
+        const dataGoogle = await respGoogle.json()
+        
+        const respOpenAi = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY}})
+        const dataOpenAi = await respOpenAi.json()
+
+        const respMistral = await fetch('https://api.mistral.com/v1/models', { headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY}})
+        const dataMistral = await respMistral.json()
+
+        let config = await this.backChannelObject.readStorage!('config') as IPinocchioConfig
+        if (config) this.pinocchioConfig = config
     }
 
     getChannelData = (): BackChannelData => {
@@ -93,7 +97,62 @@ class PinocchioChannel implements IChannel {
         return ['', 'none', 'cluster'].indexOf(scope)
     }
 
-    async processProviderEvent(providerId:string, event:any) : Promise<void> {
+    buildModel = (obj:any) => {
+        let kindDefinition = this.pinocchioConfig.kinds.find(k => k.kind === obj.kind)
+        if (kindDefinition) {
+            let prompt = JSON.stringify(obj)
+            switch(kindDefinition.promptType) {
+                case 'artifact':
+                    break
+                case 'prepend':
+                    prompt = kindDefinition.prompt + prompt
+                    break
+                case 'append':
+                    prompt = prompt + kindDefinition.prompt
+                    break
+                case 'fixed':
+                    prompt = kindDefinition.prompt
+                    break
+            }
+            let system = kindDefinition.system
+            let llm = this.pinocchioConfig.llms.find(l => l.id === kindDefinition.llm)
+            if (llm) {
+                switch(llm.provider) {
+                    case 'google':
+                        const google = createGoogleGenerativeAI({
+                            apiKey: llm.key
+                        })
+                        return {
+                            model: google(llm.model),
+                            providerOptions: {
+                                google: {
+                                    structuredOutputs: true,
+                                } satisfies GoogleLanguageModelOptions
+                            },
+                            prompt,
+                            system
+                        }
+                    case 'kwirth':
+                        break
+                    case 'openai':
+                        break
+                    default:
+                        this.broadcastError('Cannot find LLM provider '+llm.provider)
+                        break
+                }
+            }
+            else {
+                this.broadcastError('Cannot find LLM with id '+kindDefinition.llm)
+            }
+
+        }
+        else {
+            this.broadcastError('Cannot find definition for kind '+obj.kind)
+        }
+        return undefined
+    }
+
+    async processProviderEvent(providerId:string, event:IProviderEvent) : Promise<void> {
         switch(providerId) {
             // case 'validating':
             //     console.log('Received Validating event')
@@ -106,13 +165,16 @@ class PinocchioChannel implements IChannel {
                     try {
                         console.log('Pinocchio: added pod', event.obj.metadata?.name)
                         try {
+                            let {model, providerOptions, system, prompt} = this.buildModel(event.obj) || {}
+                            if (!model) return
+
+                            console.log(model)
+                            console.log(providerOptions)
+                            console.log(system)
+                            console.log(prompt)
                             const { output, usage } = await generateText({
-                                model: google('gemini-3.1-flash-lite-preview'),
-                                providerOptions: {
-                                    google: {
-                                        structuredOutputs: true,
-                                    } satisfies GoogleLanguageModelOptions,
-                                },
+                                model,
+                                providerOptions,
                                 output: Output.object({
                                     schema: z.object({
                                         findings: z.array(
@@ -124,10 +186,12 @@ class PinocchioChannel implements IChannel {
                                         globalRisk: z.number()
                                     }),
                                 }),
-                                system: 'You are a kubernetes admin expert, and you are in charge of deploying only workload that are secure. Generate a security analysis for this pod following the schema, y dámelo en español',
-                                prompt: JSON.stringify(event.obj),
+                                //'You are a kubernetes admin expert, and you are in charge of deploying only workload that are secure. Generate a security analysis for this pod following the schema, y dámelo en español',
+                                system: system||'', 
+                                prompt: prompt||'',
                             })
-                            let an:IAnalysis = {
+
+                            let analysis:IAnalysis = {
                                 text: `Starting pod '${event.obj.metadata.name}' in namespace '${event.obj.metadata.namespace}' (IN:${usage.inputTokens}, OUT:${usage.outputTokens})`,
                                 findings: output.findings,
                                 globalRisk: output.globalRisk,
@@ -138,8 +202,8 @@ class PinocchioChannel implements IChannel {
                                 },
                                 pod: event.obj
                             }
-                            this.analysis.push(an)
-                            this.broadcast(an)
+                            this.analysis.push(analysis)
+                            this.broadcastAnalysis(analysis)
                         }
                         catch (err) {
                             let message = `Pinocchio analysis ended in error when analyzing '${event.obj.metadata.name}' in namespace '${event.obj.metadata.namespace}'`
@@ -148,7 +212,7 @@ class PinocchioChannel implements IChannel {
                                 findings: [{ description: message, level: 'critical'}],
                                 timestamp: Date.now()
                             }
-                            this.broadcast(an)
+                            this.broadcastAnalysis(an)
                         }
                     }
                     catch (err) {
@@ -188,8 +252,34 @@ class PinocchioChannel implements IChannel {
             }
             let pinocchioMessage = instanceMessage as IPinocchioMessage
             switch(pinocchioMessage.command) {
-                case EPinocchioCommand.CONFIG:
-                    this.sendConfig(webSocket, instance, this.channelConfig)
+                case EPinocchioCommand.PROVIDERS:
+                    let msgProviders:IPinocchioMessageResponse = {
+                        msgtype: 'pinocchiomessageresponse',
+                        channel: 'pinocchio',
+                        action: EInstanceMessageAction.COMMAND,
+                        flow: EInstanceMessageFlow.RESPONSE,
+                        type: EInstanceMessageType.DATA,
+                        instance: instance.instanceId,
+                        providers: this.providers
+                    }
+                    webSocket.send(JSON.stringify(msgProviders))
+                    break
+                case EPinocchioCommand.CONFIGGET:
+                    let msgConfig:IPinocchioMessageResponse = {
+                        msgtype: 'pinocchiomessageresponse',
+                        channel: 'pinocchio',
+                        action: EInstanceMessageAction.COMMAND,
+                        flow: EInstanceMessageFlow.RESPONSE,
+                        type: EInstanceMessageType.DATA,
+                        instance: instance.instanceId,
+                        config:this.pinocchioConfig
+                    }
+                    webSocket.send(JSON.stringify(msgConfig))
+                    break
+                case EPinocchioCommand.CONFIGSET:
+                    let config:IPinocchioConfig = pinocchioMessage.data
+                    this.pinocchioConfig = config
+                    await this.backChannelObject.writeStorage!('config', config)
                     break
                 case EPinocchioCommand.STREAM:
                     break
@@ -315,10 +405,18 @@ class PinocchioChannel implements IChannel {
     // PRIVATE
     // *************************************************************************************
 
-    private broadcast = (an:IAnalysis) => {
+    private broadcastAnalysis = (an:IAnalysis) => {
         for (let connection of this.connections) {
             for (let instance of connection.instances) {
                 this.sendAnalysis(connection.webSocket, instance, an)
+            }
+        }
+    }
+
+    private broadcastError = (text:string) => {
+        for (let connection of this.connections) {
+            for (let instance of connection.instances) {
+                this.sendSignalError(connection.webSocket, instance, text)
             }
         }
     }
@@ -332,19 +430,6 @@ class PinocchioChannel implements IChannel {
             type: EInstanceMessageType.DATA,
             instance: instance.instanceId,
             analysis
-        }
-        ws.send(JSON.stringify(msg))
-    }
-
-    private sendConfig = (ws:WebSocket, instance:IInstance, config:IPinocchioConfig) => {
-        let msg:IPinocchioMessageResponse = {
-            msgtype: 'pinocchiomessageresponse',
-            channel: 'pinocchio',
-            action: EInstanceMessageAction.COMMAND,
-            flow: EInstanceMessageFlow.RESPONSE,
-            type: EInstanceMessageType.DATA,
-            instance: instance.instanceId,
-            config
         }
         ws.send(JSON.stringify(msg))
     }
@@ -379,6 +464,19 @@ class PinocchioChannel implements IChannel {
             level
         }
         ws.send(JSON.stringify(resp))
+    }
+
+    private sendSignalError = (ws:WebSocket, instance:IInstance, text:string): void => {
+        var errorMessage:ISignalMessage = {
+            action: EInstanceMessageAction.NONE,
+            flow: EInstanceMessageFlow.RESPONSE,
+            channel: 'pinocchio',
+            instance: instance.instanceId,
+            type: EInstanceMessageType.SIGNAL,
+            level: ESignalMessageLevel.ERROR,
+            text
+        }
+        ws.send(JSON.stringify(errorMessage))
     }
 
     getInstance(webSocket:WebSocket, instanceId: string) : IInstance | undefined{

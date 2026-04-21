@@ -1,6 +1,6 @@
 import { FC } from "react"
 import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from "../IChannel"
-import { EPinocchioCommand, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, PinocchioConfig, PinocchioInstanceConfig } from "./PinocchioConfig"
+import { EPinocchioCommand, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, PinocchioConfig, PinocchioInstanceConfig } from "./PinocchioConfig"
 import { PinocchioSetup, PinocchioIcon } from './PinocchioSetup'
 import { EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope, IOpsMessageResponse, ISignalMessage } from "@kwirthmagnify/kwirth-common"
 import { PinocchioData, IPinocchioData } from "./PinocchioData"
@@ -42,6 +42,7 @@ export class PinocchioChannel implements IChannel {
             case EInstanceMessageType.DATA:
                 if (msg.analysis) pinocchioData.analysis.push(msg.analysis)
                 else if (msg.config) pinocchioData.pinocchioConfig = msg.config as IPinocchioConfig
+                else if (msg.providers) pinocchioData.providers = msg.providers as IConfigProvider[]
                 return {
                     action: EChannelRefreshAction.REFRESH
                 }
@@ -55,11 +56,14 @@ export class PinocchioChannel implements IChannel {
                         action: EInstanceMessageAction.COMMAND,
                         flow: EInstanceMessageFlow.REQUEST,
                         type: EInstanceMessageType.DATA,
-                        command: EPinocchioCommand.CONFIG,
+                        command: EPinocchioCommand.CONFIGGET,
                         accessKey: channelObject.accessString!,
                         instance: signalMessage.instance,
-                        id: '1',
+                        id: '1'
                     }
+                    channelObject.webSocket?.send(JSON.stringify(msg))
+
+                    msg.command = EPinocchioCommand.PROVIDERS
                     channelObject.webSocket?.send(JSON.stringify(msg))
                 }
                 else {

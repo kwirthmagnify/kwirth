@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
-import { IConfigLlm, IPinocchioConfig } from './PinocchioConfig'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
+import { IConfigLlm, IConfigProvider, IPinocchioConfig } from './PinocchioConfig'
 import { objectClone } from '../magnify/Tools'
 
 interface IPinocchioLlmConfigProps {
     onClose: (pc: IPinocchioConfig | undefined) => void
+    providers: IConfigProvider[]
     pinocchioConfig: IPinocchioConfig
 }
 
@@ -97,18 +98,23 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                     <Stack spacing={2} style={{ width: '100%' }}>
                         <Stack direction={'column'} spacing={1}>
                             <TextField value={id} onChange={(e) => setId(e.target.value)} placeholder='Enter LLM id' label='LLM ID' variant='standard' fullWidth/>                            
-                            <Select value={provider} onChange={(e) => { setProvider(e.target.value); setModel('')}} variant='standard' fullWidth>
-                                {config.providers.map((prov) => (
-                                    <MenuItem key={prov.name} value={prov.name}>{prov.name}</MenuItem>
-                                ))}
-                            </Select>
+                            <FormControl variant='standard' sx={{ width: '100%'}}>
+                                <InputLabel>Provider</InputLabel>
+                                <Select value={provider} onChange={(e) => { setProvider(e.target.value); setModel('')}} variant='standard' fullWidth>
+                                    {props.providers.map((prov) => (
+                                        <MenuItem key={prov.name} value={prov.name}>{prov.name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
 
-                            <Select value={model} onChange={(e) => setModel(e.target.value)} variant='standard' fullWidth displayEmpty>
-                                <MenuItem value='' disabled>Select Model</MenuItem>
-                                {config.providers.find(p => p.name === provider)?.models.map((m) => (
-                                    <MenuItem key={m} value={m}>{m}</MenuItem>
-                                ))}
-                            </Select>
+                            <FormControl variant='standard' sx={{ width: '100%'}}>
+                                <InputLabel>Model</InputLabel>
+                                <Select value={model} onChange={(e) => setModel(e.target.value)} variant='standard' fullWidth displayEmpty>
+                                    {props.providers.find(p => p.name === provider)?.models.map((m) => (
+                                        <MenuItem key={m} value={m}>{m}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
 
                             <TextField value={key} onChange={(e) => setKey(e.target.value)} label='API Key' type='password' placeholder='Enter API Key' variant='standard' fullWidth/>
                         </Stack>

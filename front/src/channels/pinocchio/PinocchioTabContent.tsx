@@ -3,10 +3,11 @@ import { Box, Button, Card, CardContent, CardHeader, Stack, Typography } from '@
 import { IChannelObject } from '../IChannel'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
-import { IPinocchioConfig, IPinocchioInstanceConfig } from './PinocchioConfig'
+import { EPinocchioCommand, IPinocchioConfig, IPinocchioInstanceConfig, IPinocchioMessage } from './PinocchioConfig'
 import { PinocchioConfigKind } from './PinocchioConfigKind'
 import { PinocchioConfigLlm } from './PinocchioConfigLlm'
 import { MsgBoxOk, MsgBoxOkWarning } from '../../tools/MsgBox'
+import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 
 interface IContentProps {
     webSocket?: WebSocket
@@ -74,10 +75,22 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         </>
     }
 
-    const pinocchioConfigClose = (pc:IPinocchioConfig|undefined) => {
-        if (pc) {
-            pinocchioData.pinocchioConfig = pc
-            //+++ send2back
+    const pinocchioConfigClose = (config:IPinocchioConfig|undefined) => {
+        if (config) {
+            pinocchioData.pinocchioConfig = config
+            let msg:IPinocchioMessage = {
+                channel: 'pinocchio',
+                msgtype: 'pinocchiomessage',
+                id: '1',
+                accessKey: props.channelObject.accessString!,
+                instance: props.channelObject.instanceId,
+                command: EPinocchioCommand.CONFIGSET,
+                action: EInstanceMessageAction.COMMAND,
+                flow: EInstanceMessageFlow.REQUEST,
+                type: EInstanceMessageType.DATA,
+                data: config
+            }
+            props.channelObject.webSocket?.send(JSON.stringify(msg))
         }
         setShowConfigKind(false)
         setShowConfigLlm(false)
@@ -110,7 +123,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             </CardContent>
         </Card>}
         { showConfigKind && <PinocchioConfigKind pinocchioConfig={pinocchioData.pinocchioConfig} onClose={pinocchioConfigClose} />}
-        { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.pinocchioConfig} onClose={pinocchioConfigClose} />}
+        { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.pinocchioConfig} providers={pinocchioData.providers} onClose={pinocchioConfigClose} />}
         { msgBox }
     </>    
 }

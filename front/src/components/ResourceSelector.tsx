@@ -318,7 +318,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 { props.clusters?.map( (cluster) => {
                     return <MenuItem key={cluster.name} value={cluster.name} disabled={!cluster.enabled}>
                         <Stack direction={'row'} alignItems={'baseline'}>
-                            {getIcon(cluster, 24)} &nbsp; {cluster.name}
+                            {getIcon(cluster, 20)} &nbsp; {cluster.name}
                         </Stack>
                     </MenuItem>
                 })}

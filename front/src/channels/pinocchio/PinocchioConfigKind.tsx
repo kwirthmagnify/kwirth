@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, List, ListItemButton, MenuItem, Select, Stack, TextareaAutosize, Typography } from '@mui/material'
+import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, TextareaAutosize, TextField, Typography } from '@mui/material'
 import { IConfigKind, IPinocchioConfig } from './PinocchioConfig'
 import { objectClone } from '../magnify/Tools'
 
@@ -16,14 +16,19 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
     const [kind, setKind] = useState('Pod')
     const [enabled, setEnabled] = useState(true)
     const [system, setSystem] = useState('')
+    const [promptType, setPromptType] = useState('artifact')
     const [prompt, setPrompt] = useState('')
     const [action, setAction] = useState<'inform' | 'cancel' | 'repair'>('inform')
     const [llm, setLlm] = useState('')
+    const [steps, setSteps] = useState(1)
+    const [tools, setTools] = useState<string[]>([])
+    const allTools = ['tool1','tool2']
 
     const onKindSelected = (selectedKind: IConfigKind, index: number) => {
         setKind(selectedKind.kind)
         setEnabled(selectedKind.enabled)
         setSystem(selectedKind.system)
+        setPromptType(selectedKind.promptType)
         setPrompt(selectedKind.prompt)
         setAction(selectedKind.action)
         setLlm(selectedKind.llm)
@@ -35,12 +40,13 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
         setKind('Pod')
         setEnabled(true)
         setSystem('')
+        setPromptType('artifact')
         setPrompt('')
         setAction('inform')
     }
 
     const onAdd = () => {
-        const k: IConfigKind = { kind, enabled, system, prompt, action, llm }
+        const k: IConfigKind = { kind, enabled, system, promptType, prompt, action, llm, steps, tools }
         let newKinds = [...config.kinds]
 
         if (selectedIndex !== null) 
@@ -59,8 +65,13 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
         onNew()
     }
 
+    const onChangeTools = (event: SelectChangeEvent<typeof tools>) => {
+        let selectedTools  = event.target.value as string[]
+        setTools(selectedTools)
+    }
+
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '1200px', height: '65vh' } }}>
+        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '1200px', height: '75vh' } }}>
             <DialogTitle>LLM Config</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
                 
@@ -84,30 +95,61 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '16px' }} >
                     <Stack spacing={1} style={{ width: '100%' }}>
                         <Stack direction={'row'}>
-                            <Select value={kind} onChange={(e) => setKind(e.target.value)} variant='standard' sx={{ width: '100%', mr: 1 }}>
-                                {['Pod', 'Service', 'Ingress', 'HTTPRoute'].map((value) => (
-                                    <MenuItem key={value} value={value}>{value}</MenuItem>
-                                ))}
-                            </Select>
-                            <Select value={action} onChange={(e) => setAction(e.target.value as any)} variant='standard' sx={{ width: '100%', mr: 1 }}>
-                                {['inform', 'cancel', 'repair'].map((value) => (
-                                    <MenuItem key={value} value={value}>{value}</MenuItem>
-                                ))}
-                            </Select>
-                            <Select value={llm} onChange={(e) => setLlm(e.target.value)} variant='standard' sx={{ width: '100%' }}>
-                                {config.llms.map((llmItem) => (
-                                    <MenuItem key={llmItem.id} value={llmItem.id}>{llmItem.id}</MenuItem>
-                                ))}
-                            </Select>
+                            <FormControl variant='standard' sx={{ width: '100%', mr: 1 }}>
+                                <InputLabel>Kind</InputLabel>
+                                <Select value={kind} onChange={(e) => setKind(e.target.value)} variant='standard'>
+                                    {['Pod', 'Service', 'Ingress', 'HTTPRoute'].map((value) => (
+                                        <MenuItem key={value} value={value}>{value}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            <FormControl variant='standard' sx={{ width: '100%', mr: 1 }}>
+                                <InputLabel>Action</InputLabel>
+                                <Select value={action} onChange={(e) => setAction(e.target.value as any)} variant='standard'>
+                                    {['inform', 'cancel', 'repair'].map((value) => (
+                                        <MenuItem key={value} value={value}>{value}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            <FormControl variant='standard' sx={{ width: '100%'}}>
+                                <InputLabel>LLM Id</InputLabel>
+                                <Select value={llm} onChange={(e) => setLlm(e.target.value)} variant='standard' sx={{ width: '100%' }}>
+                                    {config.llms.map((llmItem) => (
+                                        <MenuItem key={llmItem.id} value={llmItem.id}>{llmItem.id}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                         </Stack>
                         
                         <Stack direction={'row'} alignItems={'center'}>
-                            <Typography flex={1}>Enabled (store the Kind but don't use it)</Typography>
+                            <Typography flex={1}>Enabled (store the Kind and set it to be usable)</Typography>
                             <Checkbox checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
                         </Stack>
 
+                        <Stack direction={'row'} justifyContent={'space-between'} m={1}>
+                            <TextField value={steps} onChange={(e) => setSteps(+e.target.value)} variant='standard' type='number' sx={{width:'30%', mr:1}} label='Steps'/>
+                            <FormControl variant='standard' sx={{ width: '100%'}}>
+                                <InputLabel>Tools</InputLabel>
+                                <Select onChange={onChangeTools} multiple value={tools} renderValue={(selected) => selected.join(', ')} variant='standard'>
+                                    { allTools.map( (tool:string) => {
+                                        return (
+                                            <MenuItem key={tool} value={tool}>
+                                                <Checkbox checked={tools.includes(tool)} />
+                                                <Typography>{tool}</Typography>
+                                            </MenuItem>
+                                        )
+                                    })}
+                                </Select>
+                            </FormControl>
+                        </Stack>
+
                         <TextareaAutosize value={system} onChange={(e) => setSystem(e.target.value)} style={{ minHeight: '130px', padding: '8px' }} placeholder='Enter system text' />
-                        <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '130px', padding: '8px' }} placeholder='Enter prompt' />
+                        <Select value={promptType} onChange={(e) => setPromptType(e.target.value as any)} variant='standard' sx={{ width: '100%', mr: 1 }} label='Action'>
+                            {['artifact', 'prepend', 'append', 'fixed'].map((value) => (
+                                <MenuItem key={value} value={value}>{value}</MenuItem>
+                            ))}
+                        </Select>
+                        <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '130px', padding: '8px' }} placeholder='Enter prompt' disabled={promptType==='artifact'}/>
 
                         <Stack direction={'row'} spacing={1}>
                             <Button variant='outlined' onClick={onNew} color='primary'>New</Button>

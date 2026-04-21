@@ -92,6 +92,17 @@ export class ClusterInfo {
             console.error(`Cannot subscribe channel '${c.getChannelData().id}' to provider '${providerId}' (provider do not exist)`)
     }
 
+    updateSubscriber = (providerId: string, c:IChannel, data:any) => {
+        //+++ review how to implement
+        let prov = this.providers.find(p => p.id===providerId)
+        if (prov) {
+            prov.addSubscriber(c,data)
+            console.log(`Subscriber '${c.getChannelData().id}' added to provider '${providerId}'`)
+        }
+        else
+            console.error(`Cannot subscribe channel '${c.getChannelData().id}' to provider '${providerId}' (provider do not exist)`)
+    }
+
     removeSubscriber = (providerId: string, c:IChannel) => {
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {

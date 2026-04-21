@@ -1,6 +1,7 @@
-import { IAnalysis, IPinocchioConfig } from "./PinocchioConfig"
+import { IAnalysis, IConfigProvider, IPinocchioConfig } from "./PinocchioConfig"
 
 export interface IPinocchioData {
+    providers:IConfigProvider[]
     pinocchioConfig: IPinocchioConfig
     analysis: IAnalysis[]
     paused:boolean
@@ -8,8 +9,8 @@ export interface IPinocchioData {
 }
 
 export class PinocchioData implements IPinocchioData {
+    providers:IConfigProvider[] = []
     pinocchioConfig = {
-        providers:[],
         kinds:[],
         llms:[]
     }

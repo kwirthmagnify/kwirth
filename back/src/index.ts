@@ -1485,7 +1485,11 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                 await runningInstance.configMaps.write('kwirth-store-channel-'+id, JSON.stringify(data))
             },
             readStorage : async (id:string) => {
-                return JSON.parse(await runningInstance.configMaps.read('kwirth-store-channel-'+id))
+                let content = await runningInstance.configMaps.read('kwirth-store-channel-'+id)
+                if (content)
+                    return JSON.parse(content)
+                else
+                    return undefined
             }
         }
         if (envChannelPinocchioEnabled) runningInstance.channels.set('pinocchio', new PinocchioChannel(runningInstance.clusterInfo, backChannelObject))
@@ -1930,7 +1934,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
     switch (exenv) {
         case 'electron':
             kwirthData = {
-                namespace: '',
+                namespace: 'default',
                 deployment: '',
                 isElectron: true,
                 inCluster: false,

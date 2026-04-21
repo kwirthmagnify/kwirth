@@ -5,7 +5,7 @@ export class KubernetesConfigMaps implements IConfigMaps {
     coreApi:CoreV1Api
     namespace:string
 
-    constructor (coreApi: CoreV1Api, namespace:string) {
+    constructor(coreApi: CoreV1Api, namespace:string) {
         this.coreApi=coreApi
         this.namespace=namespace
     }
