@@ -1,16 +1,18 @@
 import { IAnalysis, IConfigProvider, IPinocchioConfig } from "./PinocchioConfig"
 
 export interface IPinocchioData {
-    providers:IConfigProvider[]
-    pinocchioConfig: IPinocchioConfig
+    providersAvailable: string[]
+    providers: IConfigProvider[]
+    config: IPinocchioConfig
     analysis: IAnalysis[]
     paused:boolean
     started:boolean
 }
 
 export class PinocchioData implements IPinocchioData {
-    providers:IConfigProvider[] = []
-    pinocchioConfig = {
+    providersAvailable: string[] = []
+    providers: IConfigProvider[] = []
+    config = {
         kinds:[],
         llms:[]
     }

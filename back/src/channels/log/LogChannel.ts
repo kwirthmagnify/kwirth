@@ -44,7 +44,7 @@ class LogChannel implements IChannel {
             id: 'log',
             routable: false,
             pauseable: true,
-            modifyable: false,
+            modifiable: false,
             reconnectable: true,
             metrics: false,
             providers: [],

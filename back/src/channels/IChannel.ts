@@ -6,8 +6,8 @@ export interface IBackChannelRequirements {
 }
 
 export interface IBackChannelObject {
-    writeStorage?(id:string, data:any) : Promise<void>
-    readStorage?(id:string) : Promise<any>
+    writeStorage?(id:string, secret:boolean, data:any) : Promise<void>
+    readStorage?(id:string, secret:boolean) : Promise<any>
 }
 
 interface IChannel {

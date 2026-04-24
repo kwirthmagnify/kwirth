@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { IConfigLlm, IConfigProvider, IPinocchioConfig } from './PinocchioConfig'
 import { objectClone } from '../magnify/Tools'
 
@@ -10,16 +10,14 @@ interface IPinocchioLlmConfigProps {
 }
 
 const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchioLlmConfigProps) => {
-    const [msgBox, setMsgBox] = useState(<></>)
     const [config, setConfig] = useState(objectClone(props.pinocchioConfig) as IPinocchioConfig)
     
-    // Estado para controlar la edición por índice
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
-    // Estados del formulario
     const [id, setId] = useState('')
     const [provider, setProvider] = useState('google')
     const [model, setModel] = useState('')
+    const [useProviderKey, setUseProviderKey] = useState(true)
     const [key, setKey] = useState('')
 
     const onLlmSelected = (index: number) => {
@@ -28,6 +26,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
             setId(l.id)
             setProvider(l.provider)
             setModel(l.model)
+            setUseProviderKey(l.useProviderKey)
             setKey(l.key)
             setSelectedIndex(index)
         }
@@ -36,44 +35,42 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
     const onNew = () => {
         setSelectedIndex(null)
         setId('')
-        setProvider('google')
+        setProvider('')
         setModel('')
+        setUseProviderKey(false)
         setKey('')
     }
 
     const onAdd = () => {
-        const l: IConfigLlm = {
+        const llm: IConfigLlm = {
             id,
             provider,
             model,
+            useProviderKey,
             key
         }
 
         let newLlms = [...config.llms]
 
-        if (selectedIndex !== null) {
-            // Actualizar existente
-            newLlms[selectedIndex] = l
-        } else {
-            // Añadir nuevo
-            newLlms.push(l)
-        }
+        if (selectedIndex !== null) 
+            newLlms[selectedIndex] = llm
+        else
+            newLlms.push(llm)
 
         setConfig({ ...config, llms: newLlms })
-        onNew() // Limpiar tras guardar
+        onNew()
     }
 
     const onRemove = () => {
         if (selectedIndex === null) return
         
-        // Eliminación precisa por índice
         const newLlms = config.llms.filter((_, i) => i !== selectedIndex)
         setConfig({ ...config, llms: newLlms })
         onNew()
     }
 
     return (<>
-        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '800px', height: '45vh' } }}>
+        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '800px', height: '50vh' } }}>
             <DialogTitle>LLM Config</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
                 
@@ -81,11 +78,11 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                     <Box sx={{ flex: 1, overflowY: 'auto', overflowX:'hidden' }}>
                         <List sx={{ flexGrow: 1, mr: 2, width: '100%' }}>
                             {
-                                config.llms.map((l, index) =>
+                                config.llms.map((llm, index) =>
                                     <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onLlmSelected(index)}>
                                         <Stack direction={'column'}>
-                                            <Typography sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>{l.id}</Typography>
-                                            <Typography color={'darkgray'} fontSize={12}>{l.provider}</Typography>
+                                            <Typography sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>{llm.id}</Typography>
+                                            <Typography color={'darkgray'} fontSize={12}>{llm.provider}</Typography>
                                         </Stack>
                                     </ListItemButton>
                                 )
@@ -102,7 +99,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                                 <InputLabel>Provider</InputLabel>
                                 <Select value={provider} onChange={(e) => { setProvider(e.target.value); setModel('')}} variant='standard' fullWidth>
                                     {props.providers.map((prov) => (
-                                        <MenuItem key={prov.name} value={prov.name}>{prov.name}</MenuItem>
+                                        <MenuItem key={prov.name} value={prov.name} disabled={props.providers.find(p=> p.name===prov.name)?.models.length===0}>{prov.name}</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
@@ -110,13 +107,18 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                             <FormControl variant='standard' sx={{ width: '100%'}}>
                                 <InputLabel>Model</InputLabel>
                                 <Select value={model} onChange={(e) => setModel(e.target.value)} variant='standard' fullWidth displayEmpty>
-                                    {props.providers.find(p => p.name === provider)?.models.map((m) => (
-                                        <MenuItem key={m} value={m}>{m}</MenuItem>
+                                    {props.providers.find(p => p.name === provider)?.models.map((model, index) => (
+                                        <MenuItem key={index} value={model.id}>{model.name}</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
 
-                            <TextField value={key} onChange={(e) => setKey(e.target.value)} label='API Key' type='password' placeholder='Enter API Key' variant='standard' fullWidth/>
+                            <Stack direction={'row'} alignItems={'center'}>
+                                <Typography flex={1}>Use provider API Key (or enter a specific one)</Typography>
+                                <Checkbox checked={useProviderKey} onChange={(e) => setUseProviderKey(e.target.checked)} />
+                            </Stack>
+
+                            <TextField value={key} onChange={(e) => setKey(e.target.value)} disabled={useProviderKey} label='API Key' type='password' placeholder='Enter API Key' variant='standard' fullWidth/>
                         </Stack>
 
                         <Stack direction={'row'} spacing={1}>
@@ -134,7 +136,6 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                 <Button onClick={() => props.onClose(undefined)}>cancel</Button>
             </DialogActions>
         </Dialog>
-        {msgBox}
     </>)
 }
 

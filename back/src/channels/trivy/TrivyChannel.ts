@@ -55,7 +55,7 @@ class TrivyChannel implements IChannel {
             id: this.channelId,
             routable: false,
             pauseable: false,
-            modifyable: false,
+            modifiable: false,
             reconnectable: false,
             metrics: false,
             //events: false, 

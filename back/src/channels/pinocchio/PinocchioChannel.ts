@@ -4,9 +4,14 @@ import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChan
 import { Request, Response } from 'express'
 import { generateText, Output } from 'ai'
 import { createGoogleGenerativeAI, GoogleLanguageModelOptions } from '@ai-sdk/google'
+import { createMistral, MistralLanguageModelOptions } from '@ai-sdk/mistral'
 import { z } from 'zod'
-import { V1Pod } from '@kubernetes/client-node';
-import { EPinocchioCommand, IAnalysis, IConfigLlm, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse } from './PinocchioConfig';
+import { EPinocchioCommand, IAnalysis, IConfigKind, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable } from './PinocchioConfig';
+import { loadModels } from './Tools';
+import { createOpenAI, OpenAILanguageModelChatOptions } from '@ai-sdk/openai';
+import { createGroq, GroqLanguageModelOptions } from '@ai-sdk/groq';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { createDeepSeek } from '@ai-sdk/deepseek';
 
 interface IInstance {
     instanceId: string
@@ -18,6 +23,14 @@ interface IProviderEvent {
     obj:any
 }
 
+interface IModelInvocation {
+    llmProviderId: string
+    llmModelId: string
+    model: any //LanguageModelV3
+    providerOptions: any //GoogleLanguageModelOptions|MistralLanguageModelOptions
+    system: string
+    prompt: string
+}
 class PinocchioChannel implements IChannel {
     readonly channelId = 'pinocchio'
     readonly requirements: IBackChannelRequirements = {
@@ -31,20 +44,7 @@ class PinocchioChannel implements IChannel {
         instances: IInstance[] 
     }[] = []
     analysis: IAnalysis[] = []
-    providers: IConfigProvider[] = [
-        {
-            name: 'google',
-            models: ['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-2.0-flash-001','gemini-2.0-flash-lite-001','gemini-2.0-flash-lite','gemini-2.5-flash-preview-tts','gemini-2.5-ro-preview-tts','gemini-flash-latest','gemini-flash-lite-latest','gemini-pro-latest','gemini-2.5-flash-lite','gemini-2.5-flash-image','gemini-3-pro-preview','gemini-3-flash-review','gemini-3.1-pro-preview','gemini-3.1-pro-preview-customtools','gemini-3.1-flash-lite-preview','gemini-3-pro-image-preview','gemini-3.1-flash-image-preview','gemini-3.1-flash-tts-preview','gemini-robotics-er-1.5-preview','gemini-robotics-er-1.6-preview','gemini-2.5-computer-use-preview-10-2025','gemini-2.5-flash-native-audio-latest','gemini-2.5-flash-native-audio-preview-09-2025']
-        },
-        {
-            name: 'kwirth',
-            models: ['alberto-1-flash-gordon-lite', 'alberto-1.5-python-forever']
-        },
-        {
-            name: 'openai',
-            models: ['o1', 'o1-mini', 'o3-mini', 'gtp-4o', 'gtp-4o-mini', 'gtp-4', 'gtp-4-turbo', 'gtp-3.5-turbo']
-        }
-    ]
+    providers: IConfigProvider[] = []
     pinocchioConfig: IPinocchioConfig = {
         kinds: [],
         llms: []
@@ -57,24 +57,16 @@ class PinocchioChannel implements IChannel {
 
     startChannel = async () =>  {
         this.clusterInfo.addSubscriber('events', this, {
-            kinds: ['Pod'],  // +++ populate this according to channel config
+            kinds: kindsAvailable,
             crdInstances: [],
             syncCrdInstances: false
         
         })
-        // this init code for providers should be moved away
-        // +++ this data should be added to 'providers'
-        const respGoogle = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`)
-        const dataGoogle = await respGoogle.json()
-        
-        const respOpenAi = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY}})
-        const dataOpenAi = await respOpenAi.json()
-
-        const respMistral = await fetch('https://api.mistral.com/v1/models', { headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY}})
-        const dataMistral = await respMistral.json()
-
-        let config = await this.backChannelObject.readStorage!('config') as IPinocchioConfig
+        let provs = await this.backChannelObject.readStorage!('providers', true)
+        if (provs) this.providers = provs
+        let config = await this.backChannelObject.readStorage!('config', false) as IPinocchioConfig
         if (config) this.pinocchioConfig = config
+        loadModels(this.providers)
     }
 
     getChannelData = (): BackChannelData => {
@@ -82,7 +74,7 @@ class PinocchioChannel implements IChannel {
             id: 'pinocchio',
             routable: false,
             pauseable: true,
-            modifyable: false,
+            modifiable: false,
             reconnectable: true,
             metrics: false,
             providers: ['events'],
@@ -97,12 +89,15 @@ class PinocchioChannel implements IChannel {
         return ['', 'none', 'cluster'].indexOf(scope)
     }
 
-    buildModel = (obj:any) => {
-        let kindDefinition = this.pinocchioConfig.kinds.find(k => k.kind === obj.kind)
+    buildModelInvocation = (kindDefinition:IConfigKind, obj:any) : IModelInvocation|undefined => {
         if (kindDefinition) {
             let prompt = JSON.stringify(obj)
             switch(kindDefinition.promptType) {
                 case 'artifact':
+                    // already done in prompt declaration
+                    break
+                case 'jinja':
+                    // +++ pending
                     break
                 case 'prepend':
                     prompt = kindDefinition.prompt + prompt
@@ -113,41 +108,143 @@ class PinocchioChannel implements IChannel {
                 case 'fixed':
                     prompt = kindDefinition.prompt
                     break
+                case 'jinja':
+                    break
             }
             let system = kindDefinition.system
             let llm = this.pinocchioConfig.llms.find(l => l.id === kindDefinition.llm)
             if (llm) {
-                switch(llm.provider) {
-                    case 'google':
-                        const google = createGoogleGenerativeAI({
-                            apiKey: llm.key
-                        })
-                        return {
-                            model: google(llm.model),
-                            providerOptions: {
-                                google: {
-                                    structuredOutputs: true,
-                                } satisfies GoogleLanguageModelOptions
-                            },
-                            prompt,
-                            system
-                        }
-                    case 'kwirth':
-                        break
-                    case 'openai':
-                        break
-                    default:
-                        this.broadcastError('Cannot find LLM provider '+llm.provider)
-                        break
+                let key = llm.useProviderKey? this.providers.find(p => p.name === llm.provider)?.key : llm.key
+                if (key) {
+                    switch(llm.provider) {
+                        case 'deepseek':
+                            const deepseek = createDeepSeek({
+                                apiKey: key
+                            })
+                            return {
+                                llmProviderId: llm.provider,
+                                llmModelId: llm.model,
+                                model: deepseek(llm.model),
+                                providerOptions: {
+                                    openai: {
+                                        // structuredOutputs: true  unsupported
+                                    } satisfies OpenAILanguageModelChatOptions
+                                },
+                                prompt,
+                                system
+                            }
+                        case 'google':
+                            const google = createGoogleGenerativeAI({
+                                apiKey: key
+                            })
+                            return {
+                                llmProviderId: llm.provider,
+                                llmModelId: llm.model,
+                                model: google(llm.model),
+                                providerOptions: {
+                                    google: {
+                                        structuredOutputs: true,
+                                    } satisfies GoogleLanguageModelOptions
+                                },
+                                prompt,
+                                system
+                            }
+                        case 'openrouter':
+                            const openRouter = createOpenRouter({
+                                apiKey: key
+                            })
+                            return {
+                                llmProviderId: llm.provider,
+                                llmModelId: llm.model,
+                                model: openRouter(llm.model),
+                                providerOptions: {
+                                    // openRouter: {
+                                    //     specificationVersion: 'v3',
+                                    //     provider: 'openrouter',
+                                    //     modelId: '',
+                                    //     supportsImageUrls: true,
+                                    //     supportedUrls: undefined,
+                                    //     defaultObjectGenerationMode: undefined,
+                                    //     settings: undefined,
+                                    //     config: undefined,
+                                    //     getArgs: undefined,
+                                    //     doGenerate: function (options: LanguageModelV3CallOptions): Promise<Awaited<ReturnType<LanguageModelV3['doGenerate']>>> {
+                                    //         throw new Error('Function not implemented.');
+                                    //     },
+                                    //     doStream: function (options: LanguageModelV3CallOptions): Promise<Awaited<ReturnType<LanguageModelV3['doStream']>>> {
+                                    //         throw new Error('Function not implemented.');
+                                    //     }
+                                    // } satisfies OpenRouterCompletionLanguageModel
+                                },
+                                prompt,
+                                system
+                            }
+                        case 'groq':
+                            const groq = createGroq({
+                                apiKey: key
+                            })
+                            return {
+                                llmProviderId: llm.provider,
+                                llmModelId: llm.model,
+                                model: groq(llm.model),
+                                providerOptions: {
+                                    groq: {
+                                        structuredOutputs: true
+                                    } satisfies GroqLanguageModelOptions
+                                },
+                                prompt,
+                                system
+                            }
+                        case 'kwirth':
+                            break
+                        case 'openai':
+                            const openai = createOpenAI({
+                                apiKey: key
+                            })
+                            return {
+                                llmProviderId: llm.provider,
+                                llmModelId: llm.model,
+                                model: openai(llm.model),
+                                providerOptions: {
+                                    openai: {
+                                        // structuredOutputs: true,  this parameter is not supported by openai (or we are no using th right modeloptions)
+                                        // CHANGELOG.md:- 9bf7291: chore(providers/openai): enable structuredOutputs by default & switch to provider option
+
+                                    } satisfies OpenAILanguageModelChatOptions
+                                },
+                                prompt,
+                                system
+                            }
+                        case 'mistral':
+                            const mistral = createMistral({
+                                apiKey: key
+                            })
+                            return {
+                                llmProviderId: llm.provider,
+                                llmModelId: llm.model,
+                                model: mistral(llm.model),
+                                providerOptions: {
+                                    mistral: {
+                                        strictJsonSchema: true,
+                                        structuredOutputs: true
+                                    } satisfies MistralLanguageModelOptions
+                                },
+                                prompt,
+                                system
+                            }
+                        default:
+                            this.broadcastError(`Cannot find LLM provider '${llm.provider}'`)
+                            break
+                    }
+                }
+                else {
+                    this.broadcastError(`Cannot get API key for LLM '${kindDefinition.llm}'`)
                 }
             }
             else {
-                this.broadcastError('Cannot find LLM with id '+kindDefinition.llm)
+                this.broadcastError(`Cannot find LLM with id '${kindDefinition.llm}'`)
             }
 
-        }
-        else {
-            this.broadcastError('Cannot find definition for kind '+obj.kind)
         }
         return undefined
     }
@@ -163,56 +260,55 @@ class PinocchioChannel implements IChannel {
             case 'events':
                 if (event.type==='ADDED') {
                     try {
-                        console.log('Pinocchio: added pod', event.obj.metadata?.name)
-                        try {
-                            let {model, providerOptions, system, prompt} = this.buildModel(event.obj) || {}
-                            if (!model) return
+                        console.log(`Pinocchio: added ${event.obj.kind}`, event.obj.metadata?.name)
+                        for (let kind of this.pinocchioConfig.kinds.filter(k => k.enabled)) {
+                            try {
+                                let {llmModelId, llmProviderId, model, providerOptions, system, prompt} = this.buildModelInvocation(kind, event.obj) || {}
+                                if (!model) return
 
-                            console.log(model)
-                            console.log(providerOptions)
-                            console.log(system)
-                            console.log(prompt)
-                            const { output, usage } = await generateText({
-                                model,
-                                providerOptions,
-                                output: Output.object({
-                                    schema: z.object({
-                                        findings: z.array(
-                                            z.object({
-                                                description: z.string().min(1),
-                                                level: z.enum(['low', 'medium', 'high', 'critical']),
-                                            })
-                                        ),
-                                        globalRisk: z.number()
+                                const { output, usage } = await generateText({
+                                    model,
+                                    providerOptions,
+                                    output: Output.object({
+                                        schema: z.object({
+                                            findings: z.array(
+                                                z.object({
+                                                    description: z.string().min(1),
+                                                    level: z.enum(['low', 'medium', 'high', 'critical']),
+                                                })
+                                            )
+                                        }),
                                     }),
-                                }),
-                                //'You are a kubernetes admin expert, and you are in charge of deploying only workload that are secure. Generate a security analysis for this pod following the schema, y dámelo en español',
-                                system: system||'', 
-                                prompt: prompt||'',
-                            })
+                                    //'You are a kubernetes admin expert, and you are in charge of deploying only workload that are secure. Generate a security analysis for this pod following the schema, y dámelo en español',
+                                    system: system||'You are a very polite AI system', 
+                                    prompt: prompt||'Hi AI, how are you?',
+                                })
 
-                            let analysis:IAnalysis = {
-                                text: `Starting pod '${event.obj.metadata.name}' in namespace '${event.obj.metadata.namespace}' (IN:${usage.inputTokens}, OUT:${usage.outputTokens})`,
-                                findings: output.findings,
-                                globalRisk: output.globalRisk,
-                                timestamp: Date.now(),
-                                usage: {
-                                    input: usage.inputTokens,
-                                    output: usage.outputTokens
-                                },
-                                pod: event.obj
+                                let analysis:IAnalysis = {
+                                    text: `${event.type} ${event.obj.kind} '${event.obj.metadata.name}' in namespace '${event.obj.metadata.namespace}' [LLM:${llmProviderId}/${llmModelId}, IN:${usage.inputTokens}, OUT:${usage.outputTokens}]`,
+                                    findings: output.findings,
+                                    timestamp: Date.now(),
+                                    usage: {
+                                        input: usage.inputTokens,
+                                        output: usage.outputTokens
+                                    },
+                                    pod: event.obj
+                                }
+                                this.analysis.push(analysis)
+                                this.broadcastAnalysis(analysis)
                             }
-                            this.analysis.push(analysis)
-                            this.broadcastAnalysis(analysis)
-                        }
-                        catch (err) {
-                            let message = `Pinocchio analysis ended in error when analyzing '${event.obj.metadata.name}' in namespace '${event.obj.metadata.namespace}'`
-                            console.log(message, err)
-                            let an:IAnalysis = {
-                                findings: [{ description: message, level: 'critical'}],
-                                timestamp: Date.now()
+                            catch (err:any) {
+                                let message = `Pinocchio analysis ended in error when analyzing '${event.obj.metadata.name}' in namespace '${event.obj.metadata.namespace}' [Kind:${event.obj.kind}]`
+                                console.log(message, err)
+                                let an:IAnalysis = {
+                                    findings: [
+                                        { description: message, level: 'critical'},
+                                        { description: JSON.stringify(err), level: 'critical'}
+                                    ],
+                                    timestamp: Date.now()
+                                }
+                                this.broadcastAnalysis(an)
                             }
-                            this.broadcastAnalysis(an)
                         }
                     }
                     catch (err) {
@@ -252,40 +348,39 @@ class PinocchioChannel implements IChannel {
             }
             let pinocchioMessage = instanceMessage as IPinocchioMessage
             switch(pinocchioMessage.command) {
-                case EPinocchioCommand.PROVIDERS:
-                    let msgProviders:IPinocchioMessageResponse = {
+                case EPinocchioCommand.PROVIDERSAVAILABLE:
+                    let msgProvidersAvailable:IPinocchioMessageResponse = {
                         msgtype: 'pinocchiomessageresponse',
                         channel: 'pinocchio',
                         action: EInstanceMessageAction.COMMAND,
                         flow: EInstanceMessageFlow.RESPONSE,
                         type: EInstanceMessageType.DATA,
                         instance: instance.instanceId,
-                        providers: this.providers
+                        providersAvailable: ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek', 'kwirth', ]
                     }
-                    webSocket.send(JSON.stringify(msgProviders))
+                    webSocket.send(JSON.stringify(msgProvidersAvailable))
+                    break
+                case EPinocchioCommand.PROVIDERSGET:
+                    this.executeProvidersGet()
                     break
                 case EPinocchioCommand.CONFIGGET:
-                    let msgConfig:IPinocchioMessageResponse = {
-                        msgtype: 'pinocchiomessageresponse',
-                        channel: 'pinocchio',
-                        action: EInstanceMessageAction.COMMAND,
-                        flow: EInstanceMessageFlow.RESPONSE,
-                        type: EInstanceMessageType.DATA,
-                        instance: instance.instanceId,
-                        config:this.pinocchioConfig
-                    }
-                    webSocket.send(JSON.stringify(msgConfig))
+                    this.executeConfigGet()
                     break
                 case EPinocchioCommand.CONFIGSET:
                     let config:IPinocchioConfig = pinocchioMessage.data
                     this.pinocchioConfig = config
-                    await this.backChannelObject.writeStorage!('config', config)
+                    await this.backChannelObject.writeStorage!('config', false, config)
+                    this.executeConfigGet()
+                    this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Config updated')
                     break
-                case EPinocchioCommand.STREAM:
+                case EPinocchioCommand.PROVIDERSSET:
+                    let provs:IConfigProvider[] = pinocchioMessage.data
+                    this.providers = provs
+                    await this.backChannelObject.writeStorage!('providers', true, provs)
+                    await loadModels(this.providers)
+                    this.executeProvidersGet()
+                    this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Providers updated')
                     break
-                case EPinocchioCommand.INITIAL:
-                    break
-
             }
             return true
         }
@@ -405,6 +500,40 @@ class PinocchioChannel implements IChannel {
     // PRIVATE
     // *************************************************************************************
 
+    executeConfigGet = async () => {
+        for (let connection of this.connections) {
+            for (let instance of connection.instances) {
+                let msgConfig:IPinocchioMessageResponse = {
+                    msgtype: 'pinocchiomessageresponse',
+                    channel: 'pinocchio',
+                    action: EInstanceMessageAction.COMMAND,
+                    flow: EInstanceMessageFlow.RESPONSE,
+                    type: EInstanceMessageType.DATA,
+                    instance: instance.instanceId,
+                    config: this.pinocchioConfig
+                }
+                connection.webSocket.send(JSON.stringify(msgConfig))
+            }
+        }
+    }
+
+    executeProvidersGet = async () => {
+        for (let connection of this.connections) {
+            for (let instance of connection.instances) {
+                let msgProviders:IPinocchioMessageResponse = {
+                    msgtype: 'pinocchiomessageresponse',
+                    channel: 'pinocchio',
+                    action: EInstanceMessageAction.COMMAND,
+                    flow: EInstanceMessageFlow.RESPONSE,
+                    type: EInstanceMessageType.DATA,
+                    instance: instance.instanceId,
+                    providers: this.providers
+                }
+                connection.webSocket.send(JSON.stringify(msgProviders))
+            }
+        }
+    }
+    
     private broadcastAnalysis = (an:IAnalysis) => {
         for (let connection of this.connections) {
             for (let instance of connection.instances) {

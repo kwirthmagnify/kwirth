@@ -49,7 +49,7 @@ class OpsChannel implements IChannel {
             id: 'ops',
             routable: true,
             pauseable: false,
-            modifyable: false,
+            modifiable: false,
             reconnectable: false,
             metrics: false,
             //events: false,

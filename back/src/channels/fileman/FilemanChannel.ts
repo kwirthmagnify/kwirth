@@ -112,7 +112,7 @@ class FilemanChannel implements IChannel {
             id: 'fileman',
             routable: false,
             pauseable: false,
-            modifyable: false,
+            modifiable: false,
             reconnectable: true,
             metrics: false,
             //events: false,

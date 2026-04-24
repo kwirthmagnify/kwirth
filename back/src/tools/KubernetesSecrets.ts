@@ -31,9 +31,23 @@ export class KubernetesSecrets implements ISecrets {
         }
     }
     
-    public read = async (name:string, _defaultValue?:any): Promise<any> => {        
-        var ct = await this.coreApi?.readNamespacedSecret({ name, namespace:this.namespace })
-        return ct.data
+    public read = async (name:string, defaultValue?:any): Promise<any> => {        
+        try {
+            var ct = await this.coreApi?.readNamespacedSecret({ name, namespace:this.namespace })
+            if (ct.data===undefined) ct.data={ data: defaultValue }
+            return ct.data
+        }
+        catch(err:any){
+            if (err.code===404) {
+                console.log('Value not found reading secret',this.namespace,'/', name)
+                return defaultValue
+            }
+            else {
+                console.log('Error reading kubernetes secret',this.namespace,'/', name)
+                return undefined
+            }
+        }
+
     }  
 
 }

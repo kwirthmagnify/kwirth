@@ -116,7 +116,7 @@ class MagnifyChannel implements IChannel {
             id: 'magnify',
             routable: false,
             pauseable: false,
-            modifyable: false,
+            modifiable: false,
             reconnectable: true,
             metrics: true,
             //events: true,

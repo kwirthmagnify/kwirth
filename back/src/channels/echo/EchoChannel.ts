@@ -39,7 +39,7 @@ class EchoChannel implements IChannel {
             id: 'echo',
             routable: false,
             pauseable: true,
-            modifyable: false,
+            modifiable: false,
             reconnectable: true,
             metrics: false,
             //events: false,

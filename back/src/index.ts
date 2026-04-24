@@ -1147,7 +1147,7 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
                 processStopInstanceConfig(webSocket, instanceConfig, ri.channels)
                 break
             case EInstanceMessageAction.MODIFY:
-                if (ri.channels.get(instanceConfig.channel)?.getChannelData().modifyable) {
+                if (ri.channels.get(instanceConfig.channel)?.getChannelData().modifiable) {
                     ri.channels.get(instanceConfig.channel)?.modifyInstance(webSocket, instanceConfig)
                 }
                 else {
@@ -1480,18 +1480,61 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         if (envChannelMagnifyEnabled) runningInstance.channels.set('magnify', new MagnifyChannel(runningInstance.clusterInfo, localKwirthData))
 
         // +++ refactor channels like providers (with constructor and registered)
-        let backChannelObject:IBackChannelObject = {
-            writeStorage : async (id:string, data:any) => {
-                await runningInstance.configMaps.write('kwirth-store-channel-'+id, JSON.stringify(data))
+        // let backChannelObject:IBackChannelObject = {
+        //     writeStorage : async (id:string, secret:boolean, data:any) => {
+        //         if (secret) {
+        //             await runningInstance.secrets.write('kwirth-store-channel-'+id, { data: btoa(JSON.stringify(data)) })
+        //         }
+        //         else
+        //             await runningInstance.configMaps.write('kwirth-store-channel-'+id, JSON.stringify(data))
+        //     },
+        //     readStorage : async (id:string, secret:boolean) => {
+        //         if (secret) {
+        //             let content = await runningInstance.secrets.read('kwirth-store-channel-'+id)
+        //             if (content && content['data'])
+        //                 return JSON.parse(atob(content['data']))
+        //                 //return JSON.parse(Buffer.from(content['data'], 'base64').toString('utf8'))
+        //             else
+        //                 return undefined
+        //         }
+        //         else {
+        //             let content = await runningInstance.configMaps.read('kwirth-store-channel-'+id)
+        //             if (content)
+        //                 return JSON.parse(content)
+        //             else
+        //                 return undefined
+        //         }
+        //     }
+        // }
+        let backChannelObject: IBackChannelObject = {
+            writeStorage: async (id: string, secret: boolean, data: any) => {
+                if (secret) {
+                    const jsonString = JSON.stringify(data);
+                    const base64Data = Buffer.from(jsonString, 'utf8').toString('base64');
+                    
+                    await runningInstance.secrets.write('kwirth-store-channel-' + id, { 
+                        data: base64Data 
+                    });
+                } else {
+                    await runningInstance.configMaps.write('kwirth-store-channel-' + id, JSON.stringify(data));
+                }
             },
-            readStorage : async (id:string) => {
-                let content = await runningInstance.configMaps.read('kwirth-store-channel-'+id)
-                if (content)
-                    return JSON.parse(content)
-                else
-                    return undefined
+            readStorage: async (id: string, secret: boolean) => {
+                if (secret) {
+                    let content = await runningInstance.secrets.read('kwirth-store-channel-' + id);
+                    if (content && content['data']) {
+                        const decodedString = Buffer.from(content['data'], 'base64').toString('utf8');
+                        return JSON.parse(decodedString);
+                    }
+                    return undefined;
+                } else {
+                    let content = await runningInstance.configMaps.read('kwirth-store-channel-' + id);
+                    if (content) return JSON.parse(content);
+                    return undefined;
+                }
             }
         }
+
         if (envChannelPinocchioEnabled) runningInstance.channels.set('pinocchio', new PinocchioChannel(runningInstance.clusterInfo, backChannelObject))
 
         // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to

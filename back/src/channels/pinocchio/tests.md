@@ -42,8 +42,7 @@ const { output } = await generateText({
                     description: z.string().min(1),
                     level: z.enum(['low', 'medium', 'high', 'critical']),
                 })
-            ),
-            globalRisk: z.number()
+            )
         }),
     }),
     system: 'You are a kubernetes admin expert, and you are in charge of deploying only workload that are secure. Generate a security analysis for this pod following the schema',

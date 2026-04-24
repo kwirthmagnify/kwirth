@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, TextareaAutosize, TextField, Typography } from '@mui/material'
-import { IConfigKind, IPinocchioConfig } from './PinocchioConfig'
+import { IConfigKind, IPinocchioConfig, kindsAvailable } from './PinocchioConfig'
 import { objectClone } from '../magnify/Tools'
 
 interface IPinocchioLlmConfigProps {
@@ -14,7 +14,7 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
     const [kind, setKind] = useState('Pod')
-    const [enabled, setEnabled] = useState(true)
+    const [enabled, setEnabled] = useState(false)
     const [system, setSystem] = useState('')
     const [promptType, setPromptType] = useState('artifact')
     const [prompt, setPrompt] = useState('')
@@ -32,6 +32,8 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
         setPrompt(selectedKind.prompt)
         setAction(selectedKind.action)
         setLlm(selectedKind.llm)
+        setSteps(selectedKind.steps)
+        setTools(selectedKind.tools)
         setSelectedIndex(index)
     }
 
@@ -43,6 +45,8 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
         setPromptType('artifact')
         setPrompt('')
         setAction('inform')
+        setSteps(1)
+        setTools([])
     }
 
     const onAdd = () => {
@@ -72,7 +76,7 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
 
     return (
         <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '1200px', height: '75vh' } }}>
-            <DialogTitle>LLM Config</DialogTitle>
+            <DialogTitle>Kind Config</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
                 
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '30%' }}>
@@ -98,7 +102,7 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
                             <FormControl variant='standard' sx={{ width: '100%', mr: 1 }}>
                                 <InputLabel>Kind</InputLabel>
                                 <Select value={kind} onChange={(e) => setKind(e.target.value)} variant='standard'>
-                                    {['Pod', 'Service', 'Ingress', 'HTTPRoute'].map((value) => (
+                                    {kindsAvailable.map((value) => (
                                         <MenuItem key={value} value={value}>{value}</MenuItem>
                                     ))}
                                 </Select>
@@ -145,11 +149,11 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
 
                         <TextareaAutosize value={system} onChange={(e) => setSystem(e.target.value)} style={{ minHeight: '130px', padding: '8px' }} placeholder='Enter system text' />
                         <Select value={promptType} onChange={(e) => setPromptType(e.target.value as any)} variant='standard' sx={{ width: '100%', mr: 1 }} label='Action'>
-                            {['artifact', 'prepend', 'append', 'fixed'].map((value) => (
+                            {['artifact', 'jinja', 'prepend', 'append', 'fixed'].map((value) => (
                                 <MenuItem key={value} value={value}>{value}</MenuItem>
                             ))}
                         </Select>
-                        <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '130px', padding: '8px' }} placeholder='Enter prompt' disabled={promptType==='artifact'}/>
+                        <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '130px', padding: '8px' }} placeholder='Enter prompt' disabled={'artifact jinja'.includes(promptType)}/>
 
                         <Stack direction={'row'} spacing={1}>
                             <Button variant='outlined' onClick={onNew} color='primary'>New</Button>

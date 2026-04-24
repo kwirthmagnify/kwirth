@@ -42,7 +42,7 @@ class AlertChannel implements IChannel {
             id: 'alert',
             routable: false,
             pauseable: true,
-            modifyable: false,
+            modifiable: false,
             reconnectable: true,
             metrics: false,
             //events: false,

@@ -78,7 +78,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             if (kwirthOk) {
                 let suppChannels  = data.channels.map(c => {
                     let suppSources  = '['+c.sources.join(',')+']'
-                    return `<b>${c.id}</b>: ${c.routable?'route ':''}${c.pauseable?'pause ':''}${c.modifyable?'modify ':''}${c.reconnectable?'reconnect ':''}${c.metrics?'metrics ':''} ${suppSources}`
+                    return `<b>${c.id}</b>: ${c.routable?'route ':''}${c.pauseable?'pause ':''}${c.modifiable?'modify ':''}${c.reconnectable?'reconnect ':''}${c.metrics?'metrics ':''} ${suppSources}`
                 }).join('<br/>')
                 setMsgBox(MsgBoxOk('Test cluster',`Connection to cluster and API key have been <font color=green>succesfully tested</font>. This is cluster data: <br/><br/>${status}<br/><br/>And these are supported channels: <br/>${suppChannels}`, setMsgBox))
             }

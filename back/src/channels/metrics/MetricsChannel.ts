@@ -37,7 +37,7 @@ class MetricsChannel implements IChannel {
             id: 'metrics',
             routable: false,
             pauseable: true,
-            modifyable: true,
+            modifiable: true,
             reconnectable: true,
             metrics: true,
             providers: [],
