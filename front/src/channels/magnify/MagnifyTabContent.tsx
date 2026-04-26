@@ -918,7 +918,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const launchNodeShell = (p:string[]) => {
         let f = magnifyData.files.filter(x => p.includes(x.path))
-        let podName = 'kwirth-node-shell'+'-'+f[0].name
+        let podName = 'kwirth-node-shell-' + f[0].name
         let podNamespace = 'default'
         sendCommand(EMagnifyCommand.NODE, ['shell', f[0].data.origin.metadata.name, podNamespace, podName])
         let id = window.setInterval( async () => {

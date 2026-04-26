@@ -9,3 +9,4 @@ set nextversion=%major%.%minor%.%level%
 echo %currversion% to %nextversion%
 echo export const VERSION:string="%nextversion%"; > version.ts
 echo const VERSION="%nextversion%"; module.exports = { VERSION }; > version.js
+echo set KWIRTH_VERSION="%nextversion%" > version.cmd

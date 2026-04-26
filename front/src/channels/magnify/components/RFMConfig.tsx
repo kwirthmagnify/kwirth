@@ -1,7 +1,6 @@
 import { IFileObject, ISpace } from '@jfvilas/react-file-manager'
 import { Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@mui/icons-material'
 import { Cluster, Config, Customize, Kubernetes, Network, Pod, Security, Settings, Storage } from '../icons/Icons'
-import { Console } from 'console'
 
 const spaces = new Map<string, ISpace>()
 

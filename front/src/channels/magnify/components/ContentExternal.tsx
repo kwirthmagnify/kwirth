@@ -612,7 +612,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 	}
 
 	const handleIsMaximized = () => {
-		props.onWindowChange(props.id, !isMaximized, props.x, props.y, props. width, props.height)
+		props.onWindowChange(props.id, !isMaximized, props.x, props.y, props.width, props.height)
 		setIsMaximized(!isMaximized)
 	}
 

@@ -380,7 +380,8 @@ const rfmSetup = (
                         else {
                             isOwner = f.data.origin.metadata.ownerReferences?.some((o:any) => o.kind === controllerKind && o.name === rootObj.metadata.name) || false
                         }
-                        if (isOwner) return f
+                        //+++if (isOwner) return f
+                        return isOwner
                     })
                     return allPods.map(f => f.data.origin)
                 }
@@ -393,7 +394,7 @@ const rfmSetup = (
 
                 const renderSet = (prefix:number, cStatuses:any) => {
                     cStatuses.map((c:any, index:number) => {
-                        result.push(<Box key={prefix*1000+index} sx={{ width: '8px', height: '8px', backgroundColor: getContainerColor(c), margin: '1px', display: 'inline-block' }}/>)
+                        result.push(<Box key={(prefix*1000+index).toString()} sx={{ width: '8px', height: '8px', backgroundColor: getContainerColor(c), margin: '1px', display: 'inline-block' }}/>)
                     })
                 }
                 if (f.data.origin.status.initContainerStatuses && f.data.origin.status.initContainerStatuses.length>0) renderSet(0, f.data.origin.status.initContainerStatuses)

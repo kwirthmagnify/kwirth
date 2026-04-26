@@ -3,7 +3,7 @@ import { Box, Button, Card, CardContent, CardHeader, Stack, Typography } from '@
 import { IChannelObject } from '../IChannel'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
-import { EPinocchioCommand, IConfigProvider, IPinocchioConfig, IPinocchioInstanceConfig, IPinocchioMessage } from './PinocchioConfig'
+import { EPinocchioCommand, IConfigProvider, IPinocchioConfig, IPinocchioMessage } from './PinocchioConfig'
 import { PinocchioConfigKind } from './PinocchioConfigKind'
 import { PinocchioConfigLlm } from './PinocchioConfigLlm'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
@@ -17,14 +17,13 @@ interface IContentProps {
 const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let pinocchioData:IPinocchioData = props.channelObject.data
     let pinocchioConfig:IPinocchioConfig = pinocchioData.config
-    let pinocchioInstanceConfig:IPinocchioInstanceConfig = props.channelObject.instanceConfig
+    //let pinocchioInstanceConfig:IPinocchioInstanceConfig = props.channelObject.instanceConfig
     const pinocchioBoxRef = useRef<HTMLDivElement | null>(null)
     const messagesEndRef = useRef<HTMLSpanElement | null>(null)
     const [pinocchioBoxTop, setPinocchioBoxTop] = useState(0)
     const [showConfigKind, setShowConfigKind] = useState(false)
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
-    const [msgBox, setMsgBox] =useState(<></>)
 
     useEffect(() => {
         if (pinocchioBoxRef.current) setPinocchioBoxTop(pinocchioBoxRef.current.getBoundingClientRect().top)
@@ -140,7 +139,6 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         { showConfigKind && <PinocchioConfigKind pinocchioConfig={pinocchioData.config} onClose={pinocchioConfigClose} />}
         { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.config} providers={pinocchioData.providers} onClose={pinocchioConfigClose} />}
         { showConfigProvider && <PinocchioConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
-        { msgBox }
     </>    
 }
 export { PinocchioTabContent }
