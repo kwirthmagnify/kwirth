@@ -40,7 +40,7 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
     const onNew = () => {
         setSelectedIndex(null)
         setKind('Pod')
-        setEnabled(true)
+        setEnabled(false)
         setSystem('')
         setPromptType('artifact')
         setPrompt('')
@@ -126,7 +126,7 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
                         </Stack>
                         
                         <Stack direction={'row'} alignItems={'center'}>
-                            <Typography flex={1}>Enabled (store the Kind and set it to be usable)</Typography>
+                            <Typography flex={1}>Enabled (this Kind will be checked by Pinocchio)</Typography>
                             <Checkbox checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
                         </Stack>
 
@@ -153,7 +153,7 @@ const PinocchioConfigKind: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
                                 <MenuItem key={value} value={value}>{value}</MenuItem>
                             ))}
                         </Select>
-                        <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '130px', padding: '8px' }} placeholder='Enter prompt' disabled={'artifact jinja'.includes(promptType)}/>
+                        <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '130px', padding: '8px' }} placeholder='Enter prompt' disabled={promptType==='artifact'}/>
 
                         <Stack direction={'row'} spacing={1}>
                             <Button variant='outlined' onClick={onNew} color='primary'>New</Button>

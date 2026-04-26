@@ -12,6 +12,10 @@ import { createOpenAI, OpenAILanguageModelChatOptions } from '@ai-sdk/openai';
 import { createGroq, GroqLanguageModelOptions } from '@ai-sdk/groq';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createDeepSeek } from '@ai-sdk/deepseek';
+const nunjucks = require('nunjucks')
+
+// basic nunjucks config
+nunjucks.configure({ autoescape: true })
 
 interface IInstance {
     instanceId: string
@@ -91,24 +95,22 @@ class PinocchioChannel implements IChannel {
 
     buildModelInvocation = (kindDefinition:IConfigKind, obj:any) : IModelInvocation|undefined => {
         if (kindDefinition) {
-            let prompt = JSON.stringify(obj)
+            let prompt
             switch(kindDefinition.promptType) {
                 case 'artifact':
-                    // already done in prompt declaration
+                    prompt = JSON.stringify(obj)
                     break
                 case 'jinja':
-                    // +++ pending
+                    prompt = nunjucks.renderString(kindDefinition.prompt, obj)
                     break
                 case 'prepend':
-                    prompt = kindDefinition.prompt + prompt
+                    prompt = kindDefinition.prompt + JSON.stringify(obj)
                     break
                 case 'append':
-                    prompt = prompt + kindDefinition.prompt
+                    prompt = JSON.stringify(obj) + kindDefinition.prompt
                     break
                 case 'fixed':
                     prompt = kindDefinition.prompt
-                    break
-                case 'jinja':
                     break
             }
             let system = kindDefinition.system

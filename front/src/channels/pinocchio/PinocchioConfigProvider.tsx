@@ -67,9 +67,9 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
             <DialogTitle>Manage Providers</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
                 
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '30%', borderRight: '1px solid #eee' }}>
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '30%' }}>
                     <Box sx={{ flex: 1, overflowY: 'auto' }}>
-                        <List sx={{ mr: 2 }}>
+                        <List sx={{ mr: 1 }}>
                             {providers.map((p, index) => (
                                 <ListItemButton 
                                     key={index} 
@@ -102,15 +102,6 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
                                 ))}
                             </Select>
                         </FormControl>
-                        {/* <TextField 
-                            label="Provider Name"
-                            variant='standard' 
-                            fullWidth
-                            value={name} 
-                            onChange={(e) => setName(e.target.value)} 
-                            helperText='This name must match an AI-SDK provider name'
-                        /> */}
-
                         <TextField 
                             label="API Key / Token"
                             type="password"

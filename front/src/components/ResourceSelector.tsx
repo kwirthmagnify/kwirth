@@ -146,6 +146,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             setAllContainers([])
             setContainers([])
             loadAllNamespaces(props.clusters?.find(c => c.name===cluster.name)!)
+            setChannel('')
         }
     }
 
@@ -197,6 +198,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
     const onAdd = () => {
         let tabName = ''
+        if (view===EInstanceConfigView.CLUSTER)
+            tabName = 'CLUSTER'
         if (view===EInstanceConfigView.NAMESPACE)
             tabName=namespaces.join('+')
         else if (view===EInstanceConfigView.GROUP)
@@ -224,8 +227,9 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     }
 
     const addable = () => {
-        if (cluster===undefined) return false
-        if (channel === EInstanceMessageChannel.NONE) return false
+        if (cluster === undefined) return false
+        if (channel === EInstanceMessageChannel.NONE || channel ==='') return false
+        if (view===EInstanceConfigView.CLUSTER) return true
         if (view==='') return false
         if (namespaces.length === 0) return false
         if (view===EInstanceConfigView.NAMESPACE) return true
@@ -328,6 +332,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={cluster.name===''}>
                 <InputLabel>View</InputLabel>
                 <Select value={view} onChange={onChangeView} >
+                    <MenuItem key={EInstanceConfigView.CLUSTER} value={EInstanceConfigView.CLUSTER}>cluster</MenuItem>
                     <MenuItem key={EInstanceConfigView.NAMESPACE} value={EInstanceConfigView.NAMESPACE} disabled={isDocker}>namespace</MenuItem>
                     <MenuItem key={EInstanceConfigView.GROUP} value={EInstanceConfigView.GROUP} disabled={isDocker}>controller</MenuItem>
                     <MenuItem key={EInstanceConfigView.POD} value={EInstanceConfigView.POD}>pod</MenuItem>
@@ -335,7 +340,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 </Select>
             </FormControl>
 
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={view==='' || isDocker}>
+            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={view==='' || isDocker || view===EInstanceConfigView.CLUSTER}>
                 <InputLabel>Namespace</InputLabel>
                 <Select onChange={onChangeNamespaces} multiple value={namespaces} renderValue={(selected) => selected.join(', ')}>
                 { allNamespaces && allNamespaces.map( (namespace:string) => {
@@ -349,7 +354,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 </Select>
             </FormControl>
 
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={namespaces.length===0 || view==='namespace' || isDocker}>
+            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={namespaces.length===0 || view==='namespace' || isDocker  || view===EInstanceConfigView.CLUSTER}>
                 <InputLabel>Controller</InputLabel>
                 <Select onChange={onChangeController} value={controllers} multiple renderValue={(selected) => selected.map(v => v.split('+')[1]).join(', ')}>
                 { allControllers && allControllers.map( (value) => 
@@ -396,7 +401,9 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={cluster.name === ''}>
                 <InputLabel >Channel</InputLabel>
                 <Select value={props.backChannels.length>0?channel:''} onChange={onChangeChannel}> 
-                    { props.backChannels.map(c => <MenuItem key={c.id} value={c.id}>{c.id}</MenuItem>) }
+                    { props.backChannels.map(c => 
+                        <MenuItem key={c.id} value={c.id} disabled={(!c.cluster && view===EInstanceConfigView.CLUSTER) || (c.cluster && view!==EInstanceConfigView.CLUSTER)}>{c.id}</MenuItem>)
+                    }
                 </Select>
             </FormControl>
 

@@ -738,11 +738,11 @@ const processReconnect = async (webSocket: WebSocket, instanceMessage: IInstance
             console.log('Found channel', channel.getChannelData().id)
             let updated = channel.updateConnection(webSocket, instanceMessage.instance)
             if (updated) {
-                sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.RECONNECT, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Reconnect successful')
+                sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.RECONNECT, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Reconnect successful on channel: '+channel.channelId)
                 return
             }
             else {
-                sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.RECONNECT, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'An error has ocurred while updating connection')
+                sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.RECONNECT, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'An error has occurred while updating connection to channel '+channel.channelId)
                 return
             }
         }
@@ -750,7 +750,7 @@ const processReconnect = async (webSocket: WebSocket, instanceMessage: IInstance
             console.log(`Instance '${instanceMessage.instance}' not found for reconnect on channel ${channel.getChannelData().id}`)
         }
     }
-    console.log(`Instance '${instanceMessage.instance}' found for reconnect in no channels`)
+    console.log(`Instance '${instanceMessage.instance}' not found for reconnect in any channels`)
     sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.RECONNECT, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Instance has not been found for reconnect', false)
 }
 
