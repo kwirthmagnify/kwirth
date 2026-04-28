@@ -1,7 +1,7 @@
 import { LoginApi } from '../api/LoginApi'
 import { IChannel } from '../channels/IChannel'
 import { ClusterInfo } from '../model/ClusterInfo'
-import { ELogComponent, logInfo } from '../tools/Logging'
+import { ELogComponent, logError, logInfo } from '../tools/Logging'
 import { IProvider } from './IProvider'
 import express, { Request, Response} from 'express'
 
@@ -11,10 +11,10 @@ interface IBusinessDataConfig {
 }
 
 export class BusinessProvider implements IProvider {
-    public readonly id = 'businessevent'
+    public readonly id = 'business'
     public readonly providesRouter = true
     public router = express.Router()
-    public routerAlias = 'business-data'
+    public routerAlias = 'business'
 
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IBusinessDataConfig>
@@ -37,10 +37,7 @@ export class BusinessProvider implements IProvider {
                                 }
                             so subscribers can subscribe to a list of spaces and/or types
                         */
-                        console.log(req.body)
-                        console.log(this.subscribers)
                         for (let [sub, config] of this.subscribers) {
-                            console.log(sub.channelId)
                             if (config.spaces.includes(req.body.space) && (req.body.type==='' || (req.body.type!=='' && config.types.includes(req.body.type)))) {
                                 sub.processProviderEvent(this.id, {
                                     type: 'event',
@@ -57,14 +54,13 @@ export class BusinessProvider implements IProvider {
                 }
                 catch (err) {
                     res.status(500).send()
-                    console.log('Error managing business event')
-                    console.log(err)
+                    logError(ELogComponent.PROVIDER, 'Error managing business event')
+                    logError(ELogComponent.PROVIDER, err)
                 }
             })
     }
 
     addSubscriber = async (c: IChannel, config:{spaces:string[], types:string[]}) => {
-        console.log('**************ADDSUBS')
         let data:IBusinessDataConfig = {
             spaces: config.spaces,
             types: config.types

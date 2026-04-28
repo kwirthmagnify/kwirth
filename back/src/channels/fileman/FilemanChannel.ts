@@ -8,6 +8,7 @@ import fs from 'fs'
 import path from 'path'
 import fileUpload from 'express-fileupload'
 import os from 'os'
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 const ParseListing = require ('@jfvilas/parse-listing')
 
 export interface IFilemanConfig {
@@ -139,7 +140,7 @@ class FilemanChannel implements IChannel {
 
     // +++ review expired keys mangement (user is receiving no message)
     async endpointRequest(endpoint:string, req:Request, res:Response, accessKey:AccessKey) : Promise<void> {
-        console.log('Received endpointRequest:', endpoint, req.method, req.url)
+        logInfo(ELogComponent.CHANNEL, `Received endpointRequest: ${endpoint} ${req.method} ${req.url}`)
 
         let instanceId=req.query['key'] as string
         let socket = this.webSockets.find(ws => ws.instances.some(i => i.accessKey.id === accessKey.id && i.instanceId === instanceId))
@@ -189,18 +190,18 @@ class FilemanChannel implements IChannel {
                             fs.unlinkSync(tmpName)
                         }
                         catch (err) {
-                            console.log('error downloading folder')
-                            console.log(err)
+                            logInfo(ELogComponent.CHANNEL, 'error downloading folder')
+                            logInfo(ELogComponent.CHANNEL, err)
                             this.sendSignalMessage(socket.ws, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.UNSOLICITED, ESignalMessageLevel.ERROR, instance.instanceId, 'Error building tar for download: '+err)
                         }
                     }
                     else {
-                        console.error('Unmanaged fileInfo/Type', fileInfo.type)
+                        logError(ELogComponent.CHANNEL, 'Unmanaged fileInfo/Type' + fileInfo.type)
                         this.sendSignalMessage(socket.ws, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.UNSOLICITED, ESignalMessageLevel.ERROR, instance.instanceId, 'File type not supported')
                     }
                 }
                 else {
-                    console.error('No fileInfo/Type', fileInfo)
+                    logError(ELogComponent.CHANNEL, 'No fileInfo/Type' + fileInfo)
                     this.sendSignalMessage(socket.ws, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.UNSOLICITED, ESignalMessageLevel.ERROR, instance.instanceId, 'Could not get file type')
                 }
                 break
@@ -266,7 +267,7 @@ class FilemanChannel implements IChannel {
         else {
             let socket = this.webSockets.find(s => s.ws === webSocket)
             if (!socket) {
-                console.log('Socket not found')
+                logInfo(ELogComponent.CHANNEL, 'Socket not found')
                 return false
             }
 
@@ -274,7 +275,7 @@ class FilemanChannel implements IChannel {
             let instance = instances.find(i => i.instanceId === instanceMessage.instance)
             if (!instance) {
                 this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, `Instance not found`)
-                console.log(`Instance ${instanceMessage.instance} not found`)
+                logInfo(ELogComponent.CHANNEL, `Instance ${instanceMessage.instance} not found`)
                 return false
             }
             let filemanMessage = instanceMessage as IFilemanMessage
@@ -285,7 +286,7 @@ class FilemanChannel implements IChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        console.log(`Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
+        logInfo(ELogComponent.CHANNEL, `Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
@@ -327,11 +328,11 @@ class FilemanChannel implements IChannel {
     }
 
     pauseContinueInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void => {
-        console.log('Pause/Continue not supported')
+        logInfo(ELogComponent.CHANNEL, 'Pause/Continue not supported')
     }
 
     modifyInstance = (webSocket:WebSocket, instanceConfig: IInstanceConfig): void => {
-        console.log('Modify not supported')
+        logInfo(ELogComponent.CHANNEL, 'Modify not supported')
     }
 
     stopInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig): void => {
@@ -358,15 +359,15 @@ class FilemanChannel implements IChannel {
                     instances.splice(pos,1)
                 }
                 else {
-                    console.log(`Instance ${instanceId} not found, cannot delete`)
+                    logInfo(ELogComponent.CHANNEL, `Instance ${instanceId} not found, cannot delete`)
                 }
             }
             else {
-                console.log('There are no Fileman Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no Fileman Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found on Fileman')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on Fileman')
         }
     }
 
@@ -384,7 +385,7 @@ class FilemanChannel implements IChannel {
             this.webSockets.splice(pos,1)
         }
         else {
-            console.log('WebSocket not found on Fileman for remove')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on Fileman for remove')
         }
     }
 
@@ -395,7 +396,7 @@ class FilemanChannel implements IChannel {
             return true
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
             return false
         }
     }
@@ -458,14 +459,14 @@ class FilemanChannel implements IChannel {
             if (instances) {
                 let instanceIndex = instances.findIndex(t => t.instanceId === instanceId)
                 if (instanceIndex>=0) return instances[instanceIndex]
-                console.log('Instance not found')
+                logInfo(ELogComponent.CHANNEL, 'Instance not found')
             }
             else {
-                console.log('There are no Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
         }
         return undefined
     }
@@ -493,16 +494,16 @@ class FilemanChannel implements IChannel {
 
         switch (filemanMessage.command) {
             case EFilemanCommand.HOME: {
-                console.log(`Get HOME`)
+                logInfo(ELogComponent.CHANNEL, `Get HOME`)
                 execResponse.data = instance.assets.map(a => `${a.podNamespace}/${a.podName}/${a.containerName}`)
                 execResponse.type = EInstanceMessageType.DATA
                 return execResponse
             }
             case EFilemanCommand.DIR: {
-                console.log(`Get DIR from '${filemanMessage.params![0]}' to ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container}`)
+                logInfo(ELogComponent.CHANNEL, `Get DIR from '${filemanMessage.params![0]}' to ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container}`)
                 let asset = instance.assets.find (a => a.podNamespace === filemanMessage.namespace && a.podName === filemanMessage.pod && a.containerName === filemanMessage.container)
                 if (!asset) {
-                    console.log(`Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`)
+                    logInfo(ELogComponent.CHANNEL, `Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`)
                     execResponse.data = `Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`
                     return execResponse
                 }
@@ -510,10 +511,10 @@ class FilemanChannel implements IChannel {
                 return
             }
             case EFilemanCommand.RENAME: {
-                console.log(`Do RENAME '${filemanMessage.params![0]}' to '${filemanMessage.params![1]}' on ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container}`)
+                logInfo(ELogComponent.CHANNEL, `Do RENAME '${filemanMessage.params![0]}' to '${filemanMessage.params![1]}' on ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container}`)
                 let asset = instance.assets.find (a => a.podNamespace === filemanMessage.namespace && a.podName === filemanMessage.pod && a.containerName === filemanMessage.container)
                 if (!asset) {
-                    console.log(`Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`)
+                    logInfo(ELogComponent.CHANNEL, `Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`)
                     execResponse.data = `Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`
                     return execResponse
                 }
@@ -540,15 +541,15 @@ class FilemanChannel implements IChannel {
                     }
                 }
                 catch (err) {
-                    console.log(err)
+                    logInfo(ELogComponent.CHANNEL, err)
                 }
                 return
             }
             case EFilemanCommand.CREATE: {
-                console.log(`Do CREATE in '${filemanMessage.params![0]}' in ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container}`)
+                logInfo(ELogComponent.CHANNEL, `Do CREATE in '${filemanMessage.params![0]}' in ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container}`)
                 let asset = instance.assets.find (a => a.podNamespace === filemanMessage.namespace && a.podName === filemanMessage.pod && a.containerName === filemanMessage.container)
                 if (!asset) {
-                    console.log(`Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`)
+                    logInfo(ELogComponent.CHANNEL, `Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`)
                     execResponse.data = `Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`
                     return execResponse
                 }
@@ -557,11 +558,11 @@ class FilemanChannel implements IChannel {
             }
             case EFilemanCommand.COPY:
             case EFilemanCommand.MOVE: {
-                console.log(`Do ${filemanMessage.command.toUpperCase()} ${filemanMessage.params![0]} to ${filemanMessage.params![1]}  in ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container}`)
+                logInfo(ELogComponent.CHANNEL, `Do ${filemanMessage.command.toUpperCase()} ${filemanMessage.params![0]} to ${filemanMessage.params![1]}  in ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container}`)
                 let srcAsset = instance.assets.find (a => a.podNamespace === filemanMessage.namespace && a.podName === filemanMessage.pod && a.containerName === filemanMessage.container)
                 let dstAsset = instance.assets.find (a => a.podNamespace === filemanMessage.namespace && a.podName === filemanMessage.pod && a.containerName === filemanMessage.container)
                 if (!srcAsset || !dstAsset) {
-                    console.log(`Asset src or dst not found`)
+                    logInfo(ELogComponent.CHANNEL, `Asset src or dst not found`)
                     execResponse.data = `Asset src or dst not found`
                     return execResponse
                 }
@@ -569,10 +570,10 @@ class FilemanChannel implements IChannel {
                 return
             }
             case EFilemanCommand.DELETE: {
-                console.log(`Do DELETE ${filemanMessage.params![0]} in ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container}`)
+                logInfo(ELogComponent.CHANNEL, `Do DELETE ${filemanMessage.params![0]} in ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container}`)
                 let asset = instance.assets.find (a => a.podNamespace === filemanMessage.namespace && a.podName === filemanMessage.pod && a.containerName === filemanMessage.container)
                 if (!asset) {
-                    console.log(`Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`)
+                    logInfo(ELogComponent.CHANNEL, `Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`)
                     execResponse.data = `Asset ${filemanMessage.namespace}/${filemanMessage.pod}/${filemanMessage.container} not found`
                     return execResponse
                 }
@@ -645,8 +646,8 @@ class FilemanChannel implements IChannel {
             let stdout = new Writable({})
             let stderr = new Writable({})
             let stdin = new Readable({ read() {} })
-            let shellSocket = await this.clusterInfo.execApi.exec(ns, pod, c, cmd, stdout, stderr, stdin, false, (st) => { console.log('launchcommand st',st) })
-            shellSocket.on('end', () => console.log('launchcommand end'))
+            let shellSocket = await this.clusterInfo.execApi.exec(ns, pod, c, cmd, stdout, stderr, stdin, false, (st) => { logInfo(ELogComponent.CHANNEL, 'launchcommand st' + st) })
+            shellSocket.on('end', () => logInfo(ELogComponent.CHANNEL, 'launchcommand end'))
             shellSocket.onmessage = (event) => {
                 let data = event.data as Buffer
                 if (data[0]===1) accumulatedOut = Buffer.concat([accumulatedOut, data.slice(1)])
@@ -657,13 +658,14 @@ class FilemanChannel implements IChannel {
                 if (accumulatedEnd.toString('utf8') !== '') {
                     let result:IExecutionResult = JSON.parse(accumulatedEnd.toString('utf8'))
                     if (result.status!==ExecutionStatus.SUCCESS) {
-                        console.error(JSON.stringify(result))
+                        logError(ELogComponent.CHANNEL, JSON.stringify(result))
                     }
                 }
                 resolve({ stdout: accumulatedOut.toString('utf8'), stderr: accumulatedErr.toString('utf8'), stdend: JSON.parse(accumulatedEnd.toString('utf8'))})
             }
             shellSocket.onerror = (event) => {
-                console.log('lauchCommand error', event)
+                logInfo(ELogComponent.CHANNEL, 'lauchCommand error')
+                logInfo(ELogComponent.CHANNEL, event)
                 reject('error')
             }
         })
@@ -703,7 +705,8 @@ class FilemanChannel implements IChannel {
                 ended=true
             }
             shellSocket.onerror = (event) => {
-                console.log('lauchCommand error', event)
+                logInfo(ELogComponent.CHANNEL, 'lauchCommand error')
+                logInfo(ELogComponent.CHANNEL, event)
                 return { metadata: {}, message: 'Error '+event, status: ExecutionStatus.FAILURE }
             }
             while (!ended) {
@@ -713,7 +716,7 @@ class FilemanChannel implements IChannel {
             return { metadata: { filename: localPath}, message: result.message, status: result.status }
         }
         catch (err:any) {
-            console.log(err)
+            logInfo(ELogComponent.CHANNEL, err)
             return { metadata: {}, message: err.toString(), status: ExecutionStatus.FAILURE }
         }
     }
@@ -730,8 +733,8 @@ class FilemanChannel implements IChannel {
             let srclen = fs.statSync(localPath).size
 
             readStream.on('error', (err:any) => {
-                console.error('Error al leer el archivo local:', err)
-                console.log('err')
+                logError(ELogComponent.CHANNEL, 'Error reading local file:')
+                logError(ELogComponent.CHANNEL, 'err')
             })
 
             let parentFolder = remotePath.split('/').slice(0,-1).join('/').trim()
@@ -768,15 +771,16 @@ class FilemanChannel implements IChannel {
             // wait for 'cat' end
             let retries = 10 * 15  // 15 seconds
             while (!ended && retries>0) {
-                console.log(accumulatedEnd.toString('utf8'))
-                console.log(accumulatedErr.toString('utf8'))
+                logInfo(ELogComponent.CHANNEL, accumulatedEnd.toString('utf8'))
+                logInfo(ELogComponent.CHANNEL, accumulatedErr.toString('utf8'))
                 retries--
                 await new Promise ( (resolve) => { setTimeout(resolve, 100)})
             }
             let result = JSON.parse(accumulatedEnd.toString('utf8'))
-            console.log('result', result)
+            logInfo(ELogComponent.CHANNEL, 'Result ' + result)
             if (result.status!=='Success') {
-                console.log('Error on cat:', accumulatedErr.toString('utf8'))
+                logError(ELogComponent.CHANNEL, 'Error on cat:')
+                logError(ELogComponent.CHANNEL, accumulatedErr.toString('utf8'))
                 return { metadata: {}, message: result.message + '\n' + accumulatedErr, status: ExecutionStatus.FAILURE }
             }
             
@@ -797,7 +801,7 @@ class FilemanChannel implements IChannel {
             }
         }
         catch (err:any) {
-            console.log(err)
+            logInfo(ELogComponent.CHANNEL, err)
             return { metadata: {}, message: err.toString(), status: ExecutionStatus.FAILURE }
         }
     }
@@ -818,7 +822,7 @@ class FilemanChannel implements IChannel {
             await fs.unlinkSync(tempLocalFile)
         }
         catch (err) {
-            console.log('Error removing temp file')
+            logInfo(ELogComponent.CHANNEL, 'Error removing temp file')
             return { metadata:{}, message: 'Error removing temp file '+JSON.stringify(err), status: ExecutionStatus.FAILURE}
         }
 
@@ -836,7 +840,7 @@ class FilemanChannel implements IChannel {
             }
         }
         catch(err) {
-            console.log('Error removing source file')
+            logInfo(ELogComponent.CHANNEL, 'Error removing source file')
             return { metadata:{}, message: 'Error removing source file '+JSON.stringify(err), status: ExecutionStatus.FAILURE}
         }
 
@@ -857,12 +861,14 @@ class FilemanChannel implements IChannel {
                 return srcMetadata
             }
             else {
-                console.log('fileeman getFileInfo error', result.stderr)
+                logError(ELogComponent.CHANNEL, 'fileman getFileInfo error')
+                logError(ELogComponent.CHANNEL, result.stderr)
                 return undefined
             }
         }
         else {
-            console.log('fileman getFileInfo end', result.stdend)
+            logError(ELogComponent.CHANNEL, 'fileman getFileInfo end')
+            logError(ELogComponent.CHANNEL, result.stdend)
             return undefined
         }
     }
@@ -904,7 +910,7 @@ class FilemanChannel implements IChannel {
             }
         }
         else {
-            console.log('Perform cluster-wide copy')
+            logInfo(ELogComponent.CHANNEL, 'Perform cluster-wide copy')
 
             let result = await this.launchCommand(srcNamespace, srcPod, srcContainer, ['ls', '-l', parent])
             if (result.stdend.status===ExecutionStatus.SUCCESS) {
@@ -922,7 +928,8 @@ class FilemanChannel implements IChannel {
             ParseListing.parseEntries(result.stdout, (err:any, entryArray:IDirectoryEntry[]) => { entryArray.map(e => arr.push(e)) })
             let srcMetadata = arr.find(entry => entry.name === fname)
             if (arr.length===0 || !srcMetadata) {
-                console.log('**********NO CONTENT************ ', fname)
+                logWarning(ELogComponent.CHANNEL, '**********NO CONTENT************ ')
+                logWarning(ELogComponent.CHANNEL, fname)
                 return
             }
 
@@ -991,7 +998,7 @@ class FilemanChannel implements IChannel {
                                 }
                                 } break
                             default: {
-                                console.error(`Invalid type ${e.type} working with ${e.name}`)
+                                logError(ELogComponent.CHANNEL, `Invalid type ${e.type} working with ${e.name}`)
                             }
                             break
                                 
@@ -1018,7 +1025,7 @@ class FilemanChannel implements IChannel {
                     }
                     break
                 default:
-                    console.error('COPY/MOVE invalid file type:', srcMetadata.type)
+                    logError(ELogComponent.CHANNEL, 'COPY/MOVE invalid file type: ' + srcMetadata.type)
                     break
             }
         }

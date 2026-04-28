@@ -12,7 +12,7 @@ import { createOpenAI, OpenAILanguageModelChatOptions } from '@ai-sdk/openai'
 import { createGroq, GroqLanguageModelOptions } from '@ai-sdk/groq'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { createDeepSeek } from '@ai-sdk/deepseek'
-import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging';
+import { ELogComponent, logError, logInfo, logTrace, logWarning } from '../../tools/Logging';
 import { LoginApi } from '../../api/LoginApi';
 const nunjucks = require('nunjucks')
 
@@ -232,14 +232,11 @@ class PinocchioChannel implements IChannel {
 
     async processProviderEvent(providerId:string, event:IProviderEvent) : Promise<void> {
         switch(providerId) {
-            // case 'validating':
-            //     console.log('Received Validating event')
-            //     break
-            // case 'tick':
-            //     console.log('TICK')
-            //     break
             case 'business':
                 logInfo(ELogComponent.PROVIDER, event)
+                this.broadcastError('Received business event '+JSON.stringify(event))
+                logTrace(ELogComponent.CHANNEL, 'TRACE')
+                // +++ send data to LLM
                 break
             case 'events':
                 if (event.type==='ADDED') {
@@ -250,7 +247,7 @@ class PinocchioChannel implements IChannel {
                             if (event.obj?.metadata?.creationTimestamp) {
                                 let creationTs = Date.parse(event.obj?.metadata?.creationTimestamp)
                                 if (creationTs<this.startTime) {
-                                    console.warn(`'Bypass object analysis, creation timestamp is previous for object ${event.obj?.metadata?.name} and kind ${kind.kind} for LLM ${kind.llm}`)
+                                    logWarning(ELogComponent.CHANNEL, `Bypass object analysis, creation timestamp is previous for object ${event.obj?.metadata?.name} and kind ${kind.kind} for LLM ${kind.llm}`)
                                     continue
                                 }
                             }
@@ -305,7 +302,8 @@ class PinocchioChannel implements IChannel {
                         }
                     }
                     catch (err) {
-                        console.error(err)
+                        logError(ELogComponent.CHANNEL, 'Error in Pinocchio')
+                        logError(ELogComponent.CHANNEL, err)
                     }
                 }
                 break
@@ -434,17 +432,19 @@ class PinocchioChannel implements IChannel {
             let instances = socket.instances
             if (instances) {
                 let pos = instances.findIndex(t => t.instanceId === instanceId)
-                if (pos>=0) instances.splice(pos,1)
+                if (pos>=0) {
+                    instances.splice(pos,1)
+                }
                 else {
-                    console.log(`Instance ${instanceId} not found, cannot delete`)
+                    logWarning(ELogComponent.CHANNEL, `Instance ${instanceId} not found, cannot delete`)
                 }
             }
             else {
-                console.log('There are no Pinocchio Instances on websocket')
+                logWarning(ELogComponent.CHANNEL, 'There are no Pinocchio Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found on Pinocchio')
+            logWarning(ELogComponent.CHANNEL, 'WebSocket not found on Pinocchio')
         }
     }
 
@@ -462,7 +462,7 @@ class PinocchioChannel implements IChannel {
             this.connections.splice(pos,1)
         }
         else {
-            console.log('WebSocket not found on Pinocchio for remove')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on Pinocchio for remove')
         }
     }
 
@@ -473,7 +473,7 @@ class PinocchioChannel implements IChannel {
             return true
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
             return false
         }
     }
@@ -608,14 +608,14 @@ class PinocchioChannel implements IChannel {
             if (instances) {
                 let instanceIndex = instances.findIndex(t => t.instanceId === instanceId)
                 if (instanceIndex>=0) return instances[instanceIndex]
-                console.log('Instance not found')
+                logInfo(ELogComponent.CHANNEL, 'Instance not found')
             }
             else {
-                console.log('There are no Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
         }
         return undefined
     }

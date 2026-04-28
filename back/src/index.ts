@@ -1091,11 +1091,11 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
 
         let validNamespaces:string[] = []
         if (instanceConfig.namespace) validNamespaces = await AuthorizationManagement.getValidNamespaces(ri.clusterInfo.coreApi, accessKey, instanceConfig.namespace.split(','))
-        logInfo(ELogComponent.CORE, 'validNamespaces: ' + validNamespaces)
+        logInfo(ELogComponent.AUTH, 'validNamespaces: ' + validNamespaces)
 
         let validControllers:string[] = []
         if (instanceConfig.group) validControllers = await AuthorizationManagement.getValidControllers(ri.clusterInfo.coreApi,ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, accessKey, validNamespaces, instanceConfig.group.split(','))
-        logInfo(ELogComponent.CORE, 'validControllers:' + validControllers)
+        logInfo(ELogComponent.AUTH, 'validControllers:' + validControllers)
 
         let validPodNames:string[] = []
         if (ri.kwirthData.clusterType === EClusterType.DOCKER) {
@@ -1104,11 +1104,11 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
         else {
             if (instanceConfig.pod) validPodNames = await AuthorizationManagement.getValidPods(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, validNamespaces, accessKey, instanceConfig.pod.split(','))
         }
-        logInfo(ELogComponent.CORE, 'validPods:' + validPodNames)
+        logInfo(ELogComponent.AUTH, 'validPods:' + validPodNames)
 
         let validContainers:string[] = []
         if (instanceConfig.container) validContainers = await  AuthorizationManagement.getValidContainers(ri.clusterInfo.coreApi, accessKey, validNamespaces, validPodNames, instanceConfig.container.split(','))
-        logInfo(ELogComponent.CORE, 'validContainers:' + validContainers)
+        logInfo(ELogComponent.AUTH, 'validContainers:' + validContainers)
         
         switch (instanceConfig.action) {
             case EInstanceMessageAction.COMMAND:
@@ -1488,42 +1488,6 @@ const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthDat
 
 const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstance:IRunningInstance) : Promise<void> => {
     try {
-        if (envChannelLogEnabled) runningInstance.channels.set('log', new LogChannel(runningInstance.clusterInfo))
-        if (envChannelAlertEnabled) runningInstance.channels.set('alert', new AlertChannel(runningInstance.clusterInfo))
-        if (envChannelMetricsEnabled) runningInstance.channels.set('metrics', new MetricsChannel(runningInstance.clusterInfo))
-        if (envChannelOpsEnabled) runningInstance.channels.set('ops', new OpsChannel(runningInstance.clusterInfo))
-        if (envChannelTrivyEnabled) runningInstance.channels.set('trivy', new TrivyChannel(runningInstance.clusterInfo))
-        if (envChannelEchoEnabled) runningInstance.channels.set('echo', new EchoChannel(runningInstance.clusterInfo))
-        if (envChannelFilemanEnabled) runningInstance.channels.set('fileman', new FilemanChannel(runningInstance.clusterInfo))
-        if (envChannelMagnifyEnabled) runningInstance.channels.set('magnify', new MagnifyChannel(runningInstance.clusterInfo, localKwirthData))
-
-        // +++ refactor channels like providers (with constructor and registered)
-        // let backChannelObject:IBackChannelObject = {
-        //     writeStorage : async (id:string, secret:boolean, data:any) => {
-        //         if (secret) {
-        //             await runningInstance.secrets.write('kwirth-store-channel-'+id, { data: btoa(JSON.stringify(data)) })
-        //         }
-        //         else
-        //             await runningInstance.configMaps.write('kwirth-store-channel-'+id, JSON.stringify(data))
-        //     },
-        //     readStorage : async (id:string, secret:boolean) => {
-        //         if (secret) {
-        //             let content = await runningInstance.secrets.read('kwirth-store-channel-'+id)
-        //             if (content && content['data'])
-        //                 return JSON.parse(atob(content['data']))
-        //                 //return JSON.parse(Buffer.from(content['data'], 'base64').toString('utf8'))
-        //             else
-        //                 return undefined
-        //         }
-        //         else {
-        //             let content = await runningInstance.configMaps.read('kwirth-store-channel-'+id)
-        //             if (content)
-        //                 return JSON.parse(content)
-        //             else
-        //                 return undefined
-        //         }
-        //     }
-        // }
         let backChannelObject: IBackChannelObject = {
             writeStorage: async (id: string, secret: boolean, data: any) => {
                 if (secret) {
@@ -1553,7 +1517,44 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             }
         }
 
+        // +++ refactor channels like providers (with constructor and registered)
+        if (envChannelLogEnabled) runningInstance.channels.set('log', new LogChannel(runningInstance.clusterInfo))
+        if (envChannelAlertEnabled) runningInstance.channels.set('alert', new AlertChannel(runningInstance.clusterInfo))
+        if (envChannelMetricsEnabled) runningInstance.channels.set('metrics', new MetricsChannel(runningInstance.clusterInfo))
+        if (envChannelOpsEnabled) runningInstance.channels.set('ops', new OpsChannel(runningInstance.clusterInfo))
+        if (envChannelTrivyEnabled) runningInstance.channels.set('trivy', new TrivyChannel(runningInstance.clusterInfo))
+        if (envChannelEchoEnabled) runningInstance.channels.set('echo', new EchoChannel(runningInstance.clusterInfo))
+        if (envChannelFilemanEnabled) runningInstance.channels.set('fileman', new FilemanChannel(runningInstance.clusterInfo))
+        if (envChannelMagnifyEnabled) runningInstance.channels.set('magnify', new MagnifyChannel(runningInstance.clusterInfo, localKwirthData))
         if (envChannelPinocchioEnabled) runningInstance.channels.set('pinocchio', new PinocchioChannel(runningInstance.clusterInfo, backChannelObject))
+
+        // let backChannelObject:IBackChannelObject = {
+        //     writeStorage : async (id:string, secret:boolean, data:any) => {
+        //         if (secret) {
+        //             await runningInstance.secrets.write('kwirth-store-channel-'+id, { data: btoa(JSON.stringify(data)) })
+        //         }
+        //         else
+        //             await runningInstance.configMaps.write('kwirth-store-channel-'+id, JSON.stringify(data))
+        //     },
+        //     readStorage : async (id:string, secret:boolean) => {
+        //         if (secret) {
+        //             let content = await runningInstance.secrets.read('kwirth-store-channel-'+id)
+        //             if (content && content['data'])
+        //                 return JSON.parse(atob(content['data']))
+        //                 //return JSON.parse(Buffer.from(content['data'], 'base64').toString('utf8'))
+        //             else
+        //                 return undefined
+        //         }
+        //         else {
+        //             let content = await runningInstance.configMaps.read('kwirth-store-channel-'+id)
+        //             if (content)
+        //                 return JSON.parse(content)
+        //             else
+        //                 return undefined
+        //         }
+        //     }
+        // }
+
 
         // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to
         localKwirthData.channels =  Array.from(runningInstance.channels.keys()).map(k => {

@@ -5,7 +5,7 @@ import * as crypto from 'crypto'
 import { IChannel } from '../channels/IChannel'
 import { Request, Response } from 'express'
 import { AppsV1Api, BatchV1Api, CoreV1Api, V1Pod } from '@kubernetes/client-node'
-import { ELogComponent, logError, logInfo } from './Logging'
+import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 
 export class AuthorizationManagement {
     
@@ -31,7 +31,7 @@ export class AuthorizationManagement {
                 if (receivedAccessKey.type && receivedAccessKey.type.startsWith('bearer:')) {
                     if (!AuthorizationManagement.validBearerKey(apiKeyApi.masterKey, receivedAccessKey)) {
                         res.status(403).json({})
-                        logInfo(ELogComponent.CORE, 'Hashes do not match validating key')
+                        logWarning(ELogComponent.AUTH, 'Hashes do not match validating key')
                         return false
                     }
                     else
@@ -43,7 +43,7 @@ export class AuthorizationManagement {
                         if (!apiKeyApi.isElectron) await apiKeyApi.refreshKeys()
                         key = apiKeyApi.apiKeys.find(apiKey => accessKeySerialize(apiKey.accessKey)===receivedAccessKeyStr)
                         if (!key) {
-                            logInfo(ELogComponent.CORE, 'Inexistent key on validKey: '+receivedAccessKeyStr)
+                            logWarning(ELogComponent.AUTH, 'Inexistent key on validKey: '+receivedAccessKeyStr)
                             res.status(403).json({})
                             return false
                         }            
@@ -56,16 +56,16 @@ export class AuthorizationManagement {
                     if (computedExpire>=Date.now())
                         return true
                     else
-                        logInfo(ELogComponent.CORE, 'Expired key: '+receivedAccessKeyStr)
+                        logInfo(ELogComponent.AUTH, 'Expired key: '+receivedAccessKeyStr)
                 }
             }
             else {
-                logInfo(ELogComponent.CORE, 'No valid key present in headers')
+                logInfo(ELogComponent.AUTH, 'No valid key present in headers')
             }
         }
         catch (err) {
-            logError(ELogComponent.CORE, 'Error validating Key')
-            logError(ELogComponent.CORE, err)
+            logError(ELogComponent.AUTH, 'Error validating Key')
+            logError(ELogComponent.AUTH, err)
         }
         res.status(403).json({})
         return false
@@ -78,7 +78,7 @@ export class AuthorizationManagement {
             let computedExpire = 0
             if (receivedAccessKey.type && receivedAccessKey.type.startsWith('bearer:')) {
                 if (!AuthorizationManagement.validBearerKey(apiKeyApi.masterKey, receivedAccessKey)) {
-                    logInfo(ELogComponent.CORE, 'Hashes do not match getting key')
+                    logInfo(ELogComponent.AUTH, 'Hashes do not match getting key')
                     return undefined
                 }
                 else
@@ -90,7 +90,7 @@ export class AuthorizationManagement {
                     if (!apiKeyApi.isElectron) await apiKeyApi.refreshKeys()
                     key = apiKeyApi.apiKeys.find(apiKey => accessKeySerialize(apiKey.accessKey)===receivedAccessString)
                     if (!key) {
-                        logInfo(ELogComponent.CORE, 'Inexistent key on getKey: '+receivedAccessString)
+                        logWarning(ELogComponent.AUTH, 'Inexistent key on getKey: '+receivedAccessString)
                         res.status(403).json({})
                         return undefined
                     }            
@@ -101,7 +101,7 @@ export class AuthorizationManagement {
             }
             if (computedExpire>0) {
                 if (computedExpire<Date.now())
-                    logInfo(ELogComponent.CORE, 'Expired key: '+receivedAccessString)
+                    logInfo(ELogComponent.AUTH, 'Expired key: '+receivedAccessString)
                 else
                     return receivedAccessKey
             }
@@ -109,7 +109,7 @@ export class AuthorizationManagement {
             return undefined
         }
         else {
-            logInfo(ELogComponent.CORE, 'No valid key present in headers')
+            logInfo(ELogComponent.AUTH, 'No valid key present in headers')
             res.status(403).json({})
             return undefined
         }
@@ -121,7 +121,7 @@ export class AuthorizationManagement {
             // we return the higher scope from all valid scopes
             for (let sc of scopes.split(',')) {
                 let scLevel = channels.get(instanceConfigChannel)!.getChannelScopeLevel(sc)
-                if (scLevel<0) logInfo(ELogComponent.CORE, `***************** Inexistent scope '${sc}' on channel '${instanceConfigChannel}' *****************`)
+                if (scLevel<0) logWarning(ELogComponent.AUTH, `***************** Inexistent scope '${sc}' on channel '${instanceConfigChannel}' *****************`)
                 if (scLevel>higherScope) higherScope = scLevel
             }
         }
@@ -155,15 +155,15 @@ export class AuthorizationManagement {
             let haveLevel = AuthorizationManagement.getScopeLevel(channels, instanceConfig.channel, akr.scopes, Number.MIN_VALUE)
             let requestedLevel = AuthorizationManagement.getScopeLevel(channels, instanceConfig.channel, instanceConfig.scope, Number.MAX_VALUE)
             if (haveLevel<requestedLevel) {
-                logInfo(ELogComponent.CORE, `Insufficent level '${akr.scopes}' (${haveLevel}) < '${instanceConfig.scope}' (${requestedLevel}) for object`)
+                logWarning(ELogComponent.AUTH, `Insufficent level '${akr.scopes}' (${haveLevel}) < '${instanceConfig.scope}' (${requestedLevel}) for object`)
                 continue
             }
-            logInfo(ELogComponent.CORE, `Level is enough for object (${podNamespace}/${podName}/${containerName}): '${akr.scopes}'(${haveLevel}) >= '${instanceConfig.scope}' (${requestedLevel}),  let's check regexes...`)
+            logInfo(ELogComponent.AUTH, `Level is enough for object (${podNamespace}/${podName}/${containerName}): '${akr.scopes}'(${haveLevel}) >= '${instanceConfig.scope}' (${requestedLevel}),  let's check regexes...`)
 
             if (!this.checkResource(akr, podNamespace, podName, containerName)) continue
 
             valid = true
-            logInfo(ELogComponent.CORE, `Found AKR: ${JSON.stringify(akr)}`)
+            logInfo(ELogComponent.AUTH, `Found AKR: ${JSON.stringify(akr)}`)
             break
         }
         return valid
@@ -181,26 +181,26 @@ export class AuthorizationManagement {
         let haveLevel = AuthorizationManagement.getScopeLevel(channels, instanceConfig.channel, resId.scopes, Number.MIN_VALUE)
         let requestedLevel = AuthorizationManagement.getScopeLevel(channels, instanceConfig.channel, instanceConfig.scope, Number.MAX_VALUE)
         if (haveLevel < requestedLevel) {
-            logInfo(ELogComponent.CORE, 'Insufficient scope level')
+            logInfo(ELogComponent.AUTH, 'Insufficient scope level')
             return false
         }
         if ((namespace !== '') && (namespace !== resId.namespaces)) {
-            logInfo(ELogComponent.CORE, 'Insufficient namespace capabilities')
+            logInfo(ELogComponent.AUTH, 'Insufficient namespace capabilities')
             return false
         }
         if ((controller !== '') && (controller !== resId.groups)) {
-            logInfo(ELogComponent.CORE, 'Insufficient controller capabilities')
+            logInfo(ELogComponent.AUTH, 'Insufficient controller capabilities')
             return false
         }
         if ((pod !== '') && (pod !== resId.pods)) {
-            logInfo(ELogComponent.CORE, 'Insufficient pod capabilities')
+            logInfo(ELogComponent.AUTH, 'Insufficient pod capabilities')
             return false
         }
         if ((container !== '') && (container !== resId.containers)) {
-            logInfo(ELogComponent.CORE, 'Insufficient container capabilities')
+            logInfo(ELogComponent.AUTH, 'Insufficient container capabilities')
             return false
         }
-        logInfo(ELogComponent.CORE, 'Authorized!')
+        logInfo(ELogComponent.AUTH, 'Authorized!')
         return true
     }
     
@@ -213,8 +213,8 @@ export class AuthorizationManagement {
             return [...new Set(result)]
         }
         catch (err) {
-            logError(ELogComponent.CORE, 'getValidValues error')
-            logError(ELogComponent.CORE, err)
+            logError(ELogComponent.AUTH, 'getValidValues error')
+            logError(ELogComponent.AUTH, err)
             return []
         }
     }
@@ -232,8 +232,8 @@ export class AuthorizationManagement {
             return [...new Set(result)]
         }
         catch (err) {
-            logError(ELogComponent.CORE, 'Cannot list namespaces')
-            logError(ELogComponent.CORE, err)
+            logError(ELogComponent.AUTH, 'Cannot list namespaces')
+            logError(ELogComponent.AUTH, err)
             return []
         }
     }
@@ -291,8 +291,8 @@ export class AuthorizationManagement {
             }
         }
         catch (err) {
-            logInfo(ELogComponent.CORE, 'Error obtaining allowed controllers')
-            logInfo(ELogComponent.CORE, err)
+            logInfo(ELogComponent.AUTH, 'Error obtaining allowed controllers')
+            logInfo(ELogComponent.AUTH, err)
         }
         return Array.from(new Map(result.map(item => [`${item.name}-${item.type}`, item])).values())
     }
@@ -380,8 +380,8 @@ export class AuthorizationManagement {
             }    
         }
         catch (error) {
-            logError(ELogComponent.CORE, 'Error reading namespaced group: ')
-            logError(ELogComponent.CORE, error)
+            logError(ELogComponent.AUTH, 'Error reading namespaced group: ')
+            logError(ELogComponent.AUTH, error)
             return emptyResult
         }
     

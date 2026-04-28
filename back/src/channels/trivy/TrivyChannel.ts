@@ -6,6 +6,7 @@ import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources, restartController } from '../../tools/KubernetesTools'
 import { ETrivyCommand, IKnown, ITrivyMessage, ITrivyMessageResponse, IUnknown } from './TrivyModel'
 import * as path from 'path'
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging';
 const fs = require('fs')
 
 const TRIVY_API_VERSION = 'v1alpha1'
@@ -82,9 +83,9 @@ class TrivyChannel implements IChannel {
     }
 
     async endpointRequest(endpoint:string,req:Request, res:Response) : Promise<void> {
-        console.log('Received endpointRequest:', endpoint, req.method, req.url)
+        logInfo(ELogComponent.CHANNEL, `Received endpointRequest: ${endpoint} ${req.method} ${req.url}`)
         let action = req.query['action']
-        console.log('Action: ', action)
+        logInfo(ELogComponent.CHANNEL, 'Action: ' + action)
 
         switch (action) {
             case 'install':
@@ -211,7 +212,7 @@ class TrivyChannel implements IChannel {
 
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
-            console.log('Socket not found')
+            logInfo(ELogComponent.CHANNEL, 'Socket not found')
             return false
         }
 
@@ -219,7 +220,7 @@ class TrivyChannel implements IChannel {
         let instance = instances.find(i => i.instanceId === instanceMessage.instance)
         if (!instance) {
             this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, `Instance not found`)
-            console.log(`Instance ${instanceMessage.instance} not found`)
+            logInfo(ELogComponent.CHANNEL, `Instance ${instanceMessage.instance} not found`)
             return false
         }
         let resp = await this.executeCommand(instanceMessage as ITrivyMessage, instance)
@@ -228,7 +229,7 @@ class TrivyChannel implements IChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        console.log(`Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
+        logInfo(ELogComponent.CHANNEL, `Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
@@ -372,11 +373,11 @@ class TrivyChannel implements IChannel {
     }
     
     pauseContinueInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void => {
-        console.log('Pause/Continue not supported')
+        logInfo(ELogComponent.CHANNEL, 'Pause/Continue not supported')
     }
 
     modifyInstance = (webSocket:WebSocket, instanceConfig: IInstanceConfig): void => {
-        console.log('Modify not supported')
+        logInfo(ELogComponent.CHANNEL, 'Modify not supported')
     }
 
     stopInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig): void => {
@@ -406,15 +407,15 @@ class TrivyChannel implements IChannel {
                     instances.splice(pos,1)
                 }
                 else {
-                    console.log(`Instance ${instanceId} not found, cannot delete`)
+                    logInfo(ELogComponent.CHANNEL, `Instance ${instanceId} not found, cannot delete`)
                 }
             }
             else {
-                console.log('There are no trivy Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no trivy Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found on trivy')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on trivy')
         }
     }
 
@@ -432,7 +433,7 @@ class TrivyChannel implements IChannel {
             this.webSockets.splice(pos,1)
         }
         else {
-            console.log('WebSocket not found on trivy for remove')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on trivy for remove')
         }
     }
 
@@ -443,13 +444,13 @@ class TrivyChannel implements IChannel {
             return true
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
             return false
         }
     }
 
     updateConnection = (newWebSocket: WebSocket, instanceId: string): boolean => {
-        console.log('updateConnection not supported')
+        logInfo(ELogComponent.CHANNEL, 'updateConnection not supported')
         return false
     }
 
@@ -491,16 +492,16 @@ class TrivyChannel implements IChannel {
         informer.on('delete', (obj:any) => this.processInformerEvent(webSocket, instance, plural, 'delete', obj))
         informer.on('error', (err:any) => {
             try {
-                console.error('Error in informer')
-                console.log(err.Error)
+                logError(ELogComponent.CHANNEL, 'Error in informer')
+                logInfo(ELogComponent.CHANNEL, err.Error)
                 if (err['HTTP-Code']==='404' || err.statusCode===404)
-                    console.log('CRD not found, informer will not restart')
+                    logInfo(ELogComponent.CHANNEL, 'CRD not found, informer will not restart')
                 else
-                    setTimeout(() => { informer.start(); console.log('Informer restarted')}, 5000)
+                    setTimeout(() => { informer.start(); logInfo(ELogComponent.CHANNEL, 'Informer restarted')}, 5000)
             }
             catch (err) {
-                console.log('Error managing informer error:')
-                console.log(err)
+                logInfo(ELogComponent.CHANNEL, 'Error managing informer error:')
+                logInfo(ELogComponent.CHANNEL, err)
             }
         })
         return informer
@@ -542,7 +543,7 @@ class TrivyChannel implements IChannel {
                     return {resource: TRIVY_API_VULN_PLURAL, known, unknown:undefined}
                 }
                 catch(err:any) {
-                    console.log(`VulnReport not found for ${crdName}`)
+                    logInfo(ELogComponent.CHANNEL, `VulnReport not found for ${crdName}`)
                     unknown = {
                         container: asset.containerName,
                         name: asset.podName,
@@ -573,7 +574,8 @@ class TrivyChannel implements IChannel {
                 statusCode: 999,
                 statusMessage: err
             }
-            console.log('Caught Trivy error', err)
+            logError(ELogComponent.CHANNEL, 'Caught Trivy error')
+            logError(ELogComponent.CHANNEL, err)
             return {resource: TRIVY_API_VULN_PLURAL, known:undefined, unknown}
         }
     }
@@ -607,7 +609,7 @@ class TrivyChannel implements IChannel {
                     return {resource: TRIVY_API_AUDIT_PLURAL, known, unknown:undefined}
                 }
                 catch(err:any) {
-                    console.log(`AuditReport not found for ${crdName}`)
+                    logInfo(ELogComponent.CHANNEL, `AuditReport not found for ${crdName}`)
                     unknown = {
                         container: asset.containerName,
                         name: asset.podName,
@@ -638,7 +640,8 @@ class TrivyChannel implements IChannel {
                 statusCode: 999,
                 statusMessage: err
             }
-            console.log('Caught Trivy error', err)
+            logError(ELogComponent.CHANNEL, 'Caught Trivy error')
+            logError(ELogComponent.CHANNEL, err)
             return {resource: TRIVY_API_AUDIT_PLURAL, known:undefined, unknown}
         }
     }
@@ -672,7 +675,7 @@ class TrivyChannel implements IChannel {
                     return {resource: TRIVY_API_SBOM_PLURAL, known, unknown:undefined}
                 }
                 catch(err:any) {
-                    console.log(`SobmReport not found for ${crdName}`)
+                    logInfo(ELogComponent.CHANNEL, `SobmReport not found for ${crdName}`)
                     unknown = {
                         container: asset.containerName,
                         name: asset.podName,
@@ -703,7 +706,8 @@ class TrivyChannel implements IChannel {
                 statusCode: 999,
                 statusMessage: err
             }
-            console.log('Caught Trivy error', err)
+            logError(ELogComponent.CHANNEL, 'Caught Trivy error')
+            logError(ELogComponent.CHANNEL, err)
             return {resource: TRIVY_API_SBOM_PLURAL, known:undefined, unknown}
         }
     }
@@ -728,7 +732,7 @@ class TrivyChannel implements IChannel {
                 try {
                     let crdObject = await this.clusterInfo.crdApi.getNamespacedCustomObject({ group: TRIVY_API_GROUP, version: TRIVY_API_VERSION, namespace: asset.podNamespace, plural: TRIVY_API_EXPOSED_PLURAL, name: crdName })
                     
-                    console.log('Got exposed report for', crdName)
+                    logInfo(ELogComponent.CHANNEL, 'Got exposed report for ' + crdName)
                     known = {
                         container: asset.containerName,
                         name: asset.podName,
@@ -738,7 +742,7 @@ class TrivyChannel implements IChannel {
                     return {resource: TRIVY_API_EXPOSED_PLURAL, known, unknown:undefined}
                 }
                 catch(err:any) {
-                    console.log(`ExposedSecretsReport not found for ${crdName}`)
+                    logInfo(ELogComponent.CHANNEL, `ExposedSecretsReport not found for ${crdName}`)
                     unknown = {
                         container: asset.containerName,
                         name: asset.podName,
@@ -769,7 +773,8 @@ class TrivyChannel implements IChannel {
                 statusCode: 999,
                 statusMessage: err
             }
-            console.log('Caught Trivy error', err)
+            logError(ELogComponent.CHANNEL, 'Caught Trivy error')
+            logError(ELogComponent.CHANNEL, err)
             return {resource: TRIVY_API_EXPOSED_PLURAL, known:undefined, unknown}
         }
     }
@@ -799,7 +804,7 @@ class TrivyChannel implements IChannel {
                 return undefined
             }
             catch (err) {
-                console.log(err)
+                logInfo(ELogComponent.CHANNEL, err)
                 return `Error removing vulnerability report: `+err
             }
         }
@@ -836,7 +841,7 @@ class TrivyChannel implements IChannel {
                 }
                 break
             default:
-                console.log('Invalid command received:', trivyMessage.command)
+                logInfo(ELogComponent.CHANNEL, 'Invalid command received: ' + trivyMessage.command)
         }
         return resp
     }
@@ -849,7 +854,7 @@ class TrivyChannel implements IChannel {
             a.podName.startsWith(obj.metadata.labels['trivy-operator.resource.name'])
         )
         if (!asset) {
-            console.log('Asset not found for', event, plural)
+            logWarning(ELogComponent.CHANNEL, `Asset not found for ${event} ${plural}`)
             return
         }
         let payload:ITrivyMessageResponse = {
@@ -919,7 +924,8 @@ class TrivyChannel implements IChannel {
             return crdName
         }
         catch (err) {
-            console.log('Cannot get CRD name from namespaced pod:', err)
+            logError(ELogComponent.CHANNEL, 'Cannot get CRD name from namespaced pod:')
+            logError(ELogComponent.CHANNEL, err)
         }
         return undefined
     }

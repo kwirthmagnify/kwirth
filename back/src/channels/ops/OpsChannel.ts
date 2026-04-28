@@ -7,6 +7,7 @@ import { execCommandDescribe } from './GetCommand';
 import { execCommandRestart } from './RestartCommand';
 import { AuthorizationManagement } from '../../tools/AuthorizationManagement';
 import { Request, Response } from 'express'
+import { ELogComponent, logInfo } from '../../tools/Logging';
 
 export interface IAsset {
     podNamespace: string
@@ -77,13 +78,13 @@ class OpsChannel implements IChannel {
     async websocketRequest(wso:WebSocket, instanceId:string, instanceConfig:IInstanceConfig) : Promise<void> {
         let instance = this.getInstance(instanceId)
         if (!instance) {
-            console.log('ops no instance')
+            logInfo(ELogComponent.CHANNEL, 'ops no instance')
             return
         }
         let asset = instance.assets.find(a => a.podNamespace === instanceConfig.namespace && a.podName === instanceConfig.pod && a.containerName === instanceConfig.container)
         if (!asset) {
-            console.log('Ops: no asset for')
-            console.log(instanceConfig)
+            logInfo(ELogComponent.CHANNEL, 'Ops: no asset for')
+            logInfo(ELogComponent.CHANNEL, instanceConfig)
             return
         }
         const namespace=asset.podNamespace
@@ -100,7 +101,7 @@ class OpsChannel implements IChannel {
         }
 
         wso.onclose = () => {
-            console.log('Client disconnected')
+            logInfo(ELogComponent.CHANNEL, 'Client disconnected')
             stdinStream.end()
         }
 
@@ -158,7 +159,7 @@ class OpsChannel implements IChannel {
         else {
             let socket = this.webSockets.find(s => s.ws === webSocket)
             if (!socket) {
-                console.log('Socket not found')
+                logInfo(ELogComponent.CHANNEL, 'Socket not found')
                 return false
             }
 
@@ -166,7 +167,7 @@ class OpsChannel implements IChannel {
             let instance = instances.find(i => i.instanceId === instanceMessage.instance)
             if (!instance) {
                 this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, `Instance not found`)
-                console.log(`Instance ${instanceMessage.instance} not found`)
+                logInfo(ELogComponent.CHANNEL, `Instance ${instanceMessage.instance} not found`)
                 return false
             }    
             let opsMessage = instanceMessage as IOpsMessage
@@ -177,7 +178,7 @@ class OpsChannel implements IChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        console.log(`Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
+        logInfo(ELogComponent.CHANNEL, `Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
@@ -217,11 +218,11 @@ class OpsChannel implements IChannel {
     }
     
     pauseContinueInstance(webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void {
-        console.log('Pause/Continue not supported')
+        logInfo(ELogComponent.CHANNEL, 'Pause/Continue not supported')
     }
 
     modifyInstance (webSocket:WebSocket, instanceConfig: IInstanceConfig): void {
-        console.log('Modify not supported')
+        logInfo(ELogComponent.CHANNEL, 'Modify not supported')
     }
 
     stopInstance(webSocket: WebSocket, instanceConfig: IInstanceConfig): void {
@@ -254,15 +255,15 @@ class OpsChannel implements IChannel {
                     instances.splice(pos,1)
                 }
                 else {
-                    console.log(`Instance ${instanceId} not found, cannot delete`)
+                    logInfo(ELogComponent.CHANNEL, `Instance ${instanceId} not found, cannot delete`)
                 }
             }
             else {
-                console.log('There are no ops Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no ops Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found on ops')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on ops')
         }
     }
 
@@ -280,7 +281,7 @@ class OpsChannel implements IChannel {
             this.webSockets.splice(pos,1)
         }
         else {
-            console.log('WebSocket not found on ops for remove')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on ops for remove')
         }
     }
 
@@ -291,13 +292,13 @@ class OpsChannel implements IChannel {
             return true
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
             return false
         }
     }
 
     updateConnection(newWebSocket: WebSocket, instanceId: string): boolean {
-        console.log('updateConnection not supported')
+        logInfo(ELogComponent.CHANNEL, 'updateConnection not supported')
         return false
     }
 
@@ -335,7 +336,7 @@ class OpsChannel implements IChannel {
         let stderr = new Writable({})
         let stdin = new Readable({ read() {} })
 
-        let shellSocket = await this.clusterInfo.execApi.exec(podNamespace, podName, containerName, ['/bin/sh', '-i'], stdout, stderr, stdin, true, (st) => { console.log('st',st) })
+        let shellSocket = await this.clusterInfo.execApi.exec(podNamespace, podName, containerName, ['/bin/sh', '-i'], stdout, stderr, stdin, true, (st) => { logInfo(ELogComponent.CHANNEL, 'st '+st) })
         shellSocket.onmessage = (event) => {
             let text = event.data.toString('utf8').substring(1)
             var resp: IOpsMessageResponse = {
@@ -372,7 +373,7 @@ class OpsChannel implements IChannel {
     }
 
     private async executeImmediateCommand (instanceMessage:IInstanceMessage) : Promise<IRouteMessageResponse> {
-        console.log('Immediate request received')
+        logInfo(ELogComponent.CHANNEL, 'Immediate request received')
         let opsMessage = instanceMessage as IOpsMessage
 
         // we create a dummy instance for executnig command, and we add the asset refrenced in the immediate command
@@ -548,14 +549,14 @@ class OpsChannel implements IChannel {
             if (instances) {
                 let instance = instances.find(i => i.instanceId === instanceId)
                 if (instance) return instance
-                console.log('Instance not found')
+                logInfo(ELogComponent.CHANNEL, 'Instance not found')
             }
             else {
-                console.log('There are no Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
         }
         return undefined
     }

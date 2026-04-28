@@ -2,6 +2,7 @@ import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKey
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
+import { ELogComponent, logInfo } from '../../tools/Logging';
 
 export interface IAsset {
     podNamespace: string
@@ -88,7 +89,7 @@ class EchoChannel implements IChannel {
             let instance = this.getInstance(webSocket, instanceMessage.instance)
             if (!instance) {
                 this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, `Instance not found`)
-                console.log(`Instance ${instanceMessage.instance} not found`)
+                logInfo(ELogComponent.CHANNEL, `Instance ${instanceMessage.instance} not found`)
                 return false
             }
             return true
@@ -96,7 +97,7 @@ class EchoChannel implements IChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        console.log(`Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
+        logInfo(ELogComponent.CHANNEL, `Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
@@ -146,7 +147,7 @@ class EchoChannel implements IChannel {
     }
 
     modifyInstance = (webSocket:WebSocket, instanceConfig: IInstanceConfig): void => {
-        console.log('Modify not supported')
+        logInfo(ELogComponent.CHANNEL, 'Modify not supported')
     }
 
     stopInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig): void => {
@@ -174,15 +175,15 @@ class EchoChannel implements IChannel {
                     instances.splice(pos,1)
                 }
                 else {
-                    console.log(`Instance ${instanceId} not found, cannot delete`)
+                    logInfo(ELogComponent.CHANNEL, `Instance ${instanceId} not found, cannot delete`)
                 }
             }
             else {
-                console.log('There are no Echo Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no Echo Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found on Echo')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on Echo')
         }
     }
 
@@ -200,7 +201,7 @@ class EchoChannel implements IChannel {
             this.webSockets.splice(pos,1)
         }
         else {
-            console.log('WebSocket not found on Echo for remove')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on Echo for remove')
         }
     }
 
@@ -211,7 +212,7 @@ class EchoChannel implements IChannel {
             return true
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
             return false
         }
     }
@@ -274,14 +275,14 @@ class EchoChannel implements IChannel {
             if (instances) {
                 let instanceIndex = instances.findIndex(t => t.instanceId === instanceId)
                 if (instanceIndex>=0) return instances[instanceIndex]
-                console.log('Instance not found')
+                logInfo(ELogComponent.CHANNEL, 'Instance not found')
             }
             else {
-                console.log('There are no Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
         }
         return undefined
     }

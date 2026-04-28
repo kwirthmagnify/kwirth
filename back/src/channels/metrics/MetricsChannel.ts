@@ -3,6 +3,7 @@ import { ClusterInfo } from '../../model/ClusterInfo'
 import { AssetData } from '../../tools/MetricsTools'
 import { IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 
 interface IInstance {
     instanceId: string
@@ -77,7 +78,7 @@ class MetricsChannel implements IChannel {
     }
 
     private async executeImmediateCommand (instanceMessage:IInstanceMessage) : Promise<IMetricsMessageResponse> {
-        console.log('Immediate request received')
+        logInfo(ELogComponent.CHANNEL, 'Immediate request received')
         // we create a dummy instance for executnig command, and we add the asset refrenced in the immediate command received
         let iconfig:IInstanceConfig = {
             objects: EInstanceConfigObject.PODS,
@@ -159,23 +160,23 @@ class MetricsChannel implements IChannel {
                 podGroup = owner.kind.toLocaleLowerCase() + '+' + owner.name  
             }
             else {
-                console.log(`No owner found for ${podName}, assume pod/container without controller`)
+                logInfo(ELogComponent.CHANNEL, `No owner found for ${podName}, assume pod/container without controller`)
             }
             
             switch ((instanceConfig.data as MetricsConfig).mode) {
                 case MetricsConfigModeEnum.SNAPSHOT:
                     {
                         if (!this.checkScopes(instanceConfig, InstanceConfigScopeEnum.SNAPSHOT)) {
-                            console.log('Insufficient scope for SNAPSHOT')
+                            logInfo(ELogComponent.CHANNEL, 'Insufficient scope for SNAPSHOT')
                             this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, 'Insufficient scope for SNAPSHOT', instanceConfig) 
                             return false
                         }
                         if (podNode) {
-                            console.log(`Send snapshot metrics for ${podNode}/${podNamespace}/${podGroup}/${podName}/${containerName}`)
+                            logInfo(ELogComponent.CHANNEL, `Send snapshot metrics for ${podNode}/${podNamespace}/${podGroup}/${podName}/${containerName}`)
 
                             let socket = this.webSockets.find(entry => entry.ws === webSocket)
                             if (!socket) {
-                                console.log('No socket found for startInstance snapshot')
+                                logInfo(ELogComponent.CHANNEL, 'No socket found for startInstance snapshot')
                                 return false
                             }
                             let instances = socket.instances
@@ -193,13 +194,13 @@ class MetricsChannel implements IChannel {
                 case MetricsConfigModeEnum.STREAM:
                     {
                         if (!this.checkScopes(instanceConfig, InstanceConfigScopeEnum.STREAM)) {
-                            console.log('Insufficient scope for STREAM')
+                            logInfo(ELogComponent.CHANNEL, 'Insufficient scope for STREAM')
                             this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, 'Insufficient scope for STREAM', instanceConfig) 
                             return false
                         }
 
                         if (podNode) {
-                            console.log(`Start pod metrics for ${podNode}/${podNamespace}/${podGroup}/${podName}/${containerName}`)
+                            logInfo(ELogComponent.CHANNEL, `Start pod metrics for ${podNode}/${podNamespace}/${podGroup}/${podName}/${containerName}`)
                             let socket = this.webSockets.find(entry => entry.ws === webSocket)
                             let metricsConfig = instanceConfig.data as MetricsConfig
                             let interval = (metricsConfig.interval || 15) * 1000
@@ -254,7 +255,7 @@ class MetricsChannel implements IChannel {
                             }
                         }
                         else {
-                            console.log(`Cannot determine node for ${podNamespace}/${podName}}, will not be added`)
+                            logInfo(ELogComponent.CHANNEL, `Cannot determine node for ${podNamespace}/${podName}}, will not be added`)
                             return false
                         }
                     }
@@ -265,7 +266,8 @@ class MetricsChannel implements IChannel {
         }
         catch (err:any) {
             this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, err.stack, instanceConfig)
-            console.log('Generic error starting metrics instance', err)
+            logError(ELogComponent.CHANNEL, 'Generic error starting metrics instance')
+            logError(ELogComponent.CHANNEL, err)
             return false
         }
     }
@@ -328,15 +330,15 @@ class MetricsChannel implements IChannel {
                     instances.splice(instanceIndex,1)
                 }
                 else{
-                    console.log('Instance not found, cannot delete')
+                    logInfo(ELogComponent.CHANNEL, 'Instance not found, cannot delete')
                 }
             }
             else {
-                console.log('There are no Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found on intervals')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on intervals')
         }
     }
 
@@ -351,7 +353,7 @@ class MetricsChannel implements IChannel {
             return true
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
             return false
         }
     }
@@ -377,7 +379,7 @@ class MetricsChannel implements IChannel {
             let instances = socket.instances
             if (instances) {
                 for (var i=0;i<instances.length;i++) {
-                    console.log(`Interval for instance ${instances[i].instanceId} has been removed`)
+                    logInfo(ELogComponent.CHANNEL, `Interval for instance ${instances[i].instanceId} has been removed`)
                     this.removeInstance(webSocket, instances[i].instanceId)
                 }
             }
@@ -397,14 +399,14 @@ class MetricsChannel implements IChannel {
             if (instances) {
                 let instanceIndex = instances.findIndex(t => t.instanceId === instanceId)
                 if (instanceIndex>=0) return instances[instanceIndex]
-                console.log('Instance not found')
+                logInfo(ELogComponent.CHANNEL, 'Instance not found')
             }
             else {
-                console.log('There are no Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
         }
         return undefined
     }
@@ -460,7 +462,8 @@ class MetricsChannel implements IChannel {
                     total = metric.value
                 }
                 else {
-                    console.log('No node found for calculating pod metric value', asset)
+                    logError(ELogComponent.CHANNEL, 'No node found for calculating pod metric value')
+                    logError(ELogComponent.CHANNEL, asset)
                 }
                 uniqueValues.push(total)
             }
@@ -495,7 +498,7 @@ class MetricsChannel implements IChannel {
                             }
                         }
                         else {
-                            console.log(`No previous value  [CPU] found for ${m.metricName}`)
+                            logInfo(ELogComponent.CHANNEL, `No previous value  [CPU] found for ${m.metricName}`)
                         }
                     }
                     break
@@ -535,7 +538,7 @@ class MetricsChannel implements IChannel {
                             m.metricValue = Math.round(m.metricValue/totalSecs*100*100)/100   // we build a percentage with 2 decimal positions
                         }
                         else {
-                            console.log(`No previous value found for ${m.metricName}`)
+                            logInfo(ELogComponent.CHANNEL, `No previous value found for ${m.metricName}`)
                         }
                     }
                     break
@@ -634,33 +637,33 @@ class MetricsChannel implements IChannel {
                 }
                 break
             default:
-                console.log(`Invalid view:`, instanceConfig.view)
+                logWarning(ELogComponent.CHANNEL, `Invalid view:` + instanceConfig.view)
         }
     }
 
     sendMetricsDataInstance = (webSocket:WebSocket, instanceId:string, initial:boolean): void => {
         let socket = this.webSockets.find(entry => entry.ws === webSocket)
         if (!socket) {
-            console.log('No socket found for sendLogData')
+            logInfo(ELogComponent.CHANNEL, 'No socket found for sendLogData')
             return
         }
         let instances = socket.instances
 
         if (!instances) {
-            console.log('No instances found for sendMetricsData')
+            logInfo(ELogComponent.CHANNEL, 'No instances found for sendMetricsData')
             return
         }
         var instance = instances.find (i => i.instanceId === instanceId)
         if (!instance) {
-            console.log(`No instance found for sendMetricsData instance ${instanceId}`)
+            logInfo(ELogComponent.CHANNEL, `No instance found for sendMetricsData instance ${instanceId}`)
             return
         }
         if (instance.working) {
-            console.log(`Previous instance of ${instanceId} is still running`)
+            logInfo(ELogComponent.CHANNEL, `Previous instance of ${instanceId} is still running`)
             return
         }
         if (instance.paused) {
-            console.log(`Instance ${instanceId} is paused, no SMD performed`)
+            logInfo(ELogComponent.CHANNEL, `Instance ${instanceId} is paused, no SMD performed`)
             return
         }
     
@@ -689,39 +692,40 @@ class MetricsChannel implements IChannel {
                 webSocket.send(JSON.stringify(metricsMessageResponse))
             }
             catch (err) {
-                console.log('Socket error, we should forget interval')
+                logInfo(ELogComponent.CHANNEL, 'Socket error, we should forget interval')
             }
             instance.working=false
         }
         catch (err) {
             this.sendChannelSignal(webSocket, ESignalMessageLevel.WARNING, `Cannot read metrics for instance ${instanceId}`, instanceConfig)
-            console.log('Error reading metrics', err)
+            logError(ELogComponent.CHANNEL, 'Error reading metrics')
+            logError(ELogComponent.CHANNEL, err)
         }
     }
 
     // sendMetricsDataInstance = (webSocket:WebSocket, instanceId:string, initial:boolean): void => {
     //     let socket = this.webSockets.find(entry => entry.ws === webSocket)
     //     if (!socket) {
-    //         console.log('No socket found for sendLogData')
+    //         logInfo(ELogComponent.CHANNEL, 'No socket found for sendLogData')
     //         return
     //     }
     //     let instances = socket.instances
 
     //     if (!instances) {
-    //         console.log('No instances found for sendMetricsData')
+    //         logInfo(ELogComponent.CHANNEL, 'No instances found for sendMetricsData')
     //         return
     //     }
     //     var instance = instances.find (i => i.instanceId === instanceId)
     //     if (!instance) {
-    //         console.log(`No instance found for sendMetricsData instance ${instanceId}`)
+    //         logInfo(ELogComponent.CHANNEL, `No instance found for sendMetricsData instance ${instanceId}`)
     //         return
     //     }
     //     if (instance.working) {
-    //         console.log(`Previous instance of ${instanceId} is still running`)
+    //         logInfo(ELogComponent.CHANNEL, `Previous instance of ${instanceId} is still running`)
     //         return
     //     }
     //     if (instance.paused) {
-    //         console.log(`Instance ${instanceId} is paused, no SMD performed`)
+    //         logInfo(ELogComponent.CHANNEL, `Instance ${instanceId} is paused, no SMD performed`)
     //         return
     //     }
     
@@ -801,20 +805,20 @@ class MetricsChannel implements IChannel {
     //                 }
     //                 break
     //             default:
-    //                 console.log(`Invalid view:`, instanceConfig.view)
+    //                 logInfo(ELogComponent.CHANNEL, `Invalid view:`, instanceConfig.view)
     //         }
     
     //         try {
     //             webSocket.send(JSON.stringify(metricsMessage))
     //         }
     //         catch (err) {
-    //             console.log('Socket error, we should forget interval')
+    //             logInfo(ELogComponent.CHANNEL, 'Socket error, we should forget interval')
     //         }
     //         instance.working=false
     //     }
     //     catch (err) {
     //         this.sendChannelSignal(webSocket, ESignalMessageLevel.WARNING, `Cannot read metrics for instance ${instanceId}`, instanceConfig)
-    //         console.log('Error reading metrics', err)
+    //         logInfo(ELogComponent.CHANNEL, 'Error reading metrics', err)
     //     }
     // }
     
