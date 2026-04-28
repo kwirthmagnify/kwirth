@@ -1,18 +1,20 @@
 import { IChannel } from '../channels/IChannel'
 import { ClusterInfo } from '../model/ClusterInfo'
+import { ELogComponent, logInfo } from '../tools/Logging'
 import { IProvider } from './IProvider'
 
 export class TickProvider implements IProvider {
     public readonly id = 'tick'
     public readonly providesRouter = false
     public router = undefined
+    public routerAlias = undefined
 
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, any>
     private interval: NodeJS.Timeout | undefined
 
     constructor(clusterInfo: ClusterInfo) {
-        console.log(`Instantiating provider ${this.id}`)
+        logInfo(ELogComponent.PROVIDER, `Instantiating provider ${this.id}`)
         this.clusterInfo = clusterInfo
         this.subscribers = new Map()
     }

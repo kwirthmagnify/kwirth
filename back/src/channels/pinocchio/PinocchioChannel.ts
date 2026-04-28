@@ -12,6 +12,8 @@ import { createOpenAI, OpenAILanguageModelChatOptions } from '@ai-sdk/openai'
 import { createGroq, GroqLanguageModelOptions } from '@ai-sdk/groq'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { createDeepSeek } from '@ai-sdk/deepseek'
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging';
+import { LoginApi } from '../../api/LoginApi';
 const nunjucks = require('nunjucks')
 
 // basic nunjucks config
@@ -53,13 +55,19 @@ class PinocchioChannel implements IChannel {
         kinds: [],
         llms: []
     }
+    startTime: number
 
     constructor (clusterInfo:ClusterInfo, backChannelObject:IBackChannelObject) {
         this.clusterInfo = clusterInfo
         this.backChannelObject = backChannelObject
+        this.startTime = Date.now()
     }
 
     startChannel = async () =>  {
+        this.clusterInfo.addSubscriber('business', this, {
+            spaces: ['private', 'public'],
+            types: ['income']
+        })
         this.clusterInfo.addSubscriber('events', this, {
             kinds: kindsAvailable,
             crdInstances: [],
@@ -81,7 +89,7 @@ class PinocchioChannel implements IChannel {
             modifiable: false,
             reconnectable: true,
             metrics: false,
-            providers: ['events'],
+            providers: ['events', 'business'],
             sources: [ EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,
@@ -120,9 +128,7 @@ class PinocchioChannel implements IChannel {
                 if (key) {
                     switch(llm.provider) {
                         case 'deepseek':
-                            const deepseek = createDeepSeek({
-                                apiKey: key
-                            })
+                            const deepseek = createDeepSeek({ apiKey: key })
                             return {
                                 llmProviderId: llm.provider,
                                 llmModelId: llm.model,
@@ -136,9 +142,7 @@ class PinocchioChannel implements IChannel {
                                 system
                             }
                         case 'google':
-                            const google = createGoogleGenerativeAI({
-                                apiKey: key
-                            })
+                            const google = createGoogleGenerativeAI({ apiKey: key })
                             return {
                                 llmProviderId: llm.provider,
                                 llmModelId: llm.model,
@@ -152,39 +156,18 @@ class PinocchioChannel implements IChannel {
                                 system
                             }
                         case 'openrouter':
-                            const openRouter = createOpenRouter({
-                                apiKey: key
-                            })
+                            const openRouter = createOpenRouter({ apiKey: key })
                             return {
                                 llmProviderId: llm.provider,
                                 llmModelId: llm.model,
                                 model: openRouter(llm.model),
                                 providerOptions: {
-                                    // openRouter: {
-                                    //     specificationVersion: 'v3',
-                                    //     provider: 'openrouter',
-                                    //     modelId: '',
-                                    //     supportsImageUrls: true,
-                                    //     supportedUrls: undefined,
-                                    //     defaultObjectGenerationMode: undefined,
-                                    //     settings: undefined,
-                                    //     config: undefined,
-                                    //     getArgs: undefined,
-                                    //     doGenerate: function (options: LanguageModelV3CallOptions): Promise<Awaited<ReturnType<LanguageModelV3['doGenerate']>>> {
-                                    //         throw new Error('Function not implemented.');
-                                    //     },
-                                    //     doStream: function (options: LanguageModelV3CallOptions): Promise<Awaited<ReturnType<LanguageModelV3['doStream']>>> {
-                                    //         throw new Error('Function not implemented.');
-                                    //     }
-                                    // } satisfies OpenRouterCompletionLanguageModel
                                 },
                                 prompt,
                                 system
                             }
                         case 'groq':
-                            const groq = createGroq({
-                                apiKey: key
-                            })
+                            const groq = createGroq({ apiKey: key })
                             return {
                                 llmProviderId: llm.provider,
                                 llmModelId: llm.model,
@@ -200,9 +183,7 @@ class PinocchioChannel implements IChannel {
                         case 'kwirth':
                             break
                         case 'openai':
-                            const openai = createOpenAI({
-                                apiKey: key
-                            })
+                            const openai = createOpenAI({ apiKey: key })
                             return {
                                 llmProviderId: llm.provider,
                                 llmModelId: llm.model,
@@ -218,9 +199,7 @@ class PinocchioChannel implements IChannel {
                                 system
                             }
                         case 'mistral':
-                            const mistral = createMistral({
-                                apiKey: key
-                            })
+                            const mistral = createMistral({ apiKey: key })
                             return {
                                 llmProviderId: llm.provider,
                                 llmModelId: llm.model,
@@ -259,11 +238,22 @@ class PinocchioChannel implements IChannel {
             // case 'tick':
             //     console.log('TICK')
             //     break
+            case 'business':
+                logInfo(ELogComponent.PROVIDER, event)
+                break
             case 'events':
                 if (event.type==='ADDED') {
                     try {
-                        console.log(`Pinocchio: added ${event.obj.kind}`, event.obj.metadata?.name)
+                        logInfo(ELogComponent.PROVIDER, `Pinocchio: added ${event.obj.kind} ${event.obj.metadata?.name}`)
+                        
                         for (let kind of this.pinocchioConfig.kinds.filter(k => k.enabled && k.kind===event.obj.kind)) {
+                            if (event.obj?.metadata?.creationTimestamp) {
+                                let creationTs = Date.parse(event.obj?.metadata?.creationTimestamp)
+                                if (creationTs<this.startTime) {
+                                    console.warn(`'Bypass object analysis, creation timestamp is previous for object ${event.obj?.metadata?.name} and kind ${kind.kind} for LLM ${kind.llm}`)
+                                    continue
+                                }
+                            }
                             try {
                                 let {llmModelId, llmProviderId, model, providerOptions, system, prompt} = this.buildModelInvocation(kind, event.obj) || {}
                                 if (!model) return
@@ -301,7 +291,8 @@ class PinocchioChannel implements IChannel {
                             }
                             catch (err:any) {
                                 let message = `Pinocchio analysis ended in error when analyzing '${event.obj.metadata.name}' in namespace '${event.obj.metadata.namespace}' [Kind:${event.obj.kind}]`
-                                console.log(message, err)
+                                logInfo(ELogComponent.PROVIDER, message)
+                                logInfo(ELogComponent.PROVIDER, err)
                                 let an:IAnalysis = {
                                     findings: [
                                         { description: message, level: 'critical'},
@@ -319,7 +310,7 @@ class PinocchioChannel implements IChannel {
                 }
                 break
             default:
-                console.log(`Ignored provider event from ${providerId} to channel ${this.getChannelData().id}`)
+                logError(ELogComponent.PROVIDER, `Ignored provider event from ${providerId} to channel ${this.getChannelData().id}`)
         }
     }
 
@@ -345,7 +336,7 @@ class PinocchioChannel implements IChannel {
             let instance = this.getInstance(webSocket, instanceMessage.instance)
             if (!instance) {
                 this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, `Instance not found`)
-                console.log(`Instance ${instanceMessage.instance} not found`)
+                logWarning(ELogComponent.PROVIDER,`Instance ${instanceMessage.instance} not found`)
                 return false
             }
             let pinocchioMessage = instanceMessage as IPinocchioMessage
@@ -389,7 +380,7 @@ class PinocchioChannel implements IChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        console.log(`Start ${this.getChannelData().id} instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
+        logInfo(ELogComponent.CHANNEL, `Start ${this.getChannelData().id} instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
         let socket = this.connections.find(s => s.webSocket === webSocket)
         if (!socket) {

@@ -1,7 +1,8 @@
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 import { IConfigModel, IConfigProvider } from './PinocchioConfig'
 
 export const loadModels = async (providers:IConfigProvider[]) => {
-    console.log('Pinocchio loading models...')
+    logInfo(ELogComponent.CHANNEL, 'Pinocchio loading models...')
     for (let provider of providers) {
         try {
             switch(provider.name) {
@@ -94,13 +95,13 @@ export const loadModels = async (providers:IConfigProvider[]) => {
                     ]
                     break
                 default:
-                    console.error(`Pinocchio: provider '${provider.name}' is not implemented in channel, will not be available.`)
+                    logWarning(ELogComponent.CHANNEL, `Pinocchio: provider '${provider.name}' is not implemented in channel, will not be available.`)
             }
-            console.log(`Pinocchio: '${provider.name}' provider added ${provider.models.length} models`)
+            logInfo(ELogComponent.CHANNEL, `Pinocchio: '${provider.name}' provider added ${provider.models.length} models`)
         }
         catch (err) {
-            console.error(`Pinocchio: error loading models from provider ${provider.name}`)
-            console.log(err)
+            logError(ELogComponent.CHANNEL, `Pinocchio: error loading models from provider ${provider.name}`)
+            logError(ELogComponent.CHANNEL, err)
         }
     }
 }

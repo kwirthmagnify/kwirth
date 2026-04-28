@@ -7,6 +7,7 @@ import { NodeMetrics } from './INodeMetrics'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
 import { IChannel } from '../channels/IChannel'
+import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
 
 export interface INodeInfo {
     [x: string]: any;
@@ -86,31 +87,24 @@ export class ClusterInfo {
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {
             prov.addSubscriber(c,data)
-            console.log(`Subscriber '${c.getChannelData().id}' added to provider '${providerId}'`)
+            logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' added to provider '${providerId}'`)
         }
         else
-            console.error(`Cannot subscribe channel '${c.getChannelData().id}' to provider '${providerId}' (provider do not exist)`)
+            logError(ELogComponent.PROVIDER, `Cannot subscribe channel '${c.getChannelData().id}' to provider '${providerId}' (provider do not exist)`)
     }
 
     updateSubscriber = (providerId: string, c:IChannel, data:any) => {
         //+++ review how to implement
-        let prov = this.providers.find(p => p.id===providerId)
-        if (prov) {
-            prov.addSubscriber(c,data)
-            console.log(`Subscriber '${c.getChannelData().id}' added to provider '${providerId}'`)
-        }
-        else
-            console.error(`Cannot subscribe channel '${c.getChannelData().id}' to provider '${providerId}' (provider do not exist)`)
     }
 
     removeSubscriber = (providerId: string, c:IChannel) => {
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {
             prov.removeSubscriber(c)
-            console.log(`Subscriber '${c.getChannelData().id}' removed from provider '${providerId}'`)
+            logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' removed from provider '${providerId}'`)
         }
         else
-            console.error(`Cannot remove subscription of channel '${c.getChannelData().id}' from provider ${providerId} (provider do not exist)`)
+            logError(ELogComponent.PROVIDER,`Cannot remove subscription of channel '${c.getChannelData().id}' from provider ${providerId} (provider do not exist)`)
     }
 
     setKubernetesClusterName = async() => {
@@ -181,8 +175,8 @@ export class ClusterInfo {
             }
         }
         catch (err) {
-            console.log('Cannot set cluster name')
-            console.log(err)
+            logError(ELogComponent.CORE,'Cannot set cluster name')
+            logError(ELogComponent.CORE,err)
             return 'unnamed-err'
         }
     }
@@ -194,7 +188,7 @@ export class ClusterInfo {
             var nodes:Map<string, INodeInfo> = new Map()
             for (var node of resp.items) {
                 if (node.spec?.unschedulable) {
-                    console.log(`WARNING: Node ${node.metadata?.name} is unschedulable`)
+                    logWarning(ELogComponent.CORE,`WARNING: Node ${node.metadata?.name} is unschedulable`)
                 }
                 else {
                     var nodeData:INodeInfo = {
@@ -217,7 +211,8 @@ export class ClusterInfo {
             return nodes
         }
         catch (err) {
-            console.log('Cannot list nodes', err)
+            logError(ELogComponent.CORE,'Cannot list nodes')
+            logError(ELogComponent.CORE,err)
             return new Map()
         }
     }

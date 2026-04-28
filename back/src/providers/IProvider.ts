@@ -17,4 +17,5 @@ export interface IProvider {
     startProvider: () => Promise<void>
     stopProvider: () => Promise<void>
     router: Router|undefined
+    routerAlias: string|undefined
 }

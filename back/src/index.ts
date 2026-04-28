@@ -58,11 +58,13 @@ import * as crypto from 'crypto'
 import { createProviderInstance, TProviderConstructor } from './providers/IProvider'
 import { ValidatingProvider } from './providers/ValidatingProvider'
 import { TickProvider } from './providers/TickProvider'
+import { BusinessProvider } from './providers/BusinessProvider';
+import { ELogComponent, logError, logInfo, logWarning } from './tools/Logging';
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
 // global.fetch = (...args) => {
-//     console.log(`🚀 Petición iniciada a: ${args[0]}`);
+//     logInfo(ELogComponent.CORE, `🚀 Petición iniciada a: ${args[0]}`);
 //     return originalFetch(...args);
 // }
 
@@ -92,6 +94,7 @@ var registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
 registeredProviders.set('tick', TickProvider)
 registeredProviders.set('validating', ValidatingProvider)
+registeredProviders.set('business', BusinessProvider)
 
 let rootPath = process.env.ROOTPATH
 if (rootPath && !rootPath.startsWith('/')) rootPath = '/'+ rootPath
@@ -123,7 +126,7 @@ if (envCommand!==undefined) {
             let input = envMasterKey + '|cluster::::|' + expire
             let hash = crypto.createHash('md5').update(input).digest('hex')
             let apiKey:ApiKey={ accessKey:accessKeyBuild(hash, 'permanent', 'cluster::::'), description:'ApiKey created with Kwirth External', expire, days:1}
-            console.log(apiKey)
+            logInfo(ELogComponent.CORE, apiKey)
             process.exit(0)
         default:
             process.exit(1)
@@ -189,13 +192,13 @@ if (envCommand!==undefined) {
 
 
 // const getExecutionEnvironment = async (context:string|undefined):Promise<string> => {
-//     console.log('Detecting execution environment...')
+//     logInfo(ELogComponent.CORE, 'Detecting execution environment...')
 
-//     console.log('Trying Electron...')    
+//     logInfo(ELogComponent.CORE, 'Trying Electron...')    
 //     if (runningEnv.isElectron) return 'electron'
 
 //     // we keep this order of detection, since kubernetes also has a docker engine
-//     console.log('Trying Kubernetes...')
+//     logInfo(ELogComponent.CORE, 'Trying Kubernetes...')
 //     try {
 //         let kubeConfig = new KubeConfig()
 //         kubeConfig.loadFromDefault()
@@ -205,46 +208,46 @@ if (envCommand!==undefined) {
 //         return 'kubernetes'
 //     }
 //     catch (err) {
-//         console.log(err)
-//         console.log('================================================')
+//         logInfo(ELogComponent.CORE, err)
+//         logInfo(ELogComponent.CORE, '================================================')
 //     }
 
-//     console.log('Trying Linux docker...')
+//     logInfo(ELogComponent.CORE, 'Trying Linux docker...')
 //     try {
 //         let dockerApiLinux = new Docker({ socketPath: '/var/run/docker.sock'})
 //         await dockerApiLinux.listContainers( { all:false } )
 //         return 'linuxdocker'
 //     }
 //     catch (err) {
-//         console.log(err)
-//         console.log('================================================')
+//         logInfo(ELogComponent.CORE, err)
+//         logInfo(ELogComponent.CORE, '================================================')
 //     }
 
-//     console.log('Trying Windows docker...')
+//     logInfo(ELogComponent.CORE, 'Trying Windows docker...')
 //     try {
 //         let dockerApiWindows = new Docker({ socketPath: '//./pipe/docker_engine' })
 //         await dockerApiWindows.listContainers( { all:false } )
 //         return 'windowsdocker'
 //     }
 //     catch (err) {
-//         console.log(err)
-//         console.log('================================================')
+//         logInfo(ELogComponent.CORE, err)
+//         logInfo(ELogComponent.CORE, '================================================')
 //     }
 //     return 'undetected'
 // }
 
 const getExecutionEnvironment = async (context:string|undefined):Promise<string> => {
-    console.log('Detecting execution environment...')
+    logInfo(ELogComponent.CORE, 'Detecting execution environment...')
 
-    console.log('Trying Electron...')    
+    logInfo(ELogComponent.CORE, 'Trying Electron...')    
     if (runningEnv.isElectron) return 'electron'
 
-    console.log('Trying Kubernetes...')
+    logInfo(ELogComponent.CORE, 'Trying Kubernetes...')
     if (runningEnv.isK8s) {
         return 'kubernetes'
     }
 
-    console.log('Trying Docker...')
+    logInfo(ELogComponent.CORE, 'Trying Docker...')
     if (runningEnv.isDocker) return 'docker'
 
     return 'undetected'
@@ -277,14 +280,14 @@ const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthD
             }
             else {
                 // kwirth is running outside, but wants to use kubernetes secrets for storing creds, and they don't exsit
-                console.log('Cannot determine namespace while running outside cluster (trying to read users secret)')
+                logInfo(ELogComponent.CORE, 'Cannot determine namespace while running outside cluster (trying to read users secret)')
                 process.exit(1)
             }
         }
     }
     catch (err) {
-        console.error('Error obatining KwirthData')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error obatining KwirthData')
+        logError(ELogComponent.CORE, err)
     }
     return undefined
 }
@@ -292,7 +295,7 @@ const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthD
 const activateRunningInstance = (ri:IRunningInstance) => {
     runningInstances.forEach( r => r.active = false)
     ri.active = true
-    console.log('Activated RI:',ri.id, ri.clusterInfo.name)
+    logInfo(ELogComponent.CORE, `Activated RI: ${ri.id} ${ri.clusterInfo.name}` )
 }
 
 const createRunningInstance = async (context:string|undefined, kwirthData:KwirthData):Promise<IRunningInstance|undefined> => {
@@ -302,7 +305,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         if (context) kubeConfig.setCurrentContext(context)
 
         const currentContextName = kubeConfig.getCurrentContext()
-        console.log(`Will use '${currentContextName}' context`)
+        logInfo(ELogComponent.CORE, `Will use '${currentContextName}' context`)
         const currentContext = kubeConfig.contexts.find(c => c.name === currentContextName)
 
         if (currentContext) {
@@ -342,7 +345,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
 
         if (runningEnv.isElectron || runningEnv.isDocker) {
             // do nothing, since we will use kubeconfig credentials
-            console.log('SA Token will not be created under isElectron or isDocker contexts')
+            logInfo(ELogComponent.CORE, 'SA Token will not be created under isElectron or isDocker contexts')
         }
         else {
             // let saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
@@ -354,22 +357,22 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             //     token = await saToken.extractToken('kwirth-sa', kwirthData.namespace)
             // }
             // if (token) {
-            //     console.log('Got token...')
+            //     logInfo(ELogComponent.CORE, 'Got token...')
             //     clusterInfo.saToken = saToken
             //     clusterInfo.token = token
             // }
             // else {
-            //     console.log('No SA Token, no metrics will be available.')
+            //     logInfo(ELogComponent.CORE, 'No SA Token, no metrics will be available.')
             // }
             let saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
             let token = await saToken.createToken('kwirth-sa', kwirthData.namespace)
             if (token) {
-                console.log('Got token...')
+                logInfo(ELogComponent.CORE, 'Got token...')
                 clusterInfo.saToken = saToken
                 clusterInfo.token = token
             }
             else {
-                console.warn('No SA Token, no metrics will be available.')
+                logWarning(ELogComponent.CORE, 'No SA Token, no metrics will be available.')
             }
         }
 
@@ -379,12 +382,12 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         let configMaps
         let secrets
         if (runningEnv.isDocker) {
-            console.log('Configuration paths:', envConfigMapPath, envSecretPath)
+            logInfo(ELogComponent.CORE, `Configuration paths:  ${envConfigMapPath} ${envSecretPath}`)
             configMaps = new DockerConfigMaps(clusterInfo.coreApi, envConfigMapPath)
             secrets = new DockerSecrets(clusterInfo.coreApi, envSecretPath)
             let users:{ [username:string]:string } = await secrets.read('kwirth-users')
             if (!users) {
-                console.log('Admin user will be created, since there is no users config map')
+                logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users config map')
                 users = {
                     admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXI6Ojo6In0='
                 }
@@ -409,8 +412,8 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         return runningInstance
     }
     catch (err) {
-        console.error('Error creating running instance')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error creating running instance')
+        logError(ELogComponent.CORE, err)
     }
 }
 
@@ -428,7 +431,7 @@ const sendChannelSignal = (webSocket: WebSocket, level: ESignalMessageLevel, tex
         webSocket.send(JSON.stringify(signalMessage))
     }
     else {
-        console.error(`Unsupported channel '${instanceMessage.channel}' for sending signals`)
+        logError(ELogComponent.CORE, `Unsupported channel '${instanceMessage.channel}' for sending signals`)
     }
 }
 
@@ -450,7 +453,7 @@ const sendChannelSignalAsset = (webSocket: WebSocket, level: ESignalMessageLevel
         webSocket.send(JSON.stringify(signalMessage))
     }
     else {
-        console.error(`Channel '${instanceMessage.channel}' is unsupported sneding asset info`)
+        logError(ELogComponent.CORE, `Channel '${instanceMessage.channel}' is unsupported sneding asset info`)
         sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Channel '${instanceMessage.channel}' is unsupported sending asset info`, instanceMessage, ri.channels)
     }
 }
@@ -470,33 +473,34 @@ const sendInstanceConfigSignalMessage = (ws:WebSocket, action:EInstanceMessageAc
 
 const addObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containerName:string, ri:IRunningInstance) => {
     try {
-        console.log(`Object review '${instanceConfig.channel}': ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
+        logInfo(ELogComponent.CORE, `Object review '${instanceConfig.channel}': ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
 
         let valid = AuthorizationManagement.checkAkr(ri.channels, instanceConfig, podNamespace, podName, containerName)
         if (!valid) {
-            console.error(`No AKR found for object : ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
+            logError(ELogComponent.CORE, `No AKR found for object : ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
             return
         }
 
-        console.log(`Level is enough for adding object: ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
+        logInfo(ELogComponent.CORE, `Level is enough for adding object: ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
 
         if(ri.channels.has(instanceConfig.channel)) {
             let channel = ri.channels.get(instanceConfig.channel)!
             if (channel?.containsAsset(webSocket, podNamespace, podName, containerName)) {
-                console.log(`Existing asset '${instanceConfig.channel}': ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
+                logInfo(ELogComponent.CORE, `Existing asset '${instanceConfig.channel}': ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
             }
             else {
-                console.log(`addObject '${instanceConfig.channel}': ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
+                logInfo(ELogComponent.CORE, `addObject '${instanceConfig.channel}': ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
                 await channel.addObject(webSocket, instanceConfig, podNamespace, podName, containerName)
                 sendChannelSignalAsset(webSocket, ESignalMessageLevel.INFO, ESignalMessageEvent.ADD, `Container ADDED: ${podNamespace}/${podName}/${containerName}`, instanceConfig, ri, podNamespace, podName, containerName)
             }
         }
         else {
-            console.error(`Invalid channel`, instanceConfig.channel)
+            logError(ELogComponent.CORE, `Invalid channel ${instanceConfig.channel}`)
         }
     }
     catch (err) {
-        console.error('Error adding object', err)
+        logError(ELogComponent.CORE, 'Error adding object')
+        logError(ELogComponent.CORE, err)
     }
 }
 
@@ -506,66 +510,66 @@ const deleteObject = async (webSocket:WebSocket, _eventType:string, podNamespace
         sendChannelSignalAsset(webSocket, ESignalMessageLevel.INFO, ESignalMessageEvent.DELETE, `Container DELETED: ${podNamespace}/${podName}/${containerName}`, instanceConfig, ri, podNamespace, podName, containerName)
     }
     else {
-        console.error(`Invalid channel`, instanceConfig.channel)
+        logError(ELogComponent.CORE, `Invalid channel ${instanceConfig.channel}`)
     }
 }
 
 const processEvent = async (eventType:string, obj: any, webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containers:string[], ri:IRunningInstance) => {
     try {
         if (eventType === 'ADDED') {
-            console.log('eventype',eventType, podNamespace, podName, obj.status.phase)
+            logInfo(ELogComponent.CORE, `eventype: ${eventType}, ${podNamespace}, ${podName}, ${obj.status.phase}`)
             for (let container of containers) {
                 let containerName = container
                 switch (instanceConfig.view) {
                     case EInstanceConfigView.NAMESPACE:
-                        console.log('Namespace event')
-                        console.log(`Pod ADDED: ${podNamespace}/${podName}/${containerName} on namespace`)
+                        logInfo(ELogComponent.CORE, 'Namespace event')
+                        logInfo(ELogComponent.CORE, `Pod ADDED: ${podNamespace}/${podName}/${containerName} on namespace`)
                         await addObject(webSocket, instanceConfig, podNamespace, podName, containerName, ri)
                         break
                     case EInstanceConfigView.GROUP:
-                        console.log('Group event')
+                        logInfo(ELogComponent.CORE, 'Group event')
                         let [_groupType, groupName] = instanceConfig.group.split('+')
                         // we rely on kubernetes naming conventions here (we could query k8 api to discover group the pod belongs to)
                         if (podName.startsWith(groupName)) {  
-                            console.log(`Pod ADDED: ${podNamespace}/${podName}/${containerName} on group`)
+                            logInfo(ELogComponent.CORE, `Pod ADDED: ${podNamespace}/${podName}/${containerName} on group`)
                             await addObject(webSocket, instanceConfig, podNamespace, podName, containerName, ri)
                             break
                         }
-                        console.log(`Excluded group: ${groupName}`)
+                        logInfo(ELogComponent.CORE, `Excluded group: ${groupName}`)
                         break
                     case EInstanceConfigView.POD:
-                        console.log('Pod event')
+                        logInfo(ELogComponent.CORE, 'Pod event')
                         if ((instanceConfig.namespace==='' || (instanceConfig.namespace!=='' && instanceConfig.namespace.split(',').includes(podNamespace))) && instanceConfig.pod.split(',').includes(podName)) {
                             if (instanceConfig.pod.split(',').includes(podName)) {
-                                console.log(`Pod ADDED: ${podNamespace}/${podName}/${containerName} on pod`)
+                                logInfo(ELogComponent.CORE, `Pod ADDED: ${podNamespace}/${podName}/${containerName} on pod`)
                                 await addObject(webSocket, instanceConfig, podNamespace, podName, containerName, ri)
                                 break
                             }
                         }
-                        console.log(`Excluded pod: ${podName}`)
+                        logInfo(ELogComponent.CORE, `Excluded pod: ${podName}`)
                         break
                     case EInstanceConfigView.CONTAINER:
-                        console.log('Container event')
+                        logInfo(ELogComponent.CORE, 'Container event')
                         // container has the form: podname+containername (includes a plus sign as separating char)
                         let instanceContainers = Array.from (new Set (instanceConfig.container.split(',').map (c => c.split('+')[1])))
                         let instancePods = Array.from (new  Set (instanceConfig.container.split(',').map (c => c.split('+')[0])))
                         if (instanceContainers.includes(containerName) && instancePods.includes(podName)) {
                             if (instanceConfig.container.split(',').includes(podName+'+'+containerName)) {
-                                console.log(`Pod ADDED: ${podNamespace}/${podName}/${containerName} on container`)
+                                logInfo(ELogComponent.CORE, `Pod ADDED: ${podNamespace}/${podName}/${containerName} on container`)
                                 await addObject(webSocket, instanceConfig, podNamespace, podName, containerName, ri)
                                 break
                             }
                         }
-                        console.log(`Excluded container: ${containerName}`)
+                        logInfo(ELogComponent.CORE, `Excluded container: ${containerName}`)
                         break
                     default:
-                        console.error('Invalid instanceConfig view')
+                        logError(ELogComponent.CORE, 'Invalid instanceConfig view')
                         break
                 }
             }
         }
         else if (eventType === 'MODIFIED') {
-            console.log('eventype',eventType, podNamespace, podName, obj.status.phase.toLowerCase())
+            logInfo(ELogComponent.CORE, `eventype ${eventType}, ${podNamespace}, ${podName}, ${obj.status.phase.toLowerCase()}`)
             let containerNames = obj.spec.containers.map( (c: any) => c.name)
             if (obj.status.phase.toLowerCase()==='running') {
                 processEvent('ADDED', obj, webSocket, instanceConfig, podNamespace, podName, containerNames, ri)
@@ -576,17 +580,17 @@ const processEvent = async (eventType:string, obj: any, webSocket:WebSocket, ins
             }
         }
         else if (eventType === 'DELETED') {
-            console.log('eventype', eventType, podNamespace, podName, obj.status.phase)
+            logInfo(ELogComponent.CORE, `eventype ${eventType}, ${podNamespace}, ${podName}, ${obj.status.phase}`)
             deleteObject(webSocket, eventType, podNamespace, podName, '', instanceConfig, ri)
         }
         else {
-            console.error(`Pod ${eventType} is unmanaged`)
+            logError(ELogComponent.CORE, `Pod ${eventType} is unmanaged`)
             sendChannelSignalAsset(webSocket, ESignalMessageLevel.INFO, ESignalMessageEvent.OTHER, `Received unmanaged event (${eventType}): ${podNamespace}/${podName}`, instanceConfig, ri, podNamespace, podName)
         }
     }
     catch (err) {
-        console.error('Error preceossing event')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error preceossing event')
+        logError(ELogComponent.CORE, err)
     }
 }
 
@@ -626,8 +630,8 @@ const watchDockerPods = async (ri:IRunningInstance, _apiPath:string, queryParams
         }
     }
     catch (err) {
-        console.error('Error watching docker pods')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error watching docker pods')
+        logError(ELogComponent.CORE, err)
     }
 }
 
@@ -644,8 +648,8 @@ const watchKubernetesPods = async (ri:IRunningInstance, apiPath:string, queryPar
         },
         (err) => {
             if (err !== null) {
-                console.error('Generic error starting watchPods')
-                console.error(err)
+                logError(ELogComponent.CORE, 'Generic error starting watchPods')
+                logError(ELogComponent.CORE, err)
                 sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, JSON.stringify(err), instanceConfig, ri.channels)
             }
             else {
@@ -654,8 +658,8 @@ const watchKubernetesPods = async (ri:IRunningInstance, apiPath:string, queryPar
         })
     }
     catch (err) {
-        console.error('Error watching kubernetes pods')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error watching kubernetes pods')
+        logError(ELogComponent.CORE, err)
     }        
 }
 
@@ -669,14 +673,14 @@ const watchPods = async (ri:IRunningInstance, apiPath:string, queryParams:any, w
                 await watchKubernetesPods(ri, apiPath, queryParams, webSocket, instanceConfig)
             }
             catch (err) {
-                console.error('Error starting to watch docker pods')
-                console.error(err)
+                logError(ELogComponent.CORE, 'Error starting to watch docker pods')
+                logError(ELogComponent.CORE, err)
             }
         }
     }
     catch (err) {
-        console.error('Error in generic watch pods')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error in generic watch pods')
+        logError(ELogComponent.CORE, err)
     }
 }
 
@@ -700,7 +704,7 @@ const getRequestedValidatedScopedPods = async (ri:IRunningInstance, instanceConf
 
             let existClusterScope = accessKeyResources.some(resource => resource.scopes === 'cluster')
             if (!existClusterScope) {
-                console.log('validPodNames:',validPodNames, '  podName:', podName)
+                logInfo(ELogComponent.CORE, 'validPodNames: ' + validPodNames + '  podName: ' + podName)
                 if (validPodNames.length>0 && !validPodNames.includes(podName)) continue
 
                 if (instanceConfig.namespace!=='' && instanceConfig.namespace.split(',').includes(podNamespace)) {
@@ -724,18 +728,18 @@ const getRequestedValidatedScopedPods = async (ri:IRunningInstance, instanceConf
         }
     }
     catch (err) {
-        console.error('Error getting requested validated scoped pods')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error getting requested validated scoped pods')
+        logError(ELogComponent.CORE, err)
     }
     return selectedPods
 }
 
 const processReconnect = async (webSocket: WebSocket, instanceMessage: IInstanceMessage, localChannels:Map<string,IChannel>) => {
-    console.log(`Trying to reconnect instance '${instanceMessage.instance}' on channel ${instanceMessage.channel}`)
+    logInfo(ELogComponent.CORE, `Trying to reconnect instance '${instanceMessage.instance}' on channel ${instanceMessage.channel}`)
     for (let channel of localChannels.values()) {
-        console.log('Review channel for reconnect:', channel.getChannelData().id)
+        logInfo(ELogComponent.CORE, 'Review channel for reconnect:' + channel.getChannelData().id)
         if (channel.containsInstance(instanceMessage.instance)) {
-            console.log('Found channel', channel.getChannelData().id)
+            logInfo(ELogComponent.CORE, 'Found channel ' + channel.getChannelData().id)
             let updated = channel.updateConnection(webSocket, instanceMessage.instance)
             if (updated) {
                 sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.RECONNECT, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Reconnect successful on channel: '+channel.channelId)
@@ -747,18 +751,19 @@ const processReconnect = async (webSocket: WebSocket, instanceMessage: IInstance
             }
         }
         else {
-            console.log(`Instance '${instanceMessage.instance}' not found for reconnect on channel ${channel.getChannelData().id}`)
+            logInfo(ELogComponent.CORE, `Instance '${instanceMessage.instance}' not found for reconnect on channel ${channel.getChannelData().id}`)
         }
     }
-    console.log(`Instance '${instanceMessage.instance}' not found for reconnect in any channels`)
+    logInfo(ELogComponent.CORE, `Instance '${instanceMessage.instance}' not found for reconnect in any channels`)
     sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.RECONNECT, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Instance has not been found for reconnect', false)
 }
 
 const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSocket, instanceConfig: IInstanceConfig, accessKeyResources: ResourceIdentifier[], validNamespaces: string[], validPodNames: string[], validContainers: string[]) => {
     try {
-        console.log(`Trying to perform instance config for channel '${instanceConfig.channel}' with view '${instanceConfig.view}'`)
+        logInfo(ELogComponent.CORE, `Trying to perform instance config for channel '${instanceConfig.channel}' with view '${instanceConfig.view}'`)
         if (ri.channels.get(instanceConfig.channel) && ri.channels.get(instanceConfig.channel)?.getChannelData().cluster) {
-            console.error('A cluster-wide access key has been created for access key', instanceConfig.accessKey.substring(0,8)+'... to access channel', instanceConfig.channel)
+            logWarning(ELogComponent.CORE, 'A cluster-wide access key has been received for access key')
+            logWarning(ELogComponent.CORE, instanceConfig.accessKey.substring(0,8)+'... to access channel ' + instanceConfig.channel)
             let channel = ri.channels.get(instanceConfig.channel)
             if (channel) {
                 instanceConfig.instance = uuid()
@@ -796,7 +801,7 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
                                 await watchPods(ri, `/api/v1/namespaces/${namespace}/${instanceConfig.objects}`, { labelSelector: groupPods.labelSelector }, webSocket, specificInstanceConfig)
                             }
                             else
-                                console.log(`No pods on namespace ${namespace}`)
+                                logInfo(ELogComponent.CORE, `No pods on namespace ${namespace}`)
                         }
                     }
                     break
@@ -876,8 +881,8 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
         }
     }
     catch (err) {
-        console.error('Error starting instance')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error starting instance')
+        logError(ELogComponent.CORE, err)
     }
 }
 
@@ -886,7 +891,7 @@ const processStopInstanceConfig = async (webSocket: WebSocket, instanceConfig: I
         localChannels.get(instanceConfig.channel)?.stopInstance(webSocket, instanceConfig)
     }
     else {
-        console.error('Invalid channel on instance stop')
+        logError(ELogComponent.CORE, 'Invalid channel on instance stop')
     }
 }
 
@@ -917,7 +922,7 @@ const processPing = (webSocket:WebSocket, instanceMessage:IInstanceMessage, loca
         }
     }
     else {
-        console.log(`Ping socket not found on channel ${instanceMessage.channel}`)
+        logInfo(ELogComponent.CORE, `Ping socket not found on channel ${instanceMessage.channel}`)
     }
     sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.PING, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Socket has not been found')
 }
@@ -933,24 +938,24 @@ const processChannelCommand = async (webSocket: WebSocket, instanceMessage: IIns
             else {
                 // we have no instance, may be an IMMED command
                 if (instanceMessage.flow === EInstanceMessageFlow.IMMEDIATE) {
-                    console.log(`Process IMMEDIATE command`)
+                    logInfo(ELogComponent.CORE, `Process IMMEDIATE command`)
                     channel.processCommand(webSocket, instanceMessage, podNamespace, podName, containerName)
                 }
                 else {
-                    console.log(`Instance '${instanceMessage.instance}' and flow ${instanceMessage.flow} not found for command`)
-                    console.log(instanceMessage)
+                    logInfo(ELogComponent.CORE, `Instance '${instanceMessage.instance}' and flow ${instanceMessage.flow} not found for command`)
+                    logInfo(ELogComponent.CORE, instanceMessage)
                     sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, `Instance '${instanceMessage.instance}' has not been found for command`)
                 }
             }   
         }
         else {
-            console.error(`Channel not found`)
+            logError(ELogComponent.CORE, `Channel not found`)
             sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Socket has not been found')
         }
     }
     catch (err) {
-        console.error('Error on processCommand')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error on processCommand')
+        logError(ELogComponent.CORE, err)
     }
 }
 
@@ -962,25 +967,25 @@ const processChannelRoute = async (ri:IRunningInstance, webSocket: WebSocket, in
             let routeMessage = instanceMessage as IRouteMessage
             if (ri.channels.has(routeMessage.destChannel)) {
                 if (ri.channels.get(routeMessage.destChannel)?.getChannelData().routable) {
-                    console.log(`Routing message to channel ${routeMessage.destChannel}`)
+                    logInfo(ELogComponent.CORE, `Routing message to channel ${routeMessage.destChannel}`)
                     processClientMessage (webSocket, JSON.stringify(routeMessage.data), ri)
                 }
                 else {
-                    console.error(`Destination channel (${routeMessage.destChannel}) for 'route' command doesn't support routing`)
+                    logError(ELogComponent.CORE, `Destination channel (${routeMessage.destChannel}) for 'route' command doesn't support routing`)
                 }
             }
             else {
-                console.error(`Destination channel '${routeMessage.destChannel}' does not exist for instance '${instanceMessage.instance}'`)
+                logError(ELogComponent.CORE, `Destination channel '${routeMessage.destChannel}' does not exist for instance '${instanceMessage.instance}'`)
                 sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, `Dest channel ${routeMessage.destChannel} does not exist`)
             }
         }
         else {
-            console.error(`Instance '${instanceMessage.instance}' not found for route on channel ${channel.getChannelData().id}`)
+            logError(ELogComponent.CORE, `Instance '${instanceMessage.instance}' not found for route on channel ${channel.getChannelData().id}`)
             sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Instance has not been found for routing')
         }   
     }
     else {
-        console.error(`Socket not found for routing`)
+        logError(ELogComponent.CORE, `Socket not found for routing`)
         sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Socket has not been found')
     }
 }
@@ -1009,12 +1014,12 @@ const processChannelWebsocket = async (ri:IRunningInstance, webSocket: WebSocket
             webSocket.send(JSON.stringify(response))
         }
         else {
-            console.error(`Instance '${instanceConfig.instance}' not found for WebSocket on channel ${channel.getChannelData().id}`)
+            logError(ELogComponent.CORE, `Instance '${instanceConfig.instance}' not found for WebSocket on channel ${channel.getChannelData().id}`)
             sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceConfig.channel, instanceConfig, 'Instance has not been found for WEBSOCKET request')
         }   
     }
     else {
-        console.error(`Socket not found for routing`)
+        logError(ELogComponent.CORE, `Socket not found for routing`)
         sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceConfig.channel, instanceConfig, 'Socket has not been found')
     }
 }
@@ -1043,11 +1048,11 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
             return
         }
 
-        console.log('Received request:', instanceMessage.flow, instanceMessage.action, instanceMessage.channel)
+        logInfo(ELogComponent.CORE, `Received request: ${instanceMessage.flow}, ${instanceMessage.action}, ${instanceMessage.channel}`)
         if (instanceMessage.action === EInstanceMessageAction.RECONNECT) {
-            console.log('Reconnect received')
+            logInfo(ELogComponent.CORE, 'Reconnect received')
             if (!ri.channels.get(instanceMessage.channel)?.getChannelData().reconnectable) {
-                console.error(`Reconnect capability not enabled for channel ${instanceMessage.channel} and instance ${instanceMessage.instance}`)
+                logError(ELogComponent.CORE, `Reconnect capability not enabled for channel ${instanceMessage.channel} and instance ${instanceMessage.instance}`)
                 sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Channel ${instanceMessage.channel} does not support reconnect`, instanceMessage, ri.channels)
                 return
             }
@@ -1057,7 +1062,7 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
 
         if (instanceMessage.action === EInstanceMessageAction.ROUTE) {
             let routeMessage = instanceMessage as IRouteMessage
-            console.log(`Route received from channel ${instanceMessage.channel} to ${routeMessage.destChannel}`)
+            logInfo(ELogComponent.CORE, `Route received from channel ${instanceMessage.channel} to ${routeMessage.destChannel}`)
             processChannelRoute (ri, webSocket, instanceMessage)
             return
         }
@@ -1086,11 +1091,11 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
 
         let validNamespaces:string[] = []
         if (instanceConfig.namespace) validNamespaces = await AuthorizationManagement.getValidNamespaces(ri.clusterInfo.coreApi, accessKey, instanceConfig.namespace.split(','))
-        console.log('validNamespaces:', validNamespaces)
+        logInfo(ELogComponent.CORE, 'validNamespaces: ' + validNamespaces)
 
         let validControllers:string[] = []
         if (instanceConfig.group) validControllers = await AuthorizationManagement.getValidControllers(ri.clusterInfo.coreApi,ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, accessKey, validNamespaces, instanceConfig.group.split(','))
-        console.log('validControllers:', validControllers)
+        logInfo(ELogComponent.CORE, 'validControllers:' + validControllers)
 
         let validPodNames:string[] = []
         if (ri.kwirthData.clusterType === EClusterType.DOCKER) {
@@ -1099,16 +1104,16 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
         else {
             if (instanceConfig.pod) validPodNames = await AuthorizationManagement.getValidPods(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, validNamespaces, accessKey, instanceConfig.pod.split(','))
         }
-        console.log('validPods:', validPodNames)
+        logInfo(ELogComponent.CORE, 'validPods:' + validPodNames)
 
         let validContainers:string[] = []
         if (instanceConfig.container) validContainers = await  AuthorizationManagement.getValidContainers(ri.clusterInfo.coreApi, accessKey, validNamespaces, validPodNames, instanceConfig.container.split(','))
-        console.log('validContainers:', validContainers)
+        logInfo(ELogComponent.CORE, 'validContainers:' + validContainers)
         
         switch (instanceConfig.action) {
             case EInstanceMessageAction.COMMAND:
                 if (instanceMessage.flow === EInstanceMessageFlow.IMMEDIATE) {
-                    console.log('Processing immediate request')
+                    logInfo(ELogComponent.CORE, 'Processing immediate request')
                     if (validNamespaces.includes(instanceConfig.namespace)) {
                         if (validPodNames.includes(instanceConfig.pod)) {
                             if (instanceConfig.container !== '' && instanceConfig.container) {
@@ -1169,8 +1174,8 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
         }
     }
     catch (err) {
-        console.error('Error processing clietn message')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error processing clietn message')
+        logError(ELogComponent.CORE, err)
     }
 }
 
@@ -1180,7 +1185,7 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
 
         let result = await ApiKeyApi.create(ri.configMaps, envMasterKey, runningEnv.isElectron)
         if (!result) {
-            console.error('Could not get apikeyapi setting up routes')
+            logError(ELogComponent.CORE, 'Could not get apikeyapi setting up routes')
             return false
         }
         let apiKeyApi = result
@@ -1205,12 +1210,16 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
             if (provider.providesRouter) {
                 if (provider.router) {
                     //riRouter.use(`/provider/${provider.id}`, provider.router)
-                    let path= `${envRootPath}/${ri.id}/provider/${provider.id}`
+                    let path
+                    if (provider.routerAlias)
+                        path = `${envRootPath}/${provider.routerAlias}`
+                    else
+                        path = `${envRootPath}/${ri.id}/provider/${provider.id}`
                     riRouter.use(path, provider.router)
-                    console.error(`Provider ${provider.id} will listen HTTP requests at '${path}'`)
+                    logInfo(ELogComponent.CORE, `Provider ${provider.id} will listen HTTP requests at '${path}'`)
                 }
                 else {
-                    console.error(`Provider ${provider.id} provides router but ruter doen't exist`)
+                    logError(ELogComponent.CORE, `Provider ${provider.id} provides router but ruter doen't exist`)
                 }
             }
         }
@@ -1219,8 +1228,8 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
         return true
     }
     catch (err) {
-        console.error('Error setting up routes')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error setting up routes')
+        logError(ELogComponent.CORE, err)
     }
     return false
 }
@@ -1232,25 +1241,25 @@ const processHttpChannelRequest = async (channel: IChannel, endpointName:string,
             channel.endpointRequest(endpointName, req, res, accessKey)
         }
         else {
-            console.error('Could not get accessKey processing an HTTP channel request')
+            logError(ELogComponent.CORE, 'Could not get accessKey processing an HTTP channel request')
             res.status(400).send()
         }
     }
     catch (err) {
-        console.error('Error on GET endpoint')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error on GET endpoint')
+        logError(ELogComponent.CORE, err)
         res.status(400).send()
     }
 }
 
 const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
-    console.log(`Starting HTTP channel endpoints`)
+    logInfo(ELogComponent.CORE, `Starting HTTP channel endpoints`)
     for (let channel of ri.channels.values()) {
         let channelData = channel.getChannelData()
         if (channelData.endpoints.length>0) {
-            console.log(`  Starting endpoints for channel '${channelData.id}'`)
+            logInfo(ELogComponent.CORE, `  Starting endpoints for channel '${channelData.id}'`)
             for (let endpoint of channelData.endpoints) {
-                console.log(`    ${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`)
+                logInfo(ELogComponent.CORE, `    ${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`)
                 const router = express.Router()
                 router.route('*')
                     .all( async (req:Request,res:Response, next) => {
@@ -1297,33 +1306,34 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
         if (lastVersion) ri.kwirthData.lastVersion = lastVersion
     
         // show root contents for electron debuggunng purposes
-        fs.readdir('.', (err:any, archivos:any) => {
+        fs.readdir('.', (err:any, currentFiles:any) => {
             if (err) {
-                console.error('Error reading folder data:', err)
+                logError(ELogComponent.CORE, 'Error reading folder data:')
+                logError(ELogComponent.CORE, err)
                 return
             }
-            console.log('File list at project root when starting instance:', archivos.join(', '))
+            logInfo(ELogComponent.CORE, 'File list at project root when starting instance: ' + currentFiles.join(', '))
         })
 
         if (! (await setUpRoutes(ri))) {
-            console.error('Could not set up HTTP routes. Exiting')
+            logError(ELogComponent.CORE, 'Could not set up HTTP routes. Exiting')
             process.exit(1)
         }
         startChannelEndpoints(ri, expressApp)
-        console.log('Starting channels:')
+        logInfo(ELogComponent.CORE, 'Starting channels:')
         for (let channel of ri.channels.values()) {
-            console.log(`  '${channel.getChannelData().id}'`)
+            logInfo(ELogComponent.CORE, `  '${channel.getChannelData().id}'`)
             channel.startChannel()
         }
     }
     catch (err) {
-        console.error('Error in startRunningInstance')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error in startRunningInstance')
+        logError(ELogComponent.CORE, err)
     }
 }
 
 const handleNodeProcessSignal = (signal:any) => {
-    console.warn(`⚠️ Signal ${signal} received. We just close everything.`)
+    logWarning(ELogComponent.CORE, `⚠️ Signal ${signal} received. We just close everything.`)
     process.exit(0)
 }   
 
@@ -1331,48 +1341,51 @@ process.on('SIGTERM', () => handleNodeProcessSignal('SIGTERM'))
 process.on('SIGINT', () => handleNodeProcessSignal('SIGINT'))
 
 process.on('unhandledRejection', (reason:any, promise:any) => {
-    console.error('❌ UNHANDLED REJECTION')
-    console.error('Reason:', reason)
-    console.error('Stack:', reason.stack)
-    console.error('Promise:', promise)
+    logError(ELogComponent.CORE, '❌ UNHANDLED REJECTION')
+    logError(ELogComponent.CORE, 'Reason:')
+    logError(ELogComponent.CORE, reason)
+    logError(ELogComponent.CORE, 'Stack:')
+    logError(ELogComponent.CORE, reason.stack)
+    logError(ELogComponent.CORE, 'Promise:')
+    logError(ELogComponent.CORE, promise)
     console.dir(promise)
     process.exit(1)
 })
 
 process.on('uncaughtException', (err, origin) => {
-    console.error('🚨 UNCAUGHT EXCEPTION')
-    console.error(`Origin: ${origin}`)
-    console.error(err.stack || err)
+    logError(ELogComponent.CORE, '🚨 UNCAUGHT EXCEPTION')
+    logError(ELogComponent.CORE, `Origin: ${origin}`)
+    logError(ELogComponent.CORE, err.stack || err)
     process.exit(1)
 })
 
 process.on('exit', async () => {
-    console.log('********************************************************************************')
-    console.log('********************************************************************************')
-    console.log('********************************************************************************')
-    console.log('********************************************************************************')
-    console.log('********************************************************************************')
-    console.log('exiting on node exit')
+    logInfo(ELogComponent.CORE, '********************************************************************************')
+    logInfo(ELogComponent.CORE, '********************************************************************************')
+    logInfo(ELogComponent.CORE, '********************************************************************************')
+    logInfo(ELogComponent.CORE, '********************************************************************************')
+    logInfo(ELogComponent.CORE, '********************************************************************************')
+    logInfo(ELogComponent.CORE, 'exiting on node exit')
     await new Promise((resolve) => setTimeout(resolve, 10000))
 })
 
 //const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthData, localClusterInfo:ClusterInfo, metricsRequired:boolean, eventsRequired: boolean, requiredProviders:string[]) : Promise<void> => {
 const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthData, localClusterInfo:ClusterInfo, metricsRequired:boolean, requiredProviders:string[]) : Promise<void> => {
     try {
-        console.log('Node info loaded')
+        logInfo(ELogComponent.CORE, 'Node info loaded')
 
-        console.log('Source Info')
-        console.log('  Name:', localClusterInfo.name)
-        console.log('  Type:', localClusterInfo.type)
-        console.log('  Flavour:', localClusterInfo.flavour)
-        console.log('  Nodes:', localClusterInfo.nodes.size)
+        logInfo(ELogComponent.CORE, 'Source Info')
+        logInfo(ELogComponent.CORE, '  Name: ' + localClusterInfo.name)
+        logInfo(ELogComponent.CORE, '  Type: ' + localClusterInfo.type)
+        logInfo(ELogComponent.CORE, '  Flavour: ' + localClusterInfo.flavour)
+        logInfo(ELogComponent.CORE, '  Nodes: ' + localClusterInfo.nodes.size)
 
         if (metricsRequired) {
             localClusterInfo.metrics = new MetricsTools(localClusterInfo, localKwirthData.inCluster)
             localClusterInfo.metricsInterval = envMetricsInterval // we set cluster metrics interval based on default metrics interval
             await localClusterInfo.metrics.startMetrics()
-            console.log('  vCPU:', localClusterInfo.vcpus)
-            console.log('  Memory (GB):', localClusterInfo.memory/1024/1024/1024)
+            logInfo(ELogComponent.CORE, `  vCPU:        ${localClusterInfo.vcpus}`)
+            logInfo(ELogComponent.CORE, `  Memory (GB): ${localClusterInfo.memory/1024/1024/1024}`)
         }
 
         localClusterInfo.providers = []
@@ -1380,19 +1393,24 @@ const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthDat
             let provider = registeredProviders.get(provId)
             if (provider) {
                 let providerInstance = createProviderInstance(registeredProviders.get(provId), localClusterInfo)
-                providerInstance!.startProvider()
-                console.log(`Provider '${provId}' started`)
-                localClusterInfo.providers.push(providerInstance!)
+                if (providerInstance) {
+                    providerInstance!.startProvider()
+                    logInfo(ELogComponent.CORE, `Provider '${provId}' started`)
+                    localClusterInfo.providers.push(providerInstance!)
+                }
+                else {
+                    logError(ELogComponent.CORE, `Couldn't create a provider instance for '${provId}'`)
+                }
             }
             else {
-                console.error(`Required provider '${provId}' is not registered`)
+                logError(ELogComponent.CORE, `Required provider '${provId}' is not registered`)
             }
         }
 
     }
     catch (err) {
-        console.error('Error setting up kubernetes requirements')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error setting up kubernetes requirements')
+        logError(ELogComponent.CORE, err)
     }
 }
 
@@ -1415,11 +1433,11 @@ const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthDat
 
 //         // Detect if any channel requires metrics or events
 //         let eventsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().events}, false)
-//         console.log('Events required: ', eventsRequired)
+//         logInfo(ELogComponent.CORE, 'Events required: ', eventsRequired)
 //         let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
-//         console.log('Metrics required: ', metricsRequired)
-//         if (!envChannelMetricsEnabled) console.log('❌ Metrics have not been enabled on Kwirth, so it will not be available.')
-//         if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) console.log('❌ An SA Token could not be obtained, so metrics will not be available.')
+//         logInfo(ELogComponent.CORE, 'Metrics required: ', metricsRequired)
+//         if (!envChannelMetricsEnabled) logInfo(ELogComponent.CORE, '❌ Metrics have not been enabled on Kwirth, so it will not be available.')
+//         if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) logInfo(ELogComponent.CORE, '❌ An SA Token could not be obtained, so metrics will not be available.')
 //         metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
 
 //         let registerdProviders = ['tick','validating']
@@ -1427,44 +1445,44 @@ const setKubernetesClusterKwirthRequirements = async (localKwirthData: KwirthDat
 //         for (let provId of registerdProviders) {
 //             let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)            
 //             if (required) requiredProviders.push(provId)
-//             console.log(`'${provId}' required:`, required)
+//             logInfo(ELogComponent.CORE, `'${provId}' required:`, required)
 //         }
 
 //         await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, eventsRequired, requiredProviders)
 //         runningInstance.clusterInfo.type = localKwirthData.clusterType
 
-//         console.log(`Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(',')}`)
-//         console.log(`Detected own namespace: ${localKwirthData.namespace}`)
+//         logInfo(ELogComponent.CORE, `Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(',')}`)
+//         logInfo(ELogComponent.CORE, `Detected own namespace: ${localKwirthData.namespace}`)
 //         if (localKwirthData.deployment !== '')
-//             console.log(`Detected own deployment: ${localKwirthData.deployment}`)
+//             logInfo(ELogComponent.CORE, `Detected own deployment: ${localKwirthData.deployment}`)
 //         else
-//             console.log(`No deployment detected. Kwirth is not running inside a cluster`)
+//             logInfo(ELogComponent.CORE, `No deployment detected. Kwirth is not running inside a cluster`)
 
 //         if (envForward) {
-//             console.log('Will try to configure FORWARDing...')
+//             logInfo(ELogComponent.CORE, 'Will try to configure FORWARDing...')
 //             if (runningInstance.kwirthData.inCluster) {
-//                 console.log('FORWARD for inCluster is being configured...')
+//                 logInfo(ELogComponent.CORE, 'FORWARD for inCluster is being configured...')
 //                 if (envRootPath!=='') {
 //                     configureForward(runningInstance.clusterInfo, app)
 //                 }
 //                 else {
-//                     console.log('FORWARD for kubernetes Kwirth cannot be started since Kwirth must have a root path specified (like /kwirth, for example). Kwirth cannot FORWARD if it is running on root (/) path')
+//                     logInfo(ELogComponent.CORE, 'FORWARD for kubernetes Kwirth cannot be started since Kwirth must have a root path specified (like /kwirth, for example). Kwirth cannot FORWARD if it is running on root (/) path')
 //                 }
 //             }
 //             else if (runningInstance.kwirthData.isElectron) {
-//                 console.log('FORWARD for electron should be implemented')
+//                 logInfo(ELogComponent.CORE, 'FORWARD for electron should be implemented')
 //             }
 //             else {
-//                 console.log('FORWARD not avialable (not inCluster and not isElectron)')
+//                 logInfo(ELogComponent.CORE, 'FORWARD not avialable (not inCluster and not isElectron)')
 //             }
 //         }
 //         else {
-//             console.log('No FORWARD mechanism will be available.')
+//             logInfo(ELogComponent.CORE, 'No FORWARD mechanism will be available.')
 //         }
 //     }
 //     catch (err) {
-//         console.log('Error preparing kubernetes')
-//         console.log(err)
+//         logInfo(ELogComponent.CORE, 'Error preparing kubernetes')
+//         logInfo(ELogComponent.CORE, err)
 //     }
 // }
 
@@ -1542,67 +1560,67 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             return runningInstance.channels.get(k)?.getChannelData()!
         })
 
-        console.log('Required providers:')
+        logInfo(ELogComponent.CORE, 'Required providers:')
         // Detect if any channel requires metrics or events
         // let eventsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().events}, false)
-        // console.log('Events required: ', eventsRequired)
+        // logInfo(ELogComponent.CORE, 'Events required: ', eventsRequired)
         let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
-        console.log(`  'metrics' required:`, metricsRequired)
-        if (!envChannelMetricsEnabled) console.error('❌ Metrics have not been enabled on Kwirth, so it will not be available.')
-        if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) console.error('❌ An SA Token could not be obtained, so metrics will not be available.')
+        logInfo(ELogComponent.CORE, `  'metrics' required:` + metricsRequired)
+        if (!envChannelMetricsEnabled) logError(ELogComponent.CORE, '❌ Metrics have not been enabled on Kwirth, so it will not be available.')
+        if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) logError(ELogComponent.CORE, '❌ An SA Token could not be obtained, so metrics will not be available.')
         metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
 
         let requiredProviders = []
         for (let provId of registeredProviders.keys()) {
-            let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)            
+            let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)
             if (required) requiredProviders.push(provId)
-            console.log(`  '${provId}' required:`, required)
+            logInfo(ELogComponent.CORE, `  '${provId}' required: ${required}`)
         }
 
         await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, requiredProviders)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
 
-        console.log(`Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(', ')}`)
-        console.log(`Enabled providers for this (kubernetes) run are: ${Array.from(runningInstance.clusterInfo.providers).map(p => `'${p.id}'`).join(', ')}`)
-        console.log(`Detected own namespace: ${localKwirthData.namespace}`)
+        logInfo(ELogComponent.CORE, `Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(', ')}`)
+        logInfo(ELogComponent.CORE, `Enabled providers for this (kubernetes) run are: ${Array.from(runningInstance.clusterInfo.providers).map(p => `'${p.id}'`).join(', ')}`)
+        logInfo(ELogComponent.CORE, `Detected own namespace: ${localKwirthData.namespace}`)
         if (localKwirthData.deployment !== '')
-            console.log(`Detected own deployment: ${localKwirthData.deployment}`)
+            logInfo(ELogComponent.CORE, `Detected own deployment: ${localKwirthData.deployment}`)
         else
-            console.log(`No deployment detected. Kwirth is not running inside a cluster`)
+            logInfo(ELogComponent.CORE, `No deployment detected. Kwirth is not running inside a cluster`)
 
         if (envForward) {
-            console.log('Will try to configure FORWARDing...')
+            logInfo(ELogComponent.CORE, 'Will try to configure FORWARDing...')
             if (runningInstance.kwirthData.inCluster) {
-                console.log('FORWARD for inCluster is being configured...')
+                logInfo(ELogComponent.CORE, 'FORWARD for inCluster is being configured...')
                 if (envRootPath!=='') {
                     configureForward(runningInstance.clusterInfo, app)
                 }
                 else {
-                    console.log('FORWARD for kubernetes Kwirth cannot be started since Kwirth must have a root path specified (like /kwirth, for example). Kwirth cannot FORWARD if it is running on root (/) path')
+                    logInfo(ELogComponent.CORE, 'FORWARD for kubernetes Kwirth cannot be started since Kwirth must have a root path specified (like /kwirth, for example). Kwirth cannot FORWARD if it is running on root (/) path')
                 }
             }
             else if (runningInstance.kwirthData.isElectron) {
-                console.log('FORWARD for electron should be implemented')
+                logInfo(ELogComponent.CORE, 'FORWARD for electron should be implemented')
             }
             else {
-                console.log('FORWARD not avialable (not inCluster and not isElectron)')
+                logInfo(ELogComponent.CORE, 'FORWARD not avialable (not inCluster and not isElectron)')
             }
         }
         else {
-            console.log('No FORWARD mechanism will be available.')
+            logInfo(ELogComponent.CORE, 'No FORWARD mechanism will be available.')
         }
     }
     catch (err) {
-        console.error('Error preparing kubernetes')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error preparing kubernetes')
+        logError(ELogComponent.CORE, err)
     }
 }
 
 const launchKubernetes = async (context:string|undefined, localKwirthData:KwirthData, expressApp:Application) : Promise<void> => {
     try {
-        console.log('Start Kubernetes Kwirth')
+        logInfo(ELogComponent.CORE, 'Start Kubernetes Kwirth')
         if (localKwirthData) {
-            console.log('Initial kwirthData', localKwirthData)
+            logInfo(ELogComponent.CORE, `Initial kwirthData ${localKwirthData}`)
             try {
                 let runningInstance = await createRunningInstance(context, localKwirthData)
                 if (runningInstance) {
@@ -1612,28 +1630,28 @@ const launchKubernetes = async (context:string|undefined, localKwirthData:Kwirth
                     await startRunningInstance(runningInstance, expressApp)
                 }
                 else {
-                    console.error('Cannot get a running instance')
+                    logError(ELogComponent.CORE, 'Cannot get a running instance')
                 }
             }
             catch (err){
-                console.error(err)
+                logError(ELogComponent.CORE, err)
             }
         }
         else {
-            console.error('Cannot get kwirthdata launching Kubernetes, exiting...')
+            logError(ELogComponent.CORE, 'Cannot get kwirthdata launching Kubernetes, exiting...')
         }
     }
     catch (err) {
-        console.error('Error launching kubernetes')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error launching kubernetes')
+        logError(ELogComponent.CORE, err)
     }
 }
 
 const launchDocker = async (context:string|undefined, localKwirthData:KwirthData, expressApp:Application) : Promise<void> => {    
     try {
-        console.log('Start Docker Kwirth')
+        logInfo(ELogComponent.CORE, 'Start Docker Kwirth')
         if (localKwirthData) {
-            console.log('Initial kwirthData', localKwirthData)
+            logInfo(ELogComponent.CORE, `Initial kwirthData ${localKwirthData}`)
             try {
                 let runningInstance = await createRunningInstance(context, localKwirthData)
                 if (runningInstance) {
@@ -1643,28 +1661,28 @@ const launchDocker = async (context:string|undefined, localKwirthData:KwirthData
                     await startRunningInstance(runningInstance, expressApp)
                 }
                 else {
-                    console.error('Cannot get a running instance')
+                    logError(ELogComponent.CORE, 'Cannot get a running instance')
                 }
             }
             catch (err){
-                console.error(err)
+                logError(ELogComponent.CORE, err)
             }
         }
         else {
-            console.error('Cannot get kwirthdata launching Docker, exiting...')
+            logError(ELogComponent.CORE, 'Cannot get kwirthdata launching Docker, exiting...')
         }
     }
     catch (err) {
-        console.error('Error launching docker')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error launching docker')
+        logError(ELogComponent.CORE, err)
     }
 }
 
 const launchElectron = async (localKwirthData:KwirthData, expressApp:Application) : Promise<void> => {
     try {
-        console.log('Start Electron Kwirth')
+        logInfo(ELogComponent.CORE, 'Start Electron Kwirth')
         if (localKwirthData) {
-            console.log('Initial kwirthData', localKwirthData)
+            logInfo(ELogComponent.CORE, `Initial kwirthData ${localKwirthData}`)
             try {
                 expressApp.get('/core/electron/kubeconfig', (req:Request,res:Response) => {
                     try {
@@ -1679,7 +1697,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                     }
                     catch (err) {
                         res.status(500).json({})
-                        console.error(err)
+                        logError(ELogComponent.CORE, err)
                     }
                 })
                 expressApp.delete('/core/electron/kubeconfig', (req:Request,res:Response) => {
@@ -1701,17 +1719,17 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                     }
                     catch (err) {
                         res.status(500).json({})
-                        console.error(err)
+                        logError(ELogComponent.CORE, err)
                     }
                 })
                 expressApp.post('/core/electron/kubeconfig', async (req:Request, res:Response) => {
                     try {
                         let contextName:string = req.body.context
-                        console.log('Activating context for electron use:', contextName)
+                        logInfo(ELogComponent.CORE, 'Activating context for electron use: '+contextName)
                         if (contextName) {
                             let existingRunningInstance = runningInstances.find(r => r.electronContext === contextName)
                             if (existingRunningInstance) {
-                                console.log('Already activated', contextName)
+                                logInfo(ELogComponent.CORE, 'Already activated '+contextName)
                                 activateRunningInstance(existingRunningInstance)
                                 res.status(200).json(existingRunningInstance.apiKeyApi?.apiKeys[0])  // we just reuse the first inElectron ApiKey (there should be no other kind of Api Keysstsored)
                             }
@@ -1724,7 +1742,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                                     activateRunningInstance(runningInstance)
                                     await startRunningInstance(runningInstance, expressApp)
 
-                                    console.log('Creating instance for context', contextName)
+                                    logInfo(ELogComponent.CORE, 'Creating instance for context' + contextName)
                                     // +++ we should be using a common function for creating api key
                                     let description = 'Volatile key for electron'
                                     let expire:number = Date.now() + 10000000000  // 4 months
@@ -1738,7 +1756,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                                     res.status(200).json({ accessKey })
                                 }
                                 else {
-                                    console.error('Could not get a running instance')
+                                    logError(ELogComponent.CORE, 'Could not get a running instance')
                                     res.status(400).json({})
                                 }
                             }
@@ -1749,39 +1767,39 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                     }
                     catch (err) {
                         res.status(500).json({})
-                        console.error(err)
+                        logError(ELogComponent.CORE, err)
                     }
                 })
             }
             catch (err){
-                console.error(err)
+                logError(ELogComponent.CORE, err)
             }
         }
         else {
-            console.error('Cannot get kwirthdata launching Electron, exiting...')
+            logError(ELogComponent.CORE, 'Cannot get kwirthdata launching Electron, exiting...')
         }    
     }
     catch (err) {
-        console.error('Error launching electron')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error launching electron')
+        logError(ELogComponent.CORE, err)
     }
 }
 
 const startNodeTasks = () => {
     // launch GC every 15 secs
     if (global.gc) {
-        console.log('GC will run every 15 secs asynchronously')
+        logInfo(ELogComponent.CORE, 'GC will run every 15 secs asynchronously')
         setInterval ( () => {
             if (global.gc) global.gc()
        }, 15000)
     }
     else {
-        console.log(`No GC will run. You'd better enable it by adding '--expose-gc' to your node start command`)
+        logInfo(ELogComponent.CORE, `No GC will run. You'd better enable it by adding '--expose-gc' to your node start command`)
     }
 
     // show heap status every 5 mins
     setInterval ( () => {
-        console.log(v8.getHeapStatistics())
+        logInfo(ELogComponent.CORE, v8.getHeapStatistics())
     }, 300000)
 }
 
@@ -1819,11 +1837,11 @@ const configureForward = (localClusterInfo:ClusterInfo, expressApp:Application) 
                 return podIp
             }
             else {
-                console.log('Pod exists, but it seems to not to have an assigned IP')
+                logInfo(ELogComponent.CORE, 'Pod exists, but it seems to not to have an assigned IP')
             }
         }
         catch (err) {
-            console.error('Error getting pod')
+            logError(ELogComponent.CORE, 'Error getting pod')
         }
     }
 
@@ -1841,7 +1859,7 @@ const configureForward = (localClusterInfo:ClusterInfo, expressApp:Application) 
                 return
             }
             let dest = req.cookies['x-kwirth-forward']
-            console.log(`[PROXY] dynamic routing to `+dest)
+            logInfo(ELogComponent.CORE, `[PROXY] dynamic routing to `+dest)
             return dynamicProxy(req, res, next)
         }
         if (req.url.startsWith(`${envRootPath}/port-forward/pod`)) {
@@ -1849,17 +1867,17 @@ const configureForward = (localClusterInfo:ClusterInfo, expressApp:Application) 
                 let namespace=req.url.split('/')[4]
                 let podname=req.url.split('/')[5]
                 let port=req.url.split('/')[6]
-                console.log(`[PROXY] Launch port forward for pod `, namespace, '/', podname)
+                logInfo(ELogComponent.CORE, `[PROXY] Launch port forward for pod ${namespace}/${podname}`)
                 let ip = await getPodIp(localClusterInfo.coreApi, namespace, podname)
-                console.log(`[PROXY] IP `, ip)
+                logInfo(ELogComponent.CORE, `[PROXY] IP ` + ip)
                 res.cookie('x-kwirth-forward', ip+':'+port, { path: '/' })
                 res.cookie('x-kwirth-refresh', '1', { path: '/' })
                 res.redirect('/')
                 return
             }
             catch (err) {
-                console.error('Error processing port-forward')
-                console.error(err)
+                logError(ELogComponent.CORE, 'Error processing port-forward')
+                logError(ELogComponent.CORE, err)
             }
         }
         next()
@@ -1869,15 +1887,15 @@ const configureForward = (localClusterInfo:ClusterInfo, expressApp:Application) 
 const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, instances:IRunningInstance[], localProcessClientMessage:(webSocket: WebSocket, message: string, ri:IRunningInstance) => Promise<void>) => {
     try {
         // create HTTP and WS servers
-        console.log('Creating HTTP server...')
+        logInfo(ELogComponent.CORE, 'Creating HTTP server...')
         const httpServer = http.createServer(expressApp)
-        console.log('Creating WS server...')
+        logInfo(ELogComponent.CORE, 'Creating WS server...')
         const wsServer = new WebSocketServer({ server: httpServer, skipUTF8Validation:true  })
 
         wsServer.on('connection', (webSocket:WebSocket, req:IncomingMessage) => {
             const ipHeader = req.headers['x-forwarded-for']
             const ip = (Array.isArray(ipHeader) ? ipHeader[0] : ipHeader || req.socket.remoteAddress || '').split(',')[0].trim()
-            console.log(`Client connected from ${ip}`)
+            logInfo(ELogComponent.CORE, `Client connected from ${ip}`)
 
             if (req.url) {
                 // This block precesses web socket connections for channels (they are not the websocket connecitons for kwrith itself)
@@ -1886,26 +1904,28 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                 if (challenge) {
                     let ri = instances.find(r => r.active)
                     if (!ri) {
-                        console.error('No running Instance found on WS connection')
+                        logError(ELogComponent.CORE, 'No running Instance found on WS connection')
                         return
                     }
                     let websocketRequestIndex = ri.clusterInfo.pendingWebsocket.findIndex(i => i.challenge === challenge)
                     if (websocketRequestIndex>=0) {
                         let websocketRequest = ri.clusterInfo.pendingWebsocket[websocketRequestIndex]
-                        console.log('Websocket request received for channel', websocketRequest.channel)
+                        logInfo(ELogComponent.CORE, 'Websocket request received for channel ' + websocketRequest.channel)
                         if (!ri.channels.has(websocketRequest.channel)) {
                             webSocket.close()
-                            console.error('Channel not found', websocketRequest.channel)
+                            logError(ELogComponent.CORE, 'Channel not found')
+                            logError(ELogComponent.CORE, websocketRequest.channel)
                             return
                         }
                         let channel = ri.channels.get(websocketRequest.channel)!
-                        console.log('Websocket connection request routed to', websocketRequest.channel)
+                        logInfo(ELogComponent.CORE, 'Websocket connection request routed to' + websocketRequest.channel)
                         channel.websocketRequest(webSocket, websocketRequest.instance, websocketRequest.instanceConfig)
                         ri.clusterInfo.pendingWebsocket.splice(websocketRequestIndex,1)
                         return
                     }
                     else {
-                        console.error('Instance not found for completing webscoket request:', challenge)
+                        logError(ELogComponent.CORE, 'Instance not found for completing webscoket request:')
+                        logError(ELogComponent.CORE, challenge)
                         webSocket.close()
                         return
                     }
@@ -1915,7 +1935,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
             webSocket.onmessage = (event) => {
                 let ri = instances.find(r => r.active)
                 if (!ri) {
-                    console.error('No running Instance found on WS message')
+                    logError(ELogComponent.CORE, 'No running Instance found on WS message')
                     return
                 }
                 localProcessClientMessage(webSocket, event.data, ri)
@@ -1923,15 +1943,15 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
 
             webSocket.onclose = () => {
                 // we do not remove connections for the client to reconnect
-                console.log('Client disconnected')
+                logInfo(ELogComponent.CORE, 'Client disconnected')
                 let ri = instances.find(r => r.active)
                 if (!ri) {
-                    console.error('No running Instance found on WS close')
+                    logError(ELogComponent.CORE, 'No running Instance found on WS close')
                     return
                 }
                 for (let channel of ri.channels.values()) {
                     if (channel.containsConnection(webSocket)) {
-                        console.error(`Connection from IP ${ip} to channel ${channel.getChannelData().id} has been interrupted.`)
+                        logError(ELogComponent.CORE, `Connection from IP ${ip} to channel ${channel.getChannelData().id} has been interrupted.`)
                     }
                 }
                 if (runningEnv.isElectron) {
@@ -1940,20 +1960,20 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
             }
         })
 
-        console.log('Listening...')
+        logInfo(ELogComponent.CORE, 'Listening...')
         httpServer.listen(envPort, () => {
-            console.log(`Server is listening on port ${envPort}`)
+            logInfo(ELogComponent.CORE, `Server is listening on port ${envPort}`)
             if (localKwirthData.inCluster) {
-                console.log(`Kwirth is running INSIDE cluster`)
+                logInfo(ELogComponent.CORE, `Kwirth is running INSIDE cluster`)
             }
             else {
-                console.log(`Kwirth is running OUTSIDE a cluster`)
+                logInfo(ELogComponent.CORE, `Kwirth is running OUTSIDE a cluster`)
             }
         })
     }
     catch (err) {
-        console.error('Error creatinh HTTP/WS server')
-        console.error(err)
+        logError(ELogComponent.CORE, 'Error creatinh HTTP/WS server')
+        logError(ELogComponent.CORE, err)
     }
 }
 
@@ -1961,17 +1981,19 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////// START ///////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-console.log(`Kwirth version is ${VERSION}`)
-console.log(`Kwirth started at ${new Date().toISOString()}`)
-console.log('Kwirth running environment:', runningEnv)
-console.log('Kwirth Auth:', envAuth)
+logInfo(ELogComponent.CORE, `Kwirth version is ${VERSION}`)
+logInfo(ELogComponent.CORE, `Kwirth started at ${new Date().toISOString()}`)
+logInfo(ELogComponent.CORE, 'Kwirth running environment:')
+logInfo(ELogComponent.CORE, runningEnv)
+logInfo(ELogComponent.CORE, 'Kwirth Auth:')
+logInfo(ELogComponent.CORE, envAuth)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 showLogo()
 startNodeTasks()
 
 getExecutionEnvironment(envContext).then( async (exenv:string) => {
-    console.log('Kubernetes context:', envContext || 'default kubeconfig context')
+    logInfo(ELogComponent.CORE, 'Kubernetes context:' + (envContext || 'default kubeconfig context'))
 
     let kwirthData:KwirthData
     switch (exenv) {
@@ -2023,12 +2045,12 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
             if (kd)
                 kwirthData = kd
             else {
-                console.error('Cannot get KwirthData. Exiting')
+                logError(ELogComponent.CORE, 'Cannot get KwirthData. Exiting')
                 process.exit(1)
             }
             break
         default:
-            console.error(`Unsupported execution environment '${exenv}'. Exiting...`)
+            logError(ELogComponent.CORE, `Unsupported execution environment '${exenv}'. Exiting...`)
             process.exit()
     }
 
@@ -2038,12 +2060,12 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
 
     // serve front
     if (envFront) {
-        console.log(`Front serving is enbaled`)
-        console.log(`SPA is available at: ${envRootPath}/front`)
+        logInfo(ELogComponent.CORE, `Front serving is enbaled`)
+        logInfo(ELogComponent.CORE, `SPA is available at: ${envRootPath}/front`)
         app.get(`${envRootPath}`, (req, res) => res.redirect(`${envRootPath}/front`))
     }
     else {
-        console.log('Front serving not enabled, SPA will not be available')
+        logInfo(ELogComponent.CORE, 'Front serving not enabled, SPA will not be available')
     }
     app.use(`${envRootPath}`, (req, res, next) => {
         if (req.path.startsWith(`${envRootPath}/front`) || req.path === '/') return next()
@@ -2063,17 +2085,18 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
     if (envFront) app.use(`${envRootPath}/front/`, express.static('./front'))
 
     if (kwirthData.inCluster) {
-        console.log('Configuring healthz endpoint for Kubernetes')
+        logInfo(ELogComponent.CORE, 'Configuring healthz endpoint for Kubernetes')
         app.get(`/healthz`, (_req:Request,res:Response) => { res.status(200).send() })
     }
 
     const fs = require('fs')
     fs.readdir('.', (err:any, folderFiles:any) => {
         if (err) {
-            console.error('Error reading folder data:', err)
+            logError(ELogComponent.CORE, 'Error reading folder data:')
+            logError(ELogComponent.CORE, err)
             return
         }
-        console.log('File list at project root when launching environment:', folderFiles.join(', '))
+        logInfo(ELogComponent.CORE, 'File list at project root when launching environment: ' + folderFiles.join(', '))
     })
 
     createHttpServers(kwirthData, app, runningInstances, processClientMessage)
@@ -2093,10 +2116,10 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
             await launchKubernetes(envContext, kwirthData, app)
             break
         default:
-            console.error(`'Unsupported execution environment '${exenv}'. Exiting...`)
+            logError(ELogComponent.CORE, `'Unsupported execution environment '${exenv}'. Exiting...`)
             process.exit()
     }
-    console.log(`KWI1500I Control is being given to Kwirth`)
+    logInfo(ELogComponent.CORE, `KWI1500I Control is being given to Kwirth`)
  })
 .catch( (err) => {
     console.error (err)

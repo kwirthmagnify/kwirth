@@ -4,6 +4,7 @@ import { IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { CoreV1EventList, V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
 import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 const yaml = require('js-yaml')
 
 export interface IMagnifyConfig {
@@ -85,14 +86,14 @@ class MagnifyChannel implements IChannel {
             // 2. Función COMÚN con implementación por defecto
             // Si a la clase hija le vale este código, no tiene que escribir nada.
             containsConnection(webSocket: WebSocket): boolean {
-                console.log("Ejecutando lógica común de verificación...");
+                logInfo(ELogComponent.CHANNEL, "Ejecutando lógica común de verificación...");
                 // Supongamos una lógica estándar que sirva para casi todos
                 return true; 
             }
 
             // 3. Método que el hijo PUEDE sobrescribir opcionalmente
             removeConnection(webSocket: WebSocket): void {
-                console.log("Conexión eliminada de forma estándar");
+                logInfo(ELogComponent.CHANNEL, "Conexión eliminada de forma estándar");
             }
 
             // 4. Métodos que el hijo DEBE implementar sí o sí
@@ -161,7 +162,7 @@ class MagnifyChannel implements IChannel {
                 }
                 break
             default:
-                console.log(`Ignored provider event from ${providerId} to channel ${this.getChannelData().id}`)
+                logInfo(ELogComponent.CHANNEL, `Ignored provider event from ${providerId} to channel ${this.getChannelData().id}`)
         }
     }
 
@@ -188,7 +189,7 @@ class MagnifyChannel implements IChannel {
             else {
                 let socket = this.webSockets.find(s => s.ws === webSocket)
                 if (!socket) {
-                    console.log('Socket not found')
+                    logInfo(ELogComponent.CHANNEL, 'Socket not found')
                     return false
                 }
 
@@ -196,7 +197,7 @@ class MagnifyChannel implements IChannel {
                 let instance = instances.find(i => i.instanceId === instanceMessage.instance)
                 if (!instance) {
                     this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, `Instance not found`)
-                    console.log(`Instance ${instanceMessage.instance} not found`)
+                    logInfo(ELogComponent.CHANNEL, `Instance ${instanceMessage.instance} not found`)
                     return false
                 }
                 let magnifyMessage = instanceMessage as IMagnifyMessage
@@ -206,13 +207,13 @@ class MagnifyChannel implements IChannel {
             }
         }
         catch (err) {
-            console.log('Error processing magnify command')
+            logInfo(ELogComponent.CHANNEL, 'Error processing magnify command')
             return false
         }
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        console.log(`Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
+        logInfo(ELogComponent.CHANNEL, `Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
@@ -236,11 +237,11 @@ class MagnifyChannel implements IChannel {
     }
 
     pauseContinueInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void => {
-        console.log('Pause/Continue not supported')
+        logInfo(ELogComponent.CHANNEL, 'Pause/Continue not supported')
     }
 
     modifyInstance = (webSocket:WebSocket, instanceConfig: IInstanceConfig): void => {
-        console.log('Modify not supported')
+        logInfo(ELogComponent.CHANNEL, 'Modify not supported')
     }
 
     stopInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig): void => {
@@ -264,15 +265,15 @@ class MagnifyChannel implements IChannel {
                     instances.splice(pos,1)
                 }
                 else {
-                    console.log(`Instance ${instanceId} not found, cannot delete`)
+                    logInfo(ELogComponent.CHANNEL, `Instance ${instanceId} not found, cannot delete`)
                 }
             }
             else {
-                console.log('There are no Magnify Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no Magnify Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found on Magnify')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on Magnify')
         }
     }
 
@@ -290,7 +291,7 @@ class MagnifyChannel implements IChannel {
             this.webSockets.splice(pos,1)
         }
         else {
-            console.log('WebSocket not found on Magnify for remove')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on Magnify for remove')
         }
     }
 
@@ -301,7 +302,7 @@ class MagnifyChannel implements IChannel {
             return true
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
             return false
         }
     }
@@ -360,14 +361,14 @@ class MagnifyChannel implements IChannel {
             if (instances) {
                 let instanceIndex = instances.findIndex(t => t.instanceId === instanceId)
                 if (instanceIndex>=0) return instances[instanceIndex]
-                console.log('Instance not found')
+                logInfo(ELogComponent.CHANNEL, 'Instance not found')
             }
             else {
-                console.log('There are no Instances on websocket')
+                logInfo(ELogComponent.CHANNEL, 'There are no Instances on websocket')
             }
         }
         else {
-            console.log('WebSocket not found')
+            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
         }
         return undefined
     }
@@ -395,7 +396,7 @@ class MagnifyChannel implements IChannel {
 
             switch (magnifyMessage.command) {
                 case EMagnifyCommand.LIST: {
-                    console.log(`Get LIST`)
+                    logInfo(ELogComponent.CHANNEL, `Get LIST`)
                     if (!magnifyMessage.params || magnifyMessage.params.length<1) {
                         execResponse.data = `Insufficent parameters`
                         return execResponse
@@ -405,7 +406,7 @@ class MagnifyChannel implements IChannel {
                 }
                 
                 case EMagnifyCommand.SUBSCRIBE: {
-                    console.log(`Do SUBSCRIBE`)
+                    logInfo(ELogComponent.CHANNEL, `Do SUBSCRIBE`)
                     this.clusterInfo.addSubscriber('events', this, { kinds: magnifyMessage.params!, syncInstances:Boolean(magnifyMessage.params?.includes('CRD Instances'))} )
                     return
                 }
@@ -445,7 +446,7 @@ class MagnifyChannel implements IChannel {
                             for (let imageName of magnifyMessage.params!.slice(1)) {
                                 await imageDelete(this.clusterInfo.appsApi, imageName)
                             }
-                            console.log('notify-delete-ended')
+                            logInfo(ELogComponent.CHANNEL, 'notify-delete-ended')
                             throttleExcute('image-delete-node', async () => {
                                 this.sendDataMessage(webSocket, instance, magnifyMessage.id, EMagnifyCommand.LIST, JSON.stringify(await this.clusterInfo.coreApi.listNode()))
                             })
@@ -471,7 +472,7 @@ class MagnifyChannel implements IChannel {
                     break
 
                 case EMagnifyCommand.LISTCRD: {
-                    console.log(`Get LISTCRD`)
+                    logInfo(ELogComponent.CHANNEL, `Get LISTCRD`)
                     if (!magnifyMessage.params || magnifyMessage.params.length<1) {
                         execResponse.data = `Insufficent parameters`
                         return execResponse
@@ -481,27 +482,27 @@ class MagnifyChannel implements IChannel {
                 }
 
                 case EMagnifyCommand.CREATE: {
-                    console.log(`Do CREATE`)
+                    logInfo(ELogComponent.CHANNEL, `Do CREATE`)
                     this.executeCreate(webSocket, instance, magnifyMessage.params!)
                     return
                 }
                 case EMagnifyCommand.EVENTS: {
-                    console.log(`Do EVENT`)
+                    logInfo(ELogComponent.CHANNEL, `Do EVENT`)
                     this.executeEvents(webSocket, instance, magnifyMessage)
                     return
                 }
                 case EMagnifyCommand.APPLY: {
-                    console.log(`Do APPLY`)
+                    logInfo(ELogComponent.CHANNEL, `Do APPLY`)
                     this.executeApply(webSocket, instance, magnifyMessage.params!)
                     return
                 }
                 case EMagnifyCommand.DELETE: {
-                    console.log(`Do DELETE`)
+                    logInfo(ELogComponent.CHANNEL, `Do DELETE`)
                     this.executeDelete(webSocket, instance, magnifyMessage.params!)
                     return
                 }
                 case EMagnifyCommand.CONTROLLER: {
-                    console.log(`Do RESTART`)
+                    logInfo(ELogComponent.CHANNEL, `Do RESTART`)
                     switch(magnifyMessage.params?.[0]) {
                         case 'restart':
                             restartController(magnifyMessage.params[1], magnifyMessage.params[2], magnifyMessage.params[3], this.clusterInfo)
@@ -536,8 +537,8 @@ class MagnifyChannel implements IChannel {
             return execResponse
         }
         catch (err) {
-            console.log('Error executing magnify command')
-            console.log(err)
+            logInfo(ELogComponent.CHANNEL, 'Error executing magnify command')
+            logInfo(ELogComponent.CHANNEL, err)
             return undefined
         }
     }
@@ -784,7 +785,7 @@ class MagnifyChannel implements IChannel {
                     // we ignore LIST for CRDi, only SYNC is needed
                     break
                 default:
-                    console.log('Invalid class received:', param)
+                    logWarning(ELogComponent.CHANNEL, 'Invalid class received: ' + param)
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, 'Invalid class: '+param)
                     break
             }
@@ -822,7 +823,8 @@ class MagnifyChannel implements IChannel {
             }
         }
         catch (err) {
-            console.error("Error:", err);
+            logError(ELogComponent.CHANNEL, "Error:")
+            logError(ELogComponent.CHANNEL, err)
             return {
                 kind: 'V1APIResourceList',
                 apiVersion: 'v0',
@@ -844,7 +846,7 @@ class MagnifyChannel implements IChannel {
             })
         }
         catch (err:any) {
-            console.log(err)
+            logInfo(ELogComponent.CHANNEL, err)
             this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, JSON.stringify(err.body))
         }
     }
@@ -856,14 +858,14 @@ class MagnifyChannel implements IChannel {
                     await this.clusterInfo.objectsApi.delete(yaml.load(obj))
                 }
                 catch (err:any) {
-                    console.log(err)
+                    logInfo(ELogComponent.CHANNEL, err)
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, JSON.stringify(err.body))
                 }
             }
         }
         catch (err) {
-            console.log('Error executing delete')
-            console.log(err)
+            logInfo(ELogComponent.CHANNEL, 'Error executing delete')
+            logInfo(ELogComponent.CHANNEL, err)
         }
     }
 
@@ -879,14 +881,14 @@ class MagnifyChannel implements IChannel {
             }
         }
         catch (err) {
-            console.log('Error executing create')
-            console.log(err)
+            logInfo(ELogComponent.CHANNEL, 'Error executing create')
+            logInfo(ELogComponent.CHANNEL, err)
         }
     }
 
     private async executeApply (webSocket:WebSocket, instance:IInstance, params:string[]) {
         try {
-            console.log(params)
+            logInfo(ELogComponent.CHANNEL, params)
             for (let param of params) {
                 try {
                     const res = yaml.load(param)
@@ -899,8 +901,8 @@ class MagnifyChannel implements IChannel {
             }
         }
         catch (err) {
-            console.log('Error executing apply')
-            console.log(err)
+            logInfo(ELogComponent.CHANNEL, 'Error executing apply')
+            logInfo(ELogComponent.CHANNEL, err)
         }
     }
 
@@ -914,8 +916,8 @@ class MagnifyChannel implements IChannel {
             this.sendDataMessage(webSocket, instance, magnifyMessage.id, EMagnifyCommand.EVENTS, JSON.stringify(result))
         }
         catch (err) {
-            console.log('Error executing events')
-            console.log(err)
+            logInfo(ELogComponent.CHANNEL, 'Error executing events')
+            logInfo(ELogComponent.CHANNEL, err)
         }
     }
 
@@ -932,7 +934,7 @@ class MagnifyChannel implements IChannel {
                         rxmbps:0
                     }
             default:
-                console.log('Invalid scope por getUsage:', scope)
+                logWarning(ELogComponent.CHANNEL, 'Invalid scope por getUsage: ' + scope)
         }
         return {}
     }
@@ -970,7 +972,8 @@ class MagnifyChannel implements IChannel {
             }
         }
         catch (err) {
-            console.error('Error getting events:', err);
+            logError(ELogComponent.CHANNEL, 'Error getting events:')
+            logError(ELogComponent.CHANNEL, err)
         }
     }
 

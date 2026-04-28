@@ -1,6 +1,7 @@
 import { ClusterInfo, INodeInfo } from "../model/ClusterInfo"
 import { EInstanceConfigView } from "@kwirthmagnify/kwirth-common"
 import { NodeMetrics } from "../model/INodeMetrics"
+import { ELogComponent, logError, logInfo, logWarning } from "./Logging"
 
 export interface AssetData {
     podNode: string
@@ -124,7 +125,7 @@ export class MetricsTools {
     }
 
     startMetrics = async () => {
-        console.log('Metrics information for cluster is being loaded')
+        logInfo(ELogComponent.CHANNEL, 'Metrics information for cluster is being loaded')
         let nodes = Array.from(this.clusterInfo.nodes.values())
 
         this.metricsList = new Map()
@@ -143,7 +144,7 @@ export class MetricsTools {
             if (node.machineMetricValues.get('machine_memory_bytes')) this.clusterInfo.memory += node.machineMetricValues.get('machine_memory_bytes')!.value
         }
         this.clusterInfo.startMetricsInterval(this.clusterInfo.metricsInterval)
-        console.log('Metrics gathering started...')
+        logInfo(ELogComponent.CHANNEL, 'Metrics gathering started...')
     }
 
     /*
@@ -166,10 +167,10 @@ export class MetricsTools {
                 if (response.ok)
                     text = await response.text()
                 else
-                    console.log(`Error reading inElectron metrics ${response.status}: ${response.statusText}`)
+                    logError(ELogComponent.CHANNEL, `Error reading inElectron metrics ${response.status}: ${response.statusText}`)
             }
             catch (error: any) {
-                console.error(`Error reading cAdvisor metrics from inElectron on node ${node.kubernetesNode.metadata?.name}:`, error.message)
+                logError(ELogComponent.CHANNEL, `Error reading cAdvisor metrics from inElectron on node ${node.kubernetesNode.metadata?.name}:` + error.message)
             }
         }
         else if (this.inCluster) {
@@ -180,7 +181,7 @@ export class MetricsTools {
                 text = await response.text()
             }
             catch (error:any) {
-                console.log(`Error reading cAdvisor inCluster metrics at node ${node.ip}`, error.stack)
+                logError(ELogComponent.CHANNEL, `Error reading cAdvisor inCluster metrics at node ${node.ip}` + error.stack)
             }
         }
         else {
@@ -193,10 +194,11 @@ export class MetricsTools {
                 if (response.ok) 
                     text = await response.text()
                 else
-                    console.log(`Cannot get kubelet metrics ${response.status}: ${response.statusText}`)
+                    logWarning(ELogComponent.CHANNEL, `Cannot get kubelet metrics ${response.status}: ${response.statusText}`)
             }
             catch (err) {
-                console.log(`Error obtaining kubelet metrics`, err)
+                logError(ELogComponent.CHANNEL, `Error obtaining kubelet metrics`)
+                logError(ELogComponent.CHANNEL, err)
             }
         }
 
@@ -257,7 +259,7 @@ export class MetricsTools {
                 return await resp.json()
             }
             catch {
-                console.log('error reading cadvisor')
+                logError(ELogComponent.CHANNEL, 'Error reading cadvisor')
             }
         }
         else {
@@ -266,7 +268,7 @@ export class MetricsTools {
                 return await resp.json()
             }
             catch (error:any) {
-                console.log(`Error reading cAdvisor summary at node ${node.ip}`, error.stack)
+                logError(ELogComponent.CHANNEL, `Error reading cAdvisor summary at node ${node.ip} ` + error.stack)
             }
         }
         return {}
@@ -359,11 +361,15 @@ export class MetricsTools {
                                 newContainerMetricValues.set(sampledMetricName, { value: newValue + newContainerMetricValues.get(sampledMetricName)!.value, timestamp:timestamp } )                                    
                             }
                             else {
-                                console.log('Repeated container metrics (will add values):')
-                                console.log('Line:')
-                                console.log(line)
-                                console.log('Original metric:', sampledMetricName, newContainerMetricValues.get(sampledMetricName))
-                                console.log('Duplicated  metric:', sampledMetricName, newValue)
+                                logInfo(ELogComponent.CHANNEL, 'Repeated container metrics (will add values):')
+                                logInfo(ELogComponent.CHANNEL, 'Line:')
+                                logInfo(ELogComponent.CHANNEL, line)
+                                logInfo(ELogComponent.CHANNEL, 'Original metric:')
+                                logInfo(ELogComponent.CHANNEL, sampledMetricName)
+                                logInfo(ELogComponent.CHANNEL, newContainerMetricValues.get(sampledMetricName))
+                                logInfo(ELogComponent.CHANNEL, 'Duplicated  metric:')
+                                logInfo(ELogComponent.CHANNEL, sampledMetricName)
+                                logInfo(ELogComponent.CHANNEL, newValue)
                                 newContainerMetricValues.set(sampledMetricName, { value: newContainerMetricValues.get(sampledMetricName)!.value, timestamp: timestamp} )
                             }
                         }
@@ -371,11 +377,13 @@ export class MetricsTools {
                             newContainerMetricValues.set(sampledMetricName, { value: newValue, timestamp:timestamp} )
                     }
                     else {
-                        console.log('No value nor ts for container metric: ', line)
+                        logWarning(ELogComponent.CHANNEL, 'No value nor ts for container metric: ')
+                        logWarning(ELogComponent.CHANNEL, line)
                     }
                 }
                 else {
-                    console.log('Invalid container metric format: ', line)
+                    logWarning(ELogComponent.CHANNEL, 'Invalid container metric format:')
+                    logWarning(ELogComponent.CHANNEL, line)
                 }
             }
             else {
@@ -418,11 +426,13 @@ export class MetricsTools {
                                 newPodMetricValues.set(sampledMetricName, { value: newValue, timestamp:timestamp })
                         }
                         else {
-                            console.log('No value nor ts for pode metric: ', line)
+                            logWarning(ELogComponent.CHANNEL, 'No value nor ts for pode metric: ')
+                            logWarning(ELogComponent.CHANNEL, line)
                         }
                     }
                     else {
-                        console.log('Invalid pod metric format: ', line)
+                        logWarning(ELogComponent.CHANNEL, 'Invalid pod metric format: ')
+                        logWarning(ELogComponent.CHANNEL, line)
                     }    
                 }
                 else {
@@ -459,7 +469,7 @@ export class MetricsTools {
     // read metrics and values for all nodes in the cluster
     public readClusterMetrics = async (clusterInfo: ClusterInfo): Promise<void> => {
         if (this.loadingClusterMetrics) {
-            console.log(`Still loading cluster metrics ${new Date().toTimeString()}`)
+            logInfo(ELogComponent.CHANNEL, `Still loading cluster metrics ${new Date().toTimeString()}`)
             return
         }
 
@@ -467,7 +477,7 @@ export class MetricsTools {
         this.loadingClusterMetrics = true
 
         try {
-            console.log(`About to read cluster metrics ${new Date().toTimeString()}`)
+            logInfo(ELogComponent.CHANNEL, `About to read cluster metrics ${new Date().toTimeString()}`)
 
             // we rebuild the list of nodes
             let newNodeSet = await clusterInfo.getNodes()
@@ -486,8 +496,8 @@ export class MetricsTools {
             }
         }
         catch (err) {
-            console.log('Error reading cluster metrics')
-            console.log(err)
+            logError(ELogComponent.CHANNEL, 'Error reading cluster metrics')
+            logError(ELogComponent.CHANNEL, err)
         }
         this.loadingClusterMetrics = false
     }
@@ -563,7 +573,8 @@ export class MetricsTools {
                 }
             }
             catch (err) {
-                console.error('Error calculating node resources', err)
+                logError(ELogComponent.CHANNEL, 'Error calculating node resources')
+                logError(ELogComponent.CHANNEL, err)
                 return {
                     cpu:Math.random()*100,
                     memory:Math.random()*100,

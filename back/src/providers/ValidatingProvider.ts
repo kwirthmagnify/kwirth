@@ -1,5 +1,6 @@
 import { IChannel } from '../channels/IChannel'
 import { ClusterInfo } from '../model/ClusterInfo'
+import { ELogComponent, logInfo } from '../tools/Logging'
 import { IProvider } from './IProvider'
 import express, { Request, Response} from 'express'
 
@@ -11,12 +12,13 @@ export class ValidatingProvider implements IProvider {
     public readonly id = 'validating'
     public readonly providesRouter = true
     public router = express.Router()
+    public routerAlias = undefined
 
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IValidatingSubscriber>
     
     constructor(clusterInfo: ClusterInfo) {
-        console.log(`Instantiating provider ${this.id}`)
+        logInfo(ELogComponent.PROVIDER, `Instantiating provider ${this.id}`)
         this.clusterInfo = clusterInfo
         this.subscribers = new Map()
 

@@ -2,6 +2,7 @@ import { IChannel } from '../channels/IChannel'
 import { ClusterInfo } from '../model/ClusterInfo'
 import { Watch } from '@kubernetes/client-node'
 import { IProvider } from '../providers/IProvider'
+import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
 
 export interface IEventsSubscriber {
     kinds: string[]
@@ -13,6 +14,7 @@ export class EventsProvider implements IProvider {
     public readonly id = 'events'
     public readonly providesRouter = false
     public router = undefined
+    public routerAlias = undefined
 
     private resourceWatchers: Map<string, Watch>
     private clusterInfo: ClusterInfo
@@ -34,7 +36,7 @@ export class EventsProvider implements IProvider {
             this.subscribers.set(c, subscriber)
         }
         catch(err) {
-            console.log(`Errors occurred while adding subscriber ${c.getChannelData().id} to provider 'events'`)
+            logError(ELogComponent.PROVIDER, `Errors occurred while adding subscriber ${c.getChannelData().id} to provider 'events'`)
         }
     }
 
@@ -55,7 +57,9 @@ export class EventsProvider implements IProvider {
             try {
                 await watch.watch(
                     resourcePath,
-                    {}, 
+                    {
+                        timeoutSeconds: 3600
+                    }, 
                     (type, apiObj) => {
                         retryCount = 0
                         currentWaitTime = INITIAL_WAIT
@@ -63,16 +67,16 @@ export class EventsProvider implements IProvider {
                     },
                     (err) => {
                         const errorMsg = err?.message || err?.Error || "Unknown error"
-                        console.log(`[${resourcePath}] Watcher ended: ${errorMsg}`)
+                        logError(ELogComponent.PROVIDER, `[${resourcePath}] Watcher ended: ${errorMsg}`)
 
                         if (retryCount < MAX_RETRIES) {
                             retryCount++
-                            console.log(`[${resourcePath}] Retry ${retryCount}/${MAX_RETRIES}. Waiting ${currentWaitTime / 1000}s...`)                            
+                            logInfo(ELogComponent.PROVIDER, `[${resourcePath}] Retry ${retryCount}/${MAX_RETRIES}. Waiting ${currentWaitTime / 1000}s...`)                            
                             setTimeout(watchLoop, currentWaitTime)
                             currentWaitTime *= 2
                         }
                         else {
-                            console.error(`[${resourcePath}] MAX RETRIES REACHED (${MAX_RETRIES}). Stopping watcher.`)
+                            logError(ELogComponent.PROVIDER, `[${resourcePath}] MAX RETRIES REACHED (${MAX_RETRIES}). Stopping watcher.`)
                             this.resourceWatchers.delete(resourcePath)
                         }
                     }
@@ -81,7 +85,7 @@ export class EventsProvider implements IProvider {
             catch (error: any) {
                 if (retryCount < MAX_RETRIES) {
                     retryCount++
-                    console.error(`[${resourcePath}] Error: ${error.message}. Retry ${retryCount} in ${currentWaitTime / 1000}s`)
+                    logError(ELogComponent.PROVIDER, `[${resourcePath}] Error: ${error.message}. Retry ${retryCount} in ${currentWaitTime / 1000}s`)
                     setTimeout(watchLoop, currentWaitTime)
                     currentWaitTime *= 2
                 }
@@ -115,12 +119,12 @@ export class EventsProvider implements IProvider {
         const resourcePath = `/apis/${crd.spec.group}/${crd.spec.versions[0].name}/${crd.spec.names.plural}`
 
         if (this.resourceWatchers.has(resourcePath)) {
-            console.log(`Already watching CRD instances for: ${kindName}`)
+            logWarning(ELogComponent.PROVIDER, `Already watching CRD instances for: ${kindName}`)
             return
         }
 
         if (crd.spec.versions && crd.spec.versions.length > 1) {
-            console.warn(`Only version '${crd.spec.versions[0].name}' of '${kindName}' will be watched. All versions are: ${crd.spec.versions.map((v:any) => v.name).join(', ')}`);
+            logWarning(ELogComponent.PROVIDER, `Only version '${crd.spec.versions[0].name}' of '${kindName}' will be watched. All versions are: ${crd.spec.versions.map((v:any) => v.name).join(', ')}`);
         }
 
         for (let [channel, subscriber] of subscribersList.entries()) {
@@ -140,22 +144,24 @@ export class EventsProvider implements IProvider {
         }
 
         if (watcher) {
-            console.log(`Stopping watcher for CRD: ${kindName} at ${resourcePath}`)
+            logWarning(ELogComponent.PROVIDER, `Stopping watcher for CRD: ${kindName} at ${resourcePath}`)
             try {
                 // @ts-ignore
                 if (typeof watcher.abort === 'function') {
                     // @ts-ignore
                     watcher.abort();
                 }
-            } catch (e) {
-                console.error("Error aborting watcher:", e);
+            }
+            catch (e) {
+                logError(ELogComponent.PROVIDER, 'Error aborting watcher:')
+                logError(ELogComponent.PROVIDER, e)
             }
             this.resourceWatchers.delete(resourcePath)
         }
     }
 
     startProvider = async () => {
-        console.log('Events reception started...')
+        logInfo(ELogComponent.PROVIDER, 'Events reception started...')
 
         const coreResources = [
             '/api/v1/nodes',

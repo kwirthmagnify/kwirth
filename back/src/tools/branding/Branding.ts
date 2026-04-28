@@ -1,4 +1,5 @@
 import { KwirthData, versionGreaterThan } from "@kwirthmagnify/kwirth-common"
+import { ELogComponent, logInfo, logWarning } from "../Logging"
 
 export const getLastKwirthVersion = async (kwirthData:KwirthData) : Promise<string|undefined> => {
     kwirthData.lastVersion=kwirthData.version
@@ -11,21 +12,21 @@ export const getLastKwirthVersion = async (kwirthData:KwirthData) : Promise<stri
                 var regex = /^\d+\.\d+\.\d+$/
                 if (regex.test(result.name)) {
                     if (versionGreaterThan(result.name, kwirthData.version)) {
-                        console.log(`************************************************`)
-                        console.log(`************************************************`)
-                        console.log(`** New Kwirth version available: ${(result.name+'          ').substring(0,10)} **`)
-                        console.log(`************************************************`)
-                        console.log(`************************************************`)
+                        logWarning(ELogComponent.CORE, `************************************************`)
+                        logWarning(ELogComponent.CORE, `************************************************`)
+                        logWarning(ELogComponent.CORE, `** New Kwirth version available: ${(result.name+'          ').substring(0,10)} **`)
+                        logWarning(ELogComponent.CORE, `************************************************`)
+                        logWarning(ELogComponent.CORE, `************************************************`)
                         return result.name
                     }
                 }
             }
-            console.log('No new Kwirth version found on Docker hub')
+            logInfo(ELogComponent.CORE, 'No new Kwirth version found on Docker hub')
         }
     }
     catch (err) {
-        console.log('Error trying to determine last Kwirth version')
-        console.log(err)
+        logInfo(ELogComponent.CORE, 'Error trying to determine last Kwirth version')
+        logInfo(ELogComponent.CORE, err)
     }
     return undefined
 }
