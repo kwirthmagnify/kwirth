@@ -9,12 +9,14 @@ const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let logData:ILogData = props.channelObject.data
     let logConfig:ILogConfig = props.channelObject.config
     const theme = useTheme()
+
     const logBoxRef = useRef<HTMLDivElement | null>(null)
     const [logBoxTop, setLogBoxTop] = useState(0)
+    const [isAtBottom, setIsAtBottom] = useState(true)
+
     const [filter, setFilter] = useState<string>('')
     const [filterCasing, setFilterCasing] = useState(false)
     const [filterRegex, setFilterRegex] = useState(false)
-    const [isAtBottom, setIsAtBottom] = useState(true)
 
     const adornmentSelected= { margin: 0, borderWidth:1, borderStyle:'solid', borderColor:'gray', paddingLeft:3, paddingRight:3, color:theme.palette.background.default, backgroundColor:theme.palette.text.primary, cursor: 'pointer'}
     const adornmentNotSelected = { margin: 0, borderWidth:1, borderStyle: 'solid', borderColor:'#f0f0f0', backgroundColor:theme.palette.background.default, color:theme.palette.text.primary, paddingLeft:3, paddingRight:3, cursor:'pointer'}
@@ -35,9 +37,7 @@ const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     if (!logData) return <pre></pre>
 
     const formatLogLine = (logLine:ILogLine) => {
-        if (!logLine.pod) {
-            return <>{logLine.text+'\n'}</>
-        }
+        if (!logLine.pod) return <>{logLine.text+'\n'}</>
 
         if (filter!=='') {
             if (filterCasing) {

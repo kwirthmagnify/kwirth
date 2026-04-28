@@ -24,6 +24,8 @@ import { ITrivyData } from '../../trivy/TrivyData'
 import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
 import { TerminalManager } from '../../ops/terminal/TerminalManager'
+import { IPinocchioInstanceConfig } from '../../pinocchio/PinocchioConfig'
+import { IPinocchioData } from '../../pinocchio/PinocchioData'
 
 export interface IContentExternalOptions {
     pauseable: boolean
@@ -38,6 +40,7 @@ export interface IContentExternalData {
     isElectron: boolean
     channelId: string
     options: IContentExternalOptions
+    formConfig: any
     contentView: EInstanceConfigView
     settings: MagnifyUserPreferences
     frontChannels: Map<string, TChannelConstructor>
@@ -69,7 +72,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
     const [ anchorHelp, setAnchorHelp ] = useState<undefined | HTMLElement>(undefined)
     const [ anchorConfig, setAnchorConfig ] = useState<undefined | HTMLElement>(undefined)
     const [ isMaximized, setIsMaximized ] = useState(props.isMaximized)
-    const [ channelFormConfig, setChannelFormConfig ] = useState<any>()
+    //const [ channelFormConfig, setChannelFormConfig ] = useState<any>()
     const [ , setRefreshTick] = useState(0);
     const forceUpdate = () => setRefreshTick(tick => tick + 1);
 
@@ -82,23 +85,69 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 
             switch(contentExternalData.channelId) {
                 case 'log':
-                    setChannelFormConfig({ lines: 5000, showNames:false, timestamp:false, startDiagnostics: false })
+                    //setChannelFormConfig({ lines: 5000, showNames:false, timestamp:false, startDiagnostics: false })
+                    contentExternalData.formConfig = { lines: 5000, showNames:false, timestamp:false, startDiagnostics: false }
                     setLogConfig(contentExternalData.content)
                     break
                 case 'metrics':
-                    setChannelFormConfig({ aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true})
+                    //setChannelFormConfig({ aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true})
+                    contentExternalData.formConfig = { aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true}
                     setMetricsConfig(contentExternalData.content)
                     break
                 case 'ops':
-                    setChannelFormConfig({})
+                    //setChannelFormConfig({})
+                    contentExternalData.formConfig = {}
                     setOpsConfig(contentExternalData.content)
                     break
                 case 'fileman':
-                    setChannelFormConfig({})
+                    //setChannelFormConfig({})
+                    contentExternalData.formConfig = {}
                     setFilemanConfig(contentExternalData.content)
                     break
                 case 'trivy':
-                    setChannelFormConfig({
+                    // setChannelFormConfig({
+                    //     'Status': {
+                    //         text: 'Status',
+                    //         asyncAction: async () => {
+                    //             try  {
+                    //                 if (contentExternalData.content?.externalChannelObject?.data.ri)
+                    //                     return await (await fetch (`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=status`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))).text()
+                    //                 else
+                    //                     return 'No RI. Wait a few seconds.'
+                    //             }
+                    //             catch {
+                    //                 return 'N/A'
+                    //             }
+                    //         }
+                    //     },
+                    //     'Install Trivy operator': { 
+                    //         button:'Install',
+                    //         action: async () => {
+                    //             if (contentExternalData.content?.externalChannelObject?.data.ri) {
+                    //                 setMsgBox(MsgBoxWait('Trivy install', 'Wait for Trivy to start installation', setMsgBox, ))
+                    //                 await fetch (`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=install`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))
+                    //                 setMsgBox(MsgBoxOk('Install', 'Installation started, close this dialog and wait for Trivy to finish startup', setMsgBox))
+                    //             }
+                    //             else {
+                    //                 setMsgBox(MsgBoxOk('Trivy install', 'Running instance is not yet available, please try again in a few seconds', setMsgBox))
+                    //             }
+                    //         } 
+                    //     },
+                    //     'Remove Trivy operator': { 
+                    //         button:'Remove',
+                    //         action: async () => {
+                    //             if (contentExternalData.content?.externalChannelObject?.data.ri) {
+                    //                 setMsgBox(MsgBoxWait('Trivy remove', 'Wait for Trivy to start removing', setMsgBox, ))
+                    //                 await fetch (`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=remove`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))
+                    //                 setMsgBox(MsgBoxOk('Remove', 'Removing started, close this dialog and wait for Trivy to completely disappear from your cluster', setMsgBox))
+                    //             }
+                    //             else {
+                    //                 setMsgBox(MsgBoxOk('Trivy install', 'Running instance is not yet available, please try again in a few seconds', setMsgBox))
+                    //             }
+                    //         } 
+                    //     }
+                    // })
+                    contentExternalData.formConfig = {
                         'Status': {
                             text: 'Status',
                             asyncAction: async () => {
@@ -139,8 +188,12 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                                 }
                             } 
                         }
-                    })
+                    }
                     setTrivyConfig(contentExternalData.content)
+                    break
+                case 'pinocchio':
+                    contentExternalData.formConfig = {}
+                    setPinocchioConfig(contentExternalData.content)
                     break
             }
         }
@@ -429,6 +482,25 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
         c.externalChannelObject!.instanceConfig = trivyInstanceConfig
     }
 
+    const setPinocchioConfig = (c:IContentExternalObject) => {
+        let pinocchioInstanceConfig:IPinocchioInstanceConfig = {
+        }
+        let pinocchioData:IPinocchioData = {
+            providersAvailable: [],
+            providers: [],
+            config: {
+                kinds: [],
+                llms: []
+            },
+            analysis: [],
+            paused: false,
+            started: false
+        }
+        c.externalChannelObject!.webSocket = contentExternalData.content!.ws
+        c.externalChannelObject!.data = pinocchioData
+        c.externalChannelObject!.instanceConfig = pinocchioInstanceConfig
+    }
+
     const play = () => {
         if (!contentExternalData.content || !contentExternalData.content.ws || !contentExternalData.content.externalChannel || !contentExternalData.content.externalChannelObject) return
 
@@ -576,6 +648,13 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                     <Typography variant='body2'>From the asset list you will be able to see: Vulnerabilities report, Config Audit report, Exposed secrets report and also a SBOM (Software Bill of Materials, where you can analyze pacakges and its dependencies).</Typography>
                 </>
                 break
+            case 'pinocchio':
+                content = <>
+                    <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Pinocchio</Typography>
+                    <Divider/>
+                    <Typography variant='body2'>This is real WIP.</Typography>
+                </>
+                break
         }
         return <Popover
                 anchorEl={anchorHelp}
@@ -618,7 +697,8 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 
     const onConfigApply = (values:any) => {
         setAnchorConfig(undefined)
-        setChannelFormConfig(values)
+        //setChannelFormConfig(values)
+        contentExternalData.formConfig = values
         switch(contentExternalData.channelId) {
             case 'log':
                 let logConfig = contentExternalData.content!.externalChannelObject!.config as ILogConfig
@@ -652,6 +732,8 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 trivyConfig.merge = values.merge
                 trivyConfig.depth = values.depth
                 trivyInstanceConfig.aggregate = values.aggregate
+                break
+            case 'pinocchio':
                 break
         }
     }
@@ -701,7 +783,8 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
             </DialogContent>
         </ResizableDialog>        
         { anchorHelp && showHelp() }
-        { anchorConfig && <FormSimple anchorParent={anchorConfig} model={channelFormConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> }
+        {/* { anchorConfig && <FormSimple anchorParent={anchorConfig} model={channelFormConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> } */}
+        { anchorConfig && <FormSimple anchorParent={anchorConfig} model={contentExternalData.formConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> }
         { msgBox }
     </>)
 }

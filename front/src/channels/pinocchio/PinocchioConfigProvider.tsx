@@ -14,23 +14,23 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
     
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
-    const [name, setName] = useState('')
-    const [key, setKey] = useState('')
+    const [providerName, setProviderName] = useState('')
+    const [providerKey, setProviderKey] = useState(props.providersAvailable[0])
 
     const onProviderSelected = (p: IConfigProvider, index: number) => {
-        setName(p.name)
-        setKey(p.key)
+        setProviderName(p.name)
+        setProviderKey(p.key)
         setSelectedIndex(index)
     }
 
     const onNew = () => {
         setSelectedIndex(null)
-        setName('')
-        setKey('')
+        setProviderName('')
+        setProviderKey('')
     }
 
     const onAdd = () => {
-        if (!name.trim()) return
+        if (!providerName.trim()) return
 
         let newProviders = [...providers]
 
@@ -38,14 +38,14 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
             // Actualizamos manteniendo los models existentes
             newProviders[selectedIndex] = { 
                 ...newProviders[selectedIndex], 
-                name, 
-                key 
+                name: providerName, 
+                key: providerKey 
             }
         } else {
             // Nuevo proveedor con lista de modelos vacía por defecto
             const newProvider: IConfigProvider = { 
-                name, 
-                key, 
+                name: providerName, 
+                key: providerKey, 
                 models: [] 
             }
             newProviders.push(newProvider)
@@ -96,7 +96,7 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
                         
                         <FormControl variant='standard' sx={{ width: '100%'}}>
                             <InputLabel>Provider</InputLabel>
-                            <Select value={name} onChange={(e) => { setName(e.target.value)}} variant='standard' fullWidth>
+                            <Select value={providerName} onChange={(e) => { setProviderName(e.target.value)}} variant='standard' fullWidth>
                                 {props.providersAvailable.map((name) => (
                                     <MenuItem key={name} value={name} disabled={props.providersAvailable.length===0}>{name}</MenuItem>
                                 ))}
@@ -107,8 +107,8 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
                             type="password"
                             variant='standard' 
                             fullWidth
-                            value={key} 
-                            onChange={(e) => setKey(e.target.value)} 
+                            value={providerKey} 
+                            onChange={(e) => setProviderKey(e.target.value)} 
                             helperText="This key can be afterwards linked to specific used."
                         />
 
@@ -118,7 +118,7 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
                             <Button variant='outlined' onClick={onNew}>New</Button>
                             <Typography flex={1} />
                             <Button variant='text' color='error' onClick={onRemove} disabled={selectedIndex === null}>Remove</Button>
-                            <Button variant='contained' onClick={onAdd} disabled={!name}>
+                            <Button variant='contained' onClick={onAdd} disabled={!providerName}>
                                 {selectedIndex !== null ? 'Update' : 'Add'}
                             </Button>
                         </Stack>

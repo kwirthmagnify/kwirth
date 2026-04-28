@@ -8,6 +8,7 @@ import { PinocchioConfigKind } from './PinocchioConfigKind'
 import { PinocchioConfigLlm } from './PinocchioConfigLlm'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { PinocchioConfigProvider } from './PinocchioConfigProvider'
+import React from 'react'
 
 interface IContentProps {
     webSocket?: WebSocket
@@ -20,20 +21,30 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     //let pinocchioInstanceConfig:IPinocchioInstanceConfig = props.channelObject.instanceConfig
     const pinocchioBoxRef = useRef<HTMLDivElement | null>(null)
     const messagesEndRef = useRef<HTMLSpanElement | null>(null)
+    const [isAtBottom, setIsAtBottom] = useState(true)
     const [pinocchioBoxTop, setPinocchioBoxTop] = useState(0)
     const [showConfigKind, setShowConfigKind] = useState(false)
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
+    const priorityOrder = {
+        'critical': 0,
+        'high': 1,
+        'medium': 2,
+        'low': 3
+    }
 
     useEffect(() => {
         if (pinocchioBoxRef.current) setPinocchioBoxTop(pinocchioBoxRef.current.getBoundingClientRect().top)
     })
 
     useEffect(() => {
-        if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        if (isAtBottom && pinocchioBoxRef.current) {
+            pinocchioBoxRef.current.scrollTo({
+                top: pinocchioBoxRef.current.scrollHeight,
+                behavior: 'auto', // 'smooth'
+            })
         }
-    }, [pinocchioData.analysis])
+    }, [isAtBottom, pinocchioData.analysis.length])
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -54,25 +65,40 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         if (level==='high') return 'orange'
         if (level==='critical') return 'red'
     }
+
     const showContent = () => {
         if (!pinocchioData || !pinocchioData.analysis) return <></>
-        return <>
-            {pinocchioData.analysis.map( (an,index) => {
-                return <>
-                        { an.text && <Typography variant='body1' key={index} sx={{mt:2}}>{new Date(an.timestamp).toISOString()} {an.text}</Typography> }
-                        { an.findings && an.findings.map (f => {
-                            return <Stack direction={'row'} alignItems={'center'}>
-                                <Box sx={{width:'70px'}}>
-                                    <Typography variant='body2' sx={{backgroundColor: color(f.level), display: 'inline-block', p:0.5, borderRadius: '4px'}}>{f.level}</Typography>
-                                </Box>
-                                <Typography variant='body2'>{f.description}</Typography>
-                            </Stack>
-                        })}
-                    </>
-                })
-            }
+        return (<>
+            {pinocchioData.analysis.map((an, index) => {
+                return (
+                    <React.Fragment key={index}>
+                        {an.text && (
+                            <Typography variant='body1' sx={{ mt: 2 }}>
+                                {new Date(an.timestamp).toISOString()} {an.text}
+                            </Typography>
+                        )}
+                        
+                        {an.findings && [...an.findings]
+                            .sort((a, b) => priorityOrder[a.level] - priorityOrder[b.level])
+                            .map((f, fIndex) => {
+                                let description = f.description
+                                if (description.includes(' **') && description.includes('** ')) description=description.replace(' **', ' <b><u>').replace('** ', '</u></b> ')
+                                return (
+                                    <Stack key={fIndex} direction={'row'} alignItems={'center'}>
+                                        <Box sx={{ width: '70px' }}>
+                                            <Typography variant='body2' sx={{ backgroundColor: color(f.level), display: 'inline-block', p: 0.5, borderRadius: '4px' }}>
+                                                {f.level}
+                                            </Typography>
+                                        </Box>
+                                        <Typography component={'div'} variant='body2'><div dangerouslySetInnerHTML={{__html: description}}/></Typography>
+                                    </Stack>
+                                );
+                            })}
+                    </React.Fragment>
+                );
+            })}
             <span ref={messagesEndRef} style={{ float: "left", clear: "both" }} />
-        </>
+        </>)
     }
 
     const pinocchioConfigClose = (config:IPinocchioConfig|undefined) => {
@@ -116,9 +142,19 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setShowConfigProvider(false)
     }
 
-    return <>
+    const handleScroll = () => {
+        if (pinocchioBoxRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = pinocchioBoxRef.current
+            const distanceToBottom = scrollHeight - scrollTop - clientHeight
+            const atBottom = distanceToBottom < 25
+            setIsAtBottom(atBottom)
+        }
+    }
+
+return <>
         { pinocchioData.started && 
-        <Card sx={{flex:1, width:'98%', alignSelf:'center', margin:'8px'}}>
+        // <Card sx={{flex:1, width:'98%', alignSelf:'center', margin:'8px'}}>
+        <Card sx={{display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', marginTop: '8px',minHeight: 0}}>
             <CardHeader title={
                 <Stack direction={'row'} alignItems={'center'}>
                     <Typography marginRight={'32px'}><b>Events:</b> {pinocchioData.analysis.length}</Typography>
@@ -128,8 +164,10 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     <Button onClick={() => setShowConfigProvider(true)} disabled={pinocchioData.providersAvailable.length===0}>Provider</Button>
                 </Stack>}>
             </CardHeader>
-            <CardContent>
-                <Box ref={pinocchioBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', width:'100%', flexGrow:1, height: `calc(100vh - ${pinocchioBoxTop}px - 35px)`}}>
+            {/* <CardContent> */}
+                <CardContent sx={{flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, "&:last-child": { pb: 0 } }}>
+                {/* <Box ref={pinocchioBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', width:'100%', flexGrow:1, height: `calc(100vh - ${pinocchioBoxTop}px - 35px)`}}> */}
+                    <Box ref={pinocchioBoxRef} sx={{ display:'flex', flexDirection:'column', width:'100%', overflowY:'auto', flexGrow:1, height: `calc(100vh - ${pinocchioBoxTop}px - 16px)`}} onScroll={handleScroll}>
                     <Box sx={{ flex:1, overflowY: 'auto', ml:1, mr:1 }}>
                         { showContent() }
                     </Box>

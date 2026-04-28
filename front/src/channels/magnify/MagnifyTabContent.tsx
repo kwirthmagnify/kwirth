@@ -554,15 +554,15 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     const launchObjectExternal = (channel:string, files:IFileObject[], view: EInstanceConfigView, data:any, container: string|undefined ) => {
-        let width = channel==='trivy'? window.innerWidth * 0.9 : 800
-        let height = channel==='trivy'? window.innerHeight * 0.9 : 600
+        let width = (channel==='trivy' || channel==='pinocchio') ? window.innerWidth * 0.9 : 800
+        let height = (channel==='trivy' || channel==='pinocchio')? window.innerHeight * 0.9 : 600
         let win:IContentWindow = {
             id: 'external-' + channel + '-' + uuid(),
             class: 'ContentExternal',
             visible: true,
             atTop: false,
             atFront: true,
-            title: files[0].data.origin.metadata.name + (container || ''),
+            title: files.length>0 ? files[0].data.origin.metadata.name + (container || '') : (channel==='pinocchio'? 'Pinocchio' : 'NoTitle'),
             isMaximized: false,
             x: 100,
             y: 50,
@@ -578,7 +578,8 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 frontChannels: props.channelObject.frontChannels!,
                 onNotify: onComponentNotify,
                 onRefresh: onContentExternalRefresh,
-                options: channel === 'ops'?
+                formConfig: undefined,
+                options: channel === 'ops' || channel==='pinocchio'?
                     { autostart:true, pauseable:false, stoppable:false, configurable:false, data }
                     :
                     { autostart:true, pauseable:true, stoppable:true, configurable:(channel!=='fileman'), data}
@@ -659,39 +660,44 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     // cluster actions
     const setClusterActions = () => {
-            // Node
-            let spcNode = spaces.get('Node')!
-            setLeftItem(spcNode,'shell', launchNodeShell)
-            setLeftItem(spcNode,'cordon', launchNodeCordon)
-            setLeftItem(spcNode,'uncordon', launchNodeUnCordon)
-            setLeftItem(spcNode,'drain', launchNodeDrain)
+        // Cluster
+        let spcClassCluster = spaces.get('classClusterOverview')!
+        setLeftItem(spcClassCluster, 'pinocchio', (p:string[]) => {
+            launchObjectExternal('pinocchio', [], EInstanceConfigView.CLUSTER, undefined, undefined)
+        })
+        // Node
+        let spcNode = spaces.get('Node')!
+        setLeftItem(spcNode,'shell', launchNodeShell)
+        setLeftItem(spcNode,'cordon', launchNodeCordon)
+        setLeftItem(spcNode,'uncordon', launchNodeUnCordon)
+        setLeftItem(spcNode,'drain', launchNodeDrain)
 
-            // Namespace
-            let spcNamespace = spaces.get('Namespace')!
-            ;['log','metrics'].map(channelid => 
-                setLeftItem(spcNamespace,channelid, (p:string[]) => {
-                    let f = magnifyData.files.filter(f => p.includes(f.path))
-                    launchObjectExternal(channelid, f, EInstanceConfigView.NAMESPACE, undefined, undefined)
-                })
-            )
-
-            // Namespace
-            let spcClassNamespace = spaces.get('classNamespace')!
-            setLeftItem(spcClassNamespace, 'create', (p:string[]) => {
-                setInputBoxResult ( () => (name:any) => {
-                    if (name) {
-                        let obj = `
-                            apiVersion: 'v1'
-                            kind: 'Namespace'
-                            metadata:
-                                name: ${name}
-                        `
-                        sendCommand(EMagnifyCommand.CREATE, [obj])
-                    }
-                })
-                setInputBoxMessage('Enter namespace name')
-                setInputBoxTitle('Create namespace')
+        // Namespace
+        let spcNamespace = spaces.get('Namespace')!
+        ;['log','metrics'].map(channelid => 
+            setLeftItem(spcNamespace,channelid, (p:string[]) => {
+                let f = magnifyData.files.filter(f => p.includes(f.path))
+                launchObjectExternal(channelid, f, EInstanceConfigView.NAMESPACE, undefined, undefined)
             })
+        )
+
+        // Namespace
+        let spcClassNamespace = spaces.get('classNamespace')!
+        setLeftItem(spcClassNamespace, 'create', (p:string[]) => {
+            setInputBoxResult ( () => (name:any) => {
+                if (name) {
+                    let obj = `
+                        apiVersion: 'v1'
+                        kind: 'Namespace'
+                        metadata:
+                            name: ${name}
+                    `
+                    sendCommand(EMagnifyCommand.CREATE, [obj])
+                }
+            })
+            setInputBoxMessage('Enter namespace name')
+            setInputBoxTitle('Create namespace')
+        })
     }
 
     // workload actions

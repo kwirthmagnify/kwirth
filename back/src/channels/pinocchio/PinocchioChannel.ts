@@ -6,12 +6,12 @@ import { generateText, Output } from 'ai'
 import { createGoogleGenerativeAI, GoogleLanguageModelOptions } from '@ai-sdk/google'
 import { createMistral, MistralLanguageModelOptions } from '@ai-sdk/mistral'
 import { z } from 'zod'
-import { EPinocchioCommand, IAnalysis, IConfigKind, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable } from './PinocchioConfig';
+import { EPinocchioCommand, IAnalysis, IConfigKind, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable } from './PinocchioConfig'
 import { loadModels } from './Tools';
-import { createOpenAI, OpenAILanguageModelChatOptions } from '@ai-sdk/openai';
-import { createGroq, GroqLanguageModelOptions } from '@ai-sdk/groq';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { createDeepSeek } from '@ai-sdk/deepseek';
+import { createOpenAI, OpenAILanguageModelChatOptions } from '@ai-sdk/openai'
+import { createGroq, GroqLanguageModelOptions } from '@ai-sdk/groq'
+import { createOpenRouter } from '@openrouter/ai-sdk-provider'
+import { createDeepSeek } from '@ai-sdk/deepseek'
 const nunjucks = require('nunjucks')
 
 // basic nunjucks config
@@ -263,7 +263,7 @@ class PinocchioChannel implements IChannel {
                 if (event.type==='ADDED') {
                     try {
                         console.log(`Pinocchio: added ${event.obj.kind}`, event.obj.metadata?.name)
-                        for (let kind of this.pinocchioConfig.kinds.filter(k => k.enabled)) {
+                        for (let kind of this.pinocchioConfig.kinds.filter(k => k.enabled && k.kind===event.obj.kind)) {
                             try {
                                 let {llmModelId, llmProviderId, model, providerOptions, system, prompt} = this.buildModelInvocation(kind, event.obj) || {}
                                 if (!model) return
