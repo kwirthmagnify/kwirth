@@ -674,10 +674,10 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
         // Namespace
         let spcNamespace = spaces.get('Namespace')!
-        ;['log','metrics'].map(channelid => 
-            setLeftItem(spcNamespace,channelid, (p:string[]) => {
+        ;['log','metrics', 'trivy', 'fileman'].map(channelId => 
+            setLeftItem(spcNamespace,channelId, (p:string[]) => {
                 let f = magnifyData.files.filter(f => p.includes(f.path))
-                launchObjectExternal(channelid, f, EInstanceConfigView.NAMESPACE, undefined, undefined)
+                launchObjectExternal(channelId, f, EInstanceConfigView.NAMESPACE, undefined, undefined)
             })
         )
 
@@ -756,37 +756,48 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setPropertyFunction(spcDeployment, 'status', showListDeploymentStatus)
         setLeftItem(spcDeployment,'scale', launchControllerScale)
         setLeftItem(spcDeployment,'restart', launchControllerRestart)
-        setLeftItem(spcDeployment,'log', launchControllerLogs)
-        setLeftItem(spcDeployment,'metrics', launchControllerMetrics)
+        setLeftItem(spcDeployment,'log', (p) => launchControllerChannel(p,'log'))
+        setLeftItem(spcDeployment,'metrics', (p) => launchControllerChannel(p,'metrics'))
+        setLeftItem(spcDeployment,'fileman', (p) => launchControllerChannel(p,'fileman'))
+        setLeftItem(spcDeployment,'trivy', (p) => launchControllerChannel(p,'trivy'))
 
         // DaemonSet
         let spcDaemonSet = spaces.get('DaemonSet')!
         setLeftItem(spcDaemonSet,'restart', launchControllerRestart)
-        setLeftItem(spcDaemonSet,'log', launchControllerLogs)
-        setLeftItem(spcDaemonSet,'metrics', launchControllerMetrics)
+        setLeftItem(spcDaemonSet,'log', (p) => launchControllerChannel(p,'log'))
+        setLeftItem(spcDaemonSet,'metrics', (p) => launchControllerChannel(p,'metrics'))
 
         // ReplicaSet
         let spcReplicaSet = spaces.get('ReplicaSet')!
         setLeftItem(spcReplicaSet,'scale', launchControllerScale)
-        setLeftItem(spcReplicaSet,'log', launchControllerLogs)
-        setLeftItem(spcReplicaSet,'metrics', launchControllerMetrics)
+        setLeftItem(spcReplicaSet,'log', (p) => launchControllerChannel(p,'log'))
+        setLeftItem(spcReplicaSet,'metrics', (p) => launchControllerChannel(p,'metrics'))
+        setLeftItem(spcReplicaSet,'fileman', (p) => launchControllerChannel(p,'fileman'))
+        setLeftItem(spcReplicaSet,'trivy', (p) => launchControllerChannel(p,'trivy'))
 
         // ReplicationController
         let spcReplicationController = spaces.get('ReplicationController')!
         setLeftItem(spcReplicationController,'restart', launchControllerRestart)
         setLeftItem(spcReplicationController,'scale', launchControllerScale)
-        setLeftItem(spcReplicationController,'log', launchControllerLogs)
-        setLeftItem(spcReplicationController,'metrics', launchControllerMetrics)
+        setLeftItem(spcReplicationController,'log', (p) => launchControllerChannel(p,'log'))
+        setLeftItem(spcReplicationController,'metrics', (p) => launchControllerChannel(p,'metrics'))
+        setLeftItem(spcReplicationController,'fileman', (p) => launchControllerChannel(p,'fileman'))
+        setLeftItem(spcReplicationController,'trivy', (p) => launchControllerChannel(p,'trivy'))
 
         // StatefulSet
         let spcStatefulSet = spaces.get('StatefulSet')!
         setLeftItem(spcStatefulSet,'scale', launchControllerScale)
         setLeftItem(spcStatefulSet,'restart', launchControllerRestart)
-        setLeftItem(spcStatefulSet,'log', launchControllerLogs)
-        setLeftItem(spcStatefulSet,'metrics', launchControllerMetrics)
+        setLeftItem(spcStatefulSet,'log', (p) => launchControllerChannel(p,'log'))
+        setLeftItem(spcStatefulSet,'metrics', (p) => launchControllerChannel(p,'metrics'))
+        setLeftItem(spcStatefulSet,'fileman', (p) => launchControllerChannel(p,'fileman'))
+        setLeftItem(spcStatefulSet,'trivy', (p) => launchControllerChannel(p,'trivy'))
 
         let spcJob = spaces.get('Job')!
-        setLeftItem(spcJob,'log', launchJobLogs)
+        setLeftItem(spcJob,'log', (p) => launchControllerChannel(p,'log'))
+        setLeftItem(spcJob,'metrics', (p) => launchControllerChannel(p,'metrics'))
+        setLeftItem(spcJob,'fileman', (p) => launchControllerChannel(p,'fileman'))
+        setLeftItem(spcJob,'trivy', (p) => launchControllerChannel(p,'trivy'))
         
         let spcCronJob = spaces.get('CronJob')!
         setLeftItem(spcCronJob,'trigger', launchCronJobTrigger)
@@ -883,22 +894,27 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
-    const launchControllerLogs = (p:string[]) => {
+    const launchControllerChannel = (p:string[], channelId:string) => {
         let f = magnifyData.files.filter(x => p.includes(x.path))
-        launchObjectExternal('log', f, EInstanceConfigView.GROUP, undefined, undefined)
+        launchObjectExternal(channelId, f, EInstanceConfigView.GROUP, undefined, undefined)
     }
 
-    const launchControllerMetrics = (p:string[]) => {
-        let f = magnifyData.files.filter(x => p.includes(x.path))
-        // by default, we GROUP. User can change options in ContentExternal (after data is shown)
-        launchObjectExternal('metrics', f, EInstanceConfigView.GROUP, undefined, undefined)
-    }
+    // const launchControllerLogs = (p:string[]) => {
+    //     let f = magnifyData.files.filter(x => p.includes(x.path))
+    //     launchObjectExternal('log', f, EInstanceConfigView.GROUP, undefined, undefined)
+    // }
+
+    // const launchControllerMetrics = (p:string[]) => {
+    //     let f = magnifyData.files.filter(x => p.includes(x.path))
+    //     // by default, we GROUP. User can change options in ContentExternal (after data is shown)
+    //     launchObjectExternal('metrics', f, EInstanceConfigView.GROUP, undefined, undefined)
+    // }
 
     // Job actions
-    const launchJobLogs = (p:string[]) => {
-        let f = magnifyData.files.filter(x => p.includes(x.path))
-        launchObjectExternal('log', f, EInstanceConfigView.GROUP, undefined, undefined)
-    }
+    // const launchJobLogs = (p:string[]) => {
+    //     let f = magnifyData.files.filter(x => p.includes(x.path))
+    //     launchObjectExternal('log', f, EInstanceConfigView.GROUP, undefined, undefined)
+    // }
 
     // IngressClass actions
     const launchIngressClassDefault = (p:string[]) => {

@@ -12,7 +12,7 @@ import { createOpenAI, OpenAILanguageModelChatOptions } from '@ai-sdk/openai'
 import { createGroq, GroqLanguageModelOptions } from '@ai-sdk/groq'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { createDeepSeek } from '@ai-sdk/deepseek'
-import { ELogComponent, logError, logInfo, logTrace, logWarning } from '../../tools/Logging';
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging';
 const nunjucks = require('nunjucks')
 
 // basic nunjucks config
@@ -122,7 +122,6 @@ class PinocchioChannel implements IChannel {
             this.broadcastError(`Cannot get provider API key for LLM '${triggerDefinition.llm}'`)
             return undefined
         }
-        logTrace(triggerDefinition.trigger)
         switch(triggerDefinition.trigger) {
             case 'business':
                 let businessEvent = event as IBusinessProviderEvent
@@ -143,8 +142,6 @@ class PinocchioChannel implements IChannel {
                 break
             case 'artifact':
                 let eventsEvent = event as IEventsProviderEvent
-                logTrace(eventsEvent.obj)
-                logTrace(triggerDefinition.promptType)
                 switch(triggerDefinition.promptType) {
                     case 'artifact':
                         prompt = JSON.stringify(eventsEvent.obj)
@@ -339,8 +336,6 @@ class PinocchioChannel implements IChannel {
                                 let {llmModelId, llmProviderId, model, temperature, providerOptions, system, prompt} = this.buildModelInvocation(trigger, eventsEvent) || {}
                                 if (!model) return
 
-                                logTrace(temperature)
-                                logTrace(prompt)
                                 const { output, usage } = await generateText({
                                     model,
                                     temperature,

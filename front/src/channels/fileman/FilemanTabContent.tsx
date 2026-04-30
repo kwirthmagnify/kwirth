@@ -42,9 +42,9 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }, [fileManagerRef.current])
 
     let icons = new Map()
-    icons.set('namespace', { open:getIconFromKind('Namespace', 18), closed:getIconFromKind('Namespace', 18), grid:getIconFromKind('Namespace', 50), list:getIconFromKind('Namespace', 18), default:getIconFromKind('Namespace', 18) })
-    icons.set('pod', { open:getIconFromKind('Pod', 18), closed:getIconFromKind('Pod', 18), grid:getIconFromKind('Pod', 50), list:getIconFromKind('Pod', 18), default:getIconFromKind('Pod', 18) })
-    icons.set('container', { open:getIconFromKind('Container', 18), closed:getIconFromKind('Container', 18), grid:getIconFromKind('Container', 44), list:getIconFromKind('Container', 16), default:getIconFromKind('Container', 16)})
+    icons.set('namespace', { open:getIconFromKind('Namespace', 24), closed:getIconFromKind('Namespace', 24), grid:getIconFromKind('Namespace', 50), list:getIconFromKind('Namespace', 24), default:getIconFromKind('Namespace', 24) })
+    icons.set('pod', { open:getIconFromKind('Pod', 24), closed:getIconFromKind('Pod', 24), grid:getIconFromKind('Pod', 50), list:getIconFromKind('Pod', 24), default:getIconFromKind('Pod', 24) })
+    icons.set('container', { open:getIconFromKind('Container', 24), closed:getIconFromKind('Container', 24), grid:getIconFromKind('Container', 44), list:getIconFromKind('Container', 24), default:getIconFromKind('Container', 24)})
 
     let actions = new Map()
     actions.set('namespace', [

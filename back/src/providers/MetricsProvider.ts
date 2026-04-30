@@ -1,7 +1,7 @@
 import { IChannel } from '../channels/IChannel'
 import { ClusterInfo, INodeInfo } from '../model/ClusterInfo'
 import { IProvider } from '../providers/IProvider'
-import { ELogComponent, logError, logInfo, logTrace, logWarning } from '../tools/Logging'
+import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
 import { KwirthData } from '@kwirthmagnify/kwirth-common'
 import { NodeMetrics } from '../model/INodeMetrics'
 
@@ -457,7 +457,6 @@ export class MetricsProvider implements IProvider {
     }
 
     private tick = (clusterInfo: ClusterInfo): void => {
-        logTrace(ELogComponent.PROVIDER, 'read metrics')
         this.readClusterMetrics(clusterInfo)
     }
 

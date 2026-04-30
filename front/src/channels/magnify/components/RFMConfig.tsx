@@ -1,9 +1,39 @@
-import { IFileObject, ISpace } from '@jfvilas/react-file-manager'
+import { IFileObject, ISpace, ISpaceMenuItem } from '@jfvilas/react-file-manager'
 import { Add, AutoFixHigh, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@mui/icons-material'
 import { Cluster, Config, Customize, Kubernetes, Network, Pod, Security, Settings, Storage } from '../icons/Icons'
 
 const spaces = new Map<string, ISpace>()
 
+const LMFT:ISpaceMenuItem[] = [
+    {   name: 'log',
+        icon: <Subject fontSize='small'/>,
+        text: 'Logs',
+        multi: true,
+        permission: true,
+    },
+    {
+        name:'metrics',
+        icon: <BarChart fontSize='small'/>,
+        text: 'Metrics',
+        multi: true,
+        permission: true
+    },
+    {
+        name:'fileman',
+        icon: <FolderCopy fontSize='small'/>,
+        text: 'Fileman',
+        multi: true,
+        permission: true
+    },
+    {
+        name:'trivy',
+        icon: <VerifiedUser fontSize='small'/>,
+        text: 'Trivy',
+        multi: true,
+        permission: true
+    },
+
+]
 const menu:IFileObject[] = [
     {   name: 'Overview',
         isDirectory: true,
@@ -1641,6 +1671,20 @@ spaces.set('Namespace',
                 permission: true
             },
             {
+                name:'fileman',
+                icon: <FolderCopy fontSize='small'/>,
+                text: 'Fileman',
+                multi: true,
+                permission: true
+            },
+            {
+                name:'trivy',
+                icon: <VerifiedUser fontSize='small'/>,
+                text: 'Trivy',
+                multi: true,
+                permission: true
+            },
+            {
                 name: 'edit',
                 icon: <Edit fontSize='small'/>,
                 text: 'Edit',
@@ -2157,19 +2201,20 @@ spaces.set('Deployment',
                 text: 'Details',
                 permission: true,
             },
-            {   name: 'log',
-                icon: <Subject fontSize='small'/>,
-                text: 'Logs',
-                multi: true,
-                permission: true,
-            },
-            {
-                name:'metrics',
-                icon: <BarChart fontSize='small'/>,
-                text: 'Metrics',
-                multi: true,
-                permission: true
-            },
+            ...LMFT,
+            // {   name: 'log',
+            //     icon: <Subject fontSize='small'/>,
+            //     text: 'Logs',
+            //     multi: true,
+            //     permission: true,
+            // },
+            // {
+            //     name:'metrics',
+            //     icon: <BarChart fontSize='small'/>,
+            //     text: 'Metrics',
+            //     multi: true,
+            //     permission: true
+            // },
             {   name: 'edit',
                 icon: <Edit fontSize='small'/>,
                 text: 'Edit',
@@ -2269,18 +2314,19 @@ spaces.set('DaemonSet',
                 text: 'Restart',
                 permission: true,
             },
-            {   name: 'log',
-                icon: <Subject fontSize='small'/>,
-                text: 'Logs',
-                permission: true,
-            },
-            {
-                name:'metrics',
-                icon: <BarChart fontSize='small'/>,
-                text: 'Metrics',
-                multi: true,
-                permission: true
-            },
+            ...LMFT,
+            // {   name: 'log',
+            //     icon: <Subject fontSize='small'/>,
+            //     text: 'Logs',
+            //     permission: true,
+            // },
+            // {
+            //     name:'metrics',
+            //     icon: <BarChart fontSize='small'/>,
+            //     text: 'Metrics',
+            //     multi: true,
+            //     permission: true
+            // },
             {   name: 'edit',
                 icon: <Edit fontSize='small'/>,
                 text: 'Edit',
@@ -2397,11 +2443,12 @@ spaces.set('ReplicaSet',
                 text: 'Scale',
                 permission: true,
             },
-            {   name: 'log',
-                icon: <Subject fontSize='small'/>,
-                text: 'Logs',
-                permission: true,
-            },
+            ...LMFT,
+            // {   name: 'log',
+            //     icon: <Subject fontSize='small'/>,
+            //     text: 'Logs',
+            //     permission: true,
+            // },
             {   name: 'edit',
                 icon: <Edit fontSize='small'/>,
                 text: 'Edit',
@@ -2577,11 +2624,12 @@ spaces.set('StatefulSet',
                 text: 'Restart',
                 permission: true,
             },
-            {   name: 'log',
-                icon: <Subject fontSize='small'/>,
-                text: 'Logs',
-                permission: true,
-            },
+            ...LMFT,            
+            // {   name: 'log',
+            //     icon: <Subject fontSize='small'/>,
+            //     text: 'Logs',
+            //     permission: true,
+            // },
             {   name: 'edit',
                 icon: <Edit fontSize='small'/>,
                 text: 'Edit',
