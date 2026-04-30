@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { DialogTitle, DialogContent, DialogActions, Button, Typography, Stack, Tooltip, IconButton, Box } from '@mui/material'
 import { Close, ContentCopy, FullscreenExit, Fullscreen, Minimize, PinDrop, Place } from '@mui/icons-material'
 // @ts-ignore
@@ -30,7 +30,7 @@ export interface IContentDetailsProps extends IContentWindow {
 }
 
 const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
-	const newObject = useRef()
+	const newObject = useRef<any>(props.data.source.data.origin)
 	const [containsEdit, setContainsEdit] = useState<boolean>(false)
 	const [dataChanged, setDataChanged] = useState<boolean>(false)
 	const [menuContainersAnchorParent, setMenuContainersAnchorParent] = useState<Element>()
@@ -38,21 +38,12 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
 	const [isMaximized, setIsMaximized] = useState(props.isMaximized)
 	let contentDetailsData:IDetailsData = props.data
 
+	useEffect( () => {
+		if (!newObject.current) {
+			newObject.current = {}
+		}
+	}, [])
 	useEscape(props.onClose, props.id)
-	// useEffect(() => {
-	// 	newObject.current = objectClone(props.data.source.data.origin)
-
-	// 	const previousFocus = document.activeElement as HTMLElement
-	// 	const handleKeyDown = (event: KeyboardEvent) => {
-	// 		event.stopPropagation()
-	// 		if (event.key === 'Escape') props.onClose(props.id)
-	// 	}
-	// 	window.addEventListener('keydown', handleKeyDown, true)
-	// 	return () => {
-	// 		window.removeEventListener('keydown', handleKeyDown, true)
-	// 		previousFocus?.focus()
-	// 	}
-	// }, [])
 
 	const onLink = (k:string, n:string, ns:string) => {
 		props.onClose(props.id)
@@ -82,14 +73,12 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
 	}
 
     const onChangeData = (path:string, data:any) => {
-		console.log('changedata', newObject.current)
         if (props.data.source.data.origin.kind === 'ConfigMap') {
             _.set(newObject.current, path, data)
         }
         if (props.data.source.data.origin.kind === 'Secret') {
             _.set(newObject.current, path, btoa(data))
         }
-		//_.set(newObject.current, path, data)
         setDataChanged(true)
     }
 

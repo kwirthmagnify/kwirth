@@ -364,7 +364,7 @@ const Validations: React.FC<IValidationsProps> = (props: IValidationsProps) => {
     }, [props.files, props.options, props.onNavigate])
 
     return (
-        <>
+        <Stack>
             {props.options.node && formatIssues(results.node, props.onLink)}
             {props.options.configMap && formatIssues(results.configMap, props.onLink)}
             {props.options.secret && formatIssues(results.secret, props.onLink)}
@@ -379,7 +379,7 @@ const Validations: React.FC<IValidationsProps> = (props: IValidationsProps) => {
             {props.options.role && formatIssues(results.role, props.onLink)}
             {props.options.custerRole && formatIssues(results.clusterRole, props.onLink)}
             {props.options.summary && results.summary}
-        </>
+        </Stack>
     )
 }
 

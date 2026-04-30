@@ -1124,7 +1124,6 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     const onContentDetailsApply = (path:string, obj:any) => {
-        console.log(path, obj)
         sendCommand(EMagnifyCommand.APPLY, [yamlParser.dump(obj, { indent: 2 })])
     }
 
@@ -1192,7 +1191,6 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const onComponentNotify = (channel:string|undefined, level: ENotifyLevel, msg: string)  => {
         msg = 'Channel message: '+ msg
-        console.log(props.channelObject)
     }
 
     const getContentExternalIcon = (w:IContentWindow) => {
