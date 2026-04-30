@@ -40,32 +40,16 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
     
     useLayoutEffect(() => {
-        if (!opsBoxRef.current) return
+        const observer = new ResizeObserver(() => {
+            if (!opsBoxRef.current) return
+            const { top } = opsBoxRef.current.getBoundingClientRect()
+            let a = window.innerHeight - top
+            setOpsBoxHeight(a)
+        })
+        observer.observe(document.body)
 
-        if (opsConfig.launchShell) {
-            const observer = new ResizeObserver((entries) => {
-                for (let entry of entries) {
-                    const height = entry.target.parentElement?.clientHeight || entry.contentRect.height
-                    const adjustedHeight = height - 16
-                    setOpsBoxHeight(adjustedHeight)
-                }
-            })
-
-            if (opsBoxRef.current.parentElement) observer.observe(opsBoxRef.current.parentElement);
-            return () => observer.disconnect()
-        }
-        else {
-            const observer = new ResizeObserver(() => {
-                if (!opsBoxRef.current) return
-                const { top } = opsBoxRef.current.getBoundingClientRect()
-                let a = window.innerHeight - top
-                console.log('rsz')
-                setOpsBoxHeight(a)
-            })
-            observer.observe(document.body)
-            return () => observer.disconnect()
-        }
-    }, [])
+        return () => observer.disconnect()
+    }, [opsBoxRef.current])
 
     const closeTerminal = (_id:string) => {
         setSelectedTerminal(undefined)
@@ -380,21 +364,11 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setFilter(event.target?.value)
     }
 
-    if (opsConfig.launchShell) return (
-        
+    return (<>
         <Box ref={opsBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', flexGrow:1, height: `${opsBoxHeight}px`, p:2, gap: 2}}>
-            { opsData.started &&  opsData.selectedTerminal!==undefined && selectedTerminal && (
-                <Stack sx={{ display:'flex', flex:1,  flexDirection:'column', height: '100%', position: 'relative', overflow:'hidden' }}>
-                    <TerminalInstance id={selectedTerminal} terminalManager={opsData.terminalManager} data-refresh={refresh}/>
-                </Stack>
-            )}
-        </Box>
-    )
-    else return (
-        <Box ref={opsBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', flexGrow:1, height: `${opsBoxHeight}px`, p:2, gap: 2}}>
-            { showSelector && formatSelector() }
+            { showSelector && !opsConfig.launchShell && formatSelector() }
 
-            { opsData.started && !selectedTerminal &&
+            { opsData.started && !opsConfig.launchShell && !selectedTerminal &&
                 <Stack direction={'row'} spacing={2} alignItems={'stretch'} sx={{ flexGrow: 1, minHeight: 0 }}>
                     <Card sx={{ width: '60%', display: 'flex', flexDirection: 'column', maxHeight: '100%' }}>
                         <CardHeader title={
@@ -468,22 +442,26 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
                 </Stack> }
 
-            { opsData.started && opsData.selectedTerminal!==undefined && selectedTerminal && (
+            { opsData.started &&  opsData.selectedTerminal!==undefined && selectedTerminal && (
                 <Stack sx={{ display:'flex', flex:1,  flexDirection:'column', height: '100%', position: 'relative', overflow:'hidden' }}>
-                    <Box>
-                        <Button onClick={() => {setSelectedTerminal(undefined); opsData.selectedTerminal=undefined}} sx={{borderBottomRightRadius:0, borderBottomLeftRadius:0}}>
-                            <Home fontSize='small' sx={{mb:'2px'}}/>HOME
-                        </Button>
-                        {Array.from(opsData.terminalManager.terminals.keys()).map(key => {               
-                            return (
-                                <Tooltip key={key} title={key}>
-                                    <Button onClick={() => {setSelectedTerminal(key); opsData.selectedTerminal=key}} sx={{background: selectedTerminal===key? 'lightgray':'white', borderBottomRightRadius:0, borderBottomLeftRadius:0}}>
-                                        {key.split('/')[2]}{opsData.terminalManager.terminals.get(key)!.index>0 && <Typography fontSize={10} fontWeight={'900'}>&nbsp;&nbsp;F{opsData.terminalManager.terminals.get(key)?.index}</Typography>}
-                                    </Button>
-                                </Tooltip>
-                            )
-                        })}
-                    </Box>
+                    {
+                       !opsConfig.launchShell &&
+                       <Box>
+                            <Button onClick={() => {setSelectedTerminal(undefined); opsData.selectedTerminal=undefined}} sx={{borderBottomRightRadius:0, borderBottomLeftRadius:0}}>
+                                <Home fontSize='small' sx={{mb:'2px'}}/>HOME
+                            </Button>
+                            {Array.from(opsData.terminalManager.terminals.keys()).map(key => {               
+                                return (
+                                    <Tooltip key={key} title={key}>
+                                        <Button onClick={() => {setSelectedTerminal(key); opsData.selectedTerminal=key}} sx={{background: selectedTerminal===key? 'lightgray':'white', borderBottomRightRadius:0, borderBottomLeftRadius:0}}>
+                                            {key.split('/')[2]}{opsData.terminalManager.terminals.get(key)!.index>0 && <Typography fontSize={10} fontWeight={'900'}>&nbsp;&nbsp;F{opsData.terminalManager.terminals.get(key)?.index}</Typography>}
+                                        </Button>
+                                    </Tooltip>
+                                )
+                            })}
+                        </Box>
+                    }
+
                     <TerminalInstance id={selectedTerminal} terminalManager={opsData.terminalManager} data-refresh={refresh}/>
                 </Stack>
             )
@@ -491,7 +469,7 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             { msgBox }
             { anchorMenuChart && selectedScopedObject && <MenuObject onClose={() => setAnchorMenuChart(null)} onOptionSelected={menuObjectOptionSelected} anchorParent={anchorMenuChart} scopedObject={selectedScopedObject}/> }
         </Box>
-    )
+    </>)
 }
 
 export { OpsTabContent }
