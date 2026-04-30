@@ -109,7 +109,7 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
                             fullWidth
                             value={providerKey} 
                             onChange={(e) => setProviderKey(e.target.value)} 
-                            helperText="This key can be afterwards linked to specific used."
+                            helperText="This key can be afterwards linked to specific uses."
                         />
 
                         <Box sx={{ flexGrow: 1 }} />

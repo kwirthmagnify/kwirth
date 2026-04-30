@@ -17,6 +17,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
     const [id, setId] = useState('')
     const [provider, setProvider] = useState('google')
     const [model, setModel] = useState('')
+    const [temperature, setTemperature] = useState(0)
     const [useProviderKey, setUseProviderKey] = useState(true)
     const [key, setKey] = useState('')
 
@@ -26,6 +27,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
             setId(l.id)
             setProvider(l.provider)
             setModel(l.model)
+            setTemperature(l.temperature)
             setUseProviderKey(l.useProviderKey)
             setKey(l.key)
             setSelectedIndex(index)
@@ -37,6 +39,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
         setId('')
         setProvider('')
         setModel('')
+        setTemperature(0)
         setUseProviderKey(false)
         setKey('')
     }
@@ -46,6 +49,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
             id,
             provider,
             model,
+            temperature,
             useProviderKey,
             key
         }
@@ -70,7 +74,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
     }
 
     return (<>
-        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '800px', height: '50vh' } }}>
+        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '800px', height: '55vh' } }}>
             <DialogTitle>LLM Config</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
                 
@@ -112,6 +116,8 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                                     ))}
                                 </Select>
                             </FormControl>
+
+                            <TextField value={temperature} onChange={(e) => setTemperature(+e.target.value)} label='Model temperature' variant='standard' type='number' fullWidth/>
 
                             <Stack direction={'row'} alignItems={'center'}>
                                 <Typography flex={1}>Use provider API Key (or enter a specific one)</Typography>

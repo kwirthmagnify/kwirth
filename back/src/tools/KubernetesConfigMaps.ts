@@ -1,5 +1,7 @@
 import { CoreV1Api, V1ConfigMap } from '@kubernetes/client-node'
 import { IConfigMaps } from './IConfigMap'
+import { ELogComponent, logError, logInfo, logWarning } from './Logging'
+import { LoginApi } from '../api/LoginApi'
 
 export class KubernetesConfigMaps implements IConfigMaps {
     coreApi:CoreV1Api
@@ -24,21 +26,21 @@ export class KubernetesConfigMaps implements IConfigMaps {
                 return {}
             }
             catch (err:any) {
-                console.log(`Error replacing, try to create.`)
+                logWarning(ELogComponent.CORE, `Error replacing, try to create.`)
                 try {
                     await this.coreApi?.createNamespacedConfigMap({ namespace: this.namespace, body: configMap })
                     return {}
                 }
                 catch (err:any) {
-                    console.log(`Error creating ConfigMap`)
-                    console.log(err)
+                    logError(ELogComponent.CORE, `Error creating ConfigMap`)
+                    logError(ELogComponent.CORE, err)
                     return {}
                 }
             }
         }
         catch (err) {
-            console.log('Error writing configMap',this.namespace,'/', name)
-            console.log(err)
+            logError(ELogComponent.CORE, 'Error writing configMap'+this.namespace+'/'+name)
+            logError(ELogComponent.CORE, err)
             return undefined
         }
     
@@ -52,11 +54,11 @@ export class KubernetesConfigMaps implements IConfigMaps {
         }
         catch(err:any){
             if (err.code===404) {
-                console.log('Value not found reading configMap',this.namespace,'/', name)
+                logInfo(ELogComponent.CORE, 'Value not found reading configMap ' + this.namespace + '/' + name)
                 return defaultValue
             }
             else {
-                console.log('Error reading kubernetes configMap',this.namespace,'/', name)
+                logError(ELogComponent.CORE, 'Error reading kubernetes configMap ' + this.namespace + '/' + name)
                 return undefined
             }
         }

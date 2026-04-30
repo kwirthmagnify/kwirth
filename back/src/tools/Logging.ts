@@ -49,8 +49,8 @@ const logGeneric = (
     }
 }
 
-export const logTrace = (component: ELogComponent, message: unknown): void => {
-    logGeneric('trace', colors.trace, component, message)
+export const logTrace = (message: unknown): void => {
+    logGeneric('trace', colors.trace, ELogComponent.CORE, message)
 }
 
 export const logInfo = (component: ELogComponent, message: unknown): void => {

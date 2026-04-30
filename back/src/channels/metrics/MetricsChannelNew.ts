@@ -1,5 +1,5 @@
 import { IInstanceConfig, InstanceConfigViewEnum, InstanceMessageTypeEnum, ISignalMessage, SignalMessageLevelEnum, IInstanceConfigResponse, InstanceMessageFlowEnum, InstanceMessageActionEnum, InstanceMessageChannelEnum, IInstanceMessage, MetricsConfig, MetricsConfigModeEnum, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, ClusterTypeEnum, IMetricsMessageResponse, IMetricsAssets, MetricsMessage, IMetricsMessage, InstanceConfigObjectEnum, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
-import { ClusterInfo } from '../../model/ClusterInfo'
+import { ClusterInfo, INodeInfo } from '../../model/ClusterInfo'
 import { AssetData } from '../../tools/MetricsTools'
 import { IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
@@ -15,7 +15,7 @@ interface IInstance {
     interval: number
 }
 
-class MetricsChannel implements IChannel {
+class MetricsChannelNew implements IChannel {
     readonly channelId = 'metrics'
     readonly requirements: IBackChannelRequirements = {
         storage: false
@@ -54,6 +54,7 @@ class MetricsChannel implements IChannel {
     }
 
     startChannel = async () =>  {
+        this.clusterInfo.addSubscriber('metrics', this, {})
     }
 
     processProviderEvent(providerId:string, obj:any) : void {
@@ -66,7 +67,7 @@ class MetricsChannel implements IChannel {
     }
 
     async processCommand (webSocket:WebSocket, instanceMessage:IInstanceMessage) : Promise<boolean> {
-        // we treart IMMEDIATE same as REQUEST
+        // we treat IMMEDIATE same as REQUEST
         if (instanceMessage.flow === EInstanceMessageFlow.IMMEDIATE) {
             let resp = await this.executeImmediateCommand(instanceMessage)
             if (resp) webSocket.send(JSON.stringify(resp))
@@ -79,7 +80,7 @@ class MetricsChannel implements IChannel {
 
     private async executeImmediateCommand (instanceMessage:IInstanceMessage) : Promise<IMetricsMessageResponse> {
         logInfo(ELogComponent.CHANNEL, 'Immediate request received')
-        // we create a dummy instance for executnig command, and we add the asset refrenced in the immediate command received
+        // we create a dummy instance for executing command, and we add the asset refrenced in the immediate command received
         let iconfig:IInstanceConfig = {
             objects: EInstanceConfigObject.PODS,
             accessKey: '',
@@ -409,6 +410,41 @@ class MetricsChannel implements IChannel {
         return undefined
     }
 
+    extractContainerMetrics = (clusterInfo:ClusterInfo, podMetricsSet:Map<string,{value: number, timestamp:number}>, containerMetricsSet:Map<string,{value: number, timestamp:number}>, requestedMetricName:string, view:EInstanceConfigView, node:INodeInfo, asset:AssetData): {value:number, timestamp:number|undefined }=> {
+        if (view === EInstanceConfigView.CONTAINER) {
+            var metricName = asset.podNamespace + '/' + asset.podName + '/' + asset.containerName + '/' + requestedMetricName
+            var value = containerMetricsSet.get(metricName)?.value
+            if (value !== undefined) {
+                return  { value, timestamp: clusterInfo.nodes.get(node.name)?.timestamp }
+            }
+            else {
+                return  { value: 0, timestamp: clusterInfo.nodes.get(node.name)?.timestamp }
+            }    
+        }
+        else {
+            // we extract all metrics in the metricsValue that have an impact in calculating requested metrics (for instance, several container metrics for calculating pod metric)
+            // we get some metric values ignoring the container (just ckecking namespace, pod and metricname)
+            var subset = Array.from(containerMetricsSet.keys()).filter (k => k.startsWith(asset.podNamespace + '/' + asset.podName+'/') && k.endsWith('/'+requestedMetricName))
+            if (subset.length===0) {
+                // if we cannot get metrics when extracting data from container metrics, we look for podMetrics
+                var podValue = podMetricsSet.get(asset.podNamespace + '/' + asset.podName+'/'+requestedMetricName)?.value
+                if (podValue)
+                    return  { value: podValue, timestamp: clusterInfo.nodes.get(node.name)?.timestamp }
+                else {
+                    return  { value: 0, timestamp: clusterInfo.nodes.get(node.name)?.timestamp }
+                }
+            }
+            else {
+                var accum = 0
+                for (var submetric of subset) { 
+                    var v = containerMetricsSet.get(submetric)!.value
+                    accum +=v
+                }
+                return  { value: accum, timestamp: clusterInfo.nodes.get(node.name)?.timestamp }
+            }
+        }
+    }
+
     getAssetMetrics = (instanceConfig:IInstanceConfig, assets:AssetData[], usePrevMetricSet:boolean): IMetricsAssets => {
         var assetMetrics:IMetricsAssets = { assetName: this.getAssetMetricName(instanceConfig, assets), values: [] }
 
@@ -454,9 +490,9 @@ class MetricsChannel implements IChannel {
                 if (node) {
                     let metric
                     if (usePrevMetricSet)
-                        metric = this.clusterInfo.metrics.extractContainerMetrics(this.clusterInfo, node.prevPodMetricValues, node.prevContainerMetricValues, sourceMetricName, instanceConfig.view, node, asset)
+                        metric = this.extractContainerMetrics(this.clusterInfo, node.prevPodMetricValues, node.prevContainerMetricValues, sourceMetricName, instanceConfig.view, node, asset)
                     else
-                        metric = this.clusterInfo.metrics.extractContainerMetrics(this.clusterInfo, node.podMetricValues, node.containerMetricValues, sourceMetricName, instanceConfig.view, node, asset)
+                        metric = this.extractContainerMetrics(this.clusterInfo, node.podMetricValues, node.containerMetricValues, sourceMetricName, instanceConfig.view, node, asset)
                     total = metric.value
                 }
                 else {
@@ -728,4 +764,4 @@ class MetricsChannel implements IChannel {
 
 }
 
-export { MetricsChannel }
+export { MetricsChannelNew }

@@ -44,6 +44,7 @@ export class PinocchioChannel implements IChannel {
                 else if (msg.config) pinocchioData.config = msg.config as IPinocchioConfig
                 else if (msg.providers) pinocchioData.providers = msg.providers as IConfigProvider[]
                 else if (msg.providersAvailable) pinocchioData.providersAvailable = msg.providersAvailable as string[]
+                else if (msg.toolsAvailable) pinocchioData.toolsAvailable = msg.toolsAvailable as string[]
                 return {
                     action: EChannelRefreshAction.REFRESH
                 }
@@ -64,6 +65,19 @@ export class PinocchioChannel implements IChannel {
                         id: '1'
                     }
                     channelObject.webSocket?.send(JSON.stringify(msgProvidersAvailable))
+
+                    let msgToolsAvailable:IPinocchioMessage = {
+                        channel: 'pinocchio',
+                        msgtype: 'pinocchiomessage',
+                        action: EInstanceMessageAction.COMMAND,
+                        flow: EInstanceMessageFlow.REQUEST,
+                        type: EInstanceMessageType.DATA,
+                        command: EPinocchioCommand.TOOLSAVAILABLE,
+                        accessKey: channelObject.accessString!,
+                        instance: signalMessage.instance,
+                        id: '1'
+                    }
+                    channelObject.webSocket?.send(JSON.stringify(msgToolsAvailable))
 
                     let msgProviders:IPinocchioMessage = {
                         channel: 'pinocchio',

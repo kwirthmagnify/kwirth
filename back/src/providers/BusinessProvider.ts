@@ -1,4 +1,3 @@
-import { LoginApi } from '../api/LoginApi'
 import { IChannel } from '../channels/IChannel'
 import { ClusterInfo } from '../model/ClusterInfo'
 import { ELogComponent, logError, logInfo } from '../tools/Logging'
@@ -15,6 +14,7 @@ export class BusinessProvider implements IProvider {
     public readonly providesRouter = true
     public router = express.Router()
     public routerAlias = 'business'
+    private data = new Map<string, Map<string,any[]>>()
 
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IBusinessDataConfig>
@@ -37,12 +37,29 @@ export class BusinessProvider implements IProvider {
                                 }
                             so subscribers can subscribe to a list of spaces and/or types
                         */
-                        for (let [sub, config] of this.subscribers) {
+                        // store new data
+                        // +++clean array according to max size
+                        let space = this.data.get(req.body.space)
+                        if (space) {
+                            let type = space.get(req.body.type)
+                            if (type)
+                                type.push(req.body)
+                            else
+                                space.set(req.body.type, [req.body])
+                        }
+                        else {
+                            this.data.set(req.body.space, new Map())
+                            this.data.get(req.body.space)?.set(req.body.type, [req.body])
+                        }
+                        for (let [subscriber, config] of this.subscribers) {
                             if (config.spaces.includes(req.body.space) && (req.body.type==='' || (req.body.type!=='' && config.types.includes(req.body.type)))) {
-                                sub.processProviderEvent(this.id, {
-                                    type: 'event',
-                                    timestamp: Date.now(),
-                                    event: req.body
+                                subscriber.processProviderEvent(this.id, {
+                                    last: {
+                                        type: 'event',
+                                        timestamp: Date.now().toString(),
+                                        event: req.body
+                                    },
+                                    all: this.data
                                 })
                             }
                         }

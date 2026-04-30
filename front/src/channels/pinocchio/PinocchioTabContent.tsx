@@ -4,7 +4,7 @@ import { IChannelObject } from '../IChannel'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
 import { EPinocchioCommand, IConfigProvider, IPinocchioConfig, IPinocchioMessage } from './PinocchioConfig'
-import { PinocchioConfigKind } from './PinocchioConfigKind'
+import { PinocchioConfigTrigger } from './PinocchioConfigTrigger'
 import { PinocchioConfigLlm } from './PinocchioConfigLlm'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { PinocchioConfigProvider } from './PinocchioConfigProvider'
@@ -18,12 +18,12 @@ interface IContentProps {
 const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let pinocchioData:IPinocchioData = props.channelObject.data
     let pinocchioConfig:IPinocchioConfig = pinocchioData.config
-    //let pinocchioInstanceConfig:IPinocchioInstanceConfig = props.channelObject.instanceConfig
+    
     const pinocchioBoxRef = useRef<HTMLDivElement | null>(null)
     const messagesEndRef = useRef<HTMLSpanElement | null>(null)
     const [isAtBottom, setIsAtBottom] = useState(true)
     const [pinocchioBoxTop, setPinocchioBoxTop] = useState(0)
-    const [showConfigKind, setShowConfigKind] = useState(false)
+    const [showConfigTrigger, setShowConfigTrigger] = useState(false)
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
     const priorityOrder = {
@@ -118,7 +118,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             }
             props.channelObject.webSocket?.send(JSON.stringify(msg))
         }
-        setShowConfigKind(false)
+        setShowConfigTrigger(false)
         setShowConfigLlm(false)
     }
 
@@ -153,20 +153,17 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
 return <>
         { pinocchioData.started && 
-        // <Card sx={{flex:1, width:'98%', alignSelf:'center', margin:'8px'}}>
         <Card sx={{display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', marginTop: '8px',minHeight: 0}}>
             <CardHeader title={
                 <Stack direction={'row'} alignItems={'center'}>
                     <Typography marginRight={'32px'}><b>Events:</b> {pinocchioData.analysis.length}</Typography>
                     <Typography marginRight={'32px'} flex={1}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {pinocchioData.paused?'paused':pinocchioData.started?'started':'stopped'}</Typography>
-                    <Button onClick={() => setShowConfigKind(true)} disabled={pinocchioConfig.llms.length===0}>Kind</Button>
+                    <Button onClick={() => setShowConfigTrigger(true)} disabled={pinocchioConfig.llms.length===0}>Trigger</Button>
                     <Button onClick={() => setShowConfigLlm(true)} disabled={pinocchioData.providers.length===0}>LLM</Button>
                     <Button onClick={() => setShowConfigProvider(true)} disabled={pinocchioData.providersAvailable.length===0}>Provider</Button>
                 </Stack>}>
             </CardHeader>
-            {/* <CardContent> */}
                 <CardContent sx={{flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, "&:last-child": { pb: 0 } }}>
-                {/* <Box ref={pinocchioBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', width:'100%', flexGrow:1, height: `calc(100vh - ${pinocchioBoxTop}px - 35px)`}}> */}
                     <Box ref={pinocchioBoxRef} sx={{ display:'flex', flexDirection:'column', width:'100%', overflowY:'auto', flexGrow:1, height: `calc(100vh - ${pinocchioBoxTop}px - 16px)`}} onScroll={handleScroll}>
                     <Box sx={{ flex:1, overflowY: 'auto', ml:1, mr:1 }}>
                         { showContent() }
@@ -174,7 +171,7 @@ return <>
                 </Box>
             </CardContent>
         </Card>}
-        { showConfigKind && <PinocchioConfigKind pinocchioConfig={pinocchioData.config} onClose={pinocchioConfigClose} />}
+        { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} onClose={pinocchioConfigClose} />}
         { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.config} providers={pinocchioData.providers} onClose={pinocchioConfigClose} />}
         { showConfigProvider && <PinocchioConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
     </>    

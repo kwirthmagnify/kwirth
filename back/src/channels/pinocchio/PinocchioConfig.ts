@@ -8,6 +8,7 @@ export enum EPinocchioCommand {
     PROVIDERSGET = 'providersget',
     PROVIDERSSET = 'providersset',
     PROVIDERSAVAILABLE = 'providersavailable',
+    TOOLSAVAILABLE = 'toolsavailable',
 }
 
 export interface IAnalysis {
@@ -37,8 +38,10 @@ export interface IConfigProvider {
     models: IConfigModel[]
 }
 
-export interface IConfigKind {
-    kind: string
+export interface IConfigTrigger {
+    id: string
+    trigger: string
+    kind?: string
     enabled: boolean
     system: string
     promptType: string
@@ -47,24 +50,26 @@ export interface IConfigKind {
     llm: string
     steps: number
     tools: string[]
+    spaces: string[]
 }
 
 export interface IConfigLlm {
     id: string
     provider: string
     model: string
+    temperature: number
     useProviderKey: boolean
     key: string
     data?: any
 }
 
 export interface IPinocchioConfig {
-    kinds: IConfigKind[]
+    triggers: IConfigTrigger[]
     llms: IConfigLlm[]
 }
 
 export class PinocchioConfig  implements IPinocchioConfig {
-    kinds: IConfigKind[] = []
+    triggers: IConfigTrigger[] = []
     llms: IConfigLlm[] = []
 }
 
@@ -91,4 +96,5 @@ export interface IPinocchioMessageResponse extends IInstanceMessage {
     config?: IPinocchioConfig
     providers?: IConfigProvider[]
     providersAvailable?: string[]
+    toolsAvailable?: string[]
 }

@@ -72,7 +72,6 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
     const [ anchorHelp, setAnchorHelp ] = useState<undefined | HTMLElement>(undefined)
     const [ anchorConfig, setAnchorConfig ] = useState<undefined | HTMLElement>(undefined)
     const [ isMaximized, setIsMaximized ] = useState(props.isMaximized)
-    //const [ channelFormConfig, setChannelFormConfig ] = useState<any>()
     const [ , setRefreshTick] = useState(0);
     const forceUpdate = () => setRefreshTick(tick => tick + 1);
 
@@ -85,68 +84,22 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 
             switch(contentExternalData.channelId) {
                 case 'log':
-                    //setChannelFormConfig({ lines: 5000, showNames:false, timestamp:false, startDiagnostics: false })
                     contentExternalData.formConfig = { lines: 5000, showNames:false, timestamp:false, startDiagnostics: false }
                     setLogConfig(contentExternalData.content)
                     break
                 case 'metrics':
-                    //setChannelFormConfig({ aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true})
                     contentExternalData.formConfig = { aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true}
                     setMetricsConfig(contentExternalData.content)
                     break
                 case 'ops':
-                    //setChannelFormConfig({})
                     contentExternalData.formConfig = {}
                     setOpsConfig(contentExternalData.content)
                     break
                 case 'fileman':
-                    //setChannelFormConfig({})
                     contentExternalData.formConfig = {}
                     setFilemanConfig(contentExternalData.content)
                     break
                 case 'trivy':
-                    // setChannelFormConfig({
-                    //     'Status': {
-                    //         text: 'Status',
-                    //         asyncAction: async () => {
-                    //             try  {
-                    //                 if (contentExternalData.content?.externalChannelObject?.data.ri)
-                    //                     return await (await fetch (`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=status`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))).text()
-                    //                 else
-                    //                     return 'No RI. Wait a few seconds.'
-                    //             }
-                    //             catch {
-                    //                 return 'N/A'
-                    //             }
-                    //         }
-                    //     },
-                    //     'Install Trivy operator': { 
-                    //         button:'Install',
-                    //         action: async () => {
-                    //             if (contentExternalData.content?.externalChannelObject?.data.ri) {
-                    //                 setMsgBox(MsgBoxWait('Trivy install', 'Wait for Trivy to start installation', setMsgBox, ))
-                    //                 await fetch (`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=install`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))
-                    //                 setMsgBox(MsgBoxOk('Install', 'Installation started, close this dialog and wait for Trivy to finish startup', setMsgBox))
-                    //             }
-                    //             else {
-                    //                 setMsgBox(MsgBoxOk('Trivy install', 'Running instance is not yet available, please try again in a few seconds', setMsgBox))
-                    //             }
-                    //         } 
-                    //     },
-                    //     'Remove Trivy operator': { 
-                    //         button:'Remove',
-                    //         action: async () => {
-                    //             if (contentExternalData.content?.externalChannelObject?.data.ri) {
-                    //                 setMsgBox(MsgBoxWait('Trivy remove', 'Wait for Trivy to start removing', setMsgBox, ))
-                    //                 await fetch (`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=remove`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))
-                    //                 setMsgBox(MsgBoxOk('Remove', 'Removing started, close this dialog and wait for Trivy to completely disappear from your cluster', setMsgBox))
-                    //             }
-                    //             else {
-                    //                 setMsgBox(MsgBoxOk('Trivy install', 'Running instance is not yet available, please try again in a few seconds', setMsgBox))
-                    //             }
-                    //         } 
-                    //     }
-                    // })
                     contentExternalData.formConfig = {
                         'Status': {
                             text: 'Status',
@@ -486,10 +439,11 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
         let pinocchioInstanceConfig:IPinocchioInstanceConfig = {
         }
         let pinocchioData:IPinocchioData = {
+            toolsAvailable: [],
             providersAvailable: [],
             providers: [],
             config: {
-                kinds: [],
+                triggers: [],
                 llms: []
             },
             analysis: [],

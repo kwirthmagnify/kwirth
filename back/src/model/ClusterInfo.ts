@@ -20,8 +20,8 @@ export interface INodeInfo {
     prevPodMetricValues: Map<string,{value: number, timestamp:number}>
     machineMetricValues: Map<string,{value: number, timestamp:number}>
     prevMachineMetricValues: Map<string,{value: number, timestamp:number}>
-    prevSummary: NodeMetrics|undefined
     summary: NodeMetrics|undefined
+    prevSummary: NodeMetrics|undefined
     timestamp: number
 }
 
