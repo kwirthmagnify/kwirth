@@ -35,12 +35,12 @@ const EchoSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
     }
 
     return (<>
-        <Dialog open={true} maxWidth={false} sx={{'& .MuiDialog-paper': { width: '30vw', maxWidth: '40vw', height:'48vh', maxHeight:'48vh' } }}>
+        <Dialog open={true} maxWidth={false} sx={{'& .MuiDialog-paper': { width: '25vw', maxWidth: '40vw', height:'40vh', maxHeight:'40vh' } }}>
             <DialogTitle>Configure Echo channel</DialogTitle>
             <DialogContent >
-                <Stack direction={'column'} spacing={2}>
-                    <TextField value={maxLines} onChange={(e) => setMaxLines(+e.target.value)} variant='standard' label='Max lines' fullWidth/>
-                    <TextField value={interval} onChange={(e) => setInterval(+e.target.value)} variant='standard' label='Interval' fullWidth/>
+                <Stack direction={'column'} spacing={2} sx={{m:1}}>
+                    <TextField value={maxLines} onChange={(e) => setMaxLines(+e.target.value)} type='number' variant='standard' label='Max lines' fullWidth/>
+                    <TextField value={interval} onChange={(e) => setInterval(+e.target.value)} type='number' variant='standard' label='Interval' fullWidth/>
                 </Stack>
             </DialogContent>
             <DialogActions>

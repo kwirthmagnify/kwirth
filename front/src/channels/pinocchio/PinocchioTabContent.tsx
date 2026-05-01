@@ -50,8 +50,8 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         const timer = setTimeout(() => {
             if (messagesEndRef.current) {
                 messagesEndRef.current.scrollIntoView({ 
-                    behavior: pinocchioData.analysis.length > 50 ? "auto" : "smooth", 
-                    block: "end" 
+                    behavior: pinocchioData.analysis.length > 50 ? 'auto' : 'smooth', 
+                    block: 'end' 
                 });
             }
         }, 50)
@@ -97,7 +97,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     </React.Fragment>
                 );
             })}
-            <span ref={messagesEndRef} style={{ float: "left", clear: "both" }} />
+            <span ref={messagesEndRef} style={{ float: 'left', clear: 'both' }} />
         </>)
     }
 
@@ -163,7 +163,7 @@ return <>
                     <Button onClick={() => setShowConfigProvider(true)} disabled={pinocchioData.providersAvailable.length===0}>Provider</Button>
                 </Stack>}>
             </CardHeader>
-                <CardContent sx={{flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, "&:last-child": { pb: 0 } }}>
+                <CardContent sx={{flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
                     <Box ref={pinocchioBoxRef} sx={{ display:'flex', flexDirection:'column', width:'100%', overflowY:'auto', flexGrow:1, height: `calc(100vh - ${pinocchioBoxTop}px - 16px)`}} onScroll={handleScroll}>
                     <Box sx={{ flex:1, overflowY: 'auto', ml:1, mr:1 }}>
                         { showContent() }

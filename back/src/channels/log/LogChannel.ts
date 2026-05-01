@@ -2,7 +2,7 @@ import { IInstanceConfig, InstanceMessageChannelEnum, InstanceMessageTypeEnum, I
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelRequirements, IChannel } from '../IChannel';
+import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
 
 interface IAsset {
@@ -29,14 +29,16 @@ class LogChannel implements IChannel {
         storage: false
     }
     clusterInfo : ClusterInfo
+    backChannelObject: IBackChannelObject
     webSockets: {
         ws:WebSocket,
         lastRefresh: number,
         instances: IInstance[] 
     }[] = []
 
-    constructor (clusterInfo:ClusterInfo) {
+    constructor (clusterInfo:ClusterInfo, backChannelObject:IBackChannelObject) {
         this.clusterInfo = clusterInfo
+        this.backChannelObject = backChannelObject
     }
 
     getChannelData(): BackChannelData {

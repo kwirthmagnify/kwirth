@@ -157,6 +157,9 @@ class PinocchioChannel implements IChannel {
         }
 
         let system = triggerDefinition.system
+        let temperature = llm.temperature
+        if (temperature<0) temperature=0
+        if (temperature>1) temperature=1
 
         switch(llm.provider) {
             case 'deepseek':
@@ -165,12 +168,12 @@ class PinocchioChannel implements IChannel {
                     llmProviderId: llm.provider,
                     llmModelId: llm.model,
                     model: deepseek(llm.model),
-                    temperature: llm.temperature,
                     providerOptions: {
                         openai: {
-                            // structuredOutputs: true  unsupported
+                            // structuredOutputs: true  unsupported parm
                         } satisfies OpenAILanguageModelChatOptions
                     },
+                    temperature,
                     prompt,
                     system
                 }
@@ -180,12 +183,12 @@ class PinocchioChannel implements IChannel {
                     llmProviderId: llm.provider,
                     llmModelId: llm.model,
                     model: google(llm.model),
-                    temperature: llm.temperature,
                     providerOptions: {
                         google: {
                             structuredOutputs: true,
                         } satisfies GoogleLanguageModelOptions
                     },
+                    temperature,
                     prompt,
                     system
                 }
@@ -195,9 +198,9 @@ class PinocchioChannel implements IChannel {
                     llmProviderId: llm.provider,
                     llmModelId: llm.model,
                     model: openRouter(llm.model),
-                    temperature: llm.temperature,
                     providerOptions: {
                     },
+                    temperature,
                     prompt,
                     system
                 }
@@ -207,12 +210,12 @@ class PinocchioChannel implements IChannel {
                     llmProviderId: llm.provider,
                     llmModelId: llm.model,
                     model: groq(llm.model),
-                    temperature: llm.temperature,
                     providerOptions: {
                         groq: {
                             structuredOutputs: true
                         } satisfies GroqLanguageModelOptions
                     },
+                    temperature,
                     prompt,
                     system
                 }
@@ -224,13 +227,13 @@ class PinocchioChannel implements IChannel {
                     llmProviderId: llm.provider,
                     llmModelId: llm.model,
                     model: openai(llm.model),
-                    temperature: llm.temperature,
                     providerOptions: {
                         openai: {
                             // structuredOutputs: true,  this parameter is not supported by openai (or we are no using th right modeloptions)
                             // CHANGELOG.md:- 9bf7291: chore(providers/openai): enable structuredOutputs by default & switch to provider option
                         } satisfies OpenAILanguageModelChatOptions
                     },
+                    temperature,
                     prompt,
                     system
                 }
@@ -240,13 +243,13 @@ class PinocchioChannel implements IChannel {
                     llmProviderId: llm.provider,
                     llmModelId: llm.model,
                     model: mistral(llm.model),
-                    temperature: llm.temperature,
                     providerOptions: {
                         mistral: {
                             strictJsonSchema: true,
                             structuredOutputs: true
                         } satisfies MistralLanguageModelOptions
                     },
+                    temperature,
                     prompt,
                     system
                 }
@@ -314,7 +317,6 @@ class PinocchioChannel implements IChannel {
                         }
                         this.broadcastAnalysis(an)
                     }
-
                 }
 
                 break
@@ -390,7 +392,7 @@ class PinocchioChannel implements IChannel {
                 }
                 break
             default:
-                logError(ELogComponent.PROVIDER, `Ignored provider event from ${providerId} to channel ${this.getChannelData().id}`)
+                logError(ELogComponent.CHANNEL, `Ignored provider event from ${providerId} to channel ${this.getChannelData().id}`)
         }
     }
 

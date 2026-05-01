@@ -37,9 +37,9 @@ const SelectTerminal: React.FC<ISelectTerminalProps> = (props:ISelectTerminalPro
                 Select terminal
             </DialogTitle>
             <DialogContent>
-                <Stack direction='column' sx={{width:'50vh'}}>
+                <Stack direction='column' sx={{width:'50vh', m:2}}>
                     <Typography>
-                        Select terminal to switch to
+                        Select terminal to switch to:
                     </Typography>
                     <List>
                         {Array.from(props.opsData.terminalManager.terminals.keys()).map( (key,index) => <ListItemButton onClick={() => props.onSelect(key)} key={key} selected={index === selectedIndex} disabled={false}>

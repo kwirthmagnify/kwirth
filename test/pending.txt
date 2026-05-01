@@ -1,6 +1,8 @@
 ******************ERRORES
 RFM
 
+TRIVY
+when re-scanning an asset, at scanning end the card is created but there is no content (if starting a new trivy tab content is there!!)
 MAGNIFY FRONT
 💖💖💖 portforward con smart proxy
 running, just manage to detect rootpath in order to enable/disable forwarding

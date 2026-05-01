@@ -129,7 +129,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: bank-operations-ator
+  name: bank-operations
   labels:
     app: core-banking-svc
 spec:
@@ -140,7 +140,6 @@ spec:
     args:
       - |
         while true; do
-          # Variables dinámicas para realismo financiero
           ACC="ACC-$(($RANDOM % 900000 + 100000))"
           TRX="TXN-$(($RANDOM % 8000000 + 1000000))"
           AMT="$(($RANDOM % 5000)).$(($RANDOM % 99))"

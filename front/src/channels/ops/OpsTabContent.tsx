@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Box, Button, Card, CardContent, CardHeader, IconButton, ListItem, ListItemButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Card, CardContent, CardHeader, IconButton, ListItem, ListItemButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { IOpsData, IScopedObject } from './OpsData'
 import { IInstanceConfig, EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType, IOpsMessage, EMetricsConfigMode, EOpsCommand, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { IContentProps } from '../IChannel'
@@ -22,6 +22,7 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let opsData:IOpsData = props.channelObject.data
     let opsConfig:IOpsConfig = props.channelObject.config
 
+    const theme = useTheme()
     const opsBoxRef = useRef<HTMLDivElement | null>(null)
     const [opsBoxHeight, setOpsBoxHeight] = useState(0)
 
@@ -477,7 +478,7 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                         {Array.from(opsData.terminalManager.terminals.keys()).map(key => {               
                             return (
                                 <Tooltip key={key} title={key}>
-                                    <Button onClick={() => {setSelectedTerminal(key); opsData.selectedTerminal=key}} sx={{background: selectedTerminal===key? 'lightgray':'white', borderBottomRightRadius:0, borderBottomLeftRadius:0}}>
+                                    <Button onClick={() => {setSelectedTerminal(key); opsData.selectedTerminal=key}} sx={{background: selectedTerminal===key? theme.palette.divider:theme.palette.background.default, borderBottomRightRadius:0, borderBottomLeftRadius:0}}>
                                         {key.split('/')[2]}{opsData.terminalManager.terminals.get(key)!.index>0 && <Typography fontSize={10} fontWeight={'900'}>&nbsp;&nbsp;F{opsData.terminalManager.terminals.get(key)?.index}</Typography>}
                                     </Button>
                                 </Tooltip>

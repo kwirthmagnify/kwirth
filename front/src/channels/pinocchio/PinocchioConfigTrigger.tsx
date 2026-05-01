@@ -84,7 +84,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
     }
 
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '1200px', height: '80vh' } }}>
+        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '1200px', height: '65vh' } }}>
             <DialogTitle>Trigger Config</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
 

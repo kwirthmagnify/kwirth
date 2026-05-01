@@ -105,8 +105,8 @@ const AlertSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
         <Dialog open={true}>
             <DialogTitle>Create alert</DialogTitle>
             <DialogContent>
-                <Stack direction={'column'} >
-                    <TextField value={maxAlerts} onChange={onChangeMaxAlerts} variant='standard' label='Max alerts' SelectProps={{native: true}} type='number' sx={{mb:'8px'}}/>
+                <Stack direction={'column'} sx={{m:2}}>
+                    <TextField value={maxAlerts} onChange={onChangeMaxAlerts} variant='standard' label='Max alerts' SelectProps={{native: true}} type='number'/>
                     
                     <Stack direction={'row'} spacing={1}>
                         <Stack direction={'column'}>

@@ -13,8 +13,8 @@ const AlertTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const [filter, setFilter] = useState<string>('')
     const [filterCasing, setFilterCasing] = useState(false)
     const [filterRegex, setFilterRegex] = useState(false)
-    const adornmentSelected= { margin: 0, borderWidth:1, borderStyle:'solid', borderColor:'gray', paddingLeft:3, paddingRight:3, backgroundColor:'gray', cursor: 'pointer', color:'white'}
-    const adornmentNotSelected = { margin: 0, borderWidth:1, borderStyle: 'solid', borderColor:'#f0f0f0', backgroundColor:'#f0f0f0', paddingLeft:3, paddingRight:3, cursor:'pointer'}
+    const adornmentSelected= { margin: 0, borderWidth:1, borderStyle:'solid', borderColor:'gray', paddingLeft:3, paddingRight:3, color:theme.palette.background.default, backgroundColor:theme.palette.text.primary, cursor: 'pointer'}
+    const adornmentNotSelected = { margin: 0, borderWidth:1, borderStyle: 'solid', borderColor:'#f0f0f0', backgroundColor:theme.palette.background.default, color:theme.palette.text.primary, paddingLeft:3, paddingRight:3, cursor:'pointer'}
 
     useEffect(() => {
         if (alertBoxRef.current) setAlertBoxTop(alertBoxRef.current.getBoundingClientRect().top)
@@ -72,7 +72,7 @@ const AlertTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     return (<>
         { alertData.started && 
         <Card sx={{flex:1, width:'98%', alignSelf:'center', marginTop:'8px'}}>
-            <CardHeader sx={{border:0, borderBottom:1, borderStyle:'solid', borderColor: 'divider', backgroundColor:theme.palette.grey[600]}} title={
+            <CardHeader sx={{border:0, borderBottom:1, borderStyle:'solid', borderColor: 'divider'}} title={
                 <Stack direction={'row'} alignItems={'center'}>
                     <Typography marginRight={'32px'}><b>Alerts:</b> {alertData.firedAlerts.length}</Typography>
                     <Typography marginRight={'32px'}><Info fontSize='small' sx={{marginBottom:'2px', color:'blue'}} /><b>&nbsp;Info:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.INFO).length}</Typography>
@@ -93,7 +93,7 @@ const AlertTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     />
                 </Stack>}>
             </CardHeader>
-            <CardContent sx={{backgroundColor:'#f0f0f0'}}>
+            <CardContent>
                 <Box ref={alertBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', width:'100%', flexGrow:1, height: `calc(100vh - ${alertBoxTop}px - 45px)`}}>
                     { formatAlert() }
                 </Box>

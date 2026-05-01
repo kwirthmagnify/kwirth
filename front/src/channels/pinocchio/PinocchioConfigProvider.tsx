@@ -63,7 +63,7 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
     }
 
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '900px', height: '65vh' } }}>
+        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '900px', height: '45vh' } }}>
             <DialogTitle>Manage Providers</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
                 

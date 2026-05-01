@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, ClusterTypeEnum, BackChannelData, KwirthData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel} from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelRequirements, IChannel } from '../IChannel'
+import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { CoreV1EventList, V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
 import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'
@@ -65,8 +65,9 @@ class MagnifyChannel implements IChannel {
     readonly requirements: IBackChannelRequirements = {
         storage: false
     }
-    kwirthData : KwirthData
+    // kwirthData : KwirthData
     clusterInfo : ClusterInfo
+    backChannelObject: IBackChannelObject
     webSockets: {
         ws:WebSocket,
         lastRefresh: number,
@@ -107,9 +108,13 @@ class MagnifyChannel implements IChannel {
 
     // +++ add dispose/destroy (conterpart of initChannel) to IChannel (and implement in this channel a remove from "events subscription")
 
-    constructor (clusterInfo:ClusterInfo, kwirthData : KwirthData) {
+    // constructor (clusterInfo:ClusterInfo, kwirthData : KwirthData) {
+    //     this.clusterInfo = clusterInfo
+    //     this.kwirthData = kwirthData
+    // }
+    constructor (clusterInfo:ClusterInfo, backChannelObject:IBackChannelObject) {
         this.clusterInfo = clusterInfo
-        this.kwirthData = kwirthData
+        this.backChannelObject = backChannelObject
     }
 
     getChannelData = (): BackChannelData => {

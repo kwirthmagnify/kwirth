@@ -1,7 +1,7 @@
 import { IInstanceConfig, InstanceConfigViewEnum, InstanceMessageTypeEnum, ISignalMessage, SignalMessageLevelEnum, IInstanceConfigResponse, InstanceMessageFlowEnum, InstanceMessageActionEnum, InstanceMessageChannelEnum, IInstanceMessage, MetricsConfig, MetricsConfigModeEnum, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, ClusterTypeEnum, IMetricsMessageResponse, IMetricsAssets, MetricsMessage, IMetricsMessage, InstanceConfigObjectEnum, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { AssetData } from '../../tools/MetricsTools'
-import { IBackChannelRequirements, IChannel } from '../IChannel'
+import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 
@@ -21,7 +21,7 @@ class MetricsChannel implements IChannel {
         storage: false
     }
     clusterInfo: ClusterInfo
-
+    backChannelObject: IBackChannelObject
     // list of intervals (and its associated metrics) that produce metrics streams    
     webSockets: {
         ws:WebSocket,
@@ -29,8 +29,9 @@ class MetricsChannel implements IChannel {
         instances: IInstance[]
     }[] = []
     
-    constructor (clusterInfo:ClusterInfo) {
+    constructor (clusterInfo:ClusterInfo, backChannelObject:IBackChannelObject) {
         this.clusterInfo = clusterInfo
+        this.backChannelObject = backChannelObject
     }
 
     getChannelData(): BackChannelData {

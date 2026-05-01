@@ -94,9 +94,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         borderStyle: 'solid',
                     }),        
                     paper: ({ theme }) => ({
-                        // Esto quita el filtro blanco que MUI pone en modo oscuro por la elevación
                         backgroundImage: 'none !important',
-                        // Opcional: si quieres que el fondo de TODO el diálogo sea negro puro o gris oscuro
                         backgroundColor: theme.palette.mode === 'dark' ? '#121212' : '#fff',
                     }),
                 },
@@ -105,12 +103,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             MuiDialogTitle: {
                 styleOverrides: {
                     root: ({ theme }) => ({
-                        // Usamos un selector más fuerte para asegurar que gane al estilo base
                         '&.MuiDialogTitle-root': {
                             backgroundColor: theme.palette.mode === 'dark' 
                                 ? theme.palette.grey[900] 
                                 : theme.palette.grey[100],
-                            backgroundImage: 'none !important', // Esto quita el brillo gris claro
+                            backgroundImage: 'none !important',
                             borderBottom: `1px solid ${theme.palette.divider}`,
                             paddingTop: theme.spacing(1),
                             paddingBottom: theme.spacing(1),
@@ -123,10 +120,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             MuiDialogContent: {
                 styleOverrides: {
                     root: ({ theme }) => ({
-                        // Si usas el prop 'dividers', esto controla su color
                         '&.MuiDialogContent-dividers': {
                             borderColor: theme.palette.divider,
-                        },
+                        }
                     }),
                 },
             },
