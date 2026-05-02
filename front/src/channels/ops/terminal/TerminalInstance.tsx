@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { TerminalManager } from './TerminalManager';
+import { TerminalManager } from './TerminalManager'
 
 interface ITerminalInstanceProps {
     id: string|undefined

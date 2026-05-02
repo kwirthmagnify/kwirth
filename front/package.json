@@ -1,6 +1,9 @@
 {
   "name": "kwirth-front",
   "version": "0.1.0",
+  "overrides": {
+      "typescript": "$typescript"
+  },
   "homepage": ".",
   "private": true,
   "dependencies": {

@@ -1,7 +1,7 @@
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 
-export interface ManagedTerminal {
+interface ManagedTerminal {
     term: Terminal
     fitAddon: FitAddon
     started: boolean
@@ -9,7 +9,7 @@ export interface ManagedTerminal {
     socket: WebSocket
 }
 
-export class TerminalManager {
+class TerminalManager {
     public terminals: Map<string, ManagedTerminal> = new Map()
     public onClose?: (id:string) => void
 
@@ -70,3 +70,6 @@ export class TerminalManager {
         this.terminals.delete(id)
     }
 }
+
+export type { ManagedTerminal }
+export  { TerminalManager }

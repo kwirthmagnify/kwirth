@@ -15,8 +15,8 @@ import { IResourceSelected } from '../../components/ResourceSelector'
 import { ILogConfig, ILogInstanceConfig, ELogSortOrder } from '../log/LogConfig'
 import { IMetricsConfig, IMetricsInstanceConfig } from '../metrics/MetricsConfig'
 import { EChartType } from '../metrics/MenuChart'
-import { TerminalInstance } from './Terminal/TerminalInstance'
 import { SelectTerminal } from './Terminal/SelectTerminal'
+import { TerminalInstance } from './Terminal/TerminalInstance'
 
 const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let opsData:IOpsData = props.channelObject.data
