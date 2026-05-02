@@ -151,24 +151,26 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                 </Tabs>
                 
                 { selectedTab === 0 &&
-                    <Stack direction={'column'} sx={{height:300, overflowY:'auto' }}>
+                    <Stack direction={'column'} sx={{height:300}}>
                         <Stack direction={'row'} sx={{width:'100%'}}>
                             <TextField label={'Filter'} value={filterLocal} onChange={(e) => setFilterLocal(e.target.value)} sx={{width:'100%', ml:2, mr:2}} variant={'standard'}></TextField>
                             <FormControlLabel control={<Checkbox />} checked={showActive} onChange={() => setShowActive(!showActive)} label={'Show\u00a0only\u00a0active'}/>
                         </Stack>
-                        <List>
-                        {
-                            localContexts.filter(c => c.cluster.includes(filterLocal)).filter(c => !showActive || (showActive && c.status)).map(c => 
-                                <ListItemButton key={c.cluster} onClick={() => selectLocal(c.cluster)}>
-                                    <Tooltip title={c.cluster}>
-                                        <Typography>{c.cluster.substring(0,50)+(c.cluster.length>60?'...':'')}</Typography>
-                                    </Tooltip>
-                                    <Typography flexGrow={1}></Typography>
-                                    <Box sx={{width:12, height:12, borderRadius:'50%', bgcolor:c.status!==undefined? (c.status?'success.main':'error.main'):'gray', mr:1}}></Box>
-                                </ListItemButton>
-                            )
-                        }
-                        </List>
+                        <Stack direction={'column'} sx={{height:300, overflowY:'auto' }}>
+                            <List>
+                            {
+                                localContexts.filter(c => c.cluster.includes(filterLocal)).filter(c => !showActive || (showActive && c.status)).map(c => 
+                                    <ListItemButton key={c.cluster} onClick={() => selectLocal(c.cluster)}>
+                                        <Tooltip title={c.cluster}>
+                                            <Typography>{c.cluster.substring(0,50)+(c.cluster.length>60?'...':'')}</Typography>
+                                        </Tooltip>
+                                        <Typography flexGrow={1}></Typography>
+                                        <Box sx={{width:12, height:12, borderRadius:'50%', bgcolor:c.status!==undefined? (c.status?'success.main':'error.main'):'gray', mr:1}}></Box>
+                                    </ListItemButton>
+                                )
+                            }
+                            </List>
+                        </Stack>
                     </Stack>
                 }
                 { selectedTab === 1 &&

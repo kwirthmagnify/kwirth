@@ -19,7 +19,6 @@ interface IContentProps {
 
 const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let pinocchioData:IPinocchioData = props.channelObject.data
-    let pinocchioConfig:IPinocchioConfig = pinocchioData.config
     
     const pinocchioBoxRef = useRef<HTMLDivElement | null>(null)
     const messagesEndRef = useRef<HTMLSpanElement | null>(null)
