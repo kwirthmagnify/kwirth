@@ -65,6 +65,7 @@ import { BusinessProvider } from './providers/business/BusinessProvider';
 import { NewMetricsProvider } from './providers/newmetrics/NewMetricsProvider';
 
 import { ELogComponent, logError, logInfo, logWarning } from './tools/Logging';
+import { TopologyChannel } from './channels/topology/TopologyChannel';
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -116,6 +117,7 @@ const envChannelEchoEnabled = (process.env.CHANNEL_ECHO || 'true').toLowerCase()
 const envChannelFilemanEnabled = (process.env.CHANNEL_FILEMAN || 'true').toLowerCase() === 'true'
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 const envChannelPinocchioEnabled = (process.env.CHANNEL_PINOCCHIO || 'true').toLowerCase() === 'true'
+const envChannelTopologyEnabled = (process.env.CHANNEL_TOPOLOGY || 'true').toLowerCase() === 'true'
 
 var runningInstances:IRunningInstance[] = []
 
@@ -136,6 +138,7 @@ registeredChannels.set('fileman', FilemanChannel)
 registeredChannels.set('echo', EchoChannel)
 registeredChannels.set('magnify', MagnifyChannel)
 registeredChannels.set('pinocchio', PinocchioChannel)
+registeredChannels.set('topology', TopologyChannel)
 
 if (envCommand!==undefined) {
     switch(envCommand) {
@@ -1412,6 +1415,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (envChannelEchoEnabled) requiredChannels.push('echo')
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
         if (envChannelPinocchioEnabled) requiredChannels.push('pinocchio')
+        if (envChannelTopologyEnabled) requiredChannels.push('topology')
 
         logInfo(ELogComponent.CORE, 'Required channels:')
         for (let chanId of registeredChannels.keys()) {

@@ -23,9 +23,9 @@ import { ITrivyInstanceConfig } from '../../trivy/TrivyConfig'
 import { ITrivyData } from '../../trivy/TrivyData'
 import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
-import { TerminalManager } from '../../ops/terminal/TerminalManager'
 import { IPinocchioInstanceConfig } from '../../pinocchio/PinocchioConfig'
 import { IPinocchioData } from '../../pinocchio/PinocchioData'
+import { TerminalManager } from '../../ops/Terminal/TerminalManager'
 
 export interface IContentExternalOptions {
     pauseable: boolean

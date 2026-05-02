@@ -40,6 +40,7 @@
     "react-scripts": "5.0.1",
     "react-use": "^17.6.0",
     "recharts": "^2.13.3",
+    "three": "^0.184.0",
     "uuid": "^11.1.0",
     "xterm-addon-fit": "^0.8.0"
   },
@@ -75,9 +76,11 @@
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@types/cookie-parser": "^1.4.10",
     "@types/react-resizable": "^3.0.8",
+    "@types/three": "^0.184.0",
     "@types/xterm": "^2.0.3",
     "css-loader": "^7.1.2",
     "style-loader": "^4.0.0",
-    "ts-loader": "^9.5.1"
+    "ts-loader": "^9.5.1",
+    "typescript": "^6.0.3"
   }
 }
