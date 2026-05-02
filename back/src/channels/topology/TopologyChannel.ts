@@ -1,9 +1,7 @@
 import {
     BackChannelData,
-    ClusterTypeEnum,
     EClusterType,
     EInstanceMessageAction,
-    EInstanceMessageChannel,
     EInstanceMessageFlow,
     EInstanceMessageType,
     ESignalMessageLevel,
@@ -89,7 +87,10 @@ function controllerStatus(ready?: number, desired?: number): TNodeStatus {
 
 export class TopologyChannel implements IChannel {
     readonly channelId = 'topology'
-    readonly requirements: IBackChannelRequirements = { storage: false }
+    readonly requirements: IBackChannelRequirements = {
+        storage: false,
+        providers: []
+    }
 
     private clusterInfo:       ClusterInfo
     private backChannelObject: IBackChannelObject
@@ -110,8 +111,7 @@ export class TopologyChannel implements IChannel {
             modifiable:    false,
             reconnectable: true,
             metrics:       false,
-            providers:     [],
-            sources:       [ClusterTypeEnum.KUBERNETES],
+            sources:       [EClusterType.KUBERNETES],
             endpoints:     [],
             websocket:     false,
             cluster:       true,

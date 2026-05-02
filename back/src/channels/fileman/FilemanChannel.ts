@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, ClusterTypeEnum, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
 import { Readable, Writable } from 'stream'
@@ -95,7 +95,8 @@ interface IDirectoryEntry {
 class FilemanChannel implements IChannel {
     readonly channelId = 'fileman'
     readonly requirements: IBackChannelRequirements = {
-        storage: false
+        storage: false,
+        providers: []
     }
     clusterInfo : ClusterInfo
     backChannelObject: IBackChannelObject
@@ -118,9 +119,7 @@ class FilemanChannel implements IChannel {
             modifiable: false,
             reconnectable: true,
             metrics: false,
-            //events: false,
-            providers: [],
-            sources: [ ClusterTypeEnum.KUBERNETES, ClusterTypeEnum.DOCKER ],
+            sources: [ EClusterType.KUBERNETES, EClusterType.DOCKER ],
             endpoints: [
                 { name: 'download', methods: ['GET'], requiresAccessKey: true },
                 { name: 'upload', methods: ['POST'], requiresAccessKey: true } 

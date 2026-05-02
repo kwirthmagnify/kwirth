@@ -22,7 +22,8 @@ export interface IInstance {
 class EchoChannel implements IChannel {
     readonly channelId = 'echo'
     readonly requirements: IBackChannelRequirements = {
-        storage: false
+        storage: false,
+        providers: []
     }
     clusterInfo : ClusterInfo
     backChannelObject: IBackChannelObject
@@ -45,8 +46,6 @@ class EchoChannel implements IChannel {
             modifiable: false,
             reconnectable: true,
             metrics: false,
-            //events: false,
-            providers: [],
             sources: [ EClusterType.KUBERNETES, EClusterType.DOCKER ],
             endpoints: [],
             websocket: false,

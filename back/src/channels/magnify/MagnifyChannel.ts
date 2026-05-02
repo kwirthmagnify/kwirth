@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, ClusterTypeEnum, BackChannelData, KwirthData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel} from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, EClusterType} from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
@@ -63,7 +63,8 @@ export interface IInstance {
 class MagnifyChannel implements IChannel {
     readonly channelId = 'magnify'
     readonly requirements: IBackChannelRequirements = {
-        storage: false
+        storage: false,
+        providers: [ 'events' ]
     }
     // kwirthData : KwirthData
     clusterInfo : ClusterInfo
@@ -125,9 +126,7 @@ class MagnifyChannel implements IChannel {
             modifiable: false,
             reconnectable: true,
             metrics: true,
-            //events: true,
-            providers: [],
-            sources: [ ClusterTypeEnum.KUBERNETES ],
+            sources: [ EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,
             cluster: true

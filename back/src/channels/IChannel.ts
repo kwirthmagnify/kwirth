@@ -11,6 +11,7 @@ export const createChannelInstance = (channelConstructor:TChannelConstructor, cl
 
 export interface IBackChannelRequirements {
     storage: boolean
+    providers: string[]
 }
 
 export interface IBackChannelObject {

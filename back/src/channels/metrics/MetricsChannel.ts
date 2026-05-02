@@ -1,4 +1,4 @@
-import { IInstanceConfig, InstanceConfigViewEnum, InstanceMessageTypeEnum, ISignalMessage, SignalMessageLevelEnum, IInstanceConfigResponse, InstanceMessageFlowEnum, InstanceMessageActionEnum, InstanceMessageChannelEnum, IInstanceMessage, MetricsConfig, MetricsConfigModeEnum, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, ClusterTypeEnum, IMetricsMessageResponse, IMetricsAssets, MetricsMessage, IMetricsMessage, InstanceConfigObjectEnum, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, InstanceConfigViewEnum, InstanceMessageTypeEnum, ISignalMessage, SignalMessageLevelEnum, IInstanceConfigResponse, InstanceMessageFlowEnum, InstanceMessageActionEnum, InstanceMessageChannelEnum, IInstanceMessage, MetricsConfig, MetricsConfigModeEnum, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, IMetricsMessageResponse, IMetricsAssets, MetricsMessage, IMetricsMessage, InstanceConfigObjectEnum, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { AssetData } from '../../tools/MetricsTools'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
@@ -18,7 +18,8 @@ interface IInstance {
 class MetricsChannel implements IChannel {
     readonly channelId = 'metrics'
     readonly requirements: IBackChannelRequirements = {
-        storage: false
+        storage: false,
+        providers: []
     }
     clusterInfo: ClusterInfo
     backChannelObject: IBackChannelObject
@@ -42,8 +43,7 @@ class MetricsChannel implements IChannel {
             modifiable: true,
             reconnectable: true,
             metrics: true,
-            providers: [],
-            sources: [ ClusterTypeEnum.KUBERNETES ],
+            sources: [ EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,
             cluster: false

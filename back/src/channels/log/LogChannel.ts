@@ -1,4 +1,4 @@
-import { IInstanceConfig, InstanceMessageChannelEnum, InstanceMessageTypeEnum, ISignalMessage, SignalMessageLevelEnum, ClusterTypeEnum, IInstanceConfigResponse, InstanceMessageActionEnum, InstanceMessageFlowEnum, IInstanceMessage, LogConfig, BackChannelData, ILogMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, ESignalMessageLevel, EInstanceMessageType, EClusterType } from '@kwirthmagnify/kwirth-common';
+import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, LogConfig, BackChannelData, ILogMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, ESignalMessageLevel, EInstanceMessageType, EClusterType } from '@kwirthmagnify/kwirth-common';
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { ClusterInfo } from '../../model/ClusterInfo'
@@ -26,7 +26,8 @@ interface IInstance {
 class LogChannel implements IChannel {    
     readonly channelId = 'log'
     readonly requirements: IBackChannelRequirements = {
-        storage: false
+        storage: false,
+        providers: []
     }
     clusterInfo : ClusterInfo
     backChannelObject: IBackChannelObject
@@ -49,8 +50,7 @@ class LogChannel implements IChannel {
             modifiable: false,
             reconnectable: true,
             metrics: false,
-            providers: [],
-            sources: [ ClusterTypeEnum.DOCKER, ClusterTypeEnum.KUBERNETES ],
+            sources: [ EClusterType.DOCKER, EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,
             cluster:false

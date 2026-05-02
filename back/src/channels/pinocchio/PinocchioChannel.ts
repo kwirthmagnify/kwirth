@@ -62,7 +62,8 @@ interface IModelInvocation {
 class PinocchioChannel implements IChannel {
     readonly channelId = 'pinocchio'
     readonly requirements: IBackChannelRequirements = {
-        storage: true
+        storage: true,
+        providers: ['events', 'business', 'newmetrics']
     }
     clusterInfo : ClusterInfo
     backChannelObject : IBackChannelObject
@@ -115,7 +116,6 @@ class PinocchioChannel implements IChannel {
             modifiable: false,
             reconnectable: true,
             metrics: false,
-            providers: ['events', 'business', 'newmetrics'],
             sources: [ EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,

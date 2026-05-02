@@ -24,7 +24,8 @@ interface IInstance {
 class AlertChannel implements IChannel {    
     readonly channelId = 'alert'
     readonly requirements: IBackChannelRequirements = {
-        storage: false
+        storage: false,
+        providers: []
     }
     clusterInfo : ClusterInfo
     backChannelObject: IBackChannelObject
@@ -48,7 +49,7 @@ class AlertChannel implements IChannel {
             reconnectable: true,
             metrics: false,
             //events: false,
-            providers: [],
+            //providers: [],
             sources: [ EClusterType.DOCKER, EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,

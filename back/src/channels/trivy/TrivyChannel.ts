@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, ClusterTypeEnum, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType } from '@kwirthmagnify/kwirth-common';
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType } from '@kwirthmagnify/kwirth-common';
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
 import { Informer, KubernetesObject, makeInformer, ObjectCache } from '@kubernetes/client-node'
@@ -37,7 +37,8 @@ export interface IInstance {
 class TrivyChannel implements IChannel {
     readonly channelId = 'trivy'
     readonly requirements: IBackChannelRequirements = {
-        storage: false
+        storage: false,
+        providers: []
     }
     clusterInfo : ClusterInfo
     backChannelObject: IBackChannelObject
@@ -61,9 +62,7 @@ class TrivyChannel implements IChannel {
             modifiable: false,
             reconnectable: false,
             metrics: false,
-            //events: false, 
-            providers: [],
-            sources: [ ClusterTypeEnum.KUBERNETES ],
+            sources: [ EClusterType.KUBERNETES ],
             endpoints: [ {
                 name: 'operator',
                 methods: [ 'GET' ],

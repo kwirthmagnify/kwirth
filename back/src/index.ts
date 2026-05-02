@@ -1459,7 +1459,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         // we need the channels instantiated (but not started) in order to discover what provider do they require
         let requiredProviders = []
         for (let provId of registeredProviders.keys()) {
-            let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)
+            let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.requirements.providers.includes(provId)}, false)
             if (required) requiredProviders.push(provId)
             logInfo(ELogComponent.CORE, `  '${provId}' required: ${required}`)
         }
