@@ -2,7 +2,8 @@ export enum ELogComponent {
     AUTH = 'auth',
     CORE = 'core',
     PROVIDER = 'provider',
-    CHANNEL = 'channel'
+    CHANNEL = 'channel',
+    STORAGE = 'storage'
 }
 
 //const ENABLED_COMPONENTS: (ELogComponent | '*')[] = ['*']

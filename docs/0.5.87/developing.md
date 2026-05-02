@@ -184,7 +184,7 @@ And the meaning of the properties is:
   - `setup`, the channels needs user setup before starting a new channel instance.
   - `setting`, the channel needs access to the settings object for storing/retrieving Kwirth user settings.
   - `frontChannels`, the channel needs information about all supported channels in the front SPA (see Magnify channel).
-  - `metrics`, the channels wants access to the list of metrics available from the cluster (see MEtrics channel).
+  - `metrics`, the channels wants access to the list of metrics available from the cluster (see Metrics channel).
   - `notifier`, if a channel wants to send notifications to end user, this property must be enabled in order for Kwirth to provide the channel with a notifier function.
   - `notifications`, the channel wants to access the Kwirth notifications array (the ones sent to end user). (See Magnify channel).
   - `clusterUrl`, the channel wants to know the URL of the Kwirth sever, for example, for performing HTTP requests.

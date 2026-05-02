@@ -118,4 +118,4 @@ interface ProcessStats {
   processCount: number
 }
 
-export { INodeMetrics as NodeMetrics }
+export { INodeMetrics }

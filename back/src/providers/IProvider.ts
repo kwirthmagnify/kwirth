@@ -1,12 +1,13 @@
 import { IChannel } from "../channels/IChannel"
 import { Router } from 'express'
 import { ClusterInfo } from "../model/ClusterInfo"
+import { KwirthData } from "@kwirthmagnify/kwirth-common"
 
-export type TProviderConstructor = (new (clusterInfo:ClusterInfo) => IProvider)|undefined
+export type TProviderConstructor = (new (clusterInfo:ClusterInfo, kwirthData:KwirthData) => IProvider)|undefined
 
-export const createProviderInstance = (providerConstructor:TProviderConstructor, clusterInfo: ClusterInfo): IProvider | null => {
+export const createProviderInstance = (providerConstructor:TProviderConstructor, clusterInfo: ClusterInfo, kwirthData:KwirthData): IProvider | null => {
     if (!providerConstructor) throw  new Error('Error: providerConstructor is empty')
-    return new providerConstructor(clusterInfo)
+    return new providerConstructor(clusterInfo, kwirthData)
 }
 
 export interface IProvider {

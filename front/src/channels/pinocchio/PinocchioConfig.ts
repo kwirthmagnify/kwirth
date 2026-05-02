@@ -25,6 +25,11 @@ export interface IAnalysis {
     text?: string
 }
 
+export interface IMessage {
+    timestamp: number
+    text: string
+}
+
 export interface IConfigModel {
     id: string
     name: string
@@ -97,4 +102,5 @@ export interface IPinocchioMessageResponse extends IInstanceMessage {
     providers?: IConfigProvider[]
     providersAvailable?: string[]
     toolsAvailable?: string[]
+    message?:IMessage
 }

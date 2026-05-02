@@ -3,7 +3,7 @@ import { ClusterInfo } from '../model/ClusterInfo'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { IClusterMetricsConfig } from '@kwirthmagnify/kwirth-common'
-import { NodeMetrics } from '../model/INodeMetrics'
+import { INodeMetrics } from '../model/INodeMetrics'
 
 export class MetricsApi {
     public route = express.Router()
@@ -81,7 +81,7 @@ export class MetricsApi {
                     if (req.params.action==='summary') {
                         var node = this.clusterInfo.nodes.get(req.params.nodename)
                         if (node) {
-                            let nm = (await this.clusterInfo.metrics.readCAdvisorSummary(node)).node as NodeMetrics
+                            let nm = (await this.clusterInfo.metrics.readCAdvisorSummary(node)).node as INodeMetrics
                             res.status(200).send(JSON.stringify(nm))
                         }
                     }

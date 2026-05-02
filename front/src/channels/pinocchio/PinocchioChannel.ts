@@ -45,6 +45,7 @@ export class PinocchioChannel implements IChannel {
                 else if (msg.providers) pinocchioData.providers = msg.providers as IConfigProvider[]
                 else if (msg.providersAvailable) pinocchioData.providersAvailable = msg.providersAvailable as string[]
                 else if (msg.toolsAvailable) pinocchioData.toolsAvailable = msg.toolsAvailable as string[]
+                else if (msg.message) pinocchioData.analysis.push(msg.message)
                 return {
                     action: EChannelRefreshAction.REFRESH
                 }

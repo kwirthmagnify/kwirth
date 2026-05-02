@@ -1,5 +1,6 @@
 import { CoreV1Api } from '@kubernetes/client-node'
 import { ISecrets } from './ISecrets'
+import { ELogComponent, logError, logWarning } from './Logging'
 
 export class KubernetesSecrets implements ISecrets {
     coreApi:CoreV1Api
@@ -26,7 +27,8 @@ export class KubernetesSecrets implements ISecrets {
                 await this.coreApi?.createNamespacedSecret({ namespace: this.namespace, body: secret })
             }
             catch (err) {
-                console.log(`Error writing secret ${name}`, err)
+                logError(ELogComponent.STORAGE, `Error writing secret ${name}`)
+                logError(ELogComponent.STORAGE, err)
             }
         }
     }
@@ -39,11 +41,11 @@ export class KubernetesSecrets implements ISecrets {
         }
         catch(err:any){
             if (err.code===404) {
-                console.log('Value not found reading secret',this.namespace,'/', name)
+                logWarning(ELogComponent.STORAGE, 'Value not found reading secret '+this.namespace+'/'+name)
                 return defaultValue
             }
             else {
-                console.log('Error reading kubernetes secret',this.namespace,'/', name)
+                logError(ELogComponent.STORAGE, 'Error reading kubernetes secret '+this.namespace+'/'+name)
                 return undefined
             }
         }

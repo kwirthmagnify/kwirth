@@ -1,7 +1,8 @@
-import { IChannel } from '../channels/IChannel'
-import { ClusterInfo } from '../model/ClusterInfo'
-import { ELogComponent, logInfo } from '../tools/Logging'
-import { IProvider } from './IProvider'
+import { KwirthData } from '@kwirthmagnify/kwirth-common'
+import { IProvider } from '../IProvider'
+import { ClusterInfo } from '../../model/ClusterInfo'
+import { IChannel } from '../../channels/IChannel'
+import { ELogComponent, logInfo } from '../../tools/Logging'
 
 export class TickProvider implements IProvider {
     public readonly id = 'tick'
@@ -13,7 +14,7 @@ export class TickProvider implements IProvider {
     private subscribers: Map<IChannel, any>
     private interval: NodeJS.Timeout | undefined
 
-    constructor(clusterInfo: ClusterInfo) {
+    constructor(clusterInfo: ClusterInfo, kwirthData:KwirthData) {
         logInfo(ELogComponent.PROVIDER, `Instantiating provider ${this.id}`)
         this.clusterInfo = clusterInfo
         this.subscribers = new Map()

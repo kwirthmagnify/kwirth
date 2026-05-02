@@ -46,9 +46,7 @@ import { FilemanChannel } from './channels/fileman/FilemanChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
 
-
 import { IncomingMessage } from 'http'
-import { EventsProvider } from './providers/EventsProvider'
 
 import fileUpload from 'express-fileupload'
 import v8 from 'node:v8'
@@ -60,9 +58,11 @@ import * as crypto from 'crypto'
 
 // Providers +++ convert into plugin
 import { createProviderInstance, TProviderConstructor } from './providers/IProvider'
-import { ValidatingProvider } from './providers/ValidatingProvider'
-import { TickProvider } from './providers/TickProvider'
-import { BusinessProvider } from './providers/BusinessProvider';
+import { EventsProvider } from './providers/events/EventsProvider'
+import { ValidatingProvider } from './providers/validating/ValidatingProvider'
+import { TickProvider } from './providers/tick/TickProvider'
+import { BusinessProvider } from './providers/business/BusinessProvider';
+import { NewMetricsProvider } from './providers/newmetrics/NewMetricsProvider';
 
 import { ELogComponent, logError, logInfo, logWarning } from './tools/Logging';
 const fs = require('fs')
@@ -124,6 +124,7 @@ registeredProviders.set('events', EventsProvider)
 registeredProviders.set('tick', TickProvider)
 registeredProviders.set('validating', ValidatingProvider)
 registeredProviders.set('business', BusinessProvider)
+registeredProviders.set('newmetrics', NewMetricsProvider)
 
 var registeredChannels = new Map<string, TChannelConstructor>()
 registeredChannels.set('log', LogChannel)
@@ -1435,6 +1436,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         
 
         logInfo(ELogComponent.CORE, 'Required providers:')
+        
         // +++ pending convert metrics into provider
         let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
         logInfo(ELogComponent.CORE, `  'metrics' required:` + metricsRequired)
@@ -1463,7 +1465,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         for(let provId of requiredProviders) {
             let provider = registeredProviders.get(provId)
             if (provider) {
-                let providerInstance = createProviderInstance(registeredProviders.get(provId), localClusterInfo)
+                let providerInstance = createProviderInstance(registeredProviders.get(provId), localClusterInfo, localKwirthData)
                 if (providerInstance) {
                     providerInstance!.startProvider()
                     logInfo(ELogComponent.CORE, `Provider '${provId}' started`)

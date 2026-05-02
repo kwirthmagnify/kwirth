@@ -41,3 +41,6 @@ We cite here some interesting capabilities that are missing today:
   - `pinocchio`, **versioning**, add governance to trigger/llm configuration by adding versioning (not just enable/disable).
   - `pinocchio`, **notifiers**, add notifiers integration, so alerts can be send to subscribers, not just having a log of findings.
   - `pinocchio`, **scanning**, add more config for exclusions/inclusions (f.i., exclude trivy scans from pinocchio scans). Add pinocchio console management.
+  - `pinocchio`, **playground**, we need to add a playground to the front console, in order to be easy to test prompts and tools.
+  - `pinocchio`, **console**, it seems to be interesting to add some 'channel' and 'provider' operations in the front channel (restarting, resetting...).
+  - `pinocchio`, **debugging**, working with tools is tricky, since there is no explanations about what LLM's is doing, so we should instrument the tools in order to have clear information on how are they doing and how the LLM is using them.

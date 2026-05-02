@@ -4,8 +4,9 @@ Although not too exhaustive, this page contains some detail on what has been don
 ## 0.5.87
 Minor but powerful features:
 
-  - Pinocchio is now running working with several LLM's through AI-SDK from Vercel. It has been tested with OpenRouter, Gemini and Groq. This very first version just audits Kubernetes objects upon creation, but only for information.
+  - Pinocchio is now running working with several LLM's through [AI-SDK from Vercel](https://ai-sdk.dev/docs/introduction). It has been tested with OpenRouter, Gemini and Groq. This very first version just audits Kubernetes objects upon creation, but only for information.
   - Improved channel management on front (now added 'cluster' view again).
+  - Back channels are now instantiated according to Kwirth config (they're on a pre-plugin stated, like providers and front channels). We're ready to start plugin system!!!
   
 ## 0.5.40
 Minor but powerful features:

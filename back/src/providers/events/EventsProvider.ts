@@ -1,8 +1,9 @@
-import { IChannel } from '../channels/IChannel'
-import { ClusterInfo } from '../model/ClusterInfo'
 import { Watch } from '@kubernetes/client-node'
-import { IProvider } from '../providers/IProvider'
-import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
+import { KwirthData } from '@kwirthmagnify/kwirth-common'
+import { IProvider } from '../IProvider'
+import { ClusterInfo } from '../../model/ClusterInfo'
+import { IChannel } from '../../channels/IChannel'
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 
 export interface IEventsSubscriber {
     kinds: string[]
@@ -20,7 +21,7 @@ export class EventsProvider implements IProvider {
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IEventsSubscriber>
 
-    constructor(clusterInfo: ClusterInfo) {
+    constructor(clusterInfo: ClusterInfo, kwirthData:KwirthData) {
         this.clusterInfo = clusterInfo
         this.subscribers = new Map()
         this.resourceWatchers = new Map()

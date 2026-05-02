@@ -3,14 +3,14 @@ import { MetricsTools } from '../tools/MetricsTools'
 import { EClusterType, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
 import Docker from 'dockerode'
 import { DockerTools } from '../tools/DockerTools'
-import { NodeMetrics } from './INodeMetrics'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
 import { IChannel } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
+import { INodeMetrics } from './INodeMetrics'
 
 export interface INodeInfo {
-    [x: string]: any;
+    [x: string]: any  //+++
     name:string
     ip:string
     kubernetesNode: V1Node
@@ -20,8 +20,8 @@ export interface INodeInfo {
     prevPodMetricValues: Map<string,{value: number, timestamp:number}>
     machineMetricValues: Map<string,{value: number, timestamp:number}>
     prevMachineMetricValues: Map<string,{value: number, timestamp:number}>
-    summary: NodeMetrics|undefined
-    prevSummary: NodeMetrics|undefined
+    summary: INodeMetrics|undefined
+    prevSummary: INodeMetrics|undefined
     timestamp: number
 }
 

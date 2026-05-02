@@ -3,7 +3,7 @@ import { Box, Button, Card, CardContent, CardHeader, Stack, Typography } from '@
 import { IChannelObject } from '../IChannel'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
-import { EPinocchioCommand, IConfigProvider, IPinocchioConfig, IPinocchioMessage } from './PinocchioConfig'
+import { EPinocchioCommand, IAnalysis, IConfigProvider, IMessage, IPinocchioConfig, IPinocchioMessage } from './PinocchioConfig'
 import { PinocchioConfigTrigger } from './PinocchioConfigTrigger'
 import { PinocchioConfigLlm } from './PinocchioConfigLlm'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
@@ -69,33 +69,44 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const showContent = () => {
         if (!pinocchioData || !pinocchioData.analysis) return <></>
         return (<>
-            {pinocchioData.analysis.map((an, index) => {
-                return (
-                    <React.Fragment key={index}>
-                        {an.text && (
-                            <Typography variant='body1' sx={{ mt: 2 }}>
-                                {new Date(an.timestamp).toISOString()} {an.text}
-                            </Typography>
-                        )}
-                        
-                        {an.findings && [...an.findings]
-                            .sort((a, b) => priorityOrder[a.level] - priorityOrder[b.level])
-                            .map((f, fIndex) => {
-                                let description = f.description
-                                if (description.includes(' **') && description.includes('** ')) description=description.replace(' **', ' <b><u>').replace('** ', '</u></b> ')
-                                return (
-                                    <Stack key={fIndex} direction={'row'} alignItems={'center'}>
-                                        <Box sx={{ width: '70px' }}>
-                                            <Typography variant='body2' sx={{ backgroundColor: color(f.level), display: 'inline-block', p: 0.5, borderRadius: '4px' }}>
-                                                {f.level}
-                                            </Typography>
-                                        </Box>
-                                        <Typography component={'div'} variant='body2'><div dangerouslySetInnerHTML={{__html: description}}/></Typography>
-                                    </Stack>
-                                );
-                            })}
-                    </React.Fragment>
-                );
+            {pinocchioData.analysis.map((item, index) => {
+                let analysis = item as IAnalysis
+                let message = item as IMessage
+                if (typeof item === 'string') {
+                    return (
+                        <React.Fragment key={index}>
+                            {analysis.text && (
+                                <Typography variant='body1' sx={{ mt: 2 }}>
+                                    {new Date(analysis.timestamp).toISOString()} {analysis.text}
+                                </Typography>
+                            )}
+                            
+                            {analysis.findings && [...analysis.findings]
+                                .sort((a, b) => priorityOrder[a.level] - priorityOrder[b.level])
+                                .map((f, fIndex) => {
+                                    let description = f.description
+                                    if (description.includes(' **') && description.includes('** ')) description=description.replace(' **', ' <b><u>').replace('** ', '</u></b> ')
+                                    return (
+                                        <Stack key={fIndex} direction={'row'} alignItems={'center'}>
+                                            <Box sx={{ width: '70px' }}>
+                                                <Typography variant='body2' sx={{ backgroundColor: color(f.level), display: 'inline-block', p: 0.5, borderRadius: '4px' }}>
+                                                    {f.level}
+                                                </Typography>
+                                            </Box>
+                                            <Typography component={'div'} variant='body2'><div dangerouslySetInnerHTML={{__html: description}}/></Typography>
+                                        </Stack>
+                                    );
+                                })}
+                        </React.Fragment>
+                    );
+                }
+                else {
+                    return <>
+                        <Typography variant='body1' sx={{ mt: 2 }}>
+                            {new Date(message.timestamp).toISOString()} {message.text}
+                        </Typography>
+                    </>
+                }
             })}
             <span ref={messagesEndRef} style={{ float: 'left', clear: 'both' }} />
         </>)

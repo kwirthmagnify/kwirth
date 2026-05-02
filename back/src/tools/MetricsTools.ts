@@ -1,6 +1,6 @@
 import { ClusterInfo, INodeInfo } from "../model/ClusterInfo"
 import { EInstanceConfigView } from "@kwirthmagnify/kwirth-common"
-import { NodeMetrics } from "../model/INodeMetrics"
+import { INodeMetrics } from "../model/INodeMetrics"
 import { ELogComponent, logError, logInfo, logWarning } from "./Logging"
 
 export interface AssetData {
@@ -457,7 +457,7 @@ export class MetricsTools {
 
     loadNodeSummary = async (node: INodeInfo) => {
         node.prevSummary = node.summary
-        node.summary = (await this.readCAdvisorSummary(node)).node as NodeMetrics
+        node.summary = (await this.readCAdvisorSummary(node)).node as INodeMetrics
         if (node.summary && node.summary.network) {
             if (!node.summary.network.txBytes) node.summary.network.txBytes = node.summary.network.interfaces.reduce( (tot,iface) => tot+iface.txBytes, 0 )
             if (!node.summary.network.rxBytes) node.summary.network.rxBytes = node.summary.network.interfaces.reduce( (tot,iface) => tot+iface.rxBytes, 0 )

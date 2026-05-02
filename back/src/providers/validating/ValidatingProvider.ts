@@ -1,7 +1,8 @@
-import { IChannel } from '../channels/IChannel'
-import { ClusterInfo } from '../model/ClusterInfo'
-import { ELogComponent, logInfo } from '../tools/Logging'
-import { IProvider } from './IProvider'
+import { KwirthData } from '@kwirthmagnify/kwirth-common'
+import { IProvider } from '../IProvider'
+import { ClusterInfo, INodeInfo } from '../../model/ClusterInfo'
+import { IChannel } from '../../channels/IChannel'
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 import express, { Request, Response} from 'express'
 
 interface IValidatingSubscriber {
@@ -17,7 +18,7 @@ export class ValidatingProvider implements IProvider {
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IValidatingSubscriber>
     
-    constructor(clusterInfo: ClusterInfo) {
+    constructor(clusterInfo: ClusterInfo, kwirthData:KwirthData) {
         logInfo(ELogComponent.PROVIDER, `Instantiating provider ${this.id}`)
         this.clusterInfo = clusterInfo
         this.subscribers = new Map()

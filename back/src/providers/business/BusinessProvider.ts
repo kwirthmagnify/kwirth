@@ -1,12 +1,15 @@
-import { IChannel } from '../channels/IChannel'
-import { ClusterInfo } from '../model/ClusterInfo'
-import { ELogComponent, logError, logInfo } from '../tools/Logging'
-import { IProvider } from './IProvider'
+import { KwirthData } from '@kwirthmagnify/kwirth-common'
+import { IProvider } from '../IProvider'
+import { ClusterInfo } from '../../model/ClusterInfo'
+import { IChannel } from '../../channels/IChannel'
+import { ELogComponent, logError, logInfo } from '../../tools/Logging'
 import express, { Request, Response} from 'express'
 
 interface IBusinessDataConfig {
-    spaces: string[]
-    types: string[]
+    spaces: { 
+        name:string,
+        types: string[]
+    }[]
 }
 
 export class BusinessProvider implements IProvider {
@@ -19,7 +22,7 @@ export class BusinessProvider implements IProvider {
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IBusinessDataConfig>
 
-    constructor(clusterInfo: ClusterInfo) {
+    constructor(clusterInfo: ClusterInfo, kwirthData:KwirthData) {
         logInfo(ELogComponent.PROVIDER, `Instantiating provider ${this.id}`)
         this.clusterInfo = clusterInfo
         this.subscribers = new Map()
@@ -52,15 +55,18 @@ export class BusinessProvider implements IProvider {
                             this.data.get(req.body.space)?.set(req.body.type, [req.body])
                         }
                         for (let [subscriber, config] of this.subscribers) {
-                            if (config.spaces.includes(req.body.space) && (req.body.type==='' || (req.body.type!=='' && config.types.includes(req.body.type)))) {
-                                subscriber.processProviderEvent(this.id, {
-                                    last: {
-                                        type: 'event',
-                                        timestamp: Date.now().toString(),
-                                        event: req.body
-                                    },
-                                    all: this.data
-                                })
+                            let space=config.spaces.find(s => s.name === req.body.space)
+                            if (space) {
+                                if (req.body.type==='' || (req.body.type!=='' && space.types.includes(req.body.type))) {
+                                    subscriber.processProviderEvent(this.id, {
+                                        last: {
+                                            type: 'event',
+                                            timestamp: Date.now().toString(),
+                                            event: req.body
+                                        },
+                                        all: this.data
+                                    })
+                                }
                             }
                         }
                         res.status(200).json()
@@ -77,10 +83,9 @@ export class BusinessProvider implements IProvider {
             })
     }
 
-    addSubscriber = async (c: IChannel, config:{spaces:string[], types:string[]}) => {
+    addSubscriber = async (c: IChannel, config:IBusinessDataConfig) => {
         let data:IBusinessDataConfig = {
-            spaces: config.spaces,
-            types: config.types
+            spaces: config.spaces
         }
         this.subscribers.set(c, data)
     }
