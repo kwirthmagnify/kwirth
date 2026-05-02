@@ -9,6 +9,7 @@ export enum EPinocchioCommand {
     PROVIDERSSET = 'providersset',
     PROVIDERSAVAILABLE = 'providersavailable',
     TOOLSAVAILABLE = 'toolsavailable',
+    PLAYGROUND = 'playground',
 }
 
 export interface IAnalysis {

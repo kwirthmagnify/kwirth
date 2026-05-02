@@ -10,6 +10,7 @@ import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } fr
 import { PinocchioConfigProvider } from './PinocchioConfigProvider'
 import React from 'react'
 import { MenuConfig } from './MenuConfig'
+import { PinocchioPlayground } from './PinocchioConfigPlayground'
 
 interface IContentProps {
     webSocket?: WebSocket
@@ -189,9 +190,6 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     <Typography marginRight={'32px'} flex={1}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {pinocchioData.paused?'paused':pinocchioData.started?'started':'stopped'}</Typography>
                     <Button onClick={() => setShowPlayground(true)}>Playground</Button>
                     <Button onClick={(event) => setAnchorMenu(event.currentTarget)}>Config</Button>
-                    {/* <Button onClick={() => setShowConfigTrigger(true)} disabled={pinocchioConfig.llms.length===0}>Trigger</Button>
-                    <Button onClick={() => setShowConfigLlm(true)} disabled={pinocchioData.providers.length===0}>LLM</Button>
-                    <Button onClick={() => setShowConfigProvider(true)} disabled={pinocchioData.providersAvailable.length===0}>Provider</Button> */}
                 </Stack>}>
             </CardHeader>
                 <CardContent sx={{flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
@@ -205,7 +203,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} onClose={pinocchioConfigClose} />}
         { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.config} providers={pinocchioData.providers} onClose={pinocchioConfigClose} />}
         { showConfigProvider && <PinocchioConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
-        { showPlayground && <></>}
+        { showPlayground && <PinocchioPlayground onClose={() => setShowPlayground(false)} pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} providersAvailable={pinocchioData.providersAvailable} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
     </>    
 }

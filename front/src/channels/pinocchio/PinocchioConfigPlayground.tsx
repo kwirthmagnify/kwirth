@@ -1,19 +1,17 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, TextareaAutosize, TextField, Typography } from '@mui/material'
-import { IConfigTrigger, IPinocchioConfig, kindsAvailable } from './PinocchioConfig'
+import { IPinocchioConfig, kindsAvailable } from './PinocchioConfig'
 import { objectClone } from '../magnify/Tools'
-import { useKeyboard } from '../../tools/useKeyboard'
 
 interface IPinocchioLlmConfigProps {
-    onClose: (pc: IPinocchioConfig | undefined) => void
+    onClose: () => void
     pinocchioConfig: IPinocchioConfig
+    providersAvailable: string[]
     toolsAvailable: string[]
 }
 
-const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchioLlmConfigProps) => {
+const PinocchioPlayground: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchioLlmConfigProps) => {
     const [config, setConfig] = useState(objectClone(props.pinocchioConfig) as IPinocchioConfig)
-
-    const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
     const [id, setId] = useState('')
     const [trigger, setTrigger] = useState('artifact')
@@ -28,26 +26,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
     const [tools, setTools] = useState<string[]>([])
     const [spaces, setSpaces] = useState<string>('')
 
-    useKeyboard()
-    
-    const onKindSelected = (selectedTrigger: IConfigTrigger, index: number) => {
-        setId(selectedTrigger.id)
-        setTrigger(selectedTrigger.trigger)
-        setKind(selectedTrigger.kind)
-        setEnabled(selectedTrigger.enabled)
-        setSystem(selectedTrigger.system)
-        setPromptType(selectedTrigger.promptType)
-        setPrompt(selectedTrigger.prompt)
-        setAction(selectedTrigger.action)
-        setLlm(selectedTrigger.llm)
-        setSteps(selectedTrigger.steps)
-        setTools(selectedTrigger.tools)
-        setSpaces(selectedTrigger.spaces?.join(','))
-        setSelectedIndex(index)
-    }
-
-    const onNew = () => {
-        setSelectedIndex(null)
+    const onLaunch = () => {
         setId('')
         setTrigger('artifact')
         setKind('Pod')
@@ -61,63 +40,18 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
         setSpaces('')
     }
 
-    const onAdd = () => {
-        const t: IConfigTrigger = { id, trigger, kind, enabled, system, promptType, prompt, action, llm, steps, tools, spaces: spaces?.split(',') }
-        let newTriggers = [...config.triggers]
-
-        if (selectedIndex !== null) 
-            newTriggers[selectedIndex] = t
-        else
-            newTriggers.push(t)
-        setConfig({ ...config, triggers: newTriggers })
-        onNew()
-    }
-
-    const onRemove = () => {
-        if (selectedIndex === null) return
-
-        const newTriggers = config.triggers.filter((_, i) => i !== selectedIndex)
-        setConfig({ ...config, triggers: newTriggers })
-        onNew()
-    }
-
     const onChangeTools = (event: SelectChangeEvent<typeof tools>) => {
         let selectedTools  = event.target.value as string[]
         setTools(selectedTools)
     }
 
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '1200px', height: '65vh' } }}>
+        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '1200px', height: '60vh' } }}>
             <DialogTitle>Trigger Config</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
 
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '30%' }}>
-                    <Box sx={{ flex: 1, overflowY: 'auto', overflowX:'hidden' }}>
-                        <List sx={{ flexGrow: 1, mr: 2, width: '100%' }}>
-                            {config.triggers.map((t, index) => (
-                                <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onKindSelected(t, index)}>
-                                    <Stack direction={'column'}>
-                                        <Typography sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>
-                                            {t.id}
-                                        </Typography>
-                                        <Typography color={'darkgray'} fontSize={10}>{t.trigger} {t.llm}</Typography>
-                                    </Stack>
-                                </ListItemButton>
-                            ))}
-                        </List>
-                    </Box>
-                </Box>
-
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '16px' }} >
                     <Stack spacing={1} style={{ width: '100%' }}>
-                        <Stack direction={'row'} alignItems={'baseline'}>
-                            <TextField value={id} onChange={(e) => setId(e.target.value)} placeholder='Enter Trigger id' label='Trigger ID' variant='standard' fullWidth/>
-                            <Typography minWidth={'24px'}></Typography>
-                            <Stack direction={'row'} alignItems={'center'}>
-                                <Typography>Enabled</Typography>
-                                <Checkbox checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-                            </Stack>
-                        </Stack>
                         <Stack direction={'row'}>
                             <FormControl variant='standard' sx={{ width: '100%', mr: 1 }}>
                                 <InputLabel>Trigger</InputLabel>
@@ -187,22 +121,18 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
                         </FormControl>
                         <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '80px', padding: '8px' }} placeholder='Enter prompt' disabled={promptType==='artifact'}/>
 
-                        <Stack direction={'row'} spacing={1}>
-                            <Button variant='outlined' onClick={onNew} color='primary'>New</Button>
-                            <Typography flex={1} />
-                            <Button variant='text' color='error' onClick={onRemove} disabled={selectedIndex === null}>Remove</Button>
-                            <Button variant='contained' onClick={onAdd}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>
+                        <Stack direction={'row'} spacing={1} justifyContent={'end'}>
+                            <Button variant='outlined' onClick={onLaunch} color='primary'>Launch</Button>
                         </Stack>
                     </Stack>
                 </Box>
             </DialogContent>
 
             <DialogActions>
-                <Button onClick={() => props.onClose(config)}>OK</Button>
-                <Button onClick={() => props.onClose(undefined)}>Cancel</Button>
+                <Button onClick={() => props.onClose()}>Close</Button>
             </DialogActions>
         </Dialog>
     )
 }
 
-export { PinocchioConfigTrigger }
+export { PinocchioPlayground }
