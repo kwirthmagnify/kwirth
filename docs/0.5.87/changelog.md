@@ -7,6 +7,8 @@ Minor but powerful features:
   - Pinocchio is now running working with several LLM's through [AI-SDK from Vercel](https://ai-sdk.dev/docs/introduction). It has been tested with OpenRouter, Gemini and Groq. This very first version just audits Kubernetes objects upon creation, but only for information.
   - Improved channel management on front (now added 'cluster' view again).
   - Back channels are now instantiated according to Kwirth config (they're on a pre-plugin stated, like providers and front channels). We're ready to start plugin system!!!
+  - New 'business' provider is up&running, now business data can be ingested into Kwirth and sent to channels aiming to take decisions on business data.
+  - New 'newmetrics' provider (in use by pinocchio, we will transition 'metrics' channel to new metrics provider)
   
 ## 0.5.40
 Minor but powerful features:
