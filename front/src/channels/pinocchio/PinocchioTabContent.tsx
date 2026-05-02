@@ -9,6 +9,7 @@ import { PinocchioConfigLlm } from './PinocchioConfigLlm'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { PinocchioConfigProvider } from './PinocchioConfigProvider'
 import React from 'react'
+import { MenuConfig } from './MenuConfig'
 
 interface IContentProps {
     webSocket?: WebSocket
@@ -23,9 +24,11 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const messagesEndRef = useRef<HTMLSpanElement | null>(null)
     const [isAtBottom, setIsAtBottom] = useState(true)
     const [pinocchioBoxTop, setPinocchioBoxTop] = useState(0)
+    const [showPlayground, setShowPlayground] = useState(false)
     const [showConfigTrigger, setShowConfigTrigger] = useState(false)
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
+    const [anchorMenu, setAnchorMenu] = useState<Element | undefined>(undefined)
     const priorityOrder = {
         'critical': 0,
         'high': 1,
@@ -162,16 +165,33 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
-return <>
+    const onConfigAction = (a:string) => {
+        setAnchorMenu(undefined)
+        switch(a) {
+            case 'provider':
+                setShowConfigProvider(true)
+                break
+            case 'llm':
+                setShowConfigLlm(true)
+                break
+            case 'trigger':
+                setShowConfigTrigger(true)
+                break
+        }
+    }
+
+    return <>
         { pinocchioData.started && 
         <Card sx={{display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', marginTop: '8px',minHeight: 0}}>
             <CardHeader title={
                 <Stack direction={'row'} alignItems={'center'}>
                     <Typography marginRight={'32px'}><b>Events:</b> {pinocchioData.analysis.length}</Typography>
                     <Typography marginRight={'32px'} flex={1}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {pinocchioData.paused?'paused':pinocchioData.started?'started':'stopped'}</Typography>
-                    <Button onClick={() => setShowConfigTrigger(true)} disabled={pinocchioConfig.llms.length===0}>Trigger</Button>
+                    <Button onClick={() => setShowPlayground(true)}>Playground</Button>
+                    <Button onClick={(event) => setAnchorMenu(event.currentTarget)}>Config</Button>
+                    {/* <Button onClick={() => setShowConfigTrigger(true)} disabled={pinocchioConfig.llms.length===0}>Trigger</Button>
                     <Button onClick={() => setShowConfigLlm(true)} disabled={pinocchioData.providers.length===0}>LLM</Button>
-                    <Button onClick={() => setShowConfigProvider(true)} disabled={pinocchioData.providersAvailable.length===0}>Provider</Button>
+                    <Button onClick={() => setShowConfigProvider(true)} disabled={pinocchioData.providersAvailable.length===0}>Provider</Button> */}
                 </Stack>}>
             </CardHeader>
                 <CardContent sx={{flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
@@ -185,6 +205,8 @@ return <>
         { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} onClose={pinocchioConfigClose} />}
         { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.config} providers={pinocchioData.providers} onClose={pinocchioConfigClose} />}
         { showConfigProvider && <PinocchioConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
+        { showPlayground && <></>}
+        { anchorMenu && <MenuConfig anchorParent={anchorMenu} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
     </>    
 }
 export { PinocchioTabContent }

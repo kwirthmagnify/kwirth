@@ -20,7 +20,7 @@ import { createGoogleGenerativeAI, GoogleLanguageModelOptions } from '@ai-sdk/go
 import { createMistral, MistralLanguageModelOptions } from '@ai-sdk/mistral'
 
 // tools
-import { getToolByName } from './Tools';
+import { getToolByName, IToolContext } from './Tools';
 
 const _ = require('lodash')
 const nunjucks = require('nunjucks')
@@ -127,7 +127,7 @@ class PinocchioChannel implements IChannel {
         return ['', 'none', 'cluster'].indexOf(scope)
     }
 
-    buildModelInvocation = (triggerDefinition:IConfigTrigger, event:IEventsProviderEvent|IBusinessProviderEvent|INewMetricsCluster) : IModelInvocation|undefined => {
+    buildModelInvocation = async (triggerDefinition:IConfigTrigger, event:IEventsProviderEvent|IBusinessProviderEvent|INewMetricsCluster) : Promise<IModelInvocation|undefined> => {
         let prompt
         let llm = this.pinocchioConfig.llms.find(l => l.id === triggerDefinition.llm)
         if (!llm) {
@@ -177,9 +177,15 @@ class PinocchioChannel implements IChannel {
         let temperature = llm.temperature
         if (temperature<0) temperature=0
         if (temperature>1) temperature=1
+        console.log('getnodes')
+        let context:IToolContext = {
+            origin: 'Pinocchio',
+            nodes: await this.clusterInfo.getNodes()
+        }
+        console.log(context.nodes)
         let tools: any = {}
         for (let toolName of triggerDefinition.tools) {
-            tools[toolName] = (getToolByName(toolName))
+            tools[toolName] = getToolByName(toolName, context)
         }
 
         switch(llm.provider) {
@@ -301,7 +307,7 @@ class PinocchioChannel implements IChannel {
 
                 for (let triggerDefinition of this.pinocchioConfig.triggers.filter(t => t.enabled && t.trigger==='business')) {
                     try {
-                        let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools} = this.buildModelInvocation(triggerDefinition, businessEvent) || {}
+                        let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools} = await this.buildModelInvocation(triggerDefinition, businessEvent) || {}
                         if (!model) return
                         this.broadcastMessage('Received business event')
                         const { output, usage, steps } = await generateText({
@@ -315,19 +321,6 @@ class PinocchioChannel implements IChannel {
                                     response: z.string().describe('response to the question'),
                                 }),
                             }),
-
-                            // output: Output.object({
-                            //     schema: z.object({
-                            //         findings: z.array(
-                            //             z.object({
-                            //                 description: z.string().min(1),
-                            //                 level: z.enum(['low', 'medium', 'high', 'critical']),
-                            //             })
-                            //         )
-                            //     }),
-                            // }),
-                            //'You are a kubernetes admin expert, and you are in charge of deploying only workload that are secure. Generate a security analysis for this pod following the schema, y dámelo en español',
-                            //system: system||'You are a very polite AI system', 
                             system: "Use the tools provided to find information, and once you have the data, format your final response strictly as a JSON object according to the schema.",
                             prompt: prompt||'Hi AI, how are you?',
                         })
@@ -364,7 +357,7 @@ class PinocchioChannel implements IChannel {
                                 }
                             }
 
-                            let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools} = this.buildModelInvocation(trigger, eventsEvent) || {}
+                            let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools} = await this.buildModelInvocation(trigger, eventsEvent) || {}
                             if (!model) return
 
                             try {
@@ -479,9 +472,9 @@ class PinocchioChannel implements IChannel {
                         type: EInstanceMessageType.DATA,
                         instance: instance.instanceId,
                         toolsAvailable: [
-                            ...['times_two', 'father_of', 'get_cluster_data', 'get_workload_data', 'get_node_data', 'get_deployment_usage', 'get_node_usage', 'get_cluster_usage', 'get_space_data'],
+                            ...['get_cluster_data', 'get_workload_data', 'get_node_data', 'get_deployment_usage', 'get_node_usage', 'get_cluster_usage', 'get_space_data'],
                             ...['get_prev_space_data', 'get_prev_deployment_usage', 'get_prev_node_usage', 'get_prev_cluster_usage'],
-                            ...['add_node', 'add_replica', 'remove_node', 'remove_replica']
+                            ...['add_node', 'add_replica', 'remove_node', 'remove_replica', 'times_two', 'father_of' ]
                         ]
                     }
                     webSocket.send(JSON.stringify(msgToolsAvailable))

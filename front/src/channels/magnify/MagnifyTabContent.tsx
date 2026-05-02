@@ -554,8 +554,11 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     const launchObjectExternal = (channel:string, files:IFileObject[], view: EInstanceConfigView, data:any, container: string|undefined ) => {
-        let width = (channel==='trivy' || channel==='pinocchio') ? window.innerWidth * 0.9 : 800
-        let height = (channel==='trivy' || channel==='pinocchio')? window.innerHeight * 0.9 : 600
+        let width = 800
+        let height = 600
+        if (channel==='trivy') {width = window.innerWidth * 0.9; height = window.innerHeight * 0.9}
+        if (channel==='pinocchio') {width = window.innerWidth * 0.9; height = window.innerHeight * 0.8}
+
         let win:IContentWindow = {
             id: 'external-' + channel + '-' + uuid(),
             class: 'ContentExternal',

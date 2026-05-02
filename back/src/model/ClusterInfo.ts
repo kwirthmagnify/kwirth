@@ -181,7 +181,7 @@ export class ClusterInfo {
         }
     }
 
-    getNodes = async () => {
+    getNodes = async () : Promise<Map<string, INodeInfo>> => {
         // load nodes
         try {
             var resp = await this.coreApi.listNode()
