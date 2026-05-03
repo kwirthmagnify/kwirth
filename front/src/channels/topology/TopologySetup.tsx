@@ -22,20 +22,19 @@ export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     const [showDaemonSets,    setShowDaemonSets]    = useState(cfg.showDaemonSets)
     const [showJobs,          setShowJobs]          = useState(cfg.showJobs)
     const [showCronJobs,      setShowCronJobs]      = useState(cfg.showCronJobs)
+    const [showPvcs,          setShowPvcs]          = useState(cfg.showPvcs)
     const [showOnlyRunning,   setShowOnlyRunning]   = useState(cfg.showOnlyRunning)
     const [edgeAnimated,      setEdgeAnimated]      = useState(cfg.edgeAnimated)
     const [labelSize,         setLabelSize]         = useState(cfg.labelSize)
     const [nodeSpacingFactor, setNodeSpacingFactor] = useState(cfg.nodeSpacingFactor)
-    const [autoRefresh,       setAutoRefresh]       = useState(cfg.autoRefresh)
-    const [refreshInterval,   setRefreshInterval]   = useState(cfg.refreshInterval)
+    const [gridColumns,       setGridColumns]       = useState(cfg.gridColumns)
 
     const ok = () => {
         const channelConfig: ITopologyConfig = {
             showPods, showServices, showIngresses,
             showDeployments, showStatefulSets, showDaemonSets,
-            showJobs, showCronJobs, showOnlyRunning,
-            edgeAnimated, labelSize, nodeSpacingFactor,
-            autoRefresh, refreshInterval,
+            showJobs, showCronJobs, showPvcs, showOnlyRunning,
+            edgeAnimated, labelSize, nodeSpacingFactor, gridColumns,
         }
         const channelInstanceConfig: ITopologyInstanceConfig = { namespace }
         props.onChannelSetupClosed(
@@ -69,14 +68,15 @@ export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                     <Typography variant='body2' color='text.secondary'>Visible resource types</Typography>
                     <FormGroup>
                         <Stack direction='row' flexWrap='wrap'>
-                            <FormControlLabel control={<Checkbox checked={showIngresses}   onChange={e => setShowIngresses(e.target.checked)}   />} label='Ingresses'    sx={{ width: '50%' }} />
-                            <FormControlLabel control={<Checkbox checked={showServices}    onChange={e => setShowServices(e.target.checked)}    />} label='Services'     sx={{ width: '50%' }} />
-                            <FormControlLabel control={<Checkbox checked={showDeployments} onChange={e => setShowDeployments(e.target.checked)} />} label='Deployments'  sx={{ width: '50%' }} />
-                            <FormControlLabel control={<Checkbox checked={showStatefulSets}onChange={e => setShowStatefulSets(e.target.checked)}/>} label='StatefulSets' sx={{ width: '50%' }} />
-                            <FormControlLabel control={<Checkbox checked={showDaemonSets}  onChange={e => setShowDaemonSets(e.target.checked)}  />} label='DaemonSets'   sx={{ width: '50%' }} />
-                            <FormControlLabel control={<Checkbox checked={showJobs}        onChange={e => setShowJobs(e.target.checked)}        />} label='Jobs'         sx={{ width: '50%' }} />
-                            <FormControlLabel control={<Checkbox checked={showCronJobs}    onChange={e => setShowCronJobs(e.target.checked)}    />} label='CronJobs'     sx={{ width: '50%' }} />
-                            <FormControlLabel control={<Checkbox checked={showPods}        onChange={e => setShowPods(e.target.checked)}        />} label='Pods'         sx={{ width: '50%' }} />
+                            <FormControlLabel control={<Checkbox checked={showIngresses}    onChange={e => setShowIngresses(e.target.checked)}    />} label='Ingresses'    sx={{ width: '50%' }} />
+                            <FormControlLabel control={<Checkbox checked={showServices}     onChange={e => setShowServices(e.target.checked)}     />} label='Services'     sx={{ width: '50%' }} />
+                            <FormControlLabel control={<Checkbox checked={showDeployments}  onChange={e => setShowDeployments(e.target.checked)}  />} label='Deployments'  sx={{ width: '50%' }} />
+                            <FormControlLabel control={<Checkbox checked={showStatefulSets} onChange={e => setShowStatefulSets(e.target.checked)} />} label='StatefulSets' sx={{ width: '50%' }} />
+                            <FormControlLabel control={<Checkbox checked={showDaemonSets}   onChange={e => setShowDaemonSets(e.target.checked)}   />} label='DaemonSets'   sx={{ width: '50%' }} />
+                            <FormControlLabel control={<Checkbox checked={showJobs}         onChange={e => setShowJobs(e.target.checked)}         />} label='Jobs'         sx={{ width: '50%' }} />
+                            <FormControlLabel control={<Checkbox checked={showCronJobs}     onChange={e => setShowCronJobs(e.target.checked)}     />} label='CronJobs'     sx={{ width: '50%' }} />
+                            <FormControlLabel control={<Checkbox checked={showPods}         onChange={e => setShowPods(e.target.checked)}         />} label='Pods'         sx={{ width: '50%' }} />
+                            <FormControlLabel control={<Checkbox checked={showPvcs}         onChange={e => setShowPvcs(e.target.checked)}         />} label='PVCs'         sx={{ width: '50%' }} />
                         </Stack>
                     </FormGroup>
                     <FormControlLabel
@@ -91,23 +91,16 @@ export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                         label='Animate connection edges'
                     />
                     <Stack direction='row' alignItems='center' gap={2}>
-                        <Typography variant='body2' sx={{ minWidth: 110 }}>Label size: {labelSize}px</Typography>
+                        <Typography variant='body2' sx={{ minWidth: 120 }}>Label size: {labelSize}px</Typography>
                         <Slider value={labelSize} min={8} max={20} step={1} onChange={(_, v) => setLabelSize(v as number)} sx={{ flex: 1 }} />
                     </Stack>
                     <Stack direction='row' alignItems='center' gap={2}>
-                        <Typography variant='body2' sx={{ minWidth: 110 }}>Node spacing: {nodeSpacingFactor.toFixed(1)}x</Typography>
+                        <Typography variant='body2' sx={{ minWidth: 120 }}>Node spacing: {nodeSpacingFactor.toFixed(1)}x</Typography>
                         <Slider value={nodeSpacingFactor} min={0.5} max={3.0} step={0.1} onChange={(_, v) => setNodeSpacingFactor(v as number)} sx={{ flex: 1 }} />
                     </Stack>
-
-                    <Divider />
-                    <Typography variant='body2' color='text.secondary'>Data refresh</Typography>
-                    <FormControlLabel
-                        control={<Checkbox checked={autoRefresh} onChange={e => setAutoRefresh(e.target.checked)} />}
-                        label='Auto-refresh topology'
-                    />
                     <Stack direction='row' alignItems='center' gap={2}>
-                        <Typography variant='body2' sx={{ minWidth: 110 }}>Interval: {refreshInterval}s</Typography>
-                        <Slider value={refreshInterval} min={5} max={120} step={5} disabled={!autoRefresh} onChange={(_, v) => setRefreshInterval(v as number)} sx={{ flex: 1 }} />
+                        <Typography variant='body2' sx={{ minWidth: 120 }}>Grid columns: {gridColumns}</Typography>
+                        <Slider value={gridColumns} min={2} max={20} step={1} onChange={(_, v) => setGridColumns(v as number)} sx={{ flex: 1 }} />
                     </Stack>
 
                 </Stack>

@@ -24,15 +24,16 @@ import {
 const NODE_SIZE = 14
 
 const KIND_COLOR: Record<ETopologyNodeKind, number> = {
-    [ETopologyNodeKind.INGRESS]:     0x378add,
-    [ETopologyNodeKind.SERVICE]:     0x7f77dd,
-    [ETopologyNodeKind.DEPLOYMENT]:  0x1d9e75,
-    [ETopologyNodeKind.STATEFULSET]: 0x639922,
-    [ETopologyNodeKind.DAEMONSET]:   0x4a9076,
-    [ETopologyNodeKind.REPLICASET]:  0x89c1a0,
-    [ETopologyNodeKind.JOB]:         0xef9f27,
-    [ETopologyNodeKind.CRONJOB]:     0xba7517,
-    [ETopologyNodeKind.POD]:         0x34d058,
+    [ETopologyNodeKind.INGRESS]:               0x378add,
+    [ETopologyNodeKind.SERVICE]:               0x7f77dd,
+    [ETopologyNodeKind.DEPLOYMENT]:            0x1d9e75,
+    [ETopologyNodeKind.STATEFULSET]:           0x639922,
+    [ETopologyNodeKind.DAEMONSET]:             0x4a9076,
+    [ETopologyNodeKind.REPLICASET]:            0x89c1a0,
+    [ETopologyNodeKind.JOB]:                   0xef9f27,
+    [ETopologyNodeKind.CRONJOB]:               0xba7517,
+    [ETopologyNodeKind.POD]:                   0x34d058,
+    [ETopologyNodeKind.PERSISTENTVOLUMECLAIM]: 0xe06b6b,
 }
 
 const STATUS_EMISSIVE: Record<ETopologyNodeStatus, number> = {
@@ -42,6 +43,9 @@ const STATUS_EMISSIVE: Record<ETopologyNodeStatus, number> = {
     [ETopologyNodeStatus.SUCCEEDED]:   0x003300,
     [ETopologyNodeStatus.UNKNOWN]:     0x222222,
     [ETopologyNodeStatus.TERMINATING]: 0x440044,
+    [ETopologyNodeStatus.BOUND]:       0x003322,
+    [ETopologyNodeStatus.RELEASED]:    0x332200,
+    [ETopologyNodeStatus.LOST]:        0x440000,
 }
 
 const STATUS_COLOR: Record<ETopologyNodeStatus, 'default'|'success'|'warning'|'error'|'info'> = {
@@ -51,9 +55,12 @@ const STATUS_COLOR: Record<ETopologyNodeStatus, 'default'|'success'|'warning'|'e
     [ETopologyNodeStatus.SUCCEEDED]:   'info',
     [ETopologyNodeStatus.UNKNOWN]:     'default',
     [ETopologyNodeStatus.TERMINATING]: 'warning',
+    [ETopologyNodeStatus.BOUND]:       'success',
+    [ETopologyNodeStatus.RELEASED]:    'warning',
+    [ETopologyNodeStatus.LOST]:        'error',
 }
 
-// ── Context menu actions ───────────────────────────────────────────────────────
+// ── Context menu ──────────────────────────────────────────────────────────────
 
 interface ICtxAction { icon: React.ReactNode; label: string; action: string; divider?: boolean }
 
@@ -93,7 +100,7 @@ function actionsFor(kind: ETopologyNodeKind): ICtxAction[] {
     return [...(KIND_ACTIONS[kind] ?? []), ...COMMON_ACTIONS]
 }
 
-// ── Node info side panel ──────────────────────────────────────────────────────
+// ── Node info panel ───────────────────────────────────────────────────────────
 
 const NodeInfoPanel: React.FC<{ node: ITopologyNode }> = ({ node }) => (
     <Paper elevation={0} sx={{
@@ -118,11 +125,18 @@ const NodeInfoPanel: React.FC<{ node: ITopologyNode }> = ({ node }) => (
                     </Typography>
                 </Tooltip>
             )}
-            {node.host && (
-                <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.7)' }}>Host: {node.host}</Typography>
-            )}
+            {node.host && <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.7)' }}>Host: {node.host}</Typography>}
             {node.ports && node.ports.length > 0 && (
                 <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.7)' }}>Ports: {node.ports.join(', ')}</Typography>
+            )}
+            {node.storageClass && (
+                <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.7)' }}>StorageClass: {node.storageClass}</Typography>
+            )}
+            {node.capacity && (
+                <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.7)' }}>Capacity: {node.capacity}</Typography>
+            )}
+            {node.accessModes && node.accessModes.length > 0 && (
+                <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.7)' }}>Access: {node.accessModes.join(', ')}</Typography>
             )}
             {node.edges && node.edges.length > 0 && (
                 <>
@@ -159,15 +173,16 @@ function updateCamera(cam: THREE.PerspectiveCamera, sph: { theta: number; phi: n
 function geometryFor(kind: ETopologyNodeKind): THREE.BufferGeometry {
     const s = NODE_SIZE
     switch (kind) {
-        case ETopologyNodeKind.POD:         return new THREE.SphereGeometry(s, 16, 12)
-        case ETopologyNodeKind.SERVICE:     return new THREE.CylinderGeometry(s, s, s * 1.6, 6)
-        case ETopologyNodeKind.INGRESS:     return new THREE.CylinderGeometry(s * 1.3, s * 0.7, s * 1.2, 4)
+        case ETopologyNodeKind.POD:                    return new THREE.SphereGeometry(s, 16, 12)
+        case ETopologyNodeKind.SERVICE:                return new THREE.CylinderGeometry(s, s, s * 1.6, 6)
+        case ETopologyNodeKind.INGRESS:                return new THREE.CylinderGeometry(s * 1.3, s * 0.7, s * 1.2, 4)
         case ETopologyNodeKind.DEPLOYMENT:
         case ETopologyNodeKind.STATEFULSET:
-        case ETopologyNodeKind.DAEMONSET:   return new THREE.BoxGeometry(s * 1.8, s * 1.8, s * 1.8)
+        case ETopologyNodeKind.DAEMONSET:              return new THREE.BoxGeometry(s * 1.8, s * 1.8, s * 1.8)
         case ETopologyNodeKind.JOB:
-        case ETopologyNodeKind.CRONJOB:     return new THREE.TetrahedronGeometry(s * 1.2)
-        default:                            return new THREE.OctahedronGeometry(s)
+        case ETopologyNodeKind.CRONJOB:                return new THREE.TetrahedronGeometry(s * 1.2)
+        case ETopologyNodeKind.PERSISTENTVOLUMECLAIM:  return new THREE.CylinderGeometry(s * 0.6, s * 1.0, s * 0.8, 8)
+        default:                                       return new THREE.OctahedronGeometry(s)
     }
 }
 
@@ -176,16 +191,33 @@ function makeLabel(text: string, fontSize: number): THREE.Sprite {
     canvas.width  = 256
     canvas.height = 40
     const ctx = canvas.getContext('2d')!
-    ctx.font      = `${fontSize * 2}px sans-serif`
+    ctx.font      = `bold ${fontSize * 2}px sans-serif`
     ctx.fillStyle = '#ffffff'
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)'
+    ctx.lineWidth = 3
     ctx.textAlign = 'center'
     const display = text.length > 22 ? text.slice(0, 20) + '…' : text
+    ctx.strokeText(display, 128, 30)
     ctx.fillText(display, 128, 30)
     const tex = new THREE.CanvasTexture(canvas)
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })
     const sprite = new THREE.Sprite(mat)
     sprite.scale.set(72, 14, 1)
+    // Position label ABOVE the mesh — offset in Y
+    sprite.position.set(0, NODE_SIZE * 1.8, 0)
     return sprite
+}
+
+// Build an edge line between two nodes
+function buildEdgeLine(from: ITopologyNode, to: ITopologyNode, color: number, opacity: number): THREE.Line {
+    const pts = [
+        new THREE.Vector3(from.x, from.y, from.z),
+        new THREE.Vector3(to.x,   to.y,   to.z),
+    ]
+    return new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color, opacity, transparent: true, linewidth: 2 })
+    )
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -197,6 +229,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
     const cameraRef    = useRef<THREE.PerspectiveCamera>()
     const meshMapRef   = useRef<Map<string, THREE.Mesh>>(new Map())
     const edgeLinesRef = useRef<THREE.Line[]>([])
+    const hlLinesRef   = useRef<THREE.Line[]>([])   // highlighted edge lines
     const animRef      = useRef<number>()
     const isDragging   = useRef(false)
     const prevMouse    = useRef({ x: 0, y: 0 })
@@ -205,12 +238,20 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
 
     const [selectedNode,  setSelectedNode]  = useState<ITopologyNode | undefined>()
     const [contextMenu,   setContextMenu]   = useState<{ x: number; y: number; node: ITopologyNode } | undefined>()
+    const [hiddenKinds,   setHiddenKinds]   = useState<Set<ETopologyNodeKind>>(new Set())
     const [, forceUpdate] = useState(0)
 
     const topologyData: ITopologyData   = channelObject.data
     const topologyCfg:  ITopologyConfig = channelObject.config
 
-    // ── Three.js scene init ────────────────────────────────────────────────────
+    // Visible nodes (after kind filter)
+    const visibleNodes = React.useMemo(
+        () => Array.from(topologyData.nodes.values()).filter(n => !hiddenKinds.has(n.kind)),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [topologyData.lastUpdated, hiddenKinds]
+    )
+
+    // ── Three.js scene init ───────────────────────────────────────────────────
     useEffect(() => {
         const el = mountRef.current
         if (!el) return
@@ -239,29 +280,29 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         point.position.set(-300, 150, 200)
         scene.add(point)
 
-        // Grid floor
         const grid = new THREE.GridHelper(1600, 24, 0x1a2230, 0x1a2230)
         grid.position.y = -200
         scene.add(grid)
 
         // Layer label sprites
         const layers = [
-            { z: 300,  label: 'Ingress layer' },
-            { z: 150,  label: 'Service layer' },
-            { z: 0,    label: 'Controller layer' },
-            { z: -150, label: 'Pod layer' },
+            { z: 300,  label: 'Ingress' },
+            { z: 150,  label: 'Services' },
+            { z: 0,    label: 'Controllers' },
+            { z: -150, label: 'Pods' },
+            { z: -300, label: 'PVCs' },
         ]
         layers.forEach(({ z, label }) => {
             const cv = document.createElement('canvas')
             cv.width = 320; cv.height = 48
             const c = cv.getContext('2d')!
-            c.fillStyle = 'rgba(255,255,255,0.05)'
+            c.fillStyle = 'rgba(255,255,255,0.04)'
             c.fillRect(0, 0, 320, 48)
             c.fillStyle = '#6688aa'
             c.font = '20px sans-serif'
             c.fillText(label, 10, 32)
             const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, opacity: 0.6 }))
-            sp.position.set(-600, 0, z)
+            sp.position.set(-700, 0, z)
             sp.scale.set(160, 24, 1)
             scene.add(sp)
         })
@@ -280,6 +321,11 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                     mat.emissiveIntensity = 0.3 + 0.25 * Math.sin(Date.now() * 0.004)
                 }
             }
+            // Animate highlight lines
+            hlLinesRef.current.forEach((line, i) => {
+                const mat = line.material as THREE.LineBasicMaterial
+                mat.opacity = 0.5 + 0.4 * Math.sin(Date.now() * 0.004 + i * 0.5)
+            })
             renderer.render(scene, camera)
         }
         animate()
@@ -301,18 +347,21 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // ── Rebuild meshes when data changes ──────────────────────────────────────
+    // ── Rebuild meshes when data or visibility changes ────────────────────────
     useEffect(() => {
         const scene = sceneRef.current
         if (!scene) return
 
-        // Remove old meshes + edges
         meshMapRef.current.forEach(m => scene.remove(m))
         meshMapRef.current.clear()
         edgeLinesRef.current.forEach(l => scene.remove(l))
         edgeLinesRef.current = []
+        hlLinesRef.current.forEach(l => scene.remove(l))
+        hlLinesRef.current = []
 
-        topologyData.nodes.forEach(node => {
+        const nodeSet = new Set(visibleNodes.map(n => n.uid))
+
+        visibleNodes.forEach(node => {
             if (topologyCfg.showOnlyRunning && node.status !== ETopologyNodeStatus.RUNNING) return
 
             const geo = geometryFor(node.kind)
@@ -331,28 +380,76 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
             meshMapRef.current.set(node.uid, mesh)
         })
 
-        // Draw edges
-        topologyData.nodes.forEach(node => {
+        // Draw normal edges (dimmed)
+        visibleNodes.forEach(node => {
             if (!node.edges) return
             node.edges.forEach(edge => {
+                if (!nodeSet.has(edge.targetUid)) return
                 const target = topologyData.nodes.get(edge.targetUid)
                 if (!target) return
-                const pts = [
-                    new THREE.Vector3(node.x,   node.y,   node.z),
-                    new THREE.Vector3(target.x, target.y, target.z),
-                ]
-                const line = new THREE.Line(
-                    new THREE.BufferGeometry().setFromPoints(pts),
-                    new THREE.LineBasicMaterial({ color: 0x3366aa, opacity: 0.45, transparent: true })
-                )
+                const line = buildEdgeLine(node, target, 0x3366aa, 0.5)
                 scene.add(line)
                 edgeLinesRef.current.push(line)
             })
         })
 
+        // Rebuild highlight lines for current selection
+        rebuildHighlightLines(scene, selectedRef.current, visibleNodes, nodeSet)
+
         forceUpdate(n => n + 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [topologyData.lastUpdated, topologyCfg.showOnlyRunning, topologyCfg.labelSize, topologyCfg.nodeSpacingFactor])
+    }, [topologyData.lastUpdated, topologyCfg.showOnlyRunning, topologyCfg.labelSize, topologyCfg.nodeSpacingFactor, hiddenKinds])
+
+    // ── Highlight lines helper ────────────────────────────────────────────────
+    const rebuildHighlightLines = useCallback((
+        scene: THREE.Scene,
+        selectedUid: string | undefined,
+        nodes: ITopologyNode[],
+        nodeSet: Set<string>
+    ) => {
+        hlLinesRef.current.forEach(l => scene.remove(l))
+        hlLinesRef.current = []
+        if (!selectedUid) return
+
+        const selected = topologyData.nodes.get(selectedUid)
+        if (!selected) return
+
+        const highlightColor = 0xffdd44
+
+        // Edges going OUT from selected node
+        selected.edges?.forEach(edge => {
+            if (!nodeSet.has(edge.targetUid)) return
+            const target = topologyData.nodes.get(edge.targetUid)
+            if (!target) return
+            const line = buildEdgeLine(selected, target, highlightColor, 0.9)
+            scene.add(line)
+            hlLinesRef.current.push(line)
+        })
+
+        // Edges coming IN to selected node (other nodes pointing at selected)
+        nodes.forEach(node => {
+            if (node.uid === selectedUid) return
+            node.edges?.forEach(edge => {
+                if (edge.targetUid !== selectedUid) return
+                const line = buildEdgeLine(node, selected, highlightColor, 0.9)
+                scene.add(line)
+                hlLinesRef.current.push(line)
+            })
+        })
+
+        // Parent relationship: highlight edge to owner controller
+        if (selected.ownerUids) {
+            selected.ownerUids.forEach(ownerUid => {
+                if (!nodeSet.has(ownerUid)) return
+                const owner = topologyData.nodes.get(ownerUid)
+                if (!owner) return
+                const line = buildEdgeLine(owner, selected, 0x66ffaa, 0.85)
+                scene.add(line)
+                hlLinesRef.current.push(line)
+            })
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [topologyData.nodes])
 
     // ── Mouse / touch controls ────────────────────────────────────────────────
     const handleMouseDown  = useCallback((e: React.MouseEvent) => {
@@ -397,7 +494,14 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         const node = pickNode(e)
         selectedRef.current = node?.uid
         setSelectedNode(node)
-    }, [pickNode])
+
+        // Rebuild highlight lines
+        const scene = sceneRef.current
+        if (scene) {
+            const nodeSet = new Set(visibleNodes.map(n => n.uid))
+            rebuildHighlightLines(scene, node?.uid, visibleNodes, nodeSet)
+        }
+    }, [pickNode, visibleNodes, rebuildHighlightLines])
 
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
         e.preventDefault()
@@ -405,7 +509,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         if (node) setContextMenu({ x: e.clientX, y: e.clientY, node })
     }, [pickNode])
 
-    // ── Context menu action handler ───────────────────────────────────────────
+    // ── Context menu actions ──────────────────────────────────────────────────
     const handleAction = useCallback((action: string, node: ITopologyNode) => {
         setContextMenu(undefined)
         const ws = channelObject.webSocket
@@ -472,7 +576,16 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         if (cameraRef.current) updateCamera(cameraRef.current, spherical.current)
     }
 
-    // ── Stats chips ───────────────────────────────────────────────────────────
+    // ── Kind toggle chips ─────────────────────────────────────────────────────
+    const toggleKind = useCallback((kind: ETopologyNodeKind) => {
+        setHiddenKinds(prev => {
+            const next = new Set(prev)
+            if (next.has(kind)) next.delete(kind)
+            else next.add(kind)
+            return next
+        })
+    }, [])
+
     const kindCount = (kind: ETopologyNodeKind) =>
         Array.from(topologyData.nodes.values()).filter(n => n.kind === kind).length
 
@@ -480,7 +593,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
     return (
         <Box sx={{ width: '100%', height: '100%', position: 'relative', bgcolor: '#0a0c14', overflow: 'hidden' }}>
 
-            {/* Three.js canvas mount */}
+            {/* Three.js canvas */}
             <Box
                 ref={mountRef}
                 sx={{ width: '100%', height: '100%', cursor: isDragging.current ? 'grabbing' : 'grab' }}
@@ -517,7 +630,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 </Box>
             )}
 
-            {/* Camera controls */}
+            {/* Camera controls — top right */}
             <Stack sx={{ position: 'absolute', top: 12, right: 12 }} spacing={0.5}>
                 {[
                     { icon: <CenterFocusStrong fontSize='small'/>, title: 'Reset camera', fn: resetCamera },
@@ -535,36 +648,36 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 ))}
             </Stack>
 
-            {/* Stats chips — bottom left */}
-            <Box sx={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                {([
-                    ETopologyNodeKind.INGRESS,
-                    ETopologyNodeKind.SERVICE,
-                    ETopologyNodeKind.DEPLOYMENT,
-                    ETopologyNodeKind.STATEFULSET,
-                    ETopologyNodeKind.DAEMONSET,
-                    ETopologyNodeKind.POD,
-                ] as ETopologyNodeKind[]).map(kind => {
+            {/* Kind toggle chips — bottom left */}
+            <Box sx={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', gap: 0.75, flexWrap: 'wrap', maxWidth: '70%' }}>
+                {(Object.values(ETopologyNodeKind) as ETopologyNodeKind[]).map(kind => {
                     const count = kindCount(kind)
                     if (!count) return null
-                    const hex = '#' + (KIND_COLOR[kind] ?? 0x888888).toString(16).padStart(6, '0')
+                    const hex     = '#' + (KIND_COLOR[kind] ?? 0x888888).toString(16).padStart(6, '0')
+                    const hidden  = hiddenKinds.has(kind)
+                    const label   = kind === ETopologyNodeKind.PERSISTENTVOLUMECLAIM ? `PVC: ${count}` : `${kind}: ${count}`
                     return (
                         <Chip
                             key={kind}
-                            label={`${kind}: ${count}`}
+                            label={label}
                             size='small'
+                            onClick={() => toggleKind(kind)}
                             sx={{
-                                bgcolor: hex + '22',
-                                color:   hex,
-                                border:  `0.5px solid ${hex}44`,
+                                cursor: 'pointer',
+                                bgcolor: hidden ? 'rgba(255,255,255,0.04)' : hex + '22',
+                                color:   hidden ? 'rgba(255,255,255,0.25)' : hex,
+                                border:  `0.5px solid ${hidden ? 'rgba(255,255,255,0.1)' : hex + '44'}`,
                                 fontSize: 11,
+                                textDecoration: hidden ? 'line-through' : 'none',
+                                transition: 'all 0.15s ease',
+                                '&:hover': { bgcolor: hex + '33' },
                             }}
                         />
                     )
                 })}
             </Box>
 
-            {/* Selected node info panel — top left */}
+            {/* Selected node info — top left */}
             {selectedNode && (
                 <Box sx={{ position: 'absolute', top: 12, left: 12 }}>
                     <NodeInfoPanel node={selectedNode} />

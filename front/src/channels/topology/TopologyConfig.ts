@@ -7,12 +7,12 @@ export interface ITopologyConfig {
     showDaemonSets:    boolean
     showJobs:          boolean
     showCronJobs:      boolean
+    showPvcs:          boolean
     showOnlyRunning:   boolean
     edgeAnimated:      boolean
     labelSize:         number
     nodeSpacingFactor: number
-    autoRefresh:       boolean
-    refreshInterval:   number
+    gridColumns:       number
 }
 
 export class TopologyConfig implements ITopologyConfig {
@@ -24,12 +24,12 @@ export class TopologyConfig implements ITopologyConfig {
     showDaemonSets    = true
     showJobs          = false
     showCronJobs      = false
+    showPvcs          = true
     showOnlyRunning   = false
     edgeAnimated      = true
     labelSize         = 12
     nodeSpacingFactor = 1.0
-    autoRefresh       = true
-    refreshInterval   = 30
+    gridColumns       = 8
 }
 
 export interface ITopologyInstanceConfig {

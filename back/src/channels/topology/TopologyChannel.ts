@@ -15,23 +15,20 @@ import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
 import {
     V1CronJob, V1DaemonSet, V1Deployment, V1Ingress,
-    V1Job, V1Pod, V1ReplicaSet, V1Service, V1StatefulSet,
+    V1Job, V1PersistentVolumeClaim, V1Pod, V1ReplicaSet, V1Service, V1StatefulSet,
 } from '@kubernetes/client-node'
+import { ELogComponent, logInfo } from '../../tools/Logging'
 
-// ── Shared types (mirrored in frontend TopologyData.ts) ───────────────────────
-
-type TNodeKind   = 'Ingress' | 'Service' | 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'ReplicaSet' | 'Job' | 'CronJob' | 'Pod'
-type TNodeStatus = 'Running' | 'Pending' | 'Failed' | 'Succeeded' | 'Unknown' | 'Terminating'
+type TNodeKind   = 'Ingress' | 'Service' | 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'ReplicaSet' | 'Job' | 'CronJob' | 'Pod' | 'PersistentVolumeClaim'
+type TNodeStatus = 'Running' | 'Pending' | 'Failed' | 'Succeeded' | 'Unknown' | 'Terminating' | 'Bound' | 'Released' | 'Lost'
 type TTopoAction = 'ADDED' | 'MODIFIED' | 'DELETED'
 
 interface ITopologyWsMessage {
-    // IInstanceMessage base
     action:   EInstanceMessageAction
     flow:     EInstanceMessageFlow
     channel:  string
     instance: string
     type:     EInstanceMessageType
-    // topology payload
     topoAction?:    TTopoAction
     kind:           TNodeKind
     uid:            string
@@ -45,16 +42,17 @@ interface ITopologyWsMessage {
     image?:         string
     ports?:         number[]
     host?:          string
+    storageClass?:  string
+    capacity?:      string
+    accessModes?:   string[]
     edges?:         Array<{ targetUid: string; label?: string }>
+    ownerUids?:     string[]
 }
-
-// ── Instance / socket bookkeeping ─────────────────────────────────────────────
 
 interface ITopologyInstance {
     instanceId: string
-    namespace:  string              // '*all' or specific
+    namespace:  string
     paused:     boolean
-    abortFns:   Array<() => void>   // stop each K8s watcher
 }
 
 interface ISocketEntry {
@@ -62,8 +60,6 @@ interface ISocketEntry {
     lastRefresh: number
     instances:   ITopologyInstance[]
 }
-
-// ── Status helpers ────────────────────────────────────────────────────────────
 
 function podStatus(p: V1Pod): TNodeStatus {
     if (p.metadata?.deletionTimestamp) return 'Terminating'
@@ -83,25 +79,33 @@ function controllerStatus(ready?: number, desired?: number): TNodeStatus {
     return 'Failed'
 }
 
-// ── Channel ───────────────────────────────────────────────────────────────────
+function pvcStatus(p: V1PersistentVolumeClaim): TNodeStatus {
+    switch (p.status?.phase) {
+        case 'Bound':    return 'Bound'
+        case 'Pending':  return 'Pending'
+        case 'Released': return 'Released'
+        case 'Lost':     return 'Lost'
+        default:         return 'Unknown'
+    }
+}
 
 export class TopologyChannel implements IChannel {
     readonly channelId = 'topology'
     readonly requirements: IBackChannelRequirements = {
         storage: false,
-        providers: []
+        providers: ['events']
     }
 
     private clusterInfo:       ClusterInfo
     private backChannelObject: IBackChannelObject
     private webSockets:        ISocketEntry[] = []
+    private serviceCache = new Map<string, V1Service>()
+    private pvcCache     = new Map<string, V1PersistentVolumeClaim>()
 
     constructor(clusterInfo: ClusterInfo, backChannelObject: IBackChannelObject) {
         this.clusterInfo       = clusterInfo
         this.backChannelObject = backChannelObject
     }
-
-    // ── Metadata ──────────────────────────────────────────────────────────────
 
     getChannelData(): BackChannelData {
         return {
@@ -122,14 +126,50 @@ export class TopologyChannel implements IChannel {
         return ['', 'filter', 'view', 'cluster'].indexOf(scope)
     }
 
-    // ── Lifecycle stubs ───────────────────────────────────────────────────────
+    startChannel = async (): Promise<void> => {
+        this.clusterInfo.addSubscriber('events', this, {
+            kinds: ['Pod', 'Service', 'Deployment', 'StatefulSet', 'DaemonSet', 'ReplicaSet', 'Job', 'CronJob', 'Ingress', 'PersistentVolumeClaim'],
+            syncInstances: false
+        })
+        logInfo(ELogComponent.CHANNEL, '[TopologyChannel] subscribed to events provider')
+    }
 
-    startChannel = async (): Promise<void> => {}
-    processProviderEvent(_id: string, _obj: any): void {}
+    processProviderEvent(providerId: string, obj: any): void {
+        if (providerId !== 'events') return
+
+        const type: TTopoAction = obj.type as TTopoAction
+        const resource = obj.obj
+
+        if (resource.kind === 'Service') {
+            if (type === 'DELETED') this.serviceCache.delete(resource.metadata?.uid ?? '')
+            else if (resource.metadata?.uid) this.serviceCache.set(resource.metadata.uid, resource as V1Service)
+        }
+        if (resource.kind === 'PersistentVolumeClaim') {
+            if (type === 'DELETED') this.pvcCache.delete(resource.metadata?.uid ?? '')
+            else if (resource.metadata?.uid) this.pvcCache.set(resource.metadata.uid, resource as V1PersistentVolumeClaim)
+        }
+
+        const mapped = this.mapResource(resource)
+        if (!mapped) return
+
+        if (type !== 'DELETED') {
+            const svcList = Array.from(this.serviceCache.values())
+            const edges = this.computeEdges(resource, svcList)
+            if (edges.length > 0) mapped.edges = edges
+        }
+
+        for (const entry of this.webSockets) {
+            for (const inst of entry.instances) {
+                if (inst.paused) continue
+                const ns = resource.metadata?.namespace
+                if (inst.namespace !== '*all' && inst.namespace !== ns) continue
+                this.emit(entry.ws, inst, mapped as ITopologyWsMessage, type)
+            }
+        }
+    }
+
     async endpointRequest(_e: string, _req: Request, _res: Response): Promise<void> {}
     async websocketRequest(_ws: WebSocket): Promise<void> {}
-
-    // ── Command handler (from frontend context-menu actions) ──────────────────
 
     async processCommand(ws: WebSocket, msg: IInstanceMessage): Promise<boolean> {
         const m = msg as any
@@ -154,10 +194,6 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    // ── Object tracking (not used by topology — driven by watchers) ───────────
-
-    // For cluster-wide channels, index.ts calls addObject(ws, instanceConfig, '*all','*all','*all')
-    // right after sending START — this is where we kick off snapshot + watchers.
     addObject = async (ws: WebSocket, instanceConfig: IInstanceConfig): Promise<boolean> => {
         try {
             let entry = this.webSockets.find(s => s.ws === ws)
@@ -167,10 +203,9 @@ export class TopologyChannel implements IChannel {
             }
             if (entry.instances.some(i => i.instanceId === instanceConfig.instance)) return true
             const namespace = (instanceConfig.data as any)?.namespace ?? '*all'
-            const inst: ITopologyInstance = { instanceId: instanceConfig.instance, namespace, paused: false, abortFns: [] }
+            const inst: ITopologyInstance = { instanceId: instanceConfig.instance, namespace, paused: false }
             entry.instances.push(inst)
             await this.sendSnapshot(ws, inst, instanceConfig)
-            this.attachWatchers(ws, inst, instanceConfig)
         } catch (err: any) {
             this.sendSignal(ws, instanceConfig as any, ESignalMessageLevel.ERROR, err?.message ?? String(err))
         }
@@ -178,8 +213,6 @@ export class TopologyChannel implements IChannel {
     }
 
     deleteObject = async (): Promise<boolean> => false
-
-    // ── Instance management ───────────────────────────────────────────────────
 
     containsAsset  = (): boolean => false
     containsInstance(instanceId: string): boolean {
@@ -189,11 +222,7 @@ export class TopologyChannel implements IChannel {
         return this.webSockets.some(s => s.ws === ws)
     }
     removeConnection(ws: WebSocket): void {
-        const entry = this.webSockets.find(s => s.ws === ws)
-        if (entry) {
-            entry.instances.forEach(i => i.abortFns.forEach(f => f()))
-            this.webSockets = this.webSockets.filter(s => s.ws !== ws)
-        }
+        this.webSockets = this.webSockets.filter(s => s.ws !== ws)
     }
     refreshConnection(ws: WebSocket): boolean {
         const entry = this.webSockets.find(s => s.ws === ws)
@@ -217,30 +246,21 @@ export class TopologyChannel implements IChannel {
     stopInstance(ws: WebSocket, instanceConfig: IInstanceConfig): void {
         const entry = this.webSockets.find(s => s.ws === ws)
         if (!entry) return
-        const inst = entry.instances.find(i => i.instanceId === instanceConfig.instance)
-        if (inst) {
-            inst.abortFns.forEach(f => f())
-            entry.instances = entry.instances.filter(i => i.instanceId !== instanceConfig.instance)
-        }
+        entry.instances = entry.instances.filter(i => i.instanceId !== instanceConfig.instance)
         this.sendInstanceConfig(ws, EInstanceMessageAction.STOP, EInstanceMessageFlow.RESPONSE, instanceConfig, 'Topology stopped')
     }
 
     removeInstance(ws: WebSocket, instanceId: string): void {
         const entry = this.webSockets.find(s => s.ws === ws)
         if (!entry) return
-        const inst = entry.instances.find(i => i.instanceId === instanceId)
-        if (inst) inst.abortFns.forEach(f => f())
         entry.instances = entry.instances.filter(i => i.instanceId !== instanceId)
     }
-
-
-    // ── Snapshot ──────────────────────────────────────────────────────────────
 
     private async sendSnapshot(ws: WebSocket, inst: ITopologyInstance, instanceConfig: IInstanceConfig): Promise<void> {
         const all = inst.namespace === '*all'
         const ns  = inst.namespace
 
-        const [pods, svcs, deps, sts, ds, rs, jobs, crons, ings] = await Promise.allSettled([
+        const [pods, svcs, deps, sts, ds, rs, jobs, crons, ings, pvcs] = await Promise.allSettled([
             all ? this.clusterInfo.coreApi.listPodForAllNamespaces()                   : this.clusterInfo.coreApi.listNamespacedPod({ namespace: ns }),
             all ? this.clusterInfo.coreApi.listServiceForAllNamespaces()               : this.clusterInfo.coreApi.listNamespacedService({ namespace: ns }),
             all ? this.clusterInfo.appsApi.listDeploymentForAllNamespaces()            : this.clusterInfo.appsApi.listNamespacedDeployment({ namespace: ns }),
@@ -250,71 +270,56 @@ export class TopologyChannel implements IChannel {
             all ? this.clusterInfo.batchApi.listJobForAllNamespaces()                  : this.clusterInfo.batchApi.listNamespacedJob({ namespace: ns }),
             all ? this.clusterInfo.batchApi.listCronJobForAllNamespaces()              : this.clusterInfo.batchApi.listNamespacedCronJob({ namespace: ns }),
             all ? this.clusterInfo.networkApi.listIngressForAllNamespaces()            : this.clusterInfo.networkApi.listNamespacedIngress({ namespace: ns }),
+            all ? this.clusterInfo.coreApi.listPersistentVolumeClaimForAllNamespaces() : this.clusterInfo.coreApi.listNamespacedPersistentVolumeClaim({ namespace: ns }),
         ])
 
         const svcList = svcs.status === 'fulfilled' ? svcs.value.items : []
+        const pvcList = pvcs.status === 'fulfilled' ? pvcs.value.items : []
 
-        // Emit services first so edges can reference their UIDs
+        svcList.forEach(s => { if (s.metadata?.uid) this.serviceCache.set(s.metadata.uid, s) })
+        pvcList.forEach(p => { if (p.metadata?.uid) this.pvcCache.set(p.metadata.uid, p) })
+
         svcList.forEach(s => this.emit(ws, inst, this.mapService(s), 'ADDED'))
 
-        if (deps.status === 'fulfilled') deps.value.items.forEach(d => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
-        if (sts.status  === 'fulfilled') sts.value.items.forEach(s  => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, svcList) }, 'ADDED'))
-        if (ds.status   === 'fulfilled') ds.value.items.forEach(d   => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
-        if (rs.status   === 'fulfilled') rs.value.items.forEach(r   => this.emit(ws, inst, this.mapReplicaSet(r), 'ADDED'))
-        if (jobs.status === 'fulfilled') jobs.value.items.forEach(j => this.emit(ws, inst, this.mapJob(j), 'ADDED'))
+        if (deps.status  === 'fulfilled') deps.value.items.forEach(d  => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
+        if (sts.status   === 'fulfilled') sts.value.items.forEach(s   => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, svcList) }, 'ADDED'))
+        if (ds.status    === 'fulfilled') ds.value.items.forEach(d    => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
+        if (rs.status    === 'fulfilled') rs.value.items.forEach(r    => this.emit(ws, inst, this.mapReplicaSet(r), 'ADDED'))
+        if (jobs.status  === 'fulfilled') jobs.value.items.forEach(j  => this.emit(ws, inst, this.mapJob(j), 'ADDED'))
         if (crons.status === 'fulfilled') crons.value.items.forEach(c => this.emit(ws, inst, this.mapCronJob(c), 'ADDED'))
-        if (ings.status  === 'fulfilled') ings.value.items.forEach(i => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, svcList) }, 'ADDED'))
-        if (pods.status  === 'fulfilled') pods.value.items.forEach(p => this.emit(ws, inst, this.mapPod(p), 'ADDED'))
+        if (ings.status  === 'fulfilled') ings.value.items.forEach(i  => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, svcList) }, 'ADDED'))
+        if (pods.status  === 'fulfilled') pods.value.items.forEach(p  => this.emit(ws, inst, this.mapPod(p), 'ADDED'))
+        pvcList.forEach(p => this.emit(ws, inst, this.mapPvc(p), 'ADDED'))
     }
 
-    // ── K8s watchers ──────────────────────────────────────────────────────────
-
-    private attachWatchers(ws: WebSocket, inst: ITopologyInstance, instanceConfig: IInstanceConfig): void {
-        const ns  = inst.namespace === '*all' ? undefined : inst.namespace
-
-        const watch = <T extends { metadata?: any }>(path: string, mapper: (obj: T) => Partial<ITopologyWsMessage>) => {
-            const Watch = require('@kubernetes/client-node').Watch
-            const watcher = new Watch(this.clusterInfo.kubeConfig)
-            let req: any
-
-            const run = async () => {
-                try {
-                    req = await watcher.watch(
-                        path,
-                        {},
-                        (event: string, obj: T) => {
-                            if (inst.paused) return
-                            const action: TTopoAction = event === 'ADDED' ? 'ADDED' : event === 'MODIFIED' ? 'MODIFIED' : 'DELETED'
-                            this.emit(ws, inst, mapper(obj) as ITopologyWsMessage, action)
-                        },
-                        (err: any) => {
-                            if (err) console.warn(`[TopologyChannel] watcher error ${path}:`, err?.message ?? err)
-                            setTimeout(run, 5000)
-                        }
-                    )
-                } catch (err) {
-                    console.warn(`[TopologyChannel] watch start failed ${path}:`, err)
-                    setTimeout(run, 10000)
-                }
-            }
-            run()
-            inst.abortFns.push(() => { try { req?.abort() } catch {} })
+    private mapResource(resource: any): Partial<ITopologyWsMessage> | null {
+        switch (resource.kind) {
+            case 'Pod':                   return this.mapPod(resource as V1Pod)
+            case 'Service':               return this.mapService(resource as V1Service)
+            case 'Deployment':            return this.mapDeployment(resource as V1Deployment)
+            case 'StatefulSet':           return this.mapStatefulSet(resource as V1StatefulSet)
+            case 'DaemonSet':             return this.mapDaemonSet(resource as V1DaemonSet)
+            case 'ReplicaSet':            return this.mapReplicaSet(resource as V1ReplicaSet)
+            case 'Job':                   return this.mapJob(resource as V1Job)
+            case 'CronJob':               return this.mapCronJob(resource as V1CronJob)
+            case 'Ingress':               return this.mapIngress(resource as V1Ingress)
+            case 'PersistentVolumeClaim': return this.mapPvc(resource as V1PersistentVolumeClaim)
+            default:                      return null
         }
-
-        const nsPrefix = ns ? `/namespaces/${ns}` : ''
-
-        watch<V1Pod>       (`/api/v1${nsPrefix}/pods`,                              p => this.mapPod(p))
-        watch<V1Service>   (`/api/v1${nsPrefix}/services`,                          s => this.mapService(s))
-        watch<V1Deployment>(`/apis/apps/v1${nsPrefix}/deployments`,                 d => this.mapDeployment(d))
-        watch<V1StatefulSet>(`/apis/apps/v1${nsPrefix}/statefulsets`,               s => this.mapStatefulSet(s))
-        watch<V1DaemonSet> (`/apis/apps/v1${nsPrefix}/daemonsets`,                  d => this.mapDaemonSet(d))
-        watch<V1ReplicaSet>(`/apis/apps/v1${nsPrefix}/replicasets`,                 r => this.mapReplicaSet(r))
-        watch<V1Ingress>   (`/apis/networking.k8s.io/v1${nsPrefix}/ingresses`,      i => this.mapIngress(i))
-        watch<V1Job>       (`/apis/batch/v1${nsPrefix}/jobs`,                       j => this.mapJob(j))
-        watch<V1CronJob>   (`/apis/batch/v1${nsPrefix}/cronjobs`,                   c => this.mapCronJob(c))
     }
 
-    // ── Resource mappers ─────────────────────────────────────────────────────
+    private computeEdges(resource: any, svcList: V1Service[]): Array<{ targetUid: string; label: string }> {
+        switch (resource.kind) {
+            case 'Deployment':
+            case 'StatefulSet':
+            case 'DaemonSet':
+                return this.edgesForController(resource.spec?.selector?.matchLabels, resource.metadata?.namespace, svcList)
+            case 'Ingress':
+                return this.edgesForIngress(resource as V1Ingress, svcList)
+            default:
+                return []
+        }
+    }
 
     private mapPod(p: V1Pod): Partial<ITopologyWsMessage> {
         return {
@@ -322,6 +327,7 @@ export class TopologyChannel implements IChannel {
             namespace: p.metadata?.namespace ?? '', status: podStatus(p),
             labels: p.metadata?.labels ?? {},
             image: p.spec?.containers?.[0]?.image,
+            ownerUids: p.metadata?.ownerReferences?.map(r => r.uid) ?? [],
         }
     }
 
@@ -402,7 +408,16 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    // ── Edge helpers ──────────────────────────────────────────────────────────
+    private mapPvc(p: V1PersistentVolumeClaim): Partial<ITopologyWsMessage> {
+        return {
+            kind: 'PersistentVolumeClaim', uid: p.metadata?.uid ?? '', name: p.metadata?.name ?? '',
+            namespace: p.metadata?.namespace ?? '', status: pvcStatus(p),
+            labels: p.metadata?.labels ?? {},
+            storageClass: p.spec?.storageClassName,
+            capacity: p.status?.capacity?.['storage'],
+            accessModes: p.spec?.accessModes,
+        }
+    }
 
     private edgesForController(
         matchLabels: Record<string, string> | undefined,
@@ -433,53 +448,40 @@ export class TopologyChannel implements IChannel {
         return edges
     }
 
-    // ── Send helpers ──────────────────────────────────────────────────────────
-
-    private emit(
-        ws:          WebSocket,
-        inst:        ITopologyInstance,
-        partial:     Partial<ITopologyWsMessage>,
-        topoAction:  TTopoAction
-    ): void {
+    private emit(ws: WebSocket, inst: ITopologyInstance, partial: Partial<ITopologyWsMessage>, topoAction: TTopoAction): void {
         if (inst.paused) return
         const msg: ITopologyWsMessage = {
-            action:    EInstanceMessageAction.NONE,
-            flow:      EInstanceMessageFlow.UNSOLICITED,
-            channel:   'topology',
-            instance:  inst.instanceId,
-            type:      EInstanceMessageType.DATA,
+            action:        EInstanceMessageAction.NONE,
+            flow:          EInstanceMessageFlow.UNSOLICITED,
+            channel:       'topology',
+            instance:      inst.instanceId,
+            type:          EInstanceMessageType.DATA,
             topoAction,
-            kind:      partial.kind!,
-            uid:       partial.uid!,
-            name:      partial.name!,
-            namespace: partial.namespace!,
-            status:    partial.status!,
-            labels:    partial.labels ?? {},
-            annotations: partial.annotations,
-            replicas:    partial.replicas,
+            kind:          partial.kind!,
+            uid:           partial.uid!,
+            name:          partial.name!,
+            namespace:     partial.namespace!,
+            status:        partial.status!,
+            labels:        partial.labels ?? {},
+            annotations:   partial.annotations,
+            replicas:      partial.replicas,
             readyReplicas: partial.readyReplicas,
-            image:  partial.image,
-            ports:  partial.ports,
-            host:   partial.host,
-            edges:  partial.edges,
+            image:         partial.image,
+            ports:         partial.ports,
+            host:          partial.host,
+            storageClass:  partial.storageClass,
+            capacity:      partial.capacity,
+            accessModes:   partial.accessModes,
+            edges:         partial.edges,
+            ownerUids:     partial.ownerUids,
         }
         try { ws.send(JSON.stringify(msg)) }
         catch (err) { console.warn('[TopologyChannel] send error', err) }
     }
 
-    private sendInstanceConfig(
-        ws:     WebSocket,
-        action: EInstanceMessageAction,
-        flow:   EInstanceMessageFlow,
-        cfg:    IInstanceConfig,
-        text:   string
-    ): void {
+    private sendInstanceConfig(ws: WebSocket, action: EInstanceMessageAction, flow: EInstanceMessageFlow, cfg: IInstanceConfig, text: string): void {
         const resp: IInstanceConfigResponse = {
-            action, flow,
-            channel:  'topology' as any,
-            instance: cfg.instance,
-            type:     EInstanceMessageType.SIGNAL,
-            text,
+            action, flow, channel: 'topology' as any, instance: cfg.instance, type: EInstanceMessageType.SIGNAL, text,
         }
         try { ws.send(JSON.stringify(resp)) }
         catch (err) { console.warn('[TopologyChannel] sendInstanceConfig error', err) }
@@ -487,19 +489,12 @@ export class TopologyChannel implements IChannel {
 
     private sendSignal(ws: WebSocket, msg: IInstanceMessage, level: ESignalMessageLevel, text: string): void {
         const sig: ISignalMessage = {
-            action:   EInstanceMessageAction.NONE,
-            flow:     EInstanceMessageFlow.RESPONSE,
-            level,
-            channel:  'topology' as any,
-            instance: msg.instance,
-            type:     EInstanceMessageType.SIGNAL,
-            text,
+            action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.RESPONSE, level,
+            channel: 'topology' as any, instance: msg.instance, type: EInstanceMessageType.SIGNAL, text,
         }
         try { ws.send(JSON.stringify(sig)) }
         catch (err) { console.warn('[TopologyChannel] sendSignal error', err) }
     }
-
-    // ── Commands ──────────────────────────────────────────────────────────────
 
     private async doScale(ws: WebSocket, msg: IInstanceMessage, kind: string, ns: string, name: string, replicas: number): Promise<void> {
         const patch = [{ op: 'replace', path: '/spec/replicas', value: replicas }]
@@ -520,8 +515,6 @@ export class TopologyChannel implements IChannel {
         }
         this.sendSignal(ws, msg, ESignalMessageLevel.INFO, `${kind} ${name} restart triggered`)
     }
-
-    // ── Private helpers ───────────────────────────────────────────────────────
 
     private findInstance(ws: WebSocket, instanceId: string): ITopologyInstance | undefined {
         return this.webSockets.find(s => s.ws === ws)?.instances.find(i => i.instanceId === instanceId)

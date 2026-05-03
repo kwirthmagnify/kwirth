@@ -1,13 +1,14 @@
 export enum ETopologyNodeKind {
-    INGRESS     = 'Ingress',
-    SERVICE     = 'Service',
-    DEPLOYMENT  = 'Deployment',
-    STATEFULSET = 'StatefulSet',
-    DAEMONSET   = 'DaemonSet',
-    REPLICASET  = 'ReplicaSet',
-    JOB         = 'Job',
-    CRONJOB     = 'CronJob',
-    POD         = 'Pod',
+    INGRESS                = 'Ingress',
+    SERVICE                = 'Service',
+    DEPLOYMENT             = 'Deployment',
+    STATEFULSET            = 'StatefulSet',
+    DAEMONSET              = 'DaemonSet',
+    REPLICASET             = 'ReplicaSet',
+    JOB                    = 'Job',
+    CRONJOB                = 'CronJob',
+    POD                    = 'Pod',
+    PERSISTENTVOLUMECLAIM  = 'PersistentVolumeClaim',
 }
 
 export enum ETopologyNodeStatus {
@@ -17,6 +18,9 @@ export enum ETopologyNodeStatus {
     SUCCEEDED   = 'Succeeded',
     UNKNOWN     = 'Unknown',
     TERMINATING = 'Terminating',
+    BOUND       = 'Bound',
+    RELEASED    = 'Released',
+    LOST        = 'Lost',
 }
 
 export interface ITopologyEdge {
@@ -37,7 +41,11 @@ export interface ITopologyNode {
     image?:        string
     ports?:        number[]
     host?:         string
+    storageClass?: string
+    capacity?:     string
+    accessModes?:  string[]
     edges?:        ITopologyEdge[]
+    ownerUids?:    string[]
     // 3-D position — computed by layout engine
     x: number
     y: number
