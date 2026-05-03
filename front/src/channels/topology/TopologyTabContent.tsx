@@ -7,7 +7,7 @@ import {
 } from '@mui/material'
 import {
     CenterFocusStrong, Clear, ContentCopy, Delete, Hub, Info,
-    PlayArrow, Refresh, Search, Stop, Terminal, ZoomIn, ZoomOut,
+    PlayArrow, Refresh, Search, Stop, Terminal, Timeline, ZoomIn, ZoomOut,
 } from '@mui/icons-material'
 import { IContentProps } from '../IChannel'
 import {
@@ -84,6 +84,7 @@ const KIND_LEVEL: Record<ETopologyNodeKind, number> = {
 interface ICtxAction { icon: React.ReactNode; label: string; action: string; divider?: boolean }
 
 const COMMON_ACTIONS: ICtxAction[] = [
+    { icon: <Timeline fontSize='small'/>,    label: 'View path',    action: 'view-path', divider: true },
     { icon: <Info fontSize='small'/>,        label: 'View details', action: 'details' },
     { icon: <ContentCopy fontSize='small'/>, label: 'Copy name',    action: 'copy-name', divider: true },
 ]
@@ -285,6 +286,26 @@ function buildEdgeLine(from: ITopologyNode, to: ITopologyNode, color: number, op
     )
 }
 
+// Thicker highlighted path line — uses multiple offset lines to simulate width
+function buildPathLine(from: ITopologyNode, to: ITopologyNode, color: number, opacity: number): THREE.Group {
+    const group = new THREE.Group()
+    const offsets = [
+        [0, 0, 0], [1.2, 0, 0], [-1.2, 0, 0], [0, 1.2, 0], [0, -1.2, 0],
+    ]
+    offsets.forEach(([dx, dy, dz]) => {
+        const pts = [
+            new THREE.Vector3(from.x + dx, from.y + dy, from.z + dz),
+            new THREE.Vector3(to.x   + dx, to.y   + dy, to.z   + dz),
+        ]
+        const line = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints(pts),
+            new THREE.LineBasicMaterial({ color, opacity, transparent: true, linewidth: 2 })
+        )
+        group.add(line)
+    })
+    return group
+}
+
 // ── Graph traversal: collect ALL nodes connected to `root` following hierarchy ─
 //
 // Strategy: BFS in both directions across the full hierarchy PVC→Ingress.
@@ -422,17 +443,20 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
     const meshMapRef   = useRef<Map<string, THREE.Mesh>>(new Map())
     const edgeLinesRef = useRef<THREE.Line[]>([])
     const hlLinesRef   = useRef<THREE.Line[]>([])
+    const pathGroupRef = useRef<THREE.Group[]>([])   // thick path lines
     const animRef      = useRef<number>()
     const isDragging   = useRef(false)
     const prevMouse    = useRef({ x: 0, y: 0 })
     const spherical    = useRef({ theta: 0.4, phi: 1.1, radius: 700 })
     const selectedRef  = useRef<string | undefined>()
+    const pathModeRef  = useRef<string | undefined>()   // uid of node in path mode
 
     const [selectedNode,  setSelectedNode]  = useState<ITopologyNode | undefined>()
     const [contextMenu,   setContextMenu]   = useState<{ x: number; y: number; node: ITopologyNode } | undefined>()
     const [hiddenKinds,   setHiddenKinds]   = useState<Set<ETopologyNodeKind>>(new Set())
     const [searchQuery,   setSearchQuery]   = useState('')
     const [searchFocused, setSearchFocused] = useState(false)
+    const [pathModeNode,  setPathModeNode]  = useState<ITopologyNode | undefined>()
     const [, forceUpdate] = useState(0)
 
     const topologyData: ITopologyData   = channelObject.data
@@ -531,6 +555,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         meshMapRef.current.forEach(m => scene.remove(m)); meshMapRef.current.clear()
         edgeLinesRef.current.forEach(l => scene.remove(l)); edgeLinesRef.current = []
         hlLinesRef.current.forEach(l => scene.remove(l)); hlLinesRef.current = []
+        pathGroupRef.current.forEach(g => scene.remove(g)); pathGroupRef.current = []
 
         const nodeSet = new Set(visibleNodes.map(n => n.uid))
 
@@ -605,7 +630,97 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [topologyData.nodes])
 
-    // ── "Focus" a node: select it, highlight subgraph, fly camera toward it ──
+    // ── Path mode: dim everything outside the subgraph, draw thick lines ──────
+    const applyPathMode = useCallback((node: ITopologyNode) => {
+        const scene = sceneRef.current
+        if (!scene) return
+
+        pathModeRef.current = node.uid
+        setPathModeNode(node)
+
+        const nodeSet = new Set(visibleNodes.map(n => n.uid))
+        const { involvedUids, edges } = collectSubgraph(node.uid, topologyData.nodes, nodeSet)
+
+        // Dim / restore meshes
+        meshMapRef.current.forEach((mesh, uid) => {
+            const mat = mesh.material as THREE.MeshPhongMaterial
+            const inPath = involvedUids.has(uid)
+            mat.transparent = true
+            mat.opacity     = inPath ? 1.0 : 0.07
+            mat.emissiveIntensity = inPath && uid === node.uid ? 0.5 : inPath ? 0.15 : 0.0
+            mat.needsUpdate = true
+        })
+
+        // Dim normal edge lines
+        edgeLinesRef.current.forEach(l => {
+            const m = l.material as THREE.LineBasicMaterial
+            m.opacity = 0.04; m.needsUpdate = true
+        })
+
+        // Remove old path groups
+        pathGroupRef.current.forEach(g => scene.remove(g))
+        pathGroupRef.current = []
+
+        // Remove old highlight lines (path mode replaces them)
+        hlLinesRef.current.forEach(l => scene.remove(l))
+        hlLinesRef.current = []
+
+        // Draw thick path lines
+        const seen = new Set<string>()
+        edges.forEach(({ from, to, color }) => {
+            const key = `${from.uid}→${to.uid}`
+            if (seen.has(key)) return
+            seen.add(key)
+            const grp = buildPathLine(from, to, color, 0.92)
+            scene.add(grp)
+            pathGroupRef.current.push(grp)
+        })
+
+        // Fly camera to subgraph
+        const camera = cameraRef.current
+        if (camera) {
+            const involved = Array.from(involvedUids).map(u => topologyData.nodes.get(u)).filter(Boolean) as ITopologyNode[]
+            if (involved.length > 0) {
+                const cx = involved.reduce((s, n) => s + n.x, 0) / involved.length
+                const cy = involved.reduce((s, n) => s + n.y, 0) / involved.length
+                const cz = involved.reduce((s, n) => s + n.z, 0) / involved.length
+                let maxDist = 100
+                involved.forEach(n => {
+                    const d = Math.sqrt((n.x - cx) ** 2 + (n.y - cy) ** 2 + (n.z - cz) ** 2)
+                    if (d > maxDist) maxDist = d
+                })
+                animateCameraTo(camera, spherical, new THREE.Vector3(cx, cy, cz), Math.max(260, maxDist * 2.4), spherical.current.theta, spherical.current.phi)
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visibleNodes, topologyData.nodes])
+
+    const exitPathMode = useCallback(() => {
+        const scene = sceneRef.current
+        if (!scene) return
+
+        pathModeRef.current = undefined
+        setPathModeNode(undefined)
+
+        // Restore all meshes
+        meshMapRef.current.forEach((mesh, uid) => {
+            const mat = mesh.material as THREE.MeshPhongMaterial
+            mat.transparent = false
+            mat.opacity     = 1.0
+            mat.emissiveIntensity = selectedRef.current === uid ? 0.5 : 0.15
+            mat.needsUpdate = true
+        })
+
+        // Restore normal edge lines
+        edgeLinesRef.current.forEach(l => {
+            const m = l.material as THREE.LineBasicMaterial
+            m.opacity = 0.45; m.needsUpdate = true
+        })
+
+        // Remove thick path lines
+        pathGroupRef.current.forEach(g => scene.remove(g))
+        pathGroupRef.current = []
+    }, [])
     const focusNode = useCallback((node: ITopologyNode) => {
         const scene = sceneRef.current
         const camera = cameraRef.current
@@ -714,6 +829,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         }
 
         switch (action) {
+            case 'view-path':  applyPathMode(node); break
             case 'details':   selectedRef.current = node.uid; setSelectedNode(node); break
             case 'copy-name': navigator.clipboard.writeText(node.name); break
             case 'logs':      channelObject.createTab?.({ clusterName: channelObject.clusterName, namespace: node.namespace, group: '', pod: node.name, container: '' } as any, true, { channelId: 'log' }); break
@@ -724,7 +840,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
             case 'delete-pod':sendCmd('DELETE_POD'); break
             default:          channelObject.notify?.('topology', 'info' as any, `${action} on ${node.name}`)
         }
-    }, [channelObject])
+    }, [channelObject, applyPathMode])
 
     // ── Camera controls ───────────────────────────────────────────────────────
     const resetCamera = () => {
@@ -787,6 +903,31 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
             {topologyData.error && (
                 <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bgcolor: 'rgba(180,0,0,0.8)', p: '4px 12px' }}>
                     <Typography variant='caption' sx={{ color: '#fff' }}>{topologyData.error}</Typography>
+                </Box>
+            )}
+
+            {/* ── Path mode banner ── */}
+            {pathModeNode && (
+                <Box sx={{
+                    position: 'absolute', top: 0, left: 0, right: 0,
+                    bgcolor: 'rgba(30,18,60,0.94)', borderBottom: '1px solid rgba(180,140,255,0.3)',
+                    p: '5px 14px', display: 'flex', alignItems: 'center', gap: 1.5, zIndex: 6,
+                }}>
+                    <Timeline sx={{ color: '#bb88ff', fontSize: 18 }} />
+                    <Typography variant='caption' sx={{ color: '#cc99ff', flex: 1 }}>
+                        Path view: <strong>{pathModeNode.name}</strong> ({pathModeNode.kind})
+                    </Typography>
+                    <Chip
+                        label='Exit path view'
+                        size='small'
+                        onClick={exitPathMode}
+                        sx={{
+                            cursor: 'pointer', fontSize: 11,
+                            bgcolor: 'rgba(180,130,255,0.15)', color: '#cc99ff',
+                            border: '0.5px solid rgba(180,130,255,0.35)',
+                            '&:hover': { bgcolor: 'rgba(180,130,255,0.28)' },
+                        }}
+                    />
                 </Box>
             )}
 
