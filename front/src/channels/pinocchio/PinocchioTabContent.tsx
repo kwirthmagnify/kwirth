@@ -202,7 +202,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} onClose={pinocchioConfigClose} />}
         { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.config} providers={pinocchioData.providers} onClose={pinocchioConfigClose} />}
         { showConfigProvider && <PinocchioConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
-        { showPlayground && <PinocchioPlayground onClose={() => setShowPlayground(false)} pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} providersAvailable={pinocchioData.providersAvailable} />}
+        { showPlayground && <PinocchioPlayground onClose={() => setShowPlayground(false)} pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} providersAvailable={pinocchioData.providersAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!}/>}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
     </>    
 }

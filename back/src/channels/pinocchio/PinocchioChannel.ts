@@ -1,7 +1,7 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
-import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
+import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage, IPlaygroundRequest } from './PinocchioConfig'
 import { INewMetricsCluster } from '../../providers/newmetrics/INewMetricsModel'
 import { ELogComponent, logError, logInfo, logTrace, logWarning } from '../../tools/Logging'
 import { Request, Response } from 'express'
@@ -177,12 +177,10 @@ class PinocchioChannel implements IChannel {
         let temperature = llm.temperature
         if (temperature<0) temperature=0
         if (temperature>1) temperature=1
-        console.log('getnodes')
         let context:IToolContext = {
             origin: 'Pinocchio',
             nodes: await this.clusterInfo.getNodes()
         }
-        console.log(context.nodes)
         let tools: any = {}
         for (let toolName of triggerDefinition.tools) {
             tools[toolName] = getToolByName(toolName, context)
@@ -500,8 +498,46 @@ class PinocchioChannel implements IChannel {
                     this.executeProvidersGet()
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Providers updated')
                     break
+                case EPinocchioCommand.PLAYGROUND:
+                    this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Request received')
+                    await this.executePlayground(pinocchioMessage.data)
+                    break
             }
             return true
+        }
+    }
+
+    executePlayground = async (data:IConfigTrigger) => {
+        this.broadcastError('Received playground event')
+
+        try {
+            let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools} = await this.buildModelInvocation(data, businessEvent) || {}
+            if (!model) return
+            this.broadcastMessage('Received business event')
+            const { output, usage, steps } = await generateText({
+                model,
+                temperature,
+                stopWhen: stepCountIs(5),
+                tools,
+                providerOptions,
+                output: Output.object({
+                    schema: z.object({
+                        response: z.string().describe('response to the question'),
+                    }),
+                }),
+                system: "Use the tools provided to find information, and once you have the data, format your final response strictly as a JSON object according to the schema.",
+                prompt: prompt||'Hi AI, how are you?',
+            })
+            logTrace(output)
+            logTrace(steps)
+            this.broadcastMessage(JSON.stringify(output.response))
+        }
+        catch (err:any) {
+            let message = `Pinocchio analysis ended in error when analyzing`
+            logInfo(ELogComponent.PROVIDER, message)
+            logInfo(ELogComponent.PROVIDER, err)
+            this.broadcastMessage(message)
+            this.broadcastMessage(JSON.stringify(err))
         }
     }
 

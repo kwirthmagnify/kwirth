@@ -9,7 +9,7 @@ interface IMenuOrderProps {
 
 const MenuConfig: React.FC<IMenuOrderProps> = (props:IMenuOrderProps) => {
     return (
-        <Menu anchorEl={props.anchorParent} open={true} onClose={props.onClose} sx={{left:-100}}>
+        <Menu anchorEl={props.anchorParent} open={true} onClose={props.onClose}>
             <MenuList dense sx={{ width: '180px' }}>
                 <MenuItem onClick={() => props.onAction('provider')}>Provider</MenuItem>
                 <MenuItem onClick={() => props.onAction('llm')}>LLM</MenuItem>

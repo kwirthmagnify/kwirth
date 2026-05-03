@@ -1,13 +1,17 @@
 import React, { useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, TextareaAutosize, TextField, Typography } from '@mui/material'
-import { IPinocchioConfig, kindsAvailable } from './PinocchioConfig'
+import { EPinocchioCommand, IConfigTrigger, IPinocchioConfig, IPinocchioMessage, IPlaygroundRequest, kindsAvailable } from './PinocchioConfig'
 import { objectClone } from '../magnify/Tools'
+import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 
 interface IPinocchioLlmConfigProps {
     onClose: () => void
     pinocchioConfig: IPinocchioConfig
     providersAvailable: string[]
     toolsAvailable: string[]
+    accessString: string
+    webSocket: WebSocket
+    instanceId: string
 }
 
 const PinocchioPlayground: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchioLlmConfigProps) => {
@@ -27,17 +31,32 @@ const PinocchioPlayground: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
     const [spaces, setSpaces] = useState<string>('')
 
     const onLaunch = () => {
-        setId('')
-        setTrigger('artifact')
-        setKind('Pod')
-        setEnabled(false)
-        setSystem('')
-        setPromptType('artifact')
-        setPrompt('')
-        setAction('inform')
-        setSteps(1)
-        setTools([])
-        setSpaces('')
+        let msg:IPinocchioMessage = {
+            channel: 'pinocchio',
+            msgtype: 'pinocchiomessage',
+            id: '1',
+            accessKey: props.accessString!,
+            instance: props.instanceId,
+            command: EPinocchioCommand.PLAYGROUND,
+            action: EInstanceMessageAction.COMMAND,
+            flow: EInstanceMessageFlow.REQUEST,
+            type: EInstanceMessageType.DATA,
+            data: {
+                id: 'playground',
+                enabled: true,
+                action: 'inform',
+                trigger,
+                llm,
+                steps,
+                kind,
+                spaces: spaces.split(','),
+                tools,
+                promptType,
+                system,
+                prompt
+            } satisfies IConfigTrigger
+        }
+        props.webSocket?.send(JSON.stringify(msg))
     }
 
     const onChangeTools = (event: SelectChangeEvent<typeof tools>) => {
@@ -46,11 +65,10 @@ const PinocchioPlayground: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
     }
 
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '1200px', height: '60vh' } }}>
-            <DialogTitle>Trigger Config</DialogTitle>
+        <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '1200px', height: '75vh' } }}>
+            <DialogTitle>Playground</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
-
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '16px' }} >
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '8px' }} >
                     <Stack spacing={1} style={{ width: '100%' }}>
                         <Stack direction={'row'}>
                             <FormControl variant='standard' sx={{ width: '100%', mr: 1 }}>
@@ -93,7 +111,7 @@ const PinocchioPlayground: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
                                             </Select>
                                         </FormControl>
                                         <TextField value={spaces} onChange={(e) => setSpaces(e.target.value)} disabled={trigger==='artifact'} placeholder='Enter comma-separated spaces' label='Spaces' variant='standard' sx={{mr:1}} fullWidth/>
-                                        <FormControl variant='standard' sx={{ width: '100%'}}>
+                                        <FormControl variant='standard' sx={{ width: '100%', mr:1}}>
                                             <InputLabel>Tools</InputLabel>
                                             <Select onChange={onChangeTools} multiple value={tools} renderValue={(selected) => selected.join(', ')} variant='standard'>
                                                 { props.toolsAvailable.map( (tool:string) => {
@@ -106,20 +124,24 @@ const PinocchioPlayground: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
                                                 })}
                                             </Select>
                                         </FormControl>
+                                        <FormControl variant='standard' sx={{ width: '100%'}}>
+                                            <InputLabel>Prompt type</InputLabel>
+                                            <Select value={promptType} onChange={(e) => setPromptType(e.target.value as any)} variant='standard' sx={{ width: '100%' }} label='Action'>
+                                                <MenuItem value={'artifact'}  disabled={trigger==='business'}>artifact</MenuItem>
+                                                <MenuItem value={'jinja'}>jinja</MenuItem>
+                                            </Select>
+                                        </FormControl>
                                     </Stack>
                                 </Stack>
                             </FormControl>
                         </Stack>
 
-                        <TextareaAutosize value={system} onChange={(e) => setSystem(e.target.value)} style={{ minHeight: '80px', padding: '8px' }} placeholder='Enter system text' />
-                        <FormControl variant='standard' sx={{ width: '100%'}}>
-                            <InputLabel>Prompt type</InputLabel>
-                            <Select value={promptType} onChange={(e) => setPromptType(e.target.value as any)} variant='standard' sx={{ width: '100%' }} label='Action'>
-                                <MenuItem value={'artifact'}  disabled={trigger==='business'}>artifact</MenuItem>
-                                <MenuItem value={'jinja'}>jinja</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '80px', padding: '8px' }} placeholder='Enter prompt' disabled={promptType==='artifact'}/>
+                        <Stack direction={'row'} width={'100%'} spacing={1}>
+                            <TextareaAutosize value={system} onChange={(e) => setSystem(e.target.value)} style={{ minHeight: '150px', width:'100%' }} placeholder='Enter system text'/>
+                            <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '150px', width:'100%' }} placeholder='Enter prompt' disabled={promptType==='artifact'}/>
+                        </Stack>
+
+                        <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '150px', width:'100%' }} placeholder='Results'/>
 
                         <Stack direction={'row'} spacing={1} justifyContent={'end'}>
                             <Button variant='outlined' onClick={onLaunch} color='primary'>Launch</Button>

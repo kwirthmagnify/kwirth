@@ -12,6 +12,18 @@ export enum EPinocchioCommand {
     PLAYGROUND = 'playground',
 }
 
+export interface IPlaygroundRequest {
+    trigger: string
+    llm: string
+    steps: number
+    kind: string
+    spaces: string[]
+    tools: string[]
+    promptType: string
+    system: string
+    prompt: string   
+}
+
 export interface IAnalysis {
     findings: {
         description: string
