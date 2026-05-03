@@ -511,26 +511,27 @@ class PinocchioChannel implements IChannel {
         this.broadcastError('Received playground event')
 
         try {
-            let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools} = await this.buildModelInvocation(data, businessEvent) || {}
-            if (!model) return
-            this.broadcastMessage('Received business event')
-            const { output, usage, steps } = await generateText({
-                model,
-                temperature,
-                stopWhen: stepCountIs(5),
-                tools,
-                providerOptions,
-                output: Output.object({
-                    schema: z.object({
-                        response: z.string().describe('response to the question'),
-                    }),
-                }),
-                system: "Use the tools provided to find information, and once you have the data, format your final response strictly as a JSON object according to the schema.",
-                prompt: prompt||'Hi AI, how are you?',
-            })
-            logTrace(output)
-            logTrace(steps)
-            this.broadcastMessage(JSON.stringify(output.response))
+            // // let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools} = await this.buildModelInvocation(data, businessEvent) || {}
+            // let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools} = await this.buildModelInvocation(data, businessEvent) || {}
+            // if (!model) return
+            // this.broadcastMessage('Received business event')
+            // const { output, usage, steps } = await generateText({
+            //     model,
+            //     temperature,
+            //     stopWhen: stepCountIs(5),
+            //     tools,
+            //     providerOptions,
+            //     output: Output.object({
+            //         schema: z.object({
+            //             response: z.string().describe('response to the question'),
+            //         }),
+            //     }),
+            //     system: "Use the tools provided to find information, and once you have the data, format your final response strictly as a JSON object according to the schema.",
+            //     prompt: prompt||'Hi AI, how are you?',
+            // })
+            // logTrace(output)
+            // logTrace(steps)
+            // this.broadcastMessage(JSON.stringify(output.response))
         }
         catch (err:any) {
             let message = `Pinocchio analysis ended in error when analyzing`
