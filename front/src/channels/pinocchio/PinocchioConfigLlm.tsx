@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
-import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputAdornment, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { IConfigLlm, IConfigProvider, IPinocchioConfig } from './PinocchioConfig'
 import { objectClone } from '../magnify/Tools'
+import { Visibility, VisibilityOff } from '@mui/icons-material'
+import { useKeyboard } from '../../tools/useKeyboard'
 
 interface IPinocchioLlmConfigProps {
     onClose: (pc: IPinocchioConfig | undefined) => void
@@ -14,12 +16,15 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
     
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
+    const [showPassword, setShowPassword] = useState(false)
     const [id, setId] = useState('')
     const [provider, setProvider] = useState('google')
     const [model, setModel] = useState('')
     const [temperature, setTemperature] = useState(0)
     const [useProviderKey, setUseProviderKey] = useState(true)
     const [key, setKey] = useState('')
+
+    useKeyboard()
 
     const onLlmSelected = (index: number) => {
         const l = config.llms[index]
@@ -124,7 +129,19 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                                 <Checkbox checked={useProviderKey} onChange={(e) => setUseProviderKey(e.target.checked)} />
                             </Stack>
 
-                            <TextField value={key} onChange={(e) => setKey(e.target.value)} disabled={useProviderKey} label='API Key' type='password' placeholder='Enter API Key' variant='standard' fullWidth/>
+                            <TextField value={key} onChange={(e) => setKey(e.target.value)} disabled={useProviderKey} label='API Key' placeholder='Enter API Key' variant='standard' fullWidth
+                                type={showPassword ? 'text' : 'password'}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    )
+                                }}
+
+                            />
                         </Stack>
 
                         <Stack direction={'row'} spacing={1}>

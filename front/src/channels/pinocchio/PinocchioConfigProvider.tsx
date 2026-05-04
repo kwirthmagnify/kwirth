@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputAdornment, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { IConfigProvider } from './PinocchioConfig' // Ajusta la ruta según tu proyecto
 import { objectClone } from '../magnify/Tools'
+import { Visibility, VisibilityOff } from '@mui/icons-material'
+import { useKeyboard } from '../../tools/useKeyboard'
 
 interface IPinocchioConfigProviderProps {
     providersAvailable: string[]
@@ -14,9 +16,13 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
     
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
+
+    const [showPassword, setShowPassword] = useState(false)
     const [providerName, setProviderName] = useState('')
     const [providerKey, setProviderKey] = useState(props.providersAvailable[0])
 
+    useKeyboard()
+    
     const onProviderSelected = (p: IConfigProvider, index: number) => {
         setProviderName(p.name)
         setProviderKey(p.key)
@@ -103,13 +109,22 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
                             </Select>
                         </FormControl>
                         <TextField 
-                            label="API Key / Token"
-                            type="password"
+                            label='API Key / Token'
+                            type={showPassword ? 'text' : 'password'}
                             variant='standard' 
                             fullWidth
                             value={providerKey} 
                             onChange={(e) => setProviderKey(e.target.value)} 
                             helperText="This key can be afterwards linked to specific uses."
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                )
+                            }}
                         />
 
                         <Box sx={{ flexGrow: 1 }} />

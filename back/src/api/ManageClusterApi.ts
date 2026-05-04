@@ -57,6 +57,7 @@ export class ManageClusterApi {
                                         return { namespace:pod.metadata?.namespace, name:pod.metadata?.name }
                                     })
                                     res.status(200).json(podList)
+                                    break
                                 case 'containers':
                                     let podListContainer = podListResp.items.map(pod => {
                                         return { namespace:pod.metadata?.namespace, name:pod.metadata?.name, containers: pod.spec?.containers.map( (c) => c.name) }

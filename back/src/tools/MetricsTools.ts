@@ -125,7 +125,7 @@ export class MetricsTools {
     }
 
     startMetrics = async () => {
-        logInfo(ELogComponent.CHANNEL, 'Metrics information for cluster is being loaded')
+        logInfo(ELogComponent.CHANNEL, `Metrics information for cluster is being loaded (${this.clusterInfo.nodes?.size} nodes)`)
         let nodes = Array.from(this.clusterInfo.nodes.values())
 
         this.metricsList = new Map()
@@ -160,6 +160,7 @@ export class MetricsTools {
             let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
             const url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy/metrics/cadvisor`
             const fetchOptions: any = { method: 'GET' }
+            
             await this.clusterInfo.kubeConfig.applyToFetchOptions(fetchOptions)
 
             try {
@@ -184,23 +185,23 @@ export class MetricsTools {
                 logError(ELogComponent.CHANNEL, `Error reading cAdvisor inCluster metrics at node ${node.ip}` + error.stack)
             }
         }
-        else {
-            // external access without kubeconfig
-            try {
-                let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
-                const url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy/metrics/cadvisor`
-                const fetchOptions: any = { method: 'GET', headers: { Authorization: 'Bearer ' + this.clusterInfo.token} }
-                const response = await fetch(url, fetchOptions)
-                if (response.ok) 
-                    text = await response.text()
-                else
-                    logWarning(ELogComponent.CHANNEL, `Cannot get kubelet metrics ${response.status}: ${response.statusText}`)
-            }
-            catch (err) {
-                logError(ELogComponent.CHANNEL, `Error obtaining kubelet metrics`)
-                logError(ELogComponent.CHANNEL, err)
-            }
-        }
+        // else {
+        //     // external access without kubeconfig
+        //     try {
+        //         let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
+        //         const url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy/metrics/cadvisor`
+        //         const fetchOptions: any = { method: 'GET', headers: { Authorization: 'Bearer ' + this.clusterInfo.token} }
+        //         const response = await fetch(url, fetchOptions)
+        //         if (response.ok) 
+        //             text = await response.text()
+        //         else
+        //             logWarning(ELogComponent.CHANNEL, `Cannot get kubelet metrics ${response.status}: ${response.statusText}`)
+        //     }
+        //     catch (err) {
+        //         logError(ELogComponent.CHANNEL, `Error obtaining kubelet metrics`)
+        //         logError(ELogComponent.CHANNEL, err)
+        //     }
+        // }
 
         // add kwirth container metrics
         text += '# HELP kwirth_container_memory_percentage Percentage of memory used by object from the whole cluster\n'

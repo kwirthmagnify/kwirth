@@ -40,12 +40,12 @@ export class PinocchioChannel implements IChannel {
         let pinocchioData:IPinocchioData = channelObject.data
         switch (msg.type) {
             case EInstanceMessageType.DATA:
-                if (msg.analysis) pinocchioData.analysis.push(msg.analysis)
+                if (msg.analysis) pinocchioData.content.push(msg.analysis)
                 else if (msg.config) pinocchioData.config = msg.config as IPinocchioConfig
                 else if (msg.providers) pinocchioData.providers = msg.providers as IConfigProvider[]
                 else if (msg.providersAvailable) pinocchioData.providersAvailable = msg.providersAvailable as string[]
                 else if (msg.toolsAvailable) pinocchioData.toolsAvailable = msg.toolsAvailable as string[]
-                else if (msg.message) pinocchioData.analysis.push(msg.message)
+                else if (msg.message) pinocchioData.content.push(msg.message)
                 return {
                     action: EChannelRefreshAction.REFRESH
                 }
@@ -125,17 +125,13 @@ export class PinocchioChannel implements IChannel {
         channelObject.config = new PinocchioConfig()
         channelObject.data = new PinocchioData()
         let pinocchioObject:IPinocchioData= channelObject.data
-        pinocchioObject.analysis = []
+        pinocchioObject.content = []
         return false
     }
 
     startChannel(channelObject:IChannelObject): boolean {
         let pinocchioObject:IPinocchioData = channelObject.data
-        pinocchioObject.analysis.push({
-            findings: [],
-            timestamp: Date.now(),
-            text: 'Local start pinocchio channel'
-        })
+        pinocchioObject.content.push({ timestamp: Date.now(), text: 'Local start pinocchio channel' })
         pinocchioObject.paused = false
         pinocchioObject.started = true
         return true

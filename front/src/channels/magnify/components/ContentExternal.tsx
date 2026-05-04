@@ -446,7 +446,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 triggers: [],
                 llms: []
             },
-            analysis: [],
+            content: [],
             paused: false,
             started: false
         }

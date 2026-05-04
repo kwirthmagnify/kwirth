@@ -560,12 +560,7 @@ class PinocchioChannel implements IChannel {
             }
             instances.push(instance)
         }
-        let analysis:IAnalysis = {
-            findings: [],
-            timestamp: Date.now(),
-            text: 'Pinocchio session accepted'
-        }
-        this.sendAnalysis(webSocket, instance, analysis)
+        this.sendMessage(webSocket, instance, {timestamp:Date.now(), text: 'Pinocchio session accepted'})
         this.sendBatch(webSocket, instance)
         return true
     }

@@ -424,7 +424,7 @@ export class NewMetricsProvider implements IProvider {
 
         this.loadingClusterMetrics = true
         try {
-            logInfo(ELogComponent.PROVIDER, `About to read cluster metrics ${new Date().toTimeString()}`)
+            logInfo(ELogComponent.PROVIDER, `About to read cluster metrics for provider ${new Date().toTimeString()}`)
 
             // we rebuild the list of nodes
             let newNodeSet = await clusterInfo.getNodes()

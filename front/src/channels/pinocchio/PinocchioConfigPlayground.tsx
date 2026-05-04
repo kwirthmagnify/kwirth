@@ -3,6 +3,7 @@ import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitl
 import { EPinocchioCommand, IConfigTrigger, IPinocchioConfig, IPinocchioMessage, IPlaygroundRequest, kindsAvailable } from './PinocchioConfig'
 import { objectClone } from '../magnify/Tools'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
+import { useKeyboard } from '../../tools/useKeyboard'
 
 interface IPinocchioLlmConfigProps {
     onClose: () => void
@@ -30,6 +31,8 @@ const PinocchioPlayground: React.FC<IPinocchioLlmConfigProps> = (props: IPinocch
     const [tools, setTools] = useState<string[]>([])
     const [spaces, setSpaces] = useState<string>('')
 
+    useKeyboard()
+    
     const onLaunch = () => {
         let msg:IPinocchioMessage = {
             channel: 'pinocchio',

@@ -1,4 +1,5 @@
 import { AuthenticationV1TokenRequest, CoreV1Api } from '@kubernetes/client-node'
+import { ELogComponent, logError, logInfo } from './Logging'
 
 export class ServiceAccountToken {
     coreApi:CoreV1Api
@@ -61,18 +62,19 @@ export class ServiceAccountToken {
         try {
             const tokenRequest: AuthenticationV1TokenRequest = {
                 spec: {
-                    audiences: ["https://kubernetes.default.svc"],
+                    //audiences: ["https://kubernetes.default.svc"],
+                    audiences: [],
                     expirationSeconds: 3600
                 }
             }
 
             const response = await this.coreApi.createNamespacedServiceAccountToken({ name: serviceAccountName, namespace, body: tokenRequest })
             const token = response.status?.token
-            console.log(`Token created for '${serviceAccountName}':`)
+            logInfo(ELogComponent.CORE, `Token created for '${serviceAccountName}'`)
             return token
         }
         catch (err: any) {
-            console.error('Error creating SA token:', err?.response?.body || err);
+            logError(ELogComponent.CORE, 'Error creating SA token: ' + err?.response?.body + err)
         }
     }    
 
@@ -80,11 +82,11 @@ export class ServiceAccountToken {
     public deleteToken = async (serviceAccountName: string, namespace: string) => {
         try {
             const response = await this.coreApi.deleteNamespacedSecret({ name:serviceAccountName+'-kwirthtoken', namespace })
-            console.log('SA token deleted')
+            logInfo(ELogComponent.CORE, 'SA token deleted')
         }
         catch (err) {
-            console.log('Error deleting SA token')
-            console.log(err)
+            logError(ELogComponent.CORE, 'Error deleting SA token')
+            logError(ELogComponent.CORE, err)
         }
     }
     

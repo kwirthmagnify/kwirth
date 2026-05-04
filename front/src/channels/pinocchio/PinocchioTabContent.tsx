@@ -47,20 +47,20 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 behavior: 'auto', // 'smooth'
             })
         }
-    }, [isAtBottom, pinocchioData.analysis.length])
+    }, [isAtBottom, pinocchioData.content.length])
 
     useEffect(() => {
         const timer = setTimeout(() => {
             if (messagesEndRef.current) {
                 messagesEndRef.current.scrollIntoView({ 
-                    behavior: pinocchioData.analysis.length > 50 ? 'auto' : 'smooth', 
+                    behavior: pinocchioData.content.length > 50 ? 'auto' : 'smooth', 
                     block: 'end' 
                 });
             }
         }, 50)
 
         return () => clearTimeout(timer);
-    }, [pinocchioData.analysis])
+    }, [pinocchioData.content])
 
     const color = (level:string) => {
         if (level==='low') return 'gray'
@@ -70,12 +70,11 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     const showContent = () => {
-        if (!pinocchioData || !pinocchioData.analysis) return <></>
+        if (!pinocchioData || !pinocchioData.content) return <></>
         return (<>
-            {pinocchioData.analysis.map((item, index) => {
-                let analysis = item as IAnalysis
-                let message = item as IMessage
-                if (typeof item === 'string') {
+            {pinocchioData.content.map((item, index) => {
+                if (typeof item !== 'string') {
+                    let analysis = item as IAnalysis
                     return (
                         <React.Fragment key={index}>
                             {analysis.text && (
@@ -104,6 +103,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     );
                 }
                 else {
+                    let message = item as IMessage
                     return <>
                         <Typography variant='body1' sx={{ mt: 2 }}>
                             {new Date(message.timestamp).toISOString()} {message.text}
@@ -185,7 +185,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         <Card sx={{display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', marginTop: '8px',minHeight: 0}}>
             <CardHeader title={
                 <Stack direction={'row'} alignItems={'center'}>
-                    <Typography marginRight={'32px'}><b>Events:</b> {pinocchioData.analysis.length}</Typography>
+                    <Typography marginRight={'32px'}><b>Events:</b> {pinocchioData.content.length}</Typography>
                     <Typography marginRight={'32px'} flex={1}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {pinocchioData.paused?'paused':pinocchioData.started?'started':'stopped'}</Typography>
                     <Button onClick={() => setShowPlayground(true)}>Playground</Button>
                     <Button onClick={(event) => setAnchorMenu(event.currentTarget)}>Config</Button>

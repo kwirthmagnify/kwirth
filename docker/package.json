@@ -5,10 +5,10 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && esbuild dist/index.js --bundle --platform=node --target=node24 --outfile=bundle/bundle.js --external:cpu-features",
-    "not-used-start": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=1024 --trace-warnings --unhandled-rejections=strict\" nodemon src/index.ts",
-    "start:kubernetes": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=1024 --trace-warnings --unhandled-rejections=strict\" FORCE=k8s nodemon src/index.ts",
-    "start:docker": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=1024 --trace-warnings --unhandled-rejections=strict\" FORCE=docker nodemon src/index.ts",
-    "start:electron": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=1024 --trace-warnings --unhandled-rejections=strict\" FORCE=electron AUTH=kubeconfig nodemon src/index.ts"
+    "not-used-start": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" nodemon src/index.ts",
+    "start:kubernetes": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=k8s nodemon src/index.ts",
+    "start:docker": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=docker nodemon src/index.ts",
+    "start:electron": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=electron AUTH=kubeconfig nodemon src/index.ts"
   },
   "author": "",
   "license": "ISC",
@@ -20,7 +20,7 @@
     "@ai-sdk/openai": "^3.0.53",
     "@jfvilas/parse-listing": "^1.0.1",
     "@kubernetes/client-node": "^1.4.0",
-    "@kwirthmagnify/kwirth-common": "^0.4.51",
+    "@kwirthmagnify/kwirth-common": "^0.4.52",
     "@openrouter/ai-sdk-provider": "^2.8.0",
     "@types/node": "^20.12.13",
     "ai": "^6.0.174",

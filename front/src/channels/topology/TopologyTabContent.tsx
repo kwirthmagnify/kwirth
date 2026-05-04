@@ -180,59 +180,44 @@ const NodeInfoPanel: React.FC<{ node: ITopologyNode }> = ({ node }) => (
 
 // ── Camera helpers ────────────────────────────────────────────────────────────
 
-function updateCamera(cam: THREE.PerspectiveCamera, sph: { theta: number; phi: number; radius: number }) {
+function updateCamera(cam: THREE.PerspectiveCamera, sph: { theta: number; phi: number; radius: number; tx?: number; ty?: number; tz?: number }) {
+    const tx = sph.tx ?? 0, ty = sph.ty ?? 0, tz = sph.tz ?? 0
     cam.position.set(
-        sph.radius * Math.sin(sph.phi) * Math.sin(sph.theta),
-        sph.radius * Math.cos(sph.phi),
-        sph.radius * Math.sin(sph.phi) * Math.cos(sph.theta),
+        tx + sph.radius * Math.sin(sph.phi) * Math.sin(sph.theta),
+        ty + sph.radius * Math.cos(sph.phi),
+        tz + sph.radius * Math.sin(sph.phi) * Math.cos(sph.theta),
     )
-    cam.lookAt(0, 0, 0)
+    cam.lookAt(tx, ty, tz)
     cam.updateProjectionMatrix()
 }
 
-// Smoothly animate the camera target (lookAt) and spherical coords toward goal
 function animateCameraTo(
     cam:      THREE.PerspectiveCamera,
-    sph:      React.MutableRefObject<{ theta: number; phi: number; radius: number }>,
+    sph:      React.MutableRefObject<{ theta: number; phi: number; radius: number; tx?: number; ty?: number; tz?: number }>,
     target:   THREE.Vector3,
     newRadius: number,
     newTheta:  number,
     newPhi:    number,
     durationMs = 600,
 ) {
-    const start    = performance.now()
+    const start = performance.now()
     const r0 = sph.current.radius, t0 = sph.current.theta, p0 = sph.current.phi
-    const lookatCur = new THREE.Vector3(0, 0, 0)
+    const lx0 = sph.current.tx ?? 0, ly0 = sph.current.ty ?? 0, lz0 = sph.current.tz ?? 0
 
     const tick = (now: number) => {
         const t = Math.min(1, (now - start) / durationMs)
-        const e = 1 - Math.pow(1 - t, 3) // ease-out cubic
+        const e = 1 - Math.pow(1 - t, 3)
 
         sph.current.radius = r0 + (newRadius - r0) * e
         sph.current.theta  = t0 + (newTheta  - t0) * e
         sph.current.phi    = p0 + (newPhi    - p0) * e
+        sph.current.tx     = lx0 + (target.x - lx0) * e
+        sph.current.ty     = ly0 + (target.y - ly0) * e
+        sph.current.tz     = lz0 + (target.z - lz0) * e
 
-        const lx = lookatCur.x + (target.x - lookatCur.x) * e
-        const ly = lookatCur.y + (target.y - lookatCur.y) * e
-        const lz = lookatCur.z + (target.z - lookatCur.z) * e
-
-        cam.position.set(
-            lx + sph.current.radius * Math.sin(sph.current.phi) * Math.sin(sph.current.theta),
-            ly + sph.current.radius * Math.cos(sph.current.phi),
-            lz + sph.current.radius * Math.sin(sph.current.phi) * Math.cos(sph.current.theta),
-        )
-        cam.lookAt(lx, ly, lz)
-        cam.updateProjectionMatrix()
+        updateCamera(cam, sph.current)
 
         if (t < 1) requestAnimationFrame(tick)
-        else {
-            // settle — from now on updateCamera will use (0,0,0) lookAt.
-            // Adjust spherical so that updateCamera stays consistent.
-            sph.current.theta = newTheta
-            sph.current.phi   = newPhi
-            sph.current.radius = newRadius
-            updateCamera(cam, sph.current)
-        }
     }
     requestAnimationFrame(tick)
 }
@@ -386,7 +371,7 @@ function collectSubgraph(
             }
         })
 
-        // DOWN via ownedBy: deployment → pods
+        // ── DOWN via ownedBy: deployment → pods
         ownedBy.get(uid)?.forEach(child => {
             if (!nodeSet.has(child.uid)) return
             edges.push({ from: node, to: child, color: 0x66ffaa })
@@ -395,7 +380,23 @@ function collectSubgraph(
                 queue.push(child.uid)
             }
         })
-    }
+
+        // ── DOWN: pod → PVCs it mounts (via pod.edges which now include PVC targets)
+        // Already covered by node.edges traversal above — PVC edges are in pod.edges.
+        // But if current node IS a PVC, find pods that mount it (reverse of pod.edges → pvc)
+        if (node.kind === ETopologyNodeKind.PERSISTENTVOLUMECLAIM) {
+            allNodes.forEach(n => {
+                if (!nodeSet.has(n.uid) || n.kind !== ETopologyNodeKind.POD) return
+                const mountsThis = n.edges?.some(e => e.targetUid === uid)
+                if (!mountsThis) return
+                edges.push({ from: n, to: node, color: 0xe06b6b })
+                if (!involved.has(n.uid)) {
+                    involved.add(n.uid)
+                    queue.push(n.uid)
+                }
+            })
+        }
+    }   // end while
 
     return { involvedUids: involved, edges }
 }
@@ -447,7 +448,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
     const animRef      = useRef<number>()
     const isDragging   = useRef(false)
     const prevMouse    = useRef({ x: 0, y: 0 })
-    const spherical    = useRef({ theta: 0.4, phi: 1.1, radius: 700 })
+    const spherical    = useRef({ theta: 0.4, phi: 1.1, radius: 700, tx: 0, ty: 0, tz: 0 })
     const selectedRef  = useRef<string | undefined>()
     const pathModeRef  = useRef<string | undefined>()   // uid of node in path mode
 
@@ -821,10 +822,17 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         const sendCmd = (topoAction: string, extra: Record<string, any> = {}) => {
             if (!ws) return
             ws.send(JSON.stringify({
-                channel: 'topology', instance: channelObject.instanceId,
-                type: EInstanceMessageType.DATA, action: EInstanceMessageAction.NONE,
-                flow: EInstanceMessageFlow.REQUEST,
-                topoAction, kind: node.kind, name: node.name, namespace: node.namespace, uid: node.uid, ...extra,
+                channel:  'topology',
+                instance: channelObject.instanceId,
+                type:     EInstanceMessageType.DATA,
+                action:   EInstanceMessageAction.COMMAND,
+                flow:     EInstanceMessageFlow.REQUEST,
+                topoAction,
+                kind:      node.kind,
+                name:      node.name,
+                namespace: node.namespace,
+                uid:       node.uid,
+                ...extra,
             }))
         }
 
@@ -844,7 +852,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
 
     // ── Camera controls ───────────────────────────────────────────────────────
     const resetCamera = () => {
-        spherical.current = { theta: 0.4, phi: 1.1, radius: 700 }
+        spherical.current = { theta: 0.4, phi: 1.1, radius: 700, tx: 0, ty: 0, tz: 0 }
         if (cameraRef.current) updateCamera(cameraRef.current, spherical.current)
     }
     const zoomIn  = () => { spherical.current.radius = Math.max(150, spherical.current.radius - 100); if (cameraRef.current) updateCamera(cameraRef.current, spherical.current) }

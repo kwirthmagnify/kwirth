@@ -316,18 +316,36 @@ export class TopologyChannel implements IChannel {
                 return this.edgesForController(resource.spec?.selector?.matchLabels, resource.metadata?.namespace, svcList)
             case 'Ingress':
                 return this.edgesForIngress(resource as V1Ingress, svcList)
+            case 'Pod':
+                // PVC edges are already embedded in mapPod — return empty here to avoid double-adding
+                return []
             default:
                 return []
         }
     }
 
     private mapPod(p: V1Pod): Partial<ITopologyWsMessage> {
+        // Build edges to PVCs this pod mounts
+        const ns = p.metadata?.namespace ?? ''
+        const pvcEdges: Array<{ targetUid: string; label: string }> = []
+        for (const vol of p.spec?.volumes ?? []) {
+            const claimName = vol.persistentVolumeClaim?.claimName
+            if (!claimName) continue
+            // Find matching PVC in cache by name + namespace
+            for (const pvc of this.pvcCache.values()) {
+                if (pvc.metadata?.name === claimName && pvc.metadata?.namespace === ns && pvc.metadata?.uid) {
+                    pvcEdges.push({ targetUid: pvc.metadata.uid, label: vol.name })
+                    break
+                }
+            }
+        }
         return {
             kind: 'Pod', uid: p.metadata?.uid ?? '', name: p.metadata?.name ?? '',
-            namespace: p.metadata?.namespace ?? '', status: podStatus(p),
+            namespace: ns, status: podStatus(p),
             labels: p.metadata?.labels ?? {},
             image: p.spec?.containers?.[0]?.image,
             ownerUids: p.metadata?.ownerReferences?.map(r => r.uid) ?? [],
+            edges: pvcEdges.length > 0 ? pvcEdges : undefined,
         }
     }
 

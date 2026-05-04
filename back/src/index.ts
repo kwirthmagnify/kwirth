@@ -2059,7 +2059,7 @@ showLogo()
 startNodeTasks()
 
 getExecutionEnvironment(envContext).then( async (exenv:string) => {
-    logInfo(ELogComponent.CORE, 'Kubernetes context:' + (envContext || 'default kubeconfig context'))
+    logInfo(ELogComponent.CORE, `Kubernetes context: '${envContext}' (default kubeconfig context)`)
 
     let kwirthData:KwirthData
     switch (exenv) {
@@ -2136,7 +2136,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
     app.use(`${envRootPath}`, (req, res, next) => {
         if (req.path.startsWith(`${envRootPath}/front`) || req.path === '/') return next()
         if (runningEnv.isElectron && req.path.startsWith('/core/electron/')) return next()
-        if (req.path.startsWith('/core/auth/')) return next()
+        if (req.path.startsWith(`${envRootPath}/core/auth/`)) return next()
 
         const activeRI = runningInstances.find(r => r.active)
         if (activeRI && activeRI.router)
@@ -2144,7 +2144,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
         else
             return res.status(503).send('No active instance available')
     })
-    app.get('/core/auth/method', (req:Request,res:Response) => {
+    app.get(`${envRootPath}/core/auth/method`, (req:Request,res:Response) => {
         return res.status(200).json({ auth: envAuth })
     })
 

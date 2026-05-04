@@ -5,7 +5,7 @@ export interface IPinocchioData {
     providersAvailable: string[]
     providers: IConfigProvider[]
     config: IPinocchioConfig
-    analysis: (IAnalysis|IMessage)[]
+    content: (IAnalysis|IMessage)[]
     paused:boolean
     started:boolean
 }
@@ -18,7 +18,7 @@ export class PinocchioData implements IPinocchioData {
         triggers: [],
         llms: []
     }
-    analysis:(IAnalysis|IMessage)[] = []
+    content:(IAnalysis|IMessage)[] = []
     paused = false
     started = false
 }
