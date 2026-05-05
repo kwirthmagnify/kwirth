@@ -16,9 +16,11 @@ import {
 } from './TopologyData'
 import { ITopologyConfig } from './TopologyConfig'
 import {
+    EInstanceConfigView,
     EInstanceMessageAction, EInstanceMessageFlow,
     EInstanceMessageType,
 } from '@kwirthmagnify/kwirth-common'
+import { ELogSortOrder, ILogConfig, ILogInstanceConfig } from '../log/LogConfig'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -840,8 +842,27 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
             case 'view-path':  applyPathMode(node); break
             case 'details':   selectedRef.current = node.uid; setSelectedNode(node); break
             case 'copy-name': navigator.clipboard.writeText(node.name); break
-            case 'logs':      channelObject.createTab?.({ clusterName: channelObject.clusterName, namespace: node.namespace, group: '', pod: node.name, container: '' } as any, true, { channelId: 'log' }); break
-            case 'shell':     channelObject.createTab?.({ clusterName: channelObject.clusterName, namespace: node.namespace, group: '', pod: node.name, container: '' } as any, true, { channelId: 'ops' }); break
+            case 'logs':      
+                // let logConfig:ILogConfig = {
+                //     startDiagnostics: false,
+                //     follow: true,
+                //     showNames: false,
+                //     maxMessages: 5000,
+                //     maxPerPodMessages: 5000,
+                //     sortOrder: ELogSortOrder.TIME
+                // }
+                // let logInstanceConfig:ILogInstanceConfig = {
+                //     previous: false,
+                //     timestamp: false,
+                //     fromStart: false
+                // }
+                // let logSettings ={
+                //     config: logConfig,
+                //     instanceConfig: logInstanceConfig
+                // }
+                channelObject.createTab?.({clusterName: channelObject.clusterName, namespaces: [node.namespace], controllers: [], pods: [node.name], containers: [], channelId: 'log', view: EInstanceConfigView.POD, name: node.name}, true, undefined)
+                break
+            case 'shell':     channelObject.createTab?.({ clusterName: channelObject.clusterName, namespaces: [node.namespace], controllers: [], pods: [node.name], containers: [], channelId: 'ops', view: EInstanceConfigView.POD, name: node.name }, true, {}); break
             case 'scale-up':  sendCmd('SCALE', { replicas: (node.replicas ?? 0) + 1 }); break
             case 'scale-zero':sendCmd('SCALE', { replicas: 0 }); break
             case 'restart':   sendCmd('RESTART'); break

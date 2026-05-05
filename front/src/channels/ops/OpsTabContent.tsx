@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, IconButton, ListItem, ListItemButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { IOpsData, IScopedObject } from './OpsData'
+import { IOpsData, IScopedObject, OpsData } from './OpsData'
 import { IInstanceConfig, EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType, IOpsMessage, EMetricsConfigMode, EOpsCommand, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { IContentProps } from '../IChannel'
-import { ESwitchKey, IOpsConfig } from './OpsConfig'
+import { ESwitchKey, IOpsConfig, OpsConfig } from './OpsConfig'
 import { v4 as uuid } from 'uuid'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxYesNo } from '../../tools/MsgBox'
 import { Delete, Home, MoreVert, RestartAlt, Terminal } from '@mui/icons-material'
@@ -19,8 +19,8 @@ import { SelectTerminal } from './Terminal/SelectTerminal'
 import { TerminalInstance } from './Terminal/TerminalInstance'
 
 const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
-    let opsData:IOpsData = props.channelObject.data
-    let opsConfig:IOpsConfig = props.channelObject.config
+    let opsData:IOpsData = props.channelObject.data || new OpsData()
+    let opsConfig:IOpsConfig = props.channelObject.config || new OpsConfig()
 
     const theme = useTheme()
     const opsBoxRef = useRef<HTMLDivElement | null>(null)
@@ -357,8 +357,8 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     fromStart: false
                 }
                 let logSettings ={
-                    config:logConfig,
-                    instanceConfig:logInstanceConfig
+                    config: logConfig,
+                    instanceConfig: logInstanceConfig
                 }
                 if (props.channelObject.createTab) props.channelObject.createTab(logResource, true, logSettings)
                 break

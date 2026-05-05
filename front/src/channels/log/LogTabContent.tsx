@@ -1,13 +1,13 @@
-import { ILogLine, ILogData } from './LogData'
+import { ILogLine, ILogData, LogData } from './LogData'
 import { Box, Card, CardContent, CardHeader, InputAdornment, Stack, TextField, Typography, useTheme } from '@mui/material'
 import { IContentProps } from '../IChannel'
 import { useEffect, useRef, useState } from 'react'
 import { Error, Warning } from '@mui/icons-material'
-import { ILogConfig } from './LogConfig'
+import { ILogConfig, LogConfig } from './LogConfig'
 
 const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
-    let logData:ILogData = props.channelObject.data
-    let logConfig:ILogConfig = props.channelObject.config
+    let logData:ILogData = props.channelObject.data || new LogData()
+    let logConfig:ILogConfig = props.channelObject.config || new LogConfig()
     const theme = useTheme()
 
     const logBoxRef = useRef<HTMLDivElement | null>(null)

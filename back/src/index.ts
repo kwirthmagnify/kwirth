@@ -369,22 +369,6 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             logInfo(ELogComponent.CORE, 'SA Token will not be created under isElectron or isDocker contexts')
         }
         else {
-            // let saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
-            // await saToken.createToken('kwirth-sa', kwirthData.namespace)
-            // let token:string|undefined = undefined
-            // let retries = 3
-            // while (!token && retries-- > 0) {
-            //     await new Promise((resolve) => setTimeout(resolve, 1000))
-            //     token = await saToken.extractToken('kwirth-sa', kwirthData.namespace)
-            // }
-            // if (token) {
-            //     logInfo(ELogComponent.CORE, 'Got token...')
-            //     clusterInfo.saToken = saToken
-            //     clusterInfo.token = token
-            // }
-            // else {
-            //     logInfo(ELogComponent.CORE, 'No SA Token, no metrics will be available.')
-            // }
             let saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
             let token = await saToken.createToken('kwirth-sa', kwirthData.namespace)
             if (token) {
@@ -758,7 +742,7 @@ const getRequestedValidatedScopedPods = async (ri:IRunningInstance, instanceConf
 const processReconnect = async (webSocket: WebSocket, instanceMessage: IInstanceMessage, localChannels:Map<string,IChannel>) => {
     logInfo(ELogComponent.CORE, `Trying to reconnect instance '${instanceMessage.instance}' on channel ${instanceMessage.channel}`)
     for (let channel of localChannels.values()) {
-        logInfo(ELogComponent.CORE, 'Review channel for reconnect:' + channel.getChannelData().id)
+        logInfo(ELogComponent.CORE, 'Review channel for reconnect: ' + channel.getChannelData().id)
         if (channel.containsInstance(instanceMessage.instance)) {
             logInfo(ELogComponent.CORE, 'Found channel ' + channel.getChannelData().id)
             let updated = channel.updateConnection(webSocket, instanceMessage.instance)
@@ -1448,8 +1432,12 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) logError(ELogComponent.CORE, '❌ An SA Token could not be obtained, so metrics will not be available.')
         metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
         if (metricsRequired) {
-            localClusterInfo.metrics = new MetricsTools(localClusterInfo, localKwirthData.inCluster)
+            localClusterInfo.metrics = new MetricsTools(localClusterInfo, localKwirthData)
             localClusterInfo.metricsInterval = envMetricsInterval // we set cluster metrics interval based on default metrics interval
+            
+            console.log('localKwirthData.inCluster, localKwirthData.isElectron************************************')
+            console.log(localKwirthData.inCluster, localKwirthData.isElectron)
+
             await localClusterInfo.metrics.startMetrics()
             logInfo(ELogComponent.CORE, `  vCPU:        ${localClusterInfo.vcpus}`)
             logInfo(ELogComponent.CORE, `  Memory (GB): ${localClusterInfo.memory/1024/1024/1024}`)

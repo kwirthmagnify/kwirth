@@ -337,7 +337,6 @@ class PinocchioChannel implements IChannel {
                 break
             case 'newmetrics':
                 let newmetricsEvent = event as INewMetricsCluster
-                logTrace('Received metrics')
                 this.clusterMetrics.push(newmetricsEvent)
                 if (this.clusterMetrics.length>100) this.clusterMetrics.shift()
                 break

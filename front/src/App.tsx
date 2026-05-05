@@ -374,6 +374,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     const getClusters = async () => {
         // get current cluster
+        console.log('gc')
         try {
             let srcCluster = await loadSourceCluster(backendUrl, accessString)
             if (!srcCluster || !srcCluster.kwirthData) {
@@ -382,22 +383,28 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }))
                 return
             }
+            console.log('cv')
             if (versionGreaterThan(srcCluster.kwirthData.version, srcCluster.kwirthData.lastVersion)) {
                 setInitialMessage(`You have Kwirth version ${srcCluster.kwirthData.version} installed. A new version is available (${srcCluster.kwirthData.version}), it is recommended to update your Kwirth deployment. If you're a Kwirth admin and you're using 'latest' tag, you can update Kwirth from the main menu.`)
             }
 
             // get previously configured clusters
             let clusterList:Cluster[]=[]
-            if (!props.isElectron) {
+            console.log(props.isElectron)
+            if (props.isElectron) {
+            }
+            else {
                 let response = await fetch (`${backendUrl}/store/${user?.id}/clusters/list`, addGetAuthorization(accessString))
+                console.log(response)
                 if (response.status===200) {
                     clusterList = JSON.parse (await response.json())
                     clusterList = clusterList.filter (c => c.name !== srcCluster!.name)
                 }
             }
 
-            for (let cluster of clusterList)
+            for (let cluster of clusterList) {
                 readClusterInfo(cluster, notify).then( () => { setChannelMessageAction({action : EChannelRefreshAction.REFRESH}) })
+            }
             clusterList.push(srcCluster)
             setClusters(clusterList)
             setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
@@ -477,7 +484,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
         else {
             console.log(`Error, invalid channel: `, selection.channelId)
-            setMsgBox(MsgBoxOkError('Add resource', 'Channel is not supported', setMsgBox))
+            setMsgBox(MsgBoxOkError('Add resource', `Channel '${selection.channelId}' is not supported`, setMsgBox))
         }
     }
 
@@ -604,14 +611,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
             }
         }
-        newTab.channelObject.createTab = (xresource:IResourceSelected, sstart:boolean, ssettings:any) => {
-            onResourceSelectorAdd(xresource, sstart, ssettings)
+        newTab.channelObject.createTab = (resource:IResourceSelected, start:boolean, settings:any) => {
+            onResourceSelectorAdd(resource, start, settings)
         }
         startSocket(newTab, cluster, () => {
             console.log(`WebSocket connected: ${newTab.ws?.url}`, new Date().toISOString())
             setKeepAlive(newTab)
             if (newTab.channel.requirements.webSocket) newTab.channelObject.webSocket = newTab.ws
-            if (newTab && (newTab.channelStarted || start)) {
+            if (newTab && settings && (newTab.channelStarted || start)) {
                 newTab.channelObject.config = settings.config
                 newTab.channelObject.instanceConfig = settings.instanceConfig
                 startTabChannel(newTab, cluster)
@@ -1613,7 +1620,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     <AppBar position='sticky' elevation={0} sx={{ zIndex: 1300, height:'64px'}}>
                     <Toolbar>
                         <IconButton size='large' edge='start' color='inherit' sx={{ mr: 1 }} onClick={() => setMenuDrawerOpen(prev => !prev)}><Menu /></IconButton>
-                        <Typography sx={{ ml:1,flexGrow: 1 }}>KWirth - {clusters.find(c => c.name === selectedClusterName)?.clusterInfo?.name}</Typography>
+                        <Typography sx={{ ml:1,flexGrow: 1 }}>Kwirth - {clusters.find(c => c.name === selectedClusterName)?.clusterInfo?.name}</Typography>
                         <Tooltip title={<div style={{textAlign:'center'}}>{currentWorkspaceName}<br/><br/>{currentWorkspaceDescription}</div>} sx={{ mr:2}} slotProps={{popper: {modifiers: [{name: 'offset', options: {offset: [0, -12]}}]}}}>
                             <Typography variant='h6' component='div' sx={{mr:2, cursor:'default'}}>{currentWorkspaceName}</Typography>
                         </Tooltip>

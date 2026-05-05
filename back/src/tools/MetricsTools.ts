@@ -1,5 +1,5 @@
 import { ClusterInfo, INodeInfo } from "../model/ClusterInfo"
-import { EInstanceConfigView } from "@kwirthmagnify/kwirth-common"
+import { EInstanceConfigView, KwirthData } from "@kwirthmagnify/kwirth-common"
 import { INodeMetrics } from "../model/INodeMetrics"
 import { ELogComponent, logError, logInfo, logWarning } from "./Logging"
 
@@ -21,12 +21,12 @@ export class MetricsTools {
     private clusterInfo:ClusterInfo
     private metricsList: Map<string,MetricDefinition>
     private loadingClusterMetrics: boolean = false
-    private inCluster: boolean = true
+    private kwirthData:KwirthData
 
-    constructor (clusterInfo:ClusterInfo, inCluster:boolean) {
+    constructor (clusterInfo:ClusterInfo, kwirthData:KwirthData) {
         this.clusterInfo = clusterInfo
         this.metricsList = new Map()
-        this.inCluster = inCluster
+        this.kwirthData = kwirthData
     }
 
     /*
@@ -59,7 +59,7 @@ export class MetricsTools {
 
     */
 
-    // obteians the list of metrics available (its names, types and descriptions)
+    // obtain the list of metrics available (its names, types and descriptions)
     public getMetricsList() {
         return Array.from(this.metricsList.keys()).map ( metricName => { return { metric:metricName, ...this.metricsList.get(metricName)} })
     }
@@ -153,55 +153,15 @@ export class MetricsTools {
 
     // read metric raw values at a specific cluster node (invokes kubelet's cAdvisor)
     public readCAdvisorMetrics = async (node:INodeInfo): Promise<string> => {
+        // +++ use same invocation model as readcadvisor
         let text=''
         
-        if (!this.inCluster) {
-            // electronaccess with kubeconfig credentials
-            let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
-            const url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy/metrics/cadvisor`
-            const fetchOptions: any = { method: 'GET' }
-            
-            await this.clusterInfo.kubeConfig.applyToFetchOptions(fetchOptions)
-
-            try {
-                const response = await fetch(url, fetchOptions)
-                if (response.ok)
-                    text = await response.text()
-                else
-                    logError(ELogComponent.CHANNEL, `Error reading inElectron metrics ${response.status}: ${response.statusText}`)
-            }
-            catch (error: any) {
-                logError(ELogComponent.CHANNEL, `Error reading cAdvisor metrics from inElectron on node ${node.kubernetesNode.metadata?.name}:` + error.message)
-            }
-        }
-        else if (this.inCluster) {
-            // internal access without kubeconfig
-            try {
-                const response = await fetch (`https://${node.ip}:10250/metrics/cadvisor`, { headers: { Authorization: 'Bearer ' + this.clusterInfo.token} })
-                if (!response.ok) throw new Error(`Error getting kubelet metrics ${response.status}: ${response.statusText}`)
-                text = await response.text()
-            }
-            catch (error:any) {
-                logError(ELogComponent.CHANNEL, `Error reading cAdvisor inCluster metrics at node ${node.ip}` + error.stack)
-            }
-        }
-        // else {
-        //     // external access without kubeconfig
-        //     try {
-        //         let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
-        //         const url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy/metrics/cadvisor`
-        //         const fetchOptions: any = { method: 'GET', headers: { Authorization: 'Bearer ' + this.clusterInfo.token} }
-        //         const response = await fetch(url, fetchOptions)
-        //         if (response.ok) 
-        //             text = await response.text()
-        //         else
-        //             logWarning(ELogComponent.CHANNEL, `Cannot get kubelet metrics ${response.status}: ${response.statusText}`)
-        //     }
-        //     catch (err) {
-        //         logError(ELogComponent.CHANNEL, `Error obtaining kubelet metrics`)
-        //         logError(ELogComponent.CHANNEL, err)
-        //     }
-        // }
+        let { url, options } = await this.configCall(node, '/metrics/cadvisor')
+        const response = await fetch(url, options)
+        if (response.ok)
+            text = await response.text()
+        else
+            logError(ELogComponent.CHANNEL, `Error reading outCluster inElectron metrics ${response.status}: ${response.statusText}`)
 
         // add kwirth container metrics
         text += '# HELP kwirth_container_memory_percentage Percentage of memory used by object from the whole cluster\n'
@@ -247,32 +207,37 @@ export class MetricsTools {
         return text
     }
 
-    public readCAdvisorSummary = async (node:INodeInfo): Promise<any> => {
-        if (!this.inCluster) {
-            let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
-            const url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy/stats/summary`
-            const fetchOptions: any = { method: 'GET' }
-
-            // we add kubeconfig credentials
-            try {
-                await this.clusterInfo.kubeConfig.applyToFetchOptions(fetchOptions)
-                const resp = await fetch(url, fetchOptions)
-                return await resp.json()
-            }
-            catch {
-                logError(ELogComponent.CHANNEL, 'Error reading cadvisor')
-            }
+    configCall = async (node:INodeInfo, path:string) : Promise<{url:string, options:any}> => {
+        // path: /metrics/cadvisor
+        let url, options
+        if (this.kwirthData.inCluster) {
+            // inside URL plus token
+            url = `https://${node.ip}:10250${path}}`
+            options = { headers: { Authorization: 'Bearer ' + this.clusterInfo.token} }
         }
         else {
-            try {
-                let resp = await fetch (`https://${node.ip}:10250/stats/summary`, { headers: { Authorization: 'Bearer ' + this.clusterInfo.token} })
-                return await resp.json()
+            if (this.kwirthData.isElectron) {
+                // outside URL plus kubeconfig creds
+                let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
+                url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy${path}`
+                options = { method: 'GET' }
+                await this.clusterInfo.kubeConfig.applyToFetchOptions(options)
             }
-            catch (error:any) {
-                logError(ELogComponent.CHANNEL, `Error reading cAdvisor summary at node ${node.ip} ` + error.stack)
+            else {
+                // outside URL plus token
+                let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
+                url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy${path}`
+                options = { headers: { Authorization: 'Bearer ' + this.clusterInfo.token} }
+                //options ={}
             }
         }
-        return {}
+        return { url, options}
+    }
+
+    public readCAdvisorSummary = async (node:INodeInfo): Promise<any> => {
+        let { url, options } = await this.configCall(node, '/stats/summary')
+        const resp = await fetch(url, options)
+        return await resp.json()
     }
 
     // reads node metrics and loads 'metricValues' with parsed and formated data
@@ -503,7 +468,7 @@ export class MetricsTools {
         this.loadingClusterMetrics = false
     }
 
-    // get a spsecific value for a concrete metric
+    // get a specific value for a concrete metric
     public extractContainerMetrics = (clusterInfo:ClusterInfo, podMetricsSet:Map<string,{value: number, timestamp:number}>, containerMetricsSet:Map<string,{value: number, timestamp:number}>, requestedMetricName:string, view:EInstanceConfigView, node:INodeInfo, asset:AssetData): {value:number, timestamp:number|undefined }=> {
         if (view === EInstanceConfigView.CONTAINER) {
             var metricName = asset.podNamespace + '/' + asset.podName + '/' + asset.containerName + '/' + requestedMetricName
@@ -593,5 +558,4 @@ export class MetricsTools {
             }
         }
     }
-
 }
