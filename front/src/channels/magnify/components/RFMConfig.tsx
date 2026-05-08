@@ -1,5 +1,5 @@
 import { IFileObject, ISpace, ISpaceMenuItem } from '@jfvilas/react-file-manager'
-import { Add, AutoFixHigh, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@mui/icons-material'
+import { AccountTree, Add, AutoFixHigh, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@mui/icons-material'
 import { Cluster, Config, Customize, Kubernetes, Network, Pod, Security, Settings, Storage } from '../icons/Icons'
 
 const spaces = new Map<string, ISpace>()
@@ -29,6 +29,13 @@ const LMFT:ISpaceMenuItem[] = [
         name:'trivy',
         icon: <VerifiedUser fontSize='small'/>,
         text: 'Trivy',
+        multi: true,
+        permission: true
+    },
+    {
+        name:'topology',
+        icon: <AccountTree fontSize='small'/>,
+        text: 'Topology',
         multi: true,
         permission: true
     },
@@ -449,9 +456,15 @@ spaces.set('classClusterOverview',
                 icon: <AutoFixHigh fontSize='small'/>,
                 text: 'Pinocchio',
                 permission: true
+            },
+            {
+                name:'topology',
+                icon: <AccountTree fontSize='small'/>,
+                text: 'Topology',
+                permission: true
             }
         ]
-    }    
+    }
 )
 
 // Network
@@ -1685,6 +1698,13 @@ spaces.set('Namespace',
                 permission: true
             },
             {
+                name:'topology',
+                icon: <AccountTree fontSize='small'/>,
+                text: 'Topology',
+                multi: true,
+                permission: true
+            },
+            {
                 name: 'edit',
                 icon: <Edit fontSize='small'/>,
                 text: 'Edit',
@@ -2075,6 +2095,13 @@ spaces.set('Pod',
                 name:'trivy',
                 icon: <VerifiedUser fontSize='small'/>,
                 text: 'Trivy',
+                multi: true,
+                permission: true
+            },
+            {
+                name:'topology',
+                icon: <AccountTree fontSize='small'/>,
+                text: 'Topology',
                 multi: true,
                 permission: true
             },

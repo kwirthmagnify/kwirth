@@ -120,7 +120,7 @@ export class TopologyChannel implements IChannel {
             endpoints:     [],
             websocket:     false,
             cluster:       true,
-            resourced:     false,
+            resourced:     true,
         }
     }
 

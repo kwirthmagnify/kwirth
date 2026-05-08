@@ -25,6 +25,8 @@ import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
 import { IPinocchioInstanceConfig } from '../../pinocchio/PinocchioConfig'
 import { IPinocchioData } from '../../pinocchio/PinocchioData'
+import { ITopologyInstanceConfig, TopologyConfig } from '../../topology/TopologyConfig'
+import { ITopologyData, TopologyData } from '../../topology/TopologyData'
 import { TerminalManager } from '../../ops/Terminal/TerminalManager'
 
 export interface IContentExternalOptions {
@@ -147,6 +149,10 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 case 'pinocchio':
                     contentExternalData.formConfig = {}
                     setPinocchioConfig(contentExternalData.content)
+                    break
+                case 'topology':
+                    contentExternalData.formConfig = {}
+                    setTopologyConfig(contentExternalData.content)
                     break
             }
         }
@@ -455,6 +461,24 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
         c.externalChannelObject!.instanceConfig = pinocchioInstanceConfig
     }
 
+    const setTopologyConfig = (c: IContentExternalObject) => {
+        const files = props.selectedFiles ?? []
+        let namespaces: string[]
+        if (files.length === 0 || contentExternalData.contentView === EInstanceConfigView.CLUSTER) {
+            namespaces = ['*all']
+        } else if (contentExternalData.contentView === EInstanceConfigView.NAMESPACE) {
+            namespaces = files.map(f => f.data.origin.metadata.name as string)
+        } else {
+            namespaces = Array.from(new Set(files.map(f => f.data.origin.metadata.namespace as string).filter(Boolean)))
+            if (namespaces.length === 0) namespaces = ['*all']
+        }
+        const topologyInstanceConfig: ITopologyInstanceConfig = { namespaces }
+        const topologyData: ITopologyData = new TopologyData()
+        c.externalChannelObject!.data = topologyData
+        c.externalChannelObject!.config = new TopologyConfig()
+        c.externalChannelObject!.instanceConfig = topologyInstanceConfig
+    }
+
     const play = () => {
         if (!contentExternalData.content || !contentExternalData.content.ws || !contentExternalData.content.externalChannel || !contentExternalData.content.externalChannelObject) return
 
@@ -609,6 +633,13 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                     <Typography variant='body2'>This is real WIP.</Typography>
                 </>
                 break
+            case 'topology':
+                content = <>
+                    <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Topology</Typography>
+                    <Divider/>
+                    <Typography variant='body2'>Topology shows a 3D graph of Kubernetes resources and their relationships. You can launch it cluster-wide or scoped to specific namespaces selected in Magnify.</Typography>
+                </>
+                break
         }
         return <Popover
                 anchorEl={anchorHelp}
@@ -688,6 +719,8 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 trivyInstanceConfig.aggregate = values.aggregate
                 break
             case 'pinocchio':
+                break
+            case 'topology':
                 break
         }
     }

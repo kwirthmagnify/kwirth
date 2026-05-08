@@ -5,7 +5,8 @@
       "Bash(xargs grep -l \"router\\\\|app\\\\.\")",
       "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\" -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(grep -v \"//\")"
+      "Bash(grep -v \"//\")",
+      "Bash(xargs grep -l \"topology\")"
     ]
   }
 }

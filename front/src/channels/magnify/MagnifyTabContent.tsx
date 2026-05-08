@@ -440,7 +440,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     onApply: onContentDetailsApply,
                     onAction: onContentDetailsAction,
                     onLink: onMagnifyObjectDetailsLink,
-                    containerSelectionOptions: new Map([['log',2],['metrics',2],['fileman',2],['trivy',0],['ops',1],['evict',0],['cordon',0],['uncordon',0],['drain',0], ['scale',0], ['restart',0], ['trigger',0], ['suspend',0], ['resume',0]  ])
+                    containerSelectionOptions: new Map([['log',2],['metrics',2],['fileman',2],['trivy',0],['topology',0],['ops',1],['evict',0],['cordon',0],['uncordon',0],['drain',0], ['scale',0], ['restart',0], ['trigger',0], ['suspend',0], ['resume',0]  ])
                 } satisfies IDetailsData,
                 selectedFiles: [f[0]],
                 onWindowChange: onWindowChange,
@@ -558,6 +558,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         let height = 600
         if (channel==='trivy') {width = window.innerWidth * 0.9; height = window.innerHeight * 0.9}
         if (channel==='pinocchio') {width = window.innerWidth * 0.9; height = window.innerHeight * 0.8}
+        if (channel==='topology') {width = window.innerWidth * 0.9; height = window.innerHeight * 0.9}
 
         let win:IContentWindow = {
             id: 'external-' + channel + '-' + uuid(),
@@ -565,7 +566,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             visible: true,
             atTop: false,
             atFront: true,
-            title: files.length>0 ? files[0].data.origin.metadata.name + (container || '') : (channel==='pinocchio'? 'Pinocchio' : 'NoTitle'),
+            title: files.length>0 ? files[0].data.origin.metadata.name + (container || '') : (channel==='pinocchio'? 'Pinocchio' : channel==='topology'? 'Topology' : 'NoTitle'),
             isMaximized: false,
             x: 100,
             y: 50,
@@ -668,6 +669,9 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setLeftItem(spcClassCluster, 'pinocchio', (p:string[]) => {
             launchObjectExternal('pinocchio', [], EInstanceConfigView.CLUSTER, undefined, undefined)
         })
+        setLeftItem(spcClassCluster, 'topology', (p:string[]) => {
+            launchObjectExternal('topology', [], EInstanceConfigView.CLUSTER, undefined, undefined)
+        })
         // Node
         let spcNode = spaces.get('Node')!
         setLeftItem(spcNode,'shell', launchNodeShell)
@@ -677,7 +681,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
         // Namespace
         let spcNamespace = spaces.get('Namespace')!
-        ;['log','metrics', 'trivy', 'fileman'].map(channelId => 
+        ;['log','metrics', 'trivy', 'fileman', 'topology'].map(channelId =>
             setLeftItem(spcNamespace,channelId, (p:string[]) => {
                 let f = magnifyData.files.filter(f => p.includes(f.path))
                 launchObjectExternal(channelId, f, EInstanceConfigView.NAMESPACE, undefined, undefined)
@@ -739,6 +743,10 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setLeftItem(spcPod,'ops', (p:string[], currentTarget:Element) => podSingleAction('ops', p, currentTarget))
         setLeftItem(spcPod,'fileman', (p:string[], currentTarget:Element) => podGroupAction('fileman', p, currentTarget))
         setLeftItem(spcPod,'trivy', (p:string[], currentTarget:Element) => podGroupAction('trivy', p, currentTarget))
+        setLeftItem(spcPod,'topology', (p:string[]) => {
+            let f = magnifyData.files.filter(x => p.includes(x.path))
+            launchObjectExternal('topology', f, EInstanceConfigView.POD, undefined, undefined)
+        })
 
         setLeftItem(spcPod,'evict', launchPodEvict)
     }
@@ -763,12 +771,14 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setLeftItem(spcDeployment,'metrics', (p) => launchControllerChannel(p,'metrics'))
         setLeftItem(spcDeployment,'fileman', (p) => launchControllerChannel(p,'fileman'))
         setLeftItem(spcDeployment,'trivy', (p) => launchControllerChannel(p,'trivy'))
+        setLeftItem(spcDeployment,'topology', (p) => launchControllerChannel(p,'topology'))
 
         // DaemonSet
         let spcDaemonSet = spaces.get('DaemonSet')!
         setLeftItem(spcDaemonSet,'restart', launchControllerRestart)
         setLeftItem(spcDaemonSet,'log', (p) => launchControllerChannel(p,'log'))
         setLeftItem(spcDaemonSet,'metrics', (p) => launchControllerChannel(p,'metrics'))
+        setLeftItem(spcDaemonSet,'topology', (p) => launchControllerChannel(p,'topology'))
 
         // ReplicaSet
         let spcReplicaSet = spaces.get('ReplicaSet')!
@@ -777,6 +787,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setLeftItem(spcReplicaSet,'metrics', (p) => launchControllerChannel(p,'metrics'))
         setLeftItem(spcReplicaSet,'fileman', (p) => launchControllerChannel(p,'fileman'))
         setLeftItem(spcReplicaSet,'trivy', (p) => launchControllerChannel(p,'trivy'))
+        setLeftItem(spcReplicaSet,'topology', (p) => launchControllerChannel(p,'topology'))
 
         // ReplicationController
         let spcReplicationController = spaces.get('ReplicationController')!
@@ -786,6 +797,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setLeftItem(spcReplicationController,'metrics', (p) => launchControllerChannel(p,'metrics'))
         setLeftItem(spcReplicationController,'fileman', (p) => launchControllerChannel(p,'fileman'))
         setLeftItem(spcReplicationController,'trivy', (p) => launchControllerChannel(p,'trivy'))
+        setLeftItem(spcReplicationController,'topology', (p) => launchControllerChannel(p,'topology'))
 
         // StatefulSet
         let spcStatefulSet = spaces.get('StatefulSet')!
@@ -795,12 +807,14 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setLeftItem(spcStatefulSet,'metrics', (p) => launchControllerChannel(p,'metrics'))
         setLeftItem(spcStatefulSet,'fileman', (p) => launchControllerChannel(p,'fileman'))
         setLeftItem(spcStatefulSet,'trivy', (p) => launchControllerChannel(p,'trivy'))
+        setLeftItem(spcStatefulSet,'topology', (p) => launchControllerChannel(p,'topology'))
 
         let spcJob = spaces.get('Job')!
         setLeftItem(spcJob,'log', (p) => launchControllerChannel(p,'log'))
         setLeftItem(spcJob,'metrics', (p) => launchControllerChannel(p,'metrics'))
         setLeftItem(spcJob,'fileman', (p) => launchControllerChannel(p,'fileman'))
         setLeftItem(spcJob,'trivy', (p) => launchControllerChannel(p,'trivy'))
+        setLeftItem(spcJob,'topology', (p) => launchControllerChannel(p,'topology'))
         
         let spcCronJob = spaces.get('CronJob')!
         setLeftItem(spcCronJob,'trigger', launchCronJobTrigger)
