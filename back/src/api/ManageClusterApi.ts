@@ -5,7 +5,7 @@ import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 
 export class ManageClusterApi {
-    public route = express.Router()
+    router = express.Router()
     coreApi:CoreV1Api
     appsApi:AppsV1Api
 
@@ -13,7 +13,7 @@ export class ManageClusterApi {
         this.coreApi = coreApi
         this.appsApi = appsApi
 
-        this.route.route('/find')
+        this.router.route('/find')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
                 next()

@@ -18,7 +18,7 @@ const ClusterMetrics: React.FC<IClusterMetricsProps> = (props:IClusterMetricsPro
                 <XAxis dataKey='timestamp' fontSize={8}/>
                 <YAxis fontSize={8}/>
                 <Legend/>
-                <Line name={'% CPU'} type='monotone' dataKey={'cpu'} dot={false}/>
+                <Line name={'% CPU'} type='monotone' dataKey={'cpuUsage'} dot={false}/>
             </LineChart>
         </ResponsiveContainer>
 
@@ -28,7 +28,7 @@ const ClusterMetrics: React.FC<IClusterMetricsProps> = (props:IClusterMetricsPro
                 <XAxis dataKey='timestamp' fontSize={8}/>
                 <YAxis fontSize={8}/>
                 <Legend/>
-                <Line name={'% Memory'} type='monotone' dataKey={'memory'} dot={false}/>
+                <Line name={'% Memory'} type='monotone' dataKey={'memoryUsage'} dot={false}/>
             </LineChart>
         </ResponsiveContainer>
         <ResponsiveContainer>

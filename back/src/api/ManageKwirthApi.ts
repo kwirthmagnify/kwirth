@@ -5,7 +5,7 @@ import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 
 export class ManageKwirthApi {
-    public route = express.Router()
+    public router = express.Router()
     coreApi:CoreV1Api
     appsApi:AppsV1Api
     batchApi:BatchV1Api
@@ -16,7 +16,7 @@ export class ManageKwirthApi {
         this.batchApi=batchApi
 
         // restart kwirth
-        this.route.route('/restart')
+        this.router.route('/restart')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
                 next()

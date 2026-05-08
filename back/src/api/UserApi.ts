@@ -7,7 +7,7 @@ import { ISecrets } from '../tools/ISecrets'
 export class UserApi {
     secrets: ISecrets
     static semaphore: Semaphore = new Semaphore(1)
-    public route = express.Router()
+    public router = express.Router()
 
     readUsersSecret = async (secrets: ISecrets) => {
         let users:{ [username:string]:string }
@@ -29,7 +29,7 @@ export class UserApi {
     constructor (secrets: ISecrets, apiKeyApi: ApiKeyApi) {
         this.secrets=secrets
 
-        this.route.route('/')
+        this.router.route('/')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
                 next()
@@ -70,7 +70,7 @@ export class UserApi {
                 })
             })
 
-      this.route.route('/:user')
+      this.router.route('/:user')
         .all( async (req:Request,res:Response, next) => {
             if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
             next()

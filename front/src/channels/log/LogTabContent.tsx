@@ -4,6 +4,8 @@ import { IContentProps } from '../IChannel'
 import { useEffect, useRef, useState } from 'react'
 import { Error, Warning } from '@mui/icons-material'
 import { ILogConfig, LogConfig } from './LogConfig'
+import AnsiToHtml from 'ansi-to-html'
+const ansiConverter = new AnsiToHtml({ escapeXML: true })
 
 const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let logData:ILogData = props.channelObject.data || new LogData()
@@ -37,7 +39,11 @@ const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     if (!logData) return <pre></pre>
 
     const formatLogLine = (logLine:ILogLine) => {
-        if (!logLine.pod) return <>{logLine.text+'\n'}</>
+        //if (!logLine.pod) return <>{logLine.text+'\n'}</>
+        if (!logLine.pod) {
+            const html = ansiConverter.toHtml(logLine.text)
+            return <span dangerouslySetInnerHTML={{ __html: html + '\n' }} />
+        }
 
         if (filter!=='') {
             if (filterCasing) {
@@ -66,13 +72,12 @@ const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             }
         }
 
-        let podPrefix = <></>
-        let containerPrefix = <></>
-        if (logConfig.showNames) {
-            podPrefix  = <span style={{color:"green"}}>{logLine.pod+' '}</span>
-            containerPrefix = <span style={{color:"blue"}}>{logLine.container+' '}</span>
-        }
-        return <>{podPrefix}{containerPrefix}{logLine.text+'\n'}</>
+        const textHtml = ansiConverter.toHtml(logLine.text)
+        return <>
+            {logConfig.showNames && <span style={{color:"green"}}>{logLine.pod+' '}</span>}
+            {logConfig.showNames && <span style={{color:"blue"}}>{logLine.container+' '}</span>}
+            <span dangerouslySetInnerHTML={{ __html: textHtml + '\n' }} />
+        </>
     }
 
     const onChangeFilter = (event: any) => {

@@ -43,11 +43,14 @@ export class MetricsChannel implements IChannel {
         switch (metricsMessage.type) {
             case EInstanceMessageType.DATA:
                 if (metricsMessage.timestamp===0) {  // initial metrics values
-                    metricsMessage.timestamp = Date.now()
-                    if (metricsData.assetMetricsValues.length===0)
+                    if (metricsData.assetMetricsValues.length===0) {
+                        metricsMessage.timestamp = Date.now()
                         metricsData.assetMetricsValues.push(metricsMessage)
-                    else
+                    }
+                    else {
+                        metricsMessage.timestamp = metricsData.assetMetricsValues[0].timestamp
                         metricsData.assetMetricsValues[0] = metricsMessage
+                    }
                 }
                 else {
                     metricsData.assetMetricsValues.push(metricsMessage)

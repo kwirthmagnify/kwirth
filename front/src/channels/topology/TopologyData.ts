@@ -8,6 +8,7 @@ export enum ETopologyNodeKind {
     JOB                    = 'Job',
     CRONJOB                = 'CronJob',
     POD                    = 'Pod',
+    CONTAINER              = 'Container',
     PERSISTENTVOLUMECLAIM  = 'PersistentVolumeClaim',
 }
 
@@ -46,17 +47,33 @@ export interface ITopologyNode {
     accessModes?:  string[]
     edges?:        ITopologyEdge[]
     ownerUids?:    string[]
+    containers?:   string[]  // POD: list of container names
+    podName?:      string    // CONTAINER: parent pod name
     // 3-D position — computed by layout engine
     x: number
     y: number
     z: number
 }
 
+export interface ICanvasState {
+    theta:            number
+    phi:              number
+    radius:           number
+    tx:               number
+    ty:               number
+    tz:               number
+    hiddenKinds:      ETopologyNodeKind[]
+    hiddenNamespaces: string[]
+    selectedUid?:     string
+    pathModeUid?:     string
+}
+
 export interface ITopologyData {
-    nodes:       Map<string, ITopologyNode>
-    loading:     boolean
-    error:       string | undefined
-    lastUpdated: number
+    nodes:        Map<string, ITopologyNode>
+    loading:      boolean
+    error:        string | undefined
+    lastUpdated:  number
+    canvasState?: ICanvasState
 }
 
 export class TopologyData implements ITopologyData {

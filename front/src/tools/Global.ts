@@ -10,6 +10,20 @@ export enum ENotifyLevel {
     SUCCESS='success'
 }
 
+// export const getMetricsNames = async (cluster:Cluster) => {
+//     try {
+//         console.log(`Receiving metrics for cluster ${cluster.name}`)
+//         cluster.metricsList=new Map()
+//         var response = await fetch (`${cluster.url}/metrics`, addGetAuthorization(cluster.accessString))
+//         var json=await response.json() as MetricDefinition[]
+//         json.map( jsonMetric => cluster.metricsList.set(jsonMetric.metric, jsonMetric))
+//         console.log(`Metrics for cluster ${cluster.name} have been received (${Array.from(cluster.metricsList.keys()).length})`)
+//     }
+//     catch (err) {
+//         console.log(err)
+//         console.log('Error obtaining metrics list')
+//     }
+// }
 export const getMetricsNames = async (cluster:Cluster) => {
     try {
         console.log(`Receiving metrics for cluster ${cluster.name}`)

@@ -154,7 +154,7 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
 
     const renderLabel = (data:any) => {
         var values:any[] = props.series.map (s => s[data.index])
-        var total:number = values.reduce((acc,value) => acc+value.value, 0)
+        var total:number = values.reduce((acc,value) => acc + (value? value.value:0), 0)  //+++ sometimes value is undefined
         return <text x={data.x + data.width/3.5} y={data.y-10}>{total.toPrecision(3).replace(/0+$/, '').replace(/\.+$/, '')}</text>
     }
 

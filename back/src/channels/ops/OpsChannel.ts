@@ -59,7 +59,8 @@ class OpsChannel implements IChannel {
             sources: [ EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: true,
-            cluster: false
+            cluster: false,
+            resourced: true
         }
     }
 

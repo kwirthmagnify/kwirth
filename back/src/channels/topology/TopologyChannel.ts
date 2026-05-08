@@ -47,11 +47,12 @@ interface ITopologyWsMessage {
     accessModes?:   string[]
     edges?:         Array<{ targetUid: string; label?: string }>
     ownerUids?:     string[]
+    containers?:    string[]
 }
 
 interface ITopologyInstance {
     instanceId: string
-    namespace:  string
+    namespaces: string[]   // empty or ['*all'] means all namespaces
     paused:     boolean
 }
 
@@ -119,6 +120,7 @@ export class TopologyChannel implements IChannel {
             endpoints:     [],
             websocket:     false,
             cluster:       true,
+            resourced:     false,
         }
     }
 
@@ -162,7 +164,7 @@ export class TopologyChannel implements IChannel {
             for (const inst of entry.instances) {
                 if (inst.paused) continue
                 const ns = resource.metadata?.namespace
-                if (inst.namespace !== '*all' && inst.namespace !== ns) continue
+                if (!inst.namespaces.includes('*all') && ns && !inst.namespaces.includes(ns)) continue
                 this.emit(entry.ws, inst, mapped as ITopologyWsMessage, type)
             }
         }
@@ -202,8 +204,9 @@ export class TopologyChannel implements IChannel {
                 entry = this.webSockets[this.webSockets.length - 1]
             }
             if (entry.instances.some(i => i.instanceId === instanceConfig.instance)) return true
-            const namespace = (instanceConfig.data as any)?.namespace ?? '*all'
-            const inst: ITopologyInstance = { instanceId: instanceConfig.instance, namespace, paused: false }
+            const raw = (instanceConfig.data as any)?.namespaces
+            const namespaces: string[] = Array.isArray(raw) && raw.length > 0 ? raw : ['*all']
+            const inst: ITopologyInstance = { instanceId: instanceConfig.instance, namespaces, paused: false }
             entry.instances.push(inst)
             await this.sendSnapshot(ws, inst, instanceConfig)
         } catch (err: any) {
@@ -256,39 +259,40 @@ export class TopologyChannel implements IChannel {
         entry.instances = entry.instances.filter(i => i.instanceId !== instanceId)
     }
 
-    private async sendSnapshot(ws: WebSocket, inst: ITopologyInstance, instanceConfig: IInstanceConfig): Promise<void> {
-        const all = inst.namespace === '*all'
-        const ns  = inst.namespace
+    private nsMatch(inst: ITopologyInstance, ns: string | undefined): boolean {
+        return inst.namespaces.includes('*all') || (!!ns && inst.namespaces.includes(ns))
+    }
 
+    private async sendSnapshot(ws: WebSocket, inst: ITopologyInstance, _instanceConfig: IInstanceConfig): Promise<void> {
         const [pods, svcs, deps, sts, ds, rs, jobs, crons, ings, pvcs] = await Promise.allSettled([
-            all ? this.clusterInfo.coreApi.listPodForAllNamespaces()                   : this.clusterInfo.coreApi.listNamespacedPod({ namespace: ns }),
-            all ? this.clusterInfo.coreApi.listServiceForAllNamespaces()               : this.clusterInfo.coreApi.listNamespacedService({ namespace: ns }),
-            all ? this.clusterInfo.appsApi.listDeploymentForAllNamespaces()            : this.clusterInfo.appsApi.listNamespacedDeployment({ namespace: ns }),
-            all ? this.clusterInfo.appsApi.listStatefulSetForAllNamespaces()           : this.clusterInfo.appsApi.listNamespacedStatefulSet({ namespace: ns }),
-            all ? this.clusterInfo.appsApi.listDaemonSetForAllNamespaces()             : this.clusterInfo.appsApi.listNamespacedDaemonSet({ namespace: ns }),
-            all ? this.clusterInfo.appsApi.listReplicaSetForAllNamespaces()            : this.clusterInfo.appsApi.listNamespacedReplicaSet({ namespace: ns }),
-            all ? this.clusterInfo.batchApi.listJobForAllNamespaces()                  : this.clusterInfo.batchApi.listNamespacedJob({ namespace: ns }),
-            all ? this.clusterInfo.batchApi.listCronJobForAllNamespaces()              : this.clusterInfo.batchApi.listNamespacedCronJob({ namespace: ns }),
-            all ? this.clusterInfo.networkApi.listIngressForAllNamespaces()            : this.clusterInfo.networkApi.listNamespacedIngress({ namespace: ns }),
-            all ? this.clusterInfo.coreApi.listPersistentVolumeClaimForAllNamespaces() : this.clusterInfo.coreApi.listNamespacedPersistentVolumeClaim({ namespace: ns }),
+            this.clusterInfo.coreApi.listPodForAllNamespaces(),
+            this.clusterInfo.coreApi.listServiceForAllNamespaces(),
+            this.clusterInfo.appsApi.listDeploymentForAllNamespaces(),
+            this.clusterInfo.appsApi.listStatefulSetForAllNamespaces(),
+            this.clusterInfo.appsApi.listDaemonSetForAllNamespaces(),
+            this.clusterInfo.appsApi.listReplicaSetForAllNamespaces(),
+            this.clusterInfo.batchApi.listJobForAllNamespaces(),
+            this.clusterInfo.batchApi.listCronJobForAllNamespaces(),
+            this.clusterInfo.networkApi.listIngressForAllNamespaces(),
+            this.clusterInfo.coreApi.listPersistentVolumeClaimForAllNamespaces(),
         ])
 
-        const svcList = svcs.status === 'fulfilled' ? svcs.value.items : []
-        const pvcList = pvcs.status === 'fulfilled' ? pvcs.value.items : []
+        const svcList = svcs.status === 'fulfilled' ? svcs.value.items.filter(s => this.nsMatch(inst, s.metadata?.namespace)) : []
+        const pvcList = pvcs.status === 'fulfilled' ? pvcs.value.items.filter(p => this.nsMatch(inst, p.metadata?.namespace)) : []
 
         svcList.forEach(s => { if (s.metadata?.uid) this.serviceCache.set(s.metadata.uid, s) })
         pvcList.forEach(p => { if (p.metadata?.uid) this.pvcCache.set(p.metadata.uid, p) })
 
         svcList.forEach(s => this.emit(ws, inst, this.mapService(s), 'ADDED'))
 
-        if (deps.status  === 'fulfilled') deps.value.items.forEach(d  => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
-        if (sts.status   === 'fulfilled') sts.value.items.forEach(s   => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, svcList) }, 'ADDED'))
-        if (ds.status    === 'fulfilled') ds.value.items.forEach(d    => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
-        if (rs.status    === 'fulfilled') rs.value.items.forEach(r    => this.emit(ws, inst, this.mapReplicaSet(r), 'ADDED'))
-        if (jobs.status  === 'fulfilled') jobs.value.items.forEach(j  => this.emit(ws, inst, this.mapJob(j), 'ADDED'))
-        if (crons.status === 'fulfilled') crons.value.items.forEach(c => this.emit(ws, inst, this.mapCronJob(c), 'ADDED'))
-        if (ings.status  === 'fulfilled') ings.value.items.forEach(i  => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, svcList) }, 'ADDED'))
-        if (pods.status  === 'fulfilled') pods.value.items.forEach(p  => this.emit(ws, inst, this.mapPod(p), 'ADDED'))
+        if (deps.status  === 'fulfilled') deps.value.items.filter(d => this.nsMatch(inst, d.metadata?.namespace)).forEach(d => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
+        if (sts.status   === 'fulfilled') sts.value.items.filter(s  => this.nsMatch(inst, s.metadata?.namespace)).forEach(s => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, svcList) }, 'ADDED'))
+        if (ds.status    === 'fulfilled') ds.value.items.filter(d   => this.nsMatch(inst, d.metadata?.namespace)).forEach(d => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
+        if (rs.status    === 'fulfilled') rs.value.items.filter(r   => this.nsMatch(inst, r.metadata?.namespace)).forEach(r => this.emit(ws, inst, this.mapReplicaSet(r), 'ADDED'))
+        if (jobs.status  === 'fulfilled') jobs.value.items.filter(j => this.nsMatch(inst, j.metadata?.namespace)).forEach(j => this.emit(ws, inst, this.mapJob(j), 'ADDED'))
+        if (crons.status === 'fulfilled') crons.value.items.filter(c => this.nsMatch(inst, c.metadata?.namespace)).forEach(c => this.emit(ws, inst, this.mapCronJob(c), 'ADDED'))
+        if (ings.status  === 'fulfilled') ings.value.items.filter(i => this.nsMatch(inst, i.metadata?.namespace)).forEach(i => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, svcList) }, 'ADDED'))
+        if (pods.status  === 'fulfilled') pods.value.items.filter(p => this.nsMatch(inst, p.metadata?.namespace)).forEach(p => this.emit(ws, inst, this.mapPod(p), 'ADDED'))
         pvcList.forEach(p => this.emit(ws, inst, this.mapPvc(p), 'ADDED'))
     }
 
@@ -344,6 +348,7 @@ export class TopologyChannel implements IChannel {
             namespace: ns, status: podStatus(p),
             labels: p.metadata?.labels ?? {},
             image: p.spec?.containers?.[0]?.image,
+            containers: p.spec?.containers?.map(c => c.name) ?? [],
             ownerUids: p.metadata?.ownerReferences?.map(r => r.uid) ?? [],
             edges: pvcEdges.length > 0 ? pvcEdges : undefined,
         }
@@ -397,6 +402,7 @@ export class TopologyChannel implements IChannel {
             status: controllerStatus(r.status?.readyReplicas, r.spec?.replicas),
             labels: r.metadata?.labels ?? {},
             replicas: r.spec?.replicas ?? 0, readyReplicas: r.status?.readyReplicas ?? 0,
+            ownerUids: r.metadata?.ownerReferences?.map(ref => ref.uid) ?? [],
         }
     }
 
@@ -405,6 +411,7 @@ export class TopologyChannel implements IChannel {
         return {
             kind: 'Job', uid: j.metadata?.uid ?? '', name: j.metadata?.name ?? '',
             namespace: j.metadata?.namespace ?? '', status, labels: j.metadata?.labels ?? {},
+            ownerUids: j.metadata?.ownerReferences?.map(ref => ref.uid) ?? [],
         }
     }
 
@@ -492,6 +499,7 @@ export class TopologyChannel implements IChannel {
             accessModes:   partial.accessModes,
             edges:         partial.edges,
             ownerUids:     partial.ownerUids,
+            containers:    partial.containers,
         }
         try { ws.send(JSON.stringify(msg)) }
         catch (err) { console.warn('[TopologyChannel] send error', err) }

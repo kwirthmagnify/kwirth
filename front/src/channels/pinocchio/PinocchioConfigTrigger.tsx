@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
-import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, TextareaAutosize, TextField, Typography } from '@mui/material'
-import { IConfigTrigger, IPinocchioConfig, kindsAvailable } from './PinocchioConfig'
+import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, Switch, TextareaAutosize, TextField, Typography } from '@mui/material'
+import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
+import { IConfigTrigger, IConfigTriggerVersion, IPinocchioConfig } from './PinocchioConfig'
 import { objectClone } from '../magnify/Tools'
 import { useKeyboard } from '../../tools/useKeyboard'
+import { MsgBoxButtons, MsgBoxOkWarning, MsgBoxYesNo } from '../../tools/MsgBox'
 
 interface IPinocchioLlmConfigProps {
     onClose: (pc: IPinocchioConfig | undefined) => void
@@ -10,97 +12,233 @@ interface IPinocchioLlmConfigProps {
     toolsAvailable: string[]
 }
 
+const emptyVersion = (): IConfigTriggerVersion => ({
+    id: '',
+    enabled: true,
+    system: '',
+    promptType: 'jinja',
+    prompt: '',
+    action: 'inform',
+    llm: '',
+    steps: 1,
+    tools: [],
+    spaces: []
+})
+
 const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchioLlmConfigProps) => {
     const [config, setConfig] = useState(objectClone(props.pinocchioConfig) as IPinocchioConfig)
 
-    const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+    const [selectedTriggerIndex, setSelectedTriggerIndex] = useState<number | null>(null)
+    const [newTriggerId, setNewTriggerId] = useState('')
+    const [triggerId, setTriggerId] = useState('')
+    const [triggerType, setTriggerType] = useState('artifact')
 
-    const [id, setId] = useState('')
-    const [trigger, setTrigger] = useState('artifact')
-    const [kind, setKind] = useState<string|undefined>('Pod')
-    const [enabled, setEnabled] = useState(false)
+    const [selectedVersionIndex, setSelectedVersionIndex] = useState<number | null>(null)
+
+    const [msgBox, setMsgBox] = useState(<></>)
+
+    // version editor fields
+    const [versionId, setVersionId] = useState('')
+    const [description, setDescription] = useState('')
+    const [enabled, setEnabled] = useState(true)
     const [system, setSystem] = useState('')
-    const [promptType, setPromptType] = useState('artifact')
+    const [promptType, setPromptType] = useState('jinja')
     const [prompt, setPrompt] = useState('')
     const [action, setAction] = useState<'inform' | 'cancel' | 'repair'>('inform')
     const [llm, setLlm] = useState('')
     const [steps, setSteps] = useState(1)
     const [tools, setTools] = useState<string[]>([])
-    const [spaces, setSpaces] = useState<string>('')
+    const [autoTools, setAutoTools] = useState(false)
+    const [spaces, setSpaces] = useState('')
 
     useKeyboard()
-    
-    const onKindSelected = (selectedTrigger: IConfigTrigger, index: number) => {
-        setId(selectedTrigger.id)
-        setTrigger(selectedTrigger.trigger)
-        setKind(selectedTrigger.kind)
-        setEnabled(selectedTrigger.enabled)
-        setSystem(selectedTrigger.system)
-        setPromptType(selectedTrigger.promptType)
-        setPrompt(selectedTrigger.prompt)
-        setAction(selectedTrigger.action)
-        setLlm(selectedTrigger.llm)
-        setSteps(selectedTrigger.steps)
-        setTools(selectedTrigger.tools)
-        setSpaces(selectedTrigger.spaces?.join(','))
-        setSelectedIndex(index)
-    }
 
-    const onNew = () => {
-        setSelectedIndex(null)
-        setId('')
-        setTrigger('artifact')
-        setKind('Pod')
-        setEnabled(false)
+    const selectedTrigger = selectedTriggerIndex !== null ? config.triggers[selectedTriggerIndex] : null
+
+    const clearVersionEditor = () => {
+        setVersionId('')
+        setDescription('')
+        setEnabled(true)
         setSystem('')
-        setPromptType('artifact')
+        setPromptType('jinja')
         setPrompt('')
         setAction('inform')
+        setLlm('')
         setSteps(1)
         setTools([])
+        setAutoTools(false)
         setSpaces('')
     }
 
-    const onAdd = () => {
-        const t: IConfigTrigger = { id, trigger, kind, enabled, system, promptType, prompt, action, llm, steps, tools, spaces: spaces?.split(',') }
-        let newTriggers = [...config.triggers]
-
-        if (selectedIndex !== null) 
-            newTriggers[selectedIndex] = t
-        else
-            newTriggers.push(t)
-        setConfig({ ...config, triggers: newTriggers })
-        onNew()
+    const onTriggerSelect = (index: number) => {
+        setSelectedTriggerIndex(index)
+        setTriggerId(config.triggers[index].id)
+        setTriggerType(config.triggers[index].trigger)
+        setSelectedVersionIndex(null)
+        clearVersionEditor()
     }
 
-    const onRemove = () => {
-        if (selectedIndex === null) return
+    const onTriggerIdChange = (newId: string) => {
+        if (selectedTriggerIndex === null) return
+        setTriggerId(newId)
+        const newTriggers = [...(config.triggers ?? [])]
+        newTriggers[selectedTriggerIndex] = { ...newTriggers[selectedTriggerIndex], id: newId }
+        setConfig(c => ({ ...c, triggers: newTriggers }))
+    }
 
-        const newTriggers = config.triggers.filter((_, i) => i !== selectedIndex)
+    const onTriggerTypeChange = (newType: string) => {
+        if (selectedTriggerIndex === null) return
+        setTriggerType(newType)
+        const newTriggers = [...(config.triggers ?? [])]
+        newTriggers[selectedTriggerIndex] = { ...newTriggers[selectedTriggerIndex], trigger: newType }
+        setConfig(c => ({ ...c, triggers: newTriggers }))
+    }
+
+    const onTriggerAdd = () => {
+        const id = newTriggerId.trim() || `trigger-${(config.triggers ?? []).length + 1}`
+        const t: IConfigTrigger = { id, trigger: 'artifact', versions: [] }
+        const newTriggers = [...(config.triggers ?? []), t]
         setConfig({ ...config, triggers: newTriggers })
-        onNew()
+        setSelectedTriggerIndex(newTriggers.length - 1)
+        setSelectedVersionIndex(null)
+        clearVersionEditor()
+        setNewTriggerId('')
+    }
+
+    const onTriggerDelete = () => {
+        if (selectedTriggerIndex === null) return
+        const t = config.triggers[selectedTriggerIndex]
+        setMsgBox(MsgBoxYesNo('Delete trigger', `Delete trigger "${t.id}"?`, setMsgBox, (a: MsgBoxButtons) => {
+            if (a !== MsgBoxButtons.Yes) return
+            const newTriggers = (config.triggers ?? []).filter((_, i) => i !== selectedTriggerIndex)
+            setConfig(c => ({ ...c, triggers: newTriggers }))
+            setSelectedTriggerIndex(null)
+            setSelectedVersionIndex(null)
+            clearVersionEditor()
+        }))
+    }
+
+    const onVersionSelect = (v: IConfigTriggerVersion, index: number) => {
+        setSelectedVersionIndex(index)
+        setVersionId(v.id)
+        setDescription(v.description ?? '')
+        setEnabled(v.enabled)
+        setSystem(v.system)
+        setPromptType(v.promptType)
+        setPrompt(v.prompt)
+        setAction(v.action)
+        setLlm(v.llm)
+        setSteps(v.steps)
+        setTools(v.tools)
+        setAutoTools(v.autoTools ?? false)
+        setSpaces(v.spaces?.join(',') ?? '')
+    }
+
+    const onNewVersion = () => {
+        setSelectedVersionIndex(null)
+        clearVersionEditor()
+    }
+
+    const onVersionSave = () => {
+        if (selectedTriggerIndex === null) return
+        const existingVersions = config.triggers[selectedTriggerIndex].versions ?? []
+        const duplicate = existingVersions.some((v, i) => v.id === versionId.trim() && i !== selectedVersionIndex)
+        if (duplicate) {
+            setMsgBox(MsgBoxOkWarning('Duplicate version', `A version with id "${versionId.trim()}" already exists.`, setMsgBox))
+            return
+        }
+        const v: IConfigTriggerVersion = { id: versionId.trim(), description, enabled, system, promptType, prompt, action, llm, steps, tools, autoTools, spaces: spaces.split(',').filter(Boolean) }
+        const newTriggers = [...(config.triggers ?? [])]
+        const versions = [...existingVersions]
+        if (selectedVersionIndex !== null)
+            versions[selectedVersionIndex] = v
+        else
+            versions.push(v)
+        newTriggers[selectedTriggerIndex] = { ...newTriggers[selectedTriggerIndex], versions }
+        setConfig({ ...config, triggers: newTriggers })
+        onNewVersion()
+    }
+
+    const onVersionDelete = () => {
+        if (selectedTriggerIndex === null || selectedVersionIndex === null) return
+        const v = config.triggers[selectedTriggerIndex].versions[selectedVersionIndex]
+        setMsgBox(MsgBoxYesNo('Delete version', `Delete version "${v.id}"?`, setMsgBox, (a: MsgBoxButtons) => {
+            if (a !== MsgBoxButtons.Yes) return
+            const newTriggers = [...(config.triggers ?? [])]
+            const versions = (newTriggers[selectedTriggerIndex!].versions ?? []).filter((_, i) => i !== selectedVersionIndex)
+            newTriggers[selectedTriggerIndex!] = { ...newTriggers[selectedTriggerIndex!], versions }
+            setConfig(c => ({ ...c, triggers: newTriggers }))
+            onNewVersion()
+        }))
+    }
+
+    const onVersionToggle = (vIndex: number) => {
+        if (selectedTriggerIndex === null) return
+        const newTriggers = [...(config.triggers ?? [])]
+        const versions = [...(newTriggers[selectedTriggerIndex].versions ?? [])]
+        const enabling = !versions[vIndex].enabled
+        newTriggers[selectedTriggerIndex] = {
+            ...newTriggers[selectedTriggerIndex],
+            versions: versions.map((v, i) => ({ ...v, enabled: enabling ? i === vIndex : i === vIndex ? false : v.enabled }))
+        }
+        setConfig({ ...config, triggers: newTriggers })
     }
 
     const onChangeTools = (event: SelectChangeEvent<typeof tools>) => {
-        let selectedTools  = event.target.value as string[]
-        setTools(selectedTools)
+        setTools(event.target.value as string[])
     }
 
-    return (
+    return (<>
         <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '1200px', height: '65vh' } }}>
             <DialogTitle>Trigger Config</DialogTitle>
-            <DialogContent style={{ display: 'flex', height: '100%' }}>
+            <DialogContent style={{ display: 'flex', height: '100%', overflow: 'hidden', padding: '8px 16px' }}>
 
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '30%' }}>
-                    <Box sx={{ flex: 1, overflowY: 'auto', overflowX:'hidden' }}>
-                        <List sx={{ flexGrow: 1, mr: 2, width: '100%' }}>
-                            {config.triggers.map((t, index) => (
-                                <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onKindSelected(t, index)}>
-                                    <Stack direction={'column'}>
-                                        <Typography sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>
-                                            {t.id}
-                                        </Typography>
-                                        <Typography color={'darkgray'} fontSize={10}>{t.trigger} {t.llm}</Typography>
+                {/* ── Left panel ── */}
+                <Box sx={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pr: 1 }}>
+
+                    {/* Triggers */}
+                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 'bold', px: 0.5, pt: 0.5 }}>Triggers</Typography>
+                    <Stack direction='row' spacing={0.5} alignItems='center' sx={{ px: 0.5, pb: 0.5 }}>
+                        <TextField
+                            size='small'
+                            value={newTriggerId}
+                            onChange={e => setNewTriggerId(e.target.value)}
+                            placeholder='Trigger id'
+                            variant='outlined'
+                            fullWidth
+                            inputProps={{ style: { fontSize: 12, padding: '4px 6px' } }}
+                            onKeyDown={e => { if (e.key === 'Enter') onTriggerAdd() }}
+                        />
+                        <IconButton size='small' onClick={onTriggerAdd}><AddIcon fontSize='small' /></IconButton>
+                        <IconButton size='small' onClick={onTriggerDelete} disabled={selectedTriggerIndex === null} color='error'><DeleteIcon fontSize='small' /></IconButton>
+                    </Stack>
+                    <Box sx={{ flex: '0 0 auto', maxHeight: '40%', overflowY: 'auto', overflowX: 'hidden' }}>
+                        <List dense sx={{ py: 0 }}>
+                            {(config.triggers ?? []).map((t, index) => (
+                                <ListItemButton key={index} selected={selectedTriggerIndex === index} onClick={() => onTriggerSelect(index)} dense>
+                                    <Stack direction='column'>
+                                        <Typography variant='body2' sx={{ fontWeight: selectedTriggerIndex === index ? 'bold' : 'normal' }}>{t.id}</Typography>
+                                        <Typography color='textSecondary' fontSize={10}>{t.trigger}{t.kind ? ` · ${t.kind}` : ''}</Typography>
+                                    </Stack>
+                                </ListItemButton>
+                            ))}
+                        </List>
+                    </Box>
+
+                    <Divider sx={{ my: 0.5 }} />
+
+                    {/* Versions */}
+                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 'bold', px: 0.5 }}>
+                        Versions{selectedTrigger ? ` — ${selectedTrigger.id}` : ''}
+                    </Typography>
+                    <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+                        <List dense sx={{ py: 0 }}>
+                            {(selectedTrigger?.versions ?? []).map((v, index) => (
+                                <ListItemButton key={index} selected={selectedVersionIndex === index} onClick={() => onVersionSelect(v, index)} dense sx={{ py: 0.5 }}>
+                                    <Switch size='small' checked={v.enabled} onChange={() => onVersionToggle(index)} onClick={e => e.stopPropagation()} sx={{ mr: 0.5 }} />
+                                    <Stack direction='column'>
+                                        <Typography variant='body2' sx={{ fontWeight: selectedVersionIndex === index ? 'bold' : 'normal' }}>{v.id}</Typography>
+                                        {v.description && <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.2 }}>{v.description}</Typography>}
                                     </Stack>
                                 </ListItemButton>
                             ))}
@@ -108,90 +246,81 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
                     </Box>
                 </Box>
 
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '16px' }} >
+                {/* ── Right panel: version editor ── */}
+                <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'start', padding: '8px 8px 8px 16px' }}>
                     <Stack spacing={1} style={{ width: '100%' }}>
-                        <Stack direction={'row'} alignItems={'baseline'}>
-                            <TextField value={id} onChange={(e) => setId(e.target.value)} placeholder='Enter Trigger id' label='Trigger ID' variant='standard' fullWidth/>
-                            <Typography minWidth={'24px'}></Typography>
-                            <Stack direction={'row'} alignItems={'center'}>
-                                <Typography>Enabled</Typography>
-                                <Checkbox checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-                            </Stack>
-                        </Stack>
-                        <Stack direction={'row'}>
-                            <FormControl variant='standard' sx={{ width: '100%', mr: 1 }}>
-                                <InputLabel>Trigger</InputLabel>
-                                <Select value={trigger} onChange={(e) => { setTrigger(e.target.value); setPromptType('jinja')}} variant='standard'>
-                                    {['artifact', 'business'].map((value) => (
-                                        <MenuItem key={value} value={value}>{value}</MenuItem>
-                                    ))}
+                        <Stack direction='row' spacing={1}>
+                            <TextField value={triggerId} onChange={e => onTriggerIdChange(e.target.value)} placeholder='Trigger id' label='Trigger ID' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
+                            <FormControl variant='standard' fullWidth disabled={selectedTriggerIndex === null}>
+                                <InputLabel>Trigger type</InputLabel>
+                                <Select value={triggerType} onChange={e => onTriggerTypeChange(e.target.value)} variant='standard'>
+                                    <MenuItem value='artifact'>artifact</MenuItem>
+                                    <MenuItem value='business'>business</MenuItem>
                                 </Select>
                             </FormControl>
+                            <TextField value={versionId} onChange={e => setVersionId(e.target.value)} placeholder='Version id' label='Version ID' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
+                        </Stack>
+                        <TextField value={description} onChange={e => setDescription(e.target.value)} placeholder='Short description' label='Description' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
+                        <Stack direction={'row'}>
                             <FormControl variant='standard' sx={{ width: '100%', mr: 1 }}>
                                 <InputLabel>Action</InputLabel>
-                                <Select value={action} onChange={(e) => setAction(e.target.value as any)} variant='standard'>
-                                    {['inform', 'cancel', 'repair'].map((value) => (
-                                        <MenuItem key={value} value={value}>{value}</MenuItem>
-                                    ))}
+                                <Select value={action} onChange={e => setAction(e.target.value as any)} variant='standard' disabled={selectedTriggerIndex === null}>
+                                    {['inform', 'cancel', 'repair'].map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
                                 </Select>
                             </FormControl>
-                            <FormControl variant='standard' sx={{ width: '100%', mr:1}}>
-                                <InputLabel>LLM Id</InputLabel>
-                                <Select value={llm} onChange={(e) => setLlm(e.target.value)} variant='standard' sx={{ width: '100%' }}>
-                                    {config.llms.map((llmItem) => (
-                                        <MenuItem key={llmItem.id} value={llmItem.id}>{llmItem.id}</MenuItem>
-                                    ))}
+                            <FormControl variant='standard' sx={{ width: '100%', mr: 1 }}>
+                                <InputLabel>LLM</InputLabel>
+                                <Select value={llm} onChange={e => setLlm(e.target.value)} variant='standard' disabled={selectedTriggerIndex === null}>
+                                    {config.llms.map(l => <MenuItem key={l.id} value={l.id}>{l.id}</MenuItem>)}
                                 </Select>
                             </FormControl>
-                            <TextField value={steps} onChange={(e) => setSteps(+e.target.value)} variant='standard' type='number' sx={{width:'30%', mr:1}} label='Steps'/>
+                            <TextField value={steps} onChange={e => setSteps(+e.target.value)} variant='standard' type='number' sx={{ width: '20%', mr: 1 }} label='Steps' disabled={selectedTriggerIndex === null} />
+                            {selectedTrigger?.trigger !== 'artifact' && (
+                                <TextField value={spaces} onChange={e => setSpaces(e.target.value)} placeholder='space.type,...' label='Spaces' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
+                            )}
                         </Stack>
-                        
-                        <Stack direction={'row'}>
-                            <FormControl variant='standard' sx={{ width: '100%'}}>
-                                <Stack direction={'column'}>
-                                    <Stack direction={'row'}>
-                                        <FormControl variant='standard' sx={{ width: '100%', mr: 1 }}>
-                                            <InputLabel>Kind</InputLabel>
-                                            <Select value={kind} onChange={(e) => setKind(e.target.value)} disabled={trigger!=='artifact'} variant='standard'>
-                                                {kindsAvailable.map((value) => (
-                                                    <MenuItem key={value} value={value}>{value}</MenuItem>
-                                                ))}
-                                            </Select>
-                                        </FormControl>
-                                        <TextField value={spaces} onChange={(e) => setSpaces(e.target.value)} disabled={trigger==='artifact'} placeholder='Enter comma-separated spaces' label='Spaces' variant='standard' sx={{mr:1}} fullWidth/>
-                                        <FormControl variant='standard' sx={{ width: '100%'}}>
-                                            <InputLabel>Tools</InputLabel>
-                                            <Select onChange={onChangeTools} multiple value={tools} renderValue={(selected) => selected.join(', ')} variant='standard'>
-                                                { props.toolsAvailable.map( (tool:string) => {
-                                                    return (
-                                                        <MenuItem key={tool} value={tool}>
-                                                            <Checkbox checked={tools.includes(tool)} />
-                                                            <Typography>{tool}</Typography>
-                                                        </MenuItem>
-                                                    )
-                                                })}
-                                            </Select>
-                                        </FormControl>
-                                    </Stack>
-                                </Stack>
+
+                        <Stack direction={'row'} alignItems='flex-end' spacing={1}>
+                            <FormControlLabel
+                                control={<Switch size='small' checked={autoTools} onChange={e => setAutoTools(e.target.checked)} disabled={selectedTriggerIndex === null} />}
+                                label={<Typography variant='caption'>Auto</Typography>}
+                                sx={{ mr: 0, flexShrink: 0 }}
+                            />
+                            <FormControl variant='standard' sx={{ flex: 1 }} disabled={autoTools}>
+                                <InputLabel>Tools</InputLabel>
+                                <Select onChange={onChangeTools} multiple value={tools} renderValue={sel => autoTools ? `all (${props.toolsAvailable.length})` : (sel as string[]).join(', ')} variant='standard' disabled={selectedTriggerIndex === null || autoTools}>
+                                    {props.toolsAvailable.map(tool => (
+                                        <MenuItem key={tool} value={tool}>
+                                            <Checkbox size='small' checked={tools.includes(tool)} />
+                                            <Typography>{tool}</Typography>
+                                        </MenuItem>
+                                    ))}
+                                </Select>
                             </FormControl>
                         </Stack>
 
-                        <TextareaAutosize value={system} onChange={(e) => setSystem(e.target.value)} style={{ minHeight: '80px', padding: '8px' }} placeholder='Enter system text' />
-                        <FormControl variant='standard' sx={{ width: '100%'}}>
-                            <InputLabel>Prompt type</InputLabel>
-                            <Select value={promptType} onChange={(e) => setPromptType(e.target.value as any)} variant='standard' sx={{ width: '100%' }} label='Action'>
-                                <MenuItem value={'artifact'}  disabled={trigger==='business'}>artifact</MenuItem>
-                                <MenuItem value={'jinja'}>jinja</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <TextareaAutosize value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ minHeight: '80px', padding: '8px' }} placeholder='Enter prompt' disabled={promptType==='artifact'}/>
+                        <Box>
+                            <Typography variant='caption' color='text.secondary'>System</Typography>
+                            <TextareaAutosize value={system} onChange={e => setSystem(e.target.value)} minRows={3} maxRows={3} style={{ width: '100%', resize: 'none', boxSizing: 'border-box', padding: '6px', fontFamily: 'monospace', fontSize: 12 }} placeholder='System prompt' disabled={selectedTriggerIndex === null} />
+                        </Box>
+                        <Box>
+                            <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 0.5 }}>
+                                <Typography variant='caption' color='text.secondary'>Prompt</Typography>
+                                <FormControl variant='standard' sx={{ minWidth: 100 }}>
+                                    <Select value={promptType} onChange={e => setPromptType(e.target.value)} variant='standard' disabled={selectedTriggerIndex === null} sx={{ fontSize: 12 }}>
+                                        <MenuItem value='artifact'>artifact</MenuItem>
+                                        <MenuItem value='jinja'>jinja</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Stack>
+                            <TextareaAutosize value={prompt} onChange={e => setPrompt(e.target.value)} minRows={3} maxRows={3} style={{ width: '100%', resize: 'none', boxSizing: 'border-box', padding: '6px', fontFamily: 'monospace', fontSize: 12 }} placeholder='Prompt' disabled={selectedTriggerIndex === null} />
+                        </Box>
 
                         <Stack direction={'row'} spacing={1}>
-                            <Button variant='outlined' onClick={onNew} color='primary'>New</Button>
+                            <Button variant='outlined' onClick={onNewVersion} disabled={selectedTriggerIndex === null}>New</Button>
                             <Typography flex={1} />
-                            <Button variant='text' color='error' onClick={onRemove} disabled={selectedIndex === null}>Remove</Button>
-                            <Button variant='contained' onClick={onAdd}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>
+                            <Button variant='text' color='error' onClick={onVersionDelete} disabled={selectedVersionIndex === null}>Remove</Button>
+                            <Button variant='contained' onClick={onVersionSave} disabled={selectedTriggerIndex === null || !versionId.trim()}>{selectedVersionIndex !== null ? 'Update' : 'Add'}</Button>
                         </Stack>
                     </Stack>
                 </Box>
@@ -202,7 +331,8 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
                 <Button onClick={() => props.onClose(undefined)}>Cancel</Button>
             </DialogActions>
         </Dialog>
-    )
+        {msgBox}
+    </>)
 }
 
 export { PinocchioConfigTrigger }

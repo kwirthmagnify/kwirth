@@ -6,7 +6,7 @@ import { EClusterType, KwirthData } from '@kwirthmagnify/kwirth-common'
 import Docker from 'dockerode'
 
 export class ConfigApi {
-    public route = express.Router()
+    public router = express.Router()
     dockerApi : Docker
     kwirthData: KwirthData
     clusterInfo: ClusterInfo
@@ -19,7 +19,7 @@ export class ConfigApi {
         this.dockerApi = new Docker()
 
         // return kwirth version information
-        this.route.route('/info')
+        this.router.route('/info')
             .get( async (req:Request, res:Response) => {
                 try {
                     res.status(200).json(this.kwirthData)
@@ -31,7 +31,7 @@ export class ConfigApi {
             })
             
         // return kwirth and cluster version information
-        this.route.route('/cluster')
+        this.router.route('/cluster')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res, this.apiKeyApi))) return
                 next()
@@ -63,7 +63,7 @@ export class ConfigApi {
             })
             
         // get all namespaces
-        this.route.route('/namespace')
+        this.router.route('/namespace')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res, this.apiKeyApi))) return
                 next()
@@ -98,7 +98,7 @@ export class ConfigApi {
             })
 
         // get all namespaces
-        this.route.route('/pod')
+        this.router.route('/pod')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res, this.apiKeyApi))) return
                 next()
@@ -133,7 +133,7 @@ export class ConfigApi {
             })
 
         // get all deployments in a namespace
-        this.route.route(['/:namespace/groups', '/:namespace/controllers'])
+        this.router.route(['/:namespace/groups', '/:namespace/controllers'])
             .all( async (req:Request, res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res, this.apiKeyApi))) return
                 next()
@@ -157,7 +157,7 @@ export class ConfigApi {
             })
 
         // get all pods in a namespace in a controller
-        this.route.route('/:namespace/:controller/pods')
+        this.router.route('/:namespace/:controller/pods')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res, this.apiKeyApi))) return
                 next()
@@ -189,7 +189,7 @@ export class ConfigApi {
             })
 
         // returns an array containing all the containers running inside a pod
-        this.route.route('/:namespace/:pod/containers')
+        this.router.route('/:namespace/:pod/containers')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res, this.apiKeyApi))) return
                 next()

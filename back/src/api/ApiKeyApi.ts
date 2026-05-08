@@ -5,7 +5,7 @@ import { IConfigMaps } from '../tools/IConfigMap'
 import * as crypto from 'crypto'
 
 export class ApiKeyApi {
-    public route = express.Router()
+    public router = express.Router()
     public apiKeys: ApiKey[] = []
     private configMaps: IConfigMaps
     public masterKey: string
@@ -34,7 +34,7 @@ export class ApiKeyApi {
     }
 
     private initializeRoutes() {
-        this.route.route('/')
+        this.router.route('/')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, this))) return
                 next()
@@ -125,7 +125,7 @@ export class ApiKeyApi {
                 }
             })
 
-        this.route.route('/:key')
+        this.router.route('/:key')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res, this))) return
                 next()

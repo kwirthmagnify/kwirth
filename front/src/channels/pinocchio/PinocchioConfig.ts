@@ -2,6 +2,7 @@ import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
 
 export const kindsAvailable = ['Pod', 'Deployment', 'DaemonSet', 'StatefulSet', 'ReplicaSet', 'Job', 'CronJob','ReplicationController', 'Service', 'Ingress', 'HTTPRoute']  //+++ move this to a backend API
 
+
 export enum EPinocchioCommand {
     CONFIGGET = 'configget',
     CONFIGSET = 'configset',
@@ -9,7 +10,7 @@ export enum EPinocchioCommand {
     PROVIDERSSET = 'providersset',
     PROVIDERSAVAILABLE = 'providersavailable',
     TOOLSAVAILABLE = 'toolsavailable',
-    PLAYGROUND = 'playground',
+    PLAYGROUNDSET = 'playgroundset',
 }
 
 export interface IPlaygroundRequest {
@@ -56,10 +57,9 @@ export interface IConfigProvider {
     models: IConfigModel[]
 }
 
-export interface IConfigTrigger {
+export interface IConfigTriggerVersion {
     id: string
-    trigger: string
-    kind?: string
+    description?: string
     enabled: boolean
     system: string
     promptType: string
@@ -68,7 +68,15 @@ export interface IConfigTrigger {
     llm: string
     steps: number
     tools: string[]
+    autoTools?: boolean
     spaces: string[]
+}
+
+export interface IConfigTrigger {
+    id: string
+    trigger: string
+    kind?: string
+    versions: IConfigTriggerVersion[]
 }
 
 export interface IConfigLlm {
@@ -114,6 +122,6 @@ export interface IPinocchioMessageResponse extends IInstanceMessage {
     config?: IPinocchioConfig
     providers?: IConfigProvider[]
     providersAvailable?: string[]
-    toolsAvailable?: string[]
+    toolsAvailable?: { name: string, description: string }[]
     message?:IMessage
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import {
     Box, Chip, CircularProgress, Divider, IconButton, InputAdornment,
@@ -12,7 +12,7 @@ import {
 import { IContentProps } from '../IChannel'
 import {
     ETopologyNodeKind, ETopologyNodeStatus,
-    ITopologyData, ITopologyNode,
+    ICanvasState, ITopologyData, ITopologyNode,
 } from './TopologyData'
 import { ITopologyConfig } from './TopologyConfig'
 import {
@@ -20,7 +20,7 @@ import {
     EInstanceMessageAction, EInstanceMessageFlow,
     EInstanceMessageType,
 } from '@kwirthmagnify/kwirth-common'
-import { ELogSortOrder, ILogConfig, ILogInstanceConfig } from '../log/LogConfig'
+import { ENotifyLevel } from '../../tools/Global'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -36,6 +36,7 @@ const KIND_COLOR: Record<ETopologyNodeKind, number> = {
     [ETopologyNodeKind.JOB]:                   0xef9f27,
     [ETopologyNodeKind.CRONJOB]:               0xba7517,
     [ETopologyNodeKind.POD]:                   0x34d058,
+    [ETopologyNodeKind.CONTAINER]:             0x00c8a0,
     [ETopologyNodeKind.PERSISTENTVOLUMECLAIM]: 0xe06b6b,
 }
 
@@ -70,15 +71,16 @@ const STATUS_COLOR: Record<ETopologyNodeStatus, 'default'|'success'|'warning'|'e
 
 const KIND_LEVEL: Record<ETopologyNodeKind, number> = {
     [ETopologyNodeKind.PERSISTENTVOLUMECLAIM]: 0,
-    [ETopologyNodeKind.POD]:                   1,
-    [ETopologyNodeKind.REPLICASET]:            2,
-    [ETopologyNodeKind.JOB]:                   2,
-    [ETopologyNodeKind.CRONJOB]:               2,
-    [ETopologyNodeKind.DEPLOYMENT]:            3,
-    [ETopologyNodeKind.STATEFULSET]:           3,
-    [ETopologyNodeKind.DAEMONSET]:             3,
-    [ETopologyNodeKind.SERVICE]:               4,
-    [ETopologyNodeKind.INGRESS]:               5,
+    [ETopologyNodeKind.CONTAINER]:             1,
+    [ETopologyNodeKind.POD]:                   2,
+    [ETopologyNodeKind.REPLICASET]:            3,
+    [ETopologyNodeKind.JOB]:                   3,
+    [ETopologyNodeKind.CRONJOB]:               3,
+    [ETopologyNodeKind.DEPLOYMENT]:            4,
+    [ETopologyNodeKind.STATEFULSET]:           4,
+    [ETopologyNodeKind.DAEMONSET]:             4,
+    [ETopologyNodeKind.SERVICE]:               5,
+    [ETopologyNodeKind.INGRESS]:               6,
 }
 
 // ── Context menu ──────────────────────────────────────────────────────────────
@@ -92,8 +94,11 @@ const COMMON_ACTIONS: ICtxAction[] = [
 ]
 
 const KIND_ACTIONS: Partial<Record<ETopologyNodeKind, ICtxAction[]>> = {
+    [ETopologyNodeKind.CONTAINER]: [
+        { icon: <Terminal fontSize='small'/>,  label: 'Open shell',  action: 'shell' },
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',   action: 'logs', divider: true },
+    ],
     [ETopologyNodeKind.POD]: [
-        { icon: <Terminal fontSize='small'/>,  label: 'Open shell',      action: 'shell' },
         { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: 'logs' },
         { icon: <Delete fontSize='small'/>,    label: 'Delete pod',      action: 'delete-pod', divider: true },
     ],
@@ -135,6 +140,9 @@ const NodeInfoPanel: React.FC<{ node: ITopologyNode }> = ({ node }) => (
                 <Chip label={node.status} size='small' color={STATUS_COLOR[node.status]} />
             </Stack>
             <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.5)' }}>{node.kind} · {node.namespace}</Typography>
+            {node.podName && (
+                <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.7)' }}>Pod: {node.podName}</Typography>
+            )}
             {node.replicas !== undefined && (
                 <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.7)' }}>
                     Replicas: {node.readyReplicas ?? '?'} / {node.replicas}
@@ -230,6 +238,7 @@ function geometryFor(kind: ETopologyNodeKind): THREE.BufferGeometry {
     const s = NODE_SIZE
     switch (kind) {
         case ETopologyNodeKind.POD:                   return new THREE.SphereGeometry(s, 16, 12)
+        case ETopologyNodeKind.CONTAINER:             return new THREE.SphereGeometry(s * 0.55, 10, 8)
         case ETopologyNodeKind.SERVICE:               return new THREE.CylinderGeometry(s, s, s * 1.6, 6)
         case ETopologyNodeKind.INGRESS:               return new THREE.CylinderGeometry(s * 1.3, s * 0.7, s * 1.2, 4)
         case ETopologyNodeKind.DEPLOYMENT:
@@ -244,18 +253,27 @@ function geometryFor(kind: ETopologyNodeKind): THREE.BufferGeometry {
 
 function makeLabel(text: string, fontSize: number): THREE.Sprite {
     const canvas = document.createElement('canvas')
-    canvas.width = 256; canvas.height = 40
+    canvas.width = 256; canvas.height = 50  // 256/50 ≈ 72/14 sprite aspect ratio
     const ctx = canvas.getContext('2d')!
-    ctx.font = `bold ${fontSize * 2}px sans-serif`
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.fillStyle = '#ffffff'
     ctx.strokeStyle = 'rgba(0,0,0,0.8)'
     ctx.lineWidth = 3
     ctx.textAlign = 'center'
-    const display = text.length > 22 ? text.slice(0, 20) + '…' : text
-    ctx.strokeText(display, 128, 30)
-    ctx.fillText(display, 128, 30)
+    ctx.textBaseline = 'middle'
+    const display = text.length > 28 ? text.slice(0, 26) + '…' : text
+    let fs = fontSize * 2
+    ctx.font = `bold ${fs}px sans-serif`
+    const measured = ctx.measureText(display)
+    if (measured.width > 240) fs = Math.floor(fs * 240 / measured.width)
+    ctx.font = `bold ${fs}px sans-serif`
+    ctx.strokeText(display, 128, 25)
+    ctx.fillText(display, 128, 25)
     const tex = new THREE.CanvasTexture(canvas)
-    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })
+    tex.minFilter = THREE.LinearFilter
+    tex.magFilter = THREE.LinearFilter
+    tex.generateMipmaps = false
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: true })
     const sprite = new THREE.Sprite(mat)
     sprite.scale.set(72, 14, 1)
     sprite.position.set(0, NODE_SIZE * 1.8, 0)
@@ -263,12 +281,11 @@ function makeLabel(text: string, fontSize: number): THREE.Sprite {
 }
 
 function buildEdgeLine(from: ITopologyNode, to: ITopologyNode, color: number, opacity: number): THREE.Line {
-    const pts = [
-        new THREE.Vector3(from.x, from.y, from.z),
-        new THREE.Vector3(to.x,   to.y,   to.z),
-    ]
     return new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(from.x, from.y, from.z),
+            new THREE.Vector3(to.x, to.y, to.z),
+        ]),
         new THREE.LineBasicMaterial({ color, opacity, transparent: true, linewidth: 2 })
     )
 }
@@ -279,13 +296,12 @@ function buildPathLine(from: ITopologyNode, to: ITopologyNode, color: number, op
     const offsets = [
         [0, 0, 0], [1.2, 0, 0], [-1.2, 0, 0], [0, 1.2, 0], [0, -1.2, 0],
     ]
-    offsets.forEach(([dx, dy, dz]) => {
-        const pts = [
-            new THREE.Vector3(from.x + dx, from.y + dy, from.z + dz),
-            new THREE.Vector3(to.x   + dx, to.y   + dy, to.z   + dz),
-        ]
+    offsets.forEach(([ox, oy, oz]) => {
         const line = new THREE.Line(
-            new THREE.BufferGeometry().setFromPoints(pts),
+            new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(from.x + ox, from.y + oy, from.z + oz),
+                new THREE.Vector3(to.x + ox, to.y + oy, to.z + oz),
+            ]),
             new THREE.LineBasicMaterial({ color, opacity, transparent: true, linewidth: 2 })
         )
         group.add(line)
@@ -308,16 +324,20 @@ function collectSubgraph(
     allNodes: Map<string, ITopologyNode>,
     nodeSet:  Set<string>,
 ): { involvedUids: Set<string>; edges: IHighlightEdge[] } {
-    const involved = new Set<string>()
-    const edges: IHighlightEdge[] = []
-    const queue: string[] = [rootUid]
-    involved.add(rootUid)
+    const involved  = new Set<string>([rootUid])
+    const seenEdges = new Set<string>()
+    const result:   IHighlightEdge[] = []
 
-    // Precompute reverse maps: targetUid → list of nodes whose .edges point to it
+    const addEdge = (from: ITopologyNode, to: ITopologyNode, color: number) => {
+        const key = `${from.uid}→${to.uid}`
+        if (seenEdges.has(key)) return
+        seenEdges.add(key)
+        result.push({ from, to, color })
+    }
+
+    // Precompute reverse maps
     const incomingEdges = new Map<string, ITopologyNode[]>()
-    // ownerUid → list of pods/resources owned
-    const ownedBy = new Map<string, ITopologyNode[]>()
-
+    const ownedBy       = new Map<string, ITopologyNode[]>()
     allNodes.forEach(n => {
         if (!nodeSet.has(n.uid)) return
         n.edges?.forEach(e => {
@@ -330,77 +350,62 @@ function collectSubgraph(
         })
     })
 
-    while (queue.length > 0) {
-        const uid = queue.shift()!
+    // ── Phase 1: go DOWN from root only ──────────────────────────────────────
+    // Follows forward edges (Service→Pod, Pod→PVC) and ownedBy (RS→Pod, Pod→Container).
+    // This finds direct descendants without touching siblings.
+    const downQ = [rootUid]
+    const downV = new Set<string>([rootUid])
+    while (downQ.length > 0) {
+        const uid  = downQ.shift()!
         const node = allNodes.get(uid)
         if (!node || !nodeSet.has(uid)) continue
 
-        const isIngress = node.kind === ETopologyNodeKind.INGRESS
-
-        // ── UP: follow node.edges (e.g. Deployment → Service → Ingress) ───────
-        if (!isIngress) {
-            node.edges?.forEach(edge => {
-                if (!nodeSet.has(edge.targetUid)) return
-                const target = allNodes.get(edge.targetUid)
-                if (!target) return
-                edges.push({ from: node, to: target, color: 0xffdd44 })
-                if (!involved.has(target.uid)) {
-                    involved.add(target.uid)
-                    queue.push(target.uid)
-                }
-            })
-
-            // UP via ownerUids: pod → replicaset/deployment
-            node.ownerUids?.forEach(oid => {
-                if (!nodeSet.has(oid)) return
-                const owner = allNodes.get(oid)
-                if (!owner) return
-                edges.push({ from: owner, to: node, color: 0x66ffaa })
-                if (!involved.has(owner.uid)) {
-                    involved.add(owner.uid)
-                    queue.push(owner.uid)
-                }
-            })
-        }
-
-        // ── DOWN: follow reverse edges (nodes that point at this node) ─────────
-        incomingEdges.get(uid)?.forEach(src => {
-            if (!nodeSet.has(src.uid)) return
-            edges.push({ from: src, to: node, color: 0xffdd44 })
-            if (!involved.has(src.uid)) {
-                involved.add(src.uid)
-                queue.push(src.uid)
-            }
+        node.edges?.forEach(edge => {
+            if (!nodeSet.has(edge.targetUid)) return
+            const target = allNodes.get(edge.targetUid)
+            if (!target) return
+            addEdge(node, target, 0xffdd44)
+            involved.add(target.uid)
+            if (!downV.has(target.uid)) { downV.add(target.uid); downQ.push(target.uid) }
         })
 
-        // ── DOWN via ownedBy: deployment → pods
         ownedBy.get(uid)?.forEach(child => {
             if (!nodeSet.has(child.uid)) return
-            edges.push({ from: node, to: child, color: 0x66ffaa })
-            if (!involved.has(child.uid)) {
-                involved.add(child.uid)
-                queue.push(child.uid)
-            }
+            addEdge(node, child, 0x66ffaa)
+            involved.add(child.uid)
+            if (!downV.has(child.uid)) { downV.add(child.uid); downQ.push(child.uid) }
+        })
+    }
+
+    // ── Phase 2: go UP from every involved node ───────────────────────────────
+    // Follows ownerUids (Pod→RS→Deployment) and incomingEdges (Pod←Service←Ingress).
+    // Starting from all descendants found in Phase 1 avoids expanding to siblings.
+    const upQ = Array.from(involved)
+    const upV = new Set<string>(involved)
+    while (upQ.length > 0) {
+        const uid  = upQ.shift()!
+        const node = allNodes.get(uid)
+        if (!node || !nodeSet.has(uid)) continue
+        if (node.kind === ETopologyNodeKind.INGRESS) continue
+
+        node.ownerUids?.forEach(oid => {
+            if (!nodeSet.has(oid)) return
+            const owner = allNodes.get(oid)
+            if (!owner) return
+            addEdge(owner, node, 0x66ffaa)
+            involved.add(owner.uid)
+            if (!upV.has(owner.uid)) { upV.add(owner.uid); upQ.push(owner.uid) }
         })
 
-        // ── DOWN: pod → PVCs it mounts (via pod.edges which now include PVC targets)
-        // Already covered by node.edges traversal above — PVC edges are in pod.edges.
-        // But if current node IS a PVC, find pods that mount it (reverse of pod.edges → pvc)
-        if (node.kind === ETopologyNodeKind.PERSISTENTVOLUMECLAIM) {
-            allNodes.forEach(n => {
-                if (!nodeSet.has(n.uid) || n.kind !== ETopologyNodeKind.POD) return
-                const mountsThis = n.edges?.some(e => e.targetUid === uid)
-                if (!mountsThis) return
-                edges.push({ from: n, to: node, color: 0xe06b6b })
-                if (!involved.has(n.uid)) {
-                    involved.add(n.uid)
-                    queue.push(n.uid)
-                }
-            })
-        }
-    }   // end while
+        incomingEdges.get(uid)?.forEach(src => {
+            if (!nodeSet.has(src.uid)) return
+            addEdge(src, node, 0xffdd44)
+            involved.add(src.uid)
+            if (!upV.has(src.uid)) { upV.add(src.uid); upQ.push(src.uid) }
+        })
+    }
 
-    return { involvedUids: involved, edges }
+    return { involvedUids: involved, edges: result }
 }
 
 // ── Search suggestion list ────────────────────────────────────────────────────
@@ -439,6 +444,8 @@ const SearchSuggestions: React.FC<{
 // ── Main component ────────────────────────────────────────────────────────────
 
 export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) => {
+    const rootRef      = useRef<HTMLDivElement>(null)
+    const [canvasTop, setCanvasTop] = useState(0)
     const mountRef     = useRef<HTMLDivElement>(null)
     const rendererRef  = useRef<THREE.WebGLRenderer>()
     const sceneRef     = useRef<THREE.Scene>()
@@ -449,27 +456,68 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
     const pathGroupRef = useRef<THREE.Group[]>([])   // thick path lines
     const animRef      = useRef<number>()
     const isDragging   = useRef(false)
+    const isPanning    = useRef(false)
     const prevMouse    = useRef({ x: 0, y: 0 })
     const spherical    = useRef({ theta: 0.4, phi: 1.1, radius: 700, tx: 0, ty: 0, tz: 0 })
-    const selectedRef  = useRef<string | undefined>()
-    const pathModeRef  = useRef<string | undefined>()   // uid of node in path mode
+    const selectedRef    = useRef<string | undefined>()
+    const pathModeRef         = useRef<string | undefined>()
+    const hiddenKindsRef      = useRef<Set<ETopologyNodeKind>>(new Set())
+    const hiddenNamespacesRef = useRef<Set<string>>(new Set())
+    const restoredRef         = useRef(false)
 
-    const [selectedNode,  setSelectedNode]  = useState<ITopologyNode | undefined>()
-    const [contextMenu,   setContextMenu]   = useState<{ x: number; y: number; node: ITopologyNode } | undefined>()
-    const [hiddenKinds,   setHiddenKinds]   = useState<Set<ETopologyNodeKind>>(new Set())
-    const [searchQuery,   setSearchQuery]   = useState('')
-    const [searchFocused, setSearchFocused] = useState(false)
-    const [pathModeNode,  setPathModeNode]  = useState<ITopologyNode | undefined>()
+    const [selectedNode,       setSelectedNode]       = useState<ITopologyNode | undefined>()
+    const [contextMenu,        setContextMenu]        = useState<{ x: number; y: number; node: ITopologyNode } | undefined>()
+    const [hiddenKinds,        setHiddenKinds]        = useState<Set<ETopologyNodeKind>>(
+        () => new Set((channelObject.data as ITopologyData).canvasState?.hiddenKinds ?? [])
+    )
+    const [hiddenNamespaces,   setHiddenNamespaces]   = useState<Set<string>>(
+        () => new Set((channelObject.data as ITopologyData).canvasState?.hiddenNamespaces ?? [])
+    )
+    const [searchQuery,        setSearchQuery]        = useState('')
+    const [searchFocused,      setSearchFocused]      = useState(false)
+    const [pathModeNode,       setPathModeNode]       = useState<ITopologyNode | undefined>()
+    const [pathNodes,          setPathNodes]          = useState<ITopologyNode[]>([])
     const [, forceUpdate] = useState(0)
 
     const topologyData: ITopologyData   = channelObject.data
     const topologyCfg:  ITopologyConfig = channelObject.config
 
-    const visibleNodes = React.useMemo(
-        () => Array.from(topologyData.nodes.values()).filter(n => !hiddenKinds.has(n.kind)),
+    const availableNamespaces = React.useMemo(
+        () => Array.from(new Set(Array.from(topologyData.nodes.values()).map(n => n.namespace))).sort(),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [topologyData.lastUpdated, hiddenKinds]
+        [topologyData.lastUpdated]
     )
+
+    const visibleNodes = React.useMemo(
+        () => Array.from(topologyData.nodes.values()).filter(n =>
+            !hiddenKinds.has(n.kind) && !hiddenNamespaces.has(n.namespace)
+        ),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [topologyData.lastUpdated, hiddenKinds, hiddenNamespaces]
+    )
+
+    useLayoutEffect(() => {
+        if (rootRef.current) setCanvasTop(rootRef.current.getBoundingClientRect().top)
+    }, [])
+
+    // Keep refs in sync with state
+    useEffect(() => { hiddenKindsRef.current = hiddenKinds }, [hiddenKinds])
+    useEffect(() => { hiddenNamespacesRef.current = hiddenNamespaces }, [hiddenNamespaces])
+
+    // Save canvas state on unmount
+    useEffect(() => {
+        return () => {
+            const state: ICanvasState = {
+                ...spherical.current,
+                hiddenKinds:      Array.from(hiddenKindsRef.current),
+                hiddenNamespaces: Array.from(hiddenNamespacesRef.current),
+                selectedUid: selectedRef.current,
+                pathModeUid: pathModeRef.current,
+            }
+            topologyData.canvasState = state
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     // ── Three.js init ─────────────────────────────────────────────────────────
     useEffect(() => {
@@ -505,7 +553,9 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
 
         const layers = [
             { z: 300, label: 'Ingress' }, { z: 150, label: 'Services' },
-            { z: 0, label: 'Controllers' }, { z: -150, label: 'Pods' }, { z: -300, label: 'PVCs' },
+            { z: 0, label: 'Controllers' }, { z: -75, label: 'ReplicaSets' },
+            { z: -150, label: 'Pods' }, { z: -225, label: 'Containers' },
+            { z: -300, label: 'PVCs' },
         ]
         layers.forEach(({ z, label }) => {
             const cv = document.createElement('canvas')
@@ -517,6 +567,11 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
             sp.position.set(-700, 0, z); sp.scale.set(160, 24, 1)
             scene.add(sp)
         })
+
+        if (topologyData.canvasState) {
+            const s = topologyData.canvasState
+            spherical.current = { theta: s.theta, phi: s.phi, radius: s.radius, tx: s.tx, ty: s.ty, tz: s.tz }
+        }
 
         const camera = new THREE.PerspectiveCamera(50, w / h, 1, 4000)
         updateCamera(camera, spherical.current)
@@ -580,32 +635,62 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
             meshMapRef.current.set(node.uid, mesh)
         })
 
-        // Normal (dim) edges
+        // Normal edges (dim) — forward edges and ownership edges
         visibleNodes.forEach(node => {
             node.edges?.forEach(edge => {
                 if (!nodeSet.has(edge.targetUid)) return
                 const target = topologyData.nodes.get(edge.targetUid)
                 if (!target) return
-                const line = buildEdgeLine(node, target, 0x2255aa, 0.45)
+                const line = buildEdgeLine(node, target, 0x4488dd, 0.5)
                 scene.add(line); edgeLinesRef.current.push(line)
             })
-        })
-
-        // ownerUid edges (dim)
-        visibleNodes.forEach(node => {
             node.ownerUids?.forEach(oid => {
                 if (!nodeSet.has(oid)) return
                 const owner = topologyData.nodes.get(oid)
                 if (!owner) return
-                const line = buildEdgeLine(owner, node, 0x224422, 0.3)
+                const line = buildEdgeLine(owner, node, 0x44aa44, 0.4)
                 scene.add(line); edgeLinesRef.current.push(line)
             })
         })
 
-        rebuildHighlightLines(scene, selectedRef.current, visibleNodes, nodeSet)
+        if (pathModeRef.current) {
+            const { involvedUids, edges } = collectSubgraph(pathModeRef.current, topologyData.nodes, nodeSet)
+            meshMapRef.current.forEach((mesh, uid) => {
+                const mat = mesh.material as THREE.MeshPhongMaterial
+                const inPath = involvedUids.has(uid)
+                mat.transparent = true
+                mat.opacity     = inPath ? 1.0 : 0.07
+                mat.emissiveIntensity = inPath && uid === pathModeRef.current ? 0.5 : inPath ? 0.15 : 0.0
+                mat.needsUpdate = true
+            })
+            const seen = new Set<string>()
+            edges.forEach(({ from, to, color }) => {
+                const key = `${from.uid}→${to.uid}`
+                if (seen.has(key)) return
+                seen.add(key)
+                const grp = buildPathLine(from, to, color, 0.92)
+                scene.add(grp)
+                pathGroupRef.current.push(grp)
+            })
+        } else {
+            rebuildHighlightLines(scene, selectedRef.current, visibleNodes, nodeSet)
+        }
+        // One-time restore of path/selected state after nodes load
+        if (!restoredRef.current && topologyData.lastUpdated > 0 && topologyData.canvasState) {
+            restoredRef.current = true
+            const uid = topologyData.canvasState.pathModeUid ?? topologyData.canvasState.selectedUid
+            if (uid) {
+                const node = topologyData.nodes.get(uid)
+                if (node) {
+                    if (topologyData.canvasState.pathModeUid) applyPathMode(node)
+                    else { selectedRef.current = node.uid; setSelectedNode(node) }
+                }
+            }
+        }
+
         forceUpdate(n => n + 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [topologyData.lastUpdated, topologyCfg.showOnlyRunning, topologyCfg.labelSize, topologyCfg.nodeSpacingFactor, hiddenKinds])
+    }, [topologyData.lastUpdated, topologyCfg.showOnlyRunning, topologyCfg.labelSize, topologyCfg.nodeSpacingFactor, hiddenKinds, hiddenNamespaces])
 
     // ── Highlight subgraph ────────────────────────────────────────────────────
     const rebuildHighlightLines = useCallback((
@@ -638,11 +723,19 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         const scene = sceneRef.current
         if (!scene) return
 
+        selectedRef.current = node.uid
+        setSelectedNode(node)
         pathModeRef.current = node.uid
         setPathModeNode(node)
 
         const nodeSet = new Set(visibleNodes.map(n => n.uid))
         const { involvedUids, edges } = collectSubgraph(node.uid, topologyData.nodes, nodeSet)
+
+        const sorted = Array.from(involvedUids)
+            .map(u => topologyData.nodes.get(u))
+            .filter((n): n is ITopologyNode => n !== undefined)
+            .sort((a, b) => KIND_LEVEL[a.kind] - KIND_LEVEL[b.kind])
+        setPathNodes(sorted)
 
         // Dim / restore meshes
         meshMapRef.current.forEach((mesh, uid) => {
@@ -682,7 +775,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         // Fly camera to subgraph
         const camera = cameraRef.current
         if (camera) {
-            const involved = Array.from(involvedUids).map(u => topologyData.nodes.get(u)).filter(Boolean) as ITopologyNode[]
+            const involved = Array.from(involvedUids).map(u => topologyData.nodes.get(u)).filter((n): n is ITopologyNode => n !== undefined)
             if (involved.length > 0) {
                 const cx = involved.reduce((s, n) => s + n.x, 0) / involved.length
                 const cy = involved.reduce((s, n) => s + n.y, 0) / involved.length
@@ -702,78 +795,64 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         const scene = sceneRef.current
         if (!scene) return
 
+        selectedRef.current = undefined
+        setSelectedNode(undefined)
         pathModeRef.current = undefined
         setPathModeNode(undefined)
+        setPathNodes([])
 
         // Restore all meshes
-        meshMapRef.current.forEach((mesh, uid) => {
+        meshMapRef.current.forEach((mesh) => {
             const mat = mesh.material as THREE.MeshPhongMaterial
             mat.transparent = false
             mat.opacity     = 1.0
-            mat.emissiveIntensity = selectedRef.current === uid ? 0.5 : 0.15
+            mat.emissiveIntensity = 0.15
             mat.needsUpdate = true
         })
 
         // Restore normal edge lines
         edgeLinesRef.current.forEach(l => {
             const m = l.material as THREE.LineBasicMaterial
-            m.opacity = 0.45; m.needsUpdate = true
+            m.opacity = 0.5; m.needsUpdate = true
         })
 
-        // Remove thick path lines
+        // Remove thick path lines and highlight lines
         pathGroupRef.current.forEach(g => scene.remove(g))
         pathGroupRef.current = []
+        hlLinesRef.current.forEach(l => scene.remove(l))
+        hlLinesRef.current = []
     }, [])
-    const focusNode = useCallback((node: ITopologyNode) => {
-        const scene = sceneRef.current
-        const camera = cameraRef.current
-        if (!scene || !camera) return
-
-        selectedRef.current = node.uid
-        setSelectedNode(node)
-
-        const nodeSet = new Set(visibleNodes.map(n => n.uid))
-        rebuildHighlightLines(scene, node.uid, visibleNodes, nodeSet)
-
-        // Collect all involved nodes to compute bounding box for zoom
-        const { involvedUids } = collectSubgraph(node.uid, topologyData.nodes, nodeSet)
-        const involvedNodes = Array.from(involvedUids)
-            .map(uid => topologyData.nodes.get(uid))
-            .filter(Boolean) as ITopologyNode[]
-
-        if (involvedNodes.length === 0) return
-
-        // Compute centroid of involved nodes
-        const cx = involvedNodes.reduce((s, n) => s + n.x, 0) / involvedNodes.length
-        const cy = involvedNodes.reduce((s, n) => s + n.y, 0) / involvedNodes.length
-        const cz = involvedNodes.reduce((s, n) => s + n.z, 0) / involvedNodes.length
-
-        // Compute bounding sphere radius
-        let maxDist = 100
-        involvedNodes.forEach(n => {
-            const d = Math.sqrt((n.x - cx) ** 2 + (n.y - cy) ** 2 + (n.z - cz) ** 2)
-            if (d > maxDist) maxDist = d
-        })
-        const targetRadius = Math.max(250, maxDist * 2.2)
-
-        animateCameraTo(camera, spherical, new THREE.Vector3(cx, cy, cz), targetRadius, spherical.current.theta, spherical.current.phi)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [visibleNodes, rebuildHighlightLines, topologyData.nodes])
-
     // ── Mouse controls ────────────────────────────────────────────────────────
     const handleMouseDown  = useCallback((e: React.MouseEvent) => {
         if (e.button === 0) { isDragging.current = true; prevMouse.current = { x: e.clientX, y: e.clientY } }
+        if (e.button === 1) { isPanning.current  = true; prevMouse.current = { x: e.clientX, y: e.clientY }; e.preventDefault() }
     }, [])
-    const handleMouseUp    = useCallback(() => { isDragging.current = false }, [])
-    const handleMouseLeave = useCallback(() => { isDragging.current = false }, [])
+    const handleMouseUp    = useCallback(() => { isDragging.current = false; isPanning.current = false }, [])
+    const handleMouseLeave = useCallback(() => { isDragging.current = false; isPanning.current = false }, [])
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
-        if (!isDragging.current) return
+        if (!isDragging.current && !isPanning.current) return
         const dx = e.clientX - prevMouse.current.x
         const dy = e.clientY - prevMouse.current.y
         prevMouse.current = { x: e.clientX, y: e.clientY }
-        spherical.current.theta -= dx * 0.005
-        spherical.current.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.current.phi + dy * 0.005))
+        if (isDragging.current) {
+            spherical.current.theta -= dx * 0.005
+            spherical.current.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.current.phi + dy * 0.005))
+        } else {
+            // Pan: move look-at target along camera right and screen-up vectors
+            // right      = ( cos θ,              0,           −sin θ          )
+            // screen_up  = (−sin θ · cos φ,   sin φ,  −cos θ · cos φ )
+            const { theta, phi, radius } = spherical.current
+            const speed = radius * 0.0012
+            spherical.current.tx = (spherical.current.tx ?? 0)
+                - Math.cos(theta) * dx * speed
+                + Math.sin(theta) * Math.cos(phi) * dy * speed
+            spherical.current.ty = (spherical.current.ty ?? 0)
+                - Math.sin(phi) * dy * speed
+            spherical.current.tz = (spherical.current.tz ?? 0)
+                + Math.sin(theta) * dx * speed
+                + Math.cos(theta) * Math.cos(phi) * dy * speed
+        }
         if (cameraRef.current) updateCamera(cameraRef.current, spherical.current)
     }, [])
 
@@ -800,15 +879,11 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
     const handleClick = useCallback((e: React.MouseEvent) => {
         const node = pickNode(e)
         if (!node) {
-            // Click on empty space: deselect
-            selectedRef.current = undefined
-            setSelectedNode(undefined)
-            const scene = sceneRef.current
-            if (scene) { hlLinesRef.current.forEach(l => scene.remove(l)); hlLinesRef.current = [] }
+            exitPathMode()
             return
         }
-        focusNode(node)
-    }, [pickNode, focusNode])
+        applyPathMode(node)
+    }, [pickNode, applyPathMode, exitPathMode])
 
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
         e.preventDefault()
@@ -821,7 +896,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         setContextMenu(undefined)
         const ws = channelObject.webSocket
 
-        const sendCmd = (topoAction: string, extra: Record<string, any> = {}) => {
+        const sendCmd = (topoAction: string, extra: Record<string, string | number | boolean> = {}) => {
             if (!ws) return
             ws.send(JSON.stringify({
                 channel:  'topology',
@@ -839,35 +914,59 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         }
 
         switch (action) {
-            case 'view-path':  applyPathMode(node); break
+            case 'view-path': applyPathMode(node); break
             case 'details':   selectedRef.current = node.uid; setSelectedNode(node); break
             case 'copy-name': navigator.clipboard.writeText(node.name); break
-            case 'logs':      
-                // let logConfig:ILogConfig = {
-                //     startDiagnostics: false,
-                //     follow: true,
-                //     showNames: false,
-                //     maxMessages: 5000,
-                //     maxPerPodMessages: 5000,
-                //     sortOrder: ELogSortOrder.TIME
-                // }
-                // let logInstanceConfig:ILogInstanceConfig = {
-                //     previous: false,
-                //     timestamp: false,
-                //     fromStart: false
-                // }
-                // let logSettings ={
-                //     config: logConfig,
-                //     instanceConfig: logInstanceConfig
-                // }
-                channelObject.createTab?.({clusterName: channelObject.clusterName, namespaces: [node.namespace], controllers: [], pods: [node.name], containers: [], channelId: 'log', view: EInstanceConfigView.POD, name: node.name}, true, undefined)
+            case 'shell': {
+                const podNode = node.kind === ETopologyNodeKind.CONTAINER
+                    ? Array.from(topologyData.nodes.values()).find(n => node.ownerUids?.includes(n.uid) && n.kind === ETopologyNodeKind.POD)
+                    : node
+                if (podNode) {
+                    const containerName = node.kind === ETopologyNodeKind.CONTAINER ? node.name : ''
+                    channelObject.createTab?.({
+                        clusterName: channelObject.clusterName,
+                        namespaces: [podNode.namespace],
+                        controllers: [],
+                        pods: [podNode.name],
+                        containers: containerName ? [containerName] : [],
+                        channelId: 'ops',
+                        view: EInstanceConfigView.POD,
+                        name: containerName || podNode.name,
+                    }, true, {
+                        config: {
+                            accessKey: 0,
+                            launchShell: true,
+                            shell: { namespace: podNode.namespace, pod: podNode.name, container: containerName },
+                        },
+                        instanceConfig: { sessionKeepAlive: true },
+                    })
+                }
                 break
-            case 'shell':     channelObject.createTab?.({ clusterName: channelObject.clusterName, namespaces: [node.namespace], controllers: [], pods: [node.name], containers: [], channelId: 'ops', view: EInstanceConfigView.POD, name: node.name }, true, {}); break
+            }
+            case 'logs': {
+                const podNode = node.kind === ETopologyNodeKind.CONTAINER
+                    ? Array.from(topologyData.nodes.values()).find(n => node.ownerUids?.includes(n.uid) && n.kind === ETopologyNodeKind.POD)
+                    : node
+                if (podNode) {
+                    const containerName = node.kind === ETopologyNodeKind.CONTAINER ? node.name : ''
+                    channelObject.createTab?.({
+                        clusterName: channelObject.clusterName,
+                        namespaces: [podNode.namespace],
+                        controllers: [],
+                        pods: [podNode.name],
+                        containers: containerName ? [containerName] : [],
+                        channelId: 'log',
+                        view: EInstanceConfigView.POD,
+                        name: containerName || podNode.name,
+                    }, true, undefined)
+                }
+                break
+            }
             case 'scale-up':  sendCmd('SCALE', { replicas: (node.replicas ?? 0) + 1 }); break
             case 'scale-zero':sendCmd('SCALE', { replicas: 0 }); break
             case 'restart':   sendCmd('RESTART'); break
             case 'delete-pod':sendCmd('DELETE_POD'); break
-            default:          channelObject.notify?.('topology', 'info' as any, `${action} on ${node.name}`)
+            default:          channelObject.notify?.('topology', ENotifyLevel.INFO, `${action} on ${node.name}`)
         }
     }, [channelObject, applyPathMode])
 
@@ -891,12 +990,12 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
     const handleSearchSelect = useCallback((node: ITopologyNode) => {
         setSearchQuery(node.name)
         setSearchFocused(false)
-        focusNode(node)
-    }, [focusNode])
+        applyPathMode(node)
+    }, [applyPathMode])
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <Box sx={{ width: '100%', height: '100%', position: 'relative', bgcolor: '#0a0c14', overflow: 'hidden' }}>
+        <Box ref={rootRef} sx={{ width: '100%', height: `calc(100vh - ${canvasTop}px)`, position: 'relative', bgcolor: '#0a0c14', overflow: 'hidden' }}>
 
             {/* Three.js canvas */}
             <Box
@@ -935,23 +1034,48 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 </Box>
             )}
 
-            {/* ── Path mode banner ── */}
+            {/* ── Path mode banner with breadcrumbs ── */}
             {pathModeNode && (
                 <Box sx={{
                     position: 'absolute', top: 0, left: 0, right: 0,
                     bgcolor: 'rgba(30,18,60,0.94)', borderBottom: '1px solid rgba(180,140,255,0.3)',
-                    p: '5px 14px', display: 'flex', alignItems: 'center', gap: 1.5, zIndex: 6,
+                    px: 1.5, py: '5px', display: 'flex', alignItems: 'center', gap: 1, zIndex: 6,
                 }}>
-                    <Timeline sx={{ color: '#bb88ff', fontSize: 18 }} />
-                    <Typography variant='caption' sx={{ color: '#cc99ff', flex: 1 }}>
-                        Path view: <strong>{pathModeNode.name}</strong> ({pathModeNode.kind})
-                    </Typography>
+                    <Timeline sx={{ color: '#bb88ff', fontSize: 16, flexShrink: 0 }} />
+                    {/* Breadcrumb nodes */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1, overflowX: 'auto', '&::-webkit-scrollbar': { height: 3 } }}>
+                        {pathNodes.map((n, i) => {
+                            const hex = '#' + (KIND_COLOR[n.kind] ?? 0x888888).toString(16).padStart(6, '0')
+                            const isSelected = n.uid === pathModeNode.uid
+                            return (
+                                <React.Fragment key={n.uid}>
+                                    {i > 0 && (
+                                        <Typography variant='caption' sx={{ color: 'rgba(180,140,255,0.4)', flexShrink: 0 }}>›</Typography>
+                                    )}
+                                    <Box sx={{
+                                        display: 'flex', alignItems: 'center', gap: 0.4, flexShrink: 0,
+                                        px: 0.8, py: '2px', borderRadius: 1,
+                                        bgcolor: isSelected ? hex + '33' : 'rgba(255,255,255,0.05)',
+                                        border: `0.5px solid ${isSelected ? hex + '88' : 'rgba(255,255,255,0.1)'}`,
+                                    }}>
+                                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: hex, flexShrink: 0 }} />
+                                        <Typography variant='caption' noWrap sx={{ color: isSelected ? hex : 'rgba(255,255,255,0.7)', fontSize: 10, maxWidth: 90 }}>
+                                            {n.name}
+                                        </Typography>
+                                        <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, flexShrink: 0 }}>
+                                            {n.kind}
+                                        </Typography>
+                                    </Box>
+                                </React.Fragment>
+                            )
+                        })}
+                    </Box>
                     <Chip
-                        label='Exit path view'
+                        label='Exit'
                         size='small'
                         onClick={exitPathMode}
                         sx={{
-                            cursor: 'pointer', fontSize: 11,
+                            flexShrink: 0, cursor: 'pointer', fontSize: 10,
                             bgcolor: 'rgba(180,130,255,0.15)', color: '#cc99ff',
                             border: '0.5px solid rgba(180,130,255,0.35)',
                             '&:hover': { bgcolor: 'rgba(180,130,255,0.28)' },
@@ -1020,14 +1144,40 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 ))}
             </Stack>
 
+            {/* Namespace chips — bottom right */}
+            {availableNamespaces.length > 1 && (
+                <Box sx={{ position: 'absolute', bottom: 12, right: 12, display: 'flex', flexDirection: 'column', gap: 0.75, maxHeight: '60%', overflowY: 'auto', alignItems: 'flex-end' }}>
+                    {availableNamespaces.map(ns => {
+                        const hidden = hiddenNamespaces.has(ns)
+                        return (
+                            <Chip key={ns} label={ns} size='small'
+                                onClick={() => setHiddenNamespaces(prev => { const next = new Set(prev); next.has(ns) ? next.delete(ns) : next.add(ns); return next })}
+                                sx={{
+                                    cursor: 'pointer',
+                                    bgcolor: hidden ? 'rgba(255,255,255,0.04)' : 'rgba(100,160,255,0.12)',
+                                    color:   hidden ? 'rgba(255,255,255,0.25)' : '#88aadd',
+                                    border:  `0.5px solid ${hidden ? 'rgba(255,255,255,0.1)' : 'rgba(100,160,255,0.3)'}`,
+                                    fontSize: 11,
+                                    textDecoration: hidden ? 'line-through' : 'none',
+                                    transition: 'all 0.15s ease',
+                                    '&:hover': { bgcolor: 'rgba(100,160,255,0.22)' },
+                                }}
+                            />
+                        )
+                    })}
+                </Box>
+            )}
+
             {/* Kind chips — bottom left */}
-            <Box sx={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', gap: 0.75, flexWrap: 'wrap', maxWidth: '70%' }}>
+            <Box sx={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', gap: 0.75, flexWrap: 'wrap', maxWidth: '50%' }}>
                 {(Object.values(ETopologyNodeKind) as ETopologyNodeKind[]).map(kind => {
                     const count = kindCount(kind)
                     if (!count) return null
                     const hex    = '#' + (KIND_COLOR[kind] ?? 0x888888).toString(16).padStart(6, '0')
                     const hidden = hiddenKinds.has(kind)
-                    const label  = kind === ETopologyNodeKind.PERSISTENTVOLUMECLAIM ? `PVC: ${count}` : `${kind}: ${count}`
+                    const label  = kind === ETopologyNodeKind.PERSISTENTVOLUMECLAIM ? `PVC: ${count}`
+                               : kind === ETopologyNodeKind.CONTAINER ? `Ctr: ${count}`
+                               : `${kind}: ${count}`
                     return (
                         <Chip key={kind} label={label} size='small' onClick={() => toggleKind(kind)} sx={{
                             cursor: 'pointer',
@@ -1043,9 +1193,9 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 })}
             </Box>
 
-            {/* Selected node info — top left */}
+            {/* Selected node info — top left, below banner when in path mode */}
             {selectedNode && (
-                <Box sx={{ position: 'absolute', top: 12, left: 12 }}>
+                <Box sx={{ position: 'absolute', top: pathModeNode ? 54 : 12, left: 12, transition: 'top 0.15s ease' }}>
                     <NodeInfoPanel node={selectedNode} />
                 </Box>
             )}

@@ -1,16 +1,28 @@
-export interface INewMetricsCluster {
-    nodes: INewMetricsNode[]
+export interface IMetricsClusterUsage {
+    vcpus: number
+    memory: number
+    cpuUsage: number
+    memoryUsage: number
+    txmbps: number
+    rxmbps: number
 }
 
-export interface INewMetricsNode {
+export interface IMetricsCluster {
+    metricsInterval: number
+    cluster: IMetricsClusterUsage
+    nodes: IMetricsNode[]
+}
+
+export interface IMetricsNode {
+    name: string
     timestamp: number
-    summary: INewMetricsNodeSummary
-    containerMetricValues: Map<string, {value: number, timestamp:number}>
-    podMetricValues: Map<string, {value: number, timestamp:number}>
+    summary: IMetricsNodeSummary
     machineMetricValues: Map<string, {value: number, timestamp:number}>
+    podMetricValues: Map<string, {value: number, timestamp:number}>
+    containerMetricValues: Map<string, {value: number, timestamp:number}>
 }
 
-export interface INewMetricsNodeSummary {
+export interface IMetricsNodeSummary {
     nodeName: string
     systemContainers: ISystemContainer[]
     startTime: string

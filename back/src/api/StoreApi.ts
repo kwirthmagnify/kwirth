@@ -8,7 +8,7 @@ export class StoreApi {
     configMaps: IConfigMaps
     static semaphore:Semaphore = new Semaphore(1)
 
-    public route = express.Router()
+    public router = express.Router()
 
     constructor (config: IConfigMaps, apiKeyApi: ApiKeyApi) {
         this.configMaps=config
@@ -16,7 +16,7 @@ export class StoreApi {
         // A controller is implemented by prepending 'groupname-' (the controller name and a dash) to key name
 
         // get controller
-        this.route.route('/:user')
+        this.router.route('/:user')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res, apiKeyApi))) return
                 next()
@@ -42,7 +42,7 @@ export class StoreApi {
 
         // get an array of object names in a group
         // if parameter full is present we return an array containing all the objects
-        this.route.route('/:user/:group')
+        this.router.route('/:user/:group')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res,apiKeyApi))) return
                 next()
@@ -74,7 +74,7 @@ export class StoreApi {
             })
 
         // get an object
-        this.route.route('/:user/:group/:key')
+        this.router.route('/:user/:group/:key')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res, apiKeyApi))) return
                 next()

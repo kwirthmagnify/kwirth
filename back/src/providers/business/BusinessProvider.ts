@@ -2,8 +2,9 @@ import { KwirthData } from '@kwirthmagnify/kwirth-common'
 import { IProvider } from '../IProvider'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
-import { ELogComponent, logError, logInfo } from '../../tools/Logging'
+import { ELogComponent, logError, logInfo, logTrace } from '../../tools/Logging'
 import express, { Request, Response} from 'express'
+import { ApiKeyApi } from '../../api/ApiKeyApi'
 
 interface IBusinessDataConfig {
     spaces: { 
@@ -17,12 +18,15 @@ export class BusinessProvider implements IProvider {
     public readonly providesRouter = true
     public router = express.Router()
     public routerAlias = 'business'
+    readonly requiresApiKeyApi: boolean = false
+    public apiKeyApi: ApiKeyApi|undefined
+
     private data = new Map<string, Map<string,any[]>>()
 
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IBusinessDataConfig>
 
-    constructor(clusterInfo: ClusterInfo, kwirthData:KwirthData) {
+    constructor(clusterInfo: ClusterInfo, kwirthData: KwirthData, apiKeyApi?: ApiKeyApi) {
         logInfo(ELogComponent.PROVIDER, `Instantiating provider ${this.id}`)
         this.clusterInfo = clusterInfo
         this.subscribers = new Map()

@@ -51,11 +51,11 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
 
     let homeCluster = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.name : 'n/a'
     let clusterUrl = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.url : 'n/a'
-    let homeChannels = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.channels.map(c => c.id).join(', ') : ''
+    let homeChannels = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.channels.map(c => c.id).sort().join(', ') : ''
     let kwirthVersion = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.version : 'n/a'
     let kwrithNamespace = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.namespace : 'n/a'
     let kwrithDeployment = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.deployment : 'n/a'
-    let frontChannels:string = ((props.frontChannels.keys() as any).toArray()).join(', ')
+    let frontChannels:string = ((props.frontChannels.keys() as any).toArray()).sort().join(', ')
 
     const handleCardToggle = () => {
         setCardExpanded((prev) => !prev)
@@ -68,17 +68,17 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
         const i = setInterval((c: Cluster) => {
             fetch(`${c.url}/metrics/usage/cluster`, addGetAuthorization(c.accessString))
                 .then((result) => {
-                    if (!result.ok) throw new Error("Error en respuesta de red")
+                    if (!result.ok) throw new Error('Error getting cluster usage')
                     return result.json()
                 })
                 .then((data) => {
-                    setCpu(data.cpu);
-                    setDataCpu(prev => [...prev, { value: data.cpu as number }])
-                    props.dataCpu.push({ value: data.cpu as number })
+                    setCpu(data.cpuUsage)
+                    setDataCpu(prev => [...prev, { value: data.cpuUsage as number }])
+                    props.dataCpu.push({ value: data.cpuUsage as number })
                     
-                    setMemory(data.memory);
-                    setDataMemory(prev => [...prev, { value: data.memory as number}])
-                    props.dataMemory.push({ value: data.memory as number})
+                    setMemory(data.memoryUsage)
+                    setDataMemory(prev => [...prev, { value: data.memoryUsage as number}])
+                    props.dataMemory.push({ value: data.memoryUsage as number})
                     
                     setTxmbps(data.txmbps)
                     setRxmbps(data.rxmbps)
@@ -170,7 +170,6 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 </Tooltip>
                                 <Typography>&nbsp;</Typography>
                                 <Tooltip title={`View: ${tab.channelObject.view}`}>
-                                    {/* span required for showing tooltip on icon */}
                                     <span style={{ display: 'inline-flex' }}>  
                                         {viewIcon}
                                     </span>
@@ -181,14 +180,18 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 </Tooltip>
                                 <Typography flexGrow={1}/>
                                 <Tooltip title={`Open this configuration on a new tab`}>
-                                    <IconButton onClick={() => props.onHomepageSelectTab(tab)} disabled={disabled}>
-                                        <OpenInBrowser/>
-                                    </IconButton>
+                                    <span>
+                                        <IconButton onClick={() => props.onHomepageSelectTab(tab)} disabled={disabled}>
+                                            <OpenInBrowser/>
+                                        </IconButton>
+                                    </span>
                                 </Tooltip>
                                 <Tooltip title={`Restore these tab parameters to resource selector`}>
-                                    <IconButton onClick={() => props.onRestoreTabParameters(tab)} disabled={disabled}>
-                                        <FactCheck/>
-                                    </IconButton>
+                                    <span>
+                                        <IconButton onClick={() => props.onRestoreTabParameters(tab)} disabled={disabled}>
+                                            <FactCheck/>
+                                        </IconButton>
+                                    </span>
                                 </Tooltip>
                                 
                                 { listType !== EListType.FAV && 
@@ -301,7 +304,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                 content = <>{getIconFromKind('IconK3s', 20)}&nbsp;Rancher K3</>
                 break
             case 'k3d':
-                content = <>{getIconFromKind('IconK3d', 20)}&nbsp;K3D</>
+                content = <Stack direction={'row'} alignItems={'center'}>{getIconFromKind('IconK3d', 24)}&nbsp;K3D</Stack>
                 break
             case 'eks':
                 content = <>{getIconFromKind('IconEks', 20)}&nbsp;AWS Kubernetes</>
@@ -354,7 +357,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                             <Typography flexGrow={1}></Typography>
 
                             <Tooltip title={`${(cpu||0).toFixed(2)}%`}>
-                                <Stack direction={'column'} alignItems={'center'}>
+                                <Stack direction={'column'} alignItems={'center'} mr={'2px'}>
                                     <Typography fontSize={8} mb={-1}>CPU</Typography>
                                     <AreaChart width={120} height={20} data={dataCpu} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                                         <Area type="monotone" dataKey="value" stroke="#8884d8" strokeWidth={2} dot={false} fill={'#bbbbdd'}/>
@@ -362,7 +365,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 </Stack>
                             </Tooltip>
                             <Tooltip title={`${(memory||0).toFixed()}GB / ${((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed()}GB`}>
-                                <Stack direction={'column'} alignItems={'center'}>
+                                <Stack direction={'column'} alignItems={'center'} mr={'2px'}>
                                     <Typography fontSize={8} mb={-1}>Mem</Typography>
                                     <AreaChart width={120} height={20} data={dataMemory} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                                         <Area type="monotone" dataKey="value" stroke="#d88488" strokeWidth={2} dot={false} fill={'#ddbbbb'}/>
@@ -400,7 +403,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 <Typography fontSize={20}><b>Kwirth Info</b></Typography>
                                 <Typography><b>Kwirth version: </b>{kwirthVersion}</Typography>
                                 <Typography><b>Namespace: </b>{kwrithNamespace}</Typography>
-                                <Typography><b>Deployment: </b>{kwrithDeployment}</Typography>
+                                <Typography><b>Deployment: </b>{kwrithDeployment || 'N/A'}</Typography>
                                 <Typography><b>Clusters: </b>{props.clusters.map (c => c.name).join(', ')}</Typography>
                                 <Typography><b>Type: </b>{props.cluster?.clusterInfo?.type}</Typography>
                             </Stack>

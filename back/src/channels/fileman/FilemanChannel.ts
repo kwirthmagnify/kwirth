@@ -125,7 +125,8 @@ class FilemanChannel implements IChannel {
                 { name: 'upload', methods: ['POST'], requiresAccessKey: true } 
             ],
             websocket: false,
-            cluster: false
+            cluster: false,
+            resourced: true
         }
     }
 

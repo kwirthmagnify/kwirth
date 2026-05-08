@@ -69,7 +69,8 @@ class TrivyChannel implements IChannel {
                 requiresAccessKey: true
             } ],
             websocket: false,
-            cluster: false
+            cluster: false,
+            resourced: true
         }
     }
 

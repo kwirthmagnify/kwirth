@@ -158,45 +158,13 @@ const rfmSetup = (
 
                     <Divider sx={{mt:1, mb:1}}/>
 
-                    {/* <Box sx={{ flex:1, overflowY: 'auto', ml:1, mr:1 }}>
+                    <ClusterMetrics channelObject={channelObject}/>
+                    
+                    <Divider sx={{mt:1, mb:1}}/>
 
-                        <ClusterMetrics channelObject={channelObject}/>
-                        
-                        <Divider sx={{mt:1, mb:1}}/>
+                    <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ summary: true}}/>
 
-                        <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ summary: true}} />
-
-                        <Divider sx={{mt:1, mb:1}}/>
-
-                        <Stack direction={'column'}>
-                            {
-                                magnifyData.clusterEvents?.map( (e,index) => {
-                                    let severity= e.type? e.type[0]:''
-                                    let color='--mui-palette-text-primary'
-                                    if (severity==='W') color='orange'
-                                    if (severity==='E') color='red'
-                                    return <Stack key={index} direction={'row'}>
-                                        <Typography variant='body2' sx={{width:'5%', color}}>{severity}</Typography>
-                                        <Typography variant='body2' sx={{width:'25%', color}}>{e.eventTime||e.lastTimestamp||e.firstTimestamp}</Typography>
-                                        <Typography variant='body2' sx={{width:'70%', color}}>{e.message}</Typography>
-                                    </Stack>
-                                })
-                            }
-                        </Stack>
-                        <Stack direction={'row'}>
-                            <Typography flexGrow={1}/>
-                            <Button onClick={getMoreEvents}>More Events</Button>
-                        </Stack>
-                    </Box> */}
-
-                        <ClusterMetrics channelObject={channelObject}/>
-                        
-                        <Divider sx={{mt:1, mb:1}}/>
-
-                        <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ summary: true}}/>
-
-                        <Divider sx={{mt:1, mb:1}}/>
-
+                    <Divider sx={{mt:1, mb:1}}/>
 
                     <Box sx={{ flex:1, overflowY: 'auto', ml:1, mr:1 }}>
 

@@ -4,6 +4,7 @@ import { ClusterInfo, INodeInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 import express, { Request, Response} from 'express'
+import { ApiKeyApi } from '../../api/ApiKeyApi'
 
 interface IValidatingSubscriber {
     kinds: string[]
@@ -14,11 +15,13 @@ export class ValidatingProvider implements IProvider {
     public readonly providesRouter = true
     public router = express.Router()
     public routerAlias = undefined
+    readonly requiresApiKeyApi: boolean = false
+    public apiKeyApi: ApiKeyApi|undefined
 
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IValidatingSubscriber>
     
-    constructor(clusterInfo: ClusterInfo, kwirthData:KwirthData) {
+    constructor(clusterInfo: ClusterInfo, kwirthData: KwirthData) {
         logInfo(ELogComponent.PROVIDER, `Instantiating provider ${this.id}`)
         this.clusterInfo = clusterInfo
         this.subscribers = new Map()

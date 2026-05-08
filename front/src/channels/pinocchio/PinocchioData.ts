@@ -1,7 +1,7 @@
 import { IAnalysis, IConfigProvider, IMessage, IPinocchioConfig } from "./PinocchioConfig"
 
 export interface IPinocchioData {
-    toolsAvailable: string[]
+    toolsAvailable: { name: string, description: string }[]
     providersAvailable: string[]
     providers: IConfigProvider[]
     config: IPinocchioConfig
@@ -11,7 +11,7 @@ export interface IPinocchioData {
 }
 
 export class PinocchioData implements IPinocchioData {
-    toolsAvailable: string[] = []
+    toolsAvailable: { name: string, description: string }[] = []
     providersAvailable: string[] = []
     providers: IConfigProvider[] = []
     config = {

@@ -25,7 +25,8 @@ interface BackChannelData {
     metrics: boolean  // this channel requires metrics provider
     endpoints: IEndpointConfig[]  // array of specific endpoints the channel requires (usually this would be empty)
     websocket: boolean  // this channel allows websocket creation (aside from main websocket communication)
-    cluster: boolean    // this channel is cluster-wide, it has access to all namespaces/controllers/pods/containers
+    cluster: boolean    // this channel supports cluster-wide invocation (addObject called once with *all)
+    resourced: boolean  // this channel supports resource-based invocation (addObject called per selected resource)
 }
 
 interface KwirthData {

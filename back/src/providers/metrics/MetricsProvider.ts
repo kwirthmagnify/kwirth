@@ -1,44 +1,197 @@
 import { KwirthData } from '@kwirthmagnify/kwirth-common'
-import { INewMetricsCluster, INewMetricsNode, INewMetricsNodeSummary } from './INewMetricsModel'
+import { IMetricsCluster, IMetricsClusterUsage, IMetricsNode, IMetricsNodeSummary } from './IMetricsModel'
 import { IProvider } from '../IProvider'
 import { ClusterInfo, INodeInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
-import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
+import { ELogComponent, logError, logInfo, logTrace, logWarning } from '../../tools/Logging'
+import express, { Request, Response} from 'express'
+import { AuthorizationManagement } from '../../tools/AuthorizationManagement'
+import { ApiKeyApi } from '../../api/ApiKeyApi'
 
-export interface INewMetricsSubscriberConfig {
+export interface IMetricsSubscriberConfig {
 }
 
-export interface NewMetricDefinition {
+export interface MetricDefinition {
     help: string
     type: string
     eval: string
 }
 
-export class NewMetricsProvider implements IProvider {
-    public readonly id = 'newmetrics'
-    public readonly providesRouter = false
-    public router = undefined
-    public routerAlias = undefined
+export class MetricsProvider implements IProvider {
+    public readonly id = 'metrics'
+    public readonly providesRouter = true
+    public router = express.Router()
+    public routerAlias = 'metrics'
+    readonly requiresApiKeyApi: boolean = true
+    public apiKeyApi: ApiKeyApi|undefined
 
     private clusterInfo: ClusterInfo
-    private subscribers: Map<IChannel, INewMetricsSubscriberConfig>
+    private kwirthData: KwirthData
+    private subscribers: Map<IChannel, IMetricsSubscriberConfig> = new Map()
 
-    private metricsList: Map<string,NewMetricDefinition>
-    private inCluster: boolean
+    private metricsList: Map<string,MetricDefinition> = new Map()
     public metricsInterval: number = 15
     public metricsIntervalRef: number|NodeJS.Timeout|undefined = undefined
     private loadingClusterMetrics: boolean = false
+    private lastRead:IMetricsCluster|undefined
+    private prevRead:IMetricsCluster|undefined
+    private vcpus = 0
+    private memory = 0
 
     constructor(clusterInfo: ClusterInfo, kwirthData: KwirthData) {
         this.clusterInfo = clusterInfo
-        this.subscribers = new Map()
-        this.metricsList = new Map()
-        this.inCluster = kwirthData.inCluster
+        this.kwirthData = kwirthData
+
+        this.router.route('/')
+            .all( async (req:Request,res:Response, next) => {
+                if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi!))) return
+                next()
+            })
+            .get( async (req:Request, res:Response) => {
+                try {
+                    if (this.metricsList) {
+                        res.status(200).json(this.getMetricsList())
+                    }
+                    else {
+                        res.status(200).json([])
+                    }
+                }
+                catch (err) {
+                    res.status(400).send()
+                    console.log('Error obtaining available metrics list')
+                    console.log(err)
+                }
+            })
+        this.router.route('/usage/*')
+            .all( async (req:Request,res:Response, next) => {
+                if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi!))) return
+                next()
+            })
+            .get( async (req:Request, res:Response) => {
+                try {
+                    switch (req.url) {
+                        case '/usage/cluster':
+                            //this.sendUsageCluster(req,res)
+                            res.status(200).send(this.getClusterUsage())
+                        break
+                        // case '/usage/poddetail':
+                        //     this.sendUsagePodDetail(req,res)
+                        // break
+                    }
+                }
+                catch (err) {
+                    res.status(400).send()
+                    console.log('Error obtaining usage metrics')
+                    console.log(err)
+                }
+            })
+            this.router.route('/config')
+                .all( async (req:Request,res:Response, next) => {
+                    if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi!))) return
+                    next()
+                })
+                .get( async (req:Request, res:Response) => {
+                    try {
+                        res.status(200).json({ metricsInterval: this.metricsInterval })
+                    }
+                    catch (err) {
+                        res.status(400).send()
+                        logError(ELogComponent.CORE, 'Error sending metrics settings')
+                        logError(ELogComponent.CORE, err)
+                    }
+                })
+                .post( async (req:Request, res:Response) => {
+                    try {
+                        let data:any = req.body
+                        if (data.metricsInterval) {
+                            this.metricsInterval = data.metricsInterval
+                            this.stopMetricsInterval()
+                            this.startMetricsInterval(+data.metricsInterval) 
+                            logWarning(ELogComponent.CORE, `New metrics cluster interval set to ${data.metricsInterval}`)
+                        }
+                        res.status(200).json()
+                    }
+                    catch (err) {
+                        res.status(400).send()
+                        console.log('Error updating metrics settings')
+                        console.log(err)
+                    }
+                })
+    }
+
+    startMetricsInterval = (seconds: number) => {
+        this.metricsInterval = seconds
+        this.metricsIntervalRef = setInterval(
+            this.tick,
+            this.metricsInterval * 1000, 
+            this.clusterInfo
+        )
+    }
+
+    stopMetricsInterval = () => clearTimeout(this.metricsIntervalRef)
+
+    public getMetricsList() {
+        return Array.from(this.metricsList.keys()).map ( metricName => { return { metric:metricName, ...this.metricsList.get(metricName)} })
+    }
+
+    public getClusterUsage = () : IMetricsClusterUsage=> {
+        let cpuu=0, cpun=this.vcpus
+        let memu=0, memt=0
+        let tx=0, rx=0
+        let prevtx=0, prevrx=0
+        if (this.metricsList && this.lastRead) {
+            try {
+                
+                for (let lastNodeRead of this.lastRead.nodes) {
+                    if (lastNodeRead.summary) {
+                        memu += lastNodeRead.summary.memory.usageBytes
+                        memt += lastNodeRead.summary.memory.usageBytes + lastNodeRead.summary.memory.availableBytes
+                        cpuu+=lastNodeRead.summary.cpu.usageNanoCores
+                        tx += lastNodeRead.summary.network.txBytes
+                        rx += lastNodeRead.summary.network.rxBytes
+
+                        if (this.prevRead) {
+                            let prevNodeRead = this.prevRead.nodes.find(n => n.name === lastNodeRead.name)
+                            if (prevNodeRead) {
+                                prevtx += prevNodeRead.summary.network.txBytes
+                                prevrx += prevNodeRead.summary.network.rxBytes
+                            }
+                        }
+                    }
+                }
+                if (memt===0) memt=1
+                if (cpun===0) cpun=1
+                let tottx = tx-prevtx
+                let totrx = rx-prevrx
+                tottx = (tottx/1024/1024) / this.metricsInterval
+                totrx = (totrx/1024/1024) / this.metricsInterval
+                return {
+                    vcpus: this.vcpus,
+                    memory: this.memory,
+                    cpuUsage: (cpuu/(cpun*Math.pow(10,9)))*100,
+                    memoryUsage: memu/memt*100,
+                    txmbps: tottx,
+                    rxmbps: totrx
+                }
+            }
+            catch (err) {
+                logError(ELogComponent.CHANNEL, 'Error calculating node resources')
+                logError(ELogComponent.CHANNEL, err)
+            }
+        }
+        return {
+            vcpus: this.vcpus,
+            memory: this.memory,
+            cpuUsage: 0,
+            memoryUsage: 0,
+            txmbps: 0,
+            rxmbps: 0
+        }
     }
 
     addSubscriber = async (channel: IChannel, data: { container:boolean, pod:boolean, machine:boolean }) => {
         try {
-            let subscriber: INewMetricsSubscriberConfig = {
+            let subscriber: IMetricsSubscriberConfig = {
                 ...data,
             }
             this.subscribers.set(channel, subscriber)
@@ -52,7 +205,7 @@ export class NewMetricsProvider implements IProvider {
         if (this.subscribers.has(c)) this.subscribers.delete(c)
     }
 
-    addRecordType (map:Map<string,NewMetricDefinition>, metricName:string, recordType:string, value:string): void {
+    addRecordType (map:Map<string,MetricDefinition>, metricName:string, recordType:string, value:string): void {
         if (!map.has(metricName)) map.set(metricName,{help: '', type: '', eval: ''})
         switch(recordType) {
             case '# HELP':
@@ -67,55 +220,43 @@ export class NewMetricsProvider implements IProvider {
         }
     }
 
+    configCall = async (node:INodeInfo, path:string) : Promise<{url:string, options:any}> => {
+        // path: /metrics/cadvisor
+        let url, options
+        if (this.kwirthData.inCluster) {
+            // inside URL plus token
+            url = `https://${node.ip}:10250${path}`
+            options = { headers: { Authorization: 'Bearer ' + this.clusterInfo.token} }
+        }
+        else {
+            if (this.kwirthData.isElectron) {
+                // outside URL plus kubeconfig creds
+                let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
+                //url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy${path}`
+                url = `${cluster!.server}/api/v1/nodes/${node.name}/proxy${path}`
+                options = { method: 'GET' }
+                await this.clusterInfo.kubeConfig.applyToFetchOptions(options)
+            }
+            else {
+                // outside URL plus token
+                let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
+                //url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy${path}`
+                url = `${cluster!.server}/api/v1/nodes/${node.name}/proxy${path}`
+                options = { headers: { Authorization: 'Bearer ' + this.clusterInfo.token} }
+            }
+        }
+        return { url, options}
+    }
+
     public readCAdvisorMetrics = async (node:INodeInfo): Promise<string> => {
         let text=''
         
-        if (!this.inCluster) {
-            // electron access with kubeconfig credentials
-            let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
-            const url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy/metrics/cadvisor`
-            const fetchOptions: any = { method: 'GET' }
-            await this.clusterInfo.kubeConfig.applyToFetchOptions(fetchOptions)
-
-            try {
-                const response = await fetch(url, fetchOptions)
-                if (response.ok)
-                    text = await response.text()
-                else
-                    logError(ELogComponent.PROVIDER, `Error reading outCluster metrics ${response.status}: ${response.statusText}`)
-            }
-            catch (error: any) {
-                logError(ELogComponent.PROVIDER, `Error reading cAdvisor metrics from inElectron on node ${node.kubernetesNode.metadata?.name}:` + error.message)
-            }
-        }
-        else if (this.inCluster) {
-            // internal access without kubeconfig
-            try {
-                const response = await fetch (`https://${node.ip}:10250/metrics/cadvisor`, { headers: { Authorization: 'Bearer ' + this.clusterInfo.token} })
-                if (!response.ok) throw new Error(`Error getting kubelet metrics ${response.status}: ${response.statusText}`)
-                text = await response.text()
-            }
-            catch (error:any) {
-                logError(ELogComponent.PROVIDER, `Error reading cAdvisor inCluster metrics at node ${node.ip}` + error.stack)
-            }
-        }
-        else {  //+++ what about this else???
-            // external access without kubeconfig
-            try {
-                let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
-                const url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy/metrics/cadvisor`
-                const fetchOptions: any = { method: 'GET', headers: { Authorization: 'Bearer ' + this.clusterInfo.token} }
-                const response = await fetch(url, fetchOptions)
-                if (response.ok) 
-                    text = await response.text()
-                else
-                    logWarning(ELogComponent.PROVIDER, `Cannot get kubelet metrics ${response.status}: ${response.statusText}`)
-            }
-            catch (err) {
-                logError(ELogComponent.PROVIDER, `Error obtaining kubelet metrics`)
-                logError(ELogComponent.PROVIDER, err)
-            }
-        }
+        let { url, options } = await this.configCall(node, '/metrics/cadvisor')
+        const response = await fetch(url, options)
+        if (response.ok)
+            text = await response.text()
+        else
+            logError(ELogComponent.CHANNEL, `Error reading metrics from '${url}' ${response.status}: ${response.statusText}`)
 
         // add kwirth container metrics
         text += '# HELP kwirth_container_memory_percentage Percentage of memory used by object from the whole cluster\n'
@@ -161,10 +302,12 @@ export class NewMetricsProvider implements IProvider {
         return text
     }
 
-    async loadNodeMetrics(node:INodeInfo): Promise <Map<string,NewMetricDefinition>> {
-        var map:Map<string,NewMetricDefinition> = new Map()
+    async loadNodeMetrics(node:INodeInfo): Promise <Map<string,MetricDefinition>> {
+        var map:Map<string,MetricDefinition> = new Map()
 
         var allMetrics = await this.readCAdvisorMetrics(node)
+        if (!allMetrics) return new Map()
+
         var lines = allMetrics.split('\n').filter(l => l.startsWith('#'))
         for (var line of lines) {
             var recordType=line.substring(0,6).trim()
@@ -205,7 +348,7 @@ export class NewMetricsProvider implements IProvider {
     }
 
     // reads node metrics and loads 'metricValues' with parsed and formated data
-    async readNodeMetrics(srcNode:INodeInfo): Promise<INewMetricsNode> {
+    async readNodeMetrics(srcNode:INodeInfo): Promise<IMetricsNode> {
         const regex = /(?:\s*([^=^{]*)=\"([^"]*)",*)/gm;
         let rawSampledNodeMetrics = await this.readCAdvisorMetrics(srcNode)
         let lines = rawSampledNodeMetrics.split('\n')
@@ -371,7 +514,7 @@ export class NewMetricsProvider implements IProvider {
             }
         }
 
-        let newSummary = (await this.readCAdvisorSummary(srcNode)).node as INewMetricsNodeSummary
+        let newSummary = (await this.readCAdvisorSummary(srcNode)).node as IMetricsNodeSummary
         if (newSummary && newSummary.network) {
             if (!newSummary.network.txBytes) newSummary.network.txBytes = newSummary.network.interfaces.reduce( (tot,iface) => tot+iface.txBytes, 0 )
             if (!newSummary.network.rxBytes) newSummary.network.rxBytes = newSummary.network.interfaces.reduce( (tot,iface) => tot+iface.rxBytes, 0 )
@@ -380,6 +523,7 @@ export class NewMetricsProvider implements IProvider {
         }
         
         return  {
+            name: srcNode.name,
             timestamp:Date.now(),
             summary: newSummary,
             containerMetricValues: newContainerMetricValues,
@@ -388,35 +532,13 @@ export class NewMetricsProvider implements IProvider {
         }
     }
 
-    readCAdvisorSummary = async (srcNode:INodeInfo): Promise<any> => {
-        if (!this.inCluster) {
-            let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
-            const url = `${cluster!.server}/api/v1/nodes/${srcNode.kubernetesNode.metadata?.name}/proxy/stats/summary`
-            const fetchOptions: any = { method: 'GET' }
-
-            // we add kubeconfig credentials
-            try {
-                await this.clusterInfo.kubeConfig.applyToFetchOptions(fetchOptions)
-                const resp = await fetch(url, fetchOptions)
-                return await resp.json()
-            }
-            catch {
-                logError(ELogComponent.PROVIDER, 'Error reading cadvisor')
-            }
-        }
-        else {
-            try {
-                let resp = await fetch (`https://${srcNode.ip}:10250/stats/summary`, { headers: { Authorization: 'Bearer ' + this.clusterInfo.token} })
-                return await resp.json()
-            }
-            catch (error:any) {
-                logError(ELogComponent.PROVIDER, `Error reading cAdvisor summary at node ${srcNode.ip} ` + error.stack)
-            }
-        }
-        return {}
+    public readCAdvisorSummary = async (node:INodeInfo): Promise<any> => {
+        let { url, options } = await this.configCall(node, '/stats/summary')
+        const resp = await fetch(url, options)
+        return await resp.json()
     }
 
-    readClusterMetrics = async (clusterInfo: ClusterInfo): Promise<INewMetricsCluster|undefined> => {
+    readClusterMetrics = async (clusterInfo: ClusterInfo): Promise<IMetricsCluster|undefined> => {
         if (this.loadingClusterMetrics) {
             logInfo(ELogComponent.PROVIDER, `Still loading cluster metrics ${new Date().toTimeString()}`)
             return undefined
@@ -438,12 +560,13 @@ export class NewMetricsProvider implements IProvider {
             }
 
             // we read the metrics of the nodeset
-            let nodes:INewMetricsNode[] = []
+            let nodes:IMetricsNode[] = []
             for (let node of clusterInfo.nodes.values()) {
                 nodes.push(await this.readNodeMetrics(node))
             }
+            let usage = this.getClusterUsage()
             this.loadingClusterMetrics = false
-            return { nodes }
+            return { metricsInterval: this.metricsInterval, cluster:usage, nodes }
         }
         catch (err) {
             logError(ELogComponent.PROVIDER, 'Error reading cluster metrics')
@@ -454,49 +577,55 @@ export class NewMetricsProvider implements IProvider {
     }
 
     private tick = async (clusterInfo: ClusterInfo): Promise<void> => {
-        let clusterMetrics = await this.readClusterMetrics(clusterInfo)
-        if (clusterMetrics) {
+        this.prevRead = this.lastRead
+        this.lastRead = await this.readClusterMetrics(clusterInfo)
+        if (this.lastRead) {
             for (let [channel, _config] of this.subscribers) {
-                channel.processProviderEvent(this.id, clusterMetrics)
+                channel.processProviderEvent(this.id, this.lastRead)
             }
+            this.getClusterUsage()
         }
     }
 
     startProvider = async () => {
-        logInfo(ELogComponent.PROVIDER, 'NewMetrics provider started...')
+        logInfo(ELogComponent.PROVIDER, 'Metrics provider started...')
 
         let nodes = Array.from(this.clusterInfo.nodes.values())
         this.metricsList = new Map()
 
-        for (var node of nodes) {
-            var nodeMetricsMap = await this.loadNodeMetrics(node)
-            for (var m of nodeMetricsMap.keys()) {
-                if (!this.metricsList.has(m)) this.metricsList.set(m,nodeMetricsMap.get(m)!)
+        try {
+            for (let node of nodes) {
+                let nodeMetricsMap = await this.loadNodeMetrics(node)
+                for (let m of nodeMetricsMap.keys()) {
+                    if (!this.metricsList.has(m)) this.metricsList.set(m,nodeMetricsMap.get(m)!)
+                }
             }
+            logInfo(ELogComponent.CORE, `Metric list read: ${this.metricsList.size}`)
+            let vcpus = 0
+            let memory = 0
+            for (let node of nodes.values()) {
+                let metricsNode = await this.readNodeMetrics(node)
+                if (metricsNode.machineMetricValues.get('machine_cpu_cores')) vcpus += metricsNode.machineMetricValues.get('machine_cpu_cores')!.value
+                if (metricsNode.machineMetricValues.get('machine_memory_bytes')) memory += metricsNode.machineMetricValues.get('machine_memory_bytes')!.value
+            }
+
+            //+++ metrics provider shouldn't modify clusterinfo
+            this.clusterInfo.vcpus = vcpus
+            this.clusterInfo.memory = memory
+            this.vcpus = vcpus
+            this.memory = memory
+
+            this.startMetricsInterval(this.metricsInterval)
+            logInfo(ELogComponent.PROVIDER, 'Metrics gathering started...')
         }
-
-        let vcpus = 0
-        let memory = 0
-        for (let node of nodes.values()) {
-            await this.readNodeMetrics(node)
-            if (node.machineMetricValues.get('machine_cpu_cores')) vcpus += node.machineMetricValues.get('machine_cpu_cores')!.value
-            if (node.machineMetricValues.get('machine_memory_bytes')) memory += node.machineMetricValues.get('machine_memory_bytes')!.value
+        catch (err) {
+            logError(ELogComponent.CORE, 'Error starting metrics provider')
+            logTrace(JSON.stringify(err))
         }
-
-        //+++ move this out
-        this.clusterInfo.vcpus = vcpus
-        this.clusterInfo.memory = memory
-
-        this.metricsIntervalRef = setInterval(
-            this.tick,
-            this.metricsInterval * 1000, 
-            this.clusterInfo
-        )
-        logInfo(ELogComponent.PROVIDER, 'NewMetrics gathering started...')
     }
 
     stopProvider = async () => {
-        clearInterval(this.metricsIntervalRef)
+        this.stopMetricsInterval()
     }
 
 }

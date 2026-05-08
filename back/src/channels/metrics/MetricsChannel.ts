@@ -1,9 +1,17 @@
-import { IInstanceConfig, InstanceConfigViewEnum, InstanceMessageTypeEnum, ISignalMessage, SignalMessageLevelEnum, IInstanceConfigResponse, InstanceMessageFlowEnum, InstanceMessageActionEnum, InstanceMessageChannelEnum, IInstanceMessage, MetricsConfig, MetricsConfigModeEnum, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, IMetricsMessageResponse, IMetricsAssets, MetricsMessage, IMetricsMessage, InstanceConfigObjectEnum, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel, EClusterType } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, MetricsConfig, MetricsConfigModeEnum, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, IMetricsMessageResponse, IMetricsAssets, MetricsMessage, IMetricsMessage, InstanceConfigObjectEnum, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { AssetData } from '../../tools/MetricsTools'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
-import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
+import { ELogComponent, logError, logInfo, logTrace, logWarning } from '../../tools/Logging'
+import { IMetricsCluster, IMetricsNode } from '../../providers/metrics/IMetricsModel'
+
+export interface AssetData {
+    podNode: string
+    podNamespace: string
+    podGroup?: string
+    podName: string 
+    containerName: string
+}
 
 interface IInstance {
     instanceId: string
@@ -23,6 +31,7 @@ class MetricsChannel implements IChannel {
     }
     clusterInfo: ClusterInfo
     backChannelObject: IBackChannelObject
+    metricsCluster: IMetricsCluster[] = []
     // list of intervals (and its associated metrics) that produce metrics streams    
     webSockets: {
         ws:WebSocket,
@@ -46,7 +55,8 @@ class MetricsChannel implements IChannel {
             sources: [ EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,
-            cluster: false
+            cluster: false,
+            resourced: true
         }
     }
 
@@ -55,9 +65,20 @@ class MetricsChannel implements IChannel {
     }
 
     startChannel = async () =>  {
+        this.clusterInfo.addSubscriber('metrics', this, {
+        })
     }
 
-    processProviderEvent(providerId:string, obj:any) : void {
+    async processProviderEvent(providerId:string, event:IMetricsCluster) : Promise<void> {
+        switch(providerId) {
+            case 'metrics':
+                let metricsEvent = event as IMetricsCluster
+                this.metricsCluster.push(metricsEvent)
+                if (this.metricsCluster.length>100) this.metricsCluster.shift()
+                break
+            default:
+                logError(ELogComponent.CHANNEL, `Ignored provider event from ${providerId} to channel ${this.getChannelData().id}`)
+        }
     }
 
     async endpointRequest(endpoint:string,req:Request, res:Response) : Promise<void> {
@@ -410,15 +431,54 @@ class MetricsChannel implements IChannel {
         return undefined
     }
 
-    getAssetMetrics = (instanceConfig:IInstanceConfig, assets:AssetData[], usePrevMetricSet:boolean): IMetricsAssets => {
-        var assetMetrics:IMetricsAssets = { assetName: this.getAssetMetricName(instanceConfig, assets), values: [] }
+    public extractContainerMetrics = (podMetricsSet:Map<string,{value: number, timestamp:number}>, containerMetricsSet:Map<string,{value: number, timestamp:number}>, requestedMetricName:string, view:EInstanceConfigView, node:IMetricsNode, asset:AssetData): {value:number, timestamp:number|undefined }=> {
+        if (view === EInstanceConfigView.CONTAINER) {
+            let metricName = asset.podNamespace + '/' + asset.podName + '/' + asset.containerName + '/' + requestedMetricName
+            let value = containerMetricsSet.get(metricName)?.value
+            if (value !== undefined) {
+                return  { value, timestamp: node.timestamp }
+            }
+            else {
+                return  { value: 0, timestamp: node.timestamp }
+            }    
+        }
+        else {
+            // we extract all metrics in the metricsValue that have an impact in calculating requested metrics (for instance, several container metrics for calculating pod metric)
+            // we get some metric values ignoring the container (just ckecking namespace, pod and metricname)
+            let subset = Array.from(containerMetricsSet.keys()).filter (k => k.startsWith(asset.podNamespace + '/' + asset.podName+'/') && k.endsWith('/'+requestedMetricName))
+            if (subset.length===0) {
+                // if we cannot get metrics when extracting data from container metrics, we look for podMetrics
+                let podValue = podMetricsSet.get(asset.podNamespace + '/' + asset.podName+'/'+requestedMetricName)?.value
+                if (podValue)
+                    return  { value: podValue, timestamp: node.timestamp }
+                else {
+                    return  { value: 0, timestamp: node.timestamp }
+                }
+            }
+            else {
+                let accum = 0
+                for (let submetric of subset) { 
+                    let v = containerMetricsSet.get(submetric)!.value
+                    accum +=v
+                }
+                return  { value: accum, timestamp: node.timestamp }
+            }
+        }
+    }
 
-        var newAssets:AssetData[] = []
+    getAssetMetrics = (instanceConfig:IInstanceConfig, assets:AssetData[], usePrevMetricSet:boolean): IMetricsAssets|undefined => {
+        if (this.metricsCluster.length<2) {
+            return undefined
+        }
+
+        let assetMetrics:IMetricsAssets = { assetName: this.getAssetMetricName(instanceConfig, assets), values: [] }
+        let newAssets:AssetData[] = []
+
         if (instanceConfig.view=== EInstanceConfigView.CONTAINER) {
             newAssets = assets
         }
         else {
-            for (var a of assets) {
+            for (let a of assets) {
                 if (!newAssets.find(newAsset => newAsset.podName === a.podName)) {
                     newAssets.push({
                         podNode: a.podNode,
@@ -450,19 +510,23 @@ class MetricsChannel implements IChannel {
             let uniqueValues:number[] = []
 
             for (let asset of newAssets) {
-                let total=0
-                let node = this.clusterInfo.nodes.get(asset.podNode)
-                if (node) {
+                let total = 0
+                let lastRead = this.metricsCluster[this.metricsCluster.length-1]
+                let prevRead = this.metricsCluster[this.metricsCluster.length-2]
+                let lastNode = lastRead.nodes.find(n => n.name === asset.podNode)
+                let prevNode = prevRead.nodes.find(n => n.name === asset.podNode)
+                if (lastNode && prevNode) {
                     let metric
                     if (usePrevMetricSet)
-                        metric = this.clusterInfo.metrics.extractContainerMetrics(this.clusterInfo, node.prevPodMetricValues, node.prevContainerMetricValues, sourceMetricName, instanceConfig.view, node, asset)
+                        metric = this.extractContainerMetrics(prevNode.podMetricValues, prevNode.containerMetricValues, sourceMetricName, instanceConfig.view, prevNode, asset)
                     else
-                        metric = this.clusterInfo.metrics.extractContainerMetrics(this.clusterInfo, node.podMetricValues, node.containerMetricValues, sourceMetricName, instanceConfig.view, node, asset)
+                        metric = this.extractContainerMetrics(lastNode.podMetricValues, lastNode.containerMetricValues, sourceMetricName, instanceConfig.view, lastNode, asset)
                     total = metric.value
                 }
                 else {
                     logError(ELogComponent.CHANNEL, 'No node found for calculating pod metric value')
                     logError(ELogComponent.CHANNEL, asset)
+                    process.exit(1)
                 }
                 uniqueValues.push(total)
             }
@@ -476,8 +540,12 @@ class MetricsChannel implements IChannel {
 
             switch(m.metricName) {
                 case 'kwirth_container_memory_percentage':
-                    let clusterMemory = this.clusterInfo.memory
-                    if (Number.isNaN(this.clusterInfo.memory)) clusterMemory=Number.MAX_VALUE
+                    // let clusterMemory = this.clusterInfo.memory
+                    // if (Number.isNaN(this.clusterInfo.memory)) clusterMemory=Number.MAX_VALUE
+                    let clusterMemory = Number.MAX_VALUE
+                    if (this.metricsCluster.length>0) {
+                        clusterMemory = this.metricsCluster[this.metricsCluster.length-1].cluster.memory
+                    }
                     m.metricValue = Math.round(m.metricValue/clusterMemory*100*100)/100
                     break
                 case 'kwirth_container_cpu_percentage':
@@ -485,19 +553,25 @@ class MetricsChannel implements IChannel {
                         // we perform a recursive call if-and-only-if we are not extracting prev values
                         let prevValues = this.getAssetMetrics(instanceConfig, newAssets, true)
     
-                        let prev = prevValues.values.find(prevMetric => prevMetric.metricName === m.metricName)
+                        let prev = prevValues?.values.find(prevMetric => prevMetric.metricName === m.metricName)
                         if (prev) {
                             m.metricValue -= prev.metricValue
                             if (m.metricValue < 0) {  // this may happen when pod restarts take place
                                 m.metricValue = prev.metricValue
                             }
                             else {
-                                let totalSecs = this.clusterInfo.metricsInterval * this.clusterInfo.vcpus
-                                m.metricValue = Math.round(m.metricValue/totalSecs*100*100)/100
+                                let totalSecs = 1
+                                if (this.metricsCluster.length>0) {
+                                    totalSecs = this.metricsCluster[this.metricsCluster.length-1].metricsInterval * this.metricsCluster[this.metricsCluster.length-1].cluster.vcpus
+                                    m.metricValue = Math.round(m.metricValue/totalSecs*100*100)/100
+                                }
+                                else {
+                                    m.metricValue = prev.metricValue
+                                }
                             }
                         }
                         else {
-                            logInfo(ELogComponent.CHANNEL, `No previous value  [CPU] found for ${m.metricName}`)
+                            logWarning(ELogComponent.CHANNEL, `No previous value [CPU] found for ${m.metricName}`)
                         }
                     }
                     break
@@ -511,7 +585,7 @@ class MetricsChannel implements IChannel {
                 case 'kwirth_container_receive_percentage':
                     // get total transmit/receive bytes
                     let totalBytes:number = 0
-                    for (var node of this.clusterInfo.nodes.values()) {
+                    for (let node of this.metricsCluster[this.metricsCluster.length-1].nodes) {
                         let sourceMetricName = m.metricName==='kwirth_container_transmit_percentage'? 'container_network_transmit_bytes_total':'container_network_receive_bytes_total'
                         let nodeMetrics = Array.from(node.podMetricValues.keys()).filter(k => k.endsWith('/'+sourceMetricName))
                         nodeMetrics.map ( m => {
@@ -527,13 +601,14 @@ class MetricsChannel implements IChannel {
                     if (!usePrevMetricSet) {
                         // we perform a recursive call if-and-only-if we are not extracting prev values
                         var prevValues = this.getAssetMetrics(instanceConfig, newAssets, true)
-                        let prev = prevValues.values.find(prevMetric => prevMetric.metricName === m.metricName)
+                        let prev = prevValues?.values.find(prevMetric => prevMetric.metricName === m.metricName)
 
                         if (prev) {
                             m.metricValue -= prev.metricValue // we get the value of bytes sent/received on the last period
                             m.metricValue *= 8  // we convert into bits
                             m.metricValue /= (1024*1024)  // we convert into Mbits
-                            let totalSecs = this.clusterInfo.metricsInterval
+                            //let totalSecs = this.clusterInfo.metricsInterval
+                            let totalSecs = this.metricsCluster[0].metricsInterval // we sssume same metricsinteerfval for all nodes
                             m.metricValue = Math.round(m.metricValue/totalSecs*100*100)/100   // we build a percentage with 2 decimal positions
                         }
                         else {
@@ -583,14 +658,14 @@ class MetricsChannel implements IChannel {
             case EInstanceConfigView.NAMESPACE:
                 if ((instanceConfig.data as MetricsConfig).aggregate) {
                     let assetMetrics = this.getAssetMetrics(instanceConfig, instance.assets, false)
-                    responseMessage.assets.push(assetMetrics)
+                    if (assetMetrics) responseMessage.assets.push(assetMetrics)
                 }
                 else {
                     const namespaces = [...new Set(instance.assets.map(item => item.podNamespace))]
                     for (let namespace of namespaces) {
                         let assets = instance.assets.filter(a => a.podNamespace === namespace)
                         let assetMetrics = this.getAssetMetrics(instanceConfig, assets, false)
-                        responseMessage.assets.push(assetMetrics)
+                        if (assetMetrics) responseMessage.assets.push(assetMetrics)
                     }
 
                 }
@@ -598,40 +673,40 @@ class MetricsChannel implements IChannel {
             case EInstanceConfigView.GROUP:
                 if ((instanceConfig.data as MetricsConfig).aggregate) {
                     var assetMetrics = this.getAssetMetrics(instanceConfig, instance.assets, false)
-                    responseMessage.assets.push(assetMetrics)
+                    if (assetMetrics) responseMessage.assets.push(assetMetrics)
                 }
                 else {
                     const groupNames = [...new Set(instance.assets.map(item => item.podGroup))]
                     for (let groupName of groupNames) {
                         let assets=instance.assets.filter(a => a.podGroup === groupName)
                         let assetMetrics = this.getAssetMetrics(instanceConfig, assets, false)
-                        responseMessage.assets.push(assetMetrics)
+                        if (assetMetrics) responseMessage.assets.push(assetMetrics)
                     }
                 }
                 break
             case EInstanceConfigView.POD:
                 if ((instanceConfig.data as MetricsConfig).aggregate) {
                     var assetMetrics = this.getAssetMetrics(instanceConfig, instance.assets, false)
-                    responseMessage.assets.push(assetMetrics)
+                    if (assetMetrics) responseMessage.assets.push(assetMetrics)
                 }
                 else {
                     const uniquePodNames = [...new Set(instance.assets.map(asset => asset.podName))]
                     for (var podName of uniquePodNames) {
                         var assets = instance.assets.filter(a => a.podName === podName)
                         var assetMetrics = this.getAssetMetrics(instanceConfig, assets, false)
-                        responseMessage.assets.push(assetMetrics)
+                        if (assetMetrics) responseMessage.assets.push(assetMetrics)
                     }
                 }
                 break
             case EInstanceConfigView.CONTAINER:
                 if ((instanceConfig.data as MetricsConfig).aggregate) {
                     var assetMetrics = this.getAssetMetrics(instanceConfig, instance.assets, false)
-                    responseMessage.assets.push(assetMetrics)
+                    if (assetMetrics) responseMessage.assets.push(assetMetrics)
                 }
                 else {
                     for (var asset of instance.assets) {
                         var assetMetrics = this.getAssetMetrics(instanceConfig, [asset], false)
-                        responseMessage.assets.push(assetMetrics)
+                        if (assetMetrics) responseMessage.assets.push(assetMetrics)
                     }
                 }
                 break
@@ -686,12 +761,16 @@ class MetricsChannel implements IChannel {
             }
 
             this.fillData(instanceConfig, instance, metricsMessageResponse)
-            
-            try {
-                webSocket.send(JSON.stringify(metricsMessageResponse))
+            if (metricsMessageResponse.assets.length===0) {
+                
             }
-            catch (err) {
-                logInfo(ELogComponent.CHANNEL, 'Socket error, we should forget interval')
+            else {
+                try {
+                    webSocket.send(JSON.stringify(metricsMessageResponse))
+                }
+                catch (err) {
+                    logInfo(ELogComponent.CHANNEL, 'Socket error, we should forget interval')
+                }
             }
             instance.working=false
         }

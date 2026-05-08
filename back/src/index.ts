@@ -25,8 +25,8 @@ import cookieParser from 'cookie-parser'
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware'
 import { ClusterInfo } from './model/ClusterInfo'
 import { ServiceAccountToken } from './tools/ServiceAccountToken'
-import { MetricsApi } from './api/MetricsApi'
-import { MetricsTools } from './tools/MetricsTools'
+//import { MetricsApi } from './api/MetricsApi'
+//import { MetricsTools } from './tools/MetricsTools'
 import { v4 as uuid } from 'uuid'
 import { ISecrets } from './tools/ISecrets'
 import { IConfigMaps } from './tools/IConfigMap'
@@ -45,6 +45,7 @@ import { EchoChannel } from './channels/echo/EchoChannel'
 import { FilemanChannel } from './channels/fileman/FilemanChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
+import { NewsChannel } from './channels/news/NewsChannel'
 
 import { IncomingMessage } from 'http'
 
@@ -61,11 +62,11 @@ import { createProviderInstance, TProviderConstructor } from './providers/IProvi
 import { EventsProvider } from './providers/events/EventsProvider'
 import { ValidatingProvider } from './providers/validating/ValidatingProvider'
 import { TickProvider } from './providers/tick/TickProvider'
-import { BusinessProvider } from './providers/business/BusinessProvider';
-import { NewMetricsProvider } from './providers/newmetrics/NewMetricsProvider';
+import { BusinessProvider } from './providers/business/BusinessProvider'
+import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
 
-import { ELogComponent, logError, logInfo, logWarning } from './tools/Logging';
-import { TopologyChannel } from './channels/topology/TopologyChannel';
+import { ELogComponent, logError, logInfo, logWarning } from './tools/Logging'
+import { TopologyChannel } from './channels/topology/TopologyChannel'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -97,6 +98,7 @@ interface IRunningInstance {
 
 let rootPath = process.env.ROOTPATH
 if (rootPath && !rootPath.startsWith('/')) rootPath = '/'+ rootPath
+//rootPath='/kwirth' //+++
 const envRootPath = rootPath || ''
 const envCommand = process.env.COMMAND
 const envContext = process.env.CONTEXT || undefined
@@ -118,6 +120,7 @@ const envChannelFilemanEnabled = (process.env.CHANNEL_FILEMAN || 'true').toLower
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 const envChannelPinocchioEnabled = (process.env.CHANNEL_PINOCCHIO || 'true').toLowerCase() === 'true'
 const envChannelTopologyEnabled = (process.env.CHANNEL_TOPOLOGY || 'true').toLowerCase() === 'true'
+const envChannelNewsEnabled = (process.env.CHANNEL_NEWS || 'true').toLowerCase() === 'true'
 
 var runningInstances:IRunningInstance[] = []
 
@@ -126,7 +129,7 @@ registeredProviders.set('events', EventsProvider)
 registeredProviders.set('tick', TickProvider)
 registeredProviders.set('validating', ValidatingProvider)
 registeredProviders.set('business', BusinessProvider)
-registeredProviders.set('newmetrics', NewMetricsProvider)
+registeredProviders.set('metrics', MetricsProvider)
 
 var registeredChannels = new Map<string, TChannelConstructor>()
 registeredChannels.set('log', LogChannel)
@@ -139,6 +142,7 @@ registeredChannels.set('echo', EchoChannel)
 registeredChannels.set('magnify', MagnifyChannel)
 registeredChannels.set('pinocchio', PinocchioChannel)
 registeredChannels.set('topology', TopologyChannel)
+registeredChannels.set('news', NewsChannel)
 
 if (envCommand!==undefined) {
     switch(envCommand) {
@@ -276,39 +280,42 @@ const getExecutionEnvironment = async (context:string|undefined):Promise<string>
 
 
 const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthData|undefined> => {
-    try {
-        let podName=process.env.HOSTNAME
-        let kubeConfig = new KubeConfig()
-        kubeConfig.loadFromDefault()
-        if (context) kubeConfig.setCurrentContext(context)
-        let coreApi = kubeConfig.makeApiClient(CoreV1Api)
-        let appsApi = kubeConfig.makeApiClient(AppsV1Api)
+    for (let counter=0; counter<3;counter++) {
+        try {
+            let podName=process.env.HOSTNAME
+            let kubeConfig = new KubeConfig()
+            kubeConfig.loadFromDefault()
+            if (context) kubeConfig.setCurrentContext(context)
+            let coreApi = kubeConfig.makeApiClient(CoreV1Api)
+            let appsApi = kubeConfig.makeApiClient(AppsV1Api)
 
-        const pods = await coreApi.listPodForAllNamespaces()
-        const pod = pods.items.find(p => p.metadata?.name === podName)  
-        if (pod && pod.metadata?.namespace) {
-            let depName = (await AuthorizationManagement.getPodControllerName(appsApi, pod, true)) || ''
-            return { clusterName: 'inCluster', namespace: pod.metadata.namespace, deployment:depName, inCluster:true, isElectron:false, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, metricsInterval:15, channels: [] }
-        }
-        else {
-            // kwirth is supposed to be running outside of cluster, so we look for kwirth users config in order to detect namespace
-            let allSecrets = (await coreApi.listSecretForAllNamespaces()).items
-            let usersSecret = allSecrets.find(s => s.metadata?.name === 'kwirth-users')
-            if (!usersSecret) usersSecret = allSecrets.find(s => s.metadata?.name === 'kwirth.users')
-            if (usersSecret) {
-                // this namespace will be used to access secrets and configmaps
-                return { clusterName: 'inCluster', namespace:usersSecret.metadata?.namespace!, deployment:'', inCluster:false, isElectron:runningEnv.isElectron, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, metricsInterval:15, channels: [] }
+            const pods = await coreApi.listPodForAllNamespaces()
+            const pod = pods.items.find(p => p.metadata?.name === podName)  
+            if (pod && pod.metadata?.namespace) {
+                let depName = (await AuthorizationManagement.getPodControllerName(appsApi, pod, true)) || ''
+                return { clusterName: 'inCluster', namespace: pod.metadata.namespace, deployment:depName, inCluster:true, isElectron:false, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, metricsInterval:15, channels: [] }
             }
             else {
-                // kwirth is running outside, but wants to use kubernetes secrets for storing creds, and they don't exsit
-                logInfo(ELogComponent.CORE, 'Cannot determine namespace while running outside cluster (trying to read users secret)')
-                process.exit(1)
+                // kwirth is supposed to be running outside of cluster, so we look for kwirth users config in order to detect namespace
+                let allSecrets = (await coreApi.listSecretForAllNamespaces()).items
+                let usersSecret = allSecrets.find(s => s.metadata?.name === 'kwirth-users')
+                if (!usersSecret) usersSecret = allSecrets.find(s => s.metadata?.name === 'kwirth.users')
+                if (usersSecret) {
+                    // this namespace will be used to access secrets and configmaps
+                    return { clusterName: 'inCluster', namespace:usersSecret.metadata?.namespace!, deployment:'', inCluster:false, isElectron:runningEnv.isElectron, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, metricsInterval:15, channels: [] }
+                }
+                else {
+                    // kwirth is running outside, but wants to use kubernetes secrets for storing creds, and they don't exsit
+                    logInfo(ELogComponent.CORE, 'Cannot determine namespace while running outside cluster (trying to read users secret)')
+                    //+++ try to create users secret
+                    process.exit(1)
+                }
             }
         }
-    }
-    catch (err) {
-        logError(ELogComponent.CORE, 'Error obatining KwirthData')
-        logError(ELogComponent.CORE, err)
+        catch (err) {
+            logError(ELogComponent.CORE, 'Error obatining KwirthData')
+            logError(ELogComponent.CORE, err)
+        }
     }
     return undefined
 }
@@ -1174,7 +1181,7 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
                 }
                 break
             default:
-                console.error (`Invalid action in instance config: '${instanceConfig.action}'`)
+                logError(ELogComponent.CORE, `Invalid action in instance config: '${instanceConfig.action}'`)
                 break
         }
     }
@@ -1194,32 +1201,38 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
             return false
         }
         let apiKeyApi = result
-        riRouter.use(`/key`, apiKeyApi.route)
+        riRouter.use(`/key`, apiKeyApi.router)
         ri.apiKeyApi = apiKeyApi
+        for (let provider of ri.clusterInfo.providers) {
+            if (provider.requiresApiKeyApi) provider.apiKeyApi = result
+        }
         let configApi:ConfigApi = new ConfigApi(apiKeyApi, ri.kwirthData, ri.clusterInfo)
-        riRouter.use(`/config`, configApi.route)
+        riRouter.use(`/config`, configApi.router)
         let storeApi:StoreApi = new StoreApi(ri.configMaps, apiKeyApi)
-        riRouter.use(`/store`, storeApi.route)
+        riRouter.use(`/store`, storeApi.router)
         let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi)
-        riRouter.use(`/user`, userApi.route)
+        riRouter.use(`/user`, userApi.router)
         let loginApi:LoginApi = new LoginApi(ri.secrets, ri.configMaps, ri.apiKeyApi)
-        riRouter.use(`/login`, loginApi.route)
+        riRouter.use(`/login`, loginApi.router)
         let manageKwirthApi:ManageKwirthApi = new ManageKwirthApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, apiKeyApi, ri.kwirthData)
-        riRouter.use(`/managekwirth`, manageKwirthApi.route)
+        riRouter.use(`/managekwirth`, manageKwirthApi.router)
         let manageCluster:ManageClusterApi = new ManageClusterApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, apiKeyApi)
-        riRouter.use(`/managecluster`, manageCluster.route)
-        let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
-        riRouter.use(`/metrics`, metricsApi.route)
+        riRouter.use(`/managecluster`, manageCluster.router)
+        // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
+        // riRouter.use(`/metrics`, metricsApi.route)
 
         for (let provider of ri.clusterInfo.providers) {
             if (provider.providesRouter) {
                 if (provider.router) {
-                    //riRouter.use(`/provider/${provider.id}`, provider.router)
                     let path
+                    // if (provider.routerAlias)
+                    //     path = `${envRootPath}/${provider.routerAlias}`
+                    // else
+                    //     path = `${envRootPath}/${ri.id}/provider/${provider.id}`
                     if (provider.routerAlias)
-                        path = `${envRootPath}/${provider.routerAlias}`
+                        path = `/${provider.routerAlias}`
                     else
-                        path = `${envRootPath}/${ri.id}/provider/${provider.id}`
+                        path = `/${ri.id}/provider/${provider.id}`
                     riRouter.use(path, provider.router)
                     logInfo(ELogComponent.CORE, `Provider ${provider.id} will listen HTTP requests at '${path}'`)
                 }
@@ -1350,12 +1363,12 @@ process.on('SIGINT', () => handleNodeProcessSignal('SIGINT'))
 process.on('unhandledRejection', (reason:any, promise:any) => {
     logError(ELogComponent.CORE, '❌ UNHANDLED REJECTION')
     logError(ELogComponent.CORE, 'Reason:')
-    logError(ELogComponent.CORE, reason)
-    logError(ELogComponent.CORE, 'Stack:')
-    logError(ELogComponent.CORE, reason.stack)
+    logError(ELogComponent.CORE, JSON.stringify(reason))
+    // logError(ELogComponent.CORE, 'Stack:')
+    // logError(ELogComponent.CORE, reason.stack)
     logError(ELogComponent.CORE, 'Promise:')
-    logError(ELogComponent.CORE, promise)
-    console.dir(promise)
+    logError(ELogComponent.CORE, JSON.stringify(promise))
+    //console.dir(promise)
     process.exit(1)
 })
 
@@ -1376,7 +1389,6 @@ process.on('exit', async () => {
     await new Promise((resolve) => setTimeout(resolve, 10000))
 })
 
-//const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningInstance, localKwirthData: KwirthData, localClusterInfo:ClusterInfo, metricsRequired:boolean, requiredChannels:string[], requiredProviders:string[], backChannelObject:IBackChannelObject) : Promise<void> => {
 const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningInstance, localKwirthData: KwirthData, localClusterInfo:ClusterInfo, backChannelObject:IBackChannelObject) : Promise<void> => {
     try {
         logInfo(ELogComponent.CORE, 'Node info loaded')
@@ -1400,6 +1412,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
         if (envChannelPinocchioEnabled) requiredChannels.push('pinocchio')
         if (envChannelTopologyEnabled) requiredChannels.push('topology')
+        if (envChannelNewsEnabled) requiredChannels.push('news')
 
         logInfo(ELogComponent.CORE, 'Required channels:')
         for (let chanId of registeredChannels.keys()) {
@@ -1426,22 +1439,22 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         logInfo(ELogComponent.CORE, 'Required providers:')
         
         // +++ pending convert metrics into provider
-        let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
-        logInfo(ELogComponent.CORE, `  'metrics' required:` + metricsRequired)
-        if (!envChannelMetricsEnabled) logError(ELogComponent.CORE, '❌ Metrics have not been enabled on Kwirth, so it will not be available.')
-        if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) logError(ELogComponent.CORE, '❌ An SA Token could not be obtained, so metrics will not be available.')
-        metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
-        if (metricsRequired) {
-            localClusterInfo.metrics = new MetricsTools(localClusterInfo, localKwirthData)
-            localClusterInfo.metricsInterval = envMetricsInterval // we set cluster metrics interval based on default metrics interval
+        // let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
+        // logInfo(ELogComponent.CORE, `  'metrics' required:` + metricsRequired)
+        // if (!envChannelMetricsEnabled) logError(ELogComponent.CORE, '❌ Metrics have not been enabled on Kwirth, so it will not be available.')
+        // if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) logError(ELogComponent.CORE, '❌ An SA Token could not be obtained, so metrics will not be available.')
+        // metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
+        // if (metricsRequired) {
+        //     localClusterInfo.metrics = new MetricsTools(localClusterInfo, localKwirthData)
+        //     localClusterInfo.metricsInterval = envMetricsInterval // we set cluster metrics interval based on default metrics interval
             
-            console.log('localKwirthData.inCluster, localKwirthData.isElectron************************************')
-            console.log(localKwirthData.inCluster, localKwirthData.isElectron)
+        //     console.log('localKwirthData.inCluster, localKwirthData.isElectron************************************')
+        //     console.log(localKwirthData.inCluster, localKwirthData.isElectron)
 
-            await localClusterInfo.metrics.startMetrics()
-            logInfo(ELogComponent.CORE, `  vCPU:        ${localClusterInfo.vcpus}`)
-            logInfo(ELogComponent.CORE, `  Memory (GB): ${localClusterInfo.memory/1024/1024/1024}`)
-        }
+        //     await localClusterInfo.metrics.startMetrics()
+        //     logInfo(ELogComponent.CORE, `  vCPU:        ${localClusterInfo.vcpus}`)
+        //     logInfo(ELogComponent.CORE, `  Memory (GB): ${localClusterInfo.memory/1024/1024/1024}`)
+        // }
 
 
         // we need the channels instantiated (but not started) in order to discover what provider do they require
@@ -1674,7 +1687,8 @@ const launchKubernetes = async (context:string|undefined, localKwirthData:Kwirth
     try {
         logInfo(ELogComponent.CORE, 'Start Kubernetes Kwirth')
         if (localKwirthData) {
-            logInfo(ELogComponent.CORE, `Initial kwirthData ${localKwirthData}`)
+            logInfo(ELogComponent.CORE, `Initial kwirthData`)
+            logInfo(ELogComponent.CORE, localKwirthData)
             try {
                 let runningInstance = await createRunningInstance(context, localKwirthData)
                 if (runningInstance) {
@@ -1705,7 +1719,8 @@ const launchDocker = async (context:string|undefined, localKwirthData:KwirthData
     try {
         logInfo(ELogComponent.CORE, 'Start Docker Kwirth')
         if (localKwirthData) {
-            logInfo(ELogComponent.CORE, `Initial kwirthData ${localKwirthData}`)
+            logInfo(ELogComponent.CORE, `Initial kwirthData`)
+            logInfo(ELogComponent.CORE, localKwirthData)
             try {
                 let runningInstance = await createRunningInstance(context, localKwirthData)
                 if (runningInstance) {
@@ -1736,7 +1751,8 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
     try {
         logInfo(ELogComponent.CORE, 'Start Electron Kwirth')
         if (localKwirthData) {
-            logInfo(ELogComponent.CORE, `Initial kwirthData ${localKwirthData}`)
+            logInfo(ELogComponent.CORE, `Initial kwirthData`)
+            logInfo(ELogComponent.CORE, localKwirthData)
             try {
                 expressApp.get('/core/electron/kubeconfig', (req:Request,res:Response) => {
                     try {
@@ -2005,7 +2021,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                 }
                 for (let channel of ri.channels.values()) {
                     if (channel.containsConnection(webSocket)) {
-                        logError(ELogComponent.CORE, `Connection from IP ${ip} to channel ${channel.getChannelData().id} has been interrupted.`)
+                        logWarning(ELogComponent.CORE, `Connection from IP ${ip} to channel ${channel.getChannelData().id} has been interrupted.`)
                     }
                 }
                 if (runningEnv.isElectron) {
@@ -2039,8 +2055,7 @@ logInfo(ELogComponent.CORE, `Kwirth version is ${VERSION}`)
 logInfo(ELogComponent.CORE, `Kwirth started at ${new Date().toISOString()}`)
 logInfo(ELogComponent.CORE, 'Kwirth running environment:')
 logInfo(ELogComponent.CORE, runningEnv)
-logInfo(ELogComponent.CORE, 'Kwirth Auth:')
-logInfo(ELogComponent.CORE, envAuth)
+logInfo(ELogComponent.CORE, `Kwirth Auth: ${envAuth}`)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 showLogo()

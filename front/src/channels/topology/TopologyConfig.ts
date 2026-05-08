@@ -33,9 +33,9 @@ export class TopologyConfig implements ITopologyConfig {
 }
 
 export interface ITopologyInstanceConfig {
-    namespace: string
+    namespaces: string[]
 }
 
 export class TopologyInstanceConfig implements ITopologyInstanceConfig {
-    namespace = '*all'
+    namespaces = ['*all']
 }

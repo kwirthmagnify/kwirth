@@ -7,6 +7,7 @@ import { PinocchioData, IPinocchioData } from './PinocchioData'
 import { PinocchioTabContent } from './PinocchioTabContent'
 import { ENotifyLevel } from '../../tools/Global'
 
+
 export class PinocchioChannel implements IChannel {
     channelId = 'pinocchio'
     private setupVisible = false
@@ -14,7 +15,7 @@ export class PinocchioChannel implements IChannel {
     TabContent: FC<IContentProps> = PinocchioTabContent
     requirements:IChannelRequirements = {
         accessString: true,
-        clusterUrl: false,
+        clusterUrl: true,
         clusterInfo: false,
         exit: false,
         frontChannels: false,
@@ -44,7 +45,7 @@ export class PinocchioChannel implements IChannel {
                 else if (msg.config) pinocchioData.config = msg.config as IPinocchioConfig
                 else if (msg.providers) pinocchioData.providers = msg.providers as IConfigProvider[]
                 else if (msg.providersAvailable) pinocchioData.providersAvailable = msg.providersAvailable as string[]
-                else if (msg.toolsAvailable) pinocchioData.toolsAvailable = msg.toolsAvailable as string[]
+                else if (msg.toolsAvailable) pinocchioData.toolsAvailable = msg.toolsAvailable as { name: string, description: string }[]
                 else if (msg.message) pinocchioData.content.push(msg.message)
                 return {
                     action: EChannelRefreshAction.REFRESH

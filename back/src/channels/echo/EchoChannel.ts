@@ -49,7 +49,8 @@ class EchoChannel implements IChannel {
             sources: [ EClusterType.KUBERNETES, EClusterType.DOCKER ],
             endpoints: [],
             websocket: false,
-            cluster: false
+            cluster: false,
+            resourced: true
         }
     }
 

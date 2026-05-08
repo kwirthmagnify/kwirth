@@ -1,5 +1,4 @@
-import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, DiscoveryV1Api, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
-import { MetricsTools } from '../tools/MetricsTools'
+import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
 import { EClusterType, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
 import Docker from 'dockerode'
 import { DockerTools } from '../tools/DockerTools'
@@ -7,22 +6,10 @@ import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
 import { IChannel } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
-import { INodeMetrics } from './INodeMetrics'
 
 export interface INodeInfo {
-    [x: string]: any  //+++
     name:string
     ip:string
-    kubernetesNode: V1Node
-    containerMetricValues: Map<string,{value: number, timestamp:number}>
-    prevContainerMetricValues: Map<string,{value: number, timestamp:number}>
-    podMetricValues: Map<string,{value: number, timestamp:number}>
-    prevPodMetricValues: Map<string,{value: number, timestamp:number}>
-    machineMetricValues: Map<string,{value: number, timestamp:number}>
-    prevMachineMetricValues: Map<string,{value: number, timestamp:number}>
-    summary: INodeMetrics|undefined
-    prevSummary: INodeMetrics|undefined
-    timestamp: number
 }
 
 export interface IPendingWebsocket {
@@ -61,27 +48,11 @@ export class ClusterInfo {
     public apisApi!: ApisApi
     public saToken!: ServiceAccountToken
     public token: string|undefined   // needed just for connecting to kubelet and extract metrics
-    public metrics!: MetricsTools   // +++ will refactor to IProvider
     public providers!: IProvider[]
-    public metricsInterval: number = 15
-    public metricsIntervalRef: NodeJS.Timeout|undefined = undefined
     public vcpus: number = 0
     public memory: number = 0
     public type: EClusterType = EClusterType.KUBERNETES
     public flavour: string ='unknown'
-
-    static executeTask(instance: ClusterInfo) {
-        instance.metrics.readClusterMetrics(instance)
-    }
-
-    startMetricsInterval = (seconds: number) => {
-        this.metricsInterval = seconds
-        this.metricsIntervalRef = setInterval(
-            ClusterInfo.executeTask, 
-            this.metricsInterval * 1000,
-            this)
-    }
-    stopMetricsInterval = () => clearTimeout(this.metricsIntervalRef)
 
     addSubscriber = (providerId: string, c:IChannel, data:any) => {
         let prov = this.providers.find(p => p.id===providerId)
@@ -194,16 +165,6 @@ export class ClusterInfo {
                     var nodeData:INodeInfo = {
                         name: node.metadata?.name!,
                         ip: node.status?.addresses!.find(address => address.type === 'InternalIP')?.address!,
-                        kubernetesNode: node,
-                        containerMetricValues: new Map(),
-                        prevContainerMetricValues: new Map(),
-                        machineMetricValues: new Map(),
-                        timestamp: 0,
-                        podMetricValues: new Map(),
-                        prevPodMetricValues: new Map(),
-                        prevMachineMetricValues: new Map(),
-                        prevSummary: undefined,
-                        summary: undefined
                     }
                     nodes.set(nodeData.name, nodeData)
                 }

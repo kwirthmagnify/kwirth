@@ -5,10 +5,10 @@ import { Request, Response } from 'express'
 import { CoreV1EventList, V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
 import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'
 import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
+import { IMetricsClusterUsage } from '../../providers/metrics/IMetricsModel'
 const yaml = require('js-yaml')
 
 export interface IMagnifyConfig {
-    //interval: number
 }
 
 export enum EMagnifyCommand {
@@ -64,9 +64,16 @@ class MagnifyChannel implements IChannel {
     readonly channelId = 'magnify'
     readonly requirements: IBackChannelRequirements = {
         storage: false,
-        providers: [ 'events' ]
+        providers: [ 'events', 'metrics' ]
     }
-    // kwirthData : KwirthData
+    clusterUsage: IMetricsClusterUsage = {
+        vcpus: 0,
+        memory: 0,
+        cpuUsage: 0,
+        memoryUsage: 0,
+        txmbps: 0,
+        rxmbps: 0
+    }
     clusterInfo : ClusterInfo
     backChannelObject: IBackChannelObject
     webSockets: {
@@ -129,7 +136,8 @@ class MagnifyChannel implements IChannel {
             sources: [ EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,
-            cluster: true
+            cluster: true,
+            resourced: false
         }
     }
 
@@ -138,10 +146,14 @@ class MagnifyChannel implements IChannel {
     }
 
     startChannel = async () =>  {
+        this.clusterInfo.addSubscriber('metrics', this, {})
     }
 
     processProviderEvent(providerId:string, obj:any) : void {
         switch(providerId) {
+            case 'metrics':
+                this.clusterUsage = obj.cluster
+                break
             case 'events':
                 for (let socket of this.webSockets) {
                     for (let instance of socket.instances) {
@@ -928,15 +940,7 @@ class MagnifyChannel implements IChannel {
     private getUsage = async (scope:string) => {
         switch(scope) {
             case 'cluster':
-                if (this.clusterInfo.metrics)
-                    return this.clusterInfo.metrics.getClusterUsage()
-                else
-                    return {
-                        cpu:0,
-                        memory:0,
-                        txmbps:0,
-                        rxmbps:0
-                    }
+                return this.clusterUsage
             default:
                 logWarning(ELogComponent.CHANNEL, 'Invalid scope por getUsage: ' + scope)
         }

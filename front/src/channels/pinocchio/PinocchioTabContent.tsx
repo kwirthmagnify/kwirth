@@ -3,14 +3,15 @@ import { Box, Button, Card, CardContent, CardHeader, Stack, Typography } from '@
 import { IChannelObject } from '../IChannel'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
-import { EPinocchioCommand, IAnalysis, IConfigProvider, IMessage, IPinocchioConfig, IPinocchioMessage } from './PinocchioConfig'
+import { EPinocchioCommand, IAnalysis, IConfigProvider, IConfigTrigger, IMessage, IPinocchioConfig, IPinocchioMessage } from './PinocchioConfig'
 import { PinocchioConfigTrigger } from './PinocchioConfigTrigger'
 import { PinocchioConfigLlm } from './PinocchioConfigLlm'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { PinocchioConfigProvider } from './PinocchioConfigProvider'
 import React from 'react'
 import { MenuConfig } from './MenuConfig'
-import { PinocchioPlayground } from './PinocchioConfigPlayground'
+import { PinocchioImportExport } from './PinocchioImportExport'
+import { PinocchioPlayground } from './PinocchioPlayground'
 
 interface IContentProps {
     webSocket?: WebSocket
@@ -28,6 +29,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const [showConfigTrigger, setShowConfigTrigger] = useState(false)
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
+    const [showImportExport, setShowImportExport] = useState(false)
     const [anchorMenu, setAnchorMenu] = useState<Element | undefined>(undefined)
     const priorityOrder = {
         'critical': 0,
@@ -165,6 +167,65 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
+    const pinocchioPlaygroundClose = (newTrigger?: IConfigTrigger) => {
+        setShowPlayground(false)
+        if (!newTrigger) return
+        const updatedConfig: IPinocchioConfig = {
+            ...pinocchioData.config,
+            triggers: [...pinocchioData.config.triggers, newTrigger]
+        }
+        pinocchioData.config = updatedConfig
+        let msg: IPinocchioMessage = {
+            channel: 'pinocchio',
+            msgtype: 'pinocchiomessage',
+            id: '1',
+            accessKey: props.channelObject.accessString!,
+            instance: props.channelObject.instanceId,
+            command: EPinocchioCommand.CONFIGSET,
+            action: EInstanceMessageAction.COMMAND,
+            flow: EInstanceMessageFlow.REQUEST,
+            type: EInstanceMessageType.DATA,
+            data: updatedConfig
+        }
+        props.channelObject.webSocket?.send(JSON.stringify(msg))
+    }
+
+    const pinocchioImportExportClose = (providers?: IConfigProvider[], config?: IPinocchioConfig) => {
+        if (providers) {
+            pinocchioData.providers = providers
+            let msg:IPinocchioMessage = {
+                channel: 'pinocchio',
+                msgtype: 'pinocchiomessage',
+                id: '1',
+                accessKey: props.channelObject.accessString!,
+                instance: props.channelObject.instanceId,
+                command: EPinocchioCommand.PROVIDERSSET,
+                action: EInstanceMessageAction.COMMAND,
+                flow: EInstanceMessageFlow.REQUEST,
+                type: EInstanceMessageType.DATA,
+                data: providers
+            }
+            props.channelObject.webSocket?.send(JSON.stringify(msg))
+        }
+        if (config) {
+            pinocchioData.config = config
+            let msg:IPinocchioMessage = {
+                channel: 'pinocchio',
+                msgtype: 'pinocchiomessage',
+                id: '1',
+                accessKey: props.channelObject.accessString!,
+                instance: props.channelObject.instanceId,
+                command: EPinocchioCommand.CONFIGSET,
+                action: EInstanceMessageAction.COMMAND,
+                flow: EInstanceMessageFlow.REQUEST,
+                type: EInstanceMessageType.DATA,
+                data: config
+            }
+            props.channelObject.webSocket?.send(JSON.stringify(msg))
+        }
+        setShowImportExport(false)
+    }
+
     const onConfigAction = (a:string) => {
         setAnchorMenu(undefined)
         switch(a) {
@@ -176,6 +237,9 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 break
             case 'trigger':
                 setShowConfigTrigger(true)
+                break
+            case 'importexport':
+                setShowImportExport(true)
                 break
         }
     }
@@ -199,10 +263,11 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 </Box>
             </CardContent>
         </Card>}
-        { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} onClose={pinocchioConfigClose} />}
+        { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable.map(t => t.name)} onClose={pinocchioConfigClose} />}
         { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.config} providers={pinocchioData.providers} onClose={pinocchioConfigClose} />}
         { showConfigProvider && <PinocchioConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
-        { showPlayground && <PinocchioPlayground onClose={() => setShowPlayground(false)} pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} providersAvailable={pinocchioData.providersAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!}/>}
+        { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} />}
+        { showImportExport && <PinocchioImportExport providers={pinocchioData.providers} config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} providers={pinocchioData.providers} pinocchioConfig={pinocchioData.config} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
     </>    
 }

@@ -50,6 +50,7 @@ import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
 import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
 import { TopologyChannel } from './channels/topology/TopologyChannel'
+import { NewsChannel } from './channels/news/NewsChannel'
 
 interface IAppProps {
     backendUrl:string
@@ -229,6 +230,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         frontChannels.set('magnify', MagnifyChannel)
         frontChannels.set('pinocchio', PinocchioChannel)
         frontChannels.set('topology', TopologyChannel)
+        frontChannels.set('news', NewsChannel)
     },[])
 
     useEffect(() => {
@@ -374,7 +376,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     const getClusters = async () => {
         // get current cluster
-        console.log('gc')
         try {
             let srcCluster = await loadSourceCluster(backendUrl, accessString)
             if (!srcCluster || !srcCluster.kwirthData) {
@@ -383,19 +384,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }))
                 return
             }
-            console.log('cv')
             if (versionGreaterThan(srcCluster.kwirthData.version, srcCluster.kwirthData.lastVersion)) {
                 setInitialMessage(`You have Kwirth version ${srcCluster.kwirthData.version} installed. A new version is available (${srcCluster.kwirthData.version}), it is recommended to update your Kwirth deployment. If you're a Kwirth admin and you're using 'latest' tag, you can update Kwirth from the main menu.`)
             }
 
             // get previously configured clusters
             let clusterList:Cluster[]=[]
-            console.log(props.isElectron)
-            if (props.isElectron) {
-            }
-            else {
+            if (!props.isElectron) {
                 let response = await fetch (`${backendUrl}/store/${user?.id}/clusters/list`, addGetAuthorization(accessString))
-                console.log(response)
                 if (response.status===200) {
                     clusterList = JSON.parse (await response.json())
                     clusterList = clusterList.filter (c => c.name !== srcCluster!.name)
@@ -487,11 +483,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setMsgBox(MsgBoxOkError('Add resource', `Channel '${selection.channelId}' is not supported`, setMsgBox))
         }
     }
-
-    // const onMessageDelete = (indexToDelete: number) => {
-    //     if (notifications.length===1) setNotificationMenuAnchorParent(null)
-    //     setNotifications((prev) => prev.filter((_, index) => index !== indexToDelete))
-    // }
 
     const readChannelUserPreferences = async (channelId:string) : Promise<any> => {
         let chanPref = userSettingsRef.current.channelUserPreferences?.find(c => c.channelId===channelId)
@@ -611,16 +602,20 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
             }
         }
+        
         newTab.channelObject.createTab = (resource:IResourceSelected, start:boolean, settings:any) => {
             onResourceSelectorAdd(resource, start, settings)
         }
+
         startSocket(newTab, cluster, () => {
             console.log(`WebSocket connected: ${newTab.ws?.url}`, new Date().toISOString())
             setKeepAlive(newTab)
             if (newTab.channel.requirements.webSocket) newTab.channelObject.webSocket = newTab.ws
-            if (newTab && settings && (newTab.channelStarted || start)) {
-                newTab.channelObject.config = settings.config
-                newTab.channelObject.instanceConfig = settings.instanceConfig
+            if (newTab && (newTab.channelStarted || start)) {
+                if (settings) {
+                    newTab.channelObject.config = settings.config
+                    newTab.channelObject.instanceConfig = settings.instanceConfig
+                }
                 startTabChannel(newTab, cluster)
                 setChannelMessageAction({action : EChannelRefreshAction.REFRESH})  // we force rendering
             }
@@ -986,7 +981,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
         if (selectedTab.current && selectedTab.current.channel) {
             if (selectedTab.current.channel.stopChannel(selectedTab.current.channelObject)) setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
-            if (tab.ws) tab.ws.send(JSON.stringify(instanceConfig))
+            if (tab.ws && tab.ws.readyState === tab.ws.OPEN) tab.ws.send(JSON.stringify(instanceConfig))
             tab.channelStarted = false
             tab.channelPaused = false
         }

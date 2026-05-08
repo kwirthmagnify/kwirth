@@ -45,6 +45,7 @@ interface ITopologyWsMessage {
     accessModes?: string[]
     edges?:       Array<{ targetUid: string; label?: string }>
     ownerUids?:   string[]
+    containers?:  string[]
     text?:  string
     level?: string
 }
@@ -58,22 +59,28 @@ const LAYER_Z: Record<ETopologyNodeKind, number> = {
     [ETopologyNodeKind.DEPLOYMENT]:            0,
     [ETopologyNodeKind.STATEFULSET]:           0,
     [ETopologyNodeKind.DAEMONSET]:             0,
-    [ETopologyNodeKind.REPLICASET]:            0,
-    [ETopologyNodeKind.JOB]:                   0,
     [ETopologyNodeKind.CRONJOB]:               0,
+    [ETopologyNodeKind.REPLICASET]:            -75,
+    [ETopologyNodeKind.JOB]:                   -75,
     [ETopologyNodeKind.POD]:                   -150,
+    [ETopologyNodeKind.CONTAINER]:             -225,
     [ETopologyNodeKind.PERSISTENTVOLUMECLAIM]: -300,
 }
 
-// Controller kinds that can own pods
-const CONTROLLER_KINDS = new Set([
+// Top-level controllers (own ReplicaSets/Jobs or Pods directly)
+const TOP_CONTROLLER_KINDS = new Set([
     ETopologyNodeKind.DEPLOYMENT,
     ETopologyNodeKind.STATEFULSET,
     ETopologyNodeKind.DAEMONSET,
-    ETopologyNodeKind.REPLICASET,
-    ETopologyNodeKind.JOB,
     ETopologyNodeKind.CRONJOB,
 ])
+
+// Intermediate controllers (owned by top-level, own Pods)
+const MID_CONTROLLER_KINDS = new Set([
+    ETopologyNodeKind.REPLICASET,
+    ETopologyNodeKind.JOB,
+])
+
 
 const SPACING = 180
 
@@ -103,6 +110,31 @@ function placeGrid(
     })
 }
 
+function placeContainers(
+    containers: ITopologyNode[],
+    allNodes:   Map<string, ITopologyNode>,
+    stepX:      number,
+): void {
+    const containersByPod = new Map<string, ITopologyNode[]>()
+    containers.forEach(container => {
+        const podUid = container.ownerUids?.[0]
+        if (!podUid) return
+        if (!containersByPod.has(podUid)) containersByPod.set(podUid, [])
+        containersByPod.get(podUid)!.push(container)
+    })
+    containersByPod.forEach((podContainers, podUid) => {
+        const pod = allNodes.get(podUid)
+        if (!pod) return
+        const subStep = stepX * 0.5
+        const total = podContainers.length
+        podContainers.forEach((c, i) => {
+            c.x = pod.x + (i - (total - 1) / 2) * subStep
+            c.y = pod.y - stepX * 0.55
+            c.z = LAYER_Z[ETopologyNodeKind.CONTAINER]
+        })
+    })
+}
+
 /**
  * Hierarchical layout:
  *
@@ -128,34 +160,61 @@ export function recomputeLayout(
 ): void {
     const sf = spacing
 
-    const controllers: ITopologyNode[] = []
-    const pods:        ITopologyNode[] = []
-    const pvcs:        ITopologyNode[] = []
-    const services:    ITopologyNode[] = []
-    const ingresses:   ITopologyNode[] = []
-    const others:      ITopologyNode[] = []
+    const topCtrls:   ITopologyNode[] = []
+    const midCtrls:   ITopologyNode[] = []
+    const pods:       ITopologyNode[] = []
+    const containers: ITopologyNode[] = []
+    const pvcs:       ITopologyNode[] = []
+    const services:   ITopologyNode[] = []
+    const ingresses:  ITopologyNode[] = []
+    const others:     ITopologyNode[] = []
 
     nodes.forEach(n => {
-        if (CONTROLLER_KINDS.has(n.kind))                          controllers.push(n)
-        else if (n.kind === ETopologyNodeKind.POD)                 pods.push(n)
+        if (TOP_CONTROLLER_KINDS.has(n.kind))                        topCtrls.push(n)
+        else if (MID_CONTROLLER_KINDS.has(n.kind))                   midCtrls.push(n)
+        else if (n.kind === ETopologyNodeKind.POD)                   pods.push(n)
+        else if (n.kind === ETopologyNodeKind.CONTAINER)             containers.push(n)
         else if (n.kind === ETopologyNodeKind.PERSISTENTVOLUMECLAIM) pvcs.push(n)
-        else if (n.kind === ETopologyNodeKind.SERVICE)             services.push(n)
-        else if (n.kind === ETopologyNodeKind.INGRESS)             ingresses.push(n)
-        else                                                       others.push(n)
+        else if (n.kind === ETopologyNodeKind.SERVICE)               services.push(n)
+        else if (n.kind === ETopologyNodeKind.INGRESS)               ingresses.push(n)
+        else                                                         others.push(n)
     })
 
-    // ── 1. Controllers ────────────────────────────────────────────────────────
-    placeGrid(controllers, LAYER_Z[ETopologyNodeKind.DEPLOYMENT], sf, cols)
+    // ── 1. Top controllers (Deployment, StatefulSet, DaemonSet, CronJob) ──────
+    placeGrid(topCtrls, LAYER_Z[ETopologyNodeKind.DEPLOYMENT], sf, cols)
 
-    // ── 2. Pods: group by owning controller ───────────────────────────────────
-    const ctrlByUid = new Map<string, ITopologyNode>()
-    controllers.forEach(c => ctrlByUid.set(c.uid, c))
+    // ── 2. Mid controllers (ReplicaSet, Job) grouped under their top owner ────
+    const topCtrlByUid = new Map<string, ITopologyNode>()
+    topCtrls.forEach(c => topCtrlByUid.set(c.uid, c))
+
+    const midByTop = new Map<string, ITopologyNode[]>()
+    const orphanMid: ITopologyNode[] = []
+
+    midCtrls.forEach(mc => {
+        const ownerUid = (mc.ownerUids ?? []).find(u => topCtrlByUid.has(u))
+        if (ownerUid) {
+            if (!midByTop.has(ownerUid)) midByTop.set(ownerUid, [])
+            midByTop.get(ownerUid)!.push(mc)
+        } else {
+            orphanMid.push(mc)
+        }
+    })
+
+    // Flat grid sorted by parent controller order — RSes near their owner without sub-grid spread
+    const sortedMidCtrls: ITopologyNode[] = []
+    topCtrls.forEach(tc => sortedMidCtrls.push(...(midByTop.get(tc.uid) ?? [])))
+    sortedMidCtrls.push(...orphanMid)
+    placeGrid(sortedMidCtrls, LAYER_Z[ETopologyNodeKind.REPLICASET], sf, cols)
+
+    // ── 3. Pods: group by owning mid controller, fall back to top controller ───
+    const allCtrlByUid = new Map<string, ITopologyNode>()
+    ;[...topCtrls, ...midCtrls].forEach(c => allCtrlByUid.set(c.uid, c))
 
     const podsByCtrl = new Map<string, ITopologyNode[]>()
     const orphanPods: ITopologyNode[] = []
 
     pods.forEach(pod => {
-        const ownerUid = (pod.ownerUids ?? []).find(u => ctrlByUid.has(u))
+        const ownerUid = (pod.ownerUids ?? []).find(u => allCtrlByUid.has(u))
         if (ownerUid) {
             if (!podsByCtrl.has(ownerUid)) podsByCtrl.set(ownerUid, [])
             podsByCtrl.get(ownerUid)!.push(pod)
@@ -164,20 +223,14 @@ export function recomputeLayout(
         }
     })
 
-    // Each controller's pods form a mini-grid centred on the controller's X.
-    // Max pod cols per group = cfg.gridColumns (same setting re-used).
-    podsByCtrl.forEach((ctrlPods, ownerUid) => {
-        const ctrl = ctrlByUid.get(ownerUid)!
-        placeGrid(ctrlPods, LAYER_Z[ETopologyNodeKind.POD], sf, cols, ctrl.x)
+    // Flat grid sorted by grandparent→parent order — pods near their controller without sub-grid spread
+    const sortedPods: ITopologyNode[] = []
+    topCtrls.forEach(tc => {
+        ;(midByTop.get(tc.uid) ?? []).forEach(mid => sortedPods.push(...(podsByCtrl.get(mid.uid) ?? [])))
+        sortedPods.push(...(podsByCtrl.get(tc.uid) ?? []))
     })
-
-    // Orphan pods: placed as a grid to the right of the controller band
-    if (orphanPods.length > 0) {
-        const rightEdge = controllers.length > 0
-            ? Math.max(...controllers.map(c => c.x)) + SPACING * sf * 2
-            : 0
-        placeGrid(orphanPods, LAYER_Z[ETopologyNodeKind.POD], sf, cols, rightEdge)
-    }
+    sortedPods.push(...orphanPods)
+    placeGrid(sortedPods, LAYER_Z[ETopologyNodeKind.POD], sf, cols)
 
     // ── 3. PVCs: group by namespace, align under that namespace's pods ─────────
     const podsByNs = new Map<string, ITopologyNode[]>()
@@ -208,13 +261,16 @@ export function recomputeLayout(
         placeGrid(orphanPvcs, LAYER_Z[ETopologyNodeKind.PERSISTENTVOLUMECLAIM], sf, cols)
     }
 
-    // ── 4. Services ───────────────────────────────────────────────────────────
+    // ── 4. Containers: grouped under their parent pod ─────────────────────────
+    placeContainers(containers, nodes, SPACING * sf)
+
+    // ── 5. Services ───────────────────────────────────────────────────────────
     placeGrid(services, LAYER_Z[ETopologyNodeKind.SERVICE], sf, cols)
 
-    // ── 5. Ingresses ──────────────────────────────────────────────────────────
+    // ── 6. Ingresses ──────────────────────────────────────────────────────────
     placeGrid(ingresses, LAYER_Z[ETopologyNodeKind.INGRESS], sf, cols)
 
-    // ── 6. Others ─────────────────────────────────────────────────────────────
+    // ── 7. Others ─────────────────────────────────────────────────────────────
     others.forEach((n, i) => {
         n.x = i * SPACING * sf
         n.y = 0
@@ -272,8 +328,22 @@ export class TopologyChannel implements IChannel {
                 if (!this.isVisible(msg.kind, cfg)) break
                 if (cfg.showOnlyRunning && msg.status !== ETopologyNodeStatus.RUNNING && topoAction !== 'DELETED') break
 
+                if (msg.kind === ETopologyNodeKind.REPLICASET && topoAction !== 'DELETED' &&
+                    (msg.replicas ?? 0) === 0 && (msg.readyReplicas ?? 0) === 0) {
+                    if (data.nodes.delete(msg.uid)) {
+                        recomputeLayout(data.nodes, cfg.nodeSpacingFactor, cfg.gridColumns)
+                        data.lastUpdated = Date.now()
+                        action = EChannelRefreshAction.REFRESH
+                    }
+                    break
+                }
+
                 if (topoAction === 'DELETED') {
                     data.nodes.delete(msg.uid)
+                    if (msg.kind === ETopologyNodeKind.POD) {
+                        const prefix = `${msg.uid}/container/`
+                        data.nodes.forEach((_, uid) => { if (uid.startsWith(prefix)) data.nodes.delete(uid) })
+                    }
                 } else {
                     const existing = data.nodes.get(msg.uid)
                     const node: ITopologyNode = {
@@ -287,6 +357,7 @@ export class TopologyChannel implements IChannel {
                         replicas:      msg.replicas,
                         readyReplicas: msg.readyReplicas,
                         image:         msg.image,
+                        containers:    msg.containers,
                         ports:         msg.ports,
                         host:          msg.host,
                         storageClass:  msg.storageClass,
@@ -299,6 +370,29 @@ export class TopologyChannel implements IChannel {
                         z: existing?.z ?? (LAYER_Z[msg.kind] ?? 0),
                     }
                     data.nodes.set(msg.uid, node)
+
+                    if (msg.kind === ETopologyNodeKind.POD && msg.containers && msg.containers.length > 0) {
+                        const prefix = `${msg.uid}/container/`
+                        data.nodes.forEach((_, uid) => { if (uid.startsWith(prefix)) data.nodes.delete(uid) })
+                        msg.containers.forEach(containerName => {
+                            const containerUid = `${msg.uid}/container/${containerName}`
+                            const existingContainer = data.nodes.get(containerUid)
+                            const containerNode: ITopologyNode = {
+                                uid:       containerUid,
+                                name:      containerName,
+                                namespace: msg.namespace,
+                                kind:      ETopologyNodeKind.CONTAINER,
+                                status:    msg.status ?? ETopologyNodeStatus.UNKNOWN,
+                                labels:    {},
+                                ownerUids: [msg.uid],
+                                podName:   msg.name,
+                                x: existingContainer?.x ?? node.x,
+                                y: existingContainer?.y ?? node.y,
+                                z: existingContainer?.z ?? LAYER_Z[ETopologyNodeKind.CONTAINER],
+                            }
+                            data.nodes.set(containerUid, containerNode)
+                        })
+                    }
                 }
 
                 recomputeLayout(data.nodes, cfg.nodeSpacingFactor, cfg.gridColumns)
@@ -375,6 +469,7 @@ export class TopologyChannel implements IChannel {
             case ETopologyNodeKind.JOB:                  return cfg.showJobs
             case ETopologyNodeKind.CRONJOB:              return cfg.showCronJobs
             case ETopologyNodeKind.POD:                  return cfg.showPods
+            case ETopologyNodeKind.CONTAINER:            return cfg.showPods
             case ETopologyNodeKind.PERSISTENTVOLUMECLAIM: return cfg.showPvcs
             default:                                     return true
         }

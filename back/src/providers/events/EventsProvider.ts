@@ -4,6 +4,7 @@ import { IProvider } from '../IProvider'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
+import { ApiKeyApi } from '../../api/ApiKeyApi'
 
 export interface IEventsSubscriber {
     kinds: string[]
@@ -16,12 +17,14 @@ export class EventsProvider implements IProvider {
     public readonly providesRouter = false
     public router = undefined
     public routerAlias = undefined
+    readonly requiresApiKeyApi: boolean = false
+    public apiKeyApi: ApiKeyApi|undefined
 
     private resourceWatchers: Map<string, Watch>
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IEventsSubscriber>
 
-    constructor(clusterInfo: ClusterInfo, kwirthData:KwirthData) {
+    constructor(clusterInfo: ClusterInfo, kwirthData: KwirthData) {
         this.clusterInfo = clusterInfo
         this.subscribers = new Map()
         this.resourceWatchers = new Map()

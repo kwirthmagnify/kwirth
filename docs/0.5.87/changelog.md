@@ -9,7 +9,7 @@ Minor but powerful features:
   - Back channels are now instantiated according to Kwirth config (they're on a pre-plugin stated, like providers and front channels). We're ready to start plugin system!!!
   - New `business` provider is up & running, now business data can be ingested into Kwirth and sent to channels aiming to take decisions on business data.
   - `pinocchio` channel is triggering wehn business data or Kubernetes artifacts are received.
-  - New `newmetrics` provider (in use by `pinocchio`, we will transition 'metrics' channel to new metrics provider in the near future)
+  - New `metrics` provider (in use by `pinocchio`, we will transition 'metrics' channel to new metrics provider in the near future)
   - New `topology` channel, for (incredibly) seeing and managing your cluster in 3D.
   
 ## 0.5.40

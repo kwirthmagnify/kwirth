@@ -12,7 +12,7 @@ export class LoginApi {
     configMaps: IConfigMaps
     apiKeyApi: ApiKeyApi
     static semaphore:Semaphore = new Semaphore(1)
-    public route = express.Router()
+    public router = express.Router()
 
     constructor (secrets: ISecrets, configMaps: IConfigMaps, apiKeyApi:ApiKeyApi) {
         this.secrets = secrets
@@ -20,7 +20,7 @@ export class LoginApi {
         this.apiKeyApi = apiKeyApi
 
         // authentication (login)
-        this.route.post('/', async (req:Request,res:Response) => {
+        this.router.post('/', async (req:Request,res:Response) => {
             LoginApi.semaphore.use ( async () => {
                 let users = await this.readUsersSecret(this.secrets)
                 if (!users) {
@@ -62,7 +62,7 @@ export class LoginApi {
         })
 
         // change password
-        this.route.post('/password', async (req:Request,res:Response) => { 
+        this.router.post('/password', async (req:Request,res:Response) => { 
             LoginApi.semaphore.use ( async () => {
                 try {
                     let users = await this.readUsersSecret(this.secrets)

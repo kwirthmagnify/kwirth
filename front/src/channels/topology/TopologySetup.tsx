@@ -1,19 +1,17 @@
 import React, { useState } from 'react'
 import {
     Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
-    Divider, FormControlLabel, FormGroup, Slider, Stack, TextField, Typography,
+    Divider, FormControlLabel, FormGroup, Slider, Stack, Typography,
 } from '@mui/material'
 import { AccountTree } from '@mui/icons-material'
 import { ISetupProps } from '../IChannel'
-import { TopologyConfig, TopologyInstanceConfig, ITopologyConfig, ITopologyInstanceConfig } from './TopologyConfig'
+import { TopologyConfig, ITopologyConfig, ITopologyInstanceConfig } from './TopologyConfig'
 
 export const TopologyIcon = <AccountTree />
 
 export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     const cfg:  ITopologyConfig         = props.setupConfig?.channelConfig         ?? new TopologyConfig()
-    const inst: ITopologyInstanceConfig = props.setupConfig?.channelInstanceConfig ?? new TopologyInstanceConfig()
 
-    const [namespace,         setNamespace]         = useState(inst.namespace)
     const [showPods,          setShowPods]          = useState(cfg.showPods)
     const [showServices,      setShowServices]      = useState(cfg.showServices)
     const [showIngresses,     setShowIngresses]     = useState(cfg.showIngresses)
@@ -36,7 +34,7 @@ export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
             showJobs, showCronJobs, showPvcs, showOnlyRunning,
             edgeAnimated, labelSize, nodeSpacingFactor, gridColumns,
         }
-        const channelInstanceConfig: ITopologyInstanceConfig = { namespace }
+        const channelInstanceConfig: ITopologyInstanceConfig = { namespaces: ['*all'] }
         props.onChannelSetupClosed(
             props.channel,
             { channelId: props.channel.channelId, channelConfig, channelInstanceConfig },
@@ -56,15 +54,6 @@ export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
             <DialogContent>
                 <Stack spacing={2} sx={{ pt: 1 }}>
 
-                    <TextField
-                        variant='standard'
-                        label='Namespace (* for all)'
-                        value={namespace}
-                        onChange={e => setNamespace(e.target.value)}
-                        fullWidth
-                    />
-
-                    <Divider />
                     <Typography variant='body2' color='text.secondary'>Visible resource types</Typography>
                     <FormGroup>
                         <Stack direction='row' flexWrap='wrap'>

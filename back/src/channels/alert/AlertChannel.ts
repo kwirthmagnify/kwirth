@@ -53,7 +53,8 @@ class AlertChannel implements IChannel {
             sources: [ EClusterType.DOCKER, EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,
-            cluster: false
+            cluster: false,
+            resourced: true
         }
     }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { IMetricsData, EMetricsEventSeverity } from './MetricsData'
-import { Alert, Box, Button, Snackbar } from '@mui/material'
+import { Alert, Box, Button, Snackbar, Typography } from '@mui/material'
 import { IContentProps } from '../IChannel'
 import { IMetricsConfig, IMetricsInstanceConfig, IMetricViewConfig, METRICSCOLOURS, MetricsConfig } from './MetricsConfig'
 import { Chart, ISample } from './Chart'
@@ -143,27 +143,32 @@ const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
         else {
             let allCharts = Array.from(data.keys()!).map( (asset, index)  =>  {
-                return Array.from(data.get(asset)?.keys()!).map ( metric => {
-                    let metricDefinition = props.channelObject.metricsList?.get(metric)!
-                    var series = data.get(asset)?.get(metric)!
-                    return <Chart key={metricDefinition.metric}
-                        colour={METRICSCOLOURS[index]}
-                        labels={true}
-                        tooltip={true} 
-                        names={[asset]}
-                        series={[series]}
-                        chartType={metricsConfig.chart} 
-                        stack={metricsConfig.stack}
-                        viewConfig={metricsConfig.metricsDefault[metricDefinition.metric] as IMetricViewConfig} 
-                        numSeries={series.length}
-                        metricDefinition={metricDefinition} 
-                        onRemove={onChartRemove}
-                        onSetDefault={onSetMetricDefault} 
-                        height={metricsConfig.lineHeight}
-                        configurable={metricsConfig.configurable}
-                        compact={metricsConfig.compact}
-                        legend={metricsConfig.legend}
-                    />
+                return Array.from(data.get(asset)?.keys()!).map (metric => {
+                    let metricDefinition = props.channelObject.metricsList?.get(metric)
+                    if (metricDefinition) {
+                        let series = data.get(asset)?.get(metric)!
+                        return <Chart key={metricDefinition.metric}
+                            colour={METRICSCOLOURS[index]}
+                            labels={true}
+                            tooltip={true} 
+                            names={[asset]}
+                            series={[series]}
+                            chartType={metricsConfig.chart} 
+                            stack={metricsConfig.stack}
+                            viewConfig={metricsConfig.metricsDefault[metricDefinition.metric] as IMetricViewConfig} 
+                            numSeries={series.length}
+                            metricDefinition={metricDefinition} 
+                            onRemove={onChartRemove}
+                            onSetDefault={onSetMetricDefault} 
+                            height={metricsConfig.lineHeight}
+                            configurable={metricsConfig.configurable}
+                            compact={metricsConfig.compact}
+                            legend={metricsConfig.legend}
+                        />
+                    }
+                    else {
+                        return <Typography key={metric}> Metrics definition not found for ${metric}</Typography>
+                    }
                 })
             })
 
