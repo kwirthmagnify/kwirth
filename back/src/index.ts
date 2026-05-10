@@ -42,7 +42,7 @@ import { EchoChannel } from './channels/echo/EchoChannel'
 import { FilemanChannel } from './channels/fileman/FilemanChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
-import { NewsChannel } from './channels/news/NewsChannel'
+// NewsChannel removed — now loaded as plugin
 
 import { IncomingMessage } from 'http'
 
@@ -64,6 +64,8 @@ import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsP
 
 import { ELogComponent, logError, logInfo, logWarning } from './tools/Logging'
 import { TopologyChannel } from './channels/topology/TopologyChannel'
+import { PluginManager } from './tools/PluginManager'
+import { PluginApi } from './api/PluginApi'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -116,9 +118,10 @@ const envChannelFilemanEnabled = (process.env.CHANNEL_FILEMAN || 'true').toLower
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 const envChannelPinocchioEnabled = (process.env.CHANNEL_PINOCCHIO || 'true').toLowerCase() === 'true'
 const envChannelTopologyEnabled = (process.env.CHANNEL_TOPOLOGY || 'true').toLowerCase() === 'true'
-const envChannelNewsEnabled = (process.env.CHANNEL_NEWS || 'true').toLowerCase() === 'true'
 
 var runningInstances:IRunningInstance[] = []
+
+let pluginManager: PluginManager | undefined
 
 var registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
@@ -138,7 +141,7 @@ registeredChannels.set('echo', EchoChannel)
 registeredChannels.set('magnify', MagnifyChannel)
 registeredChannels.set('pinocchio', PinocchioChannel)
 registeredChannels.set('topology', TopologyChannel)
-registeredChannels.set('news', NewsChannel)
+// 'news' channel loaded dynamically by PluginManager
 
 if (envCommand!==undefined) {
     switch(envCommand) {
@@ -1167,6 +1170,10 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
         riRouter.use(`/managekwirth`, manageKwirthApi.router)
         let manageCluster:ManageClusterApi = new ManageClusterApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, apiKeyApi)
         riRouter.use(`/managecluster`, manageCluster.router)
+        if (pluginManager) {
+            let pluginApi = new PluginApi(pluginManager, registeredChannels)
+            riRouter.use(`/plugins`, pluginApi.router)
+        }
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
 
@@ -1361,7 +1368,15 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
         if (envChannelPinocchioEnabled) requiredChannels.push('pinocchio')
         if (envChannelTopologyEnabled) requiredChannels.push('topology')
-        if (envChannelNewsEnabled) requiredChannels.push('news')
+        // plugin channels: load installed plugins and add their ids to requiredChannels
+        if (!pluginManager) {
+            pluginManager = new PluginManager(runningInstance.configMaps)
+            await pluginManager.init()
+            await pluginManager.loadAll(registeredChannels)
+        }
+        for (const pluginId of pluginManager.getInstalledIds()) {
+            if (!requiredChannels.includes(pluginId)) requiredChannels.push(pluginId)
+        }
 
         logInfo(ELogComponent.CORE, 'Required channels:')
         for (let chanId of registeredChannels.keys()) {

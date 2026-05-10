@@ -1,0 +1,10 @@
+[
+    {
+        "id": "news",
+        "name": "News",
+        "version": "1.0.0",
+        "description": "Displays Kubernetes and AI news feeds",
+        "icon": "Newspaper",
+        "url": "https://github.com/jfvilas/kwirth/raw/master/plugins/news/news-plugin.tgz"
+    }
+]

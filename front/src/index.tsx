@@ -1,9 +1,22 @@
+import * as React from 'react'
+import * as MUIMaterial from '@mui/material'
+import * as MUIIcons from '@mui/icons-material'
+import * as kwirthCommon from '@kwirthmagnify/kwirth-common'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { SnackbarProvider } from 'notistack'
 import { BrowserRouter } from 'react-router-dom'
 // @ts-ignore
 import './index.css'
+
+declare global {
+    interface Window {
+        __kwirth__: { React: typeof React; MUI: { material: typeof MUIMaterial; icons: typeof MUIIcons }; kwirthCommon: typeof kwirthCommon }
+        __kwirth_plugins__: Record<string, any>
+    }
+}
+window.__kwirth__ = { React, MUI: { material: MUIMaterial, icons: MUIIcons }, kwirthCommon }
+window.__kwirth_plugins__ = {}
 
 //const isElectron = true
 const isElectron = navigator.userAgent.toLowerCase().indexOf(' electron/') >= 0

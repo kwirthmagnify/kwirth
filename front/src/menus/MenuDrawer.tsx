@@ -1,6 +1,6 @@
 import React from 'react';
 import { Divider, MenuItem, MenuList } from "@mui/material"
-import { BrowserUpdated, CreateNewFolderTwoTone, DeleteTwoTone, Edit, ExitToApp, FileOpenTwoTone, ImportExport, Info, Key, Person, SaveAsTwoTone, SaveTwoTone, Settings } from '@mui/icons-material';
+import { BrowserUpdated, CreateNewFolderTwoTone, DeleteTwoTone, Edit, ExitToApp, Extension, FileOpenTwoTone, ImportExport, Info, Key, Person, SaveAsTwoTone, SaveTwoTone, Settings } from '@mui/icons-material';
 
 enum MenuDrawerOption {
     NewWorkspace,
@@ -15,6 +15,7 @@ enum MenuDrawerOption {
     ManageCluster,
     UserSecurity,
     ApiSecurity,
+    ManagePlugins,
     UpdateKwirth,
     About,
     Exit
@@ -52,6 +53,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                 <div>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.ApiSecurity)}><Key/>&nbsp;API Security</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.UserSecurity)}><Person />&nbsp;User security</MenuItem>
+                    <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManagePlugins)}><Extension />&nbsp;Manage plugins</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.UpdateKwirth)}><BrowserUpdated />&nbsp;Update Kwirth</MenuItem>
                     <Divider/>
                 </div>

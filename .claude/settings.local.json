@@ -13,7 +13,11 @@
       "Bash(curl -s --max-time 10 \"https://rss.arxiv.org/rss/cs.AI\")",
       "Bash(curl -s --max-time 10 \"https://techcrunch.com/category/artificial-intelligence/feed/\")",
       "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\topology\\\\\" -Recurse -File | Select-Object -ExpandProperty FullName)",
-      "Bash(find \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\topology\\\\\" -type f -name \"*\")"
+      "Bash(find \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\topology\\\\\" -type f -name \"*\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(npm install *)",
+      "Bash(node build.mjs)",
+      "Bash(tar -czf news-plugin.tgz -C dist .)"
     ]
   }
 }

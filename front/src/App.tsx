@@ -50,7 +50,7 @@ import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
 import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
 import { TopologyChannel } from './channels/topology/TopologyChannel'
-import { NewsChannel } from './channels/news/NewsChannel'
+import { PluginDialog } from './components/PluginDialog'
 
 interface IAppProps {
     backendUrl:string
@@ -198,6 +198,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showUserSecurity, setShowUserSecurity]=useState<boolean>(false)
     const [showSettingsUser, setShowSettingsUser]=useState<boolean>(false)
     const [showSettingsCluster, setShowSettingsCluster]=useState<boolean>(false)
+    const [showPluginDialog, setShowPluginDialog]=useState<boolean>(false)
     const [initialMessage, setInitialMessage]=useState<string>('')
 
     // last & favs
@@ -218,6 +219,19 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const notifications = useRef<INotification[]>([])
     const [resourceSelected, setResourceSelected] = useState<IResourceSelected|undefined>(undefined)
 
+    const loadPluginFront = (id: string) => {
+        const existing = document.getElementById(`kwirth-plugin-${id}`)
+        if (existing) existing.remove()
+        const script = document.createElement('script')
+        script.id = `kwirth-plugin-${id}`
+        script.src = `${props.backendUrl}/api/plugins/${id}/front`
+        script.onload = () => {
+            const PluginChannel = window.__kwirth_plugins__?.[id]
+            if (PluginChannel) frontChannels.set(id, PluginChannel as TChannelConstructor)
+        }
+        document.head.appendChild(script)
+    }
+
     useEffect( () => {
         // only first time
         frontChannels.set('log', LogChannel)
@@ -230,7 +244,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         frontChannels.set('magnify', MagnifyChannel)
         frontChannels.set('pinocchio', PinocchioChannel)
         frontChannels.set('topology', TopologyChannel)
-        frontChannels.set('news', NewsChannel)
+
+        // Load installed plugin channels
+        fetch(`${props.backendUrl}/api/plugins`)
+            .then(r => r.json())
+            .then((plugins: { id: string }[]) => plugins.forEach(p => loadPluginFront(p.id)))
+            .catch(err => console.log(`[plugins] failed to load installed plugins: ${err}`))
     },[])
 
     useEffect(() => {
@@ -1317,6 +1336,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.UserSecurity:
                 setShowUserSecurity(true)
                 break
+            case MenuDrawerOption.ManagePlugins:
+                setShowPluginDialog(true)
+                break
             case MenuDrawerOption.ExportWorkspaces:
                 let workspacesToExport:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
                 if (workspacesToExport.length===0) {
@@ -1719,6 +1741,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showManageClusters && <ManageClusters onClose={onManageClustersClosed} clusters={clusters} notify={notify}/> }
                 { showApiSecurity && <ManageApiSecurity onClose={() => setShowApiSecurity(false)} /> }
                 { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} /> }
+                { showPluginDialog && <PluginDialog onClose={() => setShowPluginDialog(false)} frontChannels={frontChannels} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }
