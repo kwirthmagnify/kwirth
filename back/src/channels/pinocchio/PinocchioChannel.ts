@@ -312,7 +312,8 @@ class PinocchioChannel implements IChannel {
                     const lastEvt = businessEvent.last?.event
                     if (lastEvt?.space === 'launch' && lastEvt?.type === 'immediate') {
                         const payload = typeof lastEvt.data === 'string' ? lastEvt.data : JSON.stringify(lastEvt.data ?? '')
-                        await this.executePlayground(payload)
+                        const triggerType: 'business' | 'artifact' = lastEvt.triggerType === 'artifact' ? 'artifact' : 'business'
+                        await this.executePlayground(payload, triggerType)
                         break
                     }
                 }
@@ -521,29 +522,38 @@ class PinocchioChannel implements IChannel {
         }
     }
 
-    executePlayground = async (payload: string) => {
+    executePlayground = async (payload: string, triggerType: 'business' | 'artifact' = 'business') => {
         if (!this.playgroundTrigger) {
             this.broadcastMessage('Sandbox: no config applied yet — click "Apply Config" first')
             return
         }
-        const version: IConfigTriggerVersion = {
-            ...this.playgroundTrigger,
-            prompt: payload,
-            promptType: 'jinja'
+
+        let version: IConfigTriggerVersion
+        let dummyTrigger: IConfigTrigger
+        let fakeEvent: IEventsProviderEvent | IBusinessProviderEvent
+
+        if (triggerType === 'artifact') {
+            let obj: any = {}
+            try { obj = JSON.parse(payload) } catch { obj = { raw: payload } }
+            const promptType = this.playgroundTrigger.prompt ? 'jinja' : 'artifact'
+            version = { ...this.playgroundTrigger, promptType }
+            dummyTrigger = { id: 'playground', trigger: 'artifact', versions: [] }
+            fakeEvent = { type: 'ADDED', obj }
+        } else {
+            version = { ...this.playgroundTrigger, prompt: payload, promptType: 'jinja' }
+            dummyTrigger = { id: 'playground', trigger: 'business', versions: [] }
+            fakeEvent = { last: { type: 'event', timestamp: Date.now(), event: {} }, all: new Map() }
         }
-        const dummyTrigger: IConfigTrigger = { id: 'playground', trigger: 'business', versions: [] }
-        const fakeEvent: IBusinessProviderEvent = {
-            last: { type: 'event', timestamp: Date.now(), event: {} },
-            all: new Map()
-        }
+
         try {
             const invocation = await this.buildModelInvocation(dummyTrigger, version, fakeEvent)
             if (!invocation) return
-            const { model, temperature, providerOptions, tools } = invocation
+            const { model, temperature, providerOptions, tools, prompt: effectivePrompt } = invocation
 
+            this.broadcastMessage(`[Playground] type: ${triggerType}`)
             this.broadcastMessage(`[Playground] llm: ${version.llm}`)
             this.broadcastMessage(`[Playground] system: ${version.system || '(none)'}`)
-            this.broadcastMessage(`[Playground] prompt: ${payload}`)
+            this.broadcastMessage(`[Playground] prompt: ${effectivePrompt}`)
             this.broadcastMessage(`[Playground] tools: ${version.tools.join(', ') || '(none)'}`)
 
             // auto tool selection: ask LLM which tools it needs before running
@@ -555,7 +565,7 @@ class PinocchioChannel implements IChannel {
                     temperature,
                     providerOptions,
                     system: 'You are a planning assistant. Given a task and a list of available tools, respond with ONLY a comma-separated list of the tool names needed. No explanation, no punctuation beyond commas.',
-                    prompt: `Task: ${payload}\n\nAvailable tools: ${toolListStr}`
+                    prompt: `Task: ${effectivePrompt}\n\nAvailable tools: ${toolListStr}`
                 })
                 const selectedNames = selectionText.split(',').map(s => s.trim()).filter(n => n in tools)
                 this.broadcastMessage(`[Auto tools] selected: ${selectedNames.join(', ') || '(none)'}`)
@@ -570,7 +580,7 @@ class PinocchioChannel implements IChannel {
                 tools: activeTools,
                 providerOptions,
                 system: version.system || 'You are a helpful assistant.',
-                prompt: payload
+                prompt: effectivePrompt
             })
 
             const toolLines: string[] = []
@@ -593,7 +603,7 @@ class PinocchioChannel implements IChannel {
             let totalOut = usage1.outputTokens ?? 0
 
             if (!finalResponse && toolLines.length > 0) {
-                const summaryPrompt = `${payload}\n\nInformation gathered from tools:\n${toolLines.join('\n')}\n\nPlease provide a comprehensive answer based on the above data.`
+                const summaryPrompt = `${effectivePrompt}\n\nInformation gathered from tools:\n${toolLines.join('\n')}\n\nPlease provide a comprehensive answer based on the above data.`
                 const { text: phase2Text, usage: usage2 } = await generateText({
                     model,
                     temperature,

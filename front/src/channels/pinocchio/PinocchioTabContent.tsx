@@ -3,7 +3,7 @@ import { Box, Button, Card, CardContent, CardHeader, Stack, Typography } from '@
 import { IChannelObject } from '../IChannel'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
-import { EPinocchioCommand, IAnalysis, IConfigProvider, IConfigTrigger, IMessage, IPinocchioConfig, IPinocchioMessage } from './PinocchioConfig'
+import { EPinocchioCommand, IAnalysis, IConfigProvider, IConfigTrigger, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
 import { PinocchioConfigTrigger } from './PinocchioConfigTrigger'
 import { PinocchioConfigLlm } from './PinocchioConfigLlm'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
@@ -167,6 +167,24 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
+    const pinocchioPlaygroundStateChange = (state: IPlaygroundState) => {
+        const updatedConfig: IPinocchioConfig = { ...pinocchioData.config, playground: state }
+        pinocchioData.config = updatedConfig
+        const msg: IPinocchioMessage = {
+            channel: 'pinocchio',
+            msgtype: 'pinocchiomessage',
+            id: '1',
+            accessKey: props.channelObject.accessString!,
+            instance: props.channelObject.instanceId,
+            command: EPinocchioCommand.CONFIGSET,
+            action: EInstanceMessageAction.COMMAND,
+            flow: EInstanceMessageFlow.REQUEST,
+            type: EInstanceMessageType.DATA,
+            data: updatedConfig
+        }
+        props.channelObject.webSocket?.send(JSON.stringify(msg))
+    }
+
     const pinocchioPlaygroundClose = (newTrigger?: IConfigTrigger) => {
         setShowPlayground(false)
         if (!newTrigger) return
@@ -266,7 +284,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable.map(t => t.name)} onClose={pinocchioConfigClose} />}
         { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.config} providers={pinocchioData.providers} onClose={pinocchioConfigClose} />}
         { showConfigProvider && <PinocchioConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
-        { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} />}
+        { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} onStateChange={pinocchioPlaygroundStateChange} />}
         { showImportExport && <PinocchioImportExport providers={pinocchioData.providers} config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} providers={pinocchioData.providers} pinocchioConfig={pinocchioData.config} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
     </>    

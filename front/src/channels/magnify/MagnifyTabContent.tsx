@@ -823,6 +823,12 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     const setNetworkActions = () => {
+        let spcService = spaces.get('Service')!
+        setLeftItem(spcService, 'topology', (p) => launchControllerChannel(p, 'topology'))
+
+        let spcIngress = spaces.get('Ingress')!
+        setLeftItem(spcIngress, 'topology', (p) => launchControllerChannel(p, 'topology'))
+
         let spcIngressClass = spaces.get('IngressClass')!
         setLeftItem(spcIngressClass,'default', launchIngressClassDefault)
     }

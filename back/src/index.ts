@@ -25,14 +25,11 @@ import cookieParser from 'cookie-parser'
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware'
 import { ClusterInfo } from './model/ClusterInfo'
 import { ServiceAccountToken } from './tools/ServiceAccountToken'
-//import { MetricsApi } from './api/MetricsApi'
-//import { MetricsTools } from './tools/MetricsTools'
 import { v4 as uuid } from 'uuid'
 import { ISecrets } from './tools/ISecrets'
 import { IConfigMaps } from './tools/IConfigMap'
 import { DockerSecrets } from './tools/DockerSecrets'
 import { DockerConfigMaps } from './tools/DockerConfigMaps'
-//import { DockerTools } from './tools/DockerTools'
 
 // Channels +++ convert into plugin
 import { IBackChannelObject, IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
@@ -109,7 +106,6 @@ const envPort = +(process?.env?.PORT || '3883')
 const envFront = process.env.FRONT !== undefined ? process.env.FRONT === 'true' : true
 const envConfigMapPath = process.env.CONFIGMAPPATH !== undefined ? process.env.CONFIGMAPPATH : '.'
 const envSecretPath = process.env.SECRETPATH !== undefined ? process.env.SECRETPATH : '.'
-const envMetricsInterval = process.env.METRICSINTERVAL? +process.env.METRICSINTERVAL : 15
 const envChannelLogEnabled = (process.env.CHANNEL_LOG || 'true').toLowerCase() === 'true'
 const envChannelMetricsEnabled = (process.env.CHANNEL_METRICS || 'true').toLowerCase() === 'true'
 const envChannelAlertEnabled = (process.env.CHANNEL_ALERT || 'true').toLowerCase() === 'true'
@@ -213,53 +209,6 @@ if (envCommand!==undefined) {
 //   global.activeTimers.delete(id);
 //   originalClearTimeout(id);
 // };
-
-
-
-// const getExecutionEnvironment = async (context:string|undefined):Promise<string> => {
-//     logInfo(ELogComponent.CORE, 'Detecting execution environment...')
-
-//     logInfo(ELogComponent.CORE, 'Trying Electron...')    
-//     if (runningEnv.isElectron) return 'electron'
-
-//     // we keep this order of detection, since kubernetes also has a docker engine
-//     logInfo(ELogComponent.CORE, 'Trying Kubernetes...')
-//     try {
-//         let kubeConfig = new KubeConfig()
-//         kubeConfig.loadFromDefault()
-//         if (context) kubeConfig.setCurrentContext(context)
-//         let coreApi = kubeConfig.makeApiClient(CoreV1Api)
-//         await coreApi.listPodForAllNamespaces()
-//         return 'kubernetes'
-//     }
-//     catch (err) {
-//         logInfo(ELogComponent.CORE, err)
-//         logInfo(ELogComponent.CORE, '================================================')
-//     }
-
-//     logInfo(ELogComponent.CORE, 'Trying Linux docker...')
-//     try {
-//         let dockerApiLinux = new Docker({ socketPath: '/var/run/docker.sock'})
-//         await dockerApiLinux.listContainers( { all:false } )
-//         return 'linuxdocker'
-//     }
-//     catch (err) {
-//         logInfo(ELogComponent.CORE, err)
-//         logInfo(ELogComponent.CORE, '================================================')
-//     }
-
-//     logInfo(ELogComponent.CORE, 'Trying Windows docker...')
-//     try {
-//         let dockerApiWindows = new Docker({ socketPath: '//./pipe/docker_engine' })
-//         await dockerApiWindows.listContainers( { all:false } )
-//         return 'windowsdocker'
-//     }
-//     catch (err) {
-//         logInfo(ELogComponent.CORE, err)
-//         logInfo(ELogComponent.CORE, '================================================')
-//     }
-//     return 'undetected'
-// }
 
 const getExecutionEnvironment = async (context:string|undefined):Promise<string> => {
     logInfo(ELogComponent.CORE, 'Detecting execution environment...')
@@ -1421,43 +1370,23 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
 
         // we create and instantiate channels, but we don't start them, because we need to start the providers first
-        for(let chanId of requiredChannels) {
-            let channel = registeredChannels.get(chanId)
-            if (channel) {
-                let channelInstance = createChannelInstance(registeredChannels.get(chanId), localClusterInfo, backChannelObject)
+        for(let channelId of requiredChannels) {
+            let channelConstructor = registeredChannels.get(channelId)
+            if (channelConstructor) {
+                let channelInstance = createChannelInstance(registeredChannels.get(channelId), localClusterInfo, backChannelObject)
                 if (channelInstance)
-                    runningInstance.channels.set(chanId, channelInstance!)
+                    runningInstance.channels.set(channelId, channelInstance!)
                 else
-                    logError(ELogComponent.CORE, `Couldn't create a channel instance for '${chanId}'`)
+                    logError(ELogComponent.CORE, `Couldn't create a channel instance for '${channelId}'`)
             }
             else {
-                logError(ELogComponent.CORE, `Required channel '${chanId}' is not registered`)
+                logError(ELogComponent.CORE, `Required channel '${channelId}' is not registered`)
             }
         }
         
 
-        logInfo(ELogComponent.CORE, 'Required providers:')
-        
-        // +++ pending convert metrics into provider
-        // let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
-        // logInfo(ELogComponent.CORE, `  'metrics' required:` + metricsRequired)
-        // if (!envChannelMetricsEnabled) logError(ELogComponent.CORE, '❌ Metrics have not been enabled on Kwirth, so it will not be available.')
-        // if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) logError(ELogComponent.CORE, '❌ An SA Token could not be obtained, so metrics will not be available.')
-        // metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
-        // if (metricsRequired) {
-        //     localClusterInfo.metrics = new MetricsTools(localClusterInfo, localKwirthData)
-        //     localClusterInfo.metricsInterval = envMetricsInterval // we set cluster metrics interval based on default metrics interval
-            
-        //     console.log('localKwirthData.inCluster, localKwirthData.isElectron************************************')
-        //     console.log(localKwirthData.inCluster, localKwirthData.isElectron)
-
-        //     await localClusterInfo.metrics.startMetrics()
-        //     logInfo(ELogComponent.CORE, `  vCPU:        ${localClusterInfo.vcpus}`)
-        //     logInfo(ELogComponent.CORE, `  Memory (GB): ${localClusterInfo.memory/1024/1024/1024}`)
-        // }
-
-
         // we need the channels instantiated (but not started) in order to discover what provider do they require
+        logInfo(ELogComponent.CORE, 'Required providers:')
         let requiredProviders = []
         for (let provId of registeredProviders.keys()) {
             let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.requirements.providers.includes(provId)}, false)
@@ -1492,78 +1421,6 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
     }
 }
 
-// const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstance:IRunningInstance) : Promise<void> => {
-//     try {
-//         if (envChannelLogEnabled) runningInstance.channels.set('log', new LogChannel(runningInstance.clusterInfo))
-//         if (envChannelAlertEnabled) runningInstance.channels.set('alert', new AlertChannel(runningInstance.clusterInfo))
-//         if (envChannelMetricsEnabled) runningInstance.channels.set('metrics', new MetricsChannel(runningInstance.clusterInfo))
-//         if (envChannelOpsEnabled) runningInstance.channels.set('ops', new OpsChannel(runningInstance.clusterInfo))
-//         if (envChannelTrivyEnabled) runningInstance.channels.set('trivy', new TrivyChannel(runningInstance.clusterInfo))
-//         if (envChannelEchoEnabled) runningInstance.channels.set('echo', new EchoChannel(runningInstance.clusterInfo))
-//         if (envChannelFilemanEnabled) runningInstance.channels.set('fileman', new FilemanChannel(runningInstance.clusterInfo))
-//         if (envChannelMagnifyEnabled) runningInstance.channels.set('magnify', new MagnifyChannel(runningInstance.clusterInfo, localKwirthData))
-//         if (envChannelPinocchioEnabled) runningInstance.channels.set('pinocchio', new PinocchioChannel(runningInstance.clusterInfo))
-
-//         // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to
-//         localKwirthData.channels =  Array.from(runningInstance.channels.keys()).map(k => {
-//             return runningInstance.channels.get(k)?.getChannelData()!
-//         })
-
-//         // Detect if any channel requires metrics or events
-//         let eventsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().events}, false)
-//         logInfo(ELogComponent.CORE, 'Events required: ', eventsRequired)
-//         let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
-//         logInfo(ELogComponent.CORE, 'Metrics required: ', metricsRequired)
-//         if (!envChannelMetricsEnabled) logInfo(ELogComponent.CORE, '❌ Metrics have not been enabled on Kwirth, so it will not be available.')
-//         if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) logInfo(ELogComponent.CORE, '❌ An SA Token could not be obtained, so metrics will not be available.')
-//         metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
-
-//         let registerdProviders = ['tick','validating']
-//         let requiredProviders = []
-//         for (let provId of registerdProviders) {
-//             let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)            
-//             if (required) requiredProviders.push(provId)
-//             logInfo(ELogComponent.CORE, `'${provId}' required:`, required)
-//         }
-
-//         await setKubernetesClusterKwirthRequirements(localKwirthData, runningInstance.clusterInfo, metricsRequired, eventsRequired, requiredProviders)
-//         runningInstance.clusterInfo.type = localKwirthData.clusterType
-
-//         logInfo(ELogComponent.CORE, `Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(',')}`)
-//         logInfo(ELogComponent.CORE, `Detected own namespace: ${localKwirthData.namespace}`)
-//         if (localKwirthData.deployment !== '')
-//             logInfo(ELogComponent.CORE, `Detected own deployment: ${localKwirthData.deployment}`)
-//         else
-//             logInfo(ELogComponent.CORE, `No deployment detected. Kwirth is not running inside a cluster`)
-
-//         if (envForward) {
-//             logInfo(ELogComponent.CORE, 'Will try to configure FORWARDing...')
-//             if (runningInstance.kwirthData.inCluster) {
-//                 logInfo(ELogComponent.CORE, 'FORWARD for inCluster is being configured...')
-//                 if (envRootPath!=='') {
-//                     configureForward(runningInstance.clusterInfo, app)
-//                 }
-//                 else {
-//                     logInfo(ELogComponent.CORE, 'FORWARD for kubernetes Kwirth cannot be started since Kwirth must have a root path specified (like /kwirth, for example). Kwirth cannot FORWARD if it is running on root (/) path')
-//                 }
-//             }
-//             else if (runningInstance.kwirthData.isElectron) {
-//                 logInfo(ELogComponent.CORE, 'FORWARD for electron should be implemented')
-//             }
-//             else {
-//                 logInfo(ELogComponent.CORE, 'FORWARD not avialable (not inCluster and not isElectron)')
-//             }
-//         }
-//         else {
-//             logInfo(ELogComponent.CORE, 'No FORWARD mechanism will be available.')
-//         }
-//     }
-//     catch (err) {
-//         logInfo(ELogComponent.CORE, 'Error preparing kubernetes')
-//         logInfo(ELogComponent.CORE, err)
-//     }
-// }
-
 const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstance:IRunningInstance) : Promise<void> => {
     try {
         let backChannelObject: IBackChannelObject = {
@@ -1595,50 +1452,6 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             }
         }
 
-        // +++ refactor channels like providers (with constructor and registered)
-        //if (envChannelLogEnabled) runningInstance.channels.set('log', new LogChannel(runningInstance.clusterInfo, backChannelObject))
-        //if (envChannelAlertEnabled) runningInstance.channels.set('alert', new AlertChannel(runningInstance.clusterInfo, backChannelObject))
-        //if (envChannelMetricsEnabled) runningInstance.channels.set('metrics', new MetricsChannel(runningInstance.clusterInfo, backChannelObject))
-        //if (envChannelOpsEnabled) runningInstance.channels.set('ops', new OpsChannel(runningInstance.clusterInfo, backChannelObject))
-        //if (envChannelTrivyEnabled) runningInstance.channels.set('trivy', new TrivyChannel(runningInstance.clusterInfo, backChannelObject))
-        //if (envChannelEchoEnabled) runningInstance.channels.set('echo', new EchoChannel(runningInstance.clusterInfo, backChannelObject))
-        //if (envChannelFilemanEnabled) runningInstance.channels.set('fileman', new FilemanChannel(runningInstance.clusterInfo, backChannelObject))
-        //if (envChannelMagnifyEnabled) runningInstance.channels.set('magnify', new MagnifyChannel(runningInstance.clusterInfo, backChannelObject))
-        //if (envChannelPinocchioEnabled) runningInstance.channels.set('pinocchio', new PinocchioChannel(runningInstance.clusterInfo, backChannelObject))
-
-
-        // // Channel management
-        // let requiredChannels = []
-        // if (envChannelLogEnabled) requiredChannels.push('log')
-        // if (envChannelAlertEnabled) requiredChannels.push('alert')
-        // if (envChannelMetricsEnabled) requiredChannels.push('metrics')
-        // if (envChannelOpsEnabled) requiredChannels.push('ops')
-        // if (envChannelTrivyEnabled) requiredChannels.push('trivy')
-        // if (envChannelEchoEnabled) requiredChannels.push('echo')
-        // if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
-        // if (envChannelPinocchioEnabled) requiredChannels.push('pinocchio')
-
-        // logInfo(ELogComponent.CORE, 'Required channels:')
-        // for (let chanId of registeredChannels.keys()) {
-        //     logInfo(ELogComponent.CORE, `  '${chanId}' required: ${requiredChannels.includes(chanId)}`)
-        // }
-
-        // logInfo(ELogComponent.CORE, 'Required providers:')
-        // // +++ pending convert metrics into provider
-        // let metricsRequired = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().metrics}, false)
-        // logInfo(ELogComponent.CORE, `  'metrics' required:` + metricsRequired)
-        // if (!envChannelMetricsEnabled) logError(ELogComponent.CORE, '❌ Metrics have not been enabled on Kwirth, so it will not be available.')
-        // if (!runningEnv.isElectron && !runningEnv.isDocker && !runningInstance.clusterInfo.token) logError(ELogComponent.CORE, '❌ An SA Token could not be obtained, so metrics will not be available.')
-        // metricsRequired = metricsRequired && envChannelMetricsEnabled && (runningEnv.isElectron || runningEnv.isDocker || Boolean(runningInstance.clusterInfo.token))
-
-        // let requiredProviders = []
-        // for (let provId of registeredProviders.keys()) {
-        //     let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.getChannelData().providers.includes(provId)}, false)
-        //     if (required) requiredProviders.push(provId)
-        //     logInfo(ELogComponent.CORE, `  '${provId}' required: ${required}`)
-        // }
-
-        //await setKubernetesClusterKwirthRequirements(runningInstance, localKwirthData, runningInstance.clusterInfo, metricsRequired, requiredChannels, requiredProviders, backChannelObject)
         await setKubernetesClusterKwirthRequirements(runningInstance, localKwirthData, runningInstance.clusterInfo, backChannelObject)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
 

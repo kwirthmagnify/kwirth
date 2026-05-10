@@ -1,10 +1,10 @@
 import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
-import { MetricDefinition } from './metrics/MetricDefinition'
 import { ENotifyLevel } from '../tools/Global'
 import { IChannelSettings } from '../model/Settings'
 import { IResourceSelected } from '../components/ResourceSelector'
 import { IClusterInfo } from '../model/Cluster'
 import { INotification } from '../components/MenuNotification'
+import { MetricDefinition } from './metrics/MetricsTypes'
 
 type TChannelConstructor = (new () => IChannel)|undefined
 
@@ -42,7 +42,7 @@ interface IChannelObject {
     instanceConfig: any
     config: any
     data: any
-    metricsList?: Map<string, MetricDefinition>
+    metricsList?: Map<string, MetricDefinition>  //+++ review if needs to be moved to metrics channel
     accessString?: string
     isElectron: boolean
     frontChannels?: Map<string, TChannelConstructor>

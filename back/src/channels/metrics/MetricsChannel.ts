@@ -1,9 +1,10 @@
-import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, MetricsConfig, MetricsConfigModeEnum, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, IMetricsMessageResponse, IMetricsAssets, MetricsMessage, IMetricsMessage, InstanceConfigObjectEnum, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel, EClusterType } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { ELogComponent, logError, logInfo, logTrace, logWarning } from '../../tools/Logging'
 import { IMetricsCluster, IMetricsNode } from '../../providers/metrics/IMetricsModel'
+import { EMetricsConfigMode, IMetricsAssets, IMetricsConfig, IMetricsMessageResponse } from './MetricsTypes'
 
 export interface AssetData {
     podNode: string
@@ -185,8 +186,8 @@ class MetricsChannel implements IChannel {
                 logInfo(ELogComponent.CHANNEL, `No owner found for ${podName}, assume pod/container without controller`)
             }
             
-            switch ((instanceConfig.data as MetricsConfig).mode) {
-                case MetricsConfigModeEnum.SNAPSHOT: {
+            switch ((instanceConfig.data as IMetricsConfig).mode) {
+                case EMetricsConfigMode.SNAPSHOT: {
                     if (!this.checkScopes(instanceConfig, InstanceConfigScopeEnum.SNAPSHOT)) {
                         logInfo(ELogComponent.CHANNEL, 'Insufficient scope for SNAPSHOT')
                         this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, 'Insufficient scope for SNAPSHOT', instanceConfig) 
@@ -212,7 +213,7 @@ class MetricsChannel implements IChannel {
                         }
                     }
                 }
-                case MetricsConfigModeEnum.STREAM: {
+                case EMetricsConfigMode.STREAM: {
                     if (!this.checkScopes(instanceConfig, InstanceConfigScopeEnum.STREAM)) {
                         logInfo(ELogComponent.CHANNEL, 'Insufficient scope for STREAM')
                         this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, 'Insufficient scope for STREAM', instanceConfig) 
@@ -222,7 +223,7 @@ class MetricsChannel implements IChannel {
                     if (podNode) {
                         logInfo(ELogComponent.CHANNEL, `Start pod metrics for ${podNode}/${podNamespace}/${podGroup}/${podName}/${containerName}`)
                         let socket = this.webSockets.find(entry => entry.ws === webSocket)
-                        let metricsConfig = instanceConfig.data as MetricsConfig
+                        let metricsConfig = instanceConfig.data as IMetricsConfig
                         let interval = (metricsConfig.interval || 15) * 1000
                         if (socket) {
                             let instances = socket.instances
@@ -280,7 +281,7 @@ class MetricsChannel implements IChannel {
                     }
                 }
                 default:
-                    this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Invalid mode: ${(instanceConfig.data as MetricsConfig).mode}`, instanceConfig)
+                    this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Invalid mode: ${(instanceConfig.data as IMetricsConfig).mode}`, instanceConfig)
                     return false
             }
         }
@@ -311,10 +312,10 @@ class MetricsChannel implements IChannel {
         let instance = this.getInstance(webSocket, instanceConfig.instance)        
         if (instance) {
             // only modifiable properties of the metrics config
-            let destConfig = instance.instanceConfig.data as MetricsConfig
-            destConfig.metrics = (instanceConfig.data as MetricsConfig).metrics
-            destConfig.interval = (instanceConfig.data as MetricsConfig).interval
-            destConfig.aggregate = (instanceConfig.data as MetricsConfig).aggregate
+            let destConfig = instance.instanceConfig.data as IMetricsConfig
+            destConfig.metrics = (instanceConfig.data as IMetricsConfig).metrics
+            destConfig.interval = (instanceConfig.data as IMetricsConfig).interval
+            destConfig.aggregate = (instanceConfig.data as IMetricsConfig).aggregate
             this.sendInstanceConfigMessage(webSocket,EInstanceMessageAction.MODIFY, EInstanceMessageFlow.RESPONSE, EInstanceMessageChannel.METRICS, instanceConfig, 'Metrics modified')
         }
         else {
@@ -491,7 +492,7 @@ class MetricsChannel implements IChannel {
             }
         }
 
-        for (let metricName of (instanceConfig.data as MetricsConfig).metrics) {
+        for (let metricName of (instanceConfig.data as IMetricsConfig).metrics) {
             let sourceMetricName = metricName
             if (metricName === 'kwirth_container_memory_percentage') sourceMetricName = 'container_memory_working_set_bytes'
             if (metricName === 'kwirth_container_cpu_percentage') sourceMetricName = 'container_cpu_usage_seconds_total'
@@ -656,7 +657,7 @@ class MetricsChannel implements IChannel {
     fillData = (instanceConfig:IInstanceConfig, instance:IInstance, responseMessage:IMetricsMessageResponse) => {
         switch(instanceConfig.view) {
             case EInstanceConfigView.NAMESPACE:
-                if ((instanceConfig.data as MetricsConfig).aggregate) {
+                if ((instanceConfig.data as IMetricsConfig).aggregate) {
                     let assetMetrics = this.getAssetMetrics(instanceConfig, instance.assets, false)
                     if (assetMetrics) responseMessage.assets.push(assetMetrics)
                 }
@@ -671,7 +672,7 @@ class MetricsChannel implements IChannel {
                 }
                 break
             case EInstanceConfigView.GROUP:
-                if ((instanceConfig.data as MetricsConfig).aggregate) {
+                if ((instanceConfig.data as IMetricsConfig).aggregate) {
                     var assetMetrics = this.getAssetMetrics(instanceConfig, instance.assets, false)
                     if (assetMetrics) responseMessage.assets.push(assetMetrics)
                 }
@@ -685,7 +686,7 @@ class MetricsChannel implements IChannel {
                 }
                 break
             case EInstanceConfigView.POD:
-                if ((instanceConfig.data as MetricsConfig).aggregate) {
+                if ((instanceConfig.data as IMetricsConfig).aggregate) {
                     var assetMetrics = this.getAssetMetrics(instanceConfig, instance.assets, false)
                     if (assetMetrics) responseMessage.assets.push(assetMetrics)
                 }
@@ -699,7 +700,7 @@ class MetricsChannel implements IChannel {
                 }
                 break
             case EInstanceConfigView.CONTAINER:
-                if ((instanceConfig.data as MetricsConfig).aggregate) {
+                if ((instanceConfig.data as IMetricsConfig).aggregate) {
                     var assetMetrics = this.getAssetMetrics(instanceConfig, instance.assets, false)
                     if (assetMetrics) responseMessage.assets.push(assetMetrics)
                 }

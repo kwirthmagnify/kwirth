@@ -89,9 +89,28 @@ export interface IConfigLlm {
     data?: any
 }
 
+export interface IPlaygroundState {
+    llm: string
+    steps: number
+    tools: string[]
+    autoTools: boolean
+    system: string
+    prompt: string
+    eventData: string
+    triggerType: 'business' | 'artifact'
+    eventSpace: string
+    eventType: string
+    systemHistory?: string[]
+    promptHistory?: string[]
+    artifactHistory?: string[]
+    businessHistory?: string[]
+    spaceTypeHistory?: { space: string, type: string }[]
+}
+
 export interface IPinocchioConfig {
     triggers: IConfigTrigger[]
     llms: IConfigLlm[]
+    playground?: IPlaygroundState
 }
 
 export class PinocchioConfig  implements IPinocchioConfig {

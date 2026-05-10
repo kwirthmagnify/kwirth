@@ -25,8 +25,9 @@ import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
 import { IPinocchioInstanceConfig } from '../../pinocchio/PinocchioConfig'
 import { IPinocchioData } from '../../pinocchio/PinocchioData'
-import { ITopologyInstanceConfig, TopologyConfig } from '../../topology/TopologyConfig'
+import { ITopologyConfig, ITopologyInstanceConfig, TopologyConfig } from '../../topology/TopologyConfig'
 import { ITopologyData, TopologyData } from '../../topology/TopologyData'
+import { recomputeLayout } from '../../topology/TopologyChannel'
 import { TerminalManager } from '../../ops/Terminal/TerminalManager'
 
 export interface IContentExternalOptions {
@@ -151,8 +152,14 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                     setPinocchioConfig(contentExternalData.content)
                     break
                 case 'topology':
-                    contentExternalData.formConfig = {}
                     setTopologyConfig(contentExternalData.content)
+                    const topoCfg = contentExternalData.content!.externalChannelObject!.config as ITopologyConfig
+                    contentExternalData.formConfig = {
+                        showOnlyRunning: topoCfg.showOnlyRunning,
+                        labelSize: topoCfg.labelSize,
+                        nodeSpacingFactor: topoCfg.nodeSpacingFactor,
+                        gridColumns: topoCfg.gridColumns
+                    }
                     break
             }
         }
@@ -463,16 +470,20 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 
     const setTopologyConfig = (c: IContentExternalObject) => {
         const files = props.selectedFiles ?? []
-        let namespaces: string[]
-        if (files.length === 0 || contentExternalData.contentView === EInstanceConfigView.CLUSTER) {
-            namespaces = ['*all']
-        } else if (contentExternalData.contentView === EInstanceConfigView.NAMESPACE) {
-            namespaces = files.map(f => f.data.origin.metadata.name as string)
-        } else {
-            namespaces = Array.from(new Set(files.map(f => f.data.origin.metadata.namespace as string).filter(Boolean)))
-            if (namespaces.length === 0) namespaces = ['*all']
+        const view = contentExternalData.contentView
+        const topologyInstanceConfig: ITopologyInstanceConfig = {}
+        if (view === EInstanceConfigView.POD && files.length > 0) {
+            topologyInstanceConfig.pods = files.map(f => f.data.origin.metadata.name as string)
+        } else if (view === EInstanceConfigView.GROUP && files.length > 0) {
+            const kind = files[0]?.data?.origin?.kind as string
+            if (kind === 'Service') {
+                topologyInstanceConfig.services = files.map(f => f.data.origin.metadata.name as string)
+            } else if (kind === 'Ingress') {
+                topologyInstanceConfig.ingresses = files.map(f => f.data.origin.metadata.name as string)
+            } else {
+                topologyInstanceConfig.groups = files.map(f => `${f.data.origin.kind}/${f.data.origin.metadata.name}`)
+            }
         }
-        const topologyInstanceConfig: ITopologyInstanceConfig = { namespaces }
         const topologyData: ITopologyData = new TopologyData()
         c.externalChannelObject!.data = topologyData
         c.externalChannelObject!.config = new TopologyConfig()
@@ -638,6 +649,15 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                     <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Topology</Typography>
                     <Divider/>
                     <Typography variant='body2'>Topology shows a 3D graph of Kubernetes resources and their relationships. You can launch it cluster-wide or scoped to specific namespaces selected in Magnify.</Typography>
+                    <Divider/>
+                    <Typography variant='body2' sx={{ fontWeight: 600 }}>Navigation</Typography>
+                    <Typography variant='body2'><b>Rotate</b> — left mouse button + drag</Typography>
+                    <Typography variant='body2'><b>Pan</b> — middle mouse button + drag</Typography>
+                    <Typography variant='body2'><b>Zoom</b> — scroll wheel</Typography>
+                    <Typography variant='body2'><b>Select node</b> — left click</Typography>
+                    <Typography variant='body2'><b>Context menu</b> — right click on a node</Typography>
+                    <Typography variant='body2'><b>Path mode</b> — right click → View path (shows connected subgraph)</Typography>
+                    <Typography variant='body2'><b>Reset camera</b> — reset button (top right)</Typography>
                 </>
                 break
         }
@@ -720,8 +740,18 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 break
             case 'pinocchio':
                 break
-            case 'topology':
+            case 'topology': {
+                let topoConfig = contentExternalData.content!.externalChannelObject!.config as ITopologyConfig
+                topoConfig.showOnlyRunning = values.showOnlyRunning
+                topoConfig.labelSize = values.labelSize
+                topoConfig.nodeSpacingFactor = values.nodeSpacingFactor
+                topoConfig.gridColumns = values.gridColumns
+                let topoData = contentExternalData.content!.externalChannelObject!.data as ITopologyData
+                recomputeLayout(topoData.nodes, topoConfig.nodeSpacingFactor, topoConfig.gridColumns)
+                topoData.lastUpdated = Date.now()
+                forceUpdate()
                 break
+            }
         }
     }
 

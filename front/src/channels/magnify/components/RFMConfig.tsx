@@ -504,6 +504,12 @@ spaces.set('Service',
                 icon: <Edit fontSize='small'/>,
                 text: 'Edit service',
                 permission: true,
+            },
+            {
+                name: 'topology',
+                icon: <AccountTree fontSize='small'/>,
+                text: 'Topology',
+                permission: true,
             }
         ],
         properties: [
@@ -679,6 +685,12 @@ spaces.set('Ingress',
                 multi: true,
                 permission: true,
             },
+            {
+                name: 'topology',
+                icon: <AccountTree fontSize='small'/>,
+                text: 'Topology',
+                permission: true,
+            }
         ],
         properties: [
             {

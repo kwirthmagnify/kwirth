@@ -35,8 +35,8 @@ export class MetricsProvider implements IProvider {
     private loadingClusterMetrics: boolean = false
     private lastRead:IMetricsCluster|undefined
     private prevRead:IMetricsCluster|undefined
-    private vcpus = 0
-    private memory = 0
+    // private vcpus = 0
+    // private memory = 0
 
     constructor(clusterInfo: ClusterInfo, kwirthData: KwirthData) {
         this.clusterInfo = clusterInfo
@@ -135,8 +135,9 @@ export class MetricsProvider implements IProvider {
     }
 
     public getClusterUsage = () : IMetricsClusterUsage=> {
-        let cpuu=0, cpun=this.vcpus
-        let memu=0, memt=0
+        //let cpuUsed=0, cpuNumber=this.vcpus
+        let cpuUsed=0, cpuNumber=this.clusterInfo.vcpus
+        let memUsed=0, memTotal=0
         let tx=0, rx=0
         let prevtx=0, prevrx=0
         if (this.metricsList && this.lastRead) {
@@ -144,9 +145,9 @@ export class MetricsProvider implements IProvider {
                 
                 for (let lastNodeRead of this.lastRead.nodes) {
                     if (lastNodeRead.summary) {
-                        memu += lastNodeRead.summary.memory.usageBytes
-                        memt += lastNodeRead.summary.memory.usageBytes + lastNodeRead.summary.memory.availableBytes
-                        cpuu+=lastNodeRead.summary.cpu.usageNanoCores
+                        memUsed += lastNodeRead.summary.memory.usageBytes
+                        memTotal += lastNodeRead.summary.memory.usageBytes + lastNodeRead.summary.memory.availableBytes
+                        cpuUsed+=lastNodeRead.summary.cpu.usageNanoCores
                         tx += lastNodeRead.summary.network.txBytes
                         rx += lastNodeRead.summary.network.rxBytes
 
@@ -159,17 +160,19 @@ export class MetricsProvider implements IProvider {
                         }
                     }
                 }
-                if (memt===0) memt=1
-                if (cpun===0) cpun=1
+                if (memTotal===0) memTotal=1
+                if (cpuNumber===0) cpuNumber=1
                 let tottx = tx-prevtx
                 let totrx = rx-prevrx
                 tottx = (tottx/1024/1024) / this.metricsInterval
                 totrx = (totrx/1024/1024) / this.metricsInterval
                 return {
-                    vcpus: this.vcpus,
-                    memory: this.memory,
-                    cpuUsage: (cpuu/(cpun*Math.pow(10,9)))*100,
-                    memoryUsage: memu/memt*100,
+                    // vcpus: this.vcpus,
+                    vcpus: this.clusterInfo.vcpus,
+                    // memory: this.memory,
+                    memory: this.clusterInfo.memory,
+                    cpuUsage: (cpuUsed/(cpuNumber*Math.pow(10,9)))*100,
+                    memoryUsage: memUsed/memTotal*100,
                     txmbps: tottx,
                     rxmbps: totrx
                 }
@@ -180,8 +183,10 @@ export class MetricsProvider implements IProvider {
             }
         }
         return {
-            vcpus: this.vcpus,
-            memory: this.memory,
+            // vcpus: this.vcpus,
+            // memory: this.memory,
+            vcpus: this.clusterInfo.vcpus,
+            memory: this.clusterInfo.memory,
             cpuUsage: 0,
             memoryUsage: 0,
             txmbps: 0,
@@ -609,11 +614,10 @@ export class MetricsProvider implements IProvider {
                 if (metricsNode.machineMetricValues.get('machine_memory_bytes')) memory += metricsNode.machineMetricValues.get('machine_memory_bytes')!.value
             }
 
-            //+++ metrics provider shouldn't modify clusterinfo
             this.clusterInfo.vcpus = vcpus
             this.clusterInfo.memory = memory
-            this.vcpus = vcpus
-            this.memory = memory
+            // this.vcpus = vcpus
+            // this.memory = memory
 
             this.startMetricsInterval(this.metricsInterval)
             logInfo(ELogComponent.PROVIDER, 'Metrics gathering started...')

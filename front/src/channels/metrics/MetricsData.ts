@@ -1,4 +1,5 @@
-import { IInstanceMessage, IMetricsAssets } from "@kwirthmagnify/kwirth-common"
+import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
+import { IMetricsAssets } from "./MetricsTypes"
 
 export enum EMetricsEventSeverity {
     INFO = 'info',

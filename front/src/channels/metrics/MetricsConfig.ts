@@ -1,5 +1,5 @@
-import { EMetricsConfigMode } from "@kwirthmagnify/kwirth-common"
 import { EChartType } from "./MenuChart"
+import { EMetricsConfigMode } from "./MetricsTypes"
 
 interface IMetricViewConfig {
     displayName: string

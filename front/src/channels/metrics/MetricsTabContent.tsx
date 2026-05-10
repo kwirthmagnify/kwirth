@@ -4,7 +4,8 @@ import { Alert, Box, Button, Snackbar, Typography } from '@mui/material'
 import { IContentProps } from '../IChannel'
 import { IMetricsConfig, IMetricsInstanceConfig, IMetricViewConfig, METRICSCOLOURS, MetricsConfig } from './MetricsConfig'
 import { Chart, ISample } from './Chart'
-import { EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EMetricsConfigMode, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
+import { EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
+import { EMetricsConfigMode } from './MetricsTypes'
 
 const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let metricsConfig:IMetricsConfig = props.channelObject.config

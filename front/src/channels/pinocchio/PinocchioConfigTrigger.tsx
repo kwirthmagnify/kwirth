@@ -12,19 +12,6 @@ interface IPinocchioLlmConfigProps {
     toolsAvailable: string[]
 }
 
-const emptyVersion = (): IConfigTriggerVersion => ({
-    id: '',
-    enabled: true,
-    system: '',
-    promptType: 'jinja',
-    prompt: '',
-    action: 'inform',
-    llm: '',
-    steps: 1,
-    tools: [],
-    spaces: []
-})
-
 const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchioLlmConfigProps) => {
     const [config, setConfig] = useState(objectClone(props.pinocchioConfig) as IPinocchioConfig)
 
@@ -149,7 +136,9 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
         }
         const v: IConfigTriggerVersion = { id: versionId.trim(), description, enabled, system, promptType, prompt, action, llm, steps, tools, autoTools, spaces: spaces.split(',').filter(Boolean) }
         const newTriggers = [...(config.triggers ?? [])]
-        const versions = [...existingVersions]
+        let versions = [...existingVersions]
+        if (enabled)
+            versions = versions.map((ver, i) => i === selectedVersionIndex ? ver : { ...ver, enabled: false })
         if (selectedVersionIndex !== null)
             versions[selectedVersionIndex] = v
         else

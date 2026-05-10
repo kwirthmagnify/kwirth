@@ -5,12 +5,12 @@ import {
 } from '@mui/material'
 import { AccountTree } from '@mui/icons-material'
 import { ISetupProps } from '../IChannel'
-import { TopologyConfig, ITopologyConfig, ITopologyInstanceConfig } from './TopologyConfig'
+import { TopologyConfig, ITopologyConfig } from './TopologyConfig'
 
 export const TopologyIcon = <AccountTree />
 
 export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
-    const cfg:  ITopologyConfig         = props.setupConfig?.channelConfig         ?? new TopologyConfig()
+    const cfg: ITopologyConfig = props.setupConfig?.channelConfig ?? new TopologyConfig()
 
     const [showPods,          setShowPods]          = useState(cfg.showPods)
     const [showServices,      setShowServices]      = useState(cfg.showServices)
@@ -34,10 +34,9 @@ export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
             showJobs, showCronJobs, showPvcs, showOnlyRunning,
             edgeAnimated, labelSize, nodeSpacingFactor, gridColumns,
         }
-        const channelInstanceConfig: ITopologyInstanceConfig = { namespaces: ['*all'] }
         props.onChannelSetupClosed(
             props.channel,
-            { channelId: props.channel.channelId, channelConfig, channelInstanceConfig },
+            { channelId: props.channel.channelId, channelConfig, channelInstanceConfig: undefined },
             true, false
         )
     }

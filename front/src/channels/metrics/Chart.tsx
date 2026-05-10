@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { Alert, Box, Card, CardContent, CardHeader, Stack, Typography } from '@mui/material'
-import { MetricDefinition } from './MetricDefinition'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, Treemap, XAxis, YAxis } from 'recharts'
 import { IMetricViewConfig, METRICSCOLOURS } from './MetricsConfig'
 import { Tooltip as MUITooltip, IconButton } from '@mui/material'
 import { MenuChart, EMenuChartOption, EChartType } from './MenuChart'
 import { MoreVert } from '@mui/icons-material'
 import { TreemapNode } from 'recharts/types/util/types'
+import { MetricDefinition } from './MetricsTypes'
 
 export interface ISample {
     timestamp:string

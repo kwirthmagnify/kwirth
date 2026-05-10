@@ -846,12 +846,12 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
             const speed = radius * 0.0012
             spherical.current.tx = (spherical.current.tx ?? 0)
                 - Math.cos(theta) * dx * speed
-                + Math.sin(theta) * Math.cos(phi) * dy * speed
+                - Math.sin(theta) * Math.cos(phi) * dy * speed
             spherical.current.ty = (spherical.current.ty ?? 0)
-                - Math.sin(phi) * dy * speed
+                + Math.sin(phi) * dy * speed
             spherical.current.tz = (spherical.current.tz ?? 0)
                 + Math.sin(theta) * dx * speed
-                + Math.cos(theta) * Math.cos(phi) * dy * speed
+                - Math.cos(theta) * Math.cos(phi) * dy * speed
         }
         if (cameraRef.current) updateCamera(cameraRef.current, spherical.current)
     }, [])

@@ -311,7 +311,7 @@ export class TopologyChannel implements IChannel {
     processChannelMessage(channelObject: IChannelObject, wsEvent: MessageEvent): IChannelMessageAction {
         let action = EChannelRefreshAction.NONE
         const data: ITopologyData   = channelObject.data
-        const cfg:  ITopologyConfig = channelObject.config
+        const cfg:  ITopologyConfig = channelObject.config ?? new TopologyConfig()
 
         let msg: ITopologyWsMessage
         try {

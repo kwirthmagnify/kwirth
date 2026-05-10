@@ -29,7 +29,7 @@ interface INewsMessageResponse {
 
 const FEEDS: Record<string, { url: string; source: string }> = {
     kubernetes: { url: 'https://kubernetes.io/feed.xml', source: 'kubernetes.io' },
-    ai: { url: 'https://rss.arxiv.org/rss/cs.AI', source: 'arxiv.org' }
+    ai: { url: 'https://techcrunch.com/category/artificial-intelligence/feed/', source: 'techcrunch.com' }
 }
 
 interface IAsset {

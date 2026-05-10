@@ -6,7 +6,14 @@
       "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\" -Directory)",
       "Bash(Select-Object Name)",
       "Bash(grep -v \"//\")",
-      "Bash(xargs grep -l \"topology\")"
+      "Bash(xargs grep -l \"topology\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\pinocchio\" -Recurse)",
+      "Bash(Select-Object FullName)",
+      "Bash(Get-ChildItem -Recurse -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\" -Filter \"*news*\" -ErrorAction SilentlyContinue)",
+      "Bash(curl -s --max-time 10 \"https://rss.arxiv.org/rss/cs.AI\")",
+      "Bash(curl -s --max-time 10 \"https://techcrunch.com/category/artificial-intelligence/feed/\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\topology\\\\\" -Recurse -File | Select-Object -ExpandProperty FullName)",
+      "Bash(find \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\topology\\\\\" -type f -name \"*\")"
     ]
   }
 }

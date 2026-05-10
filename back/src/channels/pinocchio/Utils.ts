@@ -100,7 +100,7 @@ export const loadModels = async (providers:IConfigProvider[]) => {
             logInfo(ELogComponent.CHANNEL, `Pinocchio: '${provider.name}' provider added ${provider.models.length} models`)
         }
         catch (err) {
-            logError(ELogComponent.CHANNEL, `Pinocchio: error loading models from provider ${provider.name}`)
+            logError(ELogComponent.CHANNEL, `Pinocchio: error loading models from LLM provider '${provider.name}'`)
             logError(ELogComponent.CHANNEL, err)
         }
     }

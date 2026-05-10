@@ -33,9 +33,11 @@ export class TopologyConfig implements ITopologyConfig {
 }
 
 export interface ITopologyInstanceConfig {
-    namespaces: string[]
+    pods?:      string[]
+    services?:  string[]
+    ingresses?: string[]
+    groups?:    string[]  // "Kind/name" format
 }
 
 export class TopologyInstanceConfig implements ITopologyInstanceConfig {
-    namespaces = ['*all']
 }
