@@ -1,14 +1,6 @@
-interface ITrivyConfig {
-}
+import { ITrivyConfig, ITrivyInstanceConfig } from "./TrivyTypes"
 
 class TrivyConfig implements ITrivyConfig{
-}
-
-interface ITrivyInstanceConfig {
-    ignoreCritical: boolean
-    ignoreHigh: boolean
-    ignoreMedium: boolean
-    ignoreLow: boolean
 }
 
 class TrivyInstanceConfig implements ITrivyInstanceConfig{
@@ -18,5 +10,4 @@ class TrivyInstanceConfig implements ITrivyInstanceConfig{
     ignoreLow = true
 }
 
-export type { ITrivyConfig, ITrivyInstanceConfig }
 export { TrivyConfig, TrivyInstanceConfig }

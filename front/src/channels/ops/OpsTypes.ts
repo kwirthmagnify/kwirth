@@ -1,10 +1,11 @@
-import { IInstanceMessage } from "./InstanceMessage"
+import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
+
+export interface OpsConfig {
+}
 
 export enum EOpsCommand {
     DESCRIBE = 'describe',
-
     EXECUTE = 'execute',
-
     RESTART = 'restart',
     RESTARTPOD = 'restartpod',
     RESTARTNS = 'restartns'
@@ -33,3 +34,8 @@ export interface IOpsMessageResponse extends IInstanceMessage {
     container: string
     data?: any
 }
+
+export interface IOpsInstanceConfig {
+    sessionKeepAlive: boolean
+}
+

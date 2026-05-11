@@ -1,10 +1,10 @@
 import { FC } from "react";
-import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from "../IChannel";
-import { EchoInstanceConfig, EchoConfig, IEchoConfig } from "./EchoConfig";
+import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '../IChannel'
+import { EchoConfig, EchoInstanceConfig, IEchoConfig } from './EchoConfig'
 import { EchoSetup, EchoIcon } from './EchoSetup';
-import { IEchoMessage, IInstanceMessage, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope } from "@kwirthmagnify/kwirth-common";
-import { EchoData, IEchoData } from "./EchoData";
-import { EchoTabContent } from "./EchoTabContent";
+import { IEchoMessage, IInstanceMessage, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope } from '@kwirthmagnify/kwirth-common'
+import { EchoData, IEchoData } from './EchoData'
+import { EchoTabContent } from './EchoTabContent'
 
 export class EchoChannel implements IChannel {
     private setupVisible = false

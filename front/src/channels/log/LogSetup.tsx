@@ -2,10 +2,11 @@ import React, { useState, ChangeEvent, useRef } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, FormLabel, Radio, RadioGroup, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material'
 import { ISetupProps } from '../IChannel'
 import { Subject } from '@mui/icons-material'
-import { ILogInstanceConfig, ILogConfig, ELogSortOrder, LogInstanceConfig, LogConfig } from './LogConfig'
+import { ILogConfig, LogInstanceConfig, LogConfig } from './LogConfig'
 import { DateTimePicker, LocalizationProvider, renderTimeViewClock } from '@mui/x-date-pickers'
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment'
 import moment from 'moment'
+import { ELogSortOrder, ILogInstanceConfig } from './LogTypes'
 
 const LogIcon = <Subject />
 

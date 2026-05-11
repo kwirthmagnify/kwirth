@@ -2,7 +2,8 @@ import React, { useRef, useState } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Select, Stack, Switch, Typography, Checkbox } from '@mui/material'
 import { ISetupProps } from '../IChannel'
 import { Terminal } from '@mui/icons-material'
-import { IOpsInstanceConfig, IOpsConfig, OpsInstanceConfig, OpsConfig, ESwitchKey } from './OpsConfig'
+import { ESwitchKey, IOpsConfig, OpsConfig, OpsInstanceConfig } from './OpsConfig'
+import { IOpsInstanceConfig } from './OpsTypes'
 
 const OpsIcon = <Terminal />
 

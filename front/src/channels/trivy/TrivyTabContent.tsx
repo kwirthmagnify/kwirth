@@ -3,11 +3,11 @@ import { Box, Button, Stack, Typography, Slider, TextField, InputAdornment, Card
 import { Search as SearchIcon } from '@mui/icons-material'
 import { TReportType } from './TrivyCommon'
 import { IContentProps } from '../IChannel'
-import { ITrivyInstanceConfig } from './TrivyConfig'
 import { IAsset, ITrivyData, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_VULN_PLURAL } from './TrivyData'
 import { TrivyTabContentAssetDetails } from './components/TrivyTabContentAssetDetails'
 import { getTotalIssues, TrivyTabContentAsset } from './components/TrivyTabContentAsset'
 import { MenuOrder } from './components/MenuOrder'
+import { ITrivyInstanceConfig } from './TrivyTypes'
 
 const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const theme = useTheme()

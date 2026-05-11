@@ -3,7 +3,6 @@ import { Box, Button, Card, CardContent, CardHeader, IconButton, ListItem, ListI
 import { IOpsData, IScopedObject, OpsData } from './OpsData'
 import { IInstanceConfig, EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType, IOpsMessage, EMetricsConfigMode, EOpsCommand, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { IContentProps } from '../IChannel'
-import { ESwitchKey, IOpsConfig, OpsConfig } from './OpsConfig'
 import { v4 as uuid } from 'uuid'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxYesNo } from '../../tools/MsgBox'
 import { Delete, Home, MoreVert, RestartAlt, Terminal } from '@mui/icons-material'
@@ -12,11 +11,13 @@ import { defaultStyles, JsonView } from 'react-json-view-lite'
 import 'react-json-view-lite/dist/index.css';
 import { MenuObject, EMenuObjectOption } from './MenuObject'
 import { IResourceSelected } from '../../components/ResourceSelector'
-import { ILogConfig, ILogInstanceConfig, ELogSortOrder } from '../log/LogConfig'
+import { ILogConfig } from '../log/LogConfig'
 import { IMetricsConfig, IMetricsInstanceConfig } from '../metrics/MetricsConfig'
 import { EChartType } from '../metrics/MenuChart'
 import { SelectTerminal } from './Terminal/SelectTerminal'
 import { TerminalInstance } from './Terminal/TerminalInstance'
+import { ESwitchKey, IOpsConfig, OpsConfig } from './OpsConfig'
+import { ELogSortOrder, ILogInstanceConfig } from '../log/LogTypes'
 
 const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let opsData:IOpsData = props.channelObject.data || new OpsData()

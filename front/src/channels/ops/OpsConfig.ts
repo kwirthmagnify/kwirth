@@ -1,4 +1,5 @@
 import { IScopedObject } from "./OpsData"
+import { IOpsInstanceConfig } from "./OpsTypes"
 
 export enum ESwitchKey {
     DISABLED,
@@ -19,13 +20,8 @@ class OpsConfig implements IOpsConfig{
     launchShell = false
 }
 
-interface IOpsInstanceConfig {
-    sessionKeepAlive: boolean
-}
-
 class OpsInstanceConfig implements IOpsInstanceConfig{
     sessionKeepAlive = true
 }
-
-export type { IOpsConfig, IOpsInstanceConfig }
+export type { IOpsConfig }
 export { OpsConfig, OpsInstanceConfig }

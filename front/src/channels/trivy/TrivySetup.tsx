@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, Typography } from '@mui/material'
 import { ISetupProps } from '../IChannel'
-import { ITrivyConfig, ITrivyInstanceConfig, TrivyConfig, TrivyInstanceConfig } from './TrivyConfig'
+import { TrivyConfig, TrivyInstanceConfig } from './TrivyConfig'
 import { VerifiedUser } from '@mui/icons-material'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxOkError, MsgBoxWaitCancel } from '../../tools/MsgBox'
 import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { TrivyOperator } from './TrivyOperator'
 import { ITrivyData } from './TrivyData'
+import { ITrivyConfig, ITrivyInstanceConfig } from './TrivyTypes'
 
 const TrivyIcon = <VerifiedUser />
 

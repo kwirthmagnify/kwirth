@@ -3,7 +3,8 @@ import { Box, Card, CardContent, CardHeader, Stack, Typography } from '@mui/mate
 import { IChannelObject } from '../IChannel'
 import { IEchoData } from './EchoData'
 import { Info } from '@mui/icons-material'
-import { IEchoConfig, IEchoInstanceConfig } from './EchoConfig'
+import { IEchoInstanceConfig } from './EchoTypes'
+import { IEchoConfig } from './EchoConfig'
 
 interface IContentProps {
     webSocket?: WebSocket

@@ -1,15 +1,11 @@
+import { IAlertInstanceConfig } from "./AlertTypes"
+
 interface IAlertConfig {
     maxAlerts: number
 }
 
 class AlertConfig implements IAlertConfig{
-    maxAlerts:number = 25
-}
-
-interface IAlertInstanceConfig {
-    regexInfo: string[],
-    regexWarning: string[],
-    regexError: string[],
+    maxAlerts: number = 25
 }
 
 class AlertInstanceConfig implements IAlertInstanceConfig{
@@ -18,5 +14,5 @@ class AlertInstanceConfig implements IAlertInstanceConfig{
     regexError:string[] = []
 }
 
-export type { IAlertConfig, IAlertInstanceConfig }
+export type { IAlertConfig }
 export { AlertConfig, AlertInstanceConfig }

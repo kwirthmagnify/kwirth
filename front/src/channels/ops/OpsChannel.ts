@@ -1,13 +1,15 @@
 import { FC } from 'react'
 import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '../IChannel'
-import { IOpsMessageResponse, EOpsCommand, ISignalMessage, IInstanceConfigResponse, IInstanceConfig, EInstanceMessageFlow, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageChannel, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
+import { ISignalMessage, IInstanceConfigResponse, IInstanceConfig, EInstanceMessageFlow, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageChannel, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { OpsIcon, OpsSetup } from './OpsSetup'
 import { OpsTabContent } from './OpsTabContent'
 import { OpsData, IOpsData, IXTerm, IScopedObject } from './OpsData'
-import { OpsInstanceConfig, OpsConfig, IOpsConfig } from './OpsConfig'
+
 // @ts-ignore
 import 'xterm/css/xterm.css'
 import { ENotifyLevel } from '../../tools/Global'
+import { IOpsConfig, OpsConfig, OpsInstanceConfig } from './OpsConfig'
+import { EOpsCommand, IOpsMessageResponse } from './OpsTypes'
 
 export class OpsChannel implements IChannel {
     private setupVisible = false

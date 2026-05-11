@@ -4,7 +4,7 @@ import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChan
 import { Informer, KubernetesObject, makeInformer, ObjectCache } from '@kubernetes/client-node'
 import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources, restartController } from '../../tools/KubernetesTools'
-import { ETrivyCommand, IKnown, ITrivyMessage, ITrivyMessageResponse, IUnknown } from './TrivyModel'
+import { ETrivyCommand, IKnown, ITrivyMessage, ITrivyMessageResponse, IUnknown } from './TrivyTypes'
 import * as path from 'path'
 import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging';
 const fs = require('fs')

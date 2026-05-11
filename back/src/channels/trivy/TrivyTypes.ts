@@ -42,3 +42,13 @@ export interface IKnown {
     container: string
     report: any
 }
+
+export interface ITrivyConfig {
+}
+
+export interface ITrivyInstanceConfig {
+    ignoreCritical: boolean
+    ignoreHigh: boolean
+    ignoreMedium: boolean
+    ignoreLow: boolean
+}

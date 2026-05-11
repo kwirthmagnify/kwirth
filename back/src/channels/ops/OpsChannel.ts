@@ -1,13 +1,14 @@
-import { IInstanceConfig, InstanceMessageChannelEnum, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, IOpsMessage, IOpsMessageResponse, EOpsCommand, IRouteMessageResponse, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EClusterType } from '@kwirthmagnify/kwirth-common';
+import { IInstanceConfig, InstanceMessageChannelEnum, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, IRouteMessageResponse, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { WebSocket as NonNativeWebSocket } from 'ws'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
-import { PassThrough, Readable, Writable } from 'stream';
-import { execCommandDescribe } from './GetCommand';
-import { execCommandRestart } from './RestartCommand';
-import { AuthorizationManagement } from '../../tools/AuthorizationManagement';
+import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
+import { PassThrough, Readable, Writable } from 'stream'
+import { execCommandDescribe } from './GetCommand'
+import { execCommandRestart } from './RestartCommand'
+import { AuthorizationManagement } from '../../tools/AuthorizationManagement'
 import { Request, Response } from 'express'
-import { ELogComponent, logInfo } from '../../tools/Logging';
+import { ELogComponent, logInfo } from '../../tools/Logging'
+import { EOpsCommand, IOpsMessage, IOpsMessageResponse } from './OpsTypes'
 
 export interface IAsset {
     podNamespace: string

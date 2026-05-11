@@ -1,13 +1,14 @@
 import React, { useRef, useState } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, TextField } from '@mui/material'
 import { ISetupProps } from '../IChannel'
-import { IEchoInstanceConfig, IEchoConfig, EchoInstanceConfig, EchoConfig } from './EchoConfig'
+import { IEchoConfig, EchoConfig } from './EchoConfig'
 import { Science } from '@mui/icons-material'
+import { IEchoInstanceConfig } from './EchoTypes'
 
 const EchoIcon = <Science />
 
 const EchoSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
-    let echoInstanceConfig:IEchoInstanceConfig = props.setupConfig?.channelInstanceConfig || new EchoInstanceConfig()
+    let echoInstanceConfig:IEchoInstanceConfig = props.setupConfig?.channelInstanceConfig || new EchoConfig()
     let echoConfig:IEchoConfig = props.setupConfig?.channelConfig || new EchoConfig()
 
     const [interval, setInterval] = useState(echoInstanceConfig.interval)

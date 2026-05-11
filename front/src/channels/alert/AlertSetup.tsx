@@ -1,9 +1,10 @@
 import React, { useState, ChangeEvent, useRef } from 'react'
 import { Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, TextField } from '@mui/material'
 import { ISetupProps } from '../IChannel'
-import { IAlertInstanceConfig, IAlertConfig, AlertInstanceConfig, AlertConfig } from './AlertConfig'
+import { IAlertConfig, AlertInstanceConfig, AlertConfig } from './AlertConfig'
 import { Warning } from '@mui/icons-material'
 import { TextToolTip } from '../../tools/FrontTools'
+import { IAlertInstanceConfig } from './AlertTypes'
 
 const AlertIcon = <Warning />
 

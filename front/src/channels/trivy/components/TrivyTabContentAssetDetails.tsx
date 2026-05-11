@@ -1,6 +1,5 @@
 import { Avatar, Box, Button, Card, CardContent, Dialog, DialogActions, DialogContent, DialogTitle, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material'
 import { getAvatarContent, TReportType } from '../TrivyCommon'
-import { ITrivyInstanceConfig } from '../TrivyConfig'
 import { TrivyTabContentAssetAudit } from './TrivyTabContentAssetAudit'
 import { TrivyTabContentAssetVulns } from './TrivyTabContentAssetVulns'
 import { IAsset, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_VULN_PLURAL } from '../TrivyData'
@@ -8,6 +7,7 @@ import { TrivyTabContentAssetSbom } from './TrivyTabContentAssetSbom'
 import { TrivyTabContentAssetExposed } from './TrivyTabContentAssetExposed'
 import { useRef, useState } from 'react'
 import { useEscape } from '../../../tools/useEscape'
+import { ITrivyInstanceConfig } from '../TrivyTypes'
 
 interface ITrivyTabContentAssetDetailsProps {
     asset: IAsset

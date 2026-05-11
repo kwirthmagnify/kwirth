@@ -1,4 +1,4 @@
-import { IInstanceMessage } from "./InstanceMessage"
+import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
 
 export interface IEchoMessage extends IInstanceMessage {
     msgtype: 'echomessage'
@@ -13,3 +13,6 @@ export interface IEchoMessageResponse extends IInstanceMessage {
     text: string
 }
 
+export interface IEchoInstanceConfig {
+    interval: number
+}

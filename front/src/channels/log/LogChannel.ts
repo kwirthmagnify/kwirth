@@ -4,8 +4,9 @@ import { ILogMessage, IInstanceMessage, EInstanceMessageAction, EInstanceMessage
 import { LogIcon, LogSetup } from './LogSetup'
 import { LogTabContent } from './LogTabContent'
 import { LogData, ILogLine, ILogData } from './LogData'
-import { ILogConfig, LogInstanceConfig, ELogSortOrder, LogConfig } from './LogConfig'
+import { ILogConfig, LogInstanceConfig, LogConfig } from './LogConfig'
 import { ENotifyLevel } from '../../tools/Global'
+import { ELogSortOrder } from './LogTypes'
 
 export class LogChannel implements IChannel {
     private setupVisible = false

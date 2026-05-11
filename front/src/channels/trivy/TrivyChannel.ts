@@ -3,8 +3,9 @@ import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject,
 import { EInstanceMessageAction, EInstanceMessageType, ISignalMessage, EInstanceMessageFlow, ESignalMessageLevel, IInstanceMessage } from '@kwirthmagnify/kwirth-common'
 import { TrivyIcon, TrivySetup } from './TrivySetup'
 import { TrivyTabContent } from './TrivyTabContent'
-import { ITrivyData, ITrivyMessageResponse, IAsset, TrivyData } from './TrivyData'
+import { ITrivyData, IAsset, TrivyData } from './TrivyData'
 import { TrivyConfig, TrivyInstanceConfig } from './TrivyConfig'
+import { ITrivyMessageResponse } from './TrivyTypes'
 
 export class TrivyChannel implements IChannel {
     private setupVisible = false

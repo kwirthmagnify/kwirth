@@ -1,8 +1,4 @@
-export enum ELogSortOrder {
-    NONE = 'none',
-    TIME = 'time',
-    POD = 'pod'
-}
+import { ELogSortOrder, ILogInstanceConfig } from "./LogTypes"
 
 interface ILogConfig {
     startDiagnostics: boolean
@@ -26,13 +22,6 @@ class LogConfig implements ILogConfig{
     showNames = false
 }
 
-interface ILogInstanceConfig {
-    previous: boolean
-    timestamp: boolean
-    fromStart: boolean
-    startTime?: number
-}
-
 class LogInstanceConfig implements ILogInstanceConfig{
     previous = false
     timestamp = true
@@ -40,5 +29,5 @@ class LogInstanceConfig implements ILogInstanceConfig{
     startTime? = 0
 }
 
-export type { ILogConfig, ILogInstanceConfig }
+export type { ILogConfig }
 export { LogConfig, LogInstanceConfig }

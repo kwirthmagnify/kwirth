@@ -1,4 +1,4 @@
-import { IInstanceMessage } from "./InstanceMessage"
+import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
 
 export enum EAlertSeverity {
     INFO = 'info',
@@ -14,4 +14,10 @@ export interface IAlertMessage extends IInstanceMessage {
     pod: string
     container: string
     text: string
+}
+
+export interface IAlertInstanceConfig {
+    regexInfo: string[],
+    regexWarning: string[],
+    regexError: string[],
 }

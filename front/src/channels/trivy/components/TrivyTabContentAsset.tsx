@@ -5,9 +5,10 @@ import { Replay as ReplayIcon } from '@mui/icons-material'
 import { assetAvatarColor, getAvatarContent } from '../TrivyCommon'
 import { useState } from 'react'
 import { IChannelObject } from '../../IChannel'
-import { ITrivyInstanceConfig } from '../TrivyConfig'
+import { ITrivyInstanceConfig } from '../TrivyTypes'
 import { EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { ETrivyCommand, IAsset, ITrivyMessage, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_VULN_PLURAL } from '../TrivyData'
+import { IAsset, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_VULN_PLURAL } from '../TrivyData'
+import { ETrivyCommand, ITrivyMessage } from '../TrivyTypes'
 
 interface ITrivyTabContentAssetProps {
     asset: IAsset

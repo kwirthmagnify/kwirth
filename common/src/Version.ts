@@ -20,23 +20,6 @@ limitations under the License.
  * @param version2 level you want to compare to
  * @returns true if version1 version is higher than version2
  */
-// const versionGreatOrEqualThan = (version1: string, version2: string): boolean => {
-//     const v1 = version1.split('.').map(Number)
-//     const v2 = version2.split('.').map(Number)
-  
-//     for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
-//         const num1 = v1[i] || 0
-//         const num2 = v2[i] || 0
-
-//         if (num1 > num2) 
-//             return true
-//         else if (num1 < num2)
-//             return false
-//     }
-//     // versions are equal
-//     return true
-// }
-
 const versionGreatOrEqualThan = (version1: string, version2: string): boolean => {
     return versionGreaterThan(version1, version2) || (version1===version2)
 }
