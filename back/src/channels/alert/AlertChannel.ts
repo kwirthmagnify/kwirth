@@ -1,9 +1,10 @@
-import { IInstanceConfig, ISignalMessage, EClusterType, IInstanceConfigResponse, EAlertSeverity, IAlertMessage, IInstanceMessage, AlertConfig, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, EInstanceMessageType, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, EClusterType, IInstanceConfigResponse, IInstanceMessage, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, EInstanceMessageType, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
+import { EAlertSeverity, IAlertInstanceConfig, IAlertMessage } from './AlertTypes';
 
 interface IAsset {
     podNamespace:string,
@@ -199,17 +200,17 @@ class AlertChannel implements IChannel {
         let regexes: Map<EAlertSeverity, RegExp[]> = new Map()
 
         let regExps: RegExp[] = []
-        for (let regStr of (instanceConfig.data as AlertConfig).regexInfo)
+        for (let regStr of (instanceConfig.data as IAlertInstanceConfig).regexInfo)
             regExps.push(new RegExp (regStr))
         regexes.set(EAlertSeverity.INFO, regExps)
 
         regExps = []
-        for (let regStr of (instanceConfig.data as AlertConfig).regexWarning)
+        for (let regStr of (instanceConfig.data as IAlertInstanceConfig).regexWarning)
             regExps.push(new RegExp (regStr))
         regexes.set(EAlertSeverity.WARNING, regExps)
 
         regExps = []
-        for (let regStr of (instanceConfig.data as AlertConfig).regexError)
+        for (let regStr of (instanceConfig.data as IAlertInstanceConfig).regexError)
             regExps.push(new RegExp (regStr))
         regexes.set(EAlertSeverity.ERROR, regExps)
 

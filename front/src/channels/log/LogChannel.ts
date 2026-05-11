@@ -1,12 +1,12 @@
 import { FC } from 'react'
 import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '../IChannel'
-import { ILogMessage, IInstanceMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ISignalMessage, EInstanceConfigScope } from '@kwirthmagnify/kwirth-common'
+import { IInstanceMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ISignalMessage, EInstanceConfigScope } from '@kwirthmagnify/kwirth-common'
 import { LogIcon, LogSetup } from './LogSetup'
 import { LogTabContent } from './LogTabContent'
 import { LogData, ILogLine, ILogData } from './LogData'
 import { ILogConfig, LogInstanceConfig, LogConfig } from './LogConfig'
 import { ENotifyLevel } from '../../tools/Global'
-import { ELogSortOrder } from './LogTypes'
+import { ELogSortOrder, ILogMessage } from './LogTypes'
 
 export class LogChannel implements IChannel {
     private setupVisible = false

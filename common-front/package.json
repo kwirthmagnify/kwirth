@@ -1,0 +1,31 @@
+{
+  "name": "@kwirthmagnify/kwirth-common-front",
+  "version": "0.5.0",
+  "description": "Frontend channel interfaces for Kwirth plugins and channels",
+  "scripts": {
+    "build": "del .\\dist\\* /s /q && tsc"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "author": "Julio Fernandez",
+  "license": "ISC",
+  "dependencies": {
+    "@kwirthmagnify/kwirth-common": "^0.5.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "react": "^18.3.0",
+    "typescript": "^5.8.3"
+  }
+}

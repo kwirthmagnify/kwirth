@@ -4,7 +4,7 @@ import {
     Divider, FormControlLabel, FormGroup, Slider, Stack, Typography,
 } from '@mui/material'
 import { AccountTree } from '@mui/icons-material'
-import { ISetupProps } from '../IChannel'
+import { ISetupProps } from './types'
 import { TopologyConfig, ITopologyConfig } from './TopologyConfig'
 
 export const TopologyIcon = <AccountTree />

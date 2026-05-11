@@ -49,7 +49,6 @@ import { ContextSelector } from './components/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
 import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
-import { TopologyChannel } from './channels/topology/TopologyChannel'
 import { PluginDialog } from './components/PluginDialog'
 
 interface IAppProps {
@@ -261,7 +260,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         frontChannels.set('fileman', FilemanChannel)
         frontChannels.set('magnify', MagnifyChannel)
         frontChannels.set('pinocchio', PinocchioChannel)
-        frontChannels.set('topology', TopologyChannel)
     },[])
 
     useEffect(() => {

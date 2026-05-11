@@ -13,6 +13,16 @@ export class KubernetesConfigMaps implements IConfigMaps {
     }
 
     public write = async (name:string, data:any): Promise<any> =>{
+        if (data === null) {
+            try {
+                await this.coreApi?.deleteNamespacedConfigMap({ name, namespace: this.namespace })
+                logInfo(ELogComponent.CORE, `ConfigMap ${this.namespace}/${name} deleted`)
+            }
+            catch (err:any) {
+                if (err.code !== 404) logError(ELogComponent.CORE, `Error deleting ConfigMap ${this.namespace}/${name}: ${err}`)
+            }
+            return {}
+        }
         try {
             var configMap:V1ConfigMap = {
                 metadata: {
@@ -43,7 +53,7 @@ export class KubernetesConfigMaps implements IConfigMaps {
             logError(ELogComponent.CORE, err)
             return undefined
         }
-    
+
     }
     
     public read = async (name:string, defaultValue:any=undefined): Promise<any> => {

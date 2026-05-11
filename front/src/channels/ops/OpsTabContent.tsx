@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, IconButton, ListItem, ListItemButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { IOpsData, IScopedObject, OpsData } from './OpsData'
-import { IInstanceConfig, EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType, IOpsMessage, EMetricsConfigMode, EOpsCommand, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { IContentProps } from '../IChannel'
 import { v4 as uuid } from 'uuid'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxYesNo } from '../../tools/MsgBox'
@@ -18,6 +18,8 @@ import { SelectTerminal } from './Terminal/SelectTerminal'
 import { TerminalInstance } from './Terminal/TerminalInstance'
 import { ESwitchKey, IOpsConfig, OpsConfig } from './OpsConfig'
 import { ELogSortOrder, ILogInstanceConfig } from '../log/LogTypes'
+import { EOpsCommand, IOpsMessage } from './OpsTypes'
+import { EMetricsConfigMode } from '../metrics/MetricsTypes'
 
 const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let opsData:IOpsData = props.channelObject.data || new OpsData()

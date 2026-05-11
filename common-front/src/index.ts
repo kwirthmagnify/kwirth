@@ -1,46 +1,10 @@
-// Local copies of kwirth-front interface types so the plugin is self-contained.
 import { FC } from 'react'
-import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
+import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements } from '@kwirthmagnify/kwirth-common'
 
-export enum ENotifyLevel {
-    INFO = 'info',
-    ERROR = 'error',
-    WARNING = 'warning',
-    SUCCESS = 'success'
-}
+export { EChannelRefreshAction, ENotifyLevel }
+export type { EInstanceConfigView, IChannelMessageAction, IChannelSettings, IChannelRequirements }
 
-export enum EChannelRefreshAction {
-    NONE,
-    REFRESH,
-    STOP
-}
-
-export interface IChannelSettings {
-    channelId: string
-    channelConfig: any
-    channelInstanceConfig: any
-}
-
-export interface IChannelRequirements {
-    setup: boolean
-    settings: boolean
-    frontChannels: boolean
-    metrics: boolean
-    notifier: boolean
-    notifications: boolean
-    clusterUrl: boolean
-    clusterInfo: boolean
-    accessString: boolean
-    webSocket: boolean
-    userSettings: boolean
-    palette: boolean
-    exit: boolean
-}
-
-export interface IChannelMessageAction {
-    action: EChannelRefreshAction
-    data?: any
-}
+export type TChannelConstructor = (new () => IChannel) | undefined
 
 export interface IChannelObject {
     clusterName: string
@@ -55,13 +19,13 @@ export interface IChannelObject {
     data: any
     accessString?: string
     isElectron: boolean
-    frontChannels?: Map<string, any>
+    channelId: string
+    frontChannels?: Map<string, TChannelConstructor>
     notifications?: any[]
     webSocket?: WebSocket
     clusterUrl?: string
     clusterInfo?: any
     channelSettings?: IChannelSettings
-    channelId: string
     updateChannelSettings?: (channelSettings: IChannelSettings) => void
     createTab?: (resource: any, start: boolean, settings: any) => void
     readChannelUserPreferences?: (channelId: string) => Promise<any>

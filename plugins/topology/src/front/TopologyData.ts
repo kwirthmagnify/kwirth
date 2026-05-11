@@ -47,8 +47,9 @@ export interface ITopologyNode {
     accessModes?:  string[]
     edges?:        ITopologyEdge[]
     ownerUids?:    string[]
-    containers?:   string[]
-    podName?:      string
+    containers?:   string[]  // POD: list of container names
+    podName?:      string    // CONTAINER: parent pod name
+    // 3-D position — computed by layout engine
     x: number
     y: number
     z: number

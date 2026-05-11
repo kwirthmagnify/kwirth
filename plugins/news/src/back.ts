@@ -2,7 +2,6 @@
 // Adapted from back/src/channels/news/NewsChannel.ts.
 // Does not depend on ClusterInfo or internal logging tools.
 import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
-import { Request, Response } from 'express'
 import https from 'https'
 import http from 'http'
 
@@ -74,7 +73,7 @@ class NewsChannel {
 
     startChannel = async () => {}
     processProviderEvent(_providerId: string, _obj: unknown): void {}
-    async endpointRequest(_endpoint: string, _req: Request, _res: Response): Promise<void> {}
+    async endpointRequest(_endpoint: string, _req: unknown, _res: unknown): Promise<void> {}
     async websocketRequest(_newWebSocket: WebSocket): Promise<void> {}
 
     containsAsset = (webSocket: WebSocket, podNamespace: string, podName: string, containerName: string): boolean => {

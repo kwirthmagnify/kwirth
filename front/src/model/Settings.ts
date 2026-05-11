@@ -1,8 +1,4 @@
-interface IChannelSettings {
-    channelId: string
-    channelConfig: any
-    channelInstanceConfig: any
-}
+import { IChannelSettings } from '@kwirthmagnify/kwirth-common'
 
 class Settings {
     public channelSettings: IChannelSettings[] = []

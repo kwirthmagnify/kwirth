@@ -1,9 +1,10 @@
-import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, LogConfig, BackChannelData, ILogMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, ESignalMessageLevel, EInstanceMessageType, EClusterType } from '@kwirthmagnify/kwirth-common';
+import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, ESignalMessageLevel, EInstanceMessageType, EClusterType } from '@kwirthmagnify/kwirth-common';
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
+import { ILogConfig, ILogMessage } from './LogTypes';
 
 interface IAsset {
     podNamespace:string
@@ -163,7 +164,7 @@ class LogChannel implements IChannel {
             if (!instance) {
                 let len = socket?.instances.push ({
                     instanceId: instanceConfig.instance, 
-                    timestamps: (instanceConfig.data as LogConfig).timestamp,
+                    timestamps: (instanceConfig.data as ILogConfig).timestamp,
                     previous: false,
                     paused: false,
                     assets: [],
@@ -194,8 +195,8 @@ class LogChannel implements IChannel {
                 follow: true,
                 stdout: true,
                 stderr: true,
-                timestamps: (instanceConfig.data as LogConfig).timestamp as boolean,
-                ...((instanceConfig.data as LogConfig).fromStart? {} : {since: Date.now()-1800})
+                timestamps: (instanceConfig.data as ILogConfig).timestamp as boolean,
+                ...((instanceConfig.data as ILogConfig).fromStart? {} : {since: Date.now()-1800})
             })
 
             asset.readableStream.setEncoding('utf8')
@@ -221,7 +222,7 @@ class LogChannel implements IChannel {
             if (!instance) {
                 let len = socket?.instances.push ({
                     instanceId: instanceConfig.instance, 
-                    timestamps: (instanceConfig.data as LogConfig).timestamp,
+                    timestamps: (instanceConfig.data as ILogConfig).timestamp,
                     previous: false,
                     paused:false,
                     assets:[],
@@ -315,7 +316,7 @@ class LogChannel implements IChannel {
             //         instance.isSending = false
             //     }
             // })
-            let logConfig = instanceConfig.data as LogConfig
+            let logConfig = instanceConfig.data as ILogConfig
             let sinceSeconds = logConfig.startTime? Math.max( Math.floor((Date.now() - logConfig.startTime) / 1000), 1) : 1800
             let streamConfig = { 
                 follow: true,

@@ -11,6 +11,15 @@ export class DockerConfigMaps implements IConfigMaps {
     }
 
     public write = async (name:string, data:any): Promise<any> =>{
+        if (data === null) {
+            try {
+                fs.unlinkSync(this.path + name)
+            }
+            catch (err:any) {
+                if (err.code !== 'ENOENT') console.log(`Error deleting (${err}).`)
+            }
+            return {}
+        }
         try {
             fs.writeFileSync(this.path + name, JSON.stringify(data))
         }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EMetricsConfigMode, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
+import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelObject, IContentProps } from '../../IChannel'
 import { Box, DialogContent, DialogTitle, Divider, IconButton, Popover, Stack, Typography } from '@mui/material'
 import { Close, Fullscreen, FullscreenExit, Info, Minimize, PauseCircle, PinDrop, Place, PlayCircle, Settings, StopCircle } from '@mui/icons-material'
@@ -31,6 +31,7 @@ import { ESwitchKey, IOpsConfig } from '../../ops/OpsConfig'
 import { ITrivyInstanceConfig } from '../../trivy/TrivyTypes'
 import { IOpsInstanceConfig } from '../../ops/OpsTypes'
 import { ELogSortOrder, ILogInstanceConfig } from '../../log/LogTypes'
+import { EMetricsConfigMode } from '../../metrics/MetricsTypes'
 
 export interface IContentExternalOptions {
     pauseable: boolean
@@ -163,6 +164,9 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                         gridColumns: topoCfg.gridColumns
                     }
                     break
+                default:
+                    contentExternalData.formConfig = {}
+                    break
             }
         }
     },[])
@@ -236,6 +240,9 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 
     useAsync (async () => {
         // useAsync must be executed after useEffect, because it uses content.current
+        if (contentExternalData.content && !contentExternalData.content.externalChannelObject!.data) {
+            await contentExternalData.content.externalChannel!.initChannel(contentExternalData.content.externalChannelObject!)
+        }
         if (contentExternalData.options.autostart) {
             if (contentExternalData.content && !contentExternalData.content.externalChannelStarted) {
                 while (contentExternalData.content?.ws?.readyState !== WebSocket.OPEN) {

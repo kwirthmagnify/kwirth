@@ -1,4 +1,4 @@
-import { EAlertSeverity } from "@kwirthmagnify/kwirth-common"
+import { EAlertSeverity } from "./AlertTypes"
 
 export interface FiredAlert {
     timestamp: number

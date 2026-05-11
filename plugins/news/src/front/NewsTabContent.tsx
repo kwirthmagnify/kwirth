@@ -9,6 +9,8 @@ import { INewsChannelConfig } from './NewsConfig'
 export const NewsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const newsData: INewsData = props.channelObject.data
     const newsConfig: INewsChannelConfig = props.channelObject.config
+
+    if (!newsData || !newsConfig) return <></>
     const newsBoxRef = useRef<HTMLDivElement | null>(null)
     const [newsBoxTop, setNewsBoxTop] = useState(0)
 

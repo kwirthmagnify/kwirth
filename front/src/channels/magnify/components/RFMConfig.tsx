@@ -457,12 +457,6 @@ spaces.set('classClusterOverview',
                 text: 'Pinocchio',
                 permission: true
             },
-            {
-                name:'topology',
-                icon: <AccountTree fontSize='small'/>,
-                text: 'Topology',
-                permission: true
-            }
         ]
     }
 )

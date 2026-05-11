@@ -1,8 +1,12 @@
 import { tool } from "ai"
 import z from "zod"
+import { exec } from "child_process"
+import { promisify } from "util"
 import { ClusterInfo, INodeInfo } from "../../model/ClusterInfo"
 import { IMetricsCluster } from "../../providers/metrics/IMetricsModel"
 import { mapToJson } from "../../tools/Utils"
+
+const execAsync = promisify(exec)
 
 export interface IToolContext {
     origin: string
@@ -363,42 +367,106 @@ export const createTools = (context: IToolContext) => {
         // ── CLUSTER ACTIONS ──────────────────────────────────────────────────
 
         add_node: tool({
-            // TODO: this tool requires calling the cloud provider infrastructure API to provision a new node
-            // and add it to the cluster node pool. Implementation is provider-specific:
-            //   - AKS:  Azure VMSS scale-out via Azure SDK (@azure/arm-containerservice → ManagedClusters.beginUpdateAndWait)
-            //   - EKS:  AWS Auto Scaling Group scale-out via AWS SDK (autoscaling.setDesiredCapacity)
-            //   - GKE:  Google Cloud SDK (container.projects.locations.clusters.nodePools.setSize)
-            //   - k3s/k3d: not applicable in production; would require VM provisioning + k3s agent join
-            // The cluster flavour is available via context.clusterInfo.flavour.
-            description: 'Requests the addition of a new node to the cluster by calling the cloud provider infrastructure API (AKS/EKS/GKE). Not yet implemented — returns a placeholder response.',
+            description: 'Adds a new agent node to the cluster. For k3d uses `k3d node create <suffix> --cluster <name> --role agent`. For cloud providers (AKS/EKS/GKE) not yet implemented.',
             inputSchema: z.object({
-                nodePoolName: z.string().optional().describe('Name of the node pool to scale up (cloud-provider specific)')
+                nodeName: z.string().optional().describe('Suffix for the new node name. For k3d the Kubernetes node will be named k3d-<cluster>-<nodeName>-0. Auto-generated if omitted.'),
+                nodePoolName: z.string().optional().describe('Node pool name (cloud provider specific, ignored for k3d)')
             }),
-            execute: async ({ nodePoolName }) => {
-                context.trace('add_node', { nodePoolName: nodePoolName ?? 'default' })
-                // TODO: implement per-flavour cloud provider call (see comment above)
+            execute: async ({ nodeName, nodePoolName }) => {
+                context.trace('add_node', { nodeName: nodeName ?? 'auto', nodePoolName: nodePoolName ?? 'default' })
+                if (context.clusterInfo.flavour === 'k3d') {
+                    const suffix = nodeName ?? `agent-${Date.now()}`
+                    const clusterName = context.clusterInfo.name.replace(/^k3d-/, '')
+                    try {
+                        const { stdout, stderr } = await execAsync(`k3d node create ${suffix} --cluster ${clusterName} --role agent`, { timeout: 120000 })
+                        return { success: true, message: `New agent node '${suffix}' added to cluster '${clusterName}'`, stdout, stderr }
+                    }
+                    catch (err: any) {
+                        return { success: false, error: err.message ?? String(err) }
+                    }
+                }
                 return { success: false, message: `add_node not yet implemented for flavour '${context.clusterInfo.flavour}'` }
             }
         }),
 
         remove_node: tool({
-            // TODO: this tool requires calling the cloud provider infrastructure API to decommission a node
-            // from the cluster node pool. Implementation is provider-specific:
-            //   - AKS:  Azure VMSS scale-in via Azure SDK (@azure/arm-containerservice → ManagedClusters.beginUpdateAndWait)
-            //   - EKS:  AWS Auto Scaling Group scale-in via AWS SDK (autoscaling.setDesiredCapacity or terminateInstanceInAutoScalingGroup)
-            //   - GKE:  Google Cloud SDK (container.projects.locations.clusters.nodePools.setSize)
-            //   - k3s/k3d: not applicable in production
-            // Before decommissioning, the node should be cordoned + drained (kubectl drain) to safely
-            // evict its pods. The cluster flavour is available via context.clusterInfo.flavour.
-            description: 'Requests the removal of a node from the cluster by calling the cloud provider infrastructure API (AKS/EKS/GKE). Not yet implemented — returns a placeholder response.',
+            description: 'Removes a node from the cluster. Cordons it first, then deletes it. For k3d uses `k3d node delete`. For cloud providers (AKS/EKS/GKE) not yet implemented.',
             inputSchema: z.object({
-                nodeName: z.string().describe('Name of the Kubernetes node to remove'),
-                nodePoolName: z.string().optional().describe('Name of the node pool (cloud-provider specific)')
+                nodeName: z.string().describe('Name of the Kubernetes node to remove (e.g. k3d-mycluster-agent-0)'),
+                nodePoolName: z.string().optional().describe('Node pool name (cloud provider specific, ignored for k3d)')
             }),
             execute: async ({ nodeName, nodePoolName }) => {
                 context.trace('remove_node', { nodeName, nodePoolName: nodePoolName ?? 'default' })
-                // TODO: implement per-flavour cloud provider call (see comment above)
+                try {
+                    await context.clusterInfo.coreApi.patchNode({ name: nodeName, body: [{ op: 'add', path: '/spec/unschedulable', value: true }] })
+                }
+                catch (_) {}
+                if (context.clusterInfo.flavour === 'k3d') {
+                    try {
+                        const { stdout, stderr } = await execAsync(`k3d node delete ${nodeName}`, { timeout: 60000 })
+                        return { success: true, message: `Node '${nodeName}' removed from cluster`, stdout, stderr }
+                    }
+                    catch (err: any) {
+                        return { success: false, error: err.message ?? String(err) }
+                    }
+                }
                 return { success: false, message: `remove_node not yet implemented for flavour '${context.clusterInfo.flavour}'` }
+            }
+        }),
+
+        stop_node: tool({
+            description: 'Stops a running cluster node: cordons it in Kubernetes (marks it unschedulable) then stops the underlying container. For k3d uses `k3d node stop`. For other flavours only the cordon is applied.',
+            inputSchema: z.object({
+                nodeName: z.string().describe('Name of the Kubernetes node to stop (e.g. k3d-mycluster-agent-0)')
+            }),
+            execute: async ({ nodeName }) => {
+                context.trace('stop_node', { nodeName })
+                try {
+                    await context.clusterInfo.coreApi.patchNode({ name: nodeName, body: [{ op: 'add', path: '/spec/unschedulable', value: true }] })
+                }
+                catch (err: any) {
+                    return { success: false, error: `Failed to cordon node: ${err.message ?? String(err)}` }
+                }
+                if (context.clusterInfo.flavour !== 'k3d') {
+                    return { success: false, message: `Node '${nodeName}' cordoned but container stop is only implemented for k3d (flavour is '${context.clusterInfo.flavour}')` }
+                }
+                try {
+                    const { stdout, stderr } = await execAsync(`k3d node stop ${nodeName}`, { timeout: 30000 })
+                    return { success: true, message: `Node '${nodeName}' cordoned and stopped`, stdout, stderr }
+                }
+                catch (err: any) {
+                    return { success: false, error: `Node cordoned but container stop failed: ${err.message ?? String(err)}` }
+                }
+            }
+        }),
+
+        start_node: tool({
+            description: 'Starts a previously stopped cluster node and uncordons it. For k3d uses `k3d node start`. For other flavours only the uncordon is applied.',
+            inputSchema: z.object({
+                nodeName: z.string().describe('Name of the Kubernetes node to start (e.g. k3d-mycluster-agent-0)')
+            }),
+            execute: async ({ nodeName }) => {
+                context.trace('start_node', { nodeName })
+                if (context.clusterInfo.flavour === 'k3d') {
+                    try {
+                        const { stdout, stderr } = await execAsync(`k3d node start ${nodeName}`, { timeout: 30000 })
+                        try {
+                            await context.clusterInfo.coreApi.patchNode({ name: nodeName, body: [{ op: 'add', path: '/spec/unschedulable', value: false }] })
+                        }
+                        catch (_) {}
+                        return { success: true, message: `Node '${nodeName}' started and uncordoned`, stdout, stderr }
+                    }
+                    catch (err: any) {
+                        return { success: false, error: err.message ?? String(err) }
+                    }
+                }
+                try {
+                    await context.clusterInfo.coreApi.patchNode({ name: nodeName, body: [{ op: 'add', path: '/spec/unschedulable', value: false }] })
+                    return { success: false, message: `Node '${nodeName}' uncordoned but container start is only implemented for k3d (flavour is '${context.clusterInfo.flavour}')` }
+                }
+                catch (err: any) {
+                    return { success: false, error: `Container start not implemented for this flavour and uncordon failed: ${err.message ?? String(err)}` }
+                }
             }
         }),
 
@@ -491,8 +559,10 @@ export const toolInfoList: { name: string, description: string }[] = [
     { name: 'get_prev_node_usage',       description: 'Returns historical CPU and memory usage for one or all nodes over the last N metrics readings.' },
     { name: 'get_prev_deployment_usage', description: 'Returns historical aggregated CPU and memory usage for a deployment over the last N metrics readings.' },
     { name: 'get_prev_space_data',       description: 'Returns historical aggregated CPU and memory usage for all pods in a namespace over the last N metrics readings.' },
-    { name: 'add_node',                  description: 'Requests the addition of a new node via cloud provider API (AKS/EKS/GKE). Not yet implemented.' },
-    { name: 'remove_node',               description: 'Requests the removal of a node via cloud provider API (AKS/EKS/GKE). Not yet implemented.' },
+    { name: 'add_node',                  description: 'Adds a new agent node to the cluster. For k3d uses `k3d node create`. Cloud providers not yet implemented.' },
+    { name: 'remove_node',               description: 'Removes a node from the cluster (cordon + delete). For k3d uses `k3d node delete`. Cloud providers not yet implemented.' },
+    { name: 'stop_node',                 description: 'Stops a running node: cordons it and stops the container. For k3d uses `k3d node stop`.' },
+    { name: 'start_node',                description: 'Starts a stopped node and uncordons it. For k3d uses `k3d node start`.' },
     { name: 'add_replica',               description: 'Scales up a deployment by adding one replica.' },
     { name: 'remove_replica',            description: 'Scales down a deployment by removing one replica. Minimum of 1 replica is enforced.' },
     { name: 'times_two',                 description: 'Multiplies a number by two.' },

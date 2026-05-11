@@ -9,7 +9,7 @@ import {
     CenterFocusStrong, Clear, ContentCopy, Delete, Hub, Info,
     PlayArrow, Refresh, Search, Stop, Terminal, Timeline, ZoomIn, ZoomOut,
 } from '@mui/icons-material'
-import { IContentProps } from '../IChannel'
+import { IContentProps } from './types'
 import {
     ETopologyNodeKind, ETopologyNodeStatus,
     ICanvasState, ITopologyData, ITopologyNode,
@@ -20,7 +20,7 @@ import {
     EInstanceMessageAction, EInstanceMessageFlow,
     EInstanceMessageType,
 } from '@kwirthmagnify/kwirth-common'
-import { ENotifyLevel } from '../../tools/Global'
+import { ENotifyLevel } from './types'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

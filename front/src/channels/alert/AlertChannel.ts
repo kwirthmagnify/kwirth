@@ -1,10 +1,11 @@
 import { FC } from 'react'
 import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '../IChannel'
-import { EAlertSeverity, IAlertMessage, IInstanceMessage, ISignalMessage, EInstanceMessageFlow, EInstanceMessageType, EInstanceMessageAction, EInstanceConfigScope } from '@kwirthmagnify/kwirth-common'
+import { IInstanceMessage, ISignalMessage, EInstanceMessageFlow, EInstanceMessageType, EInstanceMessageAction, EInstanceConfigScope } from '@kwirthmagnify/kwirth-common'
 import { AlertIcon, AlertSetup } from './AlertSetup'
 import { AlertTabContent } from './AlertTabContent'
 import { AlertData, IAlertData } from './AlertData'
 import { AlertInstanceConfig, AlertConfig, IAlertConfig } from './AlertConfig'
+import { EAlertSeverity, IAlertMessage } from './AlertTypes'
 
 export class AlertChannel implements IChannel {
     private setupVisible = false

@@ -63,7 +63,6 @@ import { BusinessProvider } from './providers/business/BusinessProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
 
 import { ELogComponent, logError, logInfo, logWarning } from './tools/Logging'
-import { TopologyChannel } from './channels/topology/TopologyChannel'
 import { PluginManager } from './tools/PluginManager'
 import { PluginApi } from './api/PluginApi'
 const fs = require('fs')
@@ -118,7 +117,6 @@ const envChannelEchoEnabled = (process.env.CHANNEL_ECHO || 'true').toLowerCase()
 const envChannelFilemanEnabled = (process.env.CHANNEL_FILEMAN || 'true').toLowerCase() === 'true'
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 const envChannelPinocchioEnabled = (process.env.CHANNEL_PINOCCHIO || 'true').toLowerCase() === 'true'
-const envChannelTopologyEnabled = (process.env.CHANNEL_TOPOLOGY || 'true').toLowerCase() === 'true'
 
 var runningInstances:IRunningInstance[] = []
 
@@ -141,7 +139,6 @@ registeredChannels.set('fileman', FilemanChannel)
 registeredChannels.set('echo', EchoChannel)
 registeredChannels.set('magnify', MagnifyChannel)
 registeredChannels.set('pinocchio', PinocchioChannel)
-registeredChannels.set('topology', TopologyChannel)
 // 'news' channel loaded dynamically by PluginManager
 
 if (envCommand!==undefined) {
@@ -1395,7 +1392,6 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (envChannelEchoEnabled) requiredChannels.push('echo')
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
         if (envChannelPinocchioEnabled) requiredChannels.push('pinocchio')
-        if (envChannelTopologyEnabled) requiredChannels.push('topology')
         // plugin channels: load installed plugins and add their ids to requiredChannels
         if (!pluginManager) {
             pluginManager = new PluginManager(runningInstance.configMaps)

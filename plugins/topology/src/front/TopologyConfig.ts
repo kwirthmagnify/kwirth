@@ -36,7 +36,7 @@ export interface ITopologyInstanceConfig {
     pods?:      string[]
     services?:  string[]
     ingresses?: string[]
-    groups?:    string[]
+    groups?:    string[]  // "Kind/name" format
 }
 
 export class TopologyInstanceConfig implements ITopologyInstanceConfig {

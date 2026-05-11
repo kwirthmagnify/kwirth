@@ -18,7 +18,13 @@
       "Bash(npm install *)",
       "Bash(node build.mjs)",
       "Bash(tar -czf news-plugin.tgz -C dist .)",
-      "Bash(tar -xOf news-plugin.tgz ./back.js)"
+      "Bash(tar -xOf news-plugin.tgz ./back.js)",
+      "Bash(npm run *)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\" -Filter \"package.json\" -Recurse -File | ForEach-Object { Get-Content $_.FullName | ConvertFrom-Json | Select-Object -Property name, @{n='path';e={$_.FullName}} } | Where-Object { $_.name -match \"kwirth-common\" })",
+      "PowerShell(cmd /c \"dir /al c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common\" 2>&1)",
+      "PowerShell(\\(Get-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common\"\\).LinkType; \\(Get-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common\"\\).Target)",
+      "PowerShell(cmd /c \"dir c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common /s /b\" 2>&1)"
     ]
   }
 }

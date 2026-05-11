@@ -10,14 +10,6 @@ import {
     IInstanceMessage,
     ISignalMessage,
 } from '@kwirthmagnify/kwirth-common'
-import { Request, Response } from 'express'
-import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
-import {
-    V1CronJob, V1DaemonSet, V1Deployment, V1Ingress,
-    V1Job, V1PersistentVolumeClaim, V1Pod, V1ReplicaSet, V1Service, V1StatefulSet,
-} from '@kubernetes/client-node'
-import { ELogComponent, logInfo } from '../../tools/Logging'
 
 type TNodeKind   = 'Ingress' | 'Service' | 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'ReplicaSet' | 'Job' | 'CronJob' | 'Pod' | 'PersistentVolumeClaim'
 type TNodeStatus = 'Running' | 'Pending' | 'Failed' | 'Succeeded' | 'Unknown' | 'Terminating' | 'Bound' | 'Released' | 'Lost'
@@ -56,8 +48,8 @@ interface ITopologyInstance {
     pods?:       string[]
     services?:   string[]
     ingresses?:  string[]
-    groups?:     string[]      // "Kind/name" format
-    focusedUids?: Set<string>  // computed by sendFocusedSnapshot; undefined = full view
+    groups?:     string[]
+    focusedUids?: Set<string>
     paused:      boolean
 }
 
@@ -68,20 +60,20 @@ interface ISocketEntry {
 }
 
 interface IFocusContext {
-    allPods:  V1Pod[]
-    allSvcs:  V1Service[]
-    allDeps:  V1Deployment[]
-    allSts:   V1StatefulSet[]
-    allDs:    V1DaemonSet[]
-    allRs:    V1ReplicaSet[]
-    allJobs:  V1Job[]
-    allCrons: V1CronJob[]
-    allIngs:  V1Ingress[]
-    allPvcs:  V1PersistentVolumeClaim[]
+    allPods:  any[]
+    allSvcs:  any[]
+    allDeps:  any[]
+    allSts:   any[]
+    allDs:    any[]
+    allRs:    any[]
+    allJobs:  any[]
+    allCrons: any[]
+    allIngs:  any[]
+    allPvcs:  any[]
     included: Set<string>
 }
 
-function podStatus(p: V1Pod): TNodeStatus {
+function podStatus(p: any): TNodeStatus {
     if (p.metadata?.deletionTimestamp) return 'Terminating'
     switch (p.status?.phase) {
         case 'Running':   return 'Running'
@@ -99,7 +91,7 @@ function controllerStatus(ready?: number, desired?: number): TNodeStatus {
     return 'Failed'
 }
 
-function pvcStatus(p: V1PersistentVolumeClaim): TNodeStatus {
+function pvcStatus(p: any): TNodeStatus {
     switch (p.status?.phase) {
         case 'Bound':    return 'Bound'
         case 'Pending':  return 'Pending'
@@ -109,20 +101,20 @@ function pvcStatus(p: V1PersistentVolumeClaim): TNodeStatus {
     }
 }
 
-export class TopologyChannel implements IChannel {
+export class TopologyChannel {
     readonly channelId = 'topology'
-    readonly requirements: IBackChannelRequirements = {
+    readonly requirements = {
         storage: false,
         providers: ['events']
     }
 
-    private clusterInfo:       ClusterInfo
-    private backChannelObject: IBackChannelObject
+    private clusterInfo:       any
+    private backChannelObject: any
     private webSockets:        ISocketEntry[] = []
-    private serviceCache = new Map<string, V1Service>()
-    private pvcCache     = new Map<string, V1PersistentVolumeClaim>()
+    private serviceCache = new Map<string, any>()
+    private pvcCache     = new Map<string, any>()
 
-    constructor(clusterInfo: ClusterInfo, backChannelObject: IBackChannelObject) {
+    constructor(clusterInfo: any, backChannelObject: any) {
         this.clusterInfo       = clusterInfo
         this.backChannelObject = backChannelObject
     }
@@ -152,7 +144,7 @@ export class TopologyChannel implements IChannel {
             kinds: ['Pod', 'Service', 'Deployment', 'StatefulSet', 'DaemonSet', 'ReplicaSet', 'Job', 'CronJob', 'Ingress', 'PersistentVolumeClaim'],
             syncInstances: false
         })
-        logInfo(ELogComponent.CHANNEL, '[TopologyChannel] subscribed to events provider')
+        console.log('[TopologyChannel] subscribed to events provider')
     }
 
     processProviderEvent(providerId: string, obj: any): void {
@@ -163,11 +155,11 @@ export class TopologyChannel implements IChannel {
 
         if (resource.kind === 'Service') {
             if (type === 'DELETED') this.serviceCache.delete(resource.metadata?.uid ?? '')
-            else if (resource.metadata?.uid) this.serviceCache.set(resource.metadata.uid, resource as V1Service)
+            else if (resource.metadata?.uid) this.serviceCache.set(resource.metadata.uid, resource)
         }
         if (resource.kind === 'PersistentVolumeClaim') {
             if (type === 'DELETED') this.pvcCache.delete(resource.metadata?.uid ?? '')
-            else if (resource.metadata?.uid) this.pvcCache.set(resource.metadata.uid, resource as V1PersistentVolumeClaim)
+            else if (resource.metadata?.uid) this.pvcCache.set(resource.metadata.uid, resource)
         }
 
         const mapped = this.mapResource(resource)
@@ -190,7 +182,7 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    async endpointRequest(_e: string, _req: Request, _res: Response): Promise<void> {}
+    async endpointRequest(_e: string, _req: unknown, _res: unknown): Promise<void> {}
     async websocketRequest(_ws: WebSocket): Promise<void> {}
 
     async processCommand(ws: WebSocket, msg: IInstanceMessage): Promise<boolean> {
@@ -301,13 +293,9 @@ export class TopologyChannel implements IChannel {
         entry.instances = entry.instances.filter(i => i.instanceId !== instanceId)
     }
 
-    // ─── Namespace match ──────────────────────────────────────────────────────
-
     private nsMatch(inst: ITopologyInstance, ns: string | undefined): boolean {
         return inst.namespaces.includes('*all') || (!!ns && inst.namespaces.includes(ns))
     }
-
-    // ─── Snapshot dispatch ────────────────────────────────────────────────────
 
     private async sendSnapshot(ws: WebSocket, inst: ITopologyInstance): Promise<void> {
         const isFocused = !!(inst.pods?.length || inst.services?.length || inst.ingresses?.length || inst.groups?.length)
@@ -317,8 +305,6 @@ export class TopologyChannel implements IChannel {
             await this.sendFullSnapshot(ws, inst)
         }
     }
-
-    // ─── Full (namespace/cluster) snapshot ───────────────────────────────────
 
     private async sendFullSnapshot(ws: WebSocket, inst: ITopologyInstance): Promise<void> {
         const [pods, svcs, deps, sts, ds, rs, jobs, crons, ings, pvcs] = await Promise.allSettled([
@@ -334,26 +320,24 @@ export class TopologyChannel implements IChannel {
             this.clusterInfo.coreApi.listPersistentVolumeClaimForAllNamespaces(),
         ])
 
-        const svcList = svcs.status === 'fulfilled' ? svcs.value.items.filter(s => this.nsMatch(inst, s.metadata?.namespace)) : []
-        const pvcList = pvcs.status === 'fulfilled' ? pvcs.value.items.filter(p => this.nsMatch(inst, p.metadata?.namespace)) : []
+        const svcList = svcs.status === 'fulfilled' ? (svcs.value as any).items.filter((s: any) => this.nsMatch(inst, s.metadata?.namespace)) : []
+        const pvcList = pvcs.status === 'fulfilled' ? (pvcs.value as any).items.filter((p: any) => this.nsMatch(inst, p.metadata?.namespace)) : []
 
-        svcList.forEach(s => { if (s.metadata?.uid) this.serviceCache.set(s.metadata.uid, s) })
-        pvcList.forEach(p => { if (p.metadata?.uid) this.pvcCache.set(p.metadata.uid, p) })
+        svcList.forEach((s: any) => { if (s.metadata?.uid) this.serviceCache.set(s.metadata.uid, s) })
+        pvcList.forEach((p: any) => { if (p.metadata?.uid) this.pvcCache.set(p.metadata.uid, p) })
 
-        svcList.forEach(s => this.emit(ws, inst, this.mapService(s), 'ADDED'))
+        svcList.forEach((s: any) => this.emit(ws, inst, this.mapService(s), 'ADDED'))
 
-        if (deps.status  === 'fulfilled') deps.value.items.filter(d => this.nsMatch(inst, d.metadata?.namespace)).forEach(d => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
-        if (sts.status   === 'fulfilled') sts.value.items.filter(s  => this.nsMatch(inst, s.metadata?.namespace)).forEach(s => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, svcList) }, 'ADDED'))
-        if (ds.status    === 'fulfilled') ds.value.items.filter(d   => this.nsMatch(inst, d.metadata?.namespace)).forEach(d => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
-        if (rs.status    === 'fulfilled') rs.value.items.filter(r   => this.nsMatch(inst, r.metadata?.namespace)).forEach(r => this.emit(ws, inst, this.mapReplicaSet(r), 'ADDED'))
-        if (jobs.status  === 'fulfilled') jobs.value.items.filter(j => this.nsMatch(inst, j.metadata?.namespace)).forEach(j => this.emit(ws, inst, this.mapJob(j), 'ADDED'))
-        if (crons.status === 'fulfilled') crons.value.items.filter(c => this.nsMatch(inst, c.metadata?.namespace)).forEach(c => this.emit(ws, inst, this.mapCronJob(c), 'ADDED'))
-        if (ings.status  === 'fulfilled') ings.value.items.filter(i => this.nsMatch(inst, i.metadata?.namespace)).forEach(i => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, svcList) }, 'ADDED'))
-        if (pods.status  === 'fulfilled') pods.value.items.filter(p => this.nsMatch(inst, p.metadata?.namespace)).forEach(p => this.emit(ws, inst, this.mapPod(p), 'ADDED'))
-        pvcList.forEach(p => this.emit(ws, inst, this.mapPvc(p), 'ADDED'))
+        if (deps.status  === 'fulfilled') (deps.value as any).items.filter((d: any) => this.nsMatch(inst, d.metadata?.namespace)).forEach((d: any) => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
+        if (sts.status   === 'fulfilled') (sts.value as any).items.filter((s: any)  => this.nsMatch(inst, s.metadata?.namespace)).forEach((s: any) => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, svcList) }, 'ADDED'))
+        if (ds.status    === 'fulfilled') (ds.value as any).items.filter((d: any)   => this.nsMatch(inst, d.metadata?.namespace)).forEach((d: any) => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
+        if (rs.status    === 'fulfilled') (rs.value as any).items.filter((r: any)   => this.nsMatch(inst, r.metadata?.namespace)).forEach((r: any) => this.emit(ws, inst, this.mapReplicaSet(r), 'ADDED'))
+        if (jobs.status  === 'fulfilled') (jobs.value as any).items.filter((j: any) => this.nsMatch(inst, j.metadata?.namespace)).forEach((j: any) => this.emit(ws, inst, this.mapJob(j), 'ADDED'))
+        if (crons.status === 'fulfilled') (crons.value as any).items.filter((c: any) => this.nsMatch(inst, c.metadata?.namespace)).forEach((c: any) => this.emit(ws, inst, this.mapCronJob(c), 'ADDED'))
+        if (ings.status  === 'fulfilled') (ings.value as any).items.filter((i: any) => this.nsMatch(inst, i.metadata?.namespace)).forEach((i: any) => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, svcList) }, 'ADDED'))
+        if (pods.status  === 'fulfilled') (pods.value as any).items.filter((p: any) => this.nsMatch(inst, p.metadata?.namespace)).forEach((p: any) => this.emit(ws, inst, this.mapPod(p), 'ADDED'))
+        pvcList.forEach((p: any) => this.emit(ws, inst, this.mapPvc(p), 'ADDED'))
     }
-
-    // ─── Focused (anchor-resource) snapshot ──────────────────────────────────
 
     private async sendFocusedSnapshot(ws: WebSocket, inst: ITopologyInstance): Promise<void> {
         const [pods, svcs, deps, sts, ds, rs, jobs, crons, ings, pvcs] = await Promise.allSettled([
@@ -370,32 +354,32 @@ export class TopologyChannel implements IChannel {
         ])
 
         const ctx: IFocusContext = {
-            allPods:  pods.status  === 'fulfilled' ? pods.value.items.filter(p  => this.nsMatch(inst, p.metadata?.namespace))  : [],
-            allSvcs:  svcs.status  === 'fulfilled' ? svcs.value.items.filter(s  => this.nsMatch(inst, s.metadata?.namespace))  : [],
-            allDeps:  deps.status  === 'fulfilled' ? deps.value.items.filter(d  => this.nsMatch(inst, d.metadata?.namespace))  : [],
-            allSts:   sts.status   === 'fulfilled' ? sts.value.items.filter(s   => this.nsMatch(inst, s.metadata?.namespace))  : [],
-            allDs:    ds.status    === 'fulfilled' ? ds.value.items.filter(d    => this.nsMatch(inst, d.metadata?.namespace))   : [],
-            allRs:    rs.status    === 'fulfilled' ? rs.value.items.filter(r    => this.nsMatch(inst, r.metadata?.namespace))   : [],
-            allJobs:  jobs.status  === 'fulfilled' ? jobs.value.items.filter(j  => this.nsMatch(inst, j.metadata?.namespace))  : [],
-            allCrons: crons.status === 'fulfilled' ? crons.value.items.filter(c => this.nsMatch(inst, c.metadata?.namespace))  : [],
-            allIngs:  ings.status  === 'fulfilled' ? ings.value.items.filter(i  => this.nsMatch(inst, i.metadata?.namespace))  : [],
-            allPvcs:  pvcs.status  === 'fulfilled' ? pvcs.value.items.filter(p  => this.nsMatch(inst, p.metadata?.namespace))  : [],
+            allPods:  pods.status  === 'fulfilled' ? (pods.value as any).items.filter((p: any)  => this.nsMatch(inst, p.metadata?.namespace))  : [],
+            allSvcs:  svcs.status  === 'fulfilled' ? (svcs.value as any).items.filter((s: any)  => this.nsMatch(inst, s.metadata?.namespace))  : [],
+            allDeps:  deps.status  === 'fulfilled' ? (deps.value as any).items.filter((d: any)  => this.nsMatch(inst, d.metadata?.namespace))  : [],
+            allSts:   sts.status   === 'fulfilled' ? (sts.value as any).items.filter((s: any)   => this.nsMatch(inst, s.metadata?.namespace))  : [],
+            allDs:    ds.status    === 'fulfilled' ? (ds.value as any).items.filter((d: any)    => this.nsMatch(inst, d.metadata?.namespace))   : [],
+            allRs:    rs.status    === 'fulfilled' ? (rs.value as any).items.filter((r: any)    => this.nsMatch(inst, r.metadata?.namespace))   : [],
+            allJobs:  jobs.status  === 'fulfilled' ? (jobs.value as any).items.filter((j: any)  => this.nsMatch(inst, j.metadata?.namespace))  : [],
+            allCrons: crons.status === 'fulfilled' ? (crons.value as any).items.filter((c: any) => this.nsMatch(inst, c.metadata?.namespace))  : [],
+            allIngs:  ings.status  === 'fulfilled' ? (ings.value as any).items.filter((i: any)  => this.nsMatch(inst, i.metadata?.namespace))  : [],
+            allPvcs:  pvcs.status  === 'fulfilled' ? (pvcs.value as any).items.filter((p: any)  => this.nsMatch(inst, p.metadata?.namespace))  : [],
             included: new Set<string>(),
         }
 
-        ctx.allSvcs.forEach(s => { if (s.metadata?.uid) this.serviceCache.set(s.metadata.uid, s) })
-        ctx.allPvcs.forEach(p => { if (p.metadata?.uid) this.pvcCache.set(p.metadata.uid, p) })
+        ctx.allSvcs.forEach((s: any) => { if (s.metadata?.uid) this.serviceCache.set(s.metadata.uid, s) })
+        ctx.allPvcs.forEach((p: any) => { if (p.metadata?.uid) this.pvcCache.set(p.metadata.uid, p) })
 
         for (const name of inst.pods ?? []) {
-            const pod = ctx.allPods.find(p => p.metadata?.name === name)
+            const pod = ctx.allPods.find((p: any) => p.metadata?.name === name)
             if (pod) this.addPodChain(pod, ctx)
         }
         for (const name of inst.services ?? []) {
-            const svc = ctx.allSvcs.find(s => s.metadata?.name === name)
+            const svc = ctx.allSvcs.find((s: any) => s.metadata?.name === name)
             if (svc) this.addServiceChain(svc, ctx)
         }
         for (const name of inst.ingresses ?? []) {
-            const ing = ctx.allIngs.find(i => i.metadata?.name === name)
+            const ing = ctx.allIngs.find((i: any) => i.metadata?.name === name)
             if (ing) this.addIngressChain(ing, ctx)
         }
         for (const groupStr of inst.groups ?? []) {
@@ -406,21 +390,19 @@ export class TopologyChannel implements IChannel {
         inst.focusedUids = ctx.included
 
         const inc = ctx.included
-        ctx.allSvcs.filter(s  => inc.has(s.metadata?.uid ?? '')).forEach(s  => this.emit(ws, inst, this.mapService(s),                                                                                          'ADDED'))
-        ctx.allDeps.filter(d  => inc.has(d.metadata?.uid ?? '')).forEach(d  => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, ctx.allSvcs) }, 'ADDED'))
-        ctx.allSts.filter(s   => inc.has(s.metadata?.uid ?? '')).forEach(s  => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, ctx.allSvcs) }, 'ADDED'))
-        ctx.allDs.filter(d    => inc.has(d.metadata?.uid ?? '')).forEach(d  => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, ctx.allSvcs) }, 'ADDED'))
-        ctx.allRs.filter(r    => inc.has(r.metadata?.uid ?? '')).forEach(r  => this.emit(ws, inst, this.mapReplicaSet(r),                                                                                        'ADDED'))
-        ctx.allJobs.filter(j  => inc.has(j.metadata?.uid ?? '')).forEach(j  => this.emit(ws, inst, this.mapJob(j),                                                                                              'ADDED'))
-        ctx.allCrons.filter(c => inc.has(c.metadata?.uid ?? '')).forEach(c  => this.emit(ws, inst, this.mapCronJob(c),                                                                                          'ADDED'))
-        ctx.allIngs.filter(i  => inc.has(i.metadata?.uid ?? '')).forEach(i  => this.emit(ws, inst, { ...this.mapIngress(i),    edges: this.edgesForIngress(i, ctx.allSvcs) },                                   'ADDED'))
-        ctx.allPods.filter(p  => inc.has(p.metadata?.uid ?? '')).forEach(p  => this.emit(ws, inst, this.mapPod(p),                                                                                              'ADDED'))
-        ctx.allPvcs.filter(p  => inc.has(p.metadata?.uid ?? '')).forEach(p  => this.emit(ws, inst, this.mapPvc(p),                                                                                              'ADDED'))
+        ctx.allSvcs.filter((s: any)  => inc.has(s.metadata?.uid ?? '')).forEach((s: any)  => this.emit(ws, inst, this.mapService(s), 'ADDED'))
+        ctx.allDeps.filter((d: any)  => inc.has(d.metadata?.uid ?? '')).forEach((d: any)  => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, ctx.allSvcs) }, 'ADDED'))
+        ctx.allSts.filter((s: any)   => inc.has(s.metadata?.uid ?? '')).forEach((s: any)  => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, ctx.allSvcs) }, 'ADDED'))
+        ctx.allDs.filter((d: any)    => inc.has(d.metadata?.uid ?? '')).forEach((d: any)  => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, ctx.allSvcs) }, 'ADDED'))
+        ctx.allRs.filter((r: any)    => inc.has(r.metadata?.uid ?? '')).forEach((r: any)  => this.emit(ws, inst, this.mapReplicaSet(r), 'ADDED'))
+        ctx.allJobs.filter((j: any)  => inc.has(j.metadata?.uid ?? '')).forEach((j: any)  => this.emit(ws, inst, this.mapJob(j), 'ADDED'))
+        ctx.allCrons.filter((c: any) => inc.has(c.metadata?.uid ?? '')).forEach((c: any)  => this.emit(ws, inst, this.mapCronJob(c), 'ADDED'))
+        ctx.allIngs.filter((i: any)  => inc.has(i.metadata?.uid ?? '')).forEach((i: any)  => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, ctx.allSvcs) }, 'ADDED'))
+        ctx.allPods.filter((p: any)  => inc.has(p.metadata?.uid ?? '')).forEach((p: any)  => this.emit(ws, inst, this.mapPod(p), 'ADDED'))
+        ctx.allPvcs.filter((p: any)  => inc.has(p.metadata?.uid ?? '')).forEach((p: any)  => this.emit(ws, inst, this.mapPvc(p), 'ADDED'))
     }
 
-    // ─── Graph traversal helpers ──────────────────────────────────────────────
-
-    private addPodChain(pod: V1Pod, ctx: IFocusContext): void {
+    private addPodChain(pod: any, ctx: IFocusContext): void {
         const uid = pod.metadata?.uid ?? ''
         if (ctx.included.has(uid)) return
         ctx.included.add(uid)
@@ -430,35 +412,35 @@ export class TopologyChannel implements IChannel {
         for (const vol of pod.spec?.volumes ?? []) {
             const claimName = vol.persistentVolumeClaim?.claimName
             if (!claimName) continue
-            const pvc = ctx.allPvcs.find(p => p.metadata?.name === claimName && p.metadata?.namespace === podNs)
+            const pvc = ctx.allPvcs.find((p: any) => p.metadata?.name === claimName && p.metadata?.namespace === podNs)
             if (pvc?.metadata?.uid) ctx.included.add(pvc.metadata.uid)
         }
 
         for (const ownerRef of pod.metadata?.ownerReferences ?? []) {
             if (ownerRef.kind === 'ReplicaSet') {
-                const rs = ctx.allRs.find(r => r.metadata?.uid === ownerRef.uid)
+                const rs = ctx.allRs.find((r: any) => r.metadata?.uid === ownerRef.uid)
                 if (rs) {
                     ctx.included.add(rs.metadata?.uid ?? '')
                     for (const rsOwner of rs.metadata?.ownerReferences ?? []) {
                         if (rsOwner.kind === 'Deployment') {
-                            const dep = ctx.allDeps.find(d => d.metadata?.uid === rsOwner.uid)
+                            const dep = ctx.allDeps.find((d: any) => d.metadata?.uid === rsOwner.uid)
                             if (dep?.metadata?.uid) ctx.included.add(dep.metadata.uid)
                         }
                     }
                 }
             } else if (ownerRef.kind === 'StatefulSet') {
-                const sts = ctx.allSts.find(s => s.metadata?.uid === ownerRef.uid)
+                const sts = ctx.allSts.find((s: any) => s.metadata?.uid === ownerRef.uid)
                 if (sts?.metadata?.uid) ctx.included.add(sts.metadata.uid)
             } else if (ownerRef.kind === 'DaemonSet') {
-                const ds = ctx.allDs.find(d => d.metadata?.uid === ownerRef.uid)
+                const ds = ctx.allDs.find((d: any) => d.metadata?.uid === ownerRef.uid)
                 if (ds?.metadata?.uid) ctx.included.add(ds.metadata.uid)
             } else if (ownerRef.kind === 'Job') {
-                const job = ctx.allJobs.find(j => j.metadata?.uid === ownerRef.uid)
+                const job = ctx.allJobs.find((j: any) => j.metadata?.uid === ownerRef.uid)
                 if (job) {
                     ctx.included.add(job.metadata?.uid ?? '')
                     for (const jobOwner of job.metadata?.ownerReferences ?? []) {
                         if (jobOwner.kind === 'CronJob') {
-                            const cron = ctx.allCrons.find(c => c.metadata?.uid === jobOwner.uid)
+                            const cron = ctx.allCrons.find((c: any) => c.metadata?.uid === jobOwner.uid)
                             if (cron?.metadata?.uid) ctx.included.add(cron.metadata.uid)
                         }
                     }
@@ -477,7 +459,7 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    private addIngressForService(svc: V1Service, ctx: IFocusContext): void {
+    private addIngressForService(svc: any, ctx: IFocusContext): void {
         for (const ing of ctx.allIngs) {
             if (ing.metadata?.namespace !== svc.metadata?.namespace) continue
             for (const rule of ing.spec?.rules ?? []) {
@@ -490,7 +472,7 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    private addServiceChain(svc: V1Service, ctx: IFocusContext): void {
+    private addServiceChain(svc: any, ctx: IFocusContext): void {
         if (ctx.included.has(svc.metadata?.uid ?? '')) return
         ctx.included.add(svc.metadata?.uid ?? '')
         this.addIngressForService(svc, ctx)
@@ -506,14 +488,14 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    private addIngressChain(ing: V1Ingress, ctx: IFocusContext): void {
+    private addIngressChain(ing: any, ctx: IFocusContext): void {
         if (ctx.included.has(ing.metadata?.uid ?? '')) return
         ctx.included.add(ing.metadata?.uid ?? '')
         const ingNs = ing.metadata?.namespace
         for (const rule of ing.spec?.rules ?? []) {
             for (const path of rule.http?.paths ?? []) {
                 const svcName = path.backend?.service?.name
-                const svc = ctx.allSvcs.find(s => s.metadata?.namespace === ingNs && s.metadata?.name === svcName)
+                const svc = ctx.allSvcs.find((s: any) => s.metadata?.namespace === ingNs && s.metadata?.name === svcName)
                 if (svc) this.addServiceChain(svc, ctx)
             }
         }
@@ -522,89 +504,87 @@ export class TopologyChannel implements IChannel {
     private addGroupChain(kind: string, name: string, ctx: IFocusContext): void {
         switch (kind) {
             case 'Deployment': {
-                const dep = ctx.allDeps.find(d => d.metadata?.name === name)
+                const dep = ctx.allDeps.find((d: any) => d.metadata?.name === name)
                 if (!dep?.metadata?.uid) return
                 ctx.included.add(dep.metadata.uid)
                 for (const rs of ctx.allRs) {
-                    if (!rs.metadata?.ownerReferences?.some(r => r.uid === dep.metadata?.uid)) continue
+                    if (!rs.metadata?.ownerReferences?.some((r: any) => r.uid === dep.metadata?.uid)) continue
                     ctx.included.add(rs.metadata?.uid ?? '')
-                    ctx.allPods.filter(p => p.metadata?.ownerReferences?.some(r => r.uid === rs.metadata?.uid)).forEach(p => this.addPodChain(p, ctx))
+                    ctx.allPods.filter((p: any) => p.metadata?.ownerReferences?.some((r: any) => r.uid === rs.metadata?.uid)).forEach((p: any) => this.addPodChain(p, ctx))
                 }
                 break
             }
             case 'StatefulSet': {
-                const sts = ctx.allSts.find(s => s.metadata?.name === name)
+                const sts = ctx.allSts.find((s: any) => s.metadata?.name === name)
                 if (!sts?.metadata?.uid) return
                 ctx.included.add(sts.metadata.uid)
-                ctx.allPods.filter(p => p.metadata?.ownerReferences?.some(r => r.uid === sts.metadata?.uid)).forEach(p => this.addPodChain(p, ctx))
+                ctx.allPods.filter((p: any) => p.metadata?.ownerReferences?.some((r: any) => r.uid === sts.metadata?.uid)).forEach((p: any) => this.addPodChain(p, ctx))
                 break
             }
             case 'DaemonSet': {
-                const ds = ctx.allDs.find(d => d.metadata?.name === name)
+                const ds = ctx.allDs.find((d: any) => d.metadata?.name === name)
                 if (!ds?.metadata?.uid) return
                 ctx.included.add(ds.metadata.uid)
-                ctx.allPods.filter(p => p.metadata?.ownerReferences?.some(r => r.uid === ds.metadata?.uid)).forEach(p => this.addPodChain(p, ctx))
+                ctx.allPods.filter((p: any) => p.metadata?.ownerReferences?.some((r: any) => r.uid === ds.metadata?.uid)).forEach((p: any) => this.addPodChain(p, ctx))
                 break
             }
             case 'ReplicaSet': {
-                const rs = ctx.allRs.find(r => r.metadata?.name === name)
+                const rs = ctx.allRs.find((r: any) => r.metadata?.name === name)
                 if (!rs?.metadata?.uid) return
                 ctx.included.add(rs.metadata.uid)
-                ctx.allPods.filter(p => p.metadata?.ownerReferences?.some(r => r.uid === rs.metadata?.uid)).forEach(p => this.addPodChain(p, ctx))
+                ctx.allPods.filter((p: any) => p.metadata?.ownerReferences?.some((r: any) => r.uid === rs.metadata?.uid)).forEach((p: any) => this.addPodChain(p, ctx))
                 break
             }
             case 'Job': {
-                const job = ctx.allJobs.find(j => j.metadata?.name === name)
+                const job = ctx.allJobs.find((j: any) => j.metadata?.name === name)
                 if (!job?.metadata?.uid) return
                 ctx.included.add(job.metadata.uid)
-                ctx.allPods.filter(p => p.metadata?.ownerReferences?.some(r => r.uid === job.metadata?.uid)).forEach(p => this.addPodChain(p, ctx))
+                ctx.allPods.filter((p: any) => p.metadata?.ownerReferences?.some((r: any) => r.uid === job.metadata?.uid)).forEach((p: any) => this.addPodChain(p, ctx))
                 break
             }
             case 'CronJob': {
-                const cron = ctx.allCrons.find(c => c.metadata?.name === name)
+                const cron = ctx.allCrons.find((c: any) => c.metadata?.name === name)
                 if (!cron?.metadata?.uid) return
                 ctx.included.add(cron.metadata.uid)
-                for (const job of ctx.allJobs.filter(j => j.metadata?.ownerReferences?.some(r => r.uid === cron.metadata?.uid))) {
+                for (const job of ctx.allJobs.filter((j: any) => j.metadata?.ownerReferences?.some((r: any) => r.uid === cron.metadata?.uid))) {
                     ctx.included.add(job.metadata?.uid ?? '')
-                    ctx.allPods.filter(p => p.metadata?.ownerReferences?.some(r => r.uid === job.metadata?.uid)).forEach(p => this.addPodChain(p, ctx))
+                    ctx.allPods.filter((p: any) => p.metadata?.ownerReferences?.some((r: any) => r.uid === job.metadata?.uid)).forEach((p: any) => this.addPodChain(p, ctx))
                 }
                 break
             }
         }
     }
 
-    // ─── Resource mappers ─────────────────────────────────────────────────────
-
     private mapResource(resource: any): Partial<ITopologyWsMessage> | null {
         switch (resource.kind) {
-            case 'Pod':                   return this.mapPod(resource as V1Pod)
-            case 'Service':               return this.mapService(resource as V1Service)
-            case 'Deployment':            return this.mapDeployment(resource as V1Deployment)
-            case 'StatefulSet':           return this.mapStatefulSet(resource as V1StatefulSet)
-            case 'DaemonSet':             return this.mapDaemonSet(resource as V1DaemonSet)
-            case 'ReplicaSet':            return this.mapReplicaSet(resource as V1ReplicaSet)
-            case 'Job':                   return this.mapJob(resource as V1Job)
-            case 'CronJob':               return this.mapCronJob(resource as V1CronJob)
-            case 'Ingress':               return this.mapIngress(resource as V1Ingress)
-            case 'PersistentVolumeClaim': return this.mapPvc(resource as V1PersistentVolumeClaim)
+            case 'Pod':                   return this.mapPod(resource)
+            case 'Service':               return this.mapService(resource)
+            case 'Deployment':            return this.mapDeployment(resource)
+            case 'StatefulSet':           return this.mapStatefulSet(resource)
+            case 'DaemonSet':             return this.mapDaemonSet(resource)
+            case 'ReplicaSet':            return this.mapReplicaSet(resource)
+            case 'Job':                   return this.mapJob(resource)
+            case 'CronJob':               return this.mapCronJob(resource)
+            case 'Ingress':               return this.mapIngress(resource)
+            case 'PersistentVolumeClaim': return this.mapPvc(resource)
             default:                      return null
         }
     }
 
-    private computeEdges(resource: any, svcList: V1Service[]): Array<{ targetUid: string; label: string }> {
+    private computeEdges(resource: any, svcList: any[]): Array<{ targetUid: string; label: string }> {
         switch (resource.kind) {
             case 'Deployment':
             case 'StatefulSet':
             case 'DaemonSet':
                 return this.edgesForController(resource.spec?.selector?.matchLabels, resource.metadata?.namespace, svcList)
             case 'Ingress':
-                return this.edgesForIngress(resource as V1Ingress, svcList)
+                return this.edgesForIngress(resource, svcList)
             default:
                 return []
         }
     }
 
-    private mapPod(p: V1Pod): Partial<ITopologyWsMessage> {
+    private mapPod(p: any): Partial<ITopologyWsMessage> {
         const ns = p.metadata?.namespace ?? ''
         const pvcEdges: Array<{ targetUid: string; label: string }> = []
         for (const vol of p.spec?.volumes ?? []) {
@@ -622,22 +602,22 @@ export class TopologyChannel implements IChannel {
             namespace: ns, status: podStatus(p),
             labels: p.metadata?.labels ?? {},
             image: p.spec?.containers?.[0]?.image,
-            containers: p.spec?.containers?.map(c => c.name) ?? [],
-            ownerUids: p.metadata?.ownerReferences?.map(r => r.uid) ?? [],
+            containers: p.spec?.containers?.map((c: any) => c.name) ?? [],
+            ownerUids: p.metadata?.ownerReferences?.map((r: any) => r.uid) ?? [],
             edges: pvcEdges.length > 0 ? pvcEdges : undefined,
         }
     }
 
-    private mapService(s: V1Service): Partial<ITopologyWsMessage> {
+    private mapService(s: any): Partial<ITopologyWsMessage> {
         return {
             kind: 'Service', uid: s.metadata?.uid ?? '', name: s.metadata?.name ?? '',
             namespace: s.metadata?.namespace ?? '', status: 'Running',
             labels: s.metadata?.labels ?? {},
-            ports: s.spec?.ports?.map(p => p.port) ?? [],
+            ports: s.spec?.ports?.map((p: any) => p.port) ?? [],
         }
     }
 
-    private mapDeployment(d: V1Deployment): Partial<ITopologyWsMessage> {
+    private mapDeployment(d: any): Partial<ITopologyWsMessage> {
         const ready   = d.status?.readyReplicas   ?? 0
         const desired = d.spec?.replicas ?? 0
         const avail   = d.status?.availableReplicas ?? 0
@@ -649,7 +629,7 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    private mapStatefulSet(s: V1StatefulSet): Partial<ITopologyWsMessage> {
+    private mapStatefulSet(s: any): Partial<ITopologyWsMessage> {
         return {
             kind: 'StatefulSet', uid: s.metadata?.uid ?? '', name: s.metadata?.name ?? '',
             namespace: s.metadata?.namespace ?? '',
@@ -659,7 +639,7 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    private mapDaemonSet(d: V1DaemonSet): Partial<ITopologyWsMessage> {
+    private mapDaemonSet(d: any): Partial<ITopologyWsMessage> {
         return {
             kind: 'DaemonSet', uid: d.metadata?.uid ?? '', name: d.metadata?.name ?? '',
             namespace: d.metadata?.namespace ?? '',
@@ -669,27 +649,27 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    private mapReplicaSet(r: V1ReplicaSet): Partial<ITopologyWsMessage> {
+    private mapReplicaSet(r: any): Partial<ITopologyWsMessage> {
         return {
             kind: 'ReplicaSet', uid: r.metadata?.uid ?? '', name: r.metadata?.name ?? '',
             namespace: r.metadata?.namespace ?? '',
             status: controllerStatus(r.status?.readyReplicas, r.spec?.replicas),
             labels: r.metadata?.labels ?? {},
             replicas: r.spec?.replicas ?? 0, readyReplicas: r.status?.readyReplicas ?? 0,
-            ownerUids: r.metadata?.ownerReferences?.map(ref => ref.uid) ?? [],
+            ownerUids: r.metadata?.ownerReferences?.map((ref: any) => ref.uid) ?? [],
         }
     }
 
-    private mapJob(j: V1Job): Partial<ITopologyWsMessage> {
+    private mapJob(j: any): Partial<ITopologyWsMessage> {
         const status: TNodeStatus = (j.status?.succeeded ?? 0) > 0 ? 'Succeeded' : (j.status?.active ?? 0) > 0 ? 'Running' : 'Unknown'
         return {
             kind: 'Job', uid: j.metadata?.uid ?? '', name: j.metadata?.name ?? '',
             namespace: j.metadata?.namespace ?? '', status, labels: j.metadata?.labels ?? {},
-            ownerUids: j.metadata?.ownerReferences?.map(ref => ref.uid) ?? [],
+            ownerUids: j.metadata?.ownerReferences?.map((ref: any) => ref.uid) ?? [],
         }
     }
 
-    private mapCronJob(c: V1CronJob): Partial<ITopologyWsMessage> {
+    private mapCronJob(c: any): Partial<ITopologyWsMessage> {
         return {
             kind: 'CronJob', uid: c.metadata?.uid ?? '', name: c.metadata?.name ?? '',
             namespace: c.metadata?.namespace ?? '',
@@ -698,7 +678,7 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    private mapIngress(i: V1Ingress): Partial<ITopologyWsMessage> {
+    private mapIngress(i: any): Partial<ITopologyWsMessage> {
         return {
             kind: 'Ingress', uid: i.metadata?.uid ?? '', name: i.metadata?.name ?? '',
             namespace: i.metadata?.namespace ?? '', status: 'Running',
@@ -707,7 +687,7 @@ export class TopologyChannel implements IChannel {
         }
     }
 
-    private mapPvc(p: V1PersistentVolumeClaim): Partial<ITopologyWsMessage> {
+    private mapPvc(p: any): Partial<ITopologyWsMessage> {
         return {
             kind: 'PersistentVolumeClaim', uid: p.metadata?.uid ?? '', name: p.metadata?.name ?? '',
             namespace: p.metadata?.namespace ?? '', status: pvcStatus(p),
@@ -721,7 +701,7 @@ export class TopologyChannel implements IChannel {
     private edgesForController(
         matchLabels: Record<string, string> | undefined,
         namespace:   string | undefined,
-        services:    V1Service[]
+        services:    any[]
     ): Array<{ targetUid: string; label: string }> {
         if (!matchLabels) return []
         return services
@@ -734,7 +714,7 @@ export class TopologyChannel implements IChannel {
             .map(s => ({ targetUid: s.metadata!.uid!, label: 'exposes' }))
     }
 
-    private edgesForIngress(ingress: V1Ingress, services: V1Service[]): Array<{ targetUid: string; label: string }> {
+    private edgesForIngress(ingress: any, services: any[]): Array<{ targetUid: string; label: string }> {
         const ns = ingress.metadata?.namespace
         const edges: Array<{ targetUid: string; label: string }> = []
         for (const rule of ingress.spec?.rules ?? []) {
@@ -746,8 +726,6 @@ export class TopologyChannel implements IChannel {
         }
         return edges
     }
-
-    // ─── Emit helpers ─────────────────────────────────────────────────────────
 
     private emit(ws: WebSocket, inst: ITopologyInstance, partial: Partial<ITopologyWsMessage>, topoAction: TTopoAction): void {
         if (inst.paused) return
@@ -798,8 +776,6 @@ export class TopologyChannel implements IChannel {
         catch (err) { console.warn('[TopologyChannel] sendSignal error', err) }
     }
 
-    // ─── Kube operations ──────────────────────────────────────────────────────
-
     private async doScale(ws: WebSocket, msg: IInstanceMessage, kind: string, ns: string, name: string, replicas: number): Promise<void> {
         const patch = [{ op: 'replace', path: '/spec/replicas', value: replicas }]
         switch (kind) {
@@ -824,3 +800,5 @@ export class TopologyChannel implements IChannel {
         return this.webSockets.find(s => s.ws === ws)?.instances.find(i => i.instanceId === instanceId)
     }
 }
+
+export default TopologyChannel

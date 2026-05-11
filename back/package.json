@@ -20,7 +20,7 @@
     "@ai-sdk/openai": "^3.0.53",
     "@jfvilas/parse-listing": "^1.0.1",
     "@kubernetes/client-node": "^1.4.0",
-    "@kwirthmagnify/kwirth-common": "^0.4.52",
+    "@kwirthmagnify/kwirth-common": "^0.5.0",
     "@openrouter/ai-sdk-provider": "^2.8.0",
     "@types/node": "^20.12.13",
     "ai": "^6.0.174",

@@ -1,14 +1,9 @@
-import { KwirthData } from '@kwirthmagnify/kwirth-common'
+import { KwirthData, ENotifyLevel } from '@kwirthmagnify/kwirth-common'
 import { Cluster, IClusterInfo } from '../model/Cluster'
 import { addGetAuthorization } from './AuthorizationManagement'
 import { MetricDefinition } from '../channels/metrics/MetricsTypes'
 
-export enum ENotifyLevel {
-    INFO ='info',
-    ERROR='error',
-    WARNING='warning',
-    SUCCESS='success'
-}
+export { ENotifyLevel }
 
 //+++ review and move to metrics channel
 export const getMetricsNames = async (cluster:Cluster) => {

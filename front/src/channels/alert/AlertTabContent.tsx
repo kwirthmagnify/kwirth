@@ -3,7 +3,7 @@ import { IAlertData } from './AlertData'
 import { IContentProps } from '../IChannel'
 import { useEffect, useRef, useState } from 'react'
 import { Warning, Error, Info } from '@mui/icons-material'
-import { EAlertSeverity } from '@kwirthmagnify/kwirth-common'
+import { EAlertSeverity } from './AlertTypes'
 
 const AlertTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const theme = useTheme()

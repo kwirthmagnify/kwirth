@@ -17,24 +17,6 @@ export * from './Channel'
 export * from './InstanceMessage'
 export * from './InstanceConfig'
 
-export * from './AlertMessage'
-export * from './AlertInstanceConfig'
-
-export * from './EchoMessage'
-export * from './EchoInstanceConfig'
-
-export * from './LogInstanceConfig'
-export * from './LogMessage'
-
-export * from './MetricsMessage'
-export * from './MetricsInstanceConfig'
-
-export * from './OpsMessage'
-export * from './OpsInstanceConfig'
-
-// export * from './TrivyMessage'
-// export * from './TrivyInstanceConfig'
-
 export * from './RouteMessage'
 
 export * from './SignalMessage'
@@ -42,5 +24,5 @@ export * from './SignalMessage'
 export * from './ApiKey'
 export * from './AccessKey'
 export * from './Global'
-export * from './LogInstanceConfig'
 export * from './Version'
+export * from './FrontChannel'

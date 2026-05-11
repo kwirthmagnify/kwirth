@@ -1,8 +1,9 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IEchoConfig, IEchoMessageResponse, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
 import { ELogComponent, logInfo } from '../../tools/Logging';
+import { IEchoInstanceConfig, IEchoMessageResponse } from './EchoTypes';
 
 export interface IAsset {
     podNamespace: string
@@ -14,7 +15,7 @@ export interface IAsset {
 export interface IInstance {
     instanceId: string
     accessKey: AccessKey
-    configData: IEchoConfig
+    configData: IEchoInstanceConfig
     paused: boolean
     assets: IAsset[]
 }

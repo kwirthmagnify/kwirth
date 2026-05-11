@@ -1,13 +1,13 @@
 {
-    "id": "news",
-    "name": "News",
+    "id": "topology",
+    "name": "Topology",
     "version": "1.0.0",
-    "description": "News channel plugin for Kwirth - displays Kubernetes and AI news feeds",
-    "icon": "Newspaper",
+    "description": "Topology channel plugin for Kwirth - 3D visualization of Kubernetes cluster topology",
+    "icon": "AccountTree",
     "type": "module",
     "scripts": {
         "build": "node build.mjs",
-        "pack": "node build.mjs && tar -czf news-plugin.tgz -C dist ."
+        "pack": "node build.mjs && tar -czf topology-plugin.tgz -C dist ."
     },
     "dependencies": {
         "@kwirthmagnify/kwirth-common": "^0.5.0",
@@ -18,9 +18,11 @@
         "@mui/material": "7.1.2",
         "@types/node": "^20.12.13",
         "@types/react": "^18.3.0",
+        "@types/three": "^0.174.0",
         "esbuild": "^0.27.2",
         "react": "^18.3.0",
         "react-dom": "^18.3.0",
+        "three": "^0.174.0",
         "typescript": "^5.4.0"
     }
 }

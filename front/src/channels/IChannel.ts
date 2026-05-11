@@ -1,101 +1,31 @@
-import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
-import { ENotifyLevel } from '../tools/Global'
-import { IChannelSettings } from '../model/Settings'
+import {
+    IChannelObject as IChannelObjectBase,
+    ISetupProps as ISetupPropsBase,
+    IContentProps as IContentPropsBase,
+    IChannel, TChannelConstructor,
+    EChannelRefreshAction, ENotifyLevel,
+    IChannelMessageAction, IChannelSettings, IChannelRequirements
+} from '@kwirthmagnify/kwirth-common-front'
 import { IResourceSelected } from '../components/ResourceSelector'
 import { IClusterInfo } from '../model/Cluster'
 import { INotification } from '../components/MenuNotification'
 import { MetricDefinition } from './metrics/MetricsTypes'
 
-type TChannelConstructor = (new () => IChannel)|undefined
-
-enum EChannelRefreshAction {
-    NONE,
-    REFRESH,
-    STOP
-}
-
-interface IChannelMessageAction {
-    action: EChannelRefreshAction
-    data?:any
-}
-
-interface ISetupProps {
-    onChannelSetupClosed: (channel:IChannel, channelSettings:IChannelSettings, start:boolean, defaultValues:boolean) => void
-    channel: IChannel
-    setupConfig?: IChannelSettings
-    channelObject: IChannelObject
-    instanceSettings?: any
-}
-
-interface IContentProps {
-    channelObject: IChannelObject
-}
-
-interface IChannelObject {
-    clusterName: string
-    view: EInstanceConfigView
-    namespace: string
-    group: string
-    pod: string
-    container: string
-    instanceId: string
-    instanceConfig: any
-    config: any
-    data: any
-    metricsList?: Map<string, MetricDefinition>  //+++ review if needs to be moved to metrics channel
-    accessString?: string
-    isElectron: boolean
-    frontChannels?: Map<string, TChannelConstructor>
+interface IChannelObject extends IChannelObjectBase {
+    metricsList?: Map<string, MetricDefinition>
     notifications?: INotification[]
-    webSocket?: WebSocket
-    clusterUrl?: string
     clusterInfo?: IClusterInfo
-    channelSettings?: IChannelSettings
-    channelId: string
-    updateChannelSettings?: (channelSettings:IChannelSettings) => void
-    createTab?: (resource:IResourceSelected, start:boolean, settings:any) => void
-    readChannelUserPreferences?: (channelId:string) => Promise<any>
-    writeChannelUserPreferences?: (channelId:string, data:any) => Promise<boolean>
-    setPalette?: (palette:string) => void
-    notify?:(channelId:string|undefined, level:ENotifyLevel, message:string) => void
-    exit?: () => void
+    createTab?: (resource: IResourceSelected, start: boolean, settings: any) => void
+    frontChannels?: Map<string, TChannelConstructor>
 }
 
-export interface IChannelRequirements {
-    setup: boolean
-    settings: boolean
-    frontChannels: boolean
-    metrics: boolean
-    notifier: boolean
-    notifications: boolean
-    clusterUrl: boolean
-    clusterInfo: boolean
-    accessString: boolean
-    webSocket: boolean
-    userSettings: boolean
-    palette: boolean
-    exit: boolean
+interface ISetupProps extends ISetupPropsBase {
+    channelObject: IChannelObject
 }
 
-interface IChannel {
-    SetupDialog: React.FC<ISetupProps>
-    TabContent: React.FC<IContentProps>
-    readonly channelId: string
-    requirements: IChannelRequirements
-
-    getScope(): string
-    getChannelIcon(): JSX.Element
-    getSetupVisibility(): boolean
-    setSetupVisibility(visibility:boolean): void
-    processChannelMessage (channelObject:IChannelObject, wsEvent:MessageEvent): IChannelMessageAction
-    initChannel(channelObject:IChannelObject): Promise<boolean>
-    startChannel(channelObject:IChannelObject): boolean
-    pauseChannel(channelObject:IChannelObject): boolean
-    continueChannel(channelObject:IChannelObject): boolean
-    stopChannel(channelObject:IChannelObject): boolean
-    socketDisconnected(channelObject: IChannelObject): boolean
-    socketReconnect(channelObject: IChannelObject): boolean
+interface IContentProps extends IContentPropsBase {
+    channelObject: IChannelObject
 }
 
-export { EChannelRefreshAction }
-export type { IChannel, IChannelObject, ISetupProps, IContentProps, TChannelConstructor, IChannelMessageAction }
+export { EChannelRefreshAction, ENotifyLevel }
+export type { IChannel, IChannelObject, ISetupProps, IContentProps, TChannelConstructor, IChannelMessageAction, IChannelSettings, IChannelRequirements }

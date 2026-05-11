@@ -1,4 +1,13 @@
 ******************ERRORES
+TEST
+    pinocchio
+      tools
+      playground
+
+    plugins
+      review all deployment options
+      
+
 RFM
 
 TRIVY
