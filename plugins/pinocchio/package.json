@@ -1,0 +1,38 @@
+{
+    "id": "pinocchio",
+    "name": "Pinocchio",
+    "version": "1.0.0",
+    "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
+    "icon": "AutoFixHigh",
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "pack": "node build.mjs && tar -czf pinocchio-plugin.tgz -C dist ."
+    },
+    "dependencies": {
+        "@kwirthmagnify/kwirth-common": "^0.5.1",
+        "@kwirthmagnify/kwirth-common-front": "^0.5.1",
+        "@ai-sdk/deepseek": "^2.0.29",
+        "@ai-sdk/google": "^3.0.64",
+        "@ai-sdk/groq": "^3.0.35",
+        "@ai-sdk/mistral": "^3.0.30",
+        "@ai-sdk/openai": "^3.0.53",
+        "@openrouter/ai-sdk-provider": "^2.8.0",
+        "ai": "^6.0.174",
+        "lodash": "^4.18.1",
+        "nunjucks": "^3.2.4",
+        "zod": "^4.3.6"
+    },
+    "devDependencies": {
+        "@mui/icons-material": "7.1.2",
+        "@mui/material": "7.1.2",
+        "@types/lodash": "^4.17.0",
+        "@types/node": "^20.12.13",
+        "@types/nunjucks": "^3.2.6",
+        "@types/react": "^18.3.0",
+        "esbuild": "^0.27.2",
+        "react": "^18.3.0",
+        "react-dom": "^18.3.0",
+        "typescript": "^5.4.0"
+    }
+}

@@ -1,9 +1,8 @@
 import React, { useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputAdornment, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { IConfigLlm, IConfigProvider, IPinocchioConfig } from './PinocchioConfig'
-import { objectClone } from '../magnify/Tools'
+import { objectClone, useKeyboard } from './utils'
 import { Visibility, VisibilityOff } from '@mui/icons-material'
-import { useKeyboard } from '../../tools/useKeyboard'
 
 interface IPinocchioLlmConfigProps {
     onClose: (pc: IPinocchioConfig | undefined) => void
@@ -13,7 +12,7 @@ interface IPinocchioLlmConfigProps {
 
 const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchioLlmConfigProps) => {
     const [config, setConfig] = useState(objectClone(props.pinocchioConfig) as IPinocchioConfig)
-    
+
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
     const [showPassword, setShowPassword] = useState(false)
@@ -61,7 +60,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
 
         let newLlms = [...config.llms]
 
-        if (selectedIndex !== null) 
+        if (selectedIndex !== null)
             newLlms[selectedIndex] = llm
         else
             newLlms.push(llm)
@@ -72,7 +71,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
 
     const onRemove = () => {
         if (selectedIndex === null) return
-        
+
         const newLlms = config.llms.filter((_, i) => i !== selectedIndex)
         setConfig({ ...config, llms: newLlms })
         onNew()
@@ -82,7 +81,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
         <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '800px', height: '55vh' } }}>
             <DialogTitle>LLM Config</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
-                
+
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '40%' }}>
                     <Box sx={{ flex: 1, overflowY: 'auto', overflowX:'hidden' }}>
                         <List sx={{ flexGrow: 1, mr: 2, width: '100%' }}>
@@ -103,7 +102,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '16px' }} >
                     <Stack spacing={2} style={{ width: '100%' }}>
                         <Stack direction={'column'} spacing={1}>
-                            <TextField value={id} onChange={(e) => setId(e.target.value)} placeholder='Enter LLM id' label='LLM ID' variant='standard' fullWidth/>                            
+                            <TextField value={id} onChange={(e) => setId(e.target.value)} placeholder='Enter LLM id' label='LLM ID' variant='standard' fullWidth/>
                             <FormControl variant='standard' sx={{ width: '100%'}}>
                                 <InputLabel>Provider</InputLabel>
                                 <Select value={provider} onChange={(e) => { setProvider(e.target.value); setModel('')}} variant='standard' fullWidth>
@@ -140,7 +139,6 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                                         </InputAdornment>
                                     )
                                 }}
-
                             />
                         </Stack>
 

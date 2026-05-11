@@ -1,9 +1,8 @@
 import React, { useState } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputAdornment, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
-import { IConfigProvider } from './PinocchioConfig' // Ajusta la ruta según tu proyecto
-import { objectClone } from '../magnify/Tools'
+import { IConfigProvider } from './PinocchioConfig'
+import { objectClone, useKeyboard } from './utils'
 import { Visibility, VisibilityOff } from '@mui/icons-material'
-import { useKeyboard } from '../../tools/useKeyboard'
 
 interface IPinocchioConfigProviderProps {
     providersAvailable: string[]
@@ -13,16 +12,15 @@ interface IPinocchioConfigProviderProps {
 
 const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props: IPinocchioConfigProviderProps) => {
     const [providers, setProviders] = useState<IConfigProvider[]>(objectClone(props.providers))
-    
-    const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
+    const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
     const [showPassword, setShowPassword] = useState(false)
     const [providerName, setProviderName] = useState('')
     const [providerKey, setProviderKey] = useState(props.providersAvailable[0])
 
     useKeyboard()
-    
+
     const onProviderSelected = (p: IConfigProvider, index: number) => {
         setProviderName(p.name)
         setProviderKey(p.key)
@@ -41,22 +39,20 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
         let newProviders = [...providers]
 
         if (selectedIndex !== null) {
-            // Actualizamos manteniendo los models existentes
-            newProviders[selectedIndex] = { 
-                ...newProviders[selectedIndex], 
-                name: providerName, 
-                key: providerKey 
+            newProviders[selectedIndex] = {
+                ...newProviders[selectedIndex],
+                name: providerName,
+                key: providerKey
             }
         } else {
-            // Nuevo proveedor con lista de modelos vacía por defecto
-            const newProvider: IConfigProvider = { 
-                name: providerName, 
-                key: providerKey, 
-                models: [] 
+            const newProvider: IConfigProvider = {
+                name: providerName,
+                key: providerKey,
+                models: []
             }
             newProviders.push(newProvider)
         }
-            
+
         setProviders(newProviders)
         onNew()
     }
@@ -72,14 +68,14 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
         <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '900px', height: '45vh' } }}>
             <DialogTitle>Manage Providers</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
-                
+
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '30%' }}>
                     <Box sx={{ flex: 1, overflowY: 'auto' }}>
                         <List sx={{ mr: 1 }}>
                             {providers.map((p, index) => (
-                                <ListItemButton 
-                                    key={index} 
-                                    selected={selectedIndex === index} 
+                                <ListItemButton
+                                    key={index}
+                                    selected={selectedIndex === index}
                                     onClick={() => onProviderSelected(p, index)}
                                 >
                                     <Stack direction={'column'}>
@@ -96,10 +92,9 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
                     </Box>
                 </Box>
 
-                {/* FORMULARIO DERECHA */}
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '24px' }}>
                     <Stack spacing={3} style={{ width: '100%' }}>
-                        
+
                         <FormControl variant='standard' sx={{ width: '100%'}}>
                             <InputLabel>Provider</InputLabel>
                             <Select value={providerName} onChange={(e) => { setProviderName(e.target.value)}} variant='standard' fullWidth>
@@ -108,13 +103,13 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
                                 ))}
                             </Select>
                         </FormControl>
-                        <TextField 
+                        <TextField
                             label='API Key / Token'
                             type={showPassword ? 'text' : 'password'}
-                            variant='standard' 
+                            variant='standard'
                             fullWidth
-                            value={providerKey} 
-                            onChange={(e) => setProviderKey(e.target.value)} 
+                            value={providerKey}
+                            onChange={(e) => setProviderKey(e.target.value)}
                             helperText="This key can be afterwards linked to specific uses."
                             InputProps={{
                                 endAdornment: (

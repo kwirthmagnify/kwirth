@@ -99,7 +99,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const [ , setTick] = useState<number>(0)
 
-    const BUILTIN_CHANNELS = new Set(['log', 'echo', 'alert', 'metrics', 'trivy', 'ops', 'fileman', 'magnify', 'pinocchio'])
+    const BUILTIN_CHANNELS = new Set(['log', 'echo', 'alert', 'metrics', 'trivy', 'ops', 'fileman', 'magnify'])
 
     // RFM categories
     const onCategoryFilter = (categoryKey:string, f:IFileObject) : boolean => {
@@ -650,7 +650,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     // Sync plugin items into classClusterOverview left bar on every render
     {
-        const STATIC_CLUSTER_ITEMS = new Set(['search', 'pinocchio'])
+        const STATIC_CLUSTER_ITEMS = new Set(['search'])
         const spcClusterOverview = spaces.get('classClusterOverview')!
         const currentPluginIds = Array.from(props.channelObject.frontChannels?.keys() ?? []).filter(id => !BUILTIN_CHANNELS.has(id))
         spcClusterOverview.leftItems = spcClusterOverview.leftItems!.filter(item =>
@@ -692,9 +692,6 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const setClusterActions = () => {
         // Cluster
         let spcClassCluster = spaces.get('classClusterOverview')!
-        setLeftItem(spcClassCluster, 'pinocchio', (p:string[]) => {
-            launchObjectExternal('pinocchio', [], EInstanceConfigView.CLUSTER, undefined, undefined)
-        })
         // Node
         let spcNode = spaces.get('Node')!
         setLeftItem(spcNode,'shell', launchNodeShell)

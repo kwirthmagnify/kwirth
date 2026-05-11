@@ -1,11 +1,11 @@
 import { FC } from 'react'
-import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '../IChannel'
+import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from './types'
 import { EPinocchioCommand, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, PinocchioConfig, PinocchioInstanceConfig } from './PinocchioConfig'
 import { PinocchioSetup, PinocchioIcon } from './PinocchioSetup'
 import { EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope, ISignalMessage } from '@kwirthmagnify/kwirth-common'
 import { PinocchioData, IPinocchioData } from './PinocchioData'
 import { PinocchioTabContent } from './PinocchioTabContent'
-import { ENotifyLevel } from '../../tools/Global'
+import { ENotifyLevel } from './types'
 
 
 export class PinocchioChannel implements IChannel {
@@ -28,7 +28,7 @@ export class PinocchioChannel implements IChannel {
         userSettings: false,
         webSocket: true,
     }
-    
+
     getScope() { return EInstanceConfigScope.NONE}
     getChannelIcon(): JSX.Element { return PinocchioIcon }
 
@@ -130,6 +130,15 @@ export class PinocchioChannel implements IChannel {
         return false
     }
 
+    prepareExternalChannel(_contentView: string, _selectedFiles: unknown[], _container: string) {
+        return {
+            data: new PinocchioData(),
+            config: new PinocchioConfig(),
+            instanceConfig: new PinocchioInstanceConfig(),
+            formConfig: {}
+        }
+    }
+
     startChannel(channelObject:IChannelObject): boolean {
         let pinocchioObject:IPinocchioData = channelObject.data
         pinocchioObject.content.push({ timestamp: Date.now(), text: 'Local start pinocchio channel' })
@@ -160,9 +169,8 @@ export class PinocchioChannel implements IChannel {
     socketDisconnected(channelObject: IChannelObject): boolean {
         return false
     }
-    
+
     socketReconnect(channelObject: IChannelObject): boolean {
         return false
     }
-
-}    
+}

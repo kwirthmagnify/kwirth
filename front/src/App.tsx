@@ -48,7 +48,6 @@ import { MenuNotification, INotification } from './components/MenuNotification'
 import { ContextSelector } from './components/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
-import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
 import { PluginDialog } from './components/PluginDialog'
 
 interface IAppProps {
@@ -259,7 +258,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         frontChannels.set('ops', OpsChannel)
         frontChannels.set('fileman', FilemanChannel)
         frontChannels.set('magnify', MagnifyChannel)
-        frontChannels.set('pinocchio', PinocchioChannel)
     },[])
 
     useEffect(() => {

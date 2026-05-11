@@ -30,9 +30,6 @@ import { IFilemanConfig } from '../../fileman/FilemanConfig'
 import { ITrivyData } from '../../trivy/TrivyData'
 import { ITrivyInstanceConfig } from '../../trivy/TrivyTypes'
 
-import { IPinocchioInstanceConfig } from '../../pinocchio/PinocchioConfig'
-import { IPinocchioData } from '../../pinocchio/PinocchioData'
-
 import { ILogConfig } from '../../log/LogConfig'
 import { ILogData } from '../../log/LogData'
 import { ELogSortOrder, ILogInstanceConfig } from '../../log/LogTypes'
@@ -153,10 +150,6 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                         }
                     }
                     setTrivyConfig(contentExternalData.content)
-                    break
-                case 'pinocchio':
-                    contentExternalData.formConfig = {}
-                    setPinocchioConfig(contentExternalData.content)
                     break
                 default: {
                     const ch = contentExternalData.content?.externalChannel
@@ -459,26 +452,6 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
         c.externalChannelObject!.webSocket = contentExternalData.content!.ws
         c.externalChannelObject!.data = trivyData
         c.externalChannelObject!.instanceConfig = trivyInstanceConfig
-    }
-
-    const setPinocchioConfig = (c:IContentExternalObject) => {
-        let pinocchioInstanceConfig:IPinocchioInstanceConfig = {
-        }
-        let pinocchioData:IPinocchioData = {
-            toolsAvailable: [],
-            providersAvailable: [],
-            providers: [],
-            config: {
-                triggers: [],
-                llms: []
-            },
-            content: [],
-            paused: false,
-            started: false
-        }
-        c.externalChannelObject!.webSocket = contentExternalData.content!.ws
-        c.externalChannelObject!.data = pinocchioData
-        c.externalChannelObject!.instanceConfig = pinocchioInstanceConfig
     }
 
     const play = () => {

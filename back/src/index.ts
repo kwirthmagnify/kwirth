@@ -41,8 +41,7 @@ import { TrivyChannel } from './channels/trivy/TrivyChannel'
 import { EchoChannel } from './channels/echo/EchoChannel'
 import { FilemanChannel } from './channels/fileman/FilemanChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
-import { PinocchioChannel } from './channels/pinocchio/PinocchioChannel'
-// NewsChannel removed — now loaded as plugin
+// NewsChannel and PinocchioChannel removed — now loaded as plugins
 
 import { IncomingMessage } from 'http'
 
@@ -116,7 +115,6 @@ const envChannelTrivyEnabled = (process.env.CHANNEL_TRIVY || 'true').toLowerCase
 const envChannelEchoEnabled = (process.env.CHANNEL_ECHO || 'true').toLowerCase() === 'true'
 const envChannelFilemanEnabled = (process.env.CHANNEL_FILEMAN || 'true').toLowerCase() === 'true'
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
-const envChannelPinocchioEnabled = (process.env.CHANNEL_PINOCCHIO || 'true').toLowerCase() === 'true'
 
 var runningInstances:IRunningInstance[] = []
 
@@ -138,8 +136,7 @@ registeredChannels.set('trivy', TrivyChannel)
 registeredChannels.set('fileman', FilemanChannel)
 registeredChannels.set('echo', EchoChannel)
 registeredChannels.set('magnify', MagnifyChannel)
-registeredChannels.set('pinocchio', PinocchioChannel)
-// 'news' channel loaded dynamically by PluginManager
+// 'news' and 'pinocchio' channels loaded dynamically by PluginManager
 
 if (envCommand!==undefined) {
     switch(envCommand) {
@@ -1391,7 +1388,6 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (envChannelFilemanEnabled) requiredChannels.push('fileman')
         if (envChannelEchoEnabled) requiredChannels.push('echo')
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
-        if (envChannelPinocchioEnabled) requiredChannels.push('pinocchio')
         // plugin channels: load installed plugins and add their ids to requiredChannels
         if (!pluginManager) {
             pluginManager = new PluginManager(runningInstance.configMaps)

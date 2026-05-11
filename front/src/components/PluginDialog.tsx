@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
-import { CheckCircle, Delete, Download, Refresh } from '@mui/icons-material'
+import * as MuiIcons from '@mui/icons-material'
+import { CheckCircle, Delete, Download, Extension, Refresh } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 
@@ -131,8 +132,14 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
 
     const isInstalled = (id: string) => installed.some(p => p.id === id)
 
-    const PluginRow = ({ name, version, description, badge, action }: { name: string; version: string; description: string; badge?: React.ReactNode; action: React.ReactNode }) => (
+    const resolveIcon = (iconName?: string): React.ReactElement => {
+        const IconComponent = iconName ? (MuiIcons as Record<string, React.ElementType>)[iconName] : undefined
+        return IconComponent ? <IconComponent fontSize='small' /> : <Extension fontSize='small' />
+    }
+
+    const PluginRow = ({ icon, name, version, description, badge, action }: { icon?: string; name: string; version: string; description: string; badge?: React.ReactNode; action: React.ReactNode }) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>{resolveIcon(icon)}</Box>
             <Box flex={1}>
                 <Stack direction='row' alignItems='center' spacing={1} flexWrap='wrap'>
                     <Typography variant='body2' fontWeight='bold' component='span'>{name}</Typography>
@@ -156,6 +163,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                         : installed.map(plugin => (
                             <PluginRow
                                 key={plugin.id}
+                                icon={plugin.icon}
                                 name={plugin.name}
                                 version={plugin.version}
                                 description={plugin.description}
@@ -209,6 +217,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                     {available.map(plugin => (
                         <PluginRow
                             key={plugin.id}
+                            icon={plugin.icon}
                             name={plugin.name}
                             version={plugin.version}
                             description={plugin.description}

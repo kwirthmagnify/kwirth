@@ -1,22 +1,14 @@
-import { BackChannelData, IInstanceConfig, IInstanceMessage, AccessKey, EInstanceMessageAction } from '@kwirthmagnify/kwirth-common'
+import { BackChannelData, IInstanceConfig, IInstanceMessage, AccessKey, EInstanceMessageAction, IBackChannelRequirements, IBackChannelObject } from '@kwirthmagnify/kwirth-common'
 import { Request, Response } from 'express'
 import { ClusterInfo } from '../model/ClusterInfo'
+
+export { IBackChannelRequirements, IBackChannelObject }
 
 export type TChannelConstructor = (new (clusterInfo:ClusterInfo, backChannelObject:IBackChannelObject) => IChannel)|undefined
 
 export const createChannelInstance = (channelConstructor:TChannelConstructor, clusterInfo: ClusterInfo, backChannelObject:IBackChannelObject): IChannel | null => {
     if (!channelConstructor) throw  new Error('Error: channelConstructor is empty')
     return new channelConstructor(clusterInfo, backChannelObject)
-}
-
-export interface IBackChannelRequirements {
-    storage: boolean
-    providers: string[]
-}
-
-export interface IBackChannelObject {
-    writeStorage?(id:string, secret:boolean, data:any) : Promise<void>
-    readStorage?(id:string, secret:boolean) : Promise<any>
 }
 
 interface IChannel {

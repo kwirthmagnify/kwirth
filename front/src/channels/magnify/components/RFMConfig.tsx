@@ -1,5 +1,5 @@
 import { IFileObject, ISpace, ISpaceMenuItem } from '@jfvilas/react-file-manager'
-import { AccountTree, Add, AutoFixHigh, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@mui/icons-material'
+import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@mui/icons-material'
 import { Cluster, Config, Customize, Kubernetes, Network, Pod, Security, Settings, Storage } from '../icons/Icons'
 
 const spaces = new Map<string, ISpace>()
@@ -449,12 +449,6 @@ spaces.set('classClusterOverview',
                 name:'search',
                 icon: <Search fontSize='small'/>,
                 text: 'Search',
-                permission: true
-            },
-            {
-                name:'pinocchio',
-                icon: <AutoFixHigh fontSize='small'/>,
-                text: 'Pinocchio',
                 permission: true
             },
         ]

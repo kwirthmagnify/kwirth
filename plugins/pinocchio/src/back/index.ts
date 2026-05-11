@@ -1,9 +1,5 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
-import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage, IPlaygroundRequest } from './PinocchioConfig'
-import { IMetricsCluster } from '../../providers/metrics/IMetricsModel'
-import { ELogComponent, logError, logInfo, logTrace, logWarning } from '../../tools/Logging'
 import { Request, Response } from 'express'
 import { z } from 'zod'
 
@@ -20,7 +16,7 @@ import { createGoogleGenerativeAI, GoogleLanguageModelOptions } from '@ai-sdk/go
 import { createMistral, MistralLanguageModelOptions } from '@ai-sdk/mistral'
 
 // tools
-import { getToolByName, IToolContext, toolInfoList } from './Tools';
+import { getToolByName, IToolContext, toolInfoList } from './Tools'
 
 const _ = require('lodash')
 const nunjucks = require('nunjucks')
@@ -50,29 +46,29 @@ interface IBusinessProviderEvent {
 interface IModelInvocation {
     llmProviderId: string
     llmModelId: string
-    model: any //LanguageModelV3
+    model: any
     temperature: number
-    providerOptions: any //GoogleLanguageModelOptions|MistralLanguageModelOptions
+    providerOptions: any
     errorPath: string
     system: string
     prompt: string
     tools: any
 }
 
-class PinocchioChannel implements IChannel {
+export class PinocchioChannel {
     readonly channelId = 'pinocchio'
-    readonly requirements: IBackChannelRequirements = {
+    readonly requirements = {
         storage: true,
         providers: ['events', 'business', 'metrics']
     }
-    clusterInfo : ClusterInfo
-    backChannelObject : IBackChannelObject
+    clusterInfo: any
+    backChannelObject: any
     connections: {
         webSocket:WebSocket,
         lastRefresh: number,
-        instances: IInstance[] 
+        instances: IInstance[]
     }[] = []
-    clusterMetrics: IMetricsCluster[] = []
+    clusterMetrics: any[] = []
     analysis: IAnalysis[] = []
     providers: IConfigProvider[] = []
     pinocchioConfig: IPinocchioConfig = {
@@ -82,7 +78,7 @@ class PinocchioChannel implements IChannel {
     playgroundTrigger: IConfigTriggerVersion | undefined = undefined
     startTime: number
 
-    constructor (clusterInfo:ClusterInfo, backChannelObject:IBackChannelObject) {
+    constructor (clusterInfo: any, backChannelObject: any) {
         this.clusterInfo = clusterInfo
         this.backChannelObject = backChannelObject
         this.startTime = Date.now()
@@ -100,7 +96,7 @@ class PinocchioChannel implements IChannel {
         this.clusterInfo.addSubscriber('events', this, {
             kinds: kindsAvailable,
             crdInstances: [],
-            syncCrdInstances: false        
+            syncCrdInstances: false
         })
         let provs = await this.backChannelObject.readStorage!('pinocchio-providers', true)
         if (provs) this.providers = provs
@@ -129,14 +125,14 @@ class PinocchioChannel implements IChannel {
         return ['', 'none', 'cluster'].indexOf(scope)
     }
 
-    buildModelInvocation = async (trigger: IConfigTrigger, version: IConfigTriggerVersion, event:IEventsProviderEvent|IBusinessProviderEvent|IMetricsCluster) : Promise<IModelInvocation|undefined> => {
+    buildModelInvocation = async (trigger: IConfigTrigger, version: IConfigTriggerVersion, event: IEventsProviderEvent|IBusinessProviderEvent|any) : Promise<IModelInvocation|undefined> => {
         let prompt
         let llm = this.pinocchioConfig.llms.find(l => l.id === version.llm)
         if (!llm) {
             this.broadcastError(`Cannot find LLM with id '${version.llm}'`)
             return undefined
         }
-        let key = llm.useProviderKey? this.providers.find(p => p.name === llm.provider)?.key : llm.key
+        let key = llm.useProviderKey? this.providers.find(p => p.name === llm!.provider)?.key : llm.key
         if (!key) {
             this.broadcastError(`Cannot get provider API key for LLM '${version.llm}'`)
             return undefined
@@ -144,7 +140,6 @@ class PinocchioChannel implements IChannel {
         switch(trigger.trigger) {
             case 'business':
                 let businessEvent = event as IBusinessProviderEvent
-                // prepare data objects for nunjucks
                 let nunjucksObj:any = {}
                 for (let spaceType of version.spaces) {
                     let [space, type] = spaceType.split('.')
@@ -171,7 +166,7 @@ class PinocchioChannel implements IChannel {
                 }
                 break
             default:
-                logWarning(ELogComponent.CHANNEL, `Received invalid trigger type: '${trigger.trigger}'`)
+                console.warn(`Received invalid trigger type: '${trigger.trigger}'`)
                 return undefined
         }
 
@@ -184,7 +179,7 @@ class PinocchioChannel implements IChannel {
             nodes: await this.clusterInfo.getNodes(),
             clusterInfo: this.clusterInfo,
             clusterMetrics: this.clusterMetrics,
-            trace: (toolName, args) => logInfo(ELogComponent.CHANNEL, `[TOOL] ${toolName} ${JSON.stringify(args)}`)
+            trace: (toolName, args) => console.log(`[TOOL] ${toolName} ${JSON.stringify(args)}`)
         }
         let tools: any = {}
         for (let toolName of version.tools) {
@@ -199,9 +194,7 @@ class PinocchioChannel implements IChannel {
                     llmModelId: llm.model,
                     model: deepseek(llm.model),
                     providerOptions: {
-                        openai: {
-                            // structuredOutputs: true  unsupported parm
-                        } satisfies OpenAILanguageModelChatOptions
+                        openai: {} satisfies OpenAILanguageModelChatOptions
                     },
                     errorPath: '',
                     temperature,
@@ -232,8 +225,7 @@ class PinocchioChannel implements IChannel {
                     llmProviderId: llm.provider,
                     llmModelId: llm.model,
                     model: openRouter(llm.model),
-                    providerOptions: {
-                    },
+                    providerOptions: {},
                     errorPath: '',
                     temperature,
                     tools,
@@ -266,10 +258,7 @@ class PinocchioChannel implements IChannel {
                     llmModelId: llm.model,
                     model: openai(llm.model),
                     providerOptions: {
-                        openai: {
-                            // structuredOutputs: true,  this parameter is not supported by openai (or we are no using th right modeloptions)
-                            // CHANGELOG.md:- 9bf7291: chore(providers/openai): enable structuredOutputs by default & switch to provider option
-                        } satisfies OpenAILanguageModelChatOptions
+                        openai: {} satisfies OpenAILanguageModelChatOptions
                     },
                     errorPath: '',
                     temperature,
@@ -301,13 +290,12 @@ class PinocchioChannel implements IChannel {
         return undefined
     }
 
-    async processProviderEvent(providerId:string, event:IEventsProviderEvent|IBusinessProviderEvent|IMetricsCluster) : Promise<void> {
+    async processProviderEvent(providerId:string, event: IEventsProviderEvent|IBusinessProviderEvent|any) : Promise<void> {
         switch(providerId) {
             case 'business':
                 let businessEvent = event as IBusinessProviderEvent
-                logInfo(ELogComponent.PROVIDER, event)
+                console.log('[Pinocchio] business event', event)
 
-                // playground: handle launch.immediate events fired from the Sandbox UI
                 if (this.playgroundTrigger) {
                     const lastEvt = businessEvent.last?.event
                     if (lastEvt?.space === 'launch' && lastEvt?.type === 'immediate') {
@@ -339,13 +327,11 @@ class PinocchioChannel implements IChannel {
                             system: "Use the tools provided to find information, and once you have the data, format your final response strictly as a JSON object according to the schema.",
                             prompt: prompt||'Hi AI, how are you?',
                         })
-                        // logTrace(output)
-                        // logTrace(steps)
                         this.broadcastMessage(JSON.stringify(output.response))
                     }
                     catch (err:any) {
                         let message = `Pinocchio analysis ended in error when processing 'business' while analyzing`
-                        logInfo(ELogComponent.PROVIDER, message)
+                        console.log(message)
                         console.log(err)
                         this.broadcastMessage(message)
                         this.broadcastMessage(JSON.stringify(err))
@@ -354,21 +340,21 @@ class PinocchioChannel implements IChannel {
                 }
                 break
             case 'metrics':
-                let metricsEvent = event as IMetricsCluster
+                let metricsEvent = event as any
                 this.clusterMetrics.push(metricsEvent)
                 if (this.clusterMetrics.length>100) this.clusterMetrics.shift()
                 break
             case 'events':
                 let eventsEvent = event as IEventsProviderEvent
                 if (eventsEvent.type==='ADDED') {
-                    try {                        
+                    try {
                         for (let t of this.pinocchioConfig.triggers.filter(t => t.trigger === 'artifact' && t.kind === eventsEvent.obj.kind)) {
                           for (let version of t.versions.filter(v => v.enabled)) {
-                            logInfo(ELogComponent.PROVIDER, `Pinocchio: added ${eventsEvent.obj.kind} ${eventsEvent.obj.metadata?.name}`)
+                            console.log(`[Pinocchio] added ${eventsEvent.obj.kind} ${eventsEvent.obj.metadata?.name}`)
                             if (eventsEvent.obj?.metadata?.creationTimestamp) {
                                 let creationTs = Date.parse(eventsEvent.obj?.metadata?.creationTimestamp)
                                 if (creationTs<this.startTime) {
-                                    logWarning(ELogComponent.CHANNEL, `Bypass object analysis, creation timestamp is previous for object ${eventsEvent.obj?.metadata?.name} and kind ${t.kind} for LLM ${version.llm}`)
+                                    console.warn(`Bypass object analysis, creation timestamp is previous for object ${eventsEvent.obj?.metadata?.name} and kind ${t.kind} for LLM ${version.llm}`)
                                     continue
                                 }
                             }
@@ -392,8 +378,7 @@ class PinocchioChannel implements IChannel {
                                             )
                                         }),
                                     }),
-                                    //'You are a kubernetes admin expert, and you are in charge of deploying only workload that are secure. Generate a security analysis for this pod following the schema, y dámelo en español',
-                                    system: system||'You are a very polite AI system', 
+                                    system: system||'You are a very polite AI system',
                                     prompt: prompt||'Hi AI, how are you?',
                                 })
 
@@ -412,7 +397,7 @@ class PinocchioChannel implements IChannel {
                             }
                             catch (err:any) {
                                 let message = `Pinocchio analysis ended in error while processing 'events' when analyzing '${eventsEvent.obj.metadata.name}' in namespace '${eventsEvent.obj.metadata.namespace}' [Kind:${eventsEvent.obj.kind}]`
-                                logInfo(ELogComponent.PROVIDER, message)
+                                console.log(message)
                                 console.log(err)
                                 try {
                                     let msg = _.get(err, errorPath)
@@ -431,17 +416,17 @@ class PinocchioChannel implements IChannel {
                         }
                     }
                     catch (err) {
-                        logError(ELogComponent.CHANNEL, 'Error in Pinocchio')
-                        logError(ELogComponent.CHANNEL, err)
+                        console.error('[Pinocchio] Error in Pinocchio')
+                        console.error(err)
                     }
                 }
                 break
             default:
-                logError(ELogComponent.CHANNEL, `Ignored provider event from ${providerId} to channel ${this.getChannelData().id}`)
+                console.error(`[Pinocchio] Ignored provider event from ${providerId} to channel pinocchio`)
         }
     }
 
-    async endpointRequest(endpoint:string,req:Request, res:Response) : Promise<void> {
+    async endpointRequest(endpoint:string, req: Request, res: Response) : Promise<void> {
     }
 
     async websocketRequest(newWebSocket:WebSocket) : Promise<void> {
@@ -463,7 +448,7 @@ class PinocchioChannel implements IChannel {
             let instance = this.getInstance(webSocket, instanceMessage.instance)
             if (!instance) {
                 this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, `Instance not found`)
-                logWarning(ELogComponent.PROVIDER,`Instance ${instanceMessage.instance} not found`)
+                console.warn(`[Pinocchio] Instance ${instanceMessage.instance} not found`)
                 return false
             }
             let pinocchioMessage = instanceMessage as IPinocchioMessage
@@ -556,7 +541,6 @@ class PinocchioChannel implements IChannel {
             this.broadcastMessage(`[Playground] prompt: ${effectivePrompt}`)
             this.broadcastMessage(`[Playground] tools: ${version.tools.join(', ') || '(none)'}`)
 
-            // auto tool selection: ask LLM which tools it needs before running
             let activeTools = tools
             if (version.autoTools && Object.keys(tools).length > 0) {
                 const toolListStr = Object.keys(tools).join(', ')
@@ -572,7 +556,6 @@ class PinocchioChannel implements IChannel {
                 activeTools = Object.fromEntries(selectedNames.map(n => [n, tools[n]]))
             }
 
-            // phase 1: tool data gathering
             const { text: phase1Text, usage: usage1, steps } = await generateText({
                 model,
                 temperature,
@@ -597,7 +580,6 @@ class PinocchioChannel implements IChannel {
                 }
             }
 
-            // phase 2: if model didn't generate text after tool calls, summarize explicitly
             let finalResponse = phase1Text
             let totalIn = usage1.inputTokens ?? 0
             let totalOut = usage1.outputTokens ?? 0
@@ -625,7 +607,7 @@ class PinocchioChannel implements IChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        logInfo(ELogComponent.CHANNEL, `Start ${this.getChannelData().id} instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
+        console.log(`[Pinocchio] Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
         let socket = this.connections.find(s => s.webSocket === webSocket)
         if (!socket) {
@@ -650,7 +632,7 @@ class PinocchioChannel implements IChannel {
     deleteObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containerName:string) : Promise<boolean> => {
         return true
     }
-    
+
     pauseContinueInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void => {
     }
 
@@ -678,15 +660,15 @@ class PinocchioChannel implements IChannel {
                     instances.splice(pos,1)
                 }
                 else {
-                    logWarning(ELogComponent.CHANNEL, `Instance ${instanceId} not found, cannot delete`)
+                    console.warn(`[Pinocchio] Instance ${instanceId} not found, cannot delete`)
                 }
             }
             else {
-                logWarning(ELogComponent.CHANNEL, 'There are no Pinocchio Instances on websocket')
+                console.warn('[Pinocchio] There are no Pinocchio Instances on websocket')
             }
         }
         else {
-            logWarning(ELogComponent.CHANNEL, 'WebSocket not found on Pinocchio')
+            console.warn('[Pinocchio] WebSocket not found on Pinocchio')
         }
     }
 
@@ -704,7 +686,7 @@ class PinocchioChannel implements IChannel {
             this.connections.splice(pos,1)
         }
         else {
-            logInfo(ELogComponent.CHANNEL, 'WebSocket not found on Pinocchio for remove')
+            console.log('[Pinocchio] WebSocket not found on Pinocchio for remove')
         }
     }
 
@@ -715,7 +697,7 @@ class PinocchioChannel implements IChannel {
             return true
         }
         else {
-            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
+            console.log('[Pinocchio] WebSocket not found')
             return false
         }
     }
@@ -768,7 +750,7 @@ class PinocchioChannel implements IChannel {
             }
         }
     }
-    
+
     private broadcastAnalysis = (analysis:IAnalysis) => {
         for (let connection of this.connections) {
             for (let instance of connection.instances) {
@@ -871,18 +853,17 @@ class PinocchioChannel implements IChannel {
             if (instances) {
                 let instanceIndex = instances.findIndex(t => t.instanceId === instanceId)
                 if (instanceIndex>=0) return instances[instanceIndex]
-                logInfo(ELogComponent.CHANNEL, 'Instance not found')
+                console.log('[Pinocchio] Instance not found')
             }
             else {
-                logInfo(ELogComponent.CHANNEL, 'There are no Instances on websocket')
+                console.log('[Pinocchio] There are no Instances on websocket')
             }
         }
         else {
-            logInfo(ELogComponent.CHANNEL, 'WebSocket not found')
+            console.log('[Pinocchio] WebSocket not found')
         }
         return undefined
     }
-
 }
 
-export { PinocchioChannel }
+export default PinocchioChannel

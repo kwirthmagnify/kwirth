@@ -3,7 +3,7 @@ import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitl
 import { ScienceOutlined, Upload, Bolt, FileDownload, CheckCircleOutline, HistoryOutlined, DeleteOutlined } from '@mui/icons-material'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { useKeyboard } from '../../tools/useKeyboard'
+import { useKeyboard } from './utils'
 
 interface IProps {
     pinocchioConfig: IPinocchioConfig
@@ -225,7 +225,6 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
 
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 1 }}>
 
-                {/* ── config ── */}
                 <Stack direction='row' spacing={2} sx={{ flex: '0 0 auto' }}>
                     <Stack spacing={1} sx={{ width: 260, flexShrink: 0 }}>
                         <FormControl variant='standard' fullWidth>
@@ -293,7 +292,6 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
 
                 <Divider />
 
-                {/* ── prompt + event data ── */}
                 <Stack direction='row' spacing={1} sx={{ flex: '0 0 auto' }}>
                     <Box flex={1}>
                         <Stack direction='row' alignItems='center' spacing={0.5}>
@@ -325,7 +323,6 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                     </Box>
                 </Stack>
 
-                {/* ── tools + apply + fire ── */}
                 <Stack direction='row' spacing={2}>
                     <Stack direction='row' alignItems='flex-end' spacing={1} sx={{ flex: 1 }}>
                         <FormControlLabel
@@ -427,7 +424,6 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
 
                 <Divider />
 
-                {/* ── results ── */}
                 <Box sx={{ flex: 1, overflowY: 'auto', bgcolor: 'action.hover', borderRadius: 1, p: 1, minHeight: 40 }}>
                     <Typography variant='caption' color='text.secondary'>Results</Typography>
                     {newContent.length === 0

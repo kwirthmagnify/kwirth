@@ -364,7 +364,8 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                     </AreaChart>
                                 </Stack>
                             </Tooltip>
-                            <Tooltip title={`${(memory||0).toFixed()}GB / ${((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed()}GB`}>
+                            {/* <Tooltip title={`${(memory||0).toFixed()}GB / ${((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed()}GB`}> */}
+                            <Tooltip title={`${(memory||0).toFixed(2)}%`}>
                                 <Stack direction={'column'} alignItems={'center'} mr={'2px'}>
                                     <Typography fontSize={8} mb={-1}>Mem</Typography>
                                     <AreaChart width={120} height={20} data={dataMemory} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>

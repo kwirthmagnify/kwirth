@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Stack, Typography } from '@mui/material'
-import { IChannelObject } from '../IChannel'
+import { IChannelObject } from './types'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
 import { EPinocchioCommand, IAnalysis, IConfigProvider, IConfigTrigger, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
@@ -20,7 +20,7 @@ interface IContentProps {
 
 const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let pinocchioData:IPinocchioData = props.channelObject.data
-    
+
     const pinocchioBoxRef = useRef<HTMLDivElement | null>(null)
     const messagesEndRef = useRef<HTMLSpanElement | null>(null)
     const [isAtBottom, setIsAtBottom] = useState(true)
@@ -46,7 +46,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         if (isAtBottom && pinocchioBoxRef.current) {
             pinocchioBoxRef.current.scrollTo({
                 top: pinocchioBoxRef.current.scrollHeight,
-                behavior: 'auto', // 'smooth'
+                behavior: 'auto',
             })
         }
     }, [isAtBottom, pinocchioData.content.length])
@@ -54,9 +54,9 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     useEffect(() => {
         const timer = setTimeout(() => {
             if (messagesEndRef.current) {
-                messagesEndRef.current.scrollIntoView({ 
-                    behavior: pinocchioData.content.length > 50 ? 'auto' : 'smooth', 
-                    block: 'end' 
+                messagesEndRef.current.scrollIntoView({
+                    behavior: pinocchioData.content.length > 50 ? 'auto' : 'smooth',
+                    block: 'end'
                 });
             }
         }, 50)
@@ -84,7 +84,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                                     {new Date(analysis.timestamp).toISOString()} {analysis.text}
                                 </Typography>
                             )}
-                            
+
                             {analysis.findings && [...analysis.findings]
                                 .sort((a, b) => priorityOrder[a.level] - priorityOrder[b.level])
                                 .map((f, fIndex) => {
@@ -263,7 +263,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     return <>
-        { pinocchioData.started && 
+        { pinocchioData.started &&
         <Card sx={{display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', marginTop: '8px',minHeight: 0}}>
             <CardHeader title={
                 <Stack direction={'row'} alignItems={'center'}>
@@ -287,6 +287,6 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} onStateChange={pinocchioPlaygroundStateChange} />}
         { showImportExport && <PinocchioImportExport providers={pinocchioData.providers} config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} providers={pinocchioData.providers} pinocchioConfig={pinocchioData.config} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
-    </>    
+    </>
 }
 export { PinocchioTabContent }

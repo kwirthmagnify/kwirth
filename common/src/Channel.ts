@@ -42,4 +42,14 @@ interface KwirthData {
     channels: BackChannelData[]
 }
 
-export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType }
+interface IBackChannelRequirements {
+    storage: boolean
+    providers: string[]
+}
+
+interface IBackChannelObject {
+    writeStorage?(id: string, secret: boolean, data: any): Promise<void>
+    readStorage?(id: string, secret: boolean): Promise<any>
+}
+
+export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, IBackChannelRequirements, IBackChannelObject }

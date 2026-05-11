@@ -1,8 +1,7 @@
-import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 import { IConfigModel, IConfigProvider } from './PinocchioConfig'
 
-export const loadModels = async (providers:IConfigProvider[]) => {
-    logInfo(ELogComponent.CHANNEL, 'Pinocchio loading models...')
+export const loadModels = async (providers: IConfigProvider[]) => {
+    console.log('Pinocchio loading models...')
     for (let provider of providers) {
         try {
             switch(provider.name) {
@@ -46,7 +45,7 @@ export const loadModels = async (providers:IConfigProvider[]) => {
                     const respOpenai = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: 'Bearer ' + provider.key}})
                     const dataOpenai = await respOpenai.json()
                     provider.models = dataOpenai.data.filter((model:any) => model.object==='model').map( (model:any) => {
-                        return { 
+                        return {
                             id: model.id,
                             name: model.id,
                             description: model.description,
@@ -70,7 +69,7 @@ export const loadModels = async (providers:IConfigProvider[]) => {
                     const respMistral = await fetch('https://api.mistral.ai/v1/models', { headers: { Authorization: 'Bearer ' + provider.key}})
                     const dataMistral = await respMistral.json()
                     provider.models = dataMistral.data.filter((model:any) => model.object==='model').map( (model:any) => {
-                        return { 
+                        return {
                             id: model.id,
                             name: model.id,
                             description: model.description,
@@ -95,13 +94,13 @@ export const loadModels = async (providers:IConfigProvider[]) => {
                     ]
                     break
                 default:
-                    logWarning(ELogComponent.CHANNEL, `Pinocchio: provider '${provider.name}' is not implemented in channel, will not be available.`)
+                    console.warn(`Pinocchio: provider '${provider.name}' is not implemented in channel, will not be available.`)
             }
-            logInfo(ELogComponent.CHANNEL, `Pinocchio: '${provider.name}' provider added ${provider.models.length} models`)
+            console.log(`Pinocchio: '${provider.name}' provider added ${provider.models.length} models`)
         }
         catch (err) {
-            logError(ELogComponent.CHANNEL, `Pinocchio: error loading models from LLM provider '${provider.name}'`)
-            logError(ELogComponent.CHANNEL, err)
+            console.error(`Pinocchio: error loading models from LLM provider '${provider.name}'`)
+            console.error(err)
         }
     }
 }

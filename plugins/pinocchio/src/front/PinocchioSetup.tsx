@@ -1,5 +1,5 @@
 import React from 'react'
-import { ISetupProps } from '../IChannel'
+import { ISetupProps } from './types'
 import { AutoFixHigh } from '@mui/icons-material'
 
 const PinocchioIcon = <AutoFixHigh />

@@ -1,7 +1,6 @@
 import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
 
-export const kindsAvailable = ['Pod', 'Deployment', 'DaemonSet', 'StatefulSet', 'ReplicaSet', 'Job', 'CronJob','ReplicationController', 'Service', 'Ingress', 'HTTPRoute']  //+++ move this to a backend API
-
+export const kindsAvailable = ['Pod', 'Deployment', 'DaemonSet', 'StatefulSet', 'ReplicaSet', 'Job', 'CronJob','ReplicationController', 'Service', 'Ingress', 'HTTPRoute']
 
 export enum EPinocchioCommand {
     CONFIGGET = 'configget',
@@ -22,7 +21,7 @@ export interface IPlaygroundRequest {
     tools: string[]
     promptType: string
     system: string
-    prompt: string   
+    prompt: string
 }
 
 export interface IAnalysis {

@@ -1,12 +1,9 @@
 import esbuild from 'esbuild'
 import fs from 'fs'
 import path from 'path'
-import { createRequire } from 'module'
-
-const require = createRequire(import.meta.url)
 
 // Maps external packages to window.__kwirth__ globals so bundles don't include React/MUI/kwirth-common.
-// three is NOT externalized — it gets bundled because the host does not provide it.
+// AI SDK and other dependencies are bundled into back.js since the host does not provide them.
 const kwirthGlobalsPlugin = {
     name: 'kwirth-globals',
     setup(build) {
@@ -32,14 +29,15 @@ const kwirthGlobalsPlugin = {
 fs.mkdirSync('dist', { recursive: true })
 
 // Build front.js — IIFE that registers the channel via window.__kwirth_plugins__
-// three.js is bundled (not externalized) since the host does not provide it.
+// React/MUI/kwirth-common are externalized via globals.
+// kwirth-common-front is bundled (only TypeScript interfaces, no runtime cost).
 await esbuild.build({
     entryPoints: ['src/front/index.ts'],
     bundle: true,
     format: 'iife',
     outfile: 'dist/front.js',
     plugins: [kwirthGlobalsPlugin],
-    loader: { '.tsx': 'tsx', '.ts': 'ts' },
+    loader: { '.tsx': 'tsx', '.ts': 'tsx' },
     jsx: 'transform',
     jsxFactory: 'React.createElement',
     jsxFragment: 'React.Fragment',
@@ -49,7 +47,7 @@ await esbuild.build({
 console.log('Built dist/front.js')
 
 // Build back.js — CommonJS bundle for Node.js.
-// kwirth-common is bundled. No other externals needed.
+// All AI SDK packages (ai, @ai-sdk/*, @openrouter/*), nunjucks, lodash and zod are bundled.
 await esbuild.build({
     entryPoints: ['src/back/index.ts'],
     bundle: true,
@@ -59,6 +57,7 @@ await esbuild.build({
     outfile: 'dist/back.js',
     loader: { '.ts': 'ts' },
     minify: false,
+    external: ['cpu-features'],
 })
 console.log('Built dist/back.js')
 
@@ -73,4 +72,4 @@ const distMeta = {
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
-console.log('Done. Run: tar -czf topology-plugin.tgz -C dist .')
+console.log('Done. Run: tar -czf pinocchio-plugin.tgz -C dist .')

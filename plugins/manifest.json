@@ -14,5 +14,13 @@
         "description": "Displays Kubernetes artifacts topology in 3D",
         "icon": "AccountTree",
         "url": "https://github.com/kwirthmagnify/kwirth/raw/refs/heads/master/plugins/topology/topology-plugin.tgz"
+    },
+    {
+        "id": "pinocchio",
+        "name": "Pinocchio",
+        "version": "1.0.0",
+        "description": "Adds AI capabilities to your K8s. Will help you on analyzing workloads, security, capacity... using an external LLM",
+        "icon": "AutoFixHigh",
+        "url": "https://github.com/kwirthmagnify/kwirth/raw/refs/heads/master/plugins/pinocchio/pinocchio-plugin.tgz"
     }
 ]

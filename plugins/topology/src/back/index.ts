@@ -405,16 +405,13 @@ export class TopologyChannel {
         const uid = pod.metadata?.uid ?? ''
         if (ctx.included.has(uid)) return
         ctx.included.add(uid)
-
         const podNs = pod.metadata?.namespace
-
         for (const vol of pod.spec?.volumes ?? []) {
             const claimName = vol.persistentVolumeClaim?.claimName
             if (!claimName) continue
             const pvc = ctx.allPvcs.find((p: any) => p.metadata?.name === claimName && p.metadata?.namespace === podNs)
             if (pvc?.metadata?.uid) ctx.included.add(pvc.metadata.uid)
         }
-
         for (const ownerRef of pod.metadata?.ownerReferences ?? []) {
             if (ownerRef.kind === 'ReplicaSet') {
                 const rs = ctx.allRs.find((r: any) => r.metadata?.uid === ownerRef.uid)
@@ -446,7 +443,6 @@ export class TopologyChannel {
                 }
             }
         }
-
         const podLabels = pod.metadata?.labels ?? {}
         for (const svc of ctx.allSvcs) {
             if (svc.metadata?.namespace !== podNs) continue
@@ -697,11 +693,7 @@ export class TopologyChannel {
         }
     }
 
-    private edgesForController(
-        matchLabels: Record<string, string> | undefined,
-        namespace:   string | undefined,
-        services:    any[]
-    ): Array<{ targetUid: string; label: string }> {
+    private edgesForController(matchLabels: Record<string, string> | undefined, namespace: string | undefined, services: any[]): Array<{ targetUid: string; label: string }> {
         if (!matchLabels) return []
         return services
             .filter(s => {
@@ -729,30 +721,14 @@ export class TopologyChannel {
     private emit(ws: WebSocket, inst: ITopologyInstance, partial: Partial<ITopologyWsMessage>, topoAction: TTopoAction): void {
         if (inst.paused) return
         const msg: ITopologyWsMessage = {
-            action:        EInstanceMessageAction.NONE,
-            flow:          EInstanceMessageFlow.UNSOLICITED,
-            channel:       'topology',
-            instance:      inst.instanceId,
-            type:          EInstanceMessageType.DATA,
-            topoAction,
-            kind:          partial.kind!,
-            uid:           partial.uid!,
-            name:          partial.name!,
-            namespace:     partial.namespace!,
-            status:        partial.status!,
-            labels:        partial.labels ?? {},
-            annotations:   partial.annotations,
-            replicas:      partial.replicas,
-            readyReplicas: partial.readyReplicas,
-            image:         partial.image,
-            ports:         partial.ports,
-            host:          partial.host,
-            storageClass:  partial.storageClass,
-            capacity:      partial.capacity,
-            accessModes:   partial.accessModes,
-            edges:         partial.edges,
-            ownerUids:     partial.ownerUids,
-            containers:    partial.containers,
+            action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED,
+            channel: 'topology', instance: inst.instanceId, type: EInstanceMessageType.DATA,
+            topoAction, kind: partial.kind!, uid: partial.uid!, name: partial.name!,
+            namespace: partial.namespace!, status: partial.status!, labels: partial.labels ?? {},
+            annotations: partial.annotations, replicas: partial.replicas, readyReplicas: partial.readyReplicas,
+            image: partial.image, ports: partial.ports, host: partial.host,
+            storageClass: partial.storageClass, capacity: partial.capacity, accessModes: partial.accessModes,
+            edges: partial.edges, ownerUids: partial.ownerUids, containers: partial.containers,
         }
         try { ws.send(JSON.stringify(msg)) }
         catch (err) { console.warn('[TopologyChannel] send error', err) }

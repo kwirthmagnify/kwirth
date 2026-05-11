@@ -2,17 +2,35 @@ import { tool } from "ai"
 import z from "zod"
 import { exec } from "child_process"
 import { promisify } from "util"
-import { ClusterInfo, INodeInfo } from "../../model/ClusterInfo"
-import { IMetricsCluster } from "../../providers/metrics/IMetricsModel"
-import { mapToJson } from "../../tools/Utils"
 
 const execAsync = promisify(exec)
 
+function mapToJson(data: any): any {
+    if (data instanceof Map) {
+        const obj: Record<string, any> = {}
+        for (const [key, value] of data.entries()) {
+            obj[String(key)] = mapToJson(value)
+        }
+        return obj
+    }
+    if (Array.isArray(data)) {
+        return data.map(mapToJson)
+    }
+    if (data !== null && typeof data === 'object') {
+        const newObj: Record<string, any> = {}
+        for (const key of Object.keys(data)) {
+            newObj[key] = mapToJson(data[key])
+        }
+        return newObj
+    }
+    return data
+}
+
 export interface IToolContext {
     origin: string
-    nodes: Map<string, INodeInfo>
-    clusterInfo: ClusterInfo
-    clusterMetrics: IMetricsCluster[]
+    nodes: Map<string, any>
+    clusterInfo: any
+    clusterMetrics: any[]
     trace: (toolName: string, args: Record<string, unknown>) => void
 }
 
@@ -43,11 +61,11 @@ export const createTools = (context: IToolContext) => {
                         vcpus: context.clusterInfo.vcpus,
                         memoryGB: Math.round(context.clusterInfo.memory / 1024 / 1024 / 1024 * 100) / 100,
                         nodeCount: resp.items.length,
-                        nodes: resp.items.map(n => ({
+                        nodes: resp.items.map((n: any) => ({
                             name: n.metadata?.name,
                             cpu: n.status?.capacity?.['cpu'],
                             memoryKi: n.status?.capacity?.['memory'],
-                            ready: n.status?.conditions?.find(c => c.type === 'Ready')?.status === 'True',
+                            ready: n.status?.conditions?.find((c: any) => c.type === 'Ready')?.status === 'True',
                             unschedulable: n.spec?.unschedulable ?? false
                         }))
                     }
@@ -74,33 +92,33 @@ export const createTools = (context: IToolContext) => {
                         namespace ? context.clusterInfo.coreApi.listNamespacedService({ namespace }) : context.clusterInfo.coreApi.listServiceForAllNamespaces()
                     ])
                     return {
-                        deployments: deploymentsResp.items.map(d => ({
+                        deployments: deploymentsResp.items.map((d: any) => ({
                             name: d.metadata?.name,
                             namespace: d.metadata?.namespace,
                             replicas: d.spec?.replicas,
                             readyReplicas: d.status?.readyReplicas ?? 0,
                             availableReplicas: d.status?.availableReplicas ?? 0
                         })),
-                        statefulSets: statefulSetsResp.items.map(s => ({
+                        statefulSets: statefulSetsResp.items.map((s: any) => ({
                             name: s.metadata?.name,
                             namespace: s.metadata?.namespace,
                             replicas: s.spec?.replicas,
                             readyReplicas: s.status?.readyReplicas ?? 0
                         })),
-                        daemonSets: daemonSetsResp.items.map(d => ({
+                        daemonSets: daemonSetsResp.items.map((d: any) => ({
                             name: d.metadata?.name,
                             namespace: d.metadata?.namespace,
                             desired: d.status?.desiredNumberScheduled,
                             ready: d.status?.numberReady
                         })),
-                        pods: podsResp.items.map(p => ({
+                        pods: podsResp.items.map((p: any) => ({
                             name: p.metadata?.name,
                             namespace: p.metadata?.namespace,
                             nodeName: p.spec?.nodeName,
                             phase: p.status?.phase,
-                            ready: p.status?.conditions?.find(c => c.type === 'Ready')?.status === 'True'
+                            ready: p.status?.conditions?.find((c: any) => c.type === 'Ready')?.status === 'True'
                         })),
-                        services: servicesResp.items.map(s => ({
+                        services: servicesResp.items.map((s: any) => ({
                             name: s.metadata?.name,
                             namespace: s.metadata?.namespace,
                             type: s.spec?.type,
@@ -130,25 +148,25 @@ export const createTools = (context: IToolContext) => {
                     ])
                     return {
                         namespace,
-                        pods: podsResp.items.map(p => ({
+                        pods: podsResp.items.map((p: any) => ({
                             name: p.metadata?.name,
                             phase: p.status?.phase,
                             nodeName: p.spec?.nodeName,
-                            ready: p.status?.conditions?.find(c => c.type === 'Ready')?.status === 'True',
-                            restartCount: p.status?.containerStatuses?.reduce((sum, cs) => sum + cs.restartCount, 0) ?? 0
+                            ready: p.status?.conditions?.find((c: any) => c.type === 'Ready')?.status === 'True',
+                            restartCount: p.status?.containerStatuses?.reduce((sum: number, cs: any) => sum + cs.restartCount, 0) ?? 0
                         })),
-                        deployments: deploymentsResp.items.map(d => ({
+                        deployments: deploymentsResp.items.map((d: any) => ({
                             name: d.metadata?.name,
                             replicas: d.spec?.replicas,
                             readyReplicas: d.status?.readyReplicas ?? 0,
                             image: d.spec?.template?.spec?.containers?.[0]?.image
                         })),
-                        services: servicesResp.items.map(s => ({
+                        services: servicesResp.items.map((s: any) => ({
                             name: s.metadata?.name,
                             type: s.spec?.type,
                             clusterIP: s.spec?.clusterIP
                         })),
-                        configMaps: configMapsResp.items.map(cm => cm.metadata?.name)
+                        configMaps: configMapsResp.items.map((cm: any) => cm.metadata?.name)
                     }
                 }
                 catch (err: any) {
@@ -187,8 +205,8 @@ export const createTools = (context: IToolContext) => {
                 context.trace('get_node_usage', { nodeName: nodeName ?? '*' })
                 if (context.clusterMetrics.length === 0) return { error: 'No metrics available yet' }
                 const latest = context.clusterMetrics[context.clusterMetrics.length - 1]
-                const nodes = nodeName ? latest.nodes.filter(n => n.name === nodeName) : latest.nodes
-                return nodes.map(node => ({
+                const nodes = nodeName ? latest.nodes.filter((n: any) => n.name === nodeName) : latest.nodes
+                return nodes.map((node: any) => ({
                     name: node.name,
                     cpuMillicores: Math.round((node.summary?.cpu?.usageNanoCores ?? 0) / 1_000_000),
                     memoryMB: Math.round((node.summary?.memory?.workingSetBytes ?? 0) / 1024 / 1024),
@@ -215,7 +233,7 @@ export const createTools = (context: IToolContext) => {
                     const deployResp = await context.clusterInfo.appsApi.readNamespacedDeployment({ name, namespace })
                     const labelSelector = Object.entries(deployResp.spec?.selector?.matchLabels ?? {}).map(([k, v]) => `${k}=${v}`).join(',')
                     const podsResp = await context.clusterInfo.coreApi.listNamespacedPod({ namespace, labelSelector })
-                    const podNames = new Set(podsResp.items.map(p => p.metadata?.name))
+                    const podNames = new Set(podsResp.items.map((p: any) => p.metadata?.name))
 
                     let totalCpuNanoCores = 0
                     let totalMemoryBytes = 0
@@ -254,7 +272,7 @@ export const createTools = (context: IToolContext) => {
             execute: async ({ count = 5 }) => {
                 context.trace('get_prev_cluster_usage', { count })
                 if (context.clusterMetrics.length === 0) return { error: 'No metrics available yet' }
-                return context.clusterMetrics.slice(-count).map(reading => ({
+                return context.clusterMetrics.slice(-count).map((reading: any) => ({
                     vcpus: reading.cluster.vcpus,
                     memoryGB: Math.round(reading.cluster.memory / 1024 / 1024 / 1024 * 100) / 100,
                     cpuUsagePercent: Math.round(reading.cluster.cpuUsage * 100) / 100,
@@ -274,8 +292,8 @@ export const createTools = (context: IToolContext) => {
             execute: async ({ nodeName, count = 5 }) => {
                 context.trace('get_prev_node_usage', { nodeName: nodeName ?? '*', count })
                 if (context.clusterMetrics.length === 0) return { error: 'No metrics available yet' }
-                return context.clusterMetrics.slice(-count).map(reading => ({
-                    nodes: (nodeName ? reading.nodes.filter(n => n.name === nodeName) : reading.nodes).map(node => ({
+                return context.clusterMetrics.slice(-count).map((reading: any) => ({
+                    nodes: (nodeName ? reading.nodes.filter((n: any) => n.name === nodeName) : reading.nodes).map((node: any) => ({
                         name: node.name,
                         cpuMillicores: Math.round((node.summary?.cpu?.usageNanoCores ?? 0) / 1_000_000),
                         memoryMB: Math.round((node.summary?.memory?.workingSetBytes ?? 0) / 1024 / 1024),
@@ -300,9 +318,9 @@ export const createTools = (context: IToolContext) => {
                     const deployResp = await context.clusterInfo.appsApi.readNamespacedDeployment({ name, namespace })
                     const labelSelector = Object.entries(deployResp.spec?.selector?.matchLabels ?? {}).map(([k, v]) => `${k}=${v}`).join(',')
                     const podsResp = await context.clusterInfo.coreApi.listNamespacedPod({ namespace, labelSelector })
-                    const podNames = new Set(podsResp.items.map(p => p.metadata?.name))
+                    const podNames = new Set(podsResp.items.map((p: any) => p.metadata?.name))
 
-                    return context.clusterMetrics.slice(-count).map(reading => {
+                    return context.clusterMetrics.slice(-count).map((reading: any) => {
                         let totalCpuNanoCores = 0
                         let totalMemoryBytes = 0
                         let podCount = 0
@@ -340,7 +358,7 @@ export const createTools = (context: IToolContext) => {
             execute: async ({ namespace, count = 5 }) => {
                 context.trace('get_prev_space_data', { namespace, count })
                 if (context.clusterMetrics.length === 0) return { error: 'No metrics available yet' }
-                return context.clusterMetrics.slice(-count).map(reading => {
+                return context.clusterMetrics.slice(-count).map((reading: any) => {
                     let totalCpuNanoCores = 0
                     let totalMemoryBytes = 0
                     let podCount = 0

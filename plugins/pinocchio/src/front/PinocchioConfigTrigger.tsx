@@ -2,9 +2,7 @@ import React, { useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, Switch, TextareaAutosize, TextField, Typography } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import { IConfigTrigger, IConfigTriggerVersion, IPinocchioConfig } from './PinocchioConfig'
-import { objectClone } from '../magnify/Tools'
-import { useKeyboard } from '../../tools/useKeyboard'
-import { MsgBoxButtons, MsgBoxOkWarning, MsgBoxYesNo } from '../../tools/MsgBox'
+import { objectClone, useKeyboard, MsgBoxButtons, MsgBoxOkWarning, MsgBoxYesNo } from './utils'
 
 interface IPinocchioLlmConfigProps {
     onClose: (pc: IPinocchioConfig | undefined) => void

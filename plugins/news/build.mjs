@@ -50,7 +50,7 @@ console.log('Built dist/front.js')
 // kwirth-common must be bundled (it won't be findable from a temp dir at runtime).
 // express is marked external because it's always present in the host process.
 await esbuild.build({
-    entryPoints: ['src/back.ts'],
+    entryPoints: ['src/back/index.ts'],
     bundle: true,
     format: 'cjs',
     platform: 'node',
