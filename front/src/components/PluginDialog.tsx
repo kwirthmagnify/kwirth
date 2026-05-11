@@ -1,7 +1,7 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import * as MuiIcons from '@mui/icons-material'
-import { CheckCircle, Delete, Download, Extension, Refresh } from '@mui/icons-material'
+import { CheckCircle, Delete, Download, Extension, FolderOpen, Refresh } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 
@@ -41,6 +41,8 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     const [error, setError] = useState<string | undefined>()
     const [customUrl, setCustomUrl] = useState('')
     const [installingCustom, setInstallingCustom] = useState(false)
+    const [installingFile, setInstallingFile] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         loadInstalled()
@@ -130,6 +132,34 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         }
     }
 
+    const installFromFile = async (file: File) => {
+        setError(undefined)
+        setInstallingFile(true)
+        try {
+            const res = await fetch(`${backendUrl}/plugins/upload`, {
+                method: 'POST',
+                headers: {
+                    Authorization: accessString ? `Bearer ${accessString}` : '',
+                    'Content-Type': 'application/octet-stream',
+                    'X-Kwirth-App': 'true'
+                },
+                body: file
+            })
+            if (!res.ok) {
+                const body = await res.json()
+                throw new Error(body.error ?? `HTTP ${res.status}`)
+            }
+            const meta: IInstalledPlugin = await res.json()
+            await loadInstalled()
+            props.onPluginLoaded(meta.id)
+        } catch (err) {
+            setError(`Failed to install plugin: ${err}`)
+        } finally {
+            setInstallingFile(false)
+            if (fileInputRef.current) fileInputRef.current.value = ''
+        }
+    }
+
     const isInstalled = (id: string) => installed.some(p => p.id === id)
 
     const resolveIcon = (iconName?: string): React.ReactElement => {
@@ -180,12 +210,12 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                         ))
                     }
 
-                    <Typography variant='subtitle2' sx={{ pt: 1 }}>Install from local path or URL</Typography>
+                    <Typography variant='subtitle2' sx={{ pt: 1 }}>Install from URL</Typography>
                     <Stack direction='row' spacing={1} alignItems='center'>
                         <TextField
                             size='small'
                             fullWidth
-                            placeholder='C:/path/to/plugin.tgz  or  https://...'
+                            placeholder='https://...'
                             value={customUrl}
                             onChange={e => setCustomUrl(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') installFromUrl() }}
@@ -198,6 +228,26 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                             </span>
                         </Tooltip>
                     </Stack>
+
+                    <Typography variant='subtitle2' sx={{ pt: 1 }}>Install from local file</Typography>
+                    <Box>
+                        <input
+                            ref={fileInputRef}
+                            type='file'
+                            accept='.tgz,application/gzip'
+                            style={{ display: 'none' }}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) installFromFile(f) }}
+                        />
+                        <Button
+                            variant='outlined'
+                            size='small'
+                            startIcon={installingFile ? <CircularProgress size={14} /> : <FolderOpen fontSize='small' />}
+                            disabled={installingFile}
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            {installingFile ? 'Installing…' : 'Browse .tgz file…'}
+                        </Button>
+                    </Box>
 
                     <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
                         <Typography variant='subtitle2' flex={1}>Available plugins</Typography>

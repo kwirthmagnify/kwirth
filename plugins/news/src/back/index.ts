@@ -1,7 +1,7 @@
 // Standalone backend plugin for the News channel.
 // Adapted from back/src/channels/news/NewsChannel.ts.
 // Does not depend on ClusterInfo or internal logging tools.
-import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject } from '@kwirthmagnify/kwirth-common'
 import https from 'https'
 import http from 'http'
 
@@ -47,10 +47,10 @@ class NewsChannel {
     readonly channelId = 'news'
     readonly requirements = { storage: false, providers: [] }
     clusterInfo: any
-    backChannelObject: any
+    backChannelObject: IBackChannelObject
     webSockets: { ws: WebSocket; lastRefresh: number; instances: IInstance[] }[] = []
 
-    constructor(clusterInfo: any, backChannelObject: any) {
+    constructor(clusterInfo: any, backChannelObject: IBackChannelObject) {
         this.clusterInfo = clusterInfo
         this.backChannelObject = backChannelObject
     }
@@ -233,7 +233,7 @@ class NewsChannel {
                     }
                 }
             } catch (err) {
-                console.log(`[news-plugin] error polling ${category}: ${err}`)
+                this.backChannelObject.logError?.(`[news] error polling ${category}: ${err}`)
             }
         }
     }

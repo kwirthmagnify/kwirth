@@ -50,6 +50,10 @@ interface IBackChannelRequirements {
 interface IBackChannelObject {
     writeStorage?(id: string, secret: boolean, data: any): Promise<void>
     readStorage?(id: string, secret: boolean): Promise<any>
+    logInfo?(message: unknown): void
+    logTrace?(message: unknown): void
+    logWarning?(message: unknown): void
+    logError?(message: unknown): void
 }
 
 export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, IBackChannelRequirements, IBackChannelObject }

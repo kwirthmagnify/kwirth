@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject } from '@kwirthmagnify/kwirth-common'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage, IPlaygroundRequest } from './PinocchioConfig'
 import { Request, Response } from 'express'
 import { z } from 'zod'
@@ -62,7 +62,7 @@ export class PinocchioChannel {
         providers: ['events', 'business', 'metrics']
     }
     clusterInfo: any
-    backChannelObject: any
+    backChannelObject: IBackChannelObject
     connections: {
         webSocket:WebSocket,
         lastRefresh: number,
@@ -78,7 +78,7 @@ export class PinocchioChannel {
     playgroundTrigger: IConfigTriggerVersion | undefined = undefined
     startTime: number
 
-    constructor (clusterInfo: any, backChannelObject: any) {
+    constructor (clusterInfo: any, backChannelObject: IBackChannelObject) {
         this.clusterInfo = clusterInfo
         this.backChannelObject = backChannelObject
         this.startTime = Date.now()
@@ -102,7 +102,7 @@ export class PinocchioChannel {
         if (provs) this.providers = provs
         let config = await this.backChannelObject.readStorage!('pinocchio-config', false) as IPinocchioConfig
         if (config) this.pinocchioConfig = config
-        loadModels(this.providers)
+        loadModels(this.providers, this.backChannelObject)
     }
 
     getChannelData = (): BackChannelData => {
@@ -166,7 +166,7 @@ export class PinocchioChannel {
                 }
                 break
             default:
-                console.warn(`Received invalid trigger type: '${trigger.trigger}'`)
+                this.backChannelObject.logWarning?.(`[pinocchio] received invalid trigger type: '${trigger.trigger}'`)
                 return undefined
         }
 
@@ -179,7 +179,7 @@ export class PinocchioChannel {
             nodes: await this.clusterInfo.getNodes(),
             clusterInfo: this.clusterInfo,
             clusterMetrics: this.clusterMetrics,
-            trace: (toolName, args) => console.log(`[TOOL] ${toolName} ${JSON.stringify(args)}`)
+            trace: (toolName, args) => this.backChannelObject.logTrace?.(`[pinocchio] tool ${toolName} ${JSON.stringify(args)}`)
         }
         let tools: any = {}
         for (let toolName of version.tools) {
@@ -294,7 +294,7 @@ export class PinocchioChannel {
         switch(providerId) {
             case 'business':
                 let businessEvent = event as IBusinessProviderEvent
-                console.log('[Pinocchio] business event', event)
+                this.backChannelObject.logInfo?.(`[pinocchio] business event: ${JSON.stringify(event)}`)
 
                 if (this.playgroundTrigger) {
                     const lastEvt = businessEvent.last?.event
@@ -331,8 +331,7 @@ export class PinocchioChannel {
                     }
                     catch (err:any) {
                         let message = `Pinocchio analysis ended in error when processing 'business' while analyzing`
-                        console.log(message)
-                        console.log(err)
+                        this.backChannelObject.logError?.(`${message}: ${err}`)
                         this.broadcastMessage(message)
                         this.broadcastMessage(JSON.stringify(err))
                     }
@@ -350,11 +349,11 @@ export class PinocchioChannel {
                     try {
                         for (let t of this.pinocchioConfig.triggers.filter(t => t.trigger === 'artifact' && t.kind === eventsEvent.obj.kind)) {
                           for (let version of t.versions.filter(v => v.enabled)) {
-                            console.log(`[Pinocchio] added ${eventsEvent.obj.kind} ${eventsEvent.obj.metadata?.name}`)
+                            this.backChannelObject.logInfo?.(`[pinocchio] added ${eventsEvent.obj.kind} ${eventsEvent.obj.metadata?.name}`)
                             if (eventsEvent.obj?.metadata?.creationTimestamp) {
                                 let creationTs = Date.parse(eventsEvent.obj?.metadata?.creationTimestamp)
                                 if (creationTs<this.startTime) {
-                                    console.warn(`Bypass object analysis, creation timestamp is previous for object ${eventsEvent.obj?.metadata?.name} and kind ${t.kind} for LLM ${version.llm}`)
+                                    this.backChannelObject.logWarning?.(`[pinocchio] bypass object analysis, creation timestamp is previous for object ${eventsEvent.obj?.metadata?.name} and kind ${t.kind} for LLM ${version.llm}`)
                                     continue
                                 }
                             }
@@ -397,8 +396,7 @@ export class PinocchioChannel {
                             }
                             catch (err:any) {
                                 let message = `Pinocchio analysis ended in error while processing 'events' when analyzing '${eventsEvent.obj.metadata.name}' in namespace '${eventsEvent.obj.metadata.namespace}' [Kind:${eventsEvent.obj.kind}]`
-                                console.log(message)
-                                console.log(err)
+                                this.backChannelObject.logError?.(`${message}: ${err}`)
                                 try {
                                     let msg = _.get(err, errorPath)
                                 }
@@ -416,13 +414,12 @@ export class PinocchioChannel {
                         }
                     }
                     catch (err) {
-                        console.error('[Pinocchio] Error in Pinocchio')
-                        console.error(err)
+                        this.backChannelObject.logError?.(`[pinocchio] error in processProviderEvent: ${err}`)
                     }
                 }
                 break
             default:
-                console.error(`[Pinocchio] Ignored provider event from ${providerId} to channel pinocchio`)
+                this.backChannelObject.logWarning?.(`[pinocchio] ignored provider event from '${providerId}'`)
         }
     }
 
@@ -448,7 +445,7 @@ export class PinocchioChannel {
             let instance = this.getInstance(webSocket, instanceMessage.instance)
             if (!instance) {
                 this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, `Instance not found`)
-                console.warn(`[Pinocchio] Instance ${instanceMessage.instance} not found`)
+                this.backChannelObject.logWarning?.(`[pinocchio] instance ${instanceMessage.instance} not found`)
                 return false
             }
             let pinocchioMessage = instanceMessage as IPinocchioMessage
@@ -494,7 +491,7 @@ export class PinocchioChannel {
                     let provs:IConfigProvider[] = pinocchioMessage.data
                     this.providers = provs
                     await this.backChannelObject.writeStorage!('pinocchio-providers', true, provs)
-                    await loadModels(this.providers)
+                    await loadModels(this.providers, this.backChannelObject)
                     this.executeProvidersGet()
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Providers updated')
                     break
@@ -607,7 +604,7 @@ export class PinocchioChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        console.log(`[Pinocchio] Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
+        this.backChannelObject.logInfo?.(`[pinocchio] start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
         let socket = this.connections.find(s => s.webSocket === webSocket)
         if (!socket) {
@@ -660,15 +657,15 @@ export class PinocchioChannel {
                     instances.splice(pos,1)
                 }
                 else {
-                    console.warn(`[Pinocchio] Instance ${instanceId} not found, cannot delete`)
+                    this.backChannelObject.logWarning?.(`[pinocchio] instance ${instanceId} not found, cannot delete`)
                 }
             }
             else {
-                console.warn('[Pinocchio] There are no Pinocchio Instances on websocket')
+                this.backChannelObject.logWarning?.('[pinocchio] there are no instances on websocket')
             }
         }
         else {
-            console.warn('[Pinocchio] WebSocket not found on Pinocchio')
+            this.backChannelObject.logWarning?.('[pinocchio] websocket not found on removeInstance')
         }
     }
 
@@ -686,7 +683,7 @@ export class PinocchioChannel {
             this.connections.splice(pos,1)
         }
         else {
-            console.log('[Pinocchio] WebSocket not found on Pinocchio for remove')
+            this.backChannelObject.logWarning?.('[pinocchio] websocket not found for removeConnection')
         }
     }
 
@@ -697,7 +694,7 @@ export class PinocchioChannel {
             return true
         }
         else {
-            console.log('[Pinocchio] WebSocket not found')
+            this.backChannelObject.logWarning?.('[pinocchio] websocket not found on refreshConnection')
             return false
         }
     }
@@ -853,14 +850,14 @@ export class PinocchioChannel {
             if (instances) {
                 let instanceIndex = instances.findIndex(t => t.instanceId === instanceId)
                 if (instanceIndex>=0) return instances[instanceIndex]
-                console.log('[Pinocchio] Instance not found')
+                this.backChannelObject.logWarning?.('[pinocchio] instance not found')
             }
             else {
-                console.log('[Pinocchio] There are no Instances on websocket')
+                this.backChannelObject.logWarning?.('[pinocchio] there are no instances on websocket')
             }
         }
         else {
-            console.log('[Pinocchio] WebSocket not found')
+            this.backChannelObject.logWarning?.('[pinocchio] websocket not found in getInstance')
         }
         return undefined
     }

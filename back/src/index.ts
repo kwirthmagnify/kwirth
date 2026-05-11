@@ -61,7 +61,7 @@ import { TickProvider } from './providers/tick/TickProvider'
 import { BusinessProvider } from './providers/business/BusinessProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
 
-import { ELogComponent, logError, logInfo, logWarning } from './tools/Logging'
+import { ELogComponent, logError, logInfo, logTrace, logWarning } from './tools/Logging'
 import { PluginManager } from './tools/PluginManager'
 import { PluginApi } from './api/PluginApi'
 const fs = require('fs')
@@ -1175,6 +1175,21 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
                 try {
                     const channelInstance = createChannelInstance(ChannelClass, activeRI.clusterInfo, activeRI.backChannelObject)
                     if (channelInstance) {
+                        for (const provId of channelInstance.requirements.providers) {
+                            if (!activeRI.clusterInfo.providers.find(p => p.id === provId)) {
+                                const provConstructor = registeredProviders.get(provId)
+                                if (provConstructor) {
+                                    const providerInstance = createProviderInstance(provConstructor, activeRI.clusterInfo, activeRI.kwirthData)
+                                    if (providerInstance) {
+                                        providerInstance.startProvider()
+                                        activeRI.clusterInfo.providers.push(providerInstance)
+                                        logInfo(ELogComponent.CORE, `Provider '${provId}' started for plugin '${id}'`)
+                                    }
+                                } else {
+                                    logError(ELogComponent.CORE, `Required provider '${provId}' not registered (needed by plugin '${id}')`)
+                                }
+                            }
+                        }
                         activeRI.channels.set(id, channelInstance)
                         channelInstance.startChannel()
                         if (!activeRI.kwirthData.channels.some(c => c.id === id))
@@ -1459,6 +1474,10 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstance:IRunningInstance) : Promise<void> => {
     try {
         let backChannelObject: IBackChannelObject = {
+            logInfo: (message: unknown) => logInfo(ELogComponent.CHANNEL, message),
+            logTrace: (message: unknown) => logTrace(message),
+            logWarning: (message: unknown) => logWarning(ELogComponent.CHANNEL, message),
+            logError: (message: unknown) => logError(ELogComponent.CHANNEL, message),
             writeStorage: async (id: string, secret: boolean, data: any) => {
                 if (secret) {
                     const jsonString = JSON.stringify(data);

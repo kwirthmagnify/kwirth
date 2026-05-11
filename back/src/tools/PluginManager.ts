@@ -87,6 +87,16 @@ export class PluginManager {
         }
     }
 
+    async installFromBuffer(buffer: Buffer, registeredChannels: Map<string, TChannelConstructor>): Promise<IPluginMeta> {
+        const tmpTgz = path.join(os.tmpdir(), `kwirth-plugin-upload-${Date.now()}.tgz`)
+        fs.writeFileSync(tmpTgz, buffer)
+        try {
+            return await this.install(tmpTgz, registeredChannels)
+        } finally {
+            if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz)
+        }
+    }
+
     async uninstall(id: string, registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
         registeredChannels.delete(id)
         this.installedIds = this.installedIds.filter(i => i !== id)

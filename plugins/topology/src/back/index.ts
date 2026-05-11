@@ -5,6 +5,7 @@ import {
     EInstanceMessageFlow,
     EInstanceMessageType,
     ESignalMessageLevel,
+    IBackChannelObject,
     IInstanceConfig,
     IInstanceConfigResponse,
     IInstanceMessage,
@@ -109,12 +110,12 @@ export class TopologyChannel {
     }
 
     private clusterInfo:       any
-    private backChannelObject: any
+    private backChannelObject: IBackChannelObject
     private webSockets:        ISocketEntry[] = []
     private serviceCache = new Map<string, any>()
     private pvcCache     = new Map<string, any>()
 
-    constructor(clusterInfo: any, backChannelObject: any) {
+    constructor(clusterInfo: any, backChannelObject: IBackChannelObject) {
         this.clusterInfo       = clusterInfo
         this.backChannelObject = backChannelObject
     }
@@ -731,7 +732,7 @@ export class TopologyChannel {
             edges: partial.edges, ownerUids: partial.ownerUids, containers: partial.containers,
         }
         try { ws.send(JSON.stringify(msg)) }
-        catch (err) { console.warn('[TopologyChannel] send error', err) }
+        catch (err) { this.backChannelObject.logWarning?.(`[topology] send error: ${err}`) }
     }
 
     private sendInstanceConfig(ws: WebSocket, action: EInstanceMessageAction, flow: EInstanceMessageFlow, cfg: IInstanceConfig, text: string): void {
@@ -739,7 +740,7 @@ export class TopologyChannel {
             action, flow, channel: 'topology' as any, instance: cfg.instance, type: EInstanceMessageType.SIGNAL, text,
         }
         try { ws.send(JSON.stringify(resp)) }
-        catch (err) { console.warn('[TopologyChannel] sendInstanceConfig error', err) }
+        catch (err) { this.backChannelObject.logWarning?.(`[topology] sendInstanceConfig error: ${err}`) }
     }
 
     private sendSignal(ws: WebSocket, msg: IInstanceMessage, level: ESignalMessageLevel, text: string): void {
@@ -748,7 +749,7 @@ export class TopologyChannel {
             channel: 'topology' as any, instance: msg.instance, type: EInstanceMessageType.SIGNAL, text,
         }
         try { ws.send(JSON.stringify(sig)) }
-        catch (err) { console.warn('[TopologyChannel] sendSignal error', err) }
+        catch (err) { this.backChannelObject.logWarning?.(`[topology] sendSignal error: ${err}`) }
     }
 
     private async doScale(ws: WebSocket, msg: IInstanceMessage, kind: string, ns: string, name: string, replicas: number): Promise<void> {

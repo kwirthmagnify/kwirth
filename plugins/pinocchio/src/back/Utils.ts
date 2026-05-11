@@ -1,7 +1,8 @@
+import { IBackChannelObject } from '@kwirthmagnify/kwirth-common'
 import { IConfigModel, IConfigProvider } from './PinocchioConfig'
 
-export const loadModels = async (providers: IConfigProvider[]) => {
-    console.log('Pinocchio loading models...')
+export const loadModels = async (providers: IConfigProvider[], log: IBackChannelObject) => {
+    log.logInfo?.('Pinocchio loading models...')
     for (let provider of providers) {
         try {
             switch(provider.name) {
@@ -94,13 +95,12 @@ export const loadModels = async (providers: IConfigProvider[]) => {
                     ]
                     break
                 default:
-                    console.warn(`Pinocchio: provider '${provider.name}' is not implemented in channel, will not be available.`)
+                    log.logWarning?.(`[pinocchio] provider '${provider.name}' is not implemented in channel, will not be available.`)
             }
-            console.log(`Pinocchio: '${provider.name}' provider added ${provider.models.length} models`)
+            log.logInfo?.(`[pinocchio] '${provider.name}' provider added ${provider.models.length} models`)
         }
         catch (err) {
-            console.error(`Pinocchio: error loading models from LLM provider '${provider.name}'`)
-            console.error(err)
+            log.logError?.(`[pinocchio] error loading models from LLM provider '${provider.name}': ${err}`)
         }
     }
 }

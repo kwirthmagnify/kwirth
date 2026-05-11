@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express'
+import { Router, Request, Response, raw } from 'express'
 import { PluginManager } from '../tools/PluginManager'
 import { TChannelConstructor } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo } from '../tools/Logging'
@@ -46,6 +46,20 @@ export class PluginApi {
                 res.json(meta)
             } catch (err) {
                 logError(ELogComponent.CORE, `Plugin install error: ${err}`)
+                res.status(500).json({ error: String(err) })
+            }
+        })
+
+        this.router.post('/upload', raw({ type: 'application/octet-stream', limit: '100mb' }), async (req: Request, res: Response) => {
+            if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            if (!Buffer.isBuffer(req.body)) return void res.status(400).json({ error: 'Expected binary body' })
+            try {
+                const meta = await this.pluginManager.installFromBuffer(req.body, this.registeredChannels)
+                this.callbacks.onPluginInstalled?.(meta.id)
+                logInfo(ELogComponent.CORE, `Plugin installed via upload: ${meta.id} v${meta.version}`)
+                res.json(meta)
+            } catch (err) {
+                logError(ELogComponent.CORE, `Plugin upload error: ${err}`)
                 res.status(500).json({ error: String(err) })
             }
         })
