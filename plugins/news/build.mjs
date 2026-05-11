@@ -46,7 +46,9 @@ await esbuild.build({
 })
 console.log('Built dist/front.js')
 
-// Build back.js — CommonJS bundle for Node.js (no external replacements needed)
+// Build back.js — CommonJS bundle for Node.js.
+// kwirth-common must be bundled (it won't be findable from a temp dir at runtime).
+// express is marked external because it's always present in the host process.
 await esbuild.build({
     entryPoints: ['src/back.ts'],
     bundle: true,
@@ -54,7 +56,7 @@ await esbuild.build({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
-    external: ['@kwirthmagnify/kwirth-common'],
+    external: ['express'],
     loader: { '.ts': 'ts' },
     minify: false,
 })

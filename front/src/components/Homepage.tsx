@@ -175,7 +175,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                     </span>
                                 </Tooltip>
                                 <Typography>&nbsp;</Typography>
-                                <Tooltip title={disabled? `Cannot access cluster '${tab.channelObject.clusterName}'`: `Workspace '${tab.name}' on cluster '${tab.channelObject.clusterName}'`}>
+                                <Tooltip title={disabled? `Cannot access cluster '${tab.channelObject.clusterName}'`: `'${tab.name}' on cluster '${tab.channelObject.clusterName}'`}>
                                     <Typography>{name}</Typography>
                                 </Tooltip>
                                 <Typography flexGrow={1}/>

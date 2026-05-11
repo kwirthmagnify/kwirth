@@ -42,8 +42,15 @@ export class PluginManager {
         const tmpDir = path.join(os.tmpdir(), `kwirth-plugin-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
 
+        const isLocalPath = tarGzUrl.startsWith('file://') || (!tarGzUrl.startsWith('http://') && !tarGzUrl.startsWith('https://'))
+
         try {
-            await this.downloadFile(tarGzUrl, tmpTgz)
+            if (isLocalPath) {
+                const localPath = tarGzUrl.startsWith('file://') ? new URL(tarGzUrl).pathname.replace(/^\/([A-Za-z]:)/, '$1') : tarGzUrl
+                fs.copyFileSync(localPath, tmpTgz)
+            } else {
+                await this.downloadFile(tarGzUrl, tmpTgz)
+            }
             await tar.x({ file: tmpTgz, cwd: tmpDir })
 
             const metaPath = path.join(tmpDir, 'package.json')

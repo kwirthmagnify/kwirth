@@ -17,7 +17,8 @@
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
       "Bash(npm install *)",
       "Bash(node build.mjs)",
-      "Bash(tar -czf news-plugin.tgz -C dist .)"
+      "Bash(tar -czf news-plugin.tgz -C dist .)",
+      "Bash(tar -xOf news-plugin.tgz ./back.js)"
     ]
   }
 }

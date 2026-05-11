@@ -154,7 +154,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         },
     }), [mode])
 
-    const [frontChannels] = useState<Map<string, TChannelConstructor>>(new Map())
+    const [frontChannels, setFrontChannels] = useState<Map<string, TChannelConstructor>>(new Map())
     const [user, setUser] = useState<IUser>()
     const [logged,setLogged] = useState(false)
     const [firstLogin,setFirstLogin]=useState(false)
@@ -218,19 +218,37 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [notificationMenuAnchorParent, setNotificationMenuAnchorParent] = useState<null | HTMLElement>(null)
     const notifications = useRef<INotification[]>([])
     const [resourceSelected, setResourceSelected] = useState<IResourceSelected|undefined>(undefined)
+    const [pluginVersion, setPluginVersion] = useState(0)
 
     const loadPluginFront = (id: string) => {
         const existing = document.getElementById(`kwirth-plugin-${id}`)
         if (existing) existing.remove()
         const script = document.createElement('script')
         script.id = `kwirth-plugin-${id}`
-        script.src = `${props.backendUrl}/api/plugins/${id}/front`
+        script.src = `${props.backendUrl}/plugins/${id}/front`
         script.onload = () => {
             const PluginChannel = window.__kwirth_plugins__?.[id]
-            if (PluginChannel) frontChannels.set(id, PluginChannel as TChannelConstructor)
+            if (PluginChannel) {
+                setFrontChannels(prev => new Map(prev).set(id, PluginChannel as TChannelConstructor))
+                setPluginVersion(v => v + 1)
+            }
         }
         document.head.appendChild(script)
     }
+
+    const unloadPluginFront = (id: string) => {
+        const script = document.getElementById(`kwirth-plugin-${id}`)
+        if (script) script.remove()
+        setFrontChannels(prev => { const next = new Map(prev); next.delete(id); return next })
+        setPluginVersion(v => v + 1)
+    }
+
+    useEffect(() => {
+        if (pluginVersion === 0) return
+        const cluster = clusters?.find(c => c.name === selectedClusterName)
+        if (!cluster) return
+        readClusterInfo(cluster, notify).then(() => setUsablechannels(cluster))
+    }, [pluginVersion])
 
     useEffect( () => {
         // only first time
@@ -244,12 +262,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         frontChannels.set('magnify', MagnifyChannel)
         frontChannels.set('pinocchio', PinocchioChannel)
         frontChannels.set('topology', TopologyChannel)
-
-        // Load installed plugin channels
-        fetch(`${props.backendUrl}/api/plugins`)
-            .then(r => r.json())
-            .then((plugins: { id: string }[]) => plugins.forEach(p => loadPluginFront(p.id)))
-            .catch(err => console.log(`[plugins] failed to load installed plugins: ${err}`))
     },[])
 
     useEffect(() => {
@@ -282,6 +294,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
         getClusters()
         readLoggedUserSettings()
+
+        // load front.js for already-installed plugins
+        fetch(`${backendUrl}/plugins`, addGetAuthorization(accessString))
+            .then(r => r.json())
+            .then((plugins: { id: string }[]) => plugins.forEach(p => loadPluginFront(p.id)))
+            .catch(err => console.log(`[plugins] failed to load installed plugins: ${err}`))
 
         // load user tabs
         let lastTabs = localStorage.getItem('lastTabs')
@@ -1741,7 +1759,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showManageClusters && <ManageClusters onClose={onManageClustersClosed} clusters={clusters} notify={notify}/> }
                 { showApiSecurity && <ManageApiSecurity onClose={() => setShowApiSecurity(false)} /> }
                 { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} /> }
-                { showPluginDialog && <PluginDialog onClose={() => setShowPluginDialog(false)} frontChannels={frontChannels} /> }
+                { showPluginDialog && <PluginDialog onClose={() => setShowPluginDialog(false)} onPluginLoaded={loadPluginFront} onPluginUnloaded={unloadPluginFront} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }

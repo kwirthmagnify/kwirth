@@ -90,6 +90,7 @@ interface IRunningInstance {
     secrets: ISecrets
     configMaps: IConfigMaps
     channels: Map<string,IChannel>
+    backChannelObject: IBackChannelObject
     active: boolean
     router: any
     apiKeyApi: ApiKeyApi|undefined
@@ -369,6 +370,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             secrets,
             configMaps,
             channels: new Map(),
+            backChannelObject: {},
             active: false,
             router: undefined,
             apiKeyApi: undefined
@@ -1171,7 +1173,33 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
         let manageCluster:ManageClusterApi = new ManageClusterApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, apiKeyApi)
         riRouter.use(`/managecluster`, manageCluster.router)
         if (pluginManager) {
-            let pluginApi = new PluginApi(pluginManager, registeredChannels)
+            const onPluginInstalled = (id: string) => {
+                const activeRI = runningInstances.find(r => r.active)
+                if (!activeRI) return
+                const ChannelClass = registeredChannels.get(id)
+                if (!ChannelClass) return
+                try {
+                    const channelInstance = createChannelInstance(ChannelClass, activeRI.clusterInfo, activeRI.backChannelObject)
+                    if (channelInstance) {
+                        activeRI.channels.set(id, channelInstance)
+                        channelInstance.startChannel()
+                        if (!activeRI.kwirthData.channels.some(c => c.id === id))
+                            activeRI.kwirthData.channels.push(channelInstance.getChannelData())
+                        logInfo(ELogComponent.CORE, `Plugin channel '${id}' instantiated and started`)
+                    }
+                } catch (err) {
+                    logError(ELogComponent.CORE, `Failed to instantiate plugin channel '${id}': ${err}`)
+                }
+            }
+            const onPluginUninstalled = (id: string) => {
+                const activeRI = runningInstances.find(r => r.active)
+                if (activeRI) {
+                    activeRI.channels.delete(id)
+                    activeRI.kwirthData.channels = activeRI.kwirthData.channels.filter(c => c.id !== id)
+                }
+                logInfo(ELogComponent.CORE, `Plugin channel '${id}' removed from active instance`)
+            }
+            let pluginApi = new PluginApi(pluginManager, registeredChannels, apiKeyApi, { onPluginInstalled, onPluginUninstalled })
             riRouter.use(`/plugins`, pluginApi.router)
         }
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
@@ -1467,6 +1495,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             }
         }
 
+        runningInstance.backChannelObject = backChannelObject
         await setKubernetesClusterKwirthRequirements(runningInstance, localKwirthData, runningInstance.clusterInfo, backChannelObject)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
 
