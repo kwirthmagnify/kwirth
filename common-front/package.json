@@ -1,6 +1,6 @@
 {
   "name": "@kwirthmagnify/kwirth-common-front",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Frontend channel interfaces for Kwirth plugins and channels",
   "scripts": {
     "build": "del .\\dist\\* /s /q && tsc"
@@ -18,7 +18,7 @@
   "author": "Julio Fernandez",
   "license": "ISC",
   "dependencies": {
-    "@kwirthmagnify/kwirth-common": "^0.5.0"
+    "@kwirthmagnify/kwirth-common": "^0.5.1"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

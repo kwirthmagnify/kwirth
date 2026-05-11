@@ -1,9 +1,9 @@
-import { EInstanceConfigScope, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, IInstanceMessage } from '@kwirthmagnify/kwirth-common'
-import { IChannel, IChannelObject, IChannelRequirements, IChannelMessageAction, EChannelRefreshAction } from './types'
+import { EInstanceConfigScope, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, IInstanceMessage, IChannelRequirements, IChannelMessageAction, EChannelRefreshAction } from '@kwirthmagnify/kwirth-common'
 import { INewsChannelConfig, NewsChannelConfig, NewsInstanceConfig } from './NewsConfig'
 import { INewsData, NewsData } from './NewsData'
 import { NewsSetup, NewsIcon } from './NewsSetup'
 import { NewsTabContent } from './NewsTabContent'
+import { IChannel, IChannelObject } from '@kwirthmagnify/kwirth-common-front'
 
 interface INewsMessageResponse {
     msgtype: 'newsmessageresponse'

@@ -10,8 +10,8 @@
         "pack": "node build.mjs && tar -czf topology-plugin.tgz -C dist ."
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common": "^0.5.0",
-    "@kwirthmagnify/kwirth-common-front": "^0.5.0"
+        "@kwirthmagnify/kwirth-common": "^0.5.1",
+        "@kwirthmagnify/kwirth-common-front": "^0.5.1"
     },
     "devDependencies": {
         "@mui/icons-material": "7.1.2",

@@ -1,6 +1,6 @@
 {
   "name": "@kwirthmagnify/kwirth-common",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Common interfaces for integrating applications with Kwirth",
   "scripts": {
     "build": "del .\\dist\\* /s /q && tsc"
@@ -42,6 +42,7 @@
   },
   "homepage": "https://github.com/kwirthmagnify/kwirth-common#readme",
   "dependencies": {
+    "@kwirthmagnify/kwirth-common": "^0.5.1",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
