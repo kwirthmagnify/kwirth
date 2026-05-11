@@ -144,7 +144,6 @@ export class TopologyChannel {
             kinds: ['Pod', 'Service', 'Deployment', 'StatefulSet', 'DaemonSet', 'ReplicaSet', 'Job', 'CronJob', 'Ingress', 'PersistentVolumeClaim'],
             syncInstances: false
         })
-        console.log('[TopologyChannel] subscribed to events provider')
     }
 
     processProviderEvent(providerId: string, obj: any): void {

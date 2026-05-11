@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import { FC, ReactNode } from 'react'
 import {
     EChannelRefreshAction,
     ENotifyLevel,
@@ -11,16 +11,18 @@ import {
 } from './types'
 import {
     EInstanceConfigScope,
+    EInstanceConfigView,
     EInstanceMessageAction,
     EInstanceMessageFlow,
     EInstanceMessageType,
     IInstanceMessage,
     ISignalMessage,
 } from '@kwirthmagnify/kwirth-common'
+import { getTopologyExternalHelpContent } from './TopologyMagnify'
 import { TopologyIcon, TopologySetup } from './TopologySetup'
 import { TopologyTabContent } from './TopologyTabContent'
 import { TopologyData, ITopologyData, ITopologyNode, ETopologyNodeKind, ETopologyNodeStatus } from './TopologyData'
-import { TopologyConfig, TopologyInstanceConfig, ITopologyConfig } from './TopologyConfig'
+import { TopologyConfig, TopologyInstanceConfig, ITopologyConfig, ITopologyInstanceConfig } from './TopologyConfig'
 
 interface ITopologyWsMessage {
     type:        EInstanceMessageType
@@ -458,6 +460,46 @@ export class TopologyChannel implements IChannel {
     }
 
     socketReconnect(_channelObject: IChannelObject): boolean { return false }
+
+    prepareExternalChannel(view: EInstanceConfigView, selectedResources: any[], _container: string): { data: any; config: any; instanceConfig: any; formConfig: any } {
+        const instanceConfig: ITopologyInstanceConfig = {}
+        if (view === EInstanceConfigView.POD && selectedResources.length > 0) {
+            instanceConfig.pods = selectedResources.map((f: any) => f.data.origin.metadata.name as string)
+        } else if (view === EInstanceConfigView.GROUP && selectedResources.length > 0) {
+            const kind = selectedResources[0]?.data?.origin?.kind as string
+            if (kind === 'Service')      instanceConfig.services  = selectedResources.map((f: any) => f.data.origin.metadata.name as string)
+            else if (kind === 'Ingress') instanceConfig.ingresses = selectedResources.map((f: any) => f.data.origin.metadata.name as string)
+            else                         instanceConfig.groups    = selectedResources.map((f: any) => `${f.data.origin.kind}/${f.data.origin.metadata.name}`)
+        }
+        const config = new TopologyConfig()
+        return {
+            data: new TopologyData(),
+            config,
+            instanceConfig,
+            formConfig: {
+                showOnlyRunning:   config.showOnlyRunning,
+                labelSize:         config.labelSize,
+                nodeSpacingFactor: config.nodeSpacingFactor,
+                gridColumns:       config.gridColumns,
+            },
+        }
+    }
+
+    getExternalHelpContent(): ReactNode {
+        return getTopologyExternalHelpContent()
+    }
+
+    onExternalConfigApply(channelObject: IChannelObject, values: any): boolean {
+        const cfg  = channelObject.config as ITopologyConfig
+        cfg.showOnlyRunning   = values.showOnlyRunning
+        cfg.labelSize         = values.labelSize
+        cfg.nodeSpacingFactor = values.nodeSpacingFactor
+        cfg.gridColumns       = values.gridColumns
+        const data = channelObject.data as ITopologyData
+        recomputeLayout(data.nodes, cfg.nodeSpacingFactor, cfg.gridColumns)
+        data.lastUpdated = Date.now()
+        return true
+    }
 
     private isVisible(kind: ETopologyNodeKind, cfg: ITopologyConfig): boolean {
         switch (kind) {

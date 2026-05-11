@@ -7,6 +7,7 @@ import path from 'path'
 import fs from 'fs'
 import https from 'https'
 import http from 'http'
+import zlib from 'zlib'
 
 export interface IPluginMeta {
     id: string
@@ -65,8 +66,10 @@ export class PluginManager {
             const frontJs = fs.readFileSync(frontPath, 'utf-8')
 
             await this.configMaps.write(`kwirth-plugin-${meta.id}-meta`, meta)
-            await this.configMaps.write(`kwirth-plugin-${meta.id}-back`, { code: backJs })
-            await this.configMaps.write(`kwirth-plugin-${meta.id}-front`, { code: frontJs })
+            const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')
+            await this.configMaps.write(`kwirth-plugin-${meta.id}-back`, { code: backCompressed, compressed: true })
+            const frontCompressed = zlib.gzipSync(Buffer.from(frontJs, 'utf-8')).toString('base64')
+            await this.configMaps.write(`kwirth-plugin-${meta.id}-front`, { code: frontCompressed, compressed: true })
 
             const index = await this.listInstalled()
             const existingIdx = index.findIndex(p => p.id === meta.id)
@@ -106,7 +109,8 @@ export class PluginManager {
             try {
                 const backData = await this.configMaps.read(`kwirth-plugin-${meta.id}-back`)
                 if (backData?.code) {
-                    await this.loadBackPlugin(meta.id, backData.code, registeredChannels)
+                    const backJs = backData.compressed ? zlib.gunzipSync(Buffer.from(backData.code, 'base64')).toString('utf-8') : backData.code
+                    await this.loadBackPlugin(meta.id, backJs, registeredChannels)
                 } else {
                     logError(ELogComponent.CORE, `Plugin '${meta.id}' has no stored back.js — skipping`)
                 }
@@ -118,7 +122,9 @@ export class PluginManager {
 
     async getFrontJs(id: string): Promise<string | undefined> {
         const data = await this.configMaps.read(`kwirth-plugin-${id}-front`)
-        return data?.code
+        if (!data?.code) return undefined
+        if (data.compressed) return zlib.gunzipSync(Buffer.from(data.code, 'base64')).toString('utf-8')
+        return data.code
     }
 
     private async loadBackPlugin(id: string, backJs: string, registeredChannels: Map<string, TChannelConstructor>): Promise<void> {

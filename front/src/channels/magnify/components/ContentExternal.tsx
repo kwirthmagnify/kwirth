@@ -1,37 +1,41 @@
 import { useEffect, useRef, useState } from 'react'
-import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
-import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelObject, IContentProps } from '../../IChannel'
+import { useAsync } from 'react-use'
 import { Box, DialogContent, DialogTitle, Divider, IconButton, Popover, Stack, Typography } from '@mui/material'
 import { Close, Fullscreen, FullscreenExit, Info, Minimize, PauseCircle, PinDrop, Place, PlayCircle, Settings, StopCircle } from '@mui/icons-material'
-import { ILogConfig } from '../../log/LogConfig'
-import { ILogData } from '../../log/LogData'
+
+import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
+import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelObject, IContentProps } from '../../IChannel'
 import { createChannelInstance } from '../../../tools/ChannelTools'
 import { ENotifyLevel } from '../../../tools/Global'
-import { IMetricsConfig, IMetricsInstanceConfig } from '../../metrics/MetricsConfig'
-import { IMetricsData } from '../../metrics/MetricsData'
-import { EChartType } from '../../metrics/MenuChart'
-import { IOpsData } from '../../ops/OpsData'
 import { MagnifyUserPreferences } from './MagnifyUserPreferences'
-import { IFilemanData } from '../../fileman/FilemanData'
-import { IFilemanConfig } from '../../fileman/FilemanConfig'
-import { useAsync } from 'react-use'
 import { IContentWindow } from '../MagnifyTabContent'
 import { ResizableDialog } from './ResizableDialog'
 import { FormSimple } from './FormSimple'
-import { ITrivyData } from '../../trivy/TrivyData'
 import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
+
+import { IMetricsConfig, IMetricsInstanceConfig } from '../../metrics/MetricsConfig'
+import { EMetricsConfigMode } from '../../metrics/MetricsTypes'
+import { IMetricsData } from '../../metrics/MetricsData'
+import { EChartType } from '../../metrics/MenuChart'
+
+import { ESwitchKey, IOpsConfig } from '../../ops/OpsConfig'
+import { IOpsData } from '../../ops/OpsData'
+import { TerminalManager } from '../../ops/Terminal/TerminalManager'
+import { IOpsInstanceConfig } from '../../ops/OpsTypes'
+
+import { IFilemanData } from '../../fileman/FilemanData'
+import { IFilemanConfig } from '../../fileman/FilemanConfig'
+
+import { ITrivyData } from '../../trivy/TrivyData'
+import { ITrivyInstanceConfig } from '../../trivy/TrivyTypes'
+
 import { IPinocchioInstanceConfig } from '../../pinocchio/PinocchioConfig'
 import { IPinocchioData } from '../../pinocchio/PinocchioData'
-import { ITopologyConfig, ITopologyInstanceConfig, TopologyConfig } from '../../topology/TopologyConfig'
-import { ITopologyData, TopologyData } from '../../topology/TopologyData'
-import { recomputeLayout } from '../../topology/TopologyChannel'
-import { TerminalManager } from '../../ops/Terminal/TerminalManager'
-import { ESwitchKey, IOpsConfig } from '../../ops/OpsConfig'
-import { ITrivyInstanceConfig } from '../../trivy/TrivyTypes'
-import { IOpsInstanceConfig } from '../../ops/OpsTypes'
+
+import { ILogConfig } from '../../log/LogConfig'
+import { ILogData } from '../../log/LogData'
 import { ELogSortOrder, ILogInstanceConfig } from '../../log/LogTypes'
-import { EMetricsConfigMode } from '../../metrics/MetricsTypes'
 
 export interface IContentExternalOptions {
     pauseable: boolean
@@ -78,8 +82,8 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
     const [ anchorHelp, setAnchorHelp ] = useState<undefined | HTMLElement>(undefined)
     const [ anchorConfig, setAnchorConfig ] = useState<undefined | HTMLElement>(undefined)
     const [ isMaximized, setIsMaximized ] = useState(props.isMaximized)
-    const [ , setRefreshTick] = useState(0);
-    const forceUpdate = () => setRefreshTick(tick => tick + 1);
+    const [ , setRefreshTick] = useState(0)
+    const forceUpdate = () => setRefreshTick(tick => tick + 1)
 
     useEffect( () => {
         if (!contentExternalData.isInitialized) {
@@ -154,19 +158,19 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                     contentExternalData.formConfig = {}
                     setPinocchioConfig(contentExternalData.content)
                     break
-                case 'topology':
-                    setTopologyConfig(contentExternalData.content)
-                    const topoCfg = contentExternalData.content!.externalChannelObject!.config as ITopologyConfig
-                    contentExternalData.formConfig = {
-                        showOnlyRunning: topoCfg.showOnlyRunning,
-                        labelSize: topoCfg.labelSize,
-                        nodeSpacingFactor: topoCfg.nodeSpacingFactor,
-                        gridColumns: topoCfg.gridColumns
+                default: {
+                    const ch = contentExternalData.content?.externalChannel
+                    if (ch?.prepareExternalChannel) {
+                        const setup = ch.prepareExternalChannel(contentExternalData.contentView, props.selectedFiles, props.container ?? '')
+                        contentExternalData.content!.externalChannelObject!.data = setup.data
+                        contentExternalData.content!.externalChannelObject!.config = setup.config
+                        contentExternalData.content!.externalChannelObject!.instanceConfig = setup.instanceConfig
+                        contentExternalData.formConfig = setup.formConfig
+                    } else {
+                        contentExternalData.formConfig = {}
                     }
                     break
-                default:
-                    contentExternalData.formConfig = {}
-                    break
+                }
             }
         }
     },[])
@@ -477,28 +481,6 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
         c.externalChannelObject!.instanceConfig = pinocchioInstanceConfig
     }
 
-    const setTopologyConfig = (c: IContentExternalObject) => {
-        const files = props.selectedFiles ?? []
-        const view = contentExternalData.contentView
-        const topologyInstanceConfig: ITopologyInstanceConfig = {}
-        if (view === EInstanceConfigView.POD && files.length > 0) {
-            topologyInstanceConfig.pods = files.map(f => f.data.origin.metadata.name as string)
-        } else if (view === EInstanceConfigView.GROUP && files.length > 0) {
-            const kind = files[0]?.data?.origin?.kind as string
-            if (kind === 'Service') {
-                topologyInstanceConfig.services = files.map(f => f.data.origin.metadata.name as string)
-            } else if (kind === 'Ingress') {
-                topologyInstanceConfig.ingresses = files.map(f => f.data.origin.metadata.name as string)
-            } else {
-                topologyInstanceConfig.groups = files.map(f => `${f.data.origin.kind}/${f.data.origin.metadata.name}`)
-            }
-        }
-        const topologyData: ITopologyData = new TopologyData()
-        c.externalChannelObject!.data = topologyData
-        c.externalChannelObject!.config = new TopologyConfig()
-        c.externalChannelObject!.instanceConfig = topologyInstanceConfig
-    }
-
     const play = () => {
         if (!contentExternalData.content || !contentExternalData.content.ws || !contentExternalData.content.externalChannel || !contentExternalData.content.externalChannelObject) return
 
@@ -653,22 +635,11 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                     <Typography variant='body2'>This is real WIP.</Typography>
                 </>
                 break
-            case 'topology':
-                content = <>
-                    <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Topology</Typography>
-                    <Divider/>
-                    <Typography variant='body2'>Topology shows a 3D graph of Kubernetes resources and their relationships. You can launch it cluster-wide or scoped to specific namespaces selected in Magnify.</Typography>
-                    <Divider/>
-                    <Typography variant='body2' sx={{ fontWeight: 600 }}>Navigation</Typography>
-                    <Typography variant='body2'><b>Rotate</b> — left mouse button + drag</Typography>
-                    <Typography variant='body2'><b>Pan</b> — middle mouse button + drag</Typography>
-                    <Typography variant='body2'><b>Zoom</b> — scroll wheel</Typography>
-                    <Typography variant='body2'><b>Select node</b> — left click</Typography>
-                    <Typography variant='body2'><b>Context menu</b> — right click on a node</Typography>
-                    <Typography variant='body2'><b>Path mode</b> — right click → View path (shows connected subgraph)</Typography>
-                    <Typography variant='body2'><b>Reset camera</b> — reset button (top right)</Typography>
-                </>
+            default: {
+                const helpContent = contentExternalData.content?.externalChannel?.getExternalHelpContent?.()
+                if (helpContent) content = <>{helpContent}</>
                 break
+            }
         }
         return <Popover
                 anchorEl={anchorHelp}
@@ -749,16 +720,9 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 break
             case 'pinocchio':
                 break
-            case 'topology': {
-                let topoConfig = contentExternalData.content!.externalChannelObject!.config as ITopologyConfig
-                topoConfig.showOnlyRunning = values.showOnlyRunning
-                topoConfig.labelSize = values.labelSize
-                topoConfig.nodeSpacingFactor = values.nodeSpacingFactor
-                topoConfig.gridColumns = values.gridColumns
-                let topoData = contentExternalData.content!.externalChannelObject!.data as ITopologyData
-                recomputeLayout(topoData.nodes, topoConfig.nodeSpacingFactor, topoConfig.gridColumns)
-                topoData.lastUpdated = Date.now()
-                forceUpdate()
+            default: {
+                const ch = contentExternalData.content?.externalChannel
+                if (ch?.onExternalConfigApply?.(contentExternalData.content!.externalChannelObject!, values)) forceUpdate()
                 break
             }
         }

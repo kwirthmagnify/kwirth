@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { CheckCircle, Delete, Download, Refresh } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
@@ -38,6 +38,8 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     const [installingId, setInstallingId] = useState<string | undefined>()
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
     const [error, setError] = useState<string | undefined>()
+    const [customUrl, setCustomUrl] = useState('')
+    const [installingCustom, setInstallingCustom] = useState(false)
 
     useEffect(() => {
         loadInstalled()
@@ -105,6 +107,28 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         }
     }
 
+    const installFromUrl = async () => {
+        const url = customUrl.trim()
+        if (!url) return
+        setError(undefined)
+        setInstallingCustom(true)
+        try {
+            const res = await fetch(`${backendUrl}/plugins/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
+            if (!res.ok) {
+                const body = await res.json()
+                throw new Error(body.error ?? `HTTP ${res.status}`)
+            }
+            const meta: IInstalledPlugin = await res.json()
+            await loadInstalled()
+            props.onPluginLoaded(meta.id)
+            setCustomUrl('')
+        } catch (err) {
+            setError(`Failed to install plugin: ${err}`)
+        } finally {
+            setInstallingCustom(false)
+        }
+    }
+
     const isInstalled = (id: string) => installed.some(p => p.id === id)
 
     const PluginRow = ({ name, version, description, badge, action }: { name: string; version: string; description: string; badge?: React.ReactNode; action: React.ReactNode }) => (
@@ -147,6 +171,25 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                             />
                         ))
                     }
+
+                    <Typography variant='subtitle2' sx={{ pt: 1 }}>Install from local path or URL</Typography>
+                    <Stack direction='row' spacing={1} alignItems='center'>
+                        <TextField
+                            size='small'
+                            fullWidth
+                            placeholder='C:/path/to/plugin.tgz  or  https://...'
+                            value={customUrl}
+                            onChange={e => setCustomUrl(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') installFromUrl() }}
+                        />
+                        <Tooltip title='Install'>
+                            <span>
+                                <IconButton size='small' color='primary' disabled={installingCustom || !customUrl.trim()} onClick={installFromUrl}>
+                                    {installingCustom ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                    </Stack>
 
                     <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
                         <Typography variant='subtitle2' flex={1}>Available plugins</Typography>

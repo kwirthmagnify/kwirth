@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import { FC, ReactNode } from 'react'
 import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements } from '@kwirthmagnify/kwirth-common'
 
 export { EChannelRefreshAction, ENotifyLevel }
@@ -64,4 +64,7 @@ export interface IChannel {
     stopChannel(channelObject: IChannelObject): boolean
     socketDisconnected(channelObject: IChannelObject): boolean
     socketReconnect(channelObject: IChannelObject): boolean
+    prepareExternalChannel?: (view: EInstanceConfigView, selectedResources: any[], container: string) => { data: any; config: any; instanceConfig: any; formConfig: any }
+    getExternalHelpContent?: () => ReactNode
+    onExternalConfigApply?: (channelObject: IChannelObject, values: any) => boolean
 }
