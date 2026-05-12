@@ -103,19 +103,22 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     // RFM categories
     const onCategoryFilter = (categoryKey:string, f:IFileObject) : boolean => {
-        let cat = categories.find(c => c.key===categoryKey)
-        if (!cat) return true
+        let category = categories.find(c => c.key===categoryKey)
+        if (!category) return true
 
         let valid=true
         switch(categoryKey) {
             case 'Node':
-                valid = cat.selected.includes('all') || cat.selected.some(cat => f.data?.origin?.spec?.nodeName?.includes(cat))
+                //valid = cat.selected.includes('all') || cat.selected.some(cat => f.data?.origin?.spec?.nodeName?.includes(cat))
+                valid = category.selected.includes('all') || category.selected.some(value => f.data?.origin?.spec?.nodeName?.includes(value))
                 break
             case 'Namespace':
-                valid = cat.selected.includes('all') || cat.selected.some(cat => f.data?.origin?.metadata?.namespace?.includes(cat))
+                //valid = cat.selected.includes('all') || cat.selected.some(cat => f.data?.origin?.metadata?.namespace?.includes(cat))
+                valid = category.selected.includes('all') || category.selected.some(value => f.data?.origin?.metadata?.namespace === value)
                 break
             case 'controller':
-                valid = cat.selected.includes('all') || cat.selected.some(cat => f.data?.origin?.metadata?.ownerReferences?.[0]?.kind.includes(cat))
+                //valid = cat.selected.includes('all') || cat.selected.some(cat => f.data?.origin?.metadata?.ownerReferences?.[0]?.kind.includes(cat))
+                valid = category.selected.includes('all') || category.selected.some(value => f.data?.origin?.metadata?.ownerReferences?.[0]?.kind === value)
                 break
         }
         return valid

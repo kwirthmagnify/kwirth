@@ -93,14 +93,14 @@ export class FilemanChannel implements IChannel {
                                 else {
                                     for (let o of content.metadata.object) {
                                         let name = o.name.split('/')[o.name.split('/').length-1]
-                                        let e:IFileObject = { 
+                                        let e:IFileObject = {
                                             name,
                                             isDirectory: (o.type===1),
                                             path: o.name,
+                                            ...(o.type===0? {class:'file'}:{}),
                                             data: {
                                                 updatedAt: new Date(+o.time).toISOString(),
-                                                size: +o.size,
-                                                ...(o.type===0? {class:'file'}:{})
+                                                size: +o.size
                                             }
                                         }
                                         filemanData.files = filemanData.files.filter(f => f.path !== e.path)
@@ -139,14 +139,14 @@ export class FilemanChannel implements IChannel {
                                 let content = JSON.parse(response.data)
                                 if (content.status==='Success') {
                                     filemanData.files = filemanData.files.filter(f => f.path !== content.metadata.object)
-                                    let e:IFileObject = { 
+                                    let e:IFileObject = {
                                         name: (content.metadata.object as string).split('/').slice(-1)[0],
                                         isDirectory: (content.metadata.type===1),
                                         path: content.metadata.object,
+                                        ...(content.metadata.type===0? {class:'file'}:{}),
                                         data: {
-                                            updatedAt: new Date(+content.metadata.time).toISOString(), 
-                                            size: +content.metadata.size,
-                                            ...(content.metadata.type.type===0? {class:'file'}:{})
+                                            updatedAt: new Date(+content.metadata.time).toISOString(),
+                                            size: +content.metadata.size
                                         }
                                     }
                                     filemanData.files.push(e)

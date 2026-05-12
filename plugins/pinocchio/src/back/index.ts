@@ -301,7 +301,7 @@ export class PinocchioChannel {
                     if (lastEvt?.space === 'launch' && lastEvt?.type === 'immediate') {
                         const payload = typeof lastEvt.data === 'string' ? lastEvt.data : JSON.stringify(lastEvt.data ?? '')
                         const triggerType: 'business' | 'artifact' = lastEvt.triggerType === 'artifact' ? 'artifact' : 'business'
-                        await this.executePlayground(payload, triggerType)
+                        await this.executePlayground(payload, triggerType, lastEvt.kind)
                         break
                     }
                 }
@@ -504,7 +504,7 @@ export class PinocchioChannel {
         }
     }
 
-    executePlayground = async (payload: string, triggerType: 'business' | 'artifact' = 'business') => {
+    executePlayground = async (payload: string, triggerType: 'business' | 'artifact' = 'business', kind?: string) => {
         if (!this.playgroundTrigger) {
             this.broadcastMessage('Sandbox: no config applied yet — click "Apply Config" first')
             return
@@ -517,6 +517,7 @@ export class PinocchioChannel {
         if (triggerType === 'artifact') {
             let obj: any = {}
             try { obj = JSON.parse(payload) } catch { obj = { raw: payload } }
+            if (kind && !obj.kind) obj.kind = kind
             const promptType = this.playgroundTrigger.prompt ? 'jinja' : 'artifact'
             version = { ...this.playgroundTrigger, promptType }
             dummyTrigger = { id: 'playground', trigger: 'artifact', versions: [] }

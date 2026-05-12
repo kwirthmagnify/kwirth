@@ -77,10 +77,26 @@ export class PluginApi {
 
         this.router.get('/:id/front', async (req: Request, res: Response) => {
             try {
+                if (this.pluginManager.isDevPlugin(req.params.id)) {
+                    const code = this.pluginManager.getDevFrontJs(req.params.id)
+                    if (!code) return void res.status(404).json({ error: 'Dev plugin front.js not found' })
+                    res.setHeader('Content-Type', 'application/javascript')
+                    res.setHeader('Cache-Control', 'no-store')
+                    return res.send(code)
+                }
                 const code = await this.pluginManager.getFrontJs(req.params.id)
                 if (!code) return void res.status(404).json({ error: 'Plugin not found' })
                 res.setHeader('Content-Type', 'application/javascript')
                 res.send(code)
+            } catch (err) {
+                res.status(500).json({ error: String(err) })
+            }
+        })
+
+        this.router.get('/:id/version', async (req: Request, res: Response) => {
+            try {
+                const mtime = this.pluginManager.getDevFrontMtime(req.params.id)
+                res.json({ dev: mtime !== undefined, version: mtime ?? null })
             } catch (err) {
                 res.status(500).json({ error: String(err) })
             }

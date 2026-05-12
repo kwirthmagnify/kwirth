@@ -32,7 +32,7 @@ const TrivyTabContentAssetSbom: React.FC<ITabContentTrivyAssetSbomProps> = (prop
                 <Typography variant='body2'><b>Version: </b>{component.version}</Typography>
                 <Typography variant='body2'><b>Type: </b>{component.type}</Typography>
                 <Typography variant='body2'><b>Provider: </b>{component.supplier?.name}</Typography>
-                <Typography variant='body2'><b>Licenses: </b>{component.licenses?.map((l:any) => l.license.id).join(', ')}</Typography>
+                <Typography variant='body2'><b>Licenses: </b>{component.licenses?.map((l:any) => l.license?.id ?? l.license?.name ?? l.expression ?? '').filter(Boolean).join(', ')}</Typography>
                 <Typography variant='body2'><b>Dependencies: </b>{showDependencies()}</Typography>
             </AccordionDetails>
         </Accordion>

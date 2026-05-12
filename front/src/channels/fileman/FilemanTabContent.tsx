@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { IChannelObject } from '../IChannel'
 import { EFilemanCommand, IFilemanMessage, IFilemanData } from './FilemanData'
-import { Box, Typography } from '@mui/material'
+import { Box } from '@mui/material'
+import { AccountTree, Edit, InfoOutlined, Visibility } from '@mui/icons-material'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { IError, IFileManagerHandle, IFileObject } from '@jfvilas/react-file-manager'
 import { FileManager } from '@jfvilas/react-file-manager'
 import { v4 as uuid } from 'uuid'
-import { addGetAuthorization } from '../../tools/AuthorizationManagement'
+import { addGetAuthorization, addPostAuthorization } from '../../tools/AuthorizationManagement'
 import { MsgBoxOk } from '../../tools/MsgBox'
 import { ENotifyLevel } from '../../tools/Global'
+import { FileEditDialog } from './FileEditDialog'
 // @ts-ignore
 import '@jfvilas/react-file-manager/dist/style.css'
 // @ts-ignore
@@ -24,7 +26,8 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const filemanBoxRef = useRef<HTMLDivElement | null>(null)
     const fileManagerRef = useRef<IFileManagerHandle>(null)
     const [logBoxTop, setLogBoxTop] = useState(0)
-    const [msgBox, setMsgBox] =useState(<></>)
+    const [msgBox, setMsgBox] = useState(<></>)
+    const [editDialog, setEditDialog] = useState<React.ReactNode>(null)
 
     let filemanData:IFilemanData = props.channelObject.data
     let permissions={
@@ -50,8 +53,8 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     actions.set('namespace', [
         {
             title: 'Namespace details',
-            icon: <Typography color='green' fontWeight={600}>V</Typography>,
-            onClick: async (files : IFileObject[]) => {
+            icon: <AccountTree fontSize='small' color='success' />,
+            onClick: async (files: IFileObject[]) => {
                 let namespace = files[0].name
                 let data = await((await fetch(`${props.channelObject.clusterUrl}/config/${namespace}/groups`, addGetAuthorization(props.channelObject.accessString!))).json())
                 let info = `Controllers inside ${namespace} namespace:<br/><br/>` + data.map((ns:any) => '<b>-</b> '+ ns.name + '<br/>').join('')
@@ -59,13 +62,65 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             }
         },
     ])
+
+    const fetchFileContent = async (file: IFileObject): Promise<string | null> => {
+        const url = `${props.channelObject.clusterUrl}/${filemanData.ri}/channel/fileman/read?key=${props.channelObject.instanceId}&filename=${encodeURIComponent(file.path)}`
+        const response = await fetch(url, addGetAuthorization(props.channelObject.accessString || ''))
+        if (!response.ok) {
+            props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.ERROR, `Cannot read file ${file.path}: (${response.status}) ${await response.text()}`)
+            return null
+        }
+        return response.text()
+    }
+
     actions.set('file', [
         {
             title: 'File details',
-            icon: <Typography color='blue' fontWeight={600}>D</Typography>,
-            onClick: async (files : IFileObject[]) => {
+            icon: <InfoOutlined fontSize='small' color='info' />,
+            onClick: async (files: IFileObject[]) => {
                 let info = `Details of file '${files[0].name}':<br/><br/><b>Name</b>: ${files[0].name}<br/><b>Path</b>: ${files[0].path}<br/><b>Last update</b>: ${files[0].data.updatedAt}<br/><b>Size (bytes)</b>: ${files[0].data.size}`
                 setMsgBox(MsgBoxOk('File info', info, setMsgBox))
+            }
+        },
+        {
+            title: 'View file',
+            icon: <Visibility fontSize='small' color='action' />,
+            onClick: async (files: IFileObject[]) => {
+                const file = files[0]
+                try {
+                    const content = await fetchFileContent(file)
+                    if (content === null) return
+                    setEditDialog(<FileEditDialog filename={file.path} content={content} readOnly onSave={async () => {}} onClose={() => setEditDialog(null)} />)
+                } catch (error) {
+                    props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.ERROR, `Error reading file ${file.path}: ${error}`)
+                }
+            }
+        },
+        {
+            title: 'Edit file',
+            icon: <Edit fontSize='small' color='primary' />,
+            onClick: async (files: IFileObject[]) => {
+                const file = files[0]
+                try {
+                    const content = await fetchFileContent(file)
+                    if (content === null) return
+                    const onSave = async (newContent: string) => {
+                        const writeUrl = `${props.channelObject.clusterUrl}/${filemanData.ri}/channel/fileman/write?key=${props.channelObject.instanceId}&filename=${encodeURIComponent(file.path)}`
+                        const res = await fetch(writeUrl, addPostAuthorization(props.channelObject.accessString || '', JSON.stringify({ content: newContent })))
+                        if (!res.ok) {
+                            props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.ERROR, `Cannot write file ${file.path}: (${res.status}) ${await res.text()}`)
+                            throw new Error(`Write failed: ${res.status}`)
+                        }
+                        const entry = filemanData.files.find(f => f.path === file.path)
+                        if (entry?.data) {
+                            entry.data.size = new Blob([newContent]).size
+                            entry.data.updatedAt = new Date().toISOString()
+                        }
+                    }
+                    setEditDialog(<FileEditDialog filename={file.path} content={content} onSave={onSave} onClose={() => setEditDialog(null)} />)
+                } catch (error) {
+                    props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.ERROR, `Error reading file ${file.path}: ${error}`)
+                }
             }
         }
     ])
@@ -276,6 +331,7 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     openMode='none'
                 />
                 { msgBox }
+                { editDialog }
             </Box>
         }
     </>

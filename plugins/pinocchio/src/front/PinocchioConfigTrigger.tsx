@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, Switch, TextareaAutosize, TextField, Typography } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
-import { IConfigTrigger, IConfigTriggerVersion, IPinocchioConfig } from './PinocchioConfig'
+import { IConfigTrigger, IConfigTriggerVersion, IPinocchioConfig, kindsAvailable } from './PinocchioConfig'
 import { objectClone, useKeyboard, MsgBoxButtons, MsgBoxOkWarning, MsgBoxYesNo } from './utils'
 
 interface IPinocchioLlmConfigProps {
@@ -17,6 +17,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
     const [newTriggerId, setNewTriggerId] = useState('')
     const [triggerId, setTriggerId] = useState('')
     const [triggerType, setTriggerType] = useState('artifact')
+    const [triggerKind, setTriggerKind] = useState('')
 
     const [selectedVersionIndex, setSelectedVersionIndex] = useState<number | null>(null)
 
@@ -59,6 +60,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
         setSelectedTriggerIndex(index)
         setTriggerId(config.triggers[index].id)
         setTriggerType(config.triggers[index].trigger)
+        setTriggerKind(config.triggers[index].kind ?? '')
         setSelectedVersionIndex(null)
         clearVersionEditor()
     }
@@ -74,8 +76,17 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
     const onTriggerTypeChange = (newType: string) => {
         if (selectedTriggerIndex === null) return
         setTriggerType(newType)
+        const kind = newType === 'artifact' ? triggerKind : undefined
         const newTriggers = [...(config.triggers ?? [])]
-        newTriggers[selectedTriggerIndex] = { ...newTriggers[selectedTriggerIndex], trigger: newType }
+        newTriggers[selectedTriggerIndex] = { ...newTriggers[selectedTriggerIndex], trigger: newType, kind }
+        setConfig(c => ({ ...c, triggers: newTriggers }))
+    }
+
+    const onTriggerKindChange = (newKind: string) => {
+        if (selectedTriggerIndex === null) return
+        setTriggerKind(newKind)
+        const newTriggers = [...(config.triggers ?? [])]
+        newTriggers[selectedTriggerIndex] = { ...newTriggers[selectedTriggerIndex], kind: newKind }
         setConfig(c => ({ ...c, triggers: newTriggers }))
     }
 
@@ -245,6 +256,14 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
                                     <MenuItem value='business'>business</MenuItem>
                                 </Select>
                             </FormControl>
+                            {triggerType === 'artifact' && (
+                                <FormControl variant='standard' fullWidth disabled={selectedTriggerIndex === null}>
+                                    <InputLabel>Kind</InputLabel>
+                                    <Select value={triggerKind} onChange={e => onTriggerKindChange(e.target.value)} variant='standard'>
+                                        {kindsAvailable.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
+                                    </Select>
+                                </FormControl>
+                            )}
                             <TextField value={versionId} onChange={e => setVersionId(e.target.value)} placeholder='Version id' label='Version ID' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
                         </Stack>
                         <TextField value={description} onChange={e => setDescription(e.target.value)} placeholder='Short description' label='Description' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />

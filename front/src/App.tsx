@@ -218,17 +218,26 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [resourceSelected, setResourceSelected] = useState<IResourceSelected|undefined>(undefined)
     const [pluginVersion, setPluginVersion] = useState(0)
 
+    const pluginVersionsRef = useRef<Map<string, number>>(new Map())
+
     const loadPluginFront = (id: string) => {
         const existing = document.getElementById(`kwirth-plugin-${id}`)
         if (existing) existing.remove()
         const script = document.createElement('script')
         script.id = `kwirth-plugin-${id}`
-        script.src = `${props.backendUrl}/plugins/${id}/front`
+        script.src = `${props.backendUrl}/plugins/${id}/front?t=${Date.now()}`
         script.onload = () => {
             const PluginChannel = window.__kwirth_plugins__?.[id]
             if (PluginChannel) {
+                for (const tab of tabs.current) {
+                    if (tab.channel.channelId === id) {
+                        const refreshed = createChannelInstance(PluginChannel as TChannelConstructor)
+                        if (refreshed) tab.channel = refreshed
+                    }
+                }
                 setFrontChannels(prev => new Map(prev).set(id, PluginChannel as TChannelConstructor))
                 setPluginVersion(v => v + 1)
+                setChannelMessageAction({ action: EChannelRefreshAction.REFRESH })
             }
         }
         document.head.appendChild(script)
@@ -237,9 +246,32 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const unloadPluginFront = (id: string) => {
         const script = document.getElementById(`kwirth-plugin-${id}`)
         if (script) script.remove()
+        pluginVersionsRef.current.delete(id)
         setFrontChannels(prev => { const next = new Map(prev); next.delete(id); return next })
         setPluginVersion(v => v + 1)
     }
+
+    useEffect(() => {
+        const ids = Array.from(frontChannels.keys())
+        if (ids.length === 0) return
+        const interval = setInterval(async () => {
+            for (const id of ids) {
+                try {
+                    const res = await fetch(`${props.backendUrl}/plugins/${id}/version`, { headers: { 'X-Kwirth-App': 'true' } })
+                    if (!res.ok) continue
+                    const { dev, version } = await res.json()
+                    if (!dev) continue
+                    const prev = pluginVersionsRef.current.get(id)
+                    if (prev === undefined) { pluginVersionsRef.current.set(id, version); continue }
+                    if (prev !== version) {
+                        pluginVersionsRef.current.set(id, version)
+                        loadPluginFront(id)
+                    }
+                } catch {}
+            }
+        }, 2000)
+        return () => clearInterval(interval)
+    }, [frontChannels])
 
     useEffect(() => {
         if (pluginVersion === 0) return

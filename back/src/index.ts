@@ -1408,8 +1408,9 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             pluginManager = new PluginManager(runningInstance.configMaps)
             await pluginManager.init()
             await pluginManager.loadAll(registeredChannels)
+            pluginManager.loadDevPlugins(registeredChannels)
         }
-        for (const pluginId of pluginManager.getInstalledIds()) {
+        for (const pluginId of [...pluginManager.getInstalledIds(), ...pluginManager.getDevIds()]) {
             if (!requiredChannels.includes(pluginId)) requiredChannels.push(pluginId)
         }
 

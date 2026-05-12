@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, Menu, MenuItem, Select, SelectChangeEvent, Stack, Switch, TextareaAutosize, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
 import { ScienceOutlined, Upload, Bolt, FileDownload, CheckCircleOutline, HistoryOutlined, DeleteOutlined } from '@mui/icons-material'
-import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
+import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState, kindsAvailable } from './PinocchioConfig'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from './utils'
 
@@ -30,6 +30,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
     const [prompt, setPrompt] = useState(saved?.prompt ?? '')
     const [eventData, setEventData] = useState(saved?.eventData ?? '')
     const [triggerType, setTriggerType] = useState<'business' | 'artifact'>(saved?.triggerType ?? 'business')
+    const [artifactKind, setArtifactKind] = useState(saved?.artifactKind ?? '')
     const [eventSpace, setEventSpace] = useState(saved?.eventSpace ?? 'launch')
     const [eventType, setEventType] = useState(saved?.eventType ?? 'immediate')
 
@@ -76,7 +77,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
         setArtifactHistory(newArtifactHistory)
         setBusinessHistory(newBusinessHistory)
         setSpaceTypeHistory(newSpaceTypeHistory)
-        props.onStateChange({ llm, steps, tools, autoTools, system, prompt, eventData, triggerType, eventSpace, eventType, systemHistory: newSystemHistory, promptHistory: newPromptHistory, artifactHistory: newArtifactHistory, businessHistory: newBusinessHistory, spaceTypeHistory: newSpaceTypeHistory })
+        props.onStateChange({ llm, steps, tools, autoTools, system, prompt, eventData, triggerType, artifactKind, eventSpace, eventType, systemHistory: newSystemHistory, promptHistory: newPromptHistory, artifactHistory: newArtifactHistory, businessHistory: newBusinessHistory, spaceTypeHistory: newSpaceTypeHistory })
         props.onClose(newTrigger)
     }
 
@@ -168,7 +169,13 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${props.accessString}`
                 },
-                body: JSON.stringify({ space: eventSpace, type: eventType, data: eventData, triggerType })
+                body: JSON.stringify({
+                    space: triggerType === 'artifact' ? 'launch' : eventSpace,
+                    type: triggerType === 'artifact' ? 'immediate' : eventType,
+                    data: eventData,
+                    triggerType,
+                    kind: artifactKind
+                })
             })
         }
         finally {
@@ -385,27 +392,36 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                             <ToggleButton value='business'>Business</ToggleButton>
                             <ToggleButton value='artifact'>Artifact</ToggleButton>
                         </ToggleButtonGroup>
-                        <TextField
-                            label='Space'
-                            variant='standard'
-                            size='small'
-                            value={eventSpace}
-                            onChange={e => setEventSpace(e.target.value)}
-                            disabled={triggerType === 'artifact'}
-                            sx={{ flex: 1 }}
-                        />
-                        <TextField
-                            label='Type'
-                            variant='standard'
-                            size='small'
-                            value={eventType}
-                            onChange={e => setEventType(e.target.value)}
-                            disabled={triggerType === 'artifact'}
-                            sx={{ flex: 1 }}
-                        />
-                        <IconButton size='small' onClick={e => openHistory(e, 'spacetype')} disabled={triggerType === 'artifact' || spaceTypeHistory.length === 0} sx={{ alignSelf: 'flex-end', mb: 0.5 }}>
-                            <HistoryOutlined sx={{ fontSize: 14 }} />
-                        </IconButton>
+                        {triggerType === 'artifact' ? (
+                            <FormControl variant='standard' size='small' sx={{ flex: 1 }}>
+                                <InputLabel>Artifact Kind</InputLabel>
+                                <Select value={artifactKind} onChange={e => setArtifactKind(e.target.value)}>
+                                    {kindsAvailable.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
+                                </Select>
+                            </FormControl>
+                        ) : (
+                            <>
+                                <TextField
+                                    label='Space'
+                                    variant='standard'
+                                    size='small'
+                                    value={eventSpace}
+                                    onChange={e => setEventSpace(e.target.value)}
+                                    sx={{ flex: 1 }}
+                                />
+                                <TextField
+                                    label='Type'
+                                    variant='standard'
+                                    size='small'
+                                    value={eventType}
+                                    onChange={e => setEventType(e.target.value)}
+                                    sx={{ flex: 1 }}
+                                />
+                                <IconButton size='small' onClick={e => openHistory(e, 'spacetype')} disabled={spaceTypeHistory.length === 0} sx={{ alignSelf: 'flex-end', mb: 0.5 }}>
+                                    <HistoryOutlined sx={{ fontSize: 14 }} />
+                                </IconButton>
+                            </>
+                        )}
                         <Tooltip title={!configApplied ? 'Apply config first' : `Send ${triggerType} event to the backend`}>
                             <span>
                                 <Button

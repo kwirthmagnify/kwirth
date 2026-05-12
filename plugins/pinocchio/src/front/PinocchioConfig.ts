@@ -97,6 +97,7 @@ export interface IPlaygroundState {
     prompt: string
     eventData: string
     triggerType: 'business' | 'artifact'
+    artifactKind: string
     eventSpace: string
     eventType: string
     systemHistory?: string[]

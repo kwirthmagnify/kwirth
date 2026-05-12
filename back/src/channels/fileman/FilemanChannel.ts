@@ -122,7 +122,9 @@ class FilemanChannel implements IChannel {
             sources: [ EClusterType.KUBERNETES, EClusterType.DOCKER ],
             endpoints: [
                 { name: 'download', methods: ['GET'], requiresAccessKey: true },
-                { name: 'upload', methods: ['POST'], requiresAccessKey: true } 
+                { name: 'upload', methods: ['POST'], requiresAccessKey: true },
+                { name: 'read', methods: ['GET'], requiresAccessKey: true },
+                { name: 'write', methods: ['POST'], requiresAccessKey: true }
             ],
             websocket: false,
             cluster: false,
@@ -243,7 +245,42 @@ class FilemanChannel implements IChannel {
                 }
                 break
             }
-        } 
+            case 'read': {
+                const filename = req.query['filename'] as string
+                if (!filename) { res.status(400).send('filename required'); return }
+                const [rns, rpod, rcont] = filename.split('/').slice(1)
+                const rpath = '/' + filename.split('/').slice(4).join('/')
+                const result = await this.downloadFile(rns, rpod, rcont, rpath)
+                if (result.status === ExecutionStatus.SUCCESS) {
+                    const tmpName = result.metadata.filename as string
+                    const content = fs.readFileSync(tmpName, 'utf-8')
+                    try { fs.unlinkSync(tmpName) } catch {}
+                    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+                    res.status(200).send(content)
+                } else {
+                    res.status(400).send(result.message)
+                }
+                break
+            }
+            case 'write': {
+                const filename = req.query['filename'] as string
+                if (!filename) { res.status(400).send('filename required'); return }
+                const { content } = req.body as { content: string }
+                if (content === undefined) { res.status(400).send('content required'); return }
+                const tmpName = path.join(os.tmpdir(), uuid())
+                fs.writeFileSync(tmpName, content, 'utf-8')
+                const [wns, wpod, wcont] = filename.split('/').slice(1)
+                const wpath = '/' + filename.split('/').slice(4).join('/')
+                const result = await this.uploadFile(wns, wpod, wcont, tmpName, wpath)
+                try { fs.unlinkSync(tmpName) } catch {}
+                if (result.status === ExecutionStatus.FAILURE) {
+                    res.status(400).send(result.message)
+                } else {
+                    res.status(200).send()
+                }
+                break
+            }
+        }
     }
 
     async websocketRequest(newWebSocket:WebSocket) : Promise<void> {
