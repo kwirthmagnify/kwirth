@@ -73,4 +73,12 @@ const distMeta = {
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
-console.log('Done. Run: tar -czf pinocchio-plugin.tgz -C dist .')
+
+if (process.argv.includes('--pack')) {
+    const { execSync } = await import('child_process')
+    const tgzName = `${meta.id}-plugin-${meta.version}.tgz`
+    execSync(`tar -czf ${tgzName} -C dist .`)
+    console.log(`Created: ${tgzName}`)
+} else {
+    console.log(`Done. Run 'npm run pack' to create ${meta.id}-plugin-${meta.version}.tgz`)
+}

@@ -1,12 +1,7 @@
 import esbuild from 'esbuild'
 import fs from 'fs'
 import path from 'path'
-import { createRequire } from 'module'
 
-const require = createRequire(import.meta.url)
-
-// Maps external packages to window.__kwirth__ globals so bundles don't include React/MUI/kwirth-common.
-// three is NOT externalized — it gets bundled because the host does not provide it.
 const kwirthGlobalsPlugin = {
     name: 'kwirth-globals',
     setup(build) {
@@ -31,8 +26,7 @@ const kwirthGlobalsPlugin = {
 
 fs.mkdirSync('dist', { recursive: true })
 
-// Build front.js — IIFE that registers the channel via window.__kwirth_plugins__
-// three.js is bundled (not externalized) since the host does not provide it.
+// three.js is bundled (not externalized) since the host does not provide it
 await esbuild.build({
     entryPoints: ['src/front/index.ts'],
     bundle: true,
@@ -48,8 +42,6 @@ await esbuild.build({
 })
 console.log('Built dist/front.js')
 
-// Build back.js — CommonJS bundle for Node.js.
-// kwirth-common is bundled. No other externals needed.
 await esbuild.build({
     entryPoints: ['src/back/index.ts'],
     bundle: true,
@@ -62,7 +54,6 @@ await esbuild.build({
 })
 console.log('Built dist/back.js')
 
-// Write package.json into dist for the .tgz bundle
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = {
     id: meta.id,
@@ -70,7 +61,16 @@ const distMeta = {
     version: meta.version,
     description: meta.description,
     icon: meta.icon,
+    ...(meta.website ? { website: meta.website } : {}),
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
-console.log('Done. Run: tar -czf topology-plugin.tgz -C dist .')
+
+if (process.argv.includes('--pack')) {
+    const { execSync } = await import('child_process')
+    const tgzName = `${meta.id}-plugin-${meta.version}.tgz`
+    execSync(`tar -czf ${tgzName} -C dist .`)
+    console.log(`Created: ${tgzName}`)
+} else {
+    console.log(`Done. Run 'npm run pack' to create ${meta.id}-plugin-${meta.version}.tgz`)
+}

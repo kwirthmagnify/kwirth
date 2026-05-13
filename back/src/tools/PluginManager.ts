@@ -17,7 +17,11 @@ export interface IPluginMeta {
     icon?: string
     website?: string
     installedFrom?: string
+    backStored?: boolean
+    frontStored?: boolean
 }
+
+const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
 interface IDevPlugin {
     distPath: string
@@ -122,6 +126,32 @@ export class PluginManager {
         }
     }
 
+    private async fetchJsFromSource(meta: IPluginMeta, filename: 'back.js' | 'front.js'): Promise<string | undefined> {
+        const cacheFile = path.join(os.tmpdir(), `kwirth-plugin-${meta.id}-${filename}`)
+        if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
+        if (!meta.installedFrom || meta.installedFrom === 'local') {
+            logError(ELogComponent.CORE, `Plugin '${meta.id}' ${filename} not stored and has no remote source — cannot recover`)
+            return undefined
+        }
+        const tmpTgz = path.join(os.tmpdir(), `kwirth-plugin-${meta.id}-src-${Date.now()}.tgz`)
+        const tmpDir = path.join(os.tmpdir(), `kwirth-plugin-${meta.id}-src-${Date.now()}`)
+        fs.mkdirSync(tmpDir, { recursive: true })
+        try {
+            await this.downloadFile(meta.installedFrom, tmpTgz)
+            await tar.x({ file: tmpTgz, cwd: tmpDir })
+            const content = fs.readFileSync(path.join(tmpDir, filename), 'utf-8')
+            fs.writeFileSync(cacheFile, content)
+            logInfo(ELogComponent.CORE, `Plugin '${meta.id}' ${filename} fetched from source and cached`)
+            return content
+        } catch (err) {
+            logError(ELogComponent.CORE, `Plugin '${meta.id}' failed to fetch ${filename} from source: ${err}`)
+            return undefined
+        } finally {
+            fs.rmSync(tmpDir, { recursive: true, force: true })
+            if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz)
+        }
+    }
+
     async listInstalled(): Promise<IPluginMeta[]> {
         const stored = (await this.configMaps.read('kwirth-plugins-index', [])) as IPluginMeta[]
         const devMetas = Array.from(this.devPlugins.entries()).map(([id, dev]) => {
@@ -163,11 +193,17 @@ export class PluginManager {
             const backJs = fs.readFileSync(backPath, 'utf-8')
             const frontJs = fs.readFileSync(frontPath, 'utf-8')
 
-            await this.configMaps.write(`kwirth-plugin-${meta.id}-meta`, meta)
             const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')
-            await this.configMaps.write(`kwirth-plugin-${meta.id}-back`, { code: backCompressed, compressed: true })
             const frontCompressed = zlib.gzipSync(Buffer.from(frontJs, 'utf-8')).toString('base64')
-            await this.configMaps.write(`kwirth-plugin-${meta.id}-front`, { code: frontCompressed, compressed: true })
+
+            meta.backStored = backCompressed.length <= CONFIGMAP_SIZE_LIMIT
+            meta.frontStored = frontCompressed.length <= CONFIGMAP_SIZE_LIMIT
+            if (!meta.backStored) logInfo(ELogComponent.CORE, `Plugin '${meta.id}' back.js (${Math.round(backCompressed.length / 1024)}KB) exceeds configmap limit — will fetch from source on startup`)
+            if (!meta.frontStored) logInfo(ELogComponent.CORE, `Plugin '${meta.id}' front.js (${Math.round(frontCompressed.length / 1024)}KB) exceeds configmap limit — will fetch from source on request`)
+
+            await this.configMaps.write(`kwirth-plugin-${meta.id}-meta`, meta)
+            if (meta.backStored) await this.configMaps.write(`kwirth-plugin-${meta.id}-back`, { code: backCompressed, compressed: true })
+            if (meta.frontStored) await this.configMaps.write(`kwirth-plugin-${meta.id}-front`, { code: frontCompressed, compressed: true })
 
             const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
             const existingIdx = index.findIndex(p => p.id === meta.id)
@@ -206,23 +242,28 @@ export class PluginManager {
         await this.configMaps.write(`kwirth-plugin-${id}-back`, null)
         await this.configMaps.write(`kwirth-plugin-${id}-front`, null)
 
-        const tmpPath = path.join(os.tmpdir(), `kwirth-plugin-${id}-back.js`)
-        if (fs.existsSync(tmpPath)) fs.rmSync(tmpPath)
+        for (const f of [`kwirth-plugin-${id}-back.js`, `kwirth-plugin-${id}-front.js`]) {
+            const p = path.join(os.tmpdir(), f)
+            if (fs.existsSync(p)) fs.rmSync(p)
+        }
 
         logInfo(ELogComponent.CORE, `Plugin '${id}' uninstalled`)
     }
 
     async loadAll(registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
-        const index = await this.listInstalled()
+        const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
         for (const meta of index) {
             try {
-                const backData = await this.configMaps.read(`kwirth-plugin-${meta.id}-back`)
-                if (backData?.code) {
-                    const backJs = backData.compressed ? zlib.gunzipSync(Buffer.from(backData.code, 'base64')).toString('utf-8') : backData.code
-                    await this.loadBackPlugin(meta.id, backJs, registeredChannels)
+                let backJs: string | undefined
+                if (meta.backStored === false) {
+                    backJs = await this.fetchJsFromSource(meta, 'back.js')
                 } else {
-                    logError(ELogComponent.CORE, `Plugin '${meta.id}' has no stored back.js — skipping`)
+                    const backData = await this.configMaps.read(`kwirth-plugin-${meta.id}-back`)
+                    if (backData?.code)
+                        backJs = backData.compressed ? zlib.gunzipSync(Buffer.from(backData.code, 'base64')).toString('utf-8') : backData.code
                 }
+                if (backJs) await this.loadBackPlugin(meta.id, backJs, registeredChannels)
+                else logError(ELogComponent.CORE, `Plugin '${meta.id}' has no back.js — skipping`)
             } catch (err) {
                 logError(ELogComponent.CORE, `Failed to load plugin '${meta.id}': ${err}`)
             }
@@ -230,6 +271,8 @@ export class PluginManager {
     }
 
     async getFrontJs(id: string): Promise<string | undefined> {
+        const meta = await this.configMaps.read(`kwirth-plugin-${id}-meta`) as IPluginMeta | null
+        if (meta?.frontStored === false) return this.fetchJsFromSource(meta, 'front.js')
         const data = await this.configMaps.read(`kwirth-plugin-${id}-front`)
         if (!data?.code) return undefined
         if (data.compressed) return zlib.gunzipSync(Buffer.from(data.code, 'base64')).toString('utf-8')

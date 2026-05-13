@@ -26,7 +26,10 @@ const kwirthGlobalsPlugin = {
 
 fs.mkdirSync('dist', { recursive: true })
 
-await esbuild.build({
+const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
+fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({ id: meta.id, name: meta.name, version: meta.version, description: meta.description, icon: meta.icon, ...(meta.website ? { website: meta.website } : {}) }, null, 2))
+
+const frontCtx = await esbuild.context({
     entryPoints: ['src/front/index.ts'],
     bundle: true,
     format: 'iife',
@@ -39,9 +42,8 @@ await esbuild.build({
     target: 'es2020',
     minify: false,
 })
-console.log('Built dist/front.js')
 
-await esbuild.build({
+const backCtx = await esbuild.context({
     entryPoints: ['src/back/index.ts'],
     bundle: true,
     format: 'cjs',
@@ -52,25 +54,10 @@ await esbuild.build({
     loader: { '.ts': 'ts' },
     minify: false,
 })
-console.log('Built dist/back.js')
 
-const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
-const distMeta = {
-    id: meta.id,
-    name: meta.name,
-    version: meta.version,
-    description: meta.description,
-    icon: meta.icon,
-    ...(meta.website ? { website: meta.website } : {}),
-}
-fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
-console.log('Wrote dist/package.json')
+await frontCtx.watch()
+await backCtx.watch()
 
-if (process.argv.includes('--pack')) {
-    const { execSync } = await import('child_process')
-    const tgzName = `${meta.id}-plugin-${meta.version}.tgz`
-    execSync(`tar -czf ${tgzName} -C dist .`)
-    console.log(`Created: ${tgzName}`)
-} else {
-    console.log(`Done. Run 'npm run pack' to create ${meta.id}-plugin-${meta.version}.tgz`)
-}
+console.log('[watch] Watching src/ — front.js and back.js rebuild on every change.')
+console.log('[watch] kwirth backend hot-reloads back.js automatically.')
+console.log('[watch] kwirth frontend polls for front.js changes every 2s.')

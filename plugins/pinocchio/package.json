@@ -9,7 +9,7 @@
     "scripts": {
         "build": "node build.mjs",
         "watch": "node watch.mjs",
-        "pack": "node build.mjs && tar -czf pinocchio-plugin.tgz -C dist ."
+        "pack": "node build.mjs --pack"
     },
     "dependencies": {
         "@kwirthmagnify/kwirth-common": "file:../../common",

@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import * as MuiIcons from '@mui/icons-material'
 import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
@@ -45,7 +45,31 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     const [customUrl, setCustomUrl] = useState('')
     const [installingCustom, setInstallingCustom] = useState(false)
     const [installingFile, setInstallingFile] = useState(false)
+    const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const compareVersions = (a: string, b: string) => {
+        const pa = a.split('.').map(Number)
+        const pb = b.split('.').map(Number)
+        for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+            const diff = (pb[i] ?? 0) - (pa[i] ?? 0)
+            if (diff !== 0) return diff
+        }
+        return 0
+    }
+
+    const groupedAvailable: Record<string, IPluginManifestEntry[]> = available.reduce((acc, p) => {
+        if (!acc[p.id]) acc[p.id] = []
+        acc[p.id].push(p)
+        return acc
+    }, {} as Record<string, IPluginManifestEntry[]>)
+    Object.values(groupedAvailable).forEach(group => group.sort((a, b) => compareVersions(a.version, b.version)))
+
+    const getSelectedEntry = (id: string): IPluginManifestEntry => {
+        const group = groupedAvailable[id]
+        const version = selectedVersions[id] ?? group[0].version
+        return group.find(p => p.version === version) ?? group[0]
+    }
 
     useEffect(() => {
         loadInstalled()
@@ -188,14 +212,20 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, 0.12) 0%, hsla(${hue}, 55%, 42%, 0.26) 100%)`
     }
 
-    const PluginCard = ({ icon, name, version, description, badge, source, website, action }: { icon?: string; name: string; version: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode }) => (
+    const PluginCard = ({ icon, name, version, versions, onVersionChange, description, badge, source, website, action }: { icon?: string; name: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 120, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: pluginGradient(name) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}>{resolveIcon(icon)}</Box>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
                         <Typography variant='body2' fontWeight='bold' component='span'>{name}</Typography>
-                        <Chip label={`v${version}`} size='small' />
+                        {versions && versions.length > 1
+                            ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
+                                sx={{ height: 24, fontSize: '0.75rem', '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                              </Select>
+                            : <Chip label={`v${version}`} size='small' />
+                        }
                         {badge}
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
@@ -304,26 +334,33 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                     }
 
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
-                        {available.map(plugin => (
-                            <PluginCard
-                                key={plugin.id}
-                                icon={plugin.icon}
-                                name={plugin.name}
-                                version={plugin.version}
-                                description={plugin.description}
-                                website={plugin.website}
-                                badge={isDevInstalled(plugin.id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(plugin.id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
-                                action={
-                                    <Tooltip title={isDevInstalled(plugin.id) ? 'A dev version is already loaded' : isInstalled(plugin.id) ? 'Reinstall' : 'Install'}>
-                                        <span>
-                                            <IconButton size='small' color='primary' disabled={isDevInstalled(plugin.id) || installingId === plugin.id} onClick={() => install(plugin)}>
-                                                {installingId === plugin.id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                }
-                            />
-                        ))}
+                        {Object.keys(groupedAvailable).map(id => {
+                            const group = groupedAvailable[id]
+                            const plugin = getSelectedEntry(id)
+                            const versions = group.map(p => p.version)
+                            return (
+                                <PluginCard
+                                    key={id}
+                                    icon={plugin.icon}
+                                    name={plugin.name}
+                                    version={plugin.version}
+                                    versions={versions}
+                                    onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [id]: v }))}
+                                    description={plugin.description}
+                                    website={plugin.website}
+                                    badge={isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
+                                    action={
+                                        <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Reinstall' : 'Install'}>
+                                            <span>
+                                                <IconButton size='small' color='primary' disabled={isDevInstalled(id) || installingId === id} onClick={() => install(plugin)}>
+                                                    {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    }
+                                />
+                            )
+                        })}
                     </Box>
 
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}

@@ -16,14 +16,6 @@
         "url": "https://github.com/kwirthmagnify/kwirth/raw/refs/heads/master/plugins/topology/topology-plugin.tgz"
     },
     {
-        "id": "topology",
-        "name": "Topology",
-        "version": "1.0.2",
-        "description": "Displays Kubernetes artifacts topology in 3D",
-        "icon": "AccountTree",
-        "url": "https://github.com/kwirthmagnify/kwirth/raw/refs/heads/master/plugins/topology/topology-plugin.tgz"
-    },
-    {
         "id": "pinocchio",
         "name": "Pinocchio",
         "version": "1.0.0",
