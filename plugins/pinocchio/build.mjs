@@ -2,8 +2,6 @@ import esbuild from 'esbuild'
 import fs from 'fs'
 import path from 'path'
 
-// Maps external packages to window.__kwirth__ globals so bundles don't include React/MUI/kwirth-common.
-// AI SDK and other dependencies are bundled into back.js since the host does not provide them.
 const kwirthGlobalsPlugin = {
     name: 'kwirth-globals',
     setup(build) {
@@ -28,16 +26,13 @@ const kwirthGlobalsPlugin = {
 
 fs.mkdirSync('dist', { recursive: true })
 
-// Build front.js — IIFE that registers the channel via window.__kwirth_plugins__
-// React/MUI/kwirth-common are externalized via globals.
-// kwirth-common-front is bundled (only TypeScript interfaces, no runtime cost).
 await esbuild.build({
     entryPoints: ['src/front/index.ts'],
     bundle: true,
     format: 'iife',
     outfile: 'dist/front.js',
     plugins: [kwirthGlobalsPlugin],
-    loader: { '.tsx': 'tsx', '.ts': 'tsx' },
+    loader: { '.tsx': 'tsx', '.ts': 'ts' },
     jsx: 'transform',
     jsxFactory: 'React.createElement',
     jsxFragment: 'React.Fragment',
@@ -46,8 +41,6 @@ await esbuild.build({
 })
 console.log('Built dist/front.js')
 
-// Build back.js — CommonJS bundle for Node.js.
-// All AI SDK packages (ai, @ai-sdk/*, @openrouter/*), nunjucks, lodash and zod are bundled.
 await esbuild.build({
     entryPoints: ['src/back/index.ts'],
     bundle: true,
@@ -55,17 +48,16 @@ await esbuild.build({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
+    external: ['express'],
     loader: { '.ts': 'ts' },
     minify: false,
-    external: ['cpu-features'],
 })
 console.log('Built dist/back.js')
 
-// Write package.json into dist for the .tgz bundle
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = {
     id: meta.id,
-    name: meta.name,
+    name: `@kwirthmagnify/kwirth-plugin-${meta.id}`,
     version: meta.version,
     description: meta.description,
     icon: meta.icon,
@@ -74,11 +66,5 @@ const distMeta = {
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
-if (process.argv.includes('--pack')) {
-    const { execSync } = await import('child_process')
-    const tgzName = `kwirth-${meta.id}-plugin-${meta.version}.tgz`
-    execSync(`tar -czf ${tgzName} -C dist .`)
-    console.log(`Created: ${tgzName}`)
-} else {
-    console.log(`Done. Run 'npm run pack' to create 'kwirth-${meta.id}-plugin-${meta.version}.tgz'`)
-}
+console.log(`Done. Run 'npm publish' on your 'dist' folder in order to publish your package to npmjs.`)
+console.log(`Pacakge will be accesible (and installable on Kwirth) via this URL: https://registry.npmjs.org/${meta.publisher}/kwirth-plugin-${meta.id}/-/kwirth-plugin-${meta.id}-${meta.version}.tgz`)

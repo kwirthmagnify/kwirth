@@ -67,4 +67,4 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, nul
 console.log('Wrote dist/package.json')
 
 console.log(`Done. Run 'npm publish' on your 'dist' folder in order to publish your package to npmjs.`)
-console.log(`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/${meta.publisher}/kwirth-plugin-${meta.name}/-/kwirth-plugin-${meta.name}-${meta.version}.tgz`)
+console.log(`Pacakge will be accesible (and installable on Kwirth) via this URL: https://registry.npmjs.org/${meta.publisher}/kwirth-plugin-${meta.id}/-/kwirth-plugin-${meta.id}-${meta.version}.tgz`)

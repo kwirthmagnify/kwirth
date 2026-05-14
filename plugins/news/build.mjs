@@ -58,6 +58,7 @@ const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = {
     id: meta.id,
     name: `@kwirthmagnify/kwirth-plugin-${meta.id}`,
+    displayName: meta.displayName,
     version: meta.version,
     description: meta.description,
     icon: meta.icon,
@@ -67,4 +68,4 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, nul
 console.log('Wrote dist/package.json')
 
 console.log(`Done. Run 'npm publish' on your 'dist' folder in order to publish your package to npmjs.`)
-console.log(`Pacakge will be accesible (and installable on Kwirth) via this URL: https://registry.npmjs.org/${meta.publisher}/kwirth-plugin-${meta.name}/-/kwirth-plugin-${meta.name}-${meta.version}.tgz`)
+console.log(`Pacakge will be accesible (and installable on Kwirth) via this URL: https://registry.npmjs.org/${meta.publisher}/kwirth-plugin-${meta.id}/-/kwirth-plugin-${meta.id}-${meta.version}.tgz`)

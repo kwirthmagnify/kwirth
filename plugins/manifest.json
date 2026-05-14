@@ -2,17 +2,17 @@
     {
         "id": "news",
         "name": "News",
-        "version": "0.1.0",
+        "version": "0.1.1",
         "description": "Displays Kubernetes and AI news feeds",
         "icon": "Newspaper",
-        "url": " https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.1.0.tgz"
+        "url": " https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.1.1.tgz"
     },
     {
         "id": "topology",
         "name": "Topology",
-        "version": "0.1.0",
+        "version": "0.1.1",
         "description": "Displays Kubernetes artifacts topology in 3D, you can also interact with objects",
         "icon": "AccountTree",
-        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.1.0.tgz"
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.1.1.tgz"
     }
 ]

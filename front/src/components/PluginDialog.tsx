@@ -10,6 +10,7 @@ const PLUGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kw
 interface IPluginManifestEntry {
     id: string
     name: string
+    displayName: string
     version: string
     description: string
     icon?: string
@@ -20,6 +21,7 @@ interface IPluginManifestEntry {
 interface IInstalledPlugin {
     id: string
     name: string
+    displayName: string
     version: string
     description: string
     icon?: string
@@ -212,13 +214,13 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, 0.12) 0%, hsla(${hue}, 55%, 42%, 0.26) 100%)`
     }
 
-    const PluginCard = ({ icon, name, version, versions, onVersionChange, description, badge, source, website, action }: { icon?: string; name: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode }) => (
+    const PluginCard = ({ icon, name, displayName, version, versions, onVersionChange, description, badge, source, website, action }: { icon?: string; name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 120, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: pluginGradient(name) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}>{resolveIcon(icon)}</Box>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                        <Typography variant='body2' fontWeight='bold' component='span'>{name}</Typography>
+                        <Typography variant='body2' fontWeight='bold' component='span'>{displayName||name}</Typography>
                         {versions && versions.length > 1
                             ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
                                 sx={{ height: 24, fontSize: '0.75rem', '& .MuiSelect-select': { py: 0, px: 1 } }}>
@@ -259,6 +261,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                     key={plugin.id}
                                     icon={plugin.icon}
                                     name={plugin.name}
+                                    displayName={plugin.displayName}
                                     version={plugin.version}
                                     description={plugin.description}
                                     website={plugin.website}
@@ -343,6 +346,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                     key={id}
                                     icon={plugin.icon}
                                     name={plugin.name}
+                                    displayName={plugin.displayName}
                                     version={plugin.version}
                                     versions={versions}
                                     onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [id]: v }))}
