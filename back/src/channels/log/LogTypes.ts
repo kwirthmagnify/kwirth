@@ -6,14 +6,6 @@ export enum ELogSortOrder {
     POD = 'pod'
 }
 
-export interface ILogConfig {
-    timestamp: boolean
-    previous: boolean
-    maxMessages: number
-    fromStart: boolean
-    startTime: number
-}
-
 export interface ILogMessage extends IInstanceMessage {
     msgtype: 'logmessage'
     timestamp?: Date

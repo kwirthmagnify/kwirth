@@ -4,7 +4,7 @@ import { PassThrough } from 'stream'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
 import { Request, Response } from 'express'
-import { ILogConfig, ILogMessage } from './LogTypes';
+import { ILogInstanceConfig, ILogMessage } from './LogTypes';
 
 interface IAsset {
     podNamespace:string
@@ -164,7 +164,7 @@ class LogChannel implements IChannel {
             if (!instance) {
                 let len = socket?.instances.push ({
                     instanceId: instanceConfig.instance, 
-                    timestamps: (instanceConfig.data as ILogConfig).timestamp,
+                    timestamps: (instanceConfig.data as ILogInstanceConfig).timestamp,
                     previous: false,
                     paused: false,
                     assets: [],
@@ -195,8 +195,8 @@ class LogChannel implements IChannel {
                 follow: true,
                 stdout: true,
                 stderr: true,
-                timestamps: (instanceConfig.data as ILogConfig).timestamp as boolean,
-                ...((instanceConfig.data as ILogConfig).fromStart? {} : {since: Date.now()-1800})
+                timestamps: (instanceConfig.data as ILogInstanceConfig).timestamp as boolean,
+                ...((instanceConfig.data as ILogInstanceConfig).fromStart? {} : {since: Date.now()-1800})
             })
 
             asset.readableStream.setEncoding('utf8')
@@ -222,7 +222,7 @@ class LogChannel implements IChannel {
             if (!instance) {
                 let len = socket?.instances.push ({
                     instanceId: instanceConfig.instance, 
-                    timestamps: (instanceConfig.data as ILogConfig).timestamp,
+                    timestamps: (instanceConfig.data as ILogInstanceConfig).timestamp,
                     previous: false,
                     paused:false,
                     assets:[],
@@ -316,8 +316,10 @@ class LogChannel implements IChannel {
             //         instance.isSending = false
             //     }
             // })
-            let logConfig = instanceConfig.data as ILogConfig
+            let logConfig = instanceConfig.data as ILogInstanceConfig
             let sinceSeconds = logConfig.startTime? Math.max( Math.floor((Date.now() - logConfig.startTime) / 1000), 1) : 1800
+            console.log(Date.now(), logConfig.startTime)
+            console.log(logConfig.fromStart, logConfig.startTime, sinceSeconds)
             let streamConfig = { 
                 follow: true,
                 pretty: false,

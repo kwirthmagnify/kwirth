@@ -347,6 +347,7 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     name: `${so.namespace}-${so.pod}+${so.container}`
                 }
                 let logConfig:ILogConfig = {
+                    fromNowOn: false,
                     startDiagnostics: false,
                     follow: true,
                     showNames: false,
@@ -358,6 +359,7 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     previous: false,
                     timestamp: false,
                     fromStart: false
+                    // no startTime implies 1800 seconds back in time
                 }
                 let logSettings ={
                     config: logConfig,

@@ -1,27 +1,34 @@
-import { ELogSortOrder, ILogInstanceConfig } from "./LogTypes"
+enum ELogSortOrderEnum {
+    NONE = 'none',
+    TIME = 'time',
+    POD = 'pod'
+}
 
 interface ILogConfig {
     startDiagnostics: boolean
-    fromNowOn: boolean
 
     // for general log viewing
     follow: boolean
     maxMessages: number
-    showNames: boolean
 
     // for start diagnostics
     maxPerPodMessages: number
-    sortOrder: ELogSortOrder
+    sortOrder: ELogSortOrderEnum
 }
 
 class LogConfig implements ILogConfig{
     startDiagnostics = false
-    fromNowOn: boolean = false
     follow = true
     maxMessages = 5000
     maxPerPodMessages = 1000
-    sortOrder = ELogSortOrder.TIME
-    showNames = false
+    sortOrder = ELogSortOrderEnum.TIME
+}
+
+interface ILogInstanceConfig {
+    previous: boolean
+    timestamp: boolean
+    fromStart: boolean
+    startTime?: number
 }
 
 class LogInstanceConfig implements ILogInstanceConfig{
@@ -31,5 +38,5 @@ class LogInstanceConfig implements ILogInstanceConfig{
     startTime? = 0
 }
 
-export type { ILogConfig }
-export { LogConfig, LogInstanceConfig }
+export type { ILogConfig, ILogInstanceConfig }
+export { LogConfig, LogInstanceConfig, ELogSortOrderEnum }

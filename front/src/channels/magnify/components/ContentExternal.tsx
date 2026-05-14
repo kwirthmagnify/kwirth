@@ -327,6 +327,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 
     const setLogConfig = (c:IContentExternalObject) => {
         let logConfig:ILogConfig = {
+            fromNowOn: false,
             startDiagnostics: false,
             follow: true,
             showNames: false,
@@ -338,6 +339,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
             previous: false,
             timestamp: false,
             fromStart: false
+            // no startTime implies 1800 seconds back in time
         }
         let logData:ILogData = {
             messages: [],

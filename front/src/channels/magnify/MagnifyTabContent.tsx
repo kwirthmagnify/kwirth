@@ -191,13 +191,20 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const clickRightItem = (name:string, target:HTMLElement) => {
         switch(name) {
-            case 'notifications':
-                setNotificationMenuAnchorParent(target)
-                break
             case 'exit':
                 setMsgBox(MsgBoxYesNo('Exit cluster', 'Are you sure you want to leave this cluster and go back to initial cluster selection?', setMsgBox, (b:MsgBoxButtons)=> {
                     if (b === MsgBoxButtons.Yes) props.channelObject.exit?.()
                 }))
+                break
+            case 'notifications':
+                setNotificationMenuAnchorParent(target)
+                break
+            case 'cloud':
+                if (props.channelObject.webSocket?.readyState!==1) {
+                    setMsgBox(MsgBoxYesNo('Reconnect Kwirth', 'Kwirth has been disconnected. Do you want to reconnect?', setMsgBox, (result) => {
+                        
+                    }))
+                }
                 break
         }
     }
@@ -205,7 +212,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const rightItems:IFileManagerMenuItem[] = [
         {
             name: 'cloud',
-            //onClick: (name:string, target:HTMLElement) => clickRightItem(name, target),
+            onClick: (name:string, target:HTMLElement) => clickRightItem(name, target),
             onDraw: (name:string) => drawRightItem(name)
         },
         {

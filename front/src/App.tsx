@@ -681,6 +681,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     newTab.channelObject.config = settings.config
                     newTab.channelObject.instanceConfig = settings.instanceConfig
                 }
+                console.log('tostartfrom settings', newTab.channelObject.config)
+                console.log('tostartfrom settings', newTab.channelObject.instanceConfig)
                 startTabChannel(newTab, cluster)
                 setChannelMessageAction({action : EChannelRefreshAction.REFRESH})  // we force rendering
             }
@@ -712,6 +714,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const onChannelSetupClosed = (channel:IChannel, channelSettings:IChannelSettings, start:boolean, setDefaultValues:boolean) => {
+        console.log(channelSettings.channelInstanceConfig)
         channel.setSetupVisibility(false)
         if (!selectedTab.current || !userSettingsRef.current) return
         if (!start) {
@@ -726,8 +729,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 channelInstanceConfig: channelSettings.channelInstanceConfig,
                 channelConfig: channelSettings.channelConfig
             })
-            if (user)
-            writeLoggedUserSettings(user)
+            if (user) writeLoggedUserSettings(user)
         }
 
         selectedTab.current.channelObject.config = channelSettings.channelConfig
@@ -739,6 +741,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setMsgBox(MsgBoxOk('Kwirth',`Cluster (${selectedTab.current!.channelObject.clusterName}) could not be found.`, setMsgBox))
             return
         }
+        console.log('setupclosed', selectedTab.current.channelObject.instanceConfig)
+        console.log('setupclosed', selectedTab.current.channelObject.config)
 
         startTabChannel(selectedTab.current, cluster)
     }
@@ -984,6 +988,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             if (tab.channel) {
                 instanceConfig.scope = tab.channel.getScope()
                 instanceConfig.data = tab.channelObject.instanceConfig
+                console.log('tostart')
+                console.log(tab.channelObject.config)
+                console.log(tab.channelObject.instanceConfig)
                 tab.ws.send(JSON.stringify(instanceConfig))
                 tab.channelStarted = true
                 tab.channelPaused = false

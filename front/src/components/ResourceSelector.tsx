@@ -402,7 +402,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 <InputLabel >Channel</InputLabel>
                 <Select value={props.backChannels.length>0?channel:''} onChange={onChangeChannel}> 
                     { props.backChannels.map(c => 
-                        <MenuItem key={c.id} value={c.id} disabled={(view===EInstanceConfigView.CLUSTER && !c.cluster) || (view!==EInstanceConfigView.CLUSTER && !c.resourced)}>{c.id}</MenuItem>)
+                        <MenuItem key={c.id} value={c.id} disabled={(view===EInstanceConfigView.CLUSTER && !c.cluster)}>{c.id}</MenuItem>)
                     }
                 </Select>
             </FormControl>
