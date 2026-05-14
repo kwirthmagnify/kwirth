@@ -1,15 +1,15 @@
 {
-    "id": "@kwirthmagnify/pinocchio",
+    "id": "pinocchio",
     "name": "Pinocchio",
-    "version": "1.0.1",
+    "publisher": "@kwirthmagnify",
+    "version": "0.1.0",
     "website": "https://kwirthmagnify.dev",
     "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
     "icon": "AutoFixHigh",
     "type": "module",
     "scripts": {
         "build": "node build.mjs",
-        "watch": "node watch.mjs",
-        "pack": "node build.mjs --pack"
+        "watch": "node watch.mjs"
     },
     "dependencies": {
         "@ai-sdk/deepseek": "^2.0.29",

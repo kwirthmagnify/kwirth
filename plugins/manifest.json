@@ -2,25 +2,17 @@
     {
         "id": "news",
         "name": "News",
-        "version": "1.0.0",
+        "version": "0.1.0",
         "description": "Displays Kubernetes and AI news feeds",
         "icon": "Newspaper",
-        "url": "https://github.com/kwirthmagnify/kwirth/raw/refs/heads/master/plugins/news/news-plugin.tgz"
+        "url": " https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.1.0.tgz"
     },
     {
         "id": "topology",
         "name": "Topology",
-        "version": "1.0.0",
-        "description": "Displays Kubernetes artifacts topology in 3D",
+        "version": "0.1.0",
+        "description": "Displays Kubernetes artifacts topology in 3D, you can also interact with objects",
         "icon": "AccountTree",
-        "url": "https://github.com/kwirthmagnify/kwirth/raw/refs/heads/master/plugins/topology/topology-plugin.tgz"
-    },
-    {
-        "id": "pinocchio",
-        "name": "Pinocchio",
-        "version": "1.0.0",
-        "description": "Adds AI capabilities to your K8s. Will help you on analyzing workloads, security, capacity... using an external LLM",
-        "icon": "AutoFixHigh",
-        "url": "https://github.com/kwirthmagnify/kwirth/raw/refs/heads/master/plugins/pinocchio/pinocchio-plugin.tgz"
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.1.0.tgz"
     }
 ]
