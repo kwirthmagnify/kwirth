@@ -1,20 +1,14 @@
 import { FC, ReactNode } from 'react'
 import {
     EChannelRefreshAction,
-    ENotifyLevel,
-    IChannel,
-    IChannelMessageAction,
-    IChannelObject,
-    IChannelRequirements,
-    IContentProps,
-    ISetupProps,
-} from './types'
-import {
     EInstanceConfigScope,
     EInstanceConfigView,
     EInstanceMessageAction,
     EInstanceMessageFlow,
     EInstanceMessageType,
+    ENotifyLevel,
+    IChannelMessageAction,
+    IChannelRequirements,
     IInstanceMessage,
     ISignalMessage,
 } from '@kwirthmagnify/kwirth-common'
@@ -23,6 +17,7 @@ import { TopologyIcon, TopologySetup } from './TopologySetup'
 import { TopologyTabContent } from './TopologyTabContent'
 import { TopologyData, ITopologyData, ITopologyNode, ETopologyNodeKind, ETopologyNodeStatus } from './TopologyData'
 import { TopologyConfig, TopologyInstanceConfig, ITopologyConfig, ITopologyInstanceConfig } from './TopologyConfig'
+import { IChannel, IChannelObject, IContentProps, ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 
 interface ITopologyWsMessage {
     type:        EInstanceMessageType

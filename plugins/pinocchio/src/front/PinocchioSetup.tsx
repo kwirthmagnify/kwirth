@@ -1,6 +1,6 @@
 import React from 'react'
-import { ISetupProps } from './types'
 import { AutoFixHigh } from '@mui/icons-material'
+import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 
 const PinocchioIcon = <AutoFixHigh />
 

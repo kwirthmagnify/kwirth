@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Box, Card, CardContent, CardHeader, Chip, Link, Stack, Typography } from '@mui/material'
 import { Info } from '@mui/icons-material'
 import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
-import { IContentProps } from './types'
 import { INewsData, INewsItem } from './NewsData'
 import { INewsChannelConfig } from './NewsConfig'
+import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 
 export const NewsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const newsData: INewsData = props.channelObject.data

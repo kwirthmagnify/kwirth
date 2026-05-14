@@ -1,1 +1,0 @@
-npm publish --//registry.npmjs.org/:_authToken=TOKEN_KEEPASS

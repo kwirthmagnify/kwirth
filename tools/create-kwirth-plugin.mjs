@@ -10,6 +10,7 @@ console.log('\n── Kwirth plugin scaffold ───────────�
 
 const id          = await ask('Plugin ID (kebab-case, e.g. my-plugin)')
 const name        = await ask('Display name', id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' '))
+const publisher   = await ask('Publisher name (e.g. @my-scope)')
 const description = await ask('Description', `${name} channel plugin for Kwirth`)
 const icon        = await ask('MUI icon name', 'Extension')
 const website     = await ask('Website URL (optional)', '')
@@ -36,19 +37,20 @@ fs.mkdirSync(path.join(pluginDir, 'src', 'front'), { recursive: true })
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
     "id": "${id}",
-    "name": "${name}",${websiteLine}
+    "name": "${name}",
+    "publisher": "${publisher}",
     "version": "1.0.0",
     "description": "${description}",
     "icon": "${icon}",
+    ${websiteLine}
     "type": "module",
     "scripts": {
         "build": "node build.mjs",
-        "watch": "node watch.mjs",
-        "pack": "node build.mjs --pack"
+        "watch": "node watch.mjs"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common": "^0.5.1",
-        "@kwirthmagnify/kwirth-common-front": "^0.5.1"
+        "@kwirthmagnify/kwirth-common": "^0.5.2",
+        "@kwirthmagnify/kwirth-common-front": "^0.5.2"
     },
     "devDependencies": {
         "@mui/icons-material": "7.1.2",
@@ -152,7 +154,7 @@ console.log('Built dist/back.js')
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = {
     id: meta.id,
-    name: meta.name,
+    name: "${publisher?publisher+'/':''}kwirth-plugin-${id}",
     version: meta.version,
     description: meta.description,
     icon: meta.icon,
@@ -161,14 +163,8 @@ const distMeta = {
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
-if (process.argv.includes('--pack')) {
-    const { execSync } = await import('child_process')
-    const tgzName = \`\${meta.id}-plugin-\${meta.version}.tgz\`
-    execSync(\`tar -czf \${tgzName} -C dist .\`)
-    console.log(\`Created: \${tgzName}\`)
-} else {
-    console.log(\`Done. Run 'npm run pack' to create \${meta.id}-plugin-\${meta.version}.tgz\`)
-}
+console.log("Done. Run 'npm publish' on your 'dist' folder in order to publish your package to npmjs.")
+console.log(\`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/\${meta.publisher}/kwirth-plugin-\${meta.id}/-/kwirth-plugin-\${meta.id}-\${meta.version}.tgz\`)
 `)
 
 // ─── watch.mjs ─────────────────────────────────────────────────────────────
@@ -477,7 +473,8 @@ Next steps:
   npm install
   npm run build        # one-shot build
   npm run watch        # dev mode (hot-reload)
-  npm run pack         # build + create ${id}-plugin-1.0.0.tgz
+  cd dist              
+  npm publish          # publish to npmjs
 `)
 
 // ─── helpers ───────────────────────────────────────────────────────────────

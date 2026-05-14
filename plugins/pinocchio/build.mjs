@@ -76,9 +76,9 @@ console.log('Wrote dist/package.json')
 
 if (process.argv.includes('--pack')) {
     const { execSync } = await import('child_process')
-    const tgzName = `${meta.id}-plugin-${meta.version}.tgz`
+    const tgzName = `kwirth-${meta.id}-plugin-${meta.version}.tgz`
     execSync(`tar -czf ${tgzName} -C dist .`)
     console.log(`Created: ${tgzName}`)
 } else {
-    console.log(`Done. Run 'npm run pack' to create ${meta.id}-plugin-${meta.version}.tgz`)
+    console.log(`Done. Run 'npm run pack' to create 'kwirth-${meta.id}-plugin-${meta.version}.tgz'`)
 }

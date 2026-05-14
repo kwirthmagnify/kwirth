@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Stack, Typography } from '@mui/material'
-import { IChannelObject } from './types'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
 import { EPinocchioCommand, IAnalysis, IConfigProvider, IConfigTrigger, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
@@ -12,6 +11,7 @@ import React from 'react'
 import { MenuConfig } from './MenuConfig'
 import { PinocchioImportExport } from './PinocchioImportExport'
 import { PinocchioPlayground } from './PinocchioPlayground'
+import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
 
 interface IContentProps {
     webSocket?: WebSocket

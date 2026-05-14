@@ -4,8 +4,8 @@ import {
     Divider, FormControlLabel, FormGroup, Slider, Stack, Typography,
 } from '@mui/material'
 import { AccountTree } from '@mui/icons-material'
-import { ISetupProps } from './types'
 import { TopologyConfig, ITopologyConfig } from './TopologyConfig'
+import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 
 export const TopologyIcon = <AccountTree />
 

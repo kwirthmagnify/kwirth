@@ -1,5 +1,5 @@
 {
-    "id": "pinocchio",
+    "id": "@kwirthmagnify/pinocchio",
     "name": "Pinocchio",
     "version": "1.0.1",
     "website": "https://kwirthmagnify.dev",
@@ -12,13 +12,12 @@
         "pack": "node build.mjs --pack"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common": "file:../../common",
-        "@kwirthmagnify/kwirth-common-front": "^0.5.1",
         "@ai-sdk/deepseek": "^2.0.29",
         "@ai-sdk/google": "^3.0.64",
         "@ai-sdk/groq": "^3.0.35",
         "@ai-sdk/mistral": "^3.0.30",
         "@ai-sdk/openai": "^3.0.53",
+        "@kwirthmagnify/kwirth-common-front": "^0.5.2",
         "@openrouter/ai-sdk-provider": "^2.8.0",
         "ai": "^6.0.174",
         "lodash": "^4.18.1",

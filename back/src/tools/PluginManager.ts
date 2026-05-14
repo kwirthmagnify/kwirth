@@ -1,8 +1,8 @@
 import { IConfigMaps } from './IConfigMap'
 import { TChannelConstructor } from '../channels/IChannel'
-import { ELogComponent, logError, logInfo } from './Logging'
+import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import tar from 'tar'
-import os from 'os'
+import os, { tmpdir } from 'os'
 import path from 'path'
 import fs from 'fs'
 import https from 'https'
@@ -166,8 +166,8 @@ export class PluginManager {
     }
 
     async install(tarGzUrl: string, registeredChannels: Map<string, TChannelConstructor>, installedFrom?: string): Promise<IPluginMeta> {
-        const tmpTgz = path.join(os.tmpdir(), `kwirth-plugin-${Date.now()}.tgz`)
-        const tmpDir = path.join(os.tmpdir(), `kwirth-plugin-extract-${Date.now()}`)
+        let tmpTgz = path.join(os.tmpdir(), `kwirth-plugin-${Date.now()}.tgz`)
+        let tmpDir = path.join(os.tmpdir(), `kwirth-plugin-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
 
         const isLocalPath = tarGzUrl.startsWith('file://') || (!tarGzUrl.startsWith('http://') && !tarGzUrl.startsWith('https://'))
@@ -181,12 +181,24 @@ export class PluginManager {
             }
             await tar.x({ file: tmpTgz, cwd: tmpDir })
 
-            const metaPath = path.join(tmpDir, 'package.json')
-            const backPath = path.join(tmpDir, 'back.js')
-            const frontPath = path.join(tmpDir, 'front.js')
+            let metaPath = path.join(tmpDir, 'package.json')
+            let backPath = path.join(tmpDir, 'back.js')
+            let frontPath = path.join(tmpDir, 'front.js')
 
-            if (!fs.existsSync(metaPath) || !fs.existsSync(backPath) || !fs.existsSync(frontPath))
-                throw new Error('Invalid plugin bundle: missing package.json, back.js or front.js')
+            if (!fs.existsSync(metaPath) || !fs.existsSync(backPath) || !fs.existsSync(frontPath)) {
+                // try npmjs format (folder 'package' at top level)
+                logWarning(ELogComponent.CORE, 'Cannot find artifacts. Trying npmjs format')
+                tmpDir = path.join(tmpDir, 'package')
+                metaPath = path.join(tmpDir, 'package.json')
+                backPath = path.join(tmpDir, 'back.js')
+                frontPath = path.join(tmpDir, 'front.js')
+                if (!fs.existsSync(metaPath) || !fs.existsSync(backPath) || !fs.existsSync(frontPath)) {
+                    throw new Error('Invalid plugin bundle: missing package.json, back.js or front.js')
+                }
+                else {
+
+                }
+            }
 
             const meta: IPluginMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
             meta.installedFrom = installedFrom ?? tarGzUrl
