@@ -58,7 +58,6 @@ const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = {
     id: meta.id,
     name: `@kwirthmagnify/kwirth-plugin-${meta.id}`,
-    displayName: meta.displayName,
     version: meta.version,
     description: meta.description,
     icon: meta.icon,
