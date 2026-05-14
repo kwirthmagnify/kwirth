@@ -2,7 +2,7 @@ import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMess
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
 import { Request, Response } from 'express'
-import { ELogComponent, logError, logInfo, logTrace, logWarning } from '../../tools/Logging'
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 import { IMetricsCluster, IMetricsNode } from '../../providers/metrics/IMetricsModel'
 import { EMetricsConfigMode, IMetricsAssets, IMetricsConfig, IMetricsMessageResponse } from './MetricsTypes'
 

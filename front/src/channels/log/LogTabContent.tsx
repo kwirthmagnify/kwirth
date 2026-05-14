@@ -4,9 +4,11 @@ import { IContentProps } from '../IChannel'
 import { useEffect, useRef, useState } from 'react'
 import { Error, Warning } from '@mui/icons-material'
 import { ILogConfig, LogConfig } from './LogConfig'
-// import AnsiToHtml from 'ansi-to-html'
-// const ansiConverter = new AnsiToHtml({ escapeXML: true })
-// +++ converting into HTML creates a memory leak (or too much memory consumption, Im no sure) when rendering lots of messages
+
+const cleanANSI = (text: string): string => {
+    const regexAnsi = /\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g;
+    return text.replace(regexAnsi, '') // replace all matches with empty strings
+}
 
 const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let logData:ILogData = props.channelObject.data || new LogData()
@@ -39,54 +41,9 @@ const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     if (!logData) return <pre></pre>
 
-    // const formatLogLine = (logLine:ILogLine) => {
-    //     //if (!logLine.pod) return <>{logLine.text+'\n'}</>
-    //     if (!logLine.pod) {
-    //         const html = ansiConverter.toHtml(logLine.text)
-    //         return <span dangerouslySetInnerHTML={{ __html: html + '\n' }} />
-    //     }
-
-    //     if (filter!=='') {
-    //         if (filterCasing) {
-    //             if (filterRegex) {
-    //                 try {
-    //                     const regex=new RegExp(filter)
-    //                     if (!regex.test(logLine.text) && !regex.test(logLine.pod) && !regex.test(logLine.container)) return <></>
-    //                 }
-    //                 catch { return <></> }
-    //             }
-    //             else {
-    //                 if (!logLine.text.includes(filter) && !logLine.pod.includes(filter) && !logLine.container.includes(filter)) return <></>
-    //             }
-    //         }
-    //         else {
-    //             if (filterRegex) {
-    //                 try {
-    //                     const regex=new RegExp(filter.toLocaleLowerCase())
-    //                     if (!regex.test(logLine.text.toLocaleLowerCase()) && !regex.test(logLine.pod.toLocaleLowerCase()) && !regex.test(logLine.container.toLocaleLowerCase())) return <></>
-    //                 }
-    //                 catch { return <></> }
-    //             }
-    //             else {
-    //                 if (!logLine.text.toLocaleLowerCase().includes(filter.toLowerCase()) && !logLine.pod.toLocaleLowerCase().includes(filter.toLocaleLowerCase()) && !logLine.container.toLocaleLowerCase().includes(filter.toLocaleLowerCase())) return <></>
-    //             }
-    //         }
-    //     }
-
-    //     const textHtml = ansiConverter.toHtml(logLine.text)
-    //     return <>
-    //         {logConfig.showNames && <span style={{color:"green"}}>{logLine.pod+' '}</span>}
-    //         {logConfig.showNames && <span style={{color:"blue"}}>{logLine.container+' '}</span>}
-    //         <span dangerouslySetInnerHTML={{ __html: textHtml + '\n' }} />
-    //     </>
-    // }
-
     const formatLogLine = (logLine:ILogLine) => {
-        //if (!logLine.pod) return <>{logLine.text+'\n'}</>
         if (!logLine.pod) {
-            // const html = ansiConverter.toHtml(logLine.text)
-            // return <span dangerouslySetInnerHTML={{ __html: html + '\n' }} />
-            return <span>{logLine.text}</span>
+            return <span>{cleanANSI(logLine.text)}</span>
         }
 
         if (filter!=='') {
@@ -120,19 +77,12 @@ const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             return <>
                 <span style={{color:'green'}}>{logLine.pod+' '}</span>
                 <span style={{color:'blue'}}>{logLine.container+' '}</span>
-                <span>{logLine.text}</span>
+                <span>{cleanANSI(logLine.text)}</span>
             </>
         }
         else {
-            return <span>{logLine.text}</span>
+            return <span>{cleanANSI(logLine.text)}</span>
         }
-        //const textHtml = logLine.text
-        // return <>
-        //     {logConfig.showNames && <span style={{color:'green'}}>{logLine.pod+' '}</span>}
-        //     {logConfig.showNames && <span style={{color:'blue'}}>{logLine.container+' '}</span>}
-        //     {/* <span dangerouslySetInnerHTML={{ __html: textHtml + '\n' }} /> */}
-        //     <span>{logLine.text}</span>
-        // </>
     }
 
     const onChangeFilter = (event: any) => {

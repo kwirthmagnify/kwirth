@@ -2,7 +2,7 @@ import { KwirthData } from '@kwirthmagnify/kwirth-common'
 import { IProvider } from '../IProvider'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
-import { ELogComponent, logError, logInfo, logTrace } from '../../tools/Logging'
+import { ELogComponent, logError, logInfo } from '../../tools/Logging'
 import express, { Request, Response} from 'express'
 import { ApiKeyApi } from '../../api/ApiKeyApi'
 

@@ -33,6 +33,7 @@ const LogSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
         logConfig.maxMessages = maxMessages
         logConfig.maxPerPodMessages = maxPerPodMessages
         logConfig.sortOrder = sortOrder
+        logConfig.fromNowOn = fromNowOn
         logConfig.startDiagnostics = (selectedTab === 'sd')
         logInstanceConfig.previous  = previous
         logInstanceConfig.timestamp = timestamp
@@ -125,7 +126,7 @@ const LogSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
                                 <Typography>Get messages from now on</Typography>
                             </Stack>
                             <Stack direction='row' alignItems={'baseline'}>
-                                <Switch checked={fromStart} onChange={onFromStart} disabled={fromNowOn}/>
+                                <Switch checked={fromStart && !fromNowOn} onChange={onFromStart} disabled={fromNowOn}/>
                                 <Typography>Get messages from container start time</Typography>
                             </Stack>
                             <LocalizationProvider dateAdapter={AdapterMoment}>

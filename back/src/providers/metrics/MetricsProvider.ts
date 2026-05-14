@@ -3,7 +3,7 @@ import { IMetricsCluster, IMetricsClusterUsage, IMetricsNode, IMetricsNodeSummar
 import { IProvider } from '../IProvider'
 import { ClusterInfo, INodeInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
-import { ELogComponent, logError, logInfo, logTrace, logWarning } from '../../tools/Logging'
+import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 import express, { Request, Response} from 'express'
 import { AuthorizationManagement } from '../../tools/AuthorizationManagement'
 import { ApiKeyApi } from '../../api/ApiKeyApi'
@@ -624,7 +624,7 @@ export class MetricsProvider implements IProvider {
         }
         catch (err) {
             logError(ELogComponent.CORE, 'Error starting metrics provider')
-            logTrace(JSON.stringify(err))
+            logError(ELogComponent.CORE, JSON.stringify(err))
         }
     }
 
