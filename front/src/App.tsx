@@ -225,7 +225,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (existing) existing.remove()
         const script = document.createElement('script')
         script.id = `kwirth-plugin-${id}`
-        script.src = `${props.backendUrl}/plugins/${id}/front?t=${Date.now()}`
+        //script.src = `${props.backendUrl}/plugins/${id}/front?t=${Date.now()}`
+        script.src = `${backendUrl}/plugins/${id}/front?t=${Date.now()}`
         script.onload = () => {
             const PluginChannel = window.__kwirth_plugins__?.[id]
             if (PluginChannel) {
@@ -235,7 +236,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         if (refreshed) tab.channel = refreshed
                     }
                 }
-                setFrontChannels(prev => new Map(prev).set(id, PluginChannel as TChannelConstructor))
+                setFrontChannels(prev => {
+                    const next = new Map(prev).set(id, PluginChannel as TChannelConstructor)
+                    for (const tab of tabs.current) {
+                        if (tab.channel.requirements.frontChannels) {
+                            tab.channelObject.frontChannels = next
+                        }
+                    }
+                    return next
+                })
                 setPluginVersion(v => v + 1)
                 setChannelMessageAction({ action: EChannelRefreshAction.REFRESH })
             }
@@ -247,7 +256,16 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const script = document.getElementById(`kwirth-plugin-${id}`)
         if (script) script.remove()
         pluginVersionsRef.current.delete(id)
-        setFrontChannels(prev => { const next = new Map(prev); next.delete(id); return next })
+        setFrontChannels(prev => {
+            const next = new Map(prev)
+            next.delete(id)
+            for (const tab of tabs.current) {
+                if (tab.channel.requirements.frontChannels) {
+                    tab.channelObject.frontChannels = next
+                }
+            }
+            return next
+        })
         setPluginVersion(v => v + 1)
     }
 
@@ -257,7 +275,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const interval = setInterval(async () => {
             for (const id of ids) {
                 try {
-                    const res = await fetch(`${props.backendUrl}/plugins/${id}/version`, { headers: { 'X-Kwirth-App': 'true' } })
+                    const res = await fetch(`${backendUrl}/plugins/${id}/version`, { headers: { 'X-Kwirth-App': 'true' } })
                     if (!res.ok) continue
                     const { dev, version } = await res.json()
                     if (!dev) continue

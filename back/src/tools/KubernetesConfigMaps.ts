@@ -1,7 +1,6 @@
 import { CoreV1Api, V1ConfigMap } from '@kubernetes/client-node'
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
-import { LoginApi } from '../api/LoginApi'
 
 export class KubernetesConfigMaps implements IConfigMaps {
     coreApi:CoreV1Api
@@ -30,7 +29,7 @@ export class KubernetesConfigMaps implements IConfigMaps {
                     namespace: this.namespace
                 },
                 data: { data: JSON.stringify(data) }
-            };
+            }
             try {
                 await this.coreApi?.replaceNamespacedConfigMap({ name: name, namespace: this.namespace, body: configMap })
                 return {}

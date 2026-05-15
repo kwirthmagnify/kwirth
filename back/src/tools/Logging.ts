@@ -6,7 +6,8 @@ export enum ELogComponent {
     STORAGE = 'storage'
 }
 
-//const ENABLED_COMPONENTS: (ELogComponent | '*')[] = ['*']
+let ansiLog = true
+
 const ENABLED_COMPONENTS: (ELogComponent | '*')[] = [ ELogComponent.CHANNEL, ELogComponent.CORE, ELogComponent.PROVIDER ]
 
 const colors = {
@@ -37,10 +38,10 @@ const logGeneric = (
         ? `\n${JSON.stringify(message, null, 2)}` 
         : message
 
-    const output = `${colors.gray}[${timestamp}]${colors.reset} ` +
-                    `${colors.component}[${component}]${colors.reset} ` +
-                    `${color}[${label}] ` +
-                    `${formattedMessage}${colors.reset}`
+    const output = `${ansiLog? colors.gray : ''}[${timestamp}]${ansiLog? colors.reset : ''} ` +
+                   `${ansiLog? colors.component : ''}[${component}]${ansiLog? colors.reset : ''} ` +
+                   `${ansiLog? color : ''}[${label}] ` +
+                   `${formattedMessage}${ansiLog? colors.reset:''}`
 
     if (level === 'error') {
         console.error(output)
@@ -64,4 +65,8 @@ export const logWarning = (component: ELogComponent, message: unknown): void => 
 
 export const logError = (component: ELogComponent, message: any): void => {
     logGeneric('error', colors.error, component, message)
+}
+
+export const setLogConfig = (ansi:boolean) => {
+    ansiLog = ansi
 }

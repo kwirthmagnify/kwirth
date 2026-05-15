@@ -10,14 +10,14 @@ ipcMain.handle('kube-api-available', async (event, rawUrl) => {
         let req
 
         try {
-            const parsedUrl = new URL(rawUrl);
+            const parsedUrl = new URL(rawUrl)
             const options = {
                 hostname: parsedUrl.hostname,
                 port: parsedUrl.port || 443,
                 path: '/version', 
                 method: 'GET',
                 rejectUnauthorized: false,
-            };
+            }
 
             timer = setTimeout(() => {
                 if (req) req.destroy()
@@ -25,21 +25,17 @@ ipcMain.handle('kube-api-available', async (event, rawUrl) => {
             }, 2500)
 
             req = https.request(options, (res) => {
-                let rawData = '';
+                let rawData = ''
 
-                // 1. Vamos acumulando los trozos de texto que llegan
-                res.on('data', (chunk) => { rawData += chunk; });
+                res.on('data', (chunk) => { rawData += chunk })
 
-                // 2. Cuando termina la respuesta, intentamos parsear
                 res.on('end', () => {
-                    clearTimeout(timer)
-                
+                    clearTimeout(timer)                
                     if (res.statusCode === 200 || res.statusCode === 401 || res.statusCode === 403) {
                         try {
                             const json = JSON.parse(rawData)
-							console.log(json)
-                            //if we get a yaml with kind 'Status' its perfect
-                            // if we just get a minr, minr, gitVersion... (this is GKE way), it is also ok
+                            // if we get a yaml with kind 'Status' its perfect
+                            // if we just get a majr, minr, gitVersion... (this is GKE way), it is also ok
                             resolve(json.kind==='Status' || !!(json.major || json.gitVersion))
                         }
                         catch (e) {
@@ -104,6 +100,7 @@ async function createMainWindow() {
 			process.env.PORT = String(port)
 			process.env.AUTH = 'kubeconfig'
 			process.env.NODE_ENV = 'production'
+			process.env.ANSILOG = 'false'
 			
 			const backendDir = path.join(__dirname, 'bundle')
 			process.chdir(backendDir)
@@ -112,7 +109,7 @@ async function createMainWindow() {
 			require('./bundle/bundle.js')
 		}
 		catch (err) {
-			console.error('Error loading backend:', err);
+			console.error('Error loading backend:', err)
 		}
 
 		const loadApp = () => {

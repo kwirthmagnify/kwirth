@@ -2,7 +2,14 @@
 TEST
     plugins
       review all deployment options
-      
+
++++las categorias seleccionadas en magnify, se pierden al desmontar y montar el componente
++++IMPLEMENTAR GUARDAR EN UN CONFIGMAP LOS LOGS DE CASQUES
++++en desktop, a veces no tiene guardada la config de contexto del user (creo que es porqu ela guarda asociada a la url del server localhost:3883, localhost:3884, entonces si lo levanto y coge un  puerto diferente, no encuentras las variables)
++++si se arranca antes un channel antes que la carga de plugins, los plugins no aparece (esto es importante en magnify arrancando en desktop: la primera vez no aparecen en RFM, y si arrancas magnify de nuevo ya aparecen)
+
+
+
 
 RFM
 

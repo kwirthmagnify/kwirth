@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { ApisApi, CoreV1Api, AppsV1Api, KubeConfig, KubernetesObjectApi, Log, Watch, Exec, V1Pod, CustomObjectsApi, RbacAuthorizationV1Api, ApiextensionsV1Api, VersionApi, NetworkingV1Api, StorageV1Api, BatchV1Api, AutoscalingV2Api, NodeV1Api, SchedulingV1Api, CoordinationV1Api, AdmissionregistrationV1Api, PolicyV1Api } from '@kubernetes/client-node'
+import { ApisApi, CoreV1Api, AppsV1Api, KubeConfig, KubernetesObjectApi, Log, Watch, Exec, V1Pod, CustomObjectsApi, RbacAuthorizationV1Api, ApiextensionsV1Api, VersionApi, NetworkingV1Api, StorageV1Api, BatchV1Api, AutoscalingV2Api, NodeV1Api, SchedulingV1Api, CoordinationV1Api, AdmissionregistrationV1Api, PolicyV1Api, V1ConfigMap } from '@kubernetes/client-node'
 //import Docker from 'dockerode'
 import { ConfigApi } from './api/ConfigApi'
 import { KubernetesSecrets } from './tools/KubernetesSecrets'
@@ -61,7 +61,7 @@ import { TickProvider } from './providers/tick/TickProvider'
 import { BusinessProvider } from './providers/business/BusinessProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
 
-import { ELogComponent, logError, logInfo, logTrace, logWarning } from './tools/Logging'
+import { ELogComponent, logError, logInfo, logTrace, logWarning, setLogConfig } from './tools/Logging'
 import { PluginManager } from './tools/PluginManager'
 import { PluginApi } from './api/PluginApi'
 const fs = require('fs')
@@ -105,6 +105,8 @@ const envMasterKey = process.env.MASTERKEY || 'Kwirth4Ever'
 const envForward = (process.env.FORWARD || 'true').toLowerCase() === 'true'
 const envPort = +(process?.env?.PORT || '3883')
 const envFront = process.env.FRONT !== undefined ? process.env.FRONT === 'true' : true
+const envAnsiLog = process.env.ANSILOG !== undefined ? process.env.ANSILOG === 'true' : true
+const envExitLog = process.env.EXITLOG !== undefined ? process.env.EXITLOG === 'true' : true
 const envConfigMapPath = process.env.CONFIGMAPPATH !== undefined ? process.env.CONFIGMAPPATH : '.'
 const envSecretPath = process.env.SECRETPATH !== undefined ? process.env.SECRETPATH : '.'
 const envChannelLogEnabled = (process.env.CHANNEL_LOG || 'true').toLowerCase() === 'true'
@@ -116,18 +118,17 @@ const envChannelEchoEnabled = (process.env.CHANNEL_ECHO || 'true').toLowerCase()
 const envChannelFilemanEnabled = (process.env.CHANNEL_FILEMAN || 'true').toLowerCase() === 'true'
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 
-var runningInstances:IRunningInstance[] = []
-
+const runningInstances:IRunningInstance[] = []
 let pluginManager: PluginManager | undefined
 
-var registeredProviders = new Map<string, TProviderConstructor>()
+const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
 registeredProviders.set('tick', TickProvider)
 registeredProviders.set('validating', ValidatingProvider)
 registeredProviders.set('business', BusinessProvider)
 registeredProviders.set('metrics', MetricsProvider)
 
-var registeredChannels = new Map<string, TChannelConstructor>()
+const registeredChannels = new Map<string, TChannelConstructor>()
 registeredChannels.set('log', LogChannel)
 registeredChannels.set('alert', AlertChannel)
 registeredChannels.set('metrics', MetricsChannel)
@@ -136,7 +137,7 @@ registeredChannels.set('trivy', TrivyChannel)
 registeredChannels.set('fileman', FilemanChannel)
 registeredChannels.set('echo', EchoChannel)
 registeredChannels.set('magnify', MagnifyChannel)
-// 'news' and 'pinocchio' channels loaded dynamically by PluginManager
+// 'news' 'topology' and 'pinocchio' channels loaded dynamically by PluginManager
 
 if (envCommand!==undefined) {
     switch(envCommand) {
@@ -215,9 +216,7 @@ const getExecutionEnvironment = async (context:string|undefined):Promise<string>
     if (runningEnv.isElectron) return 'electron'
 
     logInfo(ELogComponent.CORE, 'Trying Kubernetes...')
-    if (runningEnv.isK8s) {
-        return 'kubernetes'
-    }
+    if (runningEnv.isK8s) return 'kubernetes'
 
     logInfo(ELogComponent.CORE, 'Trying Docker...')
     if (runningEnv.isDocker) return 'docker'
@@ -331,7 +330,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
                 clusterInfo.token = token
             }
             else {
-                logWarning(ELogComponent.CORE, 'No SA Token, no metrics will be available.')
+                logWarning(ELogComponent.CORE, 'There is no SA Token, no metrics will be available.')
             }
         }
 
@@ -340,23 +339,26 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
 
         let configMaps
         let secrets
+
         if (runningEnv.isDocker) {
             logInfo(ELogComponent.CORE, `Configuration paths:  ${envConfigMapPath} ${envSecretPath}`)
             configMaps = new DockerConfigMaps(clusterInfo.coreApi, envConfigMapPath)
             secrets = new DockerSecrets(clusterInfo.coreApi, envSecretPath)
-            let users:{ [username:string]:string } = await secrets.read('kwirth-users')
-            if (!users) {
-                logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users config map')
-                users = {
-                    admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXI6Ojo6In0='
-                }
-                await secrets.write('kwirth-users',users)
-            }
         }
         else {
             secrets = new KubernetesSecrets(clusterInfo.coreApi, kwirthData.namespace)
             configMaps = new KubernetesConfigMaps(clusterInfo.coreApi, kwirthData.namespace)
         }
+
+        let users:{ [username:string]:string } = await secrets.read('kwirth-users')
+        if (!users) {
+            logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users config map')
+            users = {
+                admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXI6Ojo6In0='
+            }
+            await secrets.write('kwirth-users', users)
+        }
+
         let runningInstance:IRunningInstance = {
             id: uuid(),
             kwirthData: kwirthData,
@@ -1345,43 +1347,6 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
     }
 }
 
-const handleNodeProcessSignal = (signal:any) => {
-    logWarning(ELogComponent.CORE, `⚠️ Signal ${signal} received. We just close everything.`)
-    process.exit(0)
-}   
-
-process.on('SIGTERM', () => handleNodeProcessSignal('SIGTERM'))
-process.on('SIGINT', () => handleNodeProcessSignal('SIGINT'))
-
-process.on('unhandledRejection', (reason:any, promise:any) => {
-    logError(ELogComponent.CORE, '❌ UNHANDLED REJECTION')
-    logError(ELogComponent.CORE, 'Reason:')
-    logError(ELogComponent.CORE, JSON.stringify(reason))
-    // logError(ELogComponent.CORE, 'Stack:')
-    // logError(ELogComponent.CORE, reason.stack)
-    logError(ELogComponent.CORE, 'Promise:')
-    logError(ELogComponent.CORE, JSON.stringify(promise))
-    //console.dir(promise)
-    process.exit(1)
-})
-
-process.on('uncaughtException', (err, origin) => {
-    logError(ELogComponent.CORE, '🚨 UNCAUGHT EXCEPTION')
-    logError(ELogComponent.CORE, `Origin: ${origin}`)
-    logError(ELogComponent.CORE, err.stack || err)
-    process.exit(1)
-})
-
-process.on('exit', async () => {
-    logInfo(ELogComponent.CORE, '********************************************************************************')
-    logInfo(ELogComponent.CORE, '********************************************************************************')
-    logInfo(ELogComponent.CORE, '********************************************************************************')
-    logInfo(ELogComponent.CORE, '********************************************************************************')
-    logInfo(ELogComponent.CORE, '********************************************************************************')
-    logInfo(ELogComponent.CORE, 'exiting on node exit')
-    await new Promise((resolve) => setTimeout(resolve, 10000))
-})
-
 const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningInstance, localKwirthData: KwirthData, localClusterInfo:ClusterInfo, backChannelObject:IBackChannelObject) : Promise<void> => {
     try {
         logInfo(ELogComponent.CORE, 'Node info loaded')
@@ -1561,6 +1526,8 @@ const launchKubernetes = async (context:string|undefined, localKwirthData:Kwirth
             try {
                 let runningInstance = await createRunningInstance(context, localKwirthData)
                 if (runningInstance) {
+                    setupProcessHooks(runningInstance, localKwirthData)
+
                     await prepareRunningInstance(localKwirthData, runningInstance)
                     runningInstances.push(runningInstance)
                     activateRunningInstance(runningInstance)
@@ -1916,10 +1883,95 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
     }
 }
 
+const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthData) => {
+    const handleNodeProcessSignal = (signal:any) => {
+        logWarning(ELogComponent.CORE, `⚠️ Signal ${signal} received. We just close everything.`)
+        process.exit(0)
+    }   
+
+    const exitAndLog = async (signal:any, reason:any, promise:any, err: any, origin: any, exitCode:number, waitSeconds: number) => {
+        if (reason) {
+            logError(ELogComponent.CORE, 'Reason:')
+            logError(ELogComponent.CORE, JSON.stringify(reason))
+        }
+        if (promise) {
+            logError(ELogComponent.CORE, 'Promise:')
+            logError(ELogComponent.CORE, JSON.stringify(promise))
+        }
+        if (err) {
+            logError(ELogComponent.CORE, 'Err:')
+            logError(ELogComponent.CORE, err.stack || err)
+        }
+        if (origin) {
+            logError(ELogComponent.CORE, `Origin:`)
+            logError(ELogComponent.CORE, `${origin}`)
+        }
+
+        if (envExitLog && runningEnv.isK8s && kwirthData.inCluster) {
+            let entry = {
+                timestamp: new Date().toISOString(),
+                reason,
+                promise,
+                err,
+                origin,
+            }
+            try {
+                var secureLogCm:V1ConfigMap = {
+                    metadata: {
+                        name: 'kwirth-secure-log',
+                        namespace: kwirthData.namespace
+                    },
+                    data: { events: JSON.stringify([]) }
+                }
+                let events = []
+                try {
+                    let cfgMap = await runningInstance.clusterInfo.coreApi?.readNamespacedConfigMap({ name: 'kwirth-secure-log', namespace: kwirthData.namespace })
+                    if (cfgMap && cfgMap.data && cfgMap.data.events) events = JSON.parse(cfgMap.data.events)
+                }
+                catch(err:any){
+                    if (err.code===404)
+                        await runningInstance.clusterInfo.coreApi?.createNamespacedConfigMap({ namespace: kwirthData.namespace, body: secureLogCm })
+                    else
+                        logError(ELogComponent.CORE, 'Error reading kubernetes secureLog configMap in ' + kwirthData.namespace + '/' + name)
+                }
+                events.push(entry)
+                secureLogCm.data!.events = JSON.stringify(events)
+                await runningInstance.clusterInfo.coreApi?.replaceNamespacedConfigMap({ name: 'kwirth-secure-log', namespace: kwirthData.namespace, body:secureLogCm })
+            }
+            catch {
+                console.log('Error writing secure exit info. Waiting for 1h before finishing')
+                await new Promise((resolve) => setTimeout(resolve, 60*60*1000))
+            }
+        }
+
+        if (waitSeconds>0) await new Promise((resolve) => setTimeout(resolve, waitSeconds*1000))
+        process.exit(exitCode)
+    }
+
+    process.on('SIGTERM', () => handleNodeProcessSignal('SIGTERM'))
+
+    process.on('SIGINT', () => handleNodeProcessSignal('SIGINT'))
+
+    process.on('unhandledRejection', async (reason:any, promise:any) => {
+        logError(ELogComponent.CORE, '❌ UNHANDLED REJECTION')
+        exitAndLog(undefined, reason, promise, undefined, undefined, 1, 10)
+    })
+
+    process.on('uncaughtException', async (err, origin) => {
+        logError(ELogComponent.CORE, '🚨 UNCAUGHT EXCEPTION')
+        exitAndLog(undefined, undefined, undefined, err, origin, 1, 10)
+    })
+
+    process.on('exit', async () => {
+        logWarning(ELogComponent.CORE, '🚨 EXITING on Node exit')
+        exitAndLog(undefined, undefined, undefined, undefined, undefined, 1, 10)
+    })
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////// START ///////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+setLogConfig(envAnsiLog)  //+++ test
 logInfo(ELogComponent.CORE, `Kwirth version is ${VERSION}`)
 logInfo(ELogComponent.CORE, `Kwirth started at ${new Date().toISOString()}`)
 logInfo(ELogComponent.CORE, 'Kwirth running environment:')
