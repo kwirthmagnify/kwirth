@@ -1,0 +1,32 @@
+{
+  "name": "@kwirthmagnify/kwirth-common-back",
+  "version": "0.5.2",
+  "description": "Backend interfaces for building Kwirth provider and channel plugins",
+  "scripts": {
+    "build": "tsc"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "kwirth",
+    "provider",
+    "plugin",
+    "channel"
+  ],
+  "author": "Julio Fernandez",
+  "license": "ISC",
+  "dependencies": {
+    "@kwirthmagnify/kwirth-common": "^0.5.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

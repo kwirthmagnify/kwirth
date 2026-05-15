@@ -27,6 +27,7 @@ export interface IMagnifyData {
     // updateNodes?: (action:string, node:string) => void
     updateCategoryValues?: (categoryName:string, action:string, value:string) => void
     userPreferences: MagnifyUserPreferences
+    selectedCategories?: Record<string, string[]>
 }
 
 export class MagnifyData implements IMagnifyData {

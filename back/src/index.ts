@@ -64,6 +64,8 @@ import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsP
 import { ELogComponent, logError, logInfo, logTrace, logWarning, setLogConfig } from './tools/Logging'
 import { PluginManager } from './tools/PluginManager'
 import { PluginApi } from './api/PluginApi'
+import { ProviderManager } from './tools/ProviderManager'
+import { ProviderApi } from './api/ProviderApi'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -120,6 +122,7 @@ const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLower
 
 const runningInstances:IRunningInstance[] = []
 let pluginManager: PluginManager | undefined
+let providerManager: ProviderManager | undefined
 
 const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
@@ -1213,6 +1216,10 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
             let pluginApi = new PluginApi(pluginManager, registeredChannels, apiKeyApi, { onPluginInstalled, onPluginUninstalled })
             riRouter.use(`/plugins`, pluginApi.router)
         }
+        if (providerManager) {
+            let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi)
+            riRouter.use(`/providers`, providerApi.router)
+        }
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
 
@@ -1377,6 +1384,14 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         }
         for (const pluginId of [...pluginManager.getInstalledIds(), ...pluginManager.getDevIds()]) {
             if (!requiredChannels.includes(pluginId)) requiredChannels.push(pluginId)
+        }
+
+        // provider plugins: load installed providers and register them
+        if (!providerManager) {
+            providerManager = new ProviderManager(runningInstance.configMaps)
+            await providerManager.init()
+            await providerManager.loadAll(registeredProviders)
+            providerManager.loadDevProviders(registeredProviders)
         }
 
         logInfo(ELogComponent.CORE, 'Required channels:')

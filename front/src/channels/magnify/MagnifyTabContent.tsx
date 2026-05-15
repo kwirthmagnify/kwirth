@@ -138,6 +138,8 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         else if (selected.length===0) selected=['all']
 
         cat.selected = selected
+        if (!magnifyData.selectedCategories) magnifyData.selectedCategories = {}
+        magnifyData.selectedCategories[categoryKey] = selected
         setCategories ([ ...categories ])
     }
 
@@ -146,7 +148,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             key:'Node',
             text: 'Node',
             all: [ {key:'all',text:'All...'}, {key:'-'} ],
-            selected: ['all'],
+            selected: magnifyData.selectedCategories?.['Node'] ?? ['all'],
             onCategoryValuesChange: onCategoryValuesChange,
             onCategoryFilter: onCategoryFilter,
             isFilterActive: isFilterActive
@@ -155,7 +157,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             key:'Namespace',
             text: 'Namespace',
             all: [ {key:'all',text:'All...'}, {key:'-'} ],
-            selected: ['all'],
+            selected: magnifyData.selectedCategories?.['Namespace'] ?? ['all'],
             onCategoryValuesChange: onCategoryValuesChange,
             onCategoryFilter: onCategoryFilter,
             isFilterActive: isFilterActive
@@ -164,7 +166,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             key:'controller',
             text: 'Controller',
             all: [ {key:'all',text:'All...'}, {key:'-'} , {key:'ReplicaSet'} , {key:'DaemonSet'} , {key:'StatefulSet'} , {key:'ReplicationController'}, {key:'Job'}  ],
-            selected: ['all'],
+            selected: magnifyData.selectedCategories?.['controller'] ?? ['all'],
             onCategoryValuesChange: onCategoryValuesChange,
             onCategoryFilter: onCategoryFilter,
             isFilterActive: isFilterActive

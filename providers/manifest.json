@@ -1,0 +1,9 @@
+[
+    {
+        "id": "sample",
+        "name": "Sample",
+        "version": "0.1.0",
+        "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event to subscribed channels",
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-sample/-/kwirth-provider-sample-0.1.0.tgz"
+    }
+]

@@ -1,6 +1,7 @@
 const { VERSION } = require('./version')
 const { app, BrowserWindow,  BaseWindow, nativeImage, ImageView, ipcMain } = require('electron')
 const path = require('path')
+const fs = require('fs')
 const portfinder = require('portfinder')
 const https = require('https')
 
@@ -60,6 +61,29 @@ ipcMain.handle('kube-api-available', async (event, rawUrl) => {
             resolve(false)
         }
     })
+})
+
+ipcMain.handle('store-get', async (event, key) => {
+    const storePath = path.join(app.getPath('userData'), 'kwirth-store.json')
+    try {
+        if (!fs.existsSync(storePath)) return null
+        const data = JSON.parse(fs.readFileSync(storePath, 'utf8'))
+        return data[key] ?? null
+    } catch {
+        return null
+    }
+})
+
+ipcMain.handle('store-set', async (event, key, value) => {
+    const storePath = path.join(app.getPath('userData'), 'kwirth-store.json')
+    try {
+        const data = fs.existsSync(storePath) ? JSON.parse(fs.readFileSync(storePath, 'utf8')) : {}
+        data[key] = value
+        fs.writeFileSync(storePath, JSON.stringify(data, null, 2), 'utf8')
+        return true
+    } catch {
+        return false
+    }
 })
 
 async function createMainWindow() {

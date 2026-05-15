@@ -70,9 +70,18 @@ export class PluginManager {
         const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
         if (!fs.existsSync(devConfigPath)) return
         try {
-            const devConfig = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8')) as Record<string, string>
-            for (const [id, distPath] of Object.entries(devConfig)) {
-                this.registerDevPlugin(id, distPath, registeredChannels)
+            const raw = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8'))
+            // Support both legacy flat format { id: path } and new nested format { channels: { id: path }, providers: { id: path } }
+            const channelsMap: Record<string, string> = raw.channels ?? raw
+            if (raw.channels === undefined && typeof raw === 'object') {
+                // flat format: filter out any non-string values (e.g. nested 'providers' object)
+                for (const [id, distPath] of Object.entries(channelsMap)) {
+                    if (typeof distPath === 'string') this.registerDevPlugin(id, distPath, registeredChannels)
+                }
+            } else {
+                for (const [id, distPath] of Object.entries(channelsMap)) {
+                    this.registerDevPlugin(id, distPath, registeredChannels)
+                }
             }
         } catch (err) {
             logError(ELogComponent.CORE, `Failed to load kwirth-dev.json: ${err}`)

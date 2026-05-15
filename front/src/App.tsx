@@ -49,6 +49,7 @@ import { ContextSelector } from './components/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
 import { PluginDialog } from './components/PluginDialog'
+import { ProviderDialog } from './components/ProviderDialog'
 
 interface IAppProps {
     backendUrl:string
@@ -197,6 +198,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showSettingsUser, setShowSettingsUser]=useState<boolean>(false)
     const [showSettingsCluster, setShowSettingsCluster]=useState<boolean>(false)
     const [showPluginDialog, setShowPluginDialog]=useState<boolean>(false)
+    const [showProviderDialog, setShowProviderDialog]=useState<boolean>(false)
     const [initialMessage, setInitialMessage]=useState<string>('')
 
     // last & favs
@@ -525,7 +527,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             }
         }
         else {
-            console.log('nouser')
+            console.log('No user specified on writing logged user settings')
         }
     }
 
@@ -699,8 +701,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     newTab.channelObject.config = settings.config
                     newTab.channelObject.instanceConfig = settings.instanceConfig
                 }
-                console.log('tostartfrom settings', newTab.channelObject.config)
-                console.log('tostartfrom settings', newTab.channelObject.instanceConfig)
                 startTabChannel(newTab, cluster)
                 setChannelMessageAction({action : EChannelRefreshAction.REFRESH})  // we force rendering
             }
@@ -732,7 +732,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const onChannelSetupClosed = (channel:IChannel, channelSettings:IChannelSettings, start:boolean, setDefaultValues:boolean) => {
-        console.log(channelSettings.channelInstanceConfig)
         channel.setSetupVisibility(false)
         if (!selectedTab.current || !userSettingsRef.current) return
         if (!start) {
@@ -759,9 +758,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setMsgBox(MsgBoxOk('Kwirth',`Cluster (${selectedTab.current!.channelObject.clusterName}) could not be found.`, setMsgBox))
             return
         }
-        console.log('setupclosed', selectedTab.current.channelObject.instanceConfig)
-        console.log('setupclosed', selectedTab.current.channelObject.config)
-
         startTabChannel(selectedTab.current, cluster)
     }
 
@@ -877,7 +873,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
         else {
             console.log('Received invalid channel in message: ', instanceMessage)
-            console.log(frontChannels)
             notify(undefined, ENotifyLevel.ERROR, `'Received invalid channel in message: ${instanceMessage.channel}`)
         }
     }
@@ -1006,9 +1001,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             if (tab.channel) {
                 instanceConfig.scope = tab.channel.getScope()
                 instanceConfig.data = tab.channelObject.instanceConfig
-                console.log('tostart')
-                console.log(tab.channelObject.config)
-                console.log(tab.channelObject.instanceConfig)
                 tab.ws.send(JSON.stringify(instanceConfig))
                 tab.channelStarted = true
                 tab.channelPaused = false
@@ -1409,6 +1401,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 break
             case MenuDrawerOption.ManagePlugins:
                 setShowPluginDialog(true)
+                break
+            case MenuDrawerOption.ManageProviders:
+                setShowProviderDialog(true)
                 break
             case MenuDrawerOption.ExportWorkspaces:
                 let workspacesToExport:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
@@ -1813,6 +1808,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showApiSecurity && <ManageApiSecurity onClose={() => setShowApiSecurity(false)} /> }
                 { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} /> }
                 { showPluginDialog && <PluginDialog onClose={() => setShowPluginDialog(false)} onPluginLoaded={loadPluginFront} onPluginUnloaded={unloadPluginFront} /> }
+                { showProviderDialog && <ProviderDialog onClose={() => setShowProviderDialog(false)} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }

@@ -16,6 +16,7 @@ enum MenuDrawerOption {
     UserSecurity,
     ApiSecurity,
     ManagePlugins,
+    ManageProviders,
     UpdateKwirth,
     About,
     Exit
@@ -54,6 +55,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.ApiSecurity)}><Key/>&nbsp;API Security</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.UserSecurity)}><Person />&nbsp;User security</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManagePlugins)}><Extension />&nbsp;Manage plugins</MenuItem>
+                    <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageProviders)}><Extension />&nbsp;Manage providers</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.UpdateKwirth)}><BrowserUpdated />&nbsp;Update Kwirth</MenuItem>
                     <Divider/>
                 </div>

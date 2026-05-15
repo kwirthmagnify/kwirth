@@ -45,8 +45,10 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
 
                 if (props.isElectron) intId.current = setInterval(update, 5000, contexts)
 
-                let rc = localStorage.getItem('remoteClusters')
-                if (rc) setRemoteClusters(JSON.parse(rc))
+                let rc: {name:string, url:string, accessString:string}[] | null = null
+                if (props.isElectron) rc = await (window as any).kwirth.storeGet('remoteClusters')
+                else { const raw = localStorage.getItem('remoteClusters'); if (raw) rc = JSON.parse(raw) }
+                if (rc) setRemoteClusters(rc)
             }
             catch (err) {
                 console.error("Error loading contexts:", err)
@@ -91,13 +93,18 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
         })
     }
 
+    const saveRemoteClusters = async (clusters: {name:string, url:string, accessString:string}[]) => {
+        if (props.isElectron) await (window as any).kwirth.storeSet('remoteClusters', clusters)
+        else localStorage.setItem('remoteClusters', JSON.stringify(clusters))
+    }
+
     const addRemoteCluster = () => {
         setInputBoxResult ( () => (name:any) => {
             setInputBoxResult ( () => (url:any) => {
                 setInputBoxResult ( () => (accessString:any) => {
                     console.log(name, url, accessString)
                     let newRemotes = [...remoteClusters, { name, url, accessString }]
-                    localStorage.setItem('remoteClusters', JSON.stringify(newRemotes))
+                    saveRemoteClusters(newRemotes)
                     setRemoteClusters(newRemotes)
                 })
                 setInputBoxMessage('Enter Kwirth access string')
@@ -112,7 +119,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
 
     const deleteRemoteCluster = (name:string) => {
         let newRemotes = remoteClusters.filter(c => c.name!==name)
-        localStorage.setItem('remoteClusters', JSON.stringify(newRemotes))
+        saveRemoteClusters(newRemotes)
         setRemoteClusters(newRemotes)
     }
 
