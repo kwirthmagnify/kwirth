@@ -31,7 +31,6 @@ import { IConfigMaps } from './tools/IConfigMap'
 import { DockerSecrets } from './tools/DockerSecrets'
 import { DockerConfigMaps } from './tools/DockerConfigMaps'
 
-// Channels +++ convert into plugin
 import { IBackChannelObject, IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
 import { LogChannel } from './channels/log/LogChannel'
 import { AlertChannel } from './channels/alert/AlertChannel'
