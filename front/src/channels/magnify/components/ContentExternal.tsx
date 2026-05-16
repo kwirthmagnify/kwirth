@@ -21,7 +21,7 @@ import { EChartType } from '../../metrics/MenuChart'
 
 import { ESwitchKey, IOpsConfig } from '../../ops/OpsConfig'
 import { IOpsData } from '../../ops/OpsData'
-import { TerminalManager } from '../../ops/Terminal/TerminalManager'
+import { TerminalManager } from '../../ops/terminal/TerminalManager'
 import { IOpsInstanceConfig } from '../../ops/OpsTypes'
 
 import { IFilemanData } from '../../fileman/FilemanData'

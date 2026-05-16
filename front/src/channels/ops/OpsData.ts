@@ -1,5 +1,5 @@
 import { Terminal } from 'xterm'
-import { TerminalManager } from './Terminal/TerminalManager'
+import { TerminalManager } from './terminal/TerminalManager'
 
 export interface IXTerm {
     namespace: string
