@@ -2051,6 +2051,7 @@ spaces.set('Pod',
         text:'Name',
         source:'name',
         width:25,
+        configurable: true,
         leftItems: [
             {
                 name:'details',
@@ -2135,8 +2136,9 @@ spaces.set('Pod',
                 text: 'Container',
                 source: 'na',
                 format: 'function',
-                sortable: false,
                 width: 10,
+                sortable: false,
+                removable: true,
                 visible: true
             },
             {
@@ -2146,6 +2148,7 @@ spaces.set('Pod',
                 format: 'string',
                 width: 10,
                 sortable: true,
+                removable: true,
                 visible: true
             },
             {
@@ -2155,6 +2158,7 @@ spaces.set('Pod',
                 format: 'storage',
                 width: 10,
                 sortable: true,
+                removable: true,
                 visible: true
             },
             {
@@ -2173,6 +2177,7 @@ spaces.set('Pod',
                 format: 'string',
                 width: 10,
                 sortable: true,
+                removable: true,
                 visible: true
             },
             {
@@ -2182,6 +2187,7 @@ spaces.set('Pod',
                 format: 'string',
                 width: 10,
                 sortable: true,
+                removable: true,
                 visible: true
             },
             {
@@ -2191,6 +2197,7 @@ spaces.set('Pod',
                 format: 'age',
                 width: 5,
                 sortable: true,
+                removable: true,
                 visible: true
             },
             {
@@ -2200,6 +2207,7 @@ spaces.set('Pod',
                 format: 'string',
                 width: 5,
                 sortable: false,
+                removable: true,
                 visible: true
             }
         ]
