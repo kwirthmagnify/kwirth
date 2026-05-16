@@ -197,17 +197,9 @@
 <!-- NAVIGATION -->
 <nav>
   <a class="nav-logo" href="/">
-    <img src="_media/favicon.ico"/>
+    <img src="_media/favicon.ico" width="24px"/>
     <span>kwirth</span>
   </a>
-  <!-- <a class="nav-logo" href="/">
-    <svg viewBox="0 0 32 32" fill="none">
-      <rect width="32" height="32" rx="8" fill="#f5820a" fill-opacity=".15"/>
-      <path d="M8 22L16 10l8 12" stroke="#f5820a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="16" cy="10" r="2.5" fill="#f5820a"/>
-    </svg>
-    <span>kwirth</span>
-  </a> -->
   <div class="nav-links">
     <a href="#features">Features</a>
     <a href="#magnify" class="magnify-link">Magnify</a>
@@ -375,7 +367,7 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-top:48px;">
         <div>
           <h3 class="magnify-desktop-title">Available as a Desktop App</h3>
-          <p class="magnify-desktop-sub">Kwirth Magnify can be installed as a native desktop application — no browser, no cluster access required beyond a Kwirth instance URL. Available for Windows, macOS, and Linux.</p>
+          <p class="magnify-desktop-sub">Kwirth Magnify can be installed as a native desktop application — no browser, no cluster access required beyond a Kwirth instance URL. Available for Windows and Linux.</p>
 
           <div class="download-grid">
             <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
@@ -388,7 +380,7 @@
               </div>
               <div class="dl-btn">&#x2B07; Download</div>
             </a>
-            <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
+            <!-- <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
               <div class="dl-platform">
                 <div class="dl-icon">&#xF179;</div>
                 <div>
@@ -397,7 +389,7 @@
                 </div>
               </div>
               <div class="dl-btn">&#x2B07; Download</div>
-            </a>
+            </a> -->
             <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
               <div class="dl-platform">
                 <div class="dl-icon">&#x1F427;</div>
@@ -426,6 +418,7 @@
   <p class="section-sub">A closer look at each channel — real-time data, minimal UI, maximum information density.</p>
   <div class="screenshots-tabs">
     <button class="tab-btn active" data-tab="tab-log">Log Streaming</button>
+    <button class="tab-btn active" data-tab="tab-metrics">Realtime custom metrics</button>
     <button class="tab-btn" data-tab="tab-magnify">Magnify Explorer</button>
     <button class="tab-btn" data-tab="tab-pinocchio">Pinocchio AI</button>
     <button class="tab-btn" data-tab="tab-trivy">Container File Manager</button>
@@ -437,6 +430,7 @@
   <div id="tab-magnify" class="tab-panel"><img src="assets/img/screenshot-magnify.svg" alt="Magnify Explorer"></div>
   <div id="tab-pinocchio" class="tab-panel"><img src="assets/img/screenshot-pinocchio.svg" alt="Pinocchio AI"></div>
   <div id="tab-fileman" class="tab-panel"><img src="assets/img/screenshot-pinocchio.svg" alt="Fileman"></div>
+  <div id="tab-topology" class="tab-panel"><img src="assets/img/screenshot-pinocchio.svg" alt="Topology"></div>
   <div id="tab-trivy" class="tab-panel"><img src="assets/img/screenshot-trivy.svg" alt="Trivy Security"></div>
 </section>
 
@@ -541,8 +535,8 @@
 
 <!-- CTA -->
 <div class="cta-section">
-  <h2>Start observing your cluster<br>in minutes</h2>
-  <p>Free, open source, and runs entirely inside your Kubernetes cluster.</p>
+  <h2>Start managing & observing<br>your cluster in minutes</h2>
+  <p>Free, open source, and runs entirely inside or outside your Kubernetes cluster.</p>
   <div class="cta-btns">
     <a class="btn-primary" href="getting-started.html">Get Started</a>
     <a class="btn-secondary" href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">&#x2605; Star on GitHub</a>
@@ -555,11 +549,7 @@
   <div class="footer-grid">
     <div>
       <div class="footer-logo">
-        <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
-          <rect width="32" height="32" rx="8" fill="#f5820a" fill-opacity=".15"/>
-          <path d="M8 22L16 10l8 12" stroke="#f5820a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="16" cy="10" r="2.5" fill="#f5820a"/>
-        </svg>
+        <img src="_media/favicon.ico" width="20px"/>
         <span>kwirth</span>
       </div>
       <p class="footer-desc">Kubernetes observability platform. Single pod, zero dependencies, infinite possibilities.</p>
