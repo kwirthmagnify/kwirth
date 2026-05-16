@@ -397,6 +397,22 @@ section.cover a:not(.anchor):last-of-type:hover {
   margin: 4px 0 0;
 }
 
+/* ── Progress bar (NProgress) ────────────────────────────────── */
+
+#nprogress .bar {
+  background: var(--orange) !important;
+  height: 2px !important;
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px var(--orange), 0 0 5px var(--orange) !important;
+}
+
+#nprogress .spinner-icon {
+  border-top-color: var(--orange) !important;
+  border-left-color: var(--orange) !important;
+}
+
 /* ── Scrollbar ───────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
