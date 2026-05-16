@@ -15,7 +15,7 @@
   "dependencies": {
     "@jfvilas/parse-listing": "^1.0.1",
     "@kubernetes/client-node": "^1.4.0",
-    "@kwirthmagnify/kwirth-common": "file:../common",
+    "@kwirthmagnify/kwirth-common": "^0.5.3",
     "@types/node": "^20.12.13",
     "body-parser": "^1.20.2",
     "cookie-parser": "^1.4.7",
