@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roadmap — Kwirth</title>
+  <link rel="icon" type="image/x-icon" href="_media/favicon.ico">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #060a12; --bg2: #0d1420; --bg3: #111827; --card: #0f1929; --border: #1e2d40;
+      --orange: #f5820a; --teal: #2dd4bf; --blue: #58a6ff;
+      --green: #3fb950; --yellow: #e3b341; --red: #ff7b72;
+      --text: #e6edf3; --muted: #8b949e;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.7; }
+    a { color: var(--blue); }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; padding: 0 40px; height: 62px; background: rgba(6,10,18,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo span { font-size: 1.1rem; font-weight: 700; color: var(--orange); }
+    .nav-spacer { flex: 1; }
+    .nav-links { display: flex; gap: 6px; margin-left: 28px; }
+    .nav-links a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; transition: all .2s; }
+    .nav-links a:hover { color: var(--text); background: var(--border); }
+    .container { max-width: 900px; margin: 0 auto; padding: 100px 40px 80px; }
+    h1 { font-size: 2.4rem; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.5px; }
+    .lead { color: var(--muted); font-size: 1.1rem; margin-bottom: 48px; max-width: 600px; }
+    h2 { font-size: 1.3rem; font-weight: 700; margin: 40px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .area-badge { font-size: 0.7rem; padding: 3px 9px; border-radius: 10px; font-weight: 700; letter-spacing: .5px; }
+    .roadmap-list { display: flex; flex-direction: column; gap: 10px; }
+    .roadmap-item { display: flex; gap: 16px; align-items: flex-start; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; transition: border-color .2s; }
+    .roadmap-item.done { opacity: 0.55; }
+    .roadmap-item:hover { border-color: rgba(245,130,10,.3); }
+    .ri-status { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    .ri-body h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 3px; }
+    .ri-body p { font-size: 0.825rem; color: var(--muted); margin: 0; }
+    .ri-tags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .ri-tag { font-size: 0.65rem; padding: 2px 7px; border-radius: 8px; font-weight: 600; }
+    .tag-done { background: rgba(63,185,80,.1); color: var(--green); border: 1px solid rgba(63,185,80,.2); }
+    .tag-planned { background: rgba(88,166,255,.1); color: var(--blue); border: 1px solid rgba(88,166,255,.2); }
+    .tag-ai { background: rgba(45,212,191,.1); color: var(--teal); border: 1px solid rgba(45,212,191,.2); }
+    .tag-human { background: rgba(227,179,65,.1); color: var(--yellow); border: 1px solid rgba(227,179,65,.2); }
+    .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 36px; font-size: 0.825rem; color: var(--muted); }
+    .legend-item { display: flex; align-items: center; gap: 7px; }
+    .btn-back { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 0.875rem; margin-bottom: 32px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
+    .btn-back:hover { color: var(--text); border-color: var(--muted); }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8" fill="#f5820a" fill-opacity=".15"/>
+      <path d="M8 22L16 10l8 12" stroke="#f5820a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="16" cy="10" r="2.5" fill="#f5820a"/>
+    </svg>
+    <span>kwirth</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="getting-started.html">Getting Started</a>
+    <a href="documentation/">Documentation</a>
+    <a href="project.html">Project</a>
+  </div>
+  <div class="nav-spacer"></div>
+  <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;font-size:0.875rem;padding:6px 12px;border:1px solid var(--border);border-radius:6px;">GitHub</a>
+</nav>
+
+<div class="container">
+  <a class="btn-back" href="/">&#8592; Back to home</a>
+  <h1>Roadmap</h1>
+  <p class="lead">What we're building next. Completed items are included to show the journey — the platform has come a long way.</p>
+
+  <div class="legend">
+    <div class="legend-item"><span>&#x2705;</span> Completed</div>
+    <div class="legend-item"><span>&#x1F7E6;</span> Planned (community / human request)</div>
+    <div class="legend-item"><span>&#x1F916;</span> AI-driven item</div>
+    <div class="legend-item"><span>&#x1F4A1;</span> Under consideration</div>
+  </div>
+
+  <!-- CORE KWIRTH -->
+  <h2><span class="area-badge" style="background:rgba(245,130,10,.1);color:var(--orange);border:1px solid rgba(245,130,10,.2);">kwirth</span> Core Platform</h2>
+  <div class="roadmap-list">
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Non-root path support</h4><p>Share an Ingress with other services by configuring a sub-path for Kwirth.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span><span class="ri-tag tag-human">Community request</span></div></div></div>
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Helm chart + Ingress support</h4><p>One-command installation with full Ingress and TLS support.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>API Key management with expiration</h4><p>Issue, revoke, and expire API keys from the UI.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Self-update</h4><p>Restart Kwirth from the UI — with <code>latest</code> image tag this auto-updates.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Plugin and Provider system</h4><p>Extensibility subsystem for hot-reloadable front-end channels and data providers.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span><span class="ri-tag tag-ai">AI driven</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>SSO / Identity Provider integration</h4><p>EntraID, Active Directory, Cognito, Keycloak, LDAP — standard enterprise authentication.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>JWT / Standard token support</h4><p>Replace proprietary API keys with JWT scopes matching the Kwirth VIEW system.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Gateway API support in Helm</h4><p>Add GatewayClass and HTTPRoute resources to the Helm chart.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F4A1;</div><div class="ri-body"><h4>CNCF donation</h4><p>Prepare the project for donation to the Cloud Native Computing Foundation.</p><div class="ri-tags"><span class="ri-tag tag-planned">Under consideration</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Channel config via env vars</h4><p>Configure channels and providers through environment variables (<code>KWIRTH_CHANNEL_&lt;id&gt;_&lt;var&gt;</code>).</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+  </div>
+
+  <!-- LOG -->
+  <h2><span class="area-badge" style="background:rgba(88,166,255,.1);color:var(--blue);border:1px solid rgba(88,166,255,.2);">log</span> Log Channel</h2>
+  <div class="roadmap-list">
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Configurable log start position</h4><p>Choose to receive logs since pod start, previous logs, or only from now on.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Ephemeral log mode</h4><p>Process log messages for alerting without storing them.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Secure log text masking</h4><p>Mask lines containing sensitive keywords (password, token, email) automatically.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Socket error UI</h4><p>Show a clear in-viewer indicator when the WebSocket connection drops or errors occur.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+  </div>
+
+  <!-- MAGNIFY -->
+  <h2><span class="area-badge" style="background:rgba(245,130,10,.1);color:var(--orange);border:1px solid rgba(245,130,10,.2);">magnify</span> Magnify Explorer</h2>
+  <div class="roadmap-list">
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Multi-window floating panels</h4><p>Open, resize, pin, and minimize multiple artifact detail windows simultaneously.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Node shell access</h4><p>Open a terminal session directly to a cluster node via KwirthWork.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Advanced namespace + node filtering</h4><p>Filter the resource tree by namespace, node, and other criteria.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Desktop application (Tauri)</h4><p>Native desktop builds for Windows, macOS, and Linux — standalone, no browser needed.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Namespace-scoped data sync</h4><p>For large clusters, limit Magnify sync to selected namespaces to reduce memory and API pressure.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>User-configurable artifact categories</h4><p>Let users assign Kinds to custom tree sections (e.g. show HTTPRoute under Network instead of Custom).</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F4A1;</div><div class="ri-body"><h4>Nerd container push</h4><p>After editing a container's filesystem via File Manager, push the modified image back to a registry using nerdctl.</p><div class="ri-tags"><span class="ri-tag tag-planned">Under consideration</span></div></div></div>
+  </div>
+
+  <!-- PINOCCHIO -->
+  <h2><span class="area-badge" style="background:rgba(45,212,191,.1);color:var(--teal);border:1px solid rgba(45,212,191,.2);">pinocchio</span> AI Analysis</h2>
+  <div class="roadmap-list">
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Autonomous AI agent</h4><p>Continuous cluster analysis with anomaly detection, explanations, and recommendations.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span><span class="ri-tag tag-ai">AI driven</span></div></div></div>
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Prompt playground</h4><p>Test and tune prompts and tool configurations from the UI without restarting.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Versioned governance</h4><p>Version trigger and LLM configurations — enable/disable specific versions independently.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Notifiers</h4><p>Send Pinocchio findings to Slack, Teams, PagerDuty, or email — not just the in-app log.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Artifact modification via AI</h4><p>Let Pinocchio apply suggested changes via Kubernetes mutating webhook or IaC (ArgoCD, Flux, Helm).</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Tool instrumentation / debugging</h4><p>Expose clear traces of what tools the LLM invoked and why, for easier prompt debugging.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Pinocchio console management</h4><p>Advanced scan configuration — inclusions, exclusions, per-channel settings.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+  </div>
+
+  <!-- PROVIDERS -->
+  <h2><span class="area-badge" style="background:rgba(63,185,80,.1);color:var(--green);border:1px solid rgba(63,185,80,.2);">providers</span> Data Providers</h2>
+  <div class="roadmap-list">
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>OpenTelemetry (OTLP) Provider</h4><p>Ingest traces, metrics, and logs via standard OTLP protocol into Kwirth channels.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Kafka Provider</h4><p>Stream Kafka events into Kwirth for unified infrastructure and application observability.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Grafana datasource plugin</h4><p>Embed Kwirth log streams and metrics directly in Grafana dashboards.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+  </div>
+
+  <!-- ALERTS + METRICS -->
+  <h2><span class="area-badge" style="background:rgba(255,123,114,.1);color:var(--red);border:1px solid rgba(255,123,114,.2);">alerts · metrics</span> Alerts &amp; Metrics</h2>
+  <div class="roadmap-list">
+    <div class="roadmap-item done"><div class="ri-status">&#x2705;</div><div class="ri-body"><h4>Real-time pod/node metrics</h4><p>CPU, memory, and status via WebSocket streaming.</p><div class="ri-tags"><span class="ri-tag tag-done">Done</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Metrics-based alerting</h4><p>Trigger alerts when CPU or memory cross configurable thresholds — not just log patterns.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+    <div class="roadmap-item"><div class="ri-status">&#x1F7E6;</div><div class="ri-body"><h4>Mixed sources channel</h4><p>Aggregate data from multiple clusters and sources into a single unified channel.</p><div class="ri-tags"><span class="ri-tag tag-planned">Planned</span></div></div></div>
+  </div>
+</div>
+</body>
+</html>

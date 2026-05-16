@@ -2,73 +2,624 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Kwirth Kubernetes Management Tool</title>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <meta name="description" content="Observability stack for multicluster logging, alerting, metrics... all in just one pod">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
-  <link rel="icon" type="image/x-icon" href="/kwirth/_media/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Kwirth — Kubernetes observability platform. Log streaming, metrics, alerts, security scanning and AI analysis. Deployed in a single pod.">
+  <title>Kwirth — Kubernetes Observability Platform</title>
+  <link rel="icon" type="image/x-icon" href="_media/favicon.ico">
   <style>
-    .markdown-section h2 { margin-bottom: -10px }
-    .markdown-section h3 { margin-bottom: -10px }
-    h5 { margin-bottom: -15px }
-    .imageclass100 { display: block; margin: 0 auto; border-color: #34495e; border-style: solid; border-width: 1px; margin-top: 12px; margin-bottom: 4px; }
-    .imageclass90 { display: block; width: 90%; margin: 0 auto; border-radius: 1%; border-color: #34495e; border-style: solid; border-width: 1px }
-    .imageclass80 { display: block; width: 80%; margin: 0 auto; border-radius: 1%; border-color: #34495e; border-style: solid; border-width: 1px }
-    .imageclass60 { display: block; width: 60%; margin: 0 auto; border-radius: 1%; border-color: #34495e; border-style: solid; border-width: 1px }
-    .imageclass40 { display: block; width: 40%; margin: 0 auto; border-radius: 1%; border-color: #34495e; border-style: solid; border-width: 1px }
-    .imageclass20 { display: block; width: 20%; margin: 0 auto; border-radius: 1%; border-color: #34495e; border-style: solid; border-width: 1px }
-    .imageclass10 { display: block; width: 10%; margin: 0 auto; border-radius: 1%; border-color: #34495e; border-style: solid; border-width: 1px }
-    .imageclassCenter { display: block; width: 60%; margin: 0 auto; align-self: center; border-radius: 1%; border-color: #34495e; border-style: solid; border-width: 1px }
-    select {
-      padding: 8px 12px;
-      font-size: 14px;
-      border:0;
-      outline: none;
-      transition: all 0.3s ease;
-      border-bottom: 2px solid #42b983;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #060a12;
+      --bg2:       #0d1420;
+      --bg3:       #111827;
+      --card:      #0f1929;
+      --border:    #1e2d40;
+      --orange:    #f5820a;
+      --orange2:   #ff9a2e;
+      --teal:      #2dd4bf;
+      --blue:      #58a6ff;
+      --green:     #3fb950;
+      --yellow:    #e3b341;
+      --red:       #ff7b72;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --font:      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono:      'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
     }
-    select:hover {
-      background-color: #ddd;
+
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.6; overflow-x: hidden; }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; padding: 0 40px; height: 62px;
+      background: rgba(6,10,18,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
     }
-    option {
-      background-color: #2e2e2e;
-      color: white;
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo svg { width: 32px; height: 32px; }
+    .nav-logo span { font-size: 1.2rem; font-weight: 700; color: var(--orange); letter-spacing: -0.3px; }
+    .nav-links { display: flex; gap: 6px; margin-left: 36px; }
+    .nav-links a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; transition: all .2s; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--border); }
+    .nav-links a.magnify-link { color: var(--orange); }
+    .nav-links a.magnify-link:hover { color: var(--orange2); background: rgba(245,130,10,.1); }
+    .nav-spacer { flex: 1; }
+    .nav-gh { display: flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 0.875rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); transition: all .2s; }
+    .nav-gh:hover { color: var(--text); border-color: var(--muted); }
+    .btn-nav { background: var(--orange); color: white; text-decoration: none; padding: 7px 18px; border-radius: 6px; font-size: 0.875rem; font-weight: 600; margin-left: 10px; transition: background .2s; }
+    .btn-nav:hover { background: var(--orange2); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 100px 40px 60px; text-align: center; position: relative; overflow: hidden;
     }
-    option:hover {
-      background-color: #444;
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% 20%, rgba(245,130,10,.12) 0%, transparent 70%),
+                  radial-gradient(ellipse 50% 40% at 80% 60%, rgba(45,212,191,.07) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(245,130,10,.1); border: 1px solid rgba(245,130,10,.3); color: var(--orange); padding: 5px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 24px; letter-spacing: .5px; }
+    .hero h1 { font-size: clamp(2.4rem, 5vw, 4rem); font-weight: 800; line-height: 1.1; margin-bottom: 20px; letter-spacing: -1px; }
+    .hero h1 .accent { background: linear-gradient(135deg, var(--orange), var(--orange2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero p { font-size: clamp(1rem, 2vw, 1.2rem); color: var(--muted); max-width: 620px; margin: 0 auto 36px; line-height: 1.7; }
+    .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .btn-primary { background: var(--orange); color: white; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-size: 1rem; font-weight: 700; transition: all .2s; box-shadow: 0 0 24px rgba(245,130,10,.3); }
+    .btn-primary:hover { background: var(--orange2); box-shadow: 0 0 36px rgba(245,130,10,.5); transform: translateY(-1px); }
+    .btn-secondary { background: transparent; color: var(--text); text-decoration: none; padding: 13px 28px; border-radius: 8px; font-size: 1rem; font-weight: 600; border: 1px solid var(--border); transition: all .2s; }
+    .btn-secondary:hover { border-color: var(--muted); transform: translateY(-1px); }
+    .hero-screenshot { margin-top: 50px; width: 100%; max-width: 1000px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 40px 80px rgba(0,0,0,.6); }
+    .hero-screenshot img { width: 100%; display: block; }
+
+    /* STATS */
+    .stats { display: flex; justify-content: center; gap: 0; background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .stat { padding: 28px 48px; text-align: center; border-right: 1px solid var(--border); }
+    .stat:last-child { border-right: none; }
+    .stat-num { font-size: 2rem; font-weight: 800; color: var(--orange); font-family: var(--mono); line-height: 1; }
+    .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .8px; }
+
+    /* SECTIONS */
+    section { padding: 80px 40px; max-width: 1200px; margin: 0 auto; }
+    .section-tag { display: inline-block; background: rgba(245,130,10,.1); border: 1px solid rgba(245,130,10,.25); color: var(--orange); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
+    h2.section-title { font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 800; margin-bottom: 12px; letter-spacing: -0.5px; }
+    p.section-sub { color: var(--muted); font-size: 1.05rem; max-width: 560px; line-height: 1.7; margin-bottom: 48px; }
+
+    /* FEATURES GRID */
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .feature-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; transition: all .25s; }
+    .feature-card:hover { border-color: rgba(245,130,10,.4); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.4); }
+    .feature-icon { font-size: 1.8rem; margin-bottom: 14px; }
+    .feature-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+    .feature-card p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; }
+    .feature-tag { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; margin-top: 12px; font-weight: 600; }
+    .tag-core { background: rgba(88,166,255,.1); color: var(--blue); border: 1px solid rgba(88,166,255,.2); }
+    .tag-ai { background: rgba(45,212,191,.1); color: var(--teal); border: 1px solid rgba(45,212,191,.2); }
+    .tag-security { background: rgba(227,179,65,.1); color: var(--yellow); border: 1px solid rgba(227,179,65,.2); }
+    .tag-explorer { background: rgba(245,130,10,.1); color: var(--orange); border: 1px solid rgba(245,130,10,.2); }
+
+    /* MAGNIFY SECTION */
+    .magnify-section { background: linear-gradient(135deg, rgba(245,130,10,.05) 0%, rgba(45,212,191,.03) 100%); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 80px 0; }
+    .magnify-section > .inner { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+    .magnify-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; margin-top: 48px; }
+    .magnify-screenshot { border-radius: 12px; overflow: hidden; border: 1px solid rgba(245,130,10,.3); box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+    .magnify-screenshot img { width: 100%; display: block; }
+    .magnify-features { display: flex; flex-direction: column; gap: 20px; }
+    .magnify-feature { display: flex; gap: 16px; align-items: flex-start; }
+    .magnify-feature-icon { width: 40px; height: 40px; border-radius: 8px; background: rgba(245,130,10,.1); border: 1px solid rgba(245,130,10,.2); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+    .magnify-feature h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+    .magnify-feature p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+    .magnify-desktop { margin-top: 60px; }
+    .magnify-desktop-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; }
+    .magnify-desktop-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 28px; }
+    .download-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+    .download-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 18px; display: flex; flex-direction: column; gap: 10px; transition: all .2s; text-decoration: none; }
+    .download-card:hover { border-color: var(--orange); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+    .dl-platform { display: flex; align-items: center; gap: 10px; }
+    .dl-icon { font-size: 1.6rem; }
+    .dl-name { font-weight: 700; color: var(--text); font-size: 0.95rem; }
+    .dl-ext { font-size: 0.75rem; color: var(--muted); font-family: var(--mono); }
+    .dl-btn { display: inline-flex; align-items: center; gap: 6px; background: rgba(245,130,10,.12); color: var(--orange); border: 1px solid rgba(245,130,10,.3); padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; margin-top: 4px; text-decoration: none; transition: all .2s; }
+    .dl-btn:hover { background: rgba(245,130,10,.2); }
+    .download-note { font-size: 0.8rem; color: var(--muted); margin-top: 16px; }
+    .download-note a { color: var(--blue); }
+
+    /* SCREENSHOTS TABS */
+    .screenshots-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 32px; overflow-x: auto; }
+    .tab-btn { padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); font-size: 0.875rem; cursor: pointer; white-space: nowrap; transition: all .2s; font-family: var(--font); }
+    .tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .tab-panel img { width: 100%; border-radius: 10px; border: 1px solid var(--border); }
+
+    /* INSTALL */
+    .install-section { background: var(--bg2); border-radius: 16px; padding: 48px; border: 1px solid var(--border); }
+    .install-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+    .install-tab { padding: 8px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); font-size: 0.875rem; cursor: pointer; transition: all .2s; font-family: var(--font); }
+    .install-tab.active { color: var(--orange); border-bottom-color: var(--orange); }
+    .code-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .code-block pre { padding: 20px 24px; overflow-x: auto; font-family: var(--mono); font-size: 0.85rem; line-height: 1.7; color: var(--text); }
+    .code-block pre .comment { color: var(--muted); }
+    .code-block pre .cmd { color: var(--green); }
+    .code-block pre .flag { color: var(--blue); }
+    .code-block pre .val { color: var(--orange); }
+    .install-panel { display: none; }
+    .install-panel.active { display: block; }
+
+    /* ARCHITECTURE */
+    .arch-img { width: 100%; border-radius: 12px; border: 1px solid var(--border); margin-top: 40px; }
+
+    /* PLUGINS */
+    .plugins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 40px; }
+    .plugin-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+    .plugin-card h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; }
+    .plugin-card p { font-size: 0.8rem; color: var(--muted); }
+    .plugin-badge { display: inline-block; font-size: 0.65rem; padding: 2px 7px; border-radius: 8px; margin-top: 8px; font-weight: 600; background: rgba(63,185,80,.1); color: var(--green); border: 1px solid rgba(63,185,80,.2); }
+    .plugin-badge.planned { background: rgba(139,148,158,.1); color: var(--muted); border-color: var(--border); }
+
+    /* CTA */
+    .cta-section { text-align: center; padding: 100px 40px; background: linear-gradient(180deg, transparent 0%, rgba(245,130,10,.04) 50%, transparent 100%); }
+    .cta-section h2 { font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 800; margin-bottom: 16px; letter-spacing: -0.5px; }
+    .cta-section p { color: var(--muted); font-size: 1.1rem; max-width: 500px; margin: 0 auto 36px; }
+    .cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+    /* FOOTER */
+    footer { background: var(--bg2); border-top: 1px solid var(--border); padding: 48px 40px 24px; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; max-width: 1200px; margin: 0 auto 40px; }
+    .footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .footer-logo span { font-size: 1.1rem; font-weight: 700; color: var(--orange); }
+    .footer-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.6; max-width: 280px; }
+    .footer-col h4 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 14px; }
+    .footer-col a { display: block; color: var(--muted); text-decoration: none; font-size: 0.875rem; margin-bottom: 8px; transition: color .2s; }
+    .footer-col a:hover { color: var(--text); }
+    .footer-bottom { max-width: 1200px; margin: 0 auto; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--muted); }
+    .footer-bottom a { color: var(--muted); text-decoration: none; }
+    .footer-bottom a:hover { color: var(--text); }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 16px; }
+      .nav-links { display: none; }
+      section { padding: 60px 20px; }
+      .stats { flex-direction: column; }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .magnify-grid { grid-template-columns: 1fr; gap: 32px; }
+      .download-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
+<body>
 
-<body style="background-color: white">
-  <div id="app"></div>
-  <script>
-    window.$docsify = {
-      auto2top: true,
-      relativePath: true,
-      coverpage: true,
-      loadSidebar: true,
-      logo: '/_media/kwirth-logo-20.png',
-      name: 'Kwirth Observability Stack',
-      homepage: 'index.md',
-      subMaxLevel: 2,
-      // search: [
-      // '/'            // => /README.md
-      // ],
-      search: {
-          maxAge: 86400000, // Expiration time, the default one day
-          paths: 'auto',
-          placeholder: 'Search...',
-          noData: 'No Results!',
-          depth: 6,   // Headline depth, 1 - 6
-          hideOtherSidebarContent: false // whether or not to hide other sidebar content
-      }
-    }
-  </script>
-  <!-- Docsify v4  -->
-  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
-  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+<!-- NAVIGATION -->
+<nav>
+  <a class="nav-logo" href="/">
+    <svg viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8" fill="#f5820a" fill-opacity=".15"/>
+      <path d="M8 22L16 10l8 12" stroke="#f5820a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="16" cy="10" r="2.5" fill="#f5820a"/>
+    </svg>
+    <span>kwirth</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#magnify" class="magnify-link">Magnify</a>
+    <a href="#install">Install</a>
+    <a href="#architecture">Architecture</a>
+    <a href="getting-started.html">Getting Started</a>
+    <a href="documentation/">Documentation</a>
+    <a href="project.html">Project</a>
+    <a href="roadmap.html">Roadmap</a>
+  </div>
+  <div class="nav-spacer"></div>
+  <a class="nav-gh" href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+    GitHub
+  </a>
+  <a class="btn-nav" href="getting-started.html">Get Started</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">&#x2728; Open Source · Single Pod · Zero Dependencies</div>
+  <h1>Kubernetes Observability<br><span class="accent">Without the Complexity</span></h1>
+  <p>Kwirth brings real-time log streaming, metrics, alerts, security scanning, AI analysis, and a full Kubernetes explorer — all deployed as a single pod in your cluster.</p>
+  <div class="hero-ctas">
+    <a class="btn-primary" href="getting-started.html">Get Started Free</a>
+    <a class="btn-secondary" href="documentation/">Read the Docs</a>
+    <a class="btn-secondary" href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">View on GitHub</a>
+  </div>
+  <div class="hero-screenshot">
+    <img src="assets/img/screenshot-hero.svg" alt="Kwirth UI showing multiple channels">
+  </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="stats">
+  <div class="stat"><div class="stat-num">1</div><div class="stat-label">Pod deployment</div></div>
+  <div class="stat"><div class="stat-num">0</div><div class="stat-label">External dependencies</div></div>
+  <div class="stat"><div class="stat-num">10+</div><div class="stat-label">Built-in channels</div></div>
+  <div class="stat"><div class="stat-num">&#x221E;</div><div class="stat-label">Clusters supported</div></div>
+  <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Open Source</div></div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-tag">Channels</div>
+  <h2 class="section-title">Everything you need in one place</h2>
+  <p class="section-sub">Each channel is an independent observability tool. Mix and match what you need, connect to multiple clusters simultaneously.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">&#x1F4DC;</div>
+      <h3>Log Streaming</h3>
+      <p>Real-time log aggregation from any pod or container across all namespaces. Color-coded severity, search, filter, and full-text search.</p>
+      <span class="feature-tag tag-core">Core Channel</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#x1F4CA;</div>
+      <h3>Metrics</h3>
+      <p>Live CPU, memory, and resource metrics per pod and node. Visual dashboards updated in real time via WebSocket.</p>
+      <span class="feature-tag tag-core">Core Channel</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#x1F514;</div>
+      <h3>Alerts</h3>
+      <p>Rule-based alerting on log patterns, metric thresholds, and cluster events. No external alert manager needed.</p>
+      <span class="feature-tag tag-core">Core Channel</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#x1F50D;</div>
+      <h3>Magnify Explorer</h3>
+      <p>Full-featured Kubernetes object explorer with multi-window floating panels. Browse, search, and edit any artifact. Also available as a standalone desktop application.</p>
+      <span class="feature-tag tag-explorer">Explorer · Desktop</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#x1F916;</div>
+      <h3>Pinocchio AI</h3>
+      <p>Autonomous AI agent that continuously analyzes your cluster. Detects anomalies, explains errors, and suggests fixes using any LLM provider.</p>
+      <span class="feature-tag tag-ai">AI Powered</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#x1F6E1;&#xFE0F;</div>
+      <h3>Trivy Security</h3>
+      <p>Integrated Trivy vulnerability scanning per container image. SBOM, CVE details, audit checks, and exposed secrets in one view.</p>
+      <span class="feature-tag tag-security">Security</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#x1F5A5;&#xFE0F;</div>
+      <h3>Ops Terminal</h3>
+      <p>Full xterm-compatible terminal sessions into any pod or container. Execute commands, run scripts — all through the browser.</p>
+      <span class="feature-tag tag-core">Core Channel</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#x1F4C1;</div>
+      <h3>File Manager</h3>
+      <p>Browse and edit files inside running containers. Modify ConfigMaps and Secrets in-place with syntax highlighting.</p>
+      <span class="feature-tag tag-core">Core Channel</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#x1F310;</div>
+      <h3>Topology</h3>
+      <p>Visual graph of all cluster resources — workloads, services, ingresses — with dependency navigation and real-time status.</p>
+      <span class="feature-tag tag-core">Core Channel</span>
+    </div>
+  </div>
+</section>
+
+<!-- MAGNIFY SECTION -->
+<div class="magnify-section" id="magnify">
+  <div class="inner">
+    <div class="section-tag">Magnify</div>
+    <h2 class="section-title">Kwirth Magnify — Kubernetes Explorer</h2>
+    <p class="section-sub">The most powerful way to explore, analyze, and manage Kubernetes artifacts. Use it as a channel inside Kwirth, or install it as a standalone desktop application.</p>
+
+    <div class="magnify-grid">
+      <div class="magnify-screenshot">
+        <img src="assets/img/screenshot-magnify.svg" alt="Kwirth Magnify Kubernetes Explorer">
+      </div>
+      <div class="magnify-features">
+        <div class="magnify-feature">
+          <div class="magnify-feature-icon">&#x1F5C2;&#xFE0F;</div>
+          <div>
+            <h4>Full Kubernetes Tree</h4>
+            <p>Navigate every resource in your cluster — Workloads, Network, Config, Storage, CRDs — organized in a familiar file-manager style tree.</p>
+          </div>
+        </div>
+        <div class="magnify-feature">
+          <div class="magnify-feature-icon">&#x1FA9F;</div>
+          <div>
+            <h4>Multi-Window Floating Panels</h4>
+            <p>Open multiple artifact detail windows simultaneously. Pin, minimize, resize, and arrange them freely on the canvas.</p>
+          </div>
+        </div>
+        <div class="magnify-feature">
+          <div class="magnify-feature-icon">&#x1F50E;</div>
+          <div>
+            <h4>Cross-Artifact Search</h4>
+            <p>Search any text across all Kubernetes objects at once. Case-sensitive matching, status field inclusion, and secret decoding built in.</p>
+          </div>
+        </div>
+        <div class="magnify-feature">
+          <div class="magnify-feature-icon">&#x270F;&#xFE0F;</div>
+          <div>
+            <h4>In-Place Editing</h4>
+            <p>Edit ConfigMaps and Secrets directly in the UI and apply changes with one click. No kubectl, no YAML copy-paste.</p>
+          </div>
+        </div>
+        <div class="magnify-feature">
+          <div class="magnify-feature-icon">&#x1F517;</div>
+          <div>
+            <h4>Deep Object Linking</h4>
+            <p>Follow references between resources — from a Pod to its ConfigMap, from a Service to its Endpoints — with clickable links in every detail view.</p>
+          </div>
+        </div>
+        <div class="magnify-feature">
+          <div class="magnify-feature-icon">&#x1F5A5;&#xFE0F;</div>
+          <div>
+            <h4>One-Click Pod Actions</h4>
+            <p>Open a terminal, stream logs, or run Trivy scans directly from the artifact detail panel without switching tabs.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DESKTOP APP -->
+    <div class="magnify-desktop" id="magnify-desktop">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-top:48px;">
+        <div>
+          <h3 class="magnify-desktop-title">Available as a Desktop App</h3>
+          <p class="magnify-desktop-sub">Kwirth Magnify can be installed as a native desktop application — no browser, no cluster access required beyond a Kwirth instance URL. Available for Windows, macOS, and Linux.</p>
+
+          <div class="download-grid">
+            <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
+              <div class="dl-platform">
+                <div class="dl-icon">&#xF000;</div>
+                <div>
+                  <div class="dl-name">Windows</div>
+                  <div class="dl-ext">.exe installer</div>
+                </div>
+              </div>
+              <div class="dl-btn">&#x2B07; Download</div>
+            </a>
+            <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
+              <div class="dl-platform">
+                <div class="dl-icon">&#xF179;</div>
+                <div>
+                  <div class="dl-name">macOS</div>
+                  <div class="dl-ext">.dmg package</div>
+                </div>
+              </div>
+              <div class="dl-btn">&#x2B07; Download</div>
+            </a>
+            <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
+              <div class="dl-platform">
+                <div class="dl-icon">&#x1F427;</div>
+                <div>
+                  <div class="dl-name">Linux</div>
+                  <div class="dl-ext">.AppImage / .deb</div>
+                </div>
+              </div>
+              <div class="dl-btn">&#x2B07; Download</div>
+            </a>
+          </div>
+          <p class="download-note">All releases available at <a href="https://github.com/kwirthmagnify/kwirth/releases" target="_blank" rel="noopener">github.com/kwirthmagnify/kwirth/releases</a></p>
+        </div>
+        <div class="magnify-screenshot">
+          <img src="assets/img/screenshot-magnify-desktop.svg" alt="Magnify Desktop Application">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREENSHOTS -->
+<section id="screenshots">
+  <div class="section-tag">Screenshots</div>
+  <h2 class="section-title">See it in action</h2>
+  <p class="section-sub">A closer look at each channel — real-time data, minimal UI, maximum information density.</p>
+  <div class="screenshots-tabs">
+    <button class="tab-btn active" data-tab="tab-log">Log Streaming</button>
+    <button class="tab-btn" data-tab="tab-magnify">Magnify Explorer</button>
+    <button class="tab-btn" data-tab="tab-pinocchio">Pinocchio AI</button>
+    <button class="tab-btn" data-tab="tab-trivy">Trivy Security</button>
+  </div>
+  <div id="tab-log" class="tab-panel active"><img src="assets/img/screenshot-log.svg" alt="Log Channel"></div>
+  <div id="tab-magnify" class="tab-panel"><img src="assets/img/screenshot-magnify.svg" alt="Magnify Explorer"></div>
+  <div id="tab-pinocchio" class="tab-panel"><img src="assets/img/screenshot-pinocchio.svg" alt="Pinocchio AI"></div>
+  <div id="tab-trivy" class="tab-panel"><img src="assets/img/screenshot-trivy.svg" alt="Trivy Security"></div>
+</section>
+
+<!-- INSTALL -->
+<section id="install">
+  <div class="install-section">
+    <div class="section-tag">Installation</div>
+    <h2 class="section-title">Up and running in 2 minutes</h2>
+    <p class="section-sub" style="margin-bottom:32px;">No external databases, no message queues, no complex configuration. Just one Helm command.</p>
+    <div class="install-tabs">
+      <button class="install-tab active" data-tab="i-helm">Helm</button>
+      <button class="install-tab" data-tab="i-kubectl">kubectl</button>
+      <button class="install-tab" data-tab="i-docker">Docker Desktop</button>
+    </div>
+    <div id="i-helm" class="install-panel active">
+      <div class="code-block"><pre><span class="comment"># Add the Kwirth Helm repo</span>
+<span class="cmd">helm repo add</span> kwirth https://kwirthmagnify.github.io/kwirth/helm-charts
+<span class="cmd">helm repo update</span>
+
+<span class="comment"># Install Kwirth in its own namespace</span>
+<span class="cmd">helm install</span> kwirth kwirth/kwirth \
+  <span class="flag">--namespace</span> <span class="val">kwirth</span> \
+  <span class="flag">--create-namespace</span>
+
+<span class="comment"># Open the UI</span>
+<span class="cmd">kubectl port-forward</span> <span class="flag">-n</span> kwirth svc/kwirth <span class="val">3883:3883</span></pre></div>
+    </div>
+    <div id="i-kubectl" class="install-panel">
+      <div class="code-block"><pre><span class="comment"># Apply the latest manifest directly</span>
+<span class="cmd">kubectl apply</span> <span class="flag">-f</span> \
+  https://github.com/kwirthmagnify/kwirth/releases/latest/download/kwirth.yaml
+
+<span class="comment"># Check pod is running</span>
+<span class="cmd">kubectl get pods</span> <span class="flag">-n</span> kwirth
+
+<span class="comment"># Forward the port</span>
+<span class="cmd">kubectl port-forward</span> <span class="flag">-n</span> kwirth svc/kwirth <span class="val">3883:3883</span></pre></div>
+    </div>
+    <div id="i-docker" class="install-panel">
+      <div class="code-block"><pre><span class="comment"># For Docker Desktop (kubeconfig auto-detected)</span>
+<span class="cmd">helm repo add</span> kwirth https://kwirthmagnify.github.io/kwirth/helm-charts
+<span class="cmd">helm install</span> kwirth kwirth/kwirth \
+  <span class="flag">--namespace</span> <span class="val">kwirth</span> \
+  <span class="flag">--create-namespace</span> \
+  <span class="flag">--set</span> <span class="val">service.type=NodePort</span>
+
+<span class="comment"># Access at http://localhost:PORT (check service for assigned port)</span>
+<span class="cmd">kubectl get svc</span> <span class="flag">-n</span> kwirth kwirth</pre></div>
+    </div>
+    <p style="margin-top:20px;font-size:0.875rem;color:var(--muted);">
+      Need more options? See the full <a href="getting-started.html" style="color:var(--blue);">Getting Started guide</a> for Ingress, TLS, and multi-cluster setup.
+    </p>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="section-tag">Architecture</div>
+  <h2 class="section-title">Designed for simplicity</h2>
+  <p class="section-sub">Kwirth runs as a single pod. State is stored in Kubernetes ConfigMaps — no external database needed. Each cluster you monitor is added as a connection from the UI.</p>
+  <img class="arch-img" src="assets/img/architecture.svg" alt="Kwirth Architecture Diagram">
+</section>
+
+<!-- EXTENSIBILITY -->
+<section id="plugins">
+  <div class="section-tag">Extensibility</div>
+  <h2 class="section-title">Extend with Plugins &amp; Providers</h2>
+  <p class="section-sub">Kwirth has a full plugin system for adding new front-end channels and a provider system for injecting new data sources — all hot-reloadable without restarting the pod.</p>
+  <div class="plugins-grid">
+    <div class="plugin-card">
+      <h4>&#x1F4E6; Trivy Plugin</h4>
+      <p>Security vulnerability scanning via Trivy operator integration.</p>
+      <span class="plugin-badge">Available</span>
+    </div>
+    <div class="plugin-card">
+      <h4>&#x1F4E6; Pinocchio Plugin</h4>
+      <p>AI analysis engine — pluggable LLM backend, configurable prompts.</p>
+      <span class="plugin-badge">Available</span>
+    </div>
+    <div class="plugin-card">
+      <h4>&#x1F4E6; Sample Provider</h4>
+      <p>Reference implementation for building custom data providers.</p>
+      <span class="plugin-badge">Available</span>
+    </div>
+    <div class="plugin-card">
+      <h4>&#x1F4E6; OpenTelemetry Provider</h4>
+      <p>Ingest OTLP traces, metrics, and logs from any OTel-compatible source.</p>
+      <span class="plugin-badge planned">Planned</span>
+    </div>
+    <div class="plugin-card">
+      <h4>&#x1F4E6; Kafka Provider</h4>
+      <p>Stream Kafka events into Kwirth channels for unified observability.</p>
+      <span class="plugin-badge planned">Planned</span>
+    </div>
+    <div class="plugin-card">
+      <h4>&#x1F4E6; Grafana Plugin</h4>
+      <p>Grafana datasource plugin for embedding Kwirth log streams in dashboards.</p>
+      <span class="plugin-badge planned">Planned</span>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Start observing your cluster<br>in minutes</h2>
+  <p>Free, open source, and runs entirely inside your Kubernetes cluster.</p>
+  <div class="cta-btns">
+    <a class="btn-primary" href="getting-started.html">Get Started</a>
+    <a class="btn-secondary" href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">&#x2605; Star on GitHub</a>
+    <a class="btn-secondary" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">&#x2B07; Download Magnify</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-logo">
+        <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="#f5820a" fill-opacity=".15"/>
+          <path d="M8 22L16 10l8 12" stroke="#f5820a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="16" cy="10" r="2.5" fill="#f5820a"/>
+        </svg>
+        <span>kwirth</span>
+      </div>
+      <p class="footer-desc">Kubernetes observability platform. Single pod, zero dependencies, infinite possibilities.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <a href="#features">Features</a>
+      <a href="#magnify">Magnify</a>
+      <a href="#install">Installation</a>
+      <a href="#plugins">Plugins</a>
+      <a href="roadmap.html">Roadmap</a>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <a href="getting-started.html">Getting Started</a>
+      <a href="documentation/">Documentation</a>
+      <a href="project.html">Project</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/releases" target="_blank" rel="noopener">Releases</a>
+    </div>
+    <div class="footer-col">
+      <h4>Community</h4>
+      <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/issues" target="_blank" rel="noopener">Issues</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/discussions" target="_blank" rel="noopener">Discussions</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/blob/master/LICENSE" target="_blank" rel="noopener">License (Apache 2.0)</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; 2025 Kwirth Project — Open Source under Apache 2.0</span>
+    <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">github.com/kwirthmagnify/kwirth</a>
+  </div>
+</footer>
+
+<script>
+  // Screenshot tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
+      btn.classList.add('active')
+      document.getElementById(tab).classList.add('active')
+    })
+  })
+
+  // Install tabs
+  document.querySelectorAll('.install-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab
+      document.querySelectorAll('.install-tab').forEach(b => b.classList.remove('active'))
+      document.querySelectorAll('.install-panel').forEach(p => p.classList.remove('active'))
+      btn.classList.add('active')
+      document.getElementById(tab).classList.add('active')
+    })
+  })
+
+  // Nav active on scroll
+  const sections = document.querySelectorAll('section[id], div[id]')
+  const navLinks = document.querySelectorAll('.nav-links a[href^="#"]')
+  window.addEventListener('scroll', () => {
+    let current = ''
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 100) current = s.id
+    })
+    navLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current)
+    })
+  })
+</script>
 </body>
 </html>
-

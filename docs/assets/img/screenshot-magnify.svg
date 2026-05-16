@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#060a12"/>
+  <rect x="0" y="0" width="1200" height="40" fill="#0d1117"/>
+  <circle cx="20" cy="20" r="6" fill="#ff5f57"/>
+  <circle cx="40" cy="20" r="6" fill="#ffbd2e"/>
+  <circle cx="60" cy="20" r="6" fill="#28c840"/>
+  <text x="600" y="25" font-family="monospace" font-size="13" fill="#8b949e" text-anchor="middle">Kwirth Magnify — Kubernetes Explorer (Desktop)</text>
+  <text x="600" y="380" font-family="sans-serif" font-size="32" fill="#f0f6fc" text-anchor="middle" font-weight="bold">REPLACE WITH MAGNIFY SCREENSHOT</text>
+  <text x="600" y="430" font-family="sans-serif" font-size="16" fill="#8b949e" text-anchor="middle">Show the Magnify channel with file manager tree on the left</text>
+  <text x="600" y="460" font-family="sans-serif" font-size="14" fill="#58a6ff" text-anchor="middle">+ multiple floating detail windows open (pod details, artifact search, etc.)</text>
+  <text x="600" y="490" font-family="sans-serif" font-size="13" fill="#f5820a" text-anchor="middle">Ideal: Desktop app version showing full-screen Kubernetes explorer</text>
+  <rect x="50" y="80" width="250" height="560" fill="#0d1117" rx="6" stroke="#30363d" stroke-width="1"/>
+  <text x="175" y="110" font-family="sans-serif" font-size="11" fill="#f5820a" text-anchor="middle" font-weight="bold">CLUSTER: production</text>
+  <text x="100" y="140" font-family="monospace" font-size="10" fill="#58a6ff">▼ Workloads</text>
+  <text x="115" y="160" font-family="monospace" font-size="9" fill="#8b949e">▶ Deployments (12)</text>
+  <text x="115" y="178" font-family="monospace" font-size="9" fill="#8b949e">▶ StatefulSets (4)</text>
+  <text x="115" y="196" font-family="monospace" font-size="9" fill="#8b949e">▶ Pods (47)</text>
+  <text x="100" y="220" font-family="monospace" font-size="10" fill="#58a6ff">▼ Network</text>
+  <text x="115" y="240" font-family="monospace" font-size="9" fill="#8b949e">▶ Services (18)</text>
+  <text x="115" y="258" font-family="monospace" font-size="9" fill="#8b949e">▶ Ingresses (5)</text>
+  <text x="100" y="282" font-family="monospace" font-size="10" fill="#58a6ff">▼ Config</text>
+  <text x="115" y="302" font-family="monospace" font-size="9" fill="#8b949e">▶ ConfigMaps (23)</text>
+  <text x="115" y="320" font-family="monospace" font-size="9" fill="#e3b341">▶ Secrets (8)</text>
+  <rect x="320" y="80" width="520" height="320" fill="#0d1117" rx="6" stroke="#30363d" stroke-width="1"/>
+  <text x="580" y="108" font-family="sans-serif" font-size="11" fill="#f0f6fc" text-anchor="middle" font-weight="bold">Pod Details: api-gateway-7d8f9b-x2k9p</text>
+  <text x="360" y="135" font-family="monospace" font-size="9" fill="#58a6ff">spec.containers[0].image</text>
+  <text x="360" y="152" font-family="monospace" font-size="9" fill="#3fb950">  myregistry/api-gateway:v2.1.0</text>
+  <text x="360" y="175" font-family="monospace" font-size="9" fill="#58a6ff">spec.containers[0].resources.limits</text>
+  <text x="360" y="192" font-family="monospace" font-size="9" fill="#8b949e">  cpu: 500m | memory: 512Mi</text>
+  <text x="360" y="215" font-family="monospace" font-size="9" fill="#58a6ff">status.phase</text>
+  <text x="360" y="232" font-family="monospace" font-size="9" fill="#3fb950">  Running</text>
+  <rect x="590" y="230" width="70" height="22" rx="4" fill="#f5820a"/>
+  <text x="625" y="246" font-family="sans-serif" font-size="10" fill="white" text-anchor="middle">Apply</text>
+  <rect x="670" y="230" width="70" height="22" rx="4" fill="transparent" stroke="#30363d" stroke-width="1"/>
+  <text x="705" y="246" font-family="sans-serif" font-size="10" fill="#8b949e" text-anchor="middle">Log</text>
+  <rect x="750" y="230" width="70" height="22" rx="4" fill="transparent" stroke="#30363d" stroke-width="1"/>
+  <text x="785" y="246" font-family="sans-serif" font-size="10" fill="#8b949e" text-anchor="middle">Shell</text>
+  <rect x="500" y="420" width="420" height="240" fill="#0d1117" rx="6" stroke="#30363d" stroke-width="1"/>
+  <text x="710" y="448" font-family="sans-serif" font-size="11" fill="#f0f6fc" text-anchor="middle" font-weight="bold">Artifact Search</text>
+  <text x="540" y="475" font-family="monospace" font-size="9" fill="#8b949e">Search: "redis"</text>
+  <text x="540" y="498" font-family="monospace" font-size="9" fill="#3fb950">deployment/redis-cache — spec.containers[0].name</text>
+  <text x="540" y="516" font-family="monospace" font-size="9" fill="#8b949e">configmap/redis-config — data.REDIS_HOST</text>
+  <text x="540" y="534" font-family="monospace" font-size="9" fill="#e3b341">secret/redis-secret — data.password</text>
+</svg>

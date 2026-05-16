@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
+  <rect width="900" height="500" fill="#0d1117"/>
+  <rect x="0" y="0" width="900" height="36" fill="#161b22"/>
+  <text x="450" y="24" font-family="sans-serif" font-size="12" fill="#2dd4bf" text-anchor="middle" font-weight="bold">Pinocchio AI Channel</text>
+  <text x="450" y="260" font-family="sans-serif" font-size="24" fill="#f0f6fc" text-anchor="middle" font-weight="bold">REPLACE WITH PINOCCHIO SCREENSHOT</text>
+  <text x="450" y="295" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">AI-powered Kubernetes analysis — logs, anomalies, recommendations</text>
+  <text x="450" y="320" font-family="sans-serif" font-size="12" fill="#58a6ff" text-anchor="middle">Show: AI chat interface analyzing cluster state, LLM response visible</text>
+  <rect x="20" y="50" width="560" height="400" fill="#161b22" rx="4" stroke="#30363d" stroke-width="1"/>
+  <text x="300" y="80" font-family="sans-serif" font-size="10" fill="#8b949e" text-anchor="middle">AI Analysis Feed</text>
+  <rect x="30" y="95" width="540" height="60" fill="#0d3d33" rx="4"/>
+  <text x="50" y="115" font-family="monospace" font-size="9" fill="#2dd4bf">AI: Detected anomaly in pod api-gateway-7d8f9b</text>
+  <text x="50" y="133" font-family="monospace" font-size="9" fill="#8b949e">Memory usage 94% — approaching OOMKill threshold. Suggest:</text>
+  <text x="50" y="150" font-family="monospace" font-size="9" fill="#3fb950">→ Increase memory limit to 1Gi or scale replicas to 3</text>
+  <rect x="590" y="50" width="290" height="400" fill="#161b22" rx="4" stroke="#30363d" stroke-width="1"/>
+  <text x="735" y="80" font-family="sans-serif" font-size="10" fill="#8b949e" text-anchor="middle">Configuration</text>
+  <text x="610" y="110" font-family="monospace" font-size="9" fill="#58a6ff">LLM Provider: OpenAI</text>
+  <text x="610" y="130" font-family="monospace" font-size="9" fill="#8b949e">Model: gpt-4o-mini</text>
+  <text x="610" y="150" font-family="monospace" font-size="9" fill="#3fb950">Status: Connected ✓</text>
+</svg>

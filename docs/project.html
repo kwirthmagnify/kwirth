@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project — Kwirth</title>
+  <link rel="icon" type="image/x-icon" href="_media/favicon.ico">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #060a12; --bg2: #0d1420; --bg3: #111827; --card: #0f1929; --border: #1e2d40;
+      --orange: #f5820a; --orange2: #ff9a2e; --teal: #2dd4bf; --blue: #58a6ff;
+      --green: #3fb950; --yellow: #e3b341; --red: #ff7b72;
+      --text: #e6edf3; --muted: #8b949e;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.7; }
+    a { color: var(--blue); }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; padding: 0 40px; height: 62px; background: rgba(6,10,18,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo span { font-size: 1.1rem; font-weight: 700; color: var(--orange); }
+    .nav-spacer { flex: 1; }
+    .nav-links { display: flex; gap: 6px; margin-left: 28px; }
+    .nav-links a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; transition: all .2s; }
+    .nav-links a:hover { color: var(--text); background: var(--border); }
+    .container { max-width: 900px; margin: 0 auto; padding: 100px 40px 80px; }
+    h1 { font-size: 2.4rem; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.5px; }
+    .lead { color: var(--muted); font-size: 1.1rem; margin-bottom: 48px; max-width: 600px; }
+    h2 { font-size: 1.5rem; font-weight: 700; margin: 48px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    p { margin-bottom: 14px; color: var(--muted); }
+    p strong { color: var(--text); }
+    .principles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; margin-top: 24px; }
+    .principle-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 22px; }
+    .principle-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; color: var(--orange); }
+    .principle-card p { font-size: 0.85rem; color: var(--muted); margin: 0; }
+    .stack-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .stack-item { display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
+    .stack-item .name { font-weight: 600; font-size: 0.9rem; min-width: 160px; }
+    .stack-item .desc { font-size: 0.85rem; color: var(--muted); }
+    .contributors { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+    .contributor { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; text-decoration: none; transition: all .2s; }
+    .contributor:hover { border-color: var(--orange); }
+    .contributor .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+    .contributor .cname { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+    .contributor .crole { font-size: 0.75rem; color: var(--muted); }
+    .license-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-top: 20px; }
+    .license-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .license-box p { font-size: 0.875rem; margin: 0; }
+    .btn-back { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 0.875rem; margin-bottom: 32px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
+    .btn-back:hover { color: var(--text); border-color: var(--muted); }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8" fill="#f5820a" fill-opacity=".15"/>
+      <path d="M8 22L16 10l8 12" stroke="#f5820a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="16" cy="10" r="2.5" fill="#f5820a"/>
+    </svg>
+    <span>kwirth</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="getting-started.html">Getting Started</a>
+    <a href="documentation/">Documentation</a>
+    <a href="roadmap.html">Roadmap</a>
+  </div>
+  <div class="nav-spacer"></div>
+  <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;font-size:0.875rem;padding:6px 12px;border:1px solid var(--border);border-radius:6px;">GitHub</a>
+</nav>
+
+<div class="container">
+  <a class="btn-back" href="/">&#8592; Back to home</a>
+  <h1>The Project</h1>
+  <p class="lead">Kwirth started as a solution to a simple problem: running a full observability stack requires too many moving parts. We set out to change that.</p>
+
+  <h2>Origin</h2>
+  <p>Kwirth was born from frustration. Setting up logging, metrics, and alerting for a Kubernetes cluster typically requires Prometheus, Grafana, Loki, Alertmanager, and a dozen configuration files. Kwirth answers the question: <strong>what if all of that was one pod?</strong></p>
+  <p>The project started in 2022 as an internal tool and has grown into a full observability and operations platform with AI capabilities, a standalone desktop explorer, security scanning, and an extensibility system for plugins and providers.</p>
+
+  <h2>Design Principles</h2>
+  <div class="principles-grid">
+    <div class="principle-card">
+      <h3>&#x1F4E6; One pod, zero deps</h3>
+      <p>Everything runs in a single container. State stored in ConfigMaps. No external databases, message queues, or sidecars.</p>
+    </div>
+    <div class="principle-card">
+      <h3>&#x1F50C; Real-time first</h3>
+      <p>All data flows over WebSockets. No polling. Logs, metrics, alerts, and AI responses arrive as they happen.</p>
+    </div>
+    <div class="principle-card">
+      <h3>&#x1F310; Multi-cluster native</h3>
+      <p>Connect as many clusters as you need from a single Kwirth instance. Each with independent access control.</p>
+    </div>
+    <div class="principle-card">
+      <h3>&#x1F9E9; Extensible by design</h3>
+      <p>Plugins add front-end channels. Providers add new data sources. Both hot-reload without pod restarts.</p>
+    </div>
+    <div class="principle-card">
+      <h3>&#x1F512; Secure by default</h3>
+      <p>API key authentication, role-based access at the view level, and token expiration built in from day one.</p>
+    </div>
+    <div class="principle-card">
+      <h3>&#x1F4BB; Developer experience</h3>
+      <p>Clean TypeScript codebase. React frontend. Clear separation between back-end channels and front-end components.</p>
+    </div>
+  </div>
+
+  <h2>Technology Stack</h2>
+  <div class="stack-list">
+    <div class="stack-item"><span class="name">Node.js + Express</span><span class="desc">Backend runtime — REST API and WebSocket server</span></div>
+    <div class="stack-item"><span class="name">TypeScript</span><span class="desc">Frontend and backend — full type safety across the codebase</span></div>
+    <div class="stack-item"><span class="name">React + MUI</span><span class="desc">Frontend — Material UI component library with custom theming</span></div>
+    <div class="stack-item"><span class="name">Kubernetes API</span><span class="desc">Direct cluster access via @kubernetes/client-node — no middleman</span></div>
+    <div class="stack-item"><span class="name">Docsify</span><span class="desc">Documentation — lightweight Markdown site served from GitHub Pages</span></div>
+    <div class="stack-item"><span class="name">Helm</span><span class="desc">Distribution — Helm chart for one-command installation</span></div>
+    <div class="stack-item"><span class="name">Tauri (planned)</span><span class="desc">Desktop builds for Kwirth Magnify — native app for Windows, macOS, Linux</span></div>
+  </div>
+
+  <h2>License</h2>
+  <div class="license-box">
+    <h3>Apache License 2.0</h3>
+    <p>Kwirth is free and open source software, licensed under the Apache License, Version 2.0. You are free to use, modify, and distribute it for any purpose — commercial or otherwise — as long as you include the license notice.</p>
+    <p style="margin-top:10px;"><a href="https://github.com/kwirthmagnify/kwirth/blob/master/LICENSE" target="_blank" rel="noopener">View full license text on GitHub &#x2192;</a></p>
+  </div>
+
+  <h2>Get Involved</h2>
+  <p>Kwirth welcomes contributions of all kinds — bug fixes, new channel ideas, documentation, translations, and feedback.</p>
+  <ul style="margin-left:24px;color:var(--muted);">
+    <li style="margin-bottom:8px"><a href="https://github.com/kwirthmagnify/kwirth/issues" target="_blank" rel="noopener">Open an issue</a> — bug reports and feature requests</li>
+    <li style="margin-bottom:8px"><a href="https://github.com/kwirthmagnify/kwirth/discussions" target="_blank" rel="noopener">Start a discussion</a> — questions, ideas, architecture conversations</li>
+    <li style="margin-bottom:8px"><a href="https://github.com/kwirthmagnify/kwirth/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing guide</a> — how to set up the dev environment and submit PRs</li>
+    <li style="margin-bottom:8px"><a href="roadmap.html">Roadmap</a> — items marked <em>[HUMAN]</em> are community contributions</li>
+  </ul>
+</div>
+</body>
+</html>

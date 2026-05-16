@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
+  <rect width="900" height="500" fill="#0d1117"/>
+  <rect x="0" y="0" width="900" height="36" fill="#161b22" rx="4"/>
+  <text x="450" y="24" font-family="sans-serif" font-size="12" fill="#f5820a" text-anchor="middle" font-weight="bold">Log Channel</text>
+  <text x="450" y="260" font-family="sans-serif" font-size="24" fill="#f0f6fc" text-anchor="middle" font-weight="bold">REPLACE WITH LOG CHANNEL SCREENSHOT</text>
+  <text x="450" y="295" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">Real-time log streaming with color coding and search/filter</text>
+  <text x="450" y="320" font-family="sans-serif" font-size="12" fill="#58a6ff" text-anchor="middle">Show: multi-pod log streams, search bar, color-coded severity levels</text>
+  <rect x="20" y="50" width="860" height="30" fill="#161b22" rx="2"/>
+  <text x="40" y="70" font-family="monospace" font-size="10" fill="#8b949e">Filter pods...   ○ Wrap   ○ Timestamps   ○ Colors   [Search...]</text>
+  <text x="40" y="115" font-family="monospace" font-size="9" fill="#3fb950">2025-05-16 10:23:41 [INFO]  api-gateway: Request received GET /api/v1/users</text>
+  <text x="40" y="135" font-family="monospace" font-size="9" fill="#3fb950">2025-05-16 10:23:41 [INFO]  auth-service: Token validated for user:12345</text>
+  <text x="40" y="155" font-family="monospace" font-size="9" fill="#e3b341">2025-05-16 10:23:42 [WARN]  db-service: Slow query detected (1.2s): SELECT * FROM users</text>
+  <text x="40" y="175" font-family="monospace" font-size="9" fill="#ff7b72">2025-05-16 10:23:43 [ERROR] redis-cache: Connection refused: redis-primary:6379</text>
+  <text x="40" y="195" font-family="monospace" font-size="9" fill="#3fb950">2025-05-16 10:23:44 [INFO]  api-gateway: Response 200 in 45ms</text>
+</svg>
