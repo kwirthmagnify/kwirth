@@ -6,7 +6,7 @@ import { IAsset, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_SBO
 import { TrivyTabContentAssetSbom } from './TrivyTabContentAssetSbom'
 import { TrivyTabContentAssetExposed } from './TrivyTabContentAssetExposed'
 import { useRef, useState } from 'react'
-import { useEscape } from '../../../tools/useEscape'
+import { useKeyboard } from '../../../tools/useKeyboard'
 import { ITrivyInstanceConfig } from '../TrivyTypes'
 
 interface ITrivyTabContentAssetDetailsProps {
@@ -45,7 +45,7 @@ let summaryVulnAuditExposed = (asset:IAsset, detail:TReportType) => {
 
 const TrivyTabContentAssetDetails: React.FC<ITrivyTabContentAssetDetailsProps> = (props:ITrivyTabContentAssetDetailsProps) => {
     const [ , setTick ] = useState(0)
-    useEscape(props.onClose)
+    useKeyboard(props.onClose)
 
     let asset = props.asset
     let report = (asset as any)[props.detail].report

@@ -731,7 +731,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                         <Minimize fontSize="small" />
                     </IconButton>
                     <IconButton size="small" onClick={() => props.onTop(props.id)}>
-                        {props.atTop? <PinDrop sx={{color:'blue'}} fontSize="small" /> : <Place fontSize="small" />}
+                        {props.atTop? <PinDrop sx={{color:'info.main'}} fontSize="small" /> : <Place fontSize="small" />}
                     </IconButton>
                     <IconButton size="small" onClick={handleIsMaximized}>
                         {isMaximized ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}

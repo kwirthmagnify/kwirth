@@ -31,12 +31,12 @@ const EchoTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     return (
         <>
         { echoData.started && 
-        <Card sx={{flex:1, width:'98%', alignSelf:'center', margin:'8px'}}>
+        <Card sx={{flex:1, width:'98%', alignSelf:'center', m: 1}}>
             <CardHeader title={
                 <Stack direction={'row'} alignItems={'center'}>
-                    <Typography marginRight={'32px'}><b>Lines:</b> {echoData.lines.length} / {echoConfig.maxLines}</Typography>
-                    <Typography marginRight={'32px'}><b>Interval:</b> {echoInstanceConfig.interval}</Typography>
-                    <Typography marginRight={'32px'}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {echoData.paused?'paused':echoData.started?'started':'stopped'}</Typography>
+                    <Typography mr={4}><b>Lines:</b> {echoData.lines.length} / {echoConfig.maxLines}</Typography>
+                    <Typography mr={4}><b>Interval:</b> {echoInstanceConfig.interval}</Typography>
+                    <Typography mr={4}><Info fontSize='small' sx={{mb: 0.25}} /><b>&nbsp;Status:</b> {echoData.paused?'paused':echoData.started?'started':'stopped'}</Typography>
                 </Stack>}>
             </CardHeader>
             <CardContent>

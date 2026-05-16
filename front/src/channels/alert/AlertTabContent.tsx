@@ -13,8 +13,8 @@ const AlertTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const [filter, setFilter] = useState<string>('')
     const [filterCasing, setFilterCasing] = useState(false)
     const [filterRegex, setFilterRegex] = useState(false)
-    const adornmentSelected= { margin: 0, borderWidth:1, borderStyle:'solid', borderColor:'gray', paddingLeft:3, paddingRight:3, color:theme.palette.background.default, backgroundColor:theme.palette.text.primary, cursor: 'pointer'}
-    const adornmentNotSelected = { margin: 0, borderWidth:1, borderStyle: 'solid', borderColor:'#f0f0f0', backgroundColor:theme.palette.background.default, color:theme.palette.text.primary, paddingLeft:3, paddingRight:3, cursor:'pointer'}
+    const adornmentSelected= { margin: 0, borderWidth:1, borderStyle:'solid', borderColor: theme.palette.divider, paddingLeft:3, paddingRight:3, color:theme.palette.background.default, backgroundColor:theme.palette.text.primary, cursor: 'pointer'}
+    const adornmentNotSelected = { margin: 0, borderWidth:1, borderStyle: 'solid', borderColor: theme.palette.divider, backgroundColor:theme.palette.background.default, color:theme.palette.text.primary, paddingLeft:3, paddingRight:3, cursor:'pointer'}
 
     useEffect(() => {
         if (alertBoxRef.current) setAlertBoxTop(alertBoxRef.current.getBoundingClientRect().top)
@@ -71,22 +71,22 @@ const AlertTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     return (<>
         { alertData.started && 
-        <Card sx={{flex:1, width:'98%', alignSelf:'center', marginTop:'8px'}}>
+        <Card sx={{flex:1, width:'98%', alignSelf:'center', mt: 1}}>
             <CardHeader sx={{border:0, borderBottom:1, borderStyle:'solid', borderColor: 'divider'}} title={
                 <Stack direction={'row'} alignItems={'center'}>
-                    <Typography marginRight={'32px'}><b>Alerts:</b> {alertData.firedAlerts.length}</Typography>
-                    <Typography marginRight={'32px'}><Info fontSize='small' sx={{marginBottom:'2px', color:'blue'}} /><b>&nbsp;Info:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.INFO).length}</Typography>
-                    <Typography marginRight={'32px'}><Warning fontSize='small' sx={{marginBottom:'2px', color:'orange'}} /><b>&nbsp;Warning:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.WARNING).length}</Typography>
-                    <Typography marginRight={'32px'}><Error fontSize='small' sx={{marginBottom:'2px', color:'red'}}/><b>&nbsp;Error:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.ERROR).length}</Typography>
+                    <Typography mr={4}><b>Alerts:</b> {alertData.firedAlerts.length}</Typography>
+                    <Typography mr={4}><Info fontSize='small' sx={{mb: 0.25, color: 'info.main'}} /><b>&nbsp;Info:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.INFO).length}</Typography>
+                    <Typography mr={4}><Warning fontSize='small' sx={{mb: 0.25, color: 'warning.main'}} /><b>&nbsp;Warning:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.WARNING).length}</Typography>
+                    <Typography mr={4}><Error fontSize='small' sx={{mb: 0.25, color: 'error.main'}}/><b>&nbsp;Error:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.ERROR).length}</Typography>
                     <Typography sx={{flexGrow:1}}></Typography>
                     <TextField value={filter} onChange={onChangeFilter} disabled={!alertData.started} size='small' variant='standard' placeholder='Filter...'
-                        InputProps={{ endAdornment: 
+                        InputProps={{ endAdornment:
                             <>
-                                <InputAdornment position="start" onClick={() => alertData.started && setFilterRegex(!filterRegex)} style={{margin: 0}}>
-                                    <Typography style={filterRegex? adornmentSelected : adornmentNotSelected}>.*</Typography>
+                                <InputAdornment position='start' onClick={() => alertData.started && setFilterRegex(!filterRegex)} sx={{m: 0}}>
+                                    <Typography sx={filterRegex? adornmentSelected : adornmentNotSelected}>.*</Typography>
                                 </InputAdornment>
-                                <InputAdornment position="start" onClick={() => alertData.started && setFilterCasing(!filterCasing)} style={{margin: 0, marginLeft:1}}>
-                                    <Typography style={filterCasing? adornmentSelected : adornmentNotSelected}>Aa</Typography>
+                                <InputAdornment position='start' onClick={() => alertData.started && setFilterCasing(!filterCasing)} sx={{m: 0, ml: 1}}>
+                                    <Typography sx={filterCasing? adornmentSelected : adornmentNotSelected}>Aa</Typography>
                                 </InputAdornment>
                             </>
                         }}

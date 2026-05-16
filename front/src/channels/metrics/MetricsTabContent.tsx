@@ -136,9 +136,9 @@ const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             return (<>
                 {formatMetricsError(metricsData)}
                 {rows.map((row, index) => (
-                    <div key={index} style={{ display: 'flex', justifyContent: 'space-around' }}>
+                    <Box key={index} sx={{ display: 'flex', justifyContent: 'space-around' }}>
                         {row}
-                    </div>
+                    </Box>
                 ))}
             </>)
         }
@@ -183,9 +183,9 @@ const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             return (<>
                 {formatMetricsError(metricsData)}
                 {rows.map((row, index) => (
-                    <div key={index} style={{ display: 'flex', justifyContent: 'space-around', marginLeft:'8px', marginRight:'8px' }}>
+                    <Box key={index} sx={{ display: 'flex', justifyContent: 'space-around', mx: 1 }}>
                         {row}
-                    </div>
+                    </Box>
                 ))}
             </>)
         }

@@ -298,7 +298,7 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     return <>
         { filemanData.started &&
-            <Box ref={filemanBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', flexGrow:1, height: `calc(100vh - ${logBoxTop}px - 16px)`, paddingLeft: '5px', paddingRight:'5px', marginTop:'8px'}}>
+            <Box ref={filemanBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', flexGrow:1, height: `calc(100vh - ${logBoxTop}px - 16px)`, px: 0.625, mt: 1}}>
                 <FileManager
                     ref={fileManagerRef}
                     files={filemanData.files}

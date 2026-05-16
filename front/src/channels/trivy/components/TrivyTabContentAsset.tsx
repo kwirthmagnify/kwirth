@@ -45,10 +45,10 @@ const simpleBarChart = (asset: IAsset, trivyInstanceConfig: ITrivyInstanceConfig
     }
 
     const bars = [
-        { label: `Vulns`, value: vulns, height: calculateHeight(vulns), color: '#d32f2f' },
-        { label: `Audit`, value: audit, height: calculateHeight(audit), color: '#d32f2f' },
-        { label: `Exposed`, value: exposed, height: calculateHeight(exposed), color: '#d32f2f' },
-        { label: `SBOM`, value: sbom, height: calculateHeight(sbom), color: '#388e3c' },
+        { label: `Vulns`, value: vulns, height: calculateHeight(vulns), color: 'error.main' },
+        { label: `Audit`, value: audit, height: calculateHeight(audit), color: 'error.main' },
+        { label: `Exposed`, value: exposed, height: calculateHeight(exposed), color: 'error.main' },
+        { label: `SBOM`, value: sbom, height: calculateHeight(sbom), color: 'success.main' },
     ]
 
     return (
@@ -92,7 +92,7 @@ const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props:ITrivy
 
     let assetMenu = (
         <Menu anchorEl={anchorMenu} open={Boolean(anchorMenu)} onClose={() => setAnchorMenu(undefined)}>
-            <MenuList dense sx={{width:'200px'}}>
+            <MenuList dense sx={{minWidth: 200}}>
                 <MenuItem onClick={() => { setAnchorMenu(undefined); props.onShowVulns(props.asset)}} disabled={!props.asset.vulnerabilityreports.report || getTotalIssues(trivyInstanceConfig, TRIVY_API_VULN_PLURAL, props.asset)===0}><VisibilityIcon/>&nbsp;&nbsp;Vulnerabilities</MenuItem>
                 <MenuItem onClick={() => { setAnchorMenu(undefined); props.onShowAudit(props.asset)}} disabled={!props.asset.configauditreports.report || getTotalIssues(trivyInstanceConfig, TRIVY_API_AUDIT_PLURAL, props.asset)===0}><VisibilityIcon/>&nbsp;&nbsp;Config audit</MenuItem>
                 <MenuItem onClick={() => { setAnchorMenu(undefined); props.onShowExposed(props.asset)}} disabled={!props.asset.exposedsecretreports.report || getTotalIssues(trivyInstanceConfig, TRIVY_API_EXPOSED_PLURAL, props.asset)===0}><VisibilityIcon/>&nbsp;&nbsp;Exposed secrets</MenuItem>
@@ -138,16 +138,16 @@ const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props:ITrivy
                     </Stack>
                 </Stack>
                 <Stack direction={'column'} sx={{width:'10%'}} alignItems={'center'}>
-                    <Typography fontSize={'18px'}>{getTotalIssues(trivyInstanceConfig, TRIVY_API_VULN_PLURAL, props.asset)}</Typography>
-                    <Typography fontSize={'8px'}>Vulnerabilities</Typography>
+                    <Typography sx={{fontSize: '1.125rem'}}>{getTotalIssues(trivyInstanceConfig, TRIVY_API_VULN_PLURAL, props.asset)}</Typography>
+                    <Typography variant='caption' sx={{fontSize: '0.5rem'}}>Vulnerabilities</Typography>
                 </Stack>
                 <Stack direction={'column'} sx={{width:'10%'}} alignItems={'center'}>
-                    <Typography fontSize={'18px'}>{getTotalIssues(trivyInstanceConfig, TRIVY_API_AUDIT_PLURAL, props.asset)}</Typography>
-                    <Typography fontSize={'8px'}>ConfigAudit</Typography>
+                    <Typography sx={{fontSize: '1.125rem'}}>{getTotalIssues(trivyInstanceConfig, TRIVY_API_AUDIT_PLURAL, props.asset)}</Typography>
+                    <Typography variant='caption' sx={{fontSize: '0.5rem'}}>ConfigAudit</Typography>
                 </Stack>
                 <Stack direction={'column'} sx={{width:'10%'}} alignItems={'center'}>
-                    <Typography fontSize={'18px'}>{getTotalIssues(trivyInstanceConfig, TRIVY_API_EXPOSED_PLURAL, props.asset)}</Typography>
-                    <Typography fontSize={'8px'}>ExposedSecrets</Typography>
+                    <Typography sx={{fontSize: '1.125rem'}}>{getTotalIssues(trivyInstanceConfig, TRIVY_API_EXPOSED_PLURAL, props.asset)}</Typography>
+                    <Typography variant='caption' sx={{fontSize: '0.5rem'}}>ExposedSecrets</Typography>
                 </Stack>
                 <Typography sx={{flex:1}}></Typography>
                 <IconButton onClick={(event) => setAnchorMenu(event.currentTarget)}><MoreVert/></IconButton>

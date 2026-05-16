@@ -2,7 +2,7 @@ import React, { useRef } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography} from '@mui/material'
 import { VERSION } from '../version'
 import { useAsync } from 'react-use'
-import { useEscape } from '../tools/useEscape'
+import { useKeyboard } from '../tools/useKeyboard'
 
 interface IAboutProps {
     onClose: () => void
@@ -10,7 +10,7 @@ interface IAboutProps {
 
 const About: React.FC<IAboutProps> = (props:IAboutProps) => {
     const preRef = useRef<HTMLPreElement | null>(null)
-    useEscape(props.onClose)
+    useKeyboard(props.onClose)
 
     useAsync (async () => {
         let f=0
@@ -35,7 +35,7 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
             <DialogTitle>About Kwirth...</DialogTitle>
             <DialogContent>
                 <Stack direction={'row'} alignItems={'center'} justifyContent={'space-between'}>
-                    <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column'}} mt={2}>
+                    <Stack spacing={2} mt={2}>
                         <Typography><b>Version: </b>{VERSION}</Typography>
                         <Typography><b>Homepage: </b><a href='https://kwirthmagnify.dev' target='_blank' rel='noreferrer'>https://kwirthmagnify.dev</a></Typography>
                         <Typography><b>Project: </b><a href='https://github.com/kwirthmagnify/kwirth' target='blank' rel='noreferer'>https://github.com/kwirthmagnify/kwirth</a></Typography>

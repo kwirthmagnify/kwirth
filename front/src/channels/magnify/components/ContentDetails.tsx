@@ -8,7 +8,7 @@ import { IContentWindow } from '../MagnifyTabContent'
 import { IFileObject, ISpaceMenuItem } from '@jfvilas/react-file-manager'
 import { DetailsObject, IDetailsSection } from './DetailsObject'
 import { MenuContainers } from './MenuContainers'
-import { useEscape } from '../../../tools/useEscape'
+import { useKeyboard } from '../../../tools/useKeyboard'
 
 const _ = require('lodash')
 const copy = require('clipboard-copy')
@@ -43,7 +43,7 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
 			newObject.current = {}
 		}
 	}, [])
-	useEscape(props.onClose, props.id)
+	useKeyboard(props.onClose, props.id)
 
 	const onLink = (k:string, n:string, ns:string) => {
 		props.onClose(props.id)
@@ -118,7 +118,7 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
 							<Minimize fontSize="small" />
 						</IconButton>
 						<IconButton size="small" onClick={() => props.onTop(props.id)}>
-							{props.atTop? <PinDrop sx={{color:'blue'}} fontSize="small" /> : <Place fontSize="small" />}
+							{props.atTop? <PinDrop sx={{color:'info.main'}} fontSize="small" /> : <Place fontSize="small" />}
 						</IconButton>
 						<IconButton size="small" onClick={handleIsMaximized}>
 							{isMaximized ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
@@ -144,7 +144,7 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
 				</Box>
 			</DialogContent>
 
-			<DialogActions sx={{ p: '4px 4px', pr:2 }}>
+			<DialogActions sx={{ p: 0.5, pr: 2 }}>
 				<Button onClick={() => props.data.onApply(contentDetailsData.path, newObject.current)} disabled={!containsEdit || !dataChanged} variant='contained' size='small'>
 					Apply
 				</Button>

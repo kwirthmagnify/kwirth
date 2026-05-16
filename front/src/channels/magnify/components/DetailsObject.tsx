@@ -167,9 +167,9 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                 }
                 else {
                     if (valBoolean)
-                        return <Typography sx={{color:'green'}} variant='body2'>OK</Typography>
+                        return <Typography sx={{color:'success.main'}} variant='body2'>OK</Typography>
                     else
-                        return <Typography sx={{color:'red'}} variant='body2'>ko</Typography>
+                        return <Typography sx={{color:'error.main'}} variant='body2'>ko</Typography>
                 }
 
             case 'string':
@@ -315,7 +315,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                 if (!items) return <></>
 
                 if (style.includes('table') && content) {
-                    return <TableContainer component={Paper} elevation={0} sx={{border: '1px solid #e0e0e0', mt:1, mb:1}}>
+                    return <TableContainer component={Paper} elevation={0} sx={{border: 1, borderColor: 'divider', mt:1, mb:1}}>
                         <Table size='small' sx={{width:'100%'}}>
                             <TableHead>
                                 <TableRow>
@@ -370,7 +370,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
 
             case 'objectobject':
                 if (style.includes('table')) {
-                    return <TableContainer component={Paper} elevation={0} sx={{border: '1px solid #e0e0e0', mt:1, mb:1}}>
+                    return <TableContainer component={Paper} elevation={0} sx={{border: 1, borderColor: 'divider', mt:1, mb:1}}>
                         <Table size='small'>
                             <TableHead>
                                 <TableRow>
@@ -402,7 +402,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
 
                 if (style && style.includes('table')) {
                     if (itemx && itemx?.items) {
-                        return <TableContainer component={Paper} elevation={0} sx={{border: '1px solid #e0e0e0', mt:1, mb:1}}>
+                        return <TableContainer component={Paper} elevation={0} sx={{border: 1, borderColor: 'divider', mt:1, mb:1}}>
                             <Table size='small'>
                                 <TableHead>
                                     <TableRow>
@@ -422,7 +422,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                         </TableContainer>
                     }
                     else {
-                        return <TableContainer component={Paper} elevation={0} sx={{border: '1px solid #e0e0e0', mt:1, mb:1}}>
+                        return <TableContainer component={Paper} elevation={0} sx={{border: 1, borderColor: 'divider', mt:1, mb:1}}>
                             <Table size='small'>
                                 <TableHead>
                                     <TableRow>
@@ -457,7 +457,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                                             <Tooltip title={key} placement='top'>
                                                 <Typography fontWeight={style.includes('keybold')?'700':''} variant='body2'>{key}</Typography>
                                             </Tooltip>
-                                            {style.includes('lockicon') && <Https fontSize={'small'} sx={{color:'red'}}/>}
+                                            {style.includes('lockicon') && <Https fontSize={'small'} sx={{color:'error.main'}}/>}
                                         </Stack>
                                     {
                                         renderValue(rootObj, obj, src+'.[\''+key+'\']', 'edit', style, level+1, [], undefined)
@@ -478,7 +478,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
 
             case 'table':
                 if (!content) return <></>
-                let result= _.get(obj,src) && <TableContainer component={Paper} elevation={0} sx={{border: '1px solid #e0e0e0', mt:1, mb:1}}>
+                let result= _.get(obj,src) && <TableContainer component={Paper} elevation={0} sx={{border: 1, borderColor: 'divider', mt:1, mb:1}}>
                     <Table size='small'>
                         <TableHead>
                             <TableRow>

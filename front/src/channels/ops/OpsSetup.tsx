@@ -45,7 +45,7 @@ const OpsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
                         <Switch checked={sessionKeepAlive} onChange={(e) => setSessionKeepAlive(e.target.checked)}/>
                     </Stack>
                     <Stack direction={'row'} alignItems={'center'}>
-                        <Typography style={{width:'100%'}}>Function access key</Typography>
+                        <Typography sx={{flexGrow: 1}}>Function access key</Typography>
                         <Select value={accessKey} onChange={(e) => setAccessKey(e.target.value as ESwitchKey)} variant='standard' sx={{width:'150px', textAlign: 'center'}}>
                             <MenuItem value={ESwitchKey.DISABLED}>Disabled</MenuItem>
                             <MenuItem value={ESwitchKey.NONE}>None</MenuItem>

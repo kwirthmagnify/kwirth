@@ -178,15 +178,15 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             case 'exit':
                 return <ExitToApp sx={{color: 'gray'}}/>
             case 'notifications':
-                return props.channelObject.notifications!.length>0? <NotificationsActive sx={{color: 'green'}}/> : <Notifications sx={{color: 'gray'}}/>
+                return props.channelObject.notifications!.length>0? <NotificationsActive sx={{color: 'success.main'}}/> : <Notifications sx={{color: 'text.disabled'}}/>
             case 'cloud':
                 return props.channelObject.webSocket?.readyState===1? 
                     <Tooltip title={<div style={{textAlign:'center'}}>Communications to<br/> Kwirth backend are ok</div>}>
-                        <CloudQueue sx={{color: 'green'}}/>
+                        <CloudQueue sx={{color: 'success.main'}}/>
                     </Tooltip>
                     :
                     <Tooltip title={<div style={{textAlign:'center'}}>Communications to Kwirth backend<br/>have been interrupted.<br/>You need to exit cluster and reenter.</div>}>
-                        <CloudOff sx={{color: 'red', animation: 'blink 1.5s infinite', '@keyframes blink': { '0%': { opacity: 1 }, '50%': { opacity: 0.1 }, '100%': { opacity: 1 }} }}/>
+                        <CloudOff sx={{color: 'error.main', animation: 'blink 1.5s infinite', '@keyframes blink': { '0%': { opacity: 1 }, '50%': { opacity: 0.1 }, '100%': { opacity: 1 }} }}/>
                     </Tooltip>
         }
     }
