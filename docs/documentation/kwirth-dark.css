@@ -255,6 +255,41 @@ nav.app-nav a:hover {
   background: var(--card) !important;
 }
 
+/* ── Docsify callouts (!> warn, ?> tip) ──────────────────────── */
+
+.markdown-section .warn,
+.markdown-section .warning,
+.markdown-section blockquote.warn,
+.markdown-section blockquote.warning {
+  background: rgba(245, 130, 10, 0.08) !important;
+  border-left: 4px solid var(--orange) !important;
+  border-radius: 0 8px 8px 0;
+  padding: 14px 20px !important;
+  margin: 20px 0 !important;
+  color: var(--text) !important;
+}
+
+.markdown-section .warn p,
+.markdown-section .warning p {
+  color: var(--text) !important;
+  margin: 0;
+}
+
+.markdown-section .tip,
+.markdown-section blockquote.tip {
+  background: rgba(45, 212, 191, 0.08) !important;
+  border-left: 4px solid var(--teal) !important;
+  border-radius: 0 8px 8px 0;
+  padding: 14px 20px !important;
+  margin: 20px 0 !important;
+  color: var(--text) !important;
+}
+
+.markdown-section .tip p {
+  color: var(--text) !important;
+  margin: 0;
+}
+
 /* ── Lists ───────────────────────────────────────────────────── */
 
 .markdown-section ul li::before {
