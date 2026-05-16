@@ -26,7 +26,8 @@ export class ServiceAccountToken {
             return token
         }
         catch (err: any) {
-            logError(ELogComponent.CORE, 'Error creating SA token: ' + err?.response?.body + err)
+            logError(ELogComponent.CORE, 'Error creating SA token:')
+            logError(ELogComponent.CORE, err)
         }
     }    
 

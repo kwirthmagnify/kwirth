@@ -21,6 +21,7 @@ const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = {
     id: meta.id,
     name: meta.name,
+    displayName: meta.displayName,
     version: meta.version,
     description: meta.description,
     ...(meta.website ? { website: meta.website } : {}),

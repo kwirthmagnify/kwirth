@@ -56,19 +56,19 @@ const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     catch { return <></> }
                 }
                 else {
-                    if (!logLine.text.includes(filter) && !logLine.pod.includes(filter) && !logLine.container.includes(filter)) return <></>
+                    if (!logLine.text.includes(filter) && !logLine.pod?.includes(filter) && !logLine.container?.includes(filter)) return <></>
                 }
             }
             else {
                 if (filterRegex) {
                     try {
                         const regex=new RegExp(filter.toLocaleLowerCase())
-                        if (!regex.test(logLine.text.toLocaleLowerCase()) && !regex.test(logLine.pod.toLocaleLowerCase()) && !regex.test(logLine.container.toLocaleLowerCase())) return <></>
+                        if (!regex.test(logLine.text.toLocaleLowerCase()) && !regex.test(logLine.pod?.toLocaleLowerCase()) && !regex.test(logLine.container?.toLocaleLowerCase())) return <></>
                     }
                     catch { return <></> }
                 }
                 else {
-                    if (!logLine.text.toLocaleLowerCase().includes(filter.toLowerCase()) && !logLine.pod.toLocaleLowerCase().includes(filter.toLocaleLowerCase()) && !logLine.container.toLocaleLowerCase().includes(filter.toLocaleLowerCase())) return <></>
+                    if (!logLine.text.toLocaleLowerCase().includes(filter.toLowerCase()) && !logLine.pod?.toLocaleLowerCase().includes(filter.toLocaleLowerCase()) && !logLine.container?.toLocaleLowerCase().includes(filter.toLocaleLowerCase())) return <></>
                 }
             }
         }

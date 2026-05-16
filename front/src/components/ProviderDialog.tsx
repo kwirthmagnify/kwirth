@@ -18,6 +18,7 @@ interface IProviderManifestEntry {
 interface IInstalledProvider {
     id: string
     name: string
+    displayName?: string
     version: string
     description: string
     website?: string
@@ -187,7 +188,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                         <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Checklist /></Box>
                                         <Box flex={1} minWidth={0}>
                                             <Stack direction='row' alignItems='center' spacing={0.5}>
-                                                <Typography variant='body2' fontWeight='bold'>{provider.name || provider.id}</Typography>
+                                                <Typography variant='body2' fontWeight='bold'>{provider.displayName || provider.name || provider.id}</Typography>
                                                 <Typography variant='caption' color='text.secondary'>v{provider.version}</Typography>
                                             </Stack>
                                             <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{provider.description}</Typography>
@@ -294,9 +295,9 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                     }
                                 </Stack>
                                 <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
-                                    <Tooltip title={isDevInstalled(provider.id) ? 'A dev version is already loaded' : isInstalled(provider.id) ? 'Reinstall' : 'Install'}>
+                                    <Tooltip title={isDevInstalled(provider.id) ? 'A dev version is already loaded' : isInstalled(provider.id) ? 'Already installed' : 'Install'}>
                                         <span>
-                                            <IconButton size='small' color='primary' disabled={isDevInstalled(provider.id) || installingId === provider.id} onClick={() => installFromCatalog(provider)}>
+                                            <IconButton size='small' color='primary' disabled={isDevInstalled(provider.id) || isInstalled(provider.id) || installingId === provider.id} onClick={() => installFromCatalog(provider)}>
                                                 {installingId === provider.id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
                                             </IconButton>
                                         </span>

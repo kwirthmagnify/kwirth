@@ -354,9 +354,9 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                     website={plugin.website}
                                     badge={isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
                                     action={
-                                        <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Reinstall' : 'Install'}>
+                                        <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
                                             <span>
-                                                <IconButton size='small' color='primary' disabled={isDevInstalled(id) || installingId === id} onClick={() => install(plugin)}>
+                                                <IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id} onClick={() => install(plugin)}>
                                                     {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
                                                 </IconButton>
                                             </span>

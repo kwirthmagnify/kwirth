@@ -12,6 +12,7 @@ import zlib from 'zlib'
 export interface IProviderMeta {
     id: string
     name: string
+    displayName?: string
     version: string
     description: string
     website?: string
@@ -75,6 +76,7 @@ export class ProviderManager {
         try {
             const pkg = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
             meta.name = pkg.name ?? id
+            meta.displayName = pkg.displayName
             meta.version = pkg.version ?? 'dev'
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
@@ -143,7 +145,7 @@ export class ProviderManager {
         const devMetas = Array.from(this.devProviders.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website }
             } catch {
                 return dev.meta
             }
@@ -181,6 +183,10 @@ export class ProviderManager {
             }
 
             const meta: IProviderMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+
+            if (this.installedIds.includes(meta.id))
+                throw new Error(`Provider '${meta.id}' is already installed`)
+
             meta.installedFrom = installedFrom ?? tarGzUrl
             const backJs = fs.readFileSync(backPath, 'utf-8')
 

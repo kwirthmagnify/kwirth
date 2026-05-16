@@ -210,6 +210,10 @@ export class PluginManager {
             }
 
             const meta: IPluginMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+
+            if (this.installedIds.includes(meta.id))
+                throw new Error(`Plugin '${meta.id}' is already installed`)
+
             meta.installedFrom = installedFrom ?? tarGzUrl
             const backJs = fs.readFileSync(backPath, 'utf-8')
             const frontJs = fs.readFileSync(frontPath, 'utf-8')

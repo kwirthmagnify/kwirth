@@ -347,19 +347,18 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             logInfo(ELogComponent.CORE, `Configuration paths:  ${envConfigMapPath} ${envSecretPath}`)
             configMaps = new DockerConfigMaps(clusterInfo.coreApi, envConfigMapPath)
             secrets = new DockerSecrets(clusterInfo.coreApi, envSecretPath)
+            let users:{ [username:string]:string } = await secrets.read('kwirth-users')
+            if (!users) {
+                logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users config map')
+                users = {
+                    admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXI6Ojo6In0='
+                }
+                await secrets.write('kwirth-users', users)
+            }
         }
         else {
             secrets = new KubernetesSecrets(clusterInfo.coreApi, kwirthData.namespace)
             configMaps = new KubernetesConfigMaps(clusterInfo.coreApi, kwirthData.namespace)
-        }
-
-        let users:{ [username:string]:string } = await secrets.read('kwirth-users')
-        if (!users) {
-            logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users config map')
-            users = {
-                admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXI6Ojo6In0='
-            }
-            await secrets.write('kwirth-users', users)
         }
 
         let runningInstance:IRunningInstance = {
@@ -2047,8 +2046,9 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
             break
         case 'kubernetes':
             let kd = await getKubernetesKwirthData(envContext)
-            if (kd)
+            if (kd) {
                 kwirthData = kd
+            }
             else {
                 logError(ELogComponent.CORE, 'Cannot get KwirthData. Exiting')
                 process.exit(1)

@@ -180,8 +180,6 @@ export class LogChannel implements IChannel {
         }
         logData.messages = []
         channelObject.instanceConfig = logInstanceConfig
-        console.log(channelObject.config)
-        console.log(channelObject.instanceConfig)
         return true
     }
 

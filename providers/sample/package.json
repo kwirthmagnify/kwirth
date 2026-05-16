@@ -2,7 +2,8 @@
     "id": "sample",
     "name": "@kwirthmagnify/kwirth-provider-sample",
     "publisher": "@kwirthmagnify",
-    "version": "0.1.0",
+    "version": "0.1.2",
+    "displayName": "Sample Provider",
     "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event",
     "type": "module",
     "scripts": {
