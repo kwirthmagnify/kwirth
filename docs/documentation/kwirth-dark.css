@@ -1,0 +1,481 @@
+/* Kwirth Dark Theme for Docsify — matches homepage style */
+
+:root {
+  --bg:      #060a12;
+  --bg2:     #0d1420;
+  --bg3:     #111827;
+  --card:    #0f1929;
+  --border:  #1e2d40;
+  --orange:  #f5820a;
+  --orange2: #ff9a2e;
+  --teal:    #2dd4bf;
+  --blue:    #58a6ff;
+  --green:   #3fb950;
+  --yellow:  #e3b341;
+  --red:     #ff7b72;
+  --text:    #e6edf3;
+  --muted:   #8b949e;
+  --font:    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono:    'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+/* ── Base ─────────────────────────────────────────────────────── */
+
+body {
+  background: var(--bg) !important;
+  color: var(--text);
+  font-family: var(--font);
+}
+
+/* ── Sidebar ──────────────────────────────────────────────────── */
+
+.sidebar {
+  background: var(--bg2) !important;
+  border-right: 1px solid var(--border) !important;
+  color: var(--text);
+}
+
+.sidebar > h1 {
+  color: var(--orange) !important;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.sidebar > h1 a {
+  color: var(--orange) !important;
+}
+
+.sidebar ul {
+  padding: 0 12px;
+}
+
+.sidebar ul li {
+  list-style: none;
+}
+
+.sidebar ul li a {
+  color: var(--muted) !important;
+  font-size: 0.875rem;
+  padding: 5px 10px;
+  border-radius: 6px;
+  display: block;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.sidebar ul li a:hover,
+.sidebar ul li a.active {
+  color: var(--orange) !important;
+  background: rgba(245, 130, 10, 0.08) !important;
+}
+
+.sidebar ul li ul li a {
+  color: var(--muted) !important;
+  padding-left: 20px;
+}
+
+.sidebar ul li ul li a:hover,
+.sidebar ul li ul li a.active {
+  color: var(--orange) !important;
+  background: rgba(245, 130, 10, 0.08) !important;
+}
+
+.sidebar-toggle {
+  background: var(--bg2) !important;
+  border-right: 1px solid var(--border) !important;
+}
+
+.sidebar-toggle span {
+  background-color: var(--muted) !important;
+}
+
+/* ── App Nav ──────────────────────────────────────────────────── */
+
+nav.app-nav {
+  background: rgba(6, 10, 18, 0.92) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border) !important;
+}
+
+nav.app-nav a {
+  color: var(--muted) !important;
+  font-size: 0.875rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+nav.app-nav a:hover {
+  color: var(--text) !important;
+  background: var(--border) !important;
+}
+
+/* ── Content / Markdown ───────────────────────────────────────── */
+
+.content {
+  background: var(--bg) !important;
+}
+
+.markdown-section {
+  color: var(--text) !important;
+  max-width: 860px;
+}
+
+.markdown-section h1 {
+  color: var(--orange) !important;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+
+.markdown-section h2 {
+  color: var(--text) !important;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+
+.markdown-section h3,
+.markdown-section h4,
+.markdown-section h5,
+.markdown-section h6 {
+  color: var(--text) !important;
+  font-weight: 600;
+}
+
+.markdown-section a {
+  color: var(--orange) !important;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.markdown-section a:hover {
+  color: var(--orange2) !important;
+  text-decoration: underline;
+}
+
+.markdown-section strong {
+  color: var(--text);
+}
+
+.markdown-section em {
+  color: var(--muted);
+}
+
+.markdown-section hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 32px 0;
+}
+
+/* ── Code Blocks ─────────────────────────────────────────────── */
+
+.markdown-section code {
+  background: var(--bg3) !important;
+  color: var(--teal) !important;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.875em;
+  border: 1px solid var(--border);
+}
+
+.markdown-section pre {
+  background: var(--bg2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  padding: 20px 24px !important;
+}
+
+.markdown-section pre code {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text) !important;
+  padding: 0 !important;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+/* ── Blockquotes ─────────────────────────────────────────────── */
+
+.markdown-section blockquote {
+  border-left: 4px solid var(--orange) !important;
+  background: rgba(245, 130, 10, 0.05) !important;
+  color: var(--muted) !important;
+  padding: 14px 20px;
+  border-radius: 0 8px 8px 0;
+  margin: 20px 0;
+}
+
+.markdown-section blockquote p {
+  color: var(--muted) !important;
+}
+
+/* ── Tables ──────────────────────────────────────────────────── */
+
+.markdown-section table {
+  border-collapse: collapse;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.markdown-section table th {
+  background: var(--card) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  font-weight: 700;
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.markdown-section table td {
+  border: 1px solid var(--border) !important;
+  padding: 10px 16px;
+  color: var(--text) !important;
+  font-size: 0.9rem;
+}
+
+.markdown-section table tr {
+  background: var(--bg) !important;
+}
+
+.markdown-section table tr:nth-child(2n) {
+  background: var(--bg2) !important;
+}
+
+.markdown-section table tr:hover {
+  background: var(--card) !important;
+}
+
+/* ── Lists ───────────────────────────────────────────────────── */
+
+.markdown-section ul li::before {
+  color: var(--orange);
+}
+
+.markdown-section ol li {
+  color: var(--text);
+}
+
+/* ── Cover Page ──────────────────────────────────────────────── */
+
+section.cover {
+  background: var(--bg) !important;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 20%, rgba(245, 130, 10, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 80% 60%, rgba(45, 212, 191, 0.07) 0%, transparent 60%) !important;
+}
+
+.cover-main h1 {
+  color: var(--orange) !important;
+  font-weight: 800;
+  font-size: 2.8rem;
+  letter-spacing: -1px;
+}
+
+.cover-main h1 em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--orange), var(--orange2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cover-main > p {
+  color: var(--muted) !important;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.cover-main .cover-main > blockquote {
+  color: var(--muted) !important;
+}
+
+.cover-main a[data-v] {
+  color: var(--orange) !important;
+}
+
+.cover-main a.anchor {
+  display: none;
+}
+
+/* Cover buttons */
+section.cover a:not(.anchor) {
+  border-radius: 8px !important;
+  padding: 12px 28px !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  transition: all 0.2s !important;
+  text-decoration: none !important;
+  margin: 6px !important;
+}
+
+section.cover a:not(.anchor):first-of-type {
+  background: var(--orange) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 0 24px rgba(245, 130, 10, 0.3) !important;
+}
+
+section.cover a:not(.anchor):first-of-type:hover {
+  background: var(--orange2) !important;
+  box-shadow: 0 0 36px rgba(245, 130, 10, 0.5) !important;
+  transform: translateY(-1px);
+}
+
+section.cover a:not(.anchor):last-of-type {
+  background: transparent !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+}
+
+section.cover a:not(.anchor):last-of-type:hover {
+  border-color: var(--muted) !important;
+  transform: translateY(-1px);
+}
+
+/* ── Search ──────────────────────────────────────────────────── */
+
+.search {
+  border-bottom: 1px solid var(--border) !important;
+  padding: 10px 16px;
+}
+
+.search input {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 0.875rem;
+  width: 100%;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s;
+}
+
+.search input:focus {
+  border-color: var(--orange) !important;
+}
+
+.search input::placeholder {
+  color: var(--muted);
+}
+
+.search .clear-button svg {
+  stroke: var(--muted);
+}
+
+.search .results-panel {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+}
+
+.search .matching-post {
+  border-bottom: 1px solid var(--border) !important;
+  padding: 12px 16px;
+}
+
+.search .matching-post a {
+  color: var(--orange) !important;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.search .matching-post p {
+  color: var(--muted) !important;
+  font-size: 0.85rem;
+  margin: 4px 0 0;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--orange);
+}
+
+/* ── Logo in sidebar ─────────────────────────────────────────── */
+
+img[src*="kwirth-logo"] {
+  filter: brightness(1.1);
+}
+
+/* ── Back link (keep existing style) ────────────────────────── */
+
+.back-link {
+  background: var(--orange) !important;
+  color: white !important;
+  padding: 6px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-family: var(--font);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: background 0.2s;
+  position: fixed;
+  top: 12px;
+  right: 20px;
+  z-index: 9999;
+}
+
+.back-link:hover {
+  background: var(--orange2) !important;
+}
+
+/* ── Version select ──────────────────────────────────────────── */
+
+select {
+  background: var(--card) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-bottom: 2px solid var(--orange) !important;
+  border-radius: 6px 6px 0 0 !important;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-family: var(--font);
+  outline: none;
+  transition: all 0.2s;
+}
+
+select:hover {
+  background: var(--bg3) !important;
+  border-color: var(--orange) !important;
+}
+
+option {
+  background: var(--card) !important;
+  color: var(--text) !important;
+}
+
+/* ── Image borders (update border color) ─────────────────────── */
+
+.imageclass100, .imageclass90, .imageclass80,
+.imageclass60, .imageclass40, .imageclass20,
+.imageclass10, .imageclassCenter {
+  border-color: var(--border) !important;
+  border-radius: 8px !important;
+}
