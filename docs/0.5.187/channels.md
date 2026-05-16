@@ -463,3 +463,76 @@ Minimal capabilities include:
 
 ### Use
 After configuring back channel, and activating front channel, the only thing you can do is watch Pinocchio taking actions.
+
+## Topology
+Topology channel renders an **interactive 3D graph** of all the Kubernetes resources running in your cluster. Nodes represent Kubernetes objects (Deployments, StatefulSets, DaemonSets, ReplicaSets, Jobs, CronJobs, Pods, Containers, Services, Ingresses, PersistentVolumeClaims) and edges represent relationships between them — ownership chains, service bindings, and ingress routing paths.
+
+The view updates in real time as resources are created, modified or deleted in the cluster.
+
+### What for
+With Topology channel you can:
+
+  - Get a live bird's-eye view of your entire cluster — or filter to a specific namespace or resource group.
+  - Understand relationships between objects at a glance (which pods belong to which deployment, which service exposes which pods, which ingress routes to which service).
+  - Spot unhealthy resources immediately: each node is color-coded by its current status (Running, Pending, Failed, Terminating...).
+  - Perform management operations without leaving the topology view: scale a Deployment, restart a controller, or delete a pod directly from the graph.
+
+### Features
+Key features of Topology channel:
+
+  - **Real-time sync** — Kubernetes events (ADDED / MODIFIED / DELETED) update the graph as they happen.
+  - **Hierarchical 3D layout** — resources are arranged in layers by kind, making it easy to trace relationships top-down.
+  - **Configurable visibility** — toggle which resource types to show or hide from the setup dialog.
+  - **Animated edges** — relationship edges are animated to make data flow and ownership chains visually intuitive.
+  - **Operations** — scale Deployments and StatefulSets, restart controllers, delete pods, all from the graph.
+  - **Multi-namespace view** — show resources across all namespaces in one unified graph.
+  - **Integration with other channels** — Topology can launch Log, Metrics, Fileman or shell sessions for a selected object directly from the graph node.
+
+### Use
+Starting Topology is simple. Select any resource in the resource selector (the namespace is enough) and add a new Topology tab. No detailed configuration is required to get started.
+
+The optional setup dialog lets you control:
+
+  - **Which resource types** to show (Pods, Services, Ingresses, PVCs, etc.).
+  - **Label size** and **node spacing** for adjusting the visual density of the graph.
+  - **Edge animation** on or off.
+
+!> **Screenshot needed** — Topology channel setup dialog.
+
+Once started, the 3D graph appears in the tab and begins populating with live data from the cluster.
+
+!> **Screenshot needed** — Topology channel running, showing a multi-namespace 3D graph with colored nodes and animated edges.
+
+You can click any node to select it and see its details. When one or more nodes are selected, the action toolbar shows the operations available for that resource type.
+
+!> **Screenshot needed** — Topology channel with a node selected and the action toolbar visible.
+
+## News
+!> **This is a test/demo channel.** News is not a Kubernetes observability tool — it is provided as a reference implementation showing how to build a Kwirth plugin that consumes an external data source instead of Kubernetes data.
+
+News channel polls external RSS feeds and streams new items to the browser as they appear. It demonstrates the plugin lifecycle (start, pause, continue, stop) and the WebSocket message flow using a simple, easy-to-understand data source.
+
+### What for
+  - See a working example of a plugin that pulls data from an external HTTP source on a timer.
+  - Test that Kwirth's plugin loading, WebSocket streaming, and pause/continue lifecycle work correctly.
+  - Use as a starting point for building plugins that integrate external data feeds into Kwirth.
+
+### Features
+  - Polls two configurable RSS feeds every 5 minutes:
+    - **Kubernetes** — `kubernetes.io/feed.xml`
+    - **AI** — TechCrunch AI category feed
+  - Deduplicates items across polls — each article is shown only once.
+  - Supports **pause** and **continue** to temporarily stop receiving new items.
+  - Configurable **max items** buffer: when the limit is reached, oldest items scroll off.
+
+### Use
+When you start a News channel you can configure:
+
+  - **Max items** — maximum number of news items to keep on screen.
+  - **Feeds** — select which feeds to subscribe to (Kubernetes, AI, or both).
+
+!> **Screenshot needed** — News channel setup dialog.
+
+Once started, news items appear as cards in the tab, sorted by publication date. Each card shows the title, source, category, and a link to the original article.
+
+!> **Screenshot needed** — News channel running, showing a card list of news items.

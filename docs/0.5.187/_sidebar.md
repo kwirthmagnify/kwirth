@@ -17,6 +17,7 @@
 * [How it works](how)
 * [Data streaming](datastreaming)
 * [Channel Architecture](channelarch)
+* [Plugins](plugins)
 * [Providers](providers)
 * [Channels](channels)
 * [Security](security)
