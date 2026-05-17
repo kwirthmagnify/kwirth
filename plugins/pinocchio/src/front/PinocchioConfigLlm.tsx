@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputAdornment, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { IConfigLlm, IConfigProvider, IPinocchioConfig } from './PinocchioConfig'
-import { objectClone, useKeyboard } from './utils'
+import { objectClone } from './utils'
+import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
 import { Visibility, VisibilityOff } from '@mui/icons-material'
 
 interface IPinocchioLlmConfigProps {
@@ -23,7 +24,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
     const [useProviderKey, setUseProviderKey] = useState(true)
     const [key, setKey] = useState('')
 
-    useKeyboard()
+    useKeyboard(() => props.onClose(undefined))
 
     const onLlmSelected = (index: number) => {
         const l = config.llms[index]

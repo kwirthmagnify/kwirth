@@ -1996,7 +1996,10 @@ showLogo()
 startNodeTasks()
 
 getExecutionEnvironment(envContext).then( async (exenv:string) => {
-    logInfo(ELogComponent.CORE, `Kubernetes context: '${envContext}' (default kubeconfig context)`)
+    if (envContext)
+        logInfo(ELogComponent.CORE, `Kubernetes context: '${envContext}' (default kubeconfig context)`)
+    else
+        logInfo(ELogComponent.CORE, `No CONTEXT specified via env var`)
 
     let kwirthData:KwirthData
     switch (exenv) {
@@ -2086,14 +2089,17 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
         return res.status(200).json({ auth: envAuth })
     })
 
-    if (envFront) app.use(`${envRootPath}/front/`, express.static('./front'))
+    if (envFront) {
+        if (!fs.existsSync('./front/index.html')) logError(ELogComponent.CORE, `'index.html' file has not been found on 'front' folder`)
+        app.use(`${envRootPath}/front/`, express.static('./front'))
+    }
 
     if (kwirthData.inCluster) {
         logInfo(ELogComponent.CORE, 'Configuring healthz endpoint for Kubernetes')
         app.get(`/healthz`, (_req:Request,res:Response) => { res.status(200).send() })
     }
 
-    const fs = require('fs')
+    //const fs = require('fs')
     fs.readdir('.', (err:any, folderFiles:any) => {
         if (err) {
             logError(ELogComponent.CORE, 'Error reading folder data:')

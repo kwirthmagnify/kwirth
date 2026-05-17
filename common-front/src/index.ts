@@ -1,5 +1,31 @@
-import { FC, ReactNode } from 'react'
+import { FC, ReactNode, useEffect } from 'react'
 import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements } from '@kwirthmagnify/kwirth-common'
+
+type CloseWithId = (id: string) => void
+type CloseNoId = () => void
+
+export const useKeyboard = (onEscape?: CloseWithId | CloseNoId, id?: string) => {
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            event.stopPropagation()
+            if (event.key === 'Escape' && onEscape) {
+                if (id)
+                    (onEscape as CloseWithId)(id)
+                else
+                    (onEscape as CloseNoId)()
+            }
+        }
+        const handleKeyUp = (event: KeyboardEvent) => {
+            event.stopPropagation()
+        }
+        window.addEventListener('keydown', handleKeyDown, true)
+        window.addEventListener('keyup', handleKeyUp, true)
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown, true)
+            window.removeEventListener('keyup', handleKeyUp, true)
+        }
+    }, [onEscape, id])
+}
 
 export { EChannelRefreshAction, ENotifyLevel }
 export type { EInstanceConfigView, IChannelMessageAction, IChannelSettings, IChannelRequirements }

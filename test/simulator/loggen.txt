@@ -1046,6 +1046,112 @@ spec:
 
 
 
+
+
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-crash-simulator
+  labels:
+    app: java-broken-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-broken-app
+  template:
+    metadata:
+      labels:
+        app: java-broken-app
+    spec:
+      containers:
+      - name: java-error-generator
+        # Cambiado a Eclipse Temurin (JDK 17 sobre Ubuntu Jammy, incluye bash y javac)
+        image: eclipse-temurin:17-jdk-jammy
+        command: ["/bin/bash", "-c"]
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+          requests:
+            cpu: "200m"
+            memory: "128Mi"
+        args:
+          - |
+            cat << 'EOF' > CrashSimulator.java
+            import java.io.IOException;
+            import java.sql.SQLException;
+            import java.time.LocalDateTime;
+            import java.time.format.DateTimeFormatter;
+            import java.util.Random;
+
+            public class CrashSimulator {
+                private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                private static final Random random = new Random();
+
+                public static void main(String[] args) throws InterruptedException {
+                    log("INFO", "Initializing Corporate-Core-Banking application context...");
+                    Thread.sleep(1000);
+                    log("INFO", "Loading Hibernate/Spring Data JPA repositories...");
+                    Thread.sleep(1000);
+
+                    // 1. Primer Error: Caída de Conexión a Base de Datos
+                    System.err.println("[" + dtf.format(LocalDateTime.now()) + "] ERROR [main] c.z.hikari.pool.HikariPool: HikariPool-1 - Connection is not available, request timed out after 30005ms.");
+                    SQLException dbException = new SQLException("Cannot create PoolableConnectionFactory (Communications link failure\n\nThe last packet successfully received from the server was 30,005 milliseconds ago. The last packet sent successfully to the server was 0 milliseconds ago. Driver class: com.mysql.cj.jdbc.Driver)");
+                    dbException.printStackTrace();
+                    
+                    System.err.println("[" + dtf.format(LocalDateTime.now()) + "] CRITICAL [main] o.s.b.web.embedded.tomcat.TomcatWebServer: Tomcat connector failed to start. Application shutting down routes, entering fallback error mode.");
+                    Thread.sleep(2000);
+
+                    // 2. Bucle infinito de StackTraces largos y frecuentes
+                    log("WARN", "Fallback mode active. High frequency error dumping started.");
+                    
+                    while (true) {
+                        try {
+                            levelOne();
+                        } catch (Exception e) {
+                            System.err.println("[" + dtf.format(LocalDateTime.now()) + "] ERROR [http-nio-8080-exec-" + (random.nextInt(10) + 1) + "] o.a.c.c.C.[Tomcat].[localhost].[/]: Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception");
+                            e.printStackTrace();
+                        }
+                        Thread.sleep(250 + random.nextInt(250));
+                    }
+                }
+
+                private static void log(String level, String msg) {
+                    System.out.println("[" + dtf.format(LocalDateTime.now()) + "] " + level + " [main] o.s.b.w.e.tomcat.TomcatWebServer: " + msg);
+                }
+
+                private static void levelOne() throws Exception { levelTwo(); }
+                private static void levelTwo() throws Exception { levelThree(); }
+                private static void levelThree() throws Exception { levelFour(); }
+                private static void levelFour() throws Exception { levelFive(); }
+                
+                private static void levelFive() throws Exception {
+                    throw new RuntimeException("NullPointerException: Unexpected failure processing internal transaction payroll",
+                        new IOException("Failed to replicate state to secondary cluster node at 10.240.12.44:9300",
+                            new IllegalArgumentException("Invalid token signature payload or payload corrupted during deserialization process")));
+                }
+            }
+            EOF
+            
+            log_info() { echo "[$(date '+%Y-%m-%d %H:%M:%S.%3N')] INFO [main] Simulator-Bootstrap: $1"; }
+
+            log_info "Compiling Java Crash Simulator..."
+            javac CrashSimulator.java
+            if [ $? -eq 0 ]; then
+                log_info "Compilation successful. Booting Java App..."
+                java CrashSimulator
+            else
+                echo "Compilation failed."
+                exit 1
+            fi
+
+
+
+
+
 ************************************************************************************************************************************************
 ************************************************************************************************************************************************
 ************************************************************************************************************************************************

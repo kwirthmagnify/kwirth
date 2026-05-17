@@ -93,6 +93,7 @@ export interface IPlaygroundState {
     steps: number
     tools: string[]
     autoTools: boolean
+    promptType?: 'jinja' | 'artifact'
     system: string
     prompt: string
     eventData: string

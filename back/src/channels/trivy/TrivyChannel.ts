@@ -495,7 +495,7 @@ class TrivyChannel implements IChannel {
         informer.on('error', (err:any) => {
             try {
                 logError(ELogComponent.CHANNEL, 'Error in informer')
-                logInfo(ELogComponent.CHANNEL, err.Error)
+                logError(ELogComponent.CHANNEL, err)
                 if (err['HTTP-Code']==='404' || err.statusCode===404)
                     logInfo(ELogComponent.CHANNEL, 'CRD not found, informer will not restart')
                 else

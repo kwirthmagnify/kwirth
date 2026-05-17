@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { Box, Button, Checkbox, Divider, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Tab, Tabs, Typography } from '@mui/material'
 import { IConfigLlm, IConfigProvider, IConfigTrigger, IPinocchioConfig } from './PinocchioConfig'
+import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
 
 interface IProps {
     providers: IConfigProvider[]
@@ -59,6 +60,8 @@ const CheckSection: React.FC<ICheckSectionProps> = ({ label, items, selected, on
 }
 
 const PinocchioImportExport: React.FC<IProps> = (props) => {
+    useKeyboard(() => props.onClose())
+
     const [tab, setTab] = useState(0)
     const fileInputRef = useRef<HTMLInputElement>(null)
 

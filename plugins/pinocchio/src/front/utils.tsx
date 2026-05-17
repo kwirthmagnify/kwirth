@@ -1,24 +1,11 @@
-import { useEffect } from 'react'
+import React from 'react'
+import { Dispatch, SetStateAction } from 'react'
 import { Info, Warning, Error, HelpOutline } from '@mui/icons-material'
 import { Stack, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography, CircularProgress, Box } from '@mui/material'
-import { Dispatch, SetStateAction } from 'react'
-import React from 'react'
 
 export function objectClone(obj: any): any {
     if (!obj) return undefined
     return JSON.parse(JSON.stringify(obj))
-}
-
-export const useKeyboard = () => {
-    useEffect(() => {
-        const handleKeyDown = (event: KeyboardEvent) => {
-            event.stopPropagation()
-        }
-        window.addEventListener('keydown', handleKeyDown, true)
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown, true)
-        }
-    })
 }
 
 export enum MsgBoxButtons {

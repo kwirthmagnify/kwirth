@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputAdornment, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { IConfigProvider } from './PinocchioConfig'
-import { objectClone, useKeyboard } from './utils'
+import { objectClone } from './utils'
+import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
 import { Visibility, VisibilityOff } from '@mui/icons-material'
 
 interface IPinocchioConfigProviderProps {
@@ -19,7 +20,7 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
     const [providerName, setProviderName] = useState('')
     const [providerKey, setProviderKey] = useState(props.providersAvailable[0])
 
-    useKeyboard()
+    useKeyboard(() => props.onClose(undefined))
 
     const onProviderSelected = (p: IConfigProvider, index: number) => {
         setProviderName(p.name)

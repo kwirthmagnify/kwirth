@@ -143,7 +143,6 @@ const ArtifactSearch: React.FC<IArtifactSearchProps> = (props:IArtifactSearchPro
                             let res = getResults(file.data?.origin, searchText, includeStatus, matchCase, merge)
                             return res.map((r,index) => {
                                 let val = getDeepValue(file.data.origin, r)
-                                if (!val) console.log(r)
                                 let link
                                 if (file.data.origin.metadata)
                                     link = <Typography variant='body2'><a href={`#`} onClick={() => artifactSearchData.onLink(file.data.origin.kind, file.data.origin.metadata.name, file.data.origin.metadata.namespace)}>{file.data.origin.metadata.name}</a></Typography>

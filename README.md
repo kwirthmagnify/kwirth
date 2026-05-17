@@ -1,5 +1,5 @@
 <p align="center">
-    <img height=auto src="https://kwirthmagnify.github.io/kwirth/_media/kwirth-logo-20.png" /><br/>
+    <img height=auto src="https://kwirthmagnify.github.io/kwirth/_media/kwirth-transparent-20.png" /><br/>
     <a href='https://kwirthmagnify.github.io/kwirth'><img src='https://img.shields.io/badge/contributions-welcome-orange.svg'/></a>
     <a href='https://kwirthmagnify.github.io/kwirth'><img src='https://img.shields.io/badge/project-homepage-8EA8D8.svg'/></a>
 </p>

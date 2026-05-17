@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, Switch, TextareaAutosize, TextField, Typography } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import { IConfigTrigger, IConfigTriggerVersion, IPinocchioConfig, kindsAvailable } from './PinocchioConfig'
-import { objectClone, useKeyboard, MsgBoxButtons, MsgBoxOkWarning, MsgBoxYesNo } from './utils'
+import { objectClone, MsgBoxButtons, MsgBoxOkWarning, MsgBoxYesNo } from './utils'
+import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
 
 interface IPinocchioLlmConfigProps {
     onClose: (pc: IPinocchioConfig | undefined) => void
@@ -37,7 +38,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
     const [autoTools, setAutoTools] = useState(false)
     const [spaces, setSpaces] = useState('')
 
-    useKeyboard()
+    useKeyboard(() => props.onClose(undefined))
 
     const selectedTrigger = selectedTriggerIndex !== null ? config.triggers[selectedTriggerIndex] : null
 
@@ -76,9 +77,8 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
     const onTriggerTypeChange = (newType: string) => {
         if (selectedTriggerIndex === null) return
         setTriggerType(newType)
-        const kind = newType === 'artifact' ? triggerKind : undefined
         const newTriggers = [...(config.triggers ?? [])]
-        newTriggers[selectedTriggerIndex] = { ...newTriggers[selectedTriggerIndex], trigger: newType, kind }
+        newTriggers[selectedTriggerIndex] = { ...newTriggers[selectedTriggerIndex], trigger: newType }
         setConfig(c => ({ ...c, triggers: newTriggers }))
     }
 

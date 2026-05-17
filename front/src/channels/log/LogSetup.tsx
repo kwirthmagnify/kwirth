@@ -37,7 +37,7 @@ const LogSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
         logConfig.startDiagnostics = (selectedTab === 'sd')
         logInstanceConfig.previous  = previous
         logInstanceConfig.timestamp = timestamp
-        logInstanceConfig.fromStart = fromStart
+        logInstanceConfig.fromStart = fromStart || (selectedTab === 'sd')
         logInstanceConfig.startTime = fromNowOn? Date.now() : new Date(startTimeRef.current?.value).getTime()
         props.onChannelSetupClosed(props.channel,
         {

@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react'
-import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, Menu, MenuItem, Select, SelectChangeEvent, Stack, Switch, TextareaAutosize, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, InputLabel, Menu, MenuItem, Select, SelectChangeEvent, Stack, Switch, Tab, Tabs, TextareaAutosize, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
 import { ScienceOutlined, Upload, Bolt, FileDownload, CheckCircleOutline, HistoryOutlined, DeleteOutlined } from '@mui/icons-material'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState, kindsAvailable } from './PinocchioConfig'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { useKeyboard } from './utils'
+import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
 
 interface IProps {
     pinocchioConfig: IPinocchioConfig
@@ -21,11 +21,14 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
     const initialLengthRef = useRef(props.content.length)
     const saved = props.pinocchioConfig.playground
 
+    const [tab, setTab] = useState(0)
+
     const [llm, setLlm] = useState(saved?.llm ?? '')
     const [steps, setSteps] = useState(saved?.steps ?? 5)
     const [tools, setTools] = useState<string[]>(saved?.tools ?? [])
     const [autoTools, setAutoTools] = useState(saved?.autoTools ?? false)
     const [toolFilter, setToolFilter] = useState('')
+    const [promptType, setPromptType] = useState<'jinja' | 'artifact'>(saved?.promptType ?? 'jinja')
     const [system, setSystem] = useState(saved?.system ?? '')
     const [prompt, setPrompt] = useState(saved?.prompt ?? '')
     const [eventData, setEventData] = useState(saved?.eventData ?? '')
@@ -45,10 +48,15 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
     const [configApplied, setConfigApplied] = useState(false)
     const [firing, setFiring] = useState(false)
 
-    const [exportId, setExportId] = useState('')
-    const [showExport, setShowExport] = useState(false)
+    const [importedFromTriggerId, setImportedFromTriggerId] = useState('')
     const [showImportDialog, setShowImportDialog] = useState(false)
     const [pendingImportTriggerId, setPendingImportTriggerId] = useState('')
+
+    const [showExportDialog, setShowExportDialog] = useState(false)
+    const [exportMode, setExportMode] = useState<'new' | 'version'>('new')
+    const [exportId, setExportId] = useState('')
+    const [exportTargetTriggerId, setExportTargetTriggerId] = useState('')
+    const [exportVersionId, setExportVersionId] = useState('')
 
     useKeyboard()
 
@@ -77,7 +85,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
         setArtifactHistory(newArtifactHistory)
         setBusinessHistory(newBusinessHistory)
         setSpaceTypeHistory(newSpaceTypeHistory)
-        props.onStateChange({ llm, steps, tools, autoTools, system, prompt, eventData, triggerType, artifactKind, eventSpace, eventType, systemHistory: newSystemHistory, promptHistory: newPromptHistory, artifactHistory: newArtifactHistory, businessHistory: newBusinessHistory, spaceTypeHistory: newSpaceTypeHistory })
+        props.onStateChange({ llm, steps, tools, autoTools, promptType, system, prompt, eventData, triggerType, artifactKind, eventSpace, eventType, systemHistory: newSystemHistory, promptHistory: newPromptHistory, artifactHistory: newArtifactHistory, businessHistory: newBusinessHistory, spaceTypeHistory: newSpaceTypeHistory })
         props.onClose(newTrigger)
     }
 
@@ -123,11 +131,55 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 setAutoTools(v.autoTools ?? false)
                 setSystem(v.system)
                 setPrompt(v.prompt)
+                setPromptType(v.promptType as 'jinja' | 'artifact')
                 markDirty()
             }
+            setImportedFromTriggerId(pendingImportTriggerId)
         }
         setShowImportDialog(false)
         setPendingImportTriggerId('')
+    }
+
+    const openExportDialog = () => {
+        const hasSource = !!importedFromTriggerId
+        setExportMode(hasSource ? 'version' : 'new')
+        setExportTargetTriggerId(importedFromTriggerId)
+        setExportId('')
+        setExportVersionId('')
+        setShowExportDialog(true)
+    }
+
+    const handleExportConfirm = () => {
+        if (exportMode === 'new') {
+            const trigger: IConfigTrigger = {
+                id: exportId.trim(),
+                trigger: triggerType,
+                versions: [{
+                    id: 'v1',
+                    enabled: true,
+                    llm, steps, tools, autoTools, system, prompt, promptType,
+                    action: 'inform',
+                    spaces: ['launch.immediate']
+                }]
+            }
+            setShowExportDialog(false)
+            saveAndClose(trigger)
+        } else {
+            const existing = props.pinocchioConfig.triggers.find(t => t.id === exportTargetTriggerId)
+            if (!existing) return
+            const updated: IConfigTrigger = {
+                ...existing,
+                versions: [...existing.versions, {
+                    id: exportVersionId.trim(),
+                    enabled: false,
+                    llm, steps, tools, autoTools, system, prompt, promptType,
+                    action: 'inform',
+                    spaces: ['launch.immediate']
+                }]
+            }
+            setShowExportDialog(false)
+            saveAndClose(updated)
+        }
     }
 
     const handleApply = () => {
@@ -140,7 +192,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
             autoTools,
             system,
             prompt,
-            promptType: 'jinja',
+            promptType,
             action: 'inform',
             spaces: ['launch.immediate']
         }
@@ -183,28 +235,6 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
         }
     }
 
-    const handleExport = () => {
-        if (!exportId.trim()) return
-        const trigger: IConfigTrigger = {
-            id: exportId.trim(),
-            trigger: 'business',
-            versions: [{
-                id: 'v1',
-                enabled: true,
-                llm,
-                steps,
-                tools,
-                autoTools,
-                system,
-                prompt,
-                promptType: 'jinja',
-                action: 'inform',
-                spaces: ['launch.immediate']
-            }]
-        }
-        saveAndClose(trigger)
-    }
-
     const onChangeTools = (e: SelectChangeEvent<string[]>) => {
         setTools(e.target.value as string[])
         markDirty()
@@ -223,17 +253,24 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
 
     return (
         <Dialog open={true} PaperProps={{ sx: { width: '90vw', maxWidth: '1300px', height: '85vh' } }}>
-            <DialogTitle>
+            <DialogTitle sx={{ pb: 0 }}>
                 <Stack direction='row' alignItems='center' spacing={1}>
                     <ScienceOutlined />
-                    <Typography variant='h6' flex={1}>Playground</Typography>
+                    <Typography variant='h6'>Playground</Typography>
                 </Stack>
+                <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mt: 1 }}>
+                    <Tab label='LLM' />
+                    <Tab label='Input' />
+                    <Tab label='Call' />
+                    <Tab label='Results' />
+                </Tabs>
             </DialogTitle>
 
-            <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 1 }}>
+            <DialogContent sx={{ display: 'flex', flexDirection: 'column', pt: 2, overflow: 'hidden' }}>
 
-                <Stack direction='row' spacing={2} sx={{ flex: '0 0 auto' }}>
-                    <Stack spacing={1} sx={{ width: 260, flexShrink: 0 }}>
+                {/* Tab 0: LLM */}
+                {tab === 0 && (
+                    <Stack spacing={3} sx={{ maxWidth: 420, mx: 'auto', width: '100%', pt: 3, px: 2 }}>
                         <FormControl variant='standard' fullWidth>
                             <InputLabel>LLM</InputLabel>
                             <Select value={llm} onChange={e => { setLlm(e.target.value); markDirty() }}>
@@ -250,209 +287,165 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                             onChange={e => { setSteps(Math.max(1, +e.target.value)); markDirty() }}
                             fullWidth
                         />
+                        <Box>
+                            <Button size='small' startIcon={<Upload />} onClick={() => setShowImportDialog(true)}>Import from trigger</Button>
+                        </Box>
                     </Stack>
+                )}
 
-                    <Box flex={1}>
-                        <Stack direction='row' alignItems='center' spacing={0.5}>
-                            <Typography variant='caption' color='text.secondary'>System</Typography>
-                            <IconButton size='small' onClick={e => openHistory(e, 'system')} disabled={systemHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
+                {/* Tab 1: Input */}
+                {tab === 1 && (
+                    <Stack spacing={2} sx={{ height: '100%', overflow: 'hidden', px: 2, pt: 1 }}>
+                        <Stack direction='row' spacing={2} alignItems='center' sx={{ flex: '0 0 auto' }}>
+                            <ToggleButtonGroup value={triggerType} exclusive size='small' onChange={(_, v) => { if (v) setTriggerType(v) }}>
+                                <ToggleButton value='business'>Business</ToggleButton>
+                                <ToggleButton value='artifact'>Artifact</ToggleButton>
+                            </ToggleButtonGroup>
+                            {triggerType === 'artifact' ? (
+                                <FormControl variant='standard' sx={{ minWidth: 160 }}>
+                                    <InputLabel>Artifact Kind</InputLabel>
+                                    <Select value={artifactKind} onChange={e => setArtifactKind(e.target.value)}>
+                                        {kindsAvailable.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
+                                    </Select>
+                                </FormControl>
+                            ) : (
+                                <>
+                                    <TextField label='Space' variant='standard' size='small' value={eventSpace} onChange={e => setEventSpace(e.target.value)} sx={{ flex: 1 }} />
+                                    <TextField label='Type' variant='standard' size='small' value={eventType} onChange={e => setEventType(e.target.value)} sx={{ flex: 1 }} />
+                                    <IconButton size='small' onClick={e => openHistory(e, 'spacetype')} disabled={spaceTypeHistory.length === 0}>
+                                        <HistoryOutlined sx={{ fontSize: 14 }} />
+                                    </IconButton>
+                                </>
+                            )}
                         </Stack>
-                        <Stack direction='row' alignItems='center' spacing={1}>
-                            <TextareaAutosize
-                                value={system}
-                                onChange={e => { setSystem(e.target.value); markDirty() }}
-                                minRows={5}
-                                maxRows={5}
-                                style={{ flex: 1, width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, overflowY: 'auto' }}
-                                placeholder='Enter system prompt…'
-                            />
-                            <Stack spacing={1} sx={{ flexShrink: 0 }}>
-                                <Button size='small' startIcon={<Upload />} onClick={() => setShowImportDialog(true)}>
-                                    Import
-                                </Button>
-                                {showExport
-                                    ? <Stack spacing={0.5}>
-                                        <TextField
-                                            size='small'
-                                            label='Trigger ID'
-                                            value={exportId}
-                                            onChange={e => setExportId(e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') handleExport() }}
-                                            autoFocus
-                                            sx={{ width: 140 }}
-                                        />
-                                        <Stack direction='row' spacing={0.5}>
-                                            <Button size='small' variant='contained' onClick={handleExport} disabled={!exportId.trim()}>Create</Button>
-                                            <Button size='small' onClick={() => setShowExport(false)}>Cancel</Button>
-                                        </Stack>
-                                    </Stack>
-                                    : <Tooltip title='Export current config as a new trigger (spaces: launch.immediate)'>
-                                        <Button size='small' startIcon={<FileDownload />} onClick={() => setShowExport(true)}>
-                                            Export
-                                        </Button>
-                                    </Tooltip>
-                                }
-                            </Stack>
-                        </Stack>
-                    </Box>
-                </Stack>
-
-                <Divider />
-
-                <Stack direction='row' spacing={1} sx={{ flex: '0 0 auto' }}>
-                    <Box flex={1}>
-                        <Stack direction='row' alignItems='center' spacing={0.5}>
-                            <Typography variant='caption' color='text.secondary'>Prompt</Typography>
-                            <IconButton size='small' onClick={e => openHistory(e, 'prompt')} disabled={promptHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
-                        </Stack>
-                        <TextareaAutosize
-                            value={prompt}
-                            onChange={e => { setPrompt(e.target.value); markDirty() }}
-                            minRows={12}
-                            maxRows={12}
-                            style={{ width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, overflowY: 'auto' }}
-                            placeholder='Enter the Jinja prompt template…'
-                        />
-                    </Box>
-                    <Box flex={1}>
-                        <Stack direction='row' alignItems='center' spacing={0.5}>
-                            <Typography variant='caption' color='text.secondary'>Artifact / Event JSON</Typography>
-                            <IconButton size='small' onClick={e => openHistory(e, triggerType)} disabled={(triggerType === 'artifact' ? artifactHistory : businessHistory).length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
-                        </Stack>
-                        <TextareaAutosize
-                            value={eventData}
-                            onChange={e => setEventData(e.target.value)}
-                            minRows={12}
-                            maxRows={12}
-                            style={{ width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, overflowY: 'auto' }}
-                            placeholder='Enter the artifact or JSON payload to send as the business event data…'
-                        />
-                    </Box>
-                </Stack>
-
-                <Stack direction='row' spacing={2}>
-                    <Stack direction='row' alignItems='flex-end' spacing={1} sx={{ flex: 1 }}>
-                        <FormControlLabel
-                            control={<Switch size='small' checked={autoTools} onChange={e => { setAutoTools(e.target.checked); markDirty() }} />}
-                            label={<Typography variant='caption'>Auto</Typography>}
-                            sx={{ mr: 0, flexShrink: 0 }}
-                        />
-                        <FormControl variant='standard' disabled={autoTools} sx={{ flex: 1, minWidth: 0 }}>
-                            <InputLabel>Tools</InputLabel>
-                            <Select multiple value={tools} onChange={onChangeTools} renderValue={sel => autoTools ? `all (${props.toolsAvailable.length})` : (sel as string[]).join(', ')}>
-                                <MenuItem disableRipple onClickCapture={e => e.stopPropagation()} sx={{ p: 0.5 }}>
-                                    <TextField
-                                        size='small'
-                                        placeholder='Filter…'
-                                        value={toolFilter}
-                                        onChange={e => setToolFilter(e.target.value)}
-                                        onKeyDown={e => e.stopPropagation()}
-                                        fullWidth
-                                        variant='outlined'
-                                    />
-                                </MenuItem>
-                                {props.toolsAvailable
-                                    .filter(t => !toolFilter || t.name.includes(toolFilter) || t.description.toLowerCase().includes(toolFilter.toLowerCase()))
-                                    .map(tool => (
-                                        <MenuItem key={tool.name} value={tool.name}>
-                                            <Checkbox size='small' checked={tools.includes(tool.name)} />
-                                            <Box>
-                                                <Typography variant='body2'>{tool.name}</Typography>
-                                                <Typography variant='caption' color='text.secondary'>{tool.description}</Typography>
-                                            </Box>
-                                        </MenuItem>
-                                    ))
-                                }
-                            </Select>
-                        </FormControl>
-                        <Tooltip title='Upload LLM, steps, tools and system to backend'>
-                            <span>
-                                <Button
-                                    variant={configApplied ? 'text' : 'outlined'}
-                                    size='small'
-                                    startIcon={configApplied ? <CheckCircleOutline color='success' /> : <Upload />}
-                                    onClick={handleApply}
-                                    disabled={!llm}
-                                    color={configApplied ? 'success' : 'primary'}
-                                    sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
-                                >
-                                    {configApplied ? 'Config applied' : 'Apply Config'}
-                                </Button>
-                            </span>
-                        </Tooltip>
-                    </Stack>
-                    <Stack direction='row' alignItems='flex-end' spacing={1} sx={{ flex: 1 }}>
-                        <ToggleButtonGroup
-                            value={triggerType}
-                            exclusive
-                            size='small'
-                            onChange={(_, v) => { if (v) setTriggerType(v) }}
-                            sx={{ flexShrink: 0 }}
-                        >
-                            <ToggleButton value='business'>Business</ToggleButton>
-                            <ToggleButton value='artifact'>Artifact</ToggleButton>
-                        </ToggleButtonGroup>
-                        {triggerType === 'artifact' ? (
-                            <FormControl variant='standard' size='small' sx={{ flex: 1 }}>
-                                <InputLabel>Artifact Kind</InputLabel>
-                                <Select value={artifactKind} onChange={e => setArtifactKind(e.target.value)}>
-                                    {kindsAvailable.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
-                                </Select>
-                            </FormControl>
-                        ) : (
-                            <>
-                                <TextField
-                                    label='Space'
-                                    variant='standard'
-                                    size='small'
-                                    value={eventSpace}
-                                    onChange={e => setEventSpace(e.target.value)}
-                                    sx={{ flex: 1 }}
-                                />
-                                <TextField
-                                    label='Type'
-                                    variant='standard'
-                                    size='small'
-                                    value={eventType}
-                                    onChange={e => setEventType(e.target.value)}
-                                    sx={{ flex: 1 }}
-                                />
-                                <IconButton size='small' onClick={e => openHistory(e, 'spacetype')} disabled={spaceTypeHistory.length === 0} sx={{ alignSelf: 'flex-end', mb: 0.5 }}>
+                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            <Stack direction='row' alignItems='center' spacing={0.5}>
+                                <Typography variant='caption' color='text.secondary'>
+                                    {triggerType === 'artifact' ? 'Artifact JSON' : 'Event JSON'}
+                                </Typography>
+                                <IconButton size='small' onClick={e => openHistory(e, triggerType)} disabled={(triggerType === 'artifact' ? artifactHistory : businessHistory).length === 0}>
                                     <HistoryOutlined sx={{ fontSize: 14 }} />
                                 </IconButton>
-                            </>
-                        )}
-                        <Tooltip title={!configApplied ? 'Apply config first' : `Send ${triggerType} event to the backend`}>
-                            <span>
-                                <Button
-                                    variant='contained'
-                                    size='small'
-                                    startIcon={<Bolt />}
-                                    onClick={handleFire}
-                                    disabled={!configApplied || firing}
-                                >
-                                    {firing ? 'Firing…' : 'Fire'}
-                                </Button>
-                            </span>
-                        </Tooltip>
+                            </Stack>
+                            <TextareaAutosize
+                                value={eventData}
+                                onChange={e => setEventData(e.target.value)}
+                                minRows={18}
+                                style={{ width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, overflowY: 'auto' }}
+                                placeholder='Enter the artifact or JSON payload…'
+                            />
+                        </Box>
                     </Stack>
-                </Stack>
+                )}
 
-                <Divider />
+                {/* Tab 2: Call */}
+                {tab === 2 && (
+                    <Stack spacing={1} sx={{ height: '100%', overflow: 'hidden', px: 2, pt: 1 }}>
+                        <Stack direction='row' alignItems='flex-end' spacing={1} sx={{ flex: '0 0 auto' }}>
+                            <FormControl variant='standard' sx={{ minWidth: 140 }}>
+                                <InputLabel>Prompt type</InputLabel>
+                                <Select value={promptType} onChange={e => { setPromptType(e.target.value as 'jinja' | 'artifact'); markDirty() }}>
+                                    <MenuItem value='jinja'>jinja</MenuItem>
+                                    <MenuItem value='artifact'>artifact</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <FormControlLabel
+                                control={<Switch size='small' checked={autoTools} onChange={e => { setAutoTools(e.target.checked); markDirty() }} />}
+                                label={<Typography variant='caption'>Auto</Typography>}
+                                sx={{ mr: 0, flexShrink: 0 }}
+                            />
+                            <FormControl variant='standard' disabled={autoTools} sx={{ flex: 1 }}>
+                                <InputLabel>Tools</InputLabel>
+                                <Select multiple value={tools} onChange={onChangeTools} renderValue={sel => autoTools ? `all (${props.toolsAvailable.length})` : (sel as string[]).join(', ')}>
+                                    <MenuItem disableRipple onClickCapture={e => e.stopPropagation()} sx={{ p: 0.5 }}>
+                                        <TextField size='small' placeholder='Filter…' value={toolFilter} onChange={e => setToolFilter(e.target.value)} onKeyDown={e => e.stopPropagation()} fullWidth variant='outlined' />
+                                    </MenuItem>
+                                    {props.toolsAvailable
+                                        .filter(t => !toolFilter || t.name.includes(toolFilter) || t.description.toLowerCase().includes(toolFilter.toLowerCase()))
+                                        .map(tool => (
+                                            <MenuItem key={tool.name} value={tool.name}>
+                                                <Checkbox size='small' checked={tools.includes(tool.name)} />
+                                                <Box>
+                                                    <Typography variant='body2'>{tool.name}</Typography>
+                                                    <Typography variant='caption' color='text.secondary'>{tool.description}</Typography>
+                                                </Box>
+                                            </MenuItem>
+                                        ))
+                                    }
+                                </Select>
+                            </FormControl>
+                        </Stack>
+                        <Box sx={{ flex: '0 0 auto' }}>
+                            <Stack direction='row' alignItems='center' spacing={0.5}>
+                                <Typography variant='caption' color='text.secondary'>System</Typography>
+                                <IconButton size='small' onClick={e => openHistory(e, 'system')} disabled={systemHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
+                            </Stack>
+                            <TextareaAutosize value={system} onChange={e => { setSystem(e.target.value); markDirty() }} minRows={4} maxRows={4} style={{ width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13 }} placeholder='Enter system prompt…' />
+                        </Box>
+                        <Box sx={{ flex: 1 }}>
+                            <Stack direction='row' alignItems='center' spacing={0.5}>
+                                <Typography variant='caption' color='text.secondary'>Prompt</Typography>
+                                <IconButton size='small' onClick={e => openHistory(e, 'prompt')} disabled={promptHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
+                            </Stack>
+                            <TextareaAutosize value={prompt} onChange={e => { setPrompt(e.target.value); markDirty() }} minRows={8} maxRows={8} style={{ width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13 }} placeholder='Enter the prompt template…' />
+                        </Box>
+                    </Stack>
+                )}
 
-                <Box sx={{ flex: 1, overflowY: 'auto', bgcolor: 'action.hover', borderRadius: 1, p: 1, minHeight: 40 }}>
-                    <Typography variant='caption' color='text.secondary'>Results</Typography>
-                    {newContent.length === 0
-                        ? <Typography variant='body2' color='text.disabled' sx={{ ml: 1 }}>No results yet — apply config then fire.</Typography>
-                        : newContent.map((item, i) => renderItem(item, i))
-                    }
-                </Box>
+                {/* Tab 3: Results */}
+                {tab === 3 && (
+                    <Stack spacing={2} sx={{ height: '100%', overflow: 'hidden', px: 2, pt: 1 }}>
+                        <Stack direction='row' spacing={2} alignItems='center' sx={{ flex: '0 0 auto' }}>
+                            <Tooltip title='Upload LLM, steps, tools and system to backend'>
+                                <span>
+                                    <Button
+                                        variant={configApplied ? 'text' : 'outlined'}
+                                        startIcon={configApplied ? <CheckCircleOutline color='success' /> : <Upload />}
+                                        onClick={handleApply}
+                                        disabled={!llm}
+                                        color={configApplied ? 'success' : 'primary'}
+                                    >
+                                        {configApplied ? 'Config applied' : 'Apply Config'}
+                                    </Button>
+                                </span>
+                            </Tooltip>
+                            <Tooltip title={!configApplied ? 'Apply config first' : `Send ${triggerType} event to the backend`}>
+                                <span>
+                                    <Button
+                                        variant='contained'
+                                        startIcon={<Bolt />}
+                                        onClick={handleFire}
+                                        disabled={!configApplied || firing}
+                                    >
+                                        {firing ? 'Firing…' : 'Fire'}
+                                    </Button>
+                                </span>
+                            </Tooltip>
+                            <Box sx={{ flex: 1 }} />
+                            <Tooltip title='Export current config as trigger or version'>
+                                <Button size='small' startIcon={<FileDownload />} onClick={openExportDialog}>Export</Button>
+                            </Tooltip>
+                        </Stack>
+                        <Box sx={{ flex: 1, overflowY: 'auto', bgcolor: 'action.hover', borderRadius: 1, p: 1 }}>
+                            <Typography variant='caption' color='text.secondary'>Results</Typography>
+                            {newContent.length === 0
+                                ? <Typography variant='body2' color='text.disabled' sx={{ ml: 1 }}>No results yet — apply config then fire.</Typography>
+                                : newContent.map((item, i) => renderItem(item, i))
+                            }
+                        </Box>
+                    </Stack>
+                )}
 
             </DialogContent>
 
-            <DialogActions>
-                <Button variant='contained' onClick={() => saveAndClose()}>Save</Button>
-                <Button onClick={() => props.onClose()}>Cancel</Button>
+            <DialogActions sx={{ justifyContent: 'space-between' }}>
+                <Box>
+                    {tab < 3 && <Button onClick={() => setTab(t => t + 1)}>Next</Button>}
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button variant='contained' onClick={() => saveAndClose()}>Save</Button>
+                    <Button onClick={() => props.onClose()}>Cancel</Button>
+                </Box>
             </DialogActions>
 
             <Menu anchorEl={historyAnchor} open={Boolean(historyAnchor)} onClose={() => setHistoryAnchor(null)} PaperProps={{ sx: { maxHeight: 300, overflowY: 'auto' } }}>
@@ -479,6 +472,51 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                     ))
                 }
             </Menu>
+
+            <Dialog open={showExportDialog} onClose={() => setShowExportDialog(false)} PaperProps={{ sx: { width: 420, height: 340 } }}>
+                <DialogTitle>Export playground</DialogTitle>
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1, px: 3, overflow: 'hidden' }}>
+                    <ToggleButtonGroup value={exportMode} exclusive size='small' onChange={(_, v) => { if (v) setExportMode(v) }}>
+                        <ToggleButton value='new'>New trigger</ToggleButton>
+                        <ToggleButton value='version' disabled={props.pinocchioConfig.triggers.length === 0}>Add version</ToggleButton>
+                    </ToggleButtonGroup>
+                    <Box sx={{ visibility: exportMode === 'new' ? 'visible' : 'hidden', position: exportMode === 'new' ? 'static' : 'absolute' }}>
+                        <TextField label='Trigger ID' variant='standard' value={exportId} onChange={e => setExportId(e.target.value)} fullWidth />
+                    </Box>
+                    <Box sx={{ visibility: exportMode === 'version' ? 'visible' : 'hidden', position: exportMode === 'version' ? 'static' : 'absolute', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <FormControl variant='standard' fullWidth>
+                            <InputLabel>Trigger</InputLabel>
+                            <Select value={exportTargetTriggerId} onChange={e => { setExportTargetTriggerId(e.target.value); setExportVersionId('') }}>
+                                {props.pinocchioConfig.triggers.map(t => (
+                                    <MenuItem key={t.id} value={t.id}>{t.id}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        {(() => {
+                            const versionExists = !!exportVersionId.trim() && !!props.pinocchioConfig.triggers.find(t => t.id === exportTargetTriggerId)?.versions.some(v => v.id === exportVersionId.trim())
+                            return (
+                                <TextField
+                                    label='Version ID'
+                                    variant='standard'
+                                    value={exportVersionId}
+                                    onChange={e => setExportVersionId(e.target.value)}
+                                    fullWidth
+                                    error={versionExists}
+                                    helperText={versionExists ? 'This version ID already exists in the selected trigger' : ' '}
+                                />
+                            )
+                        })()}
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    {(() => {
+                        const versionExists = exportMode === 'version' && !!exportVersionId.trim() && !!props.pinocchioConfig.triggers.find(t => t.id === exportTargetTriggerId)?.versions.some(v => v.id === exportVersionId.trim())
+                        const disabled = exportMode === 'new' ? !exportId.trim() : (!exportTargetTriggerId || !exportVersionId.trim() || versionExists)
+                        return <Button variant='contained' onClick={handleExportConfirm} disabled={disabled}>Export</Button>
+                    })()}
+                    <Button onClick={() => setShowExportDialog(false)}>Cancel</Button>
+                </DialogActions>
+            </Dialog>
 
             <Dialog open={showImportDialog} onClose={() => { setShowImportDialog(false); setPendingImportTriggerId('') }}>
                 <DialogTitle>Import from trigger</DialogTitle>
