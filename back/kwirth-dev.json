@@ -1,3 +1,4 @@
 {
-  "pinocchio": "../plugins/pinocchio/dist"
+  "pinocchio": "../plugins/pinocchio/dist",
+  "topology": "../plugins/topology/dist"
 }

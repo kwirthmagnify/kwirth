@@ -67,7 +67,7 @@ Today, we begin a deep-dive series on the specific features that make **#Kwirth*
 ---
 
 ### 7/10 Filesystem Access
-**Situation:** You need to review or edit the content of a `.env` file inside a running Pod.
+**Situation:** You need to review or edit a 'hosts' file inside a running Pod, just for a quick workaround or for testing purposes.
 **Solution:** Launch a **'Fileman'** channel, wait for the file manager to load, and navigate just as you would in your local file explorer. Download, view, edit, or upload as many files as needed.
 **Time to solve:** 15 seconds.
 **NOTES:** You can copy/move files between containers (**#Kwirth** handles the underlying instructions). You can also download entire folder structures.
@@ -96,7 +96,17 @@ Today, we begin a deep-dive series on the specific features that make **#Kwirth*
 
 ---
 
-### 10/10 Architectural Flexibility
+### 10/10 Topology
+**Situation:** You need to understand in just one shot how a pod is deployed, which component it relates to, and how it can be reached from outside the cluster.
+**Solution:** Launch a Topology channel (or a topology window if you are working with Kwirth Magnify). Navigate through teh cluster in order to see artifact relationships.
+**Time to solve:** 3 seconds.
+**NOTES:** You can filter out components you don't want to see in the canvas. On the other side, you can decide what artifact to focus on.
+
+[VIDEO]
+
+---
+
+### 11/10 Architectural Flexibility
 **Situation:** You have diverse needs, such as: (1) Integrating with **#Backstage**, (2) Running a local server without a cluster, (3) Using a native desktop experience, or (4) Optimizing for low latency.
 **Solution:** 1. Deploy **Kwirth External** alongside your **#Backstage** instance.
 2. Use the **Dockerized version** of Kwirth for local development.

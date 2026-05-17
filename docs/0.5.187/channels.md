@@ -497,15 +497,15 @@ The optional setup dialog lets you control:
   - **Label size** and **node spacing** for adjusting the visual density of the graph.
   - **Edge animation** on or off.
 
-!> **Screenshot needed** — Topology channel setup dialog.
+![topologysetup](./_media/ch-images/topology-setup.png  ':class=imageclass60')
 
 Once started, the 3D graph appears in the tab and begins populating with live data from the cluster.
 
-!> **Screenshot needed** — Topology channel running, showing a multi-namespace 3D graph with colored nodes and animated edges.
+![topologynavigate](./_media/ch-images/topology-navigate.png  ':class=imageclass60')
 
 You can click any node to select it and see its details. When one or more nodes are selected, the action toolbar shows the operations available for that resource type.
 
-!> **Screenshot needed** — Topology channel with a node selected and the action toolbar visible.
+![topologycontextmenu](./_media/ch-images/topology-contextmenu.png  ':class=imageclass60')
 
 ## News
 !> **This is a test/demo channel.** News is not a Kubernetes observability tool — it is provided as a reference implementation showing how to build a Kwirth plugin that consumes an external data source instead of Kubernetes data.
@@ -531,8 +531,8 @@ When you start a News channel you can configure:
   - **Max items** — maximum number of news items to keep on screen.
   - **Feeds** — select which feeds to subscribe to (Kubernetes, AI, or both).
 
-!> **Screenshot needed** — News channel setup dialog.
+![newssetup](./_media/ch-images/news-setup.png  ':class=imageclass60')
 
 Once started, news items appear as cards in the tab, sorted by publication date. Each card shows the title, source, category, and a link to the original article.
 
-!> **Screenshot needed** — News channel running, showing a card list of news items.
+![newsrunning](./_media/ch-images/news-running.png  ':class=imageclass60')

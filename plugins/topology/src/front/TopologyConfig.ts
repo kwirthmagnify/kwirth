@@ -28,7 +28,7 @@ export class TopologyConfig implements ITopologyConfig {
     showOnlyRunning   = false
     edgeAnimated      = true
     labelSize         = 12
-    nodeSpacingFactor = 1.0
+    nodeSpacingFactor = 0.5
     gridColumns       = 8
 }
 

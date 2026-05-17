@@ -51,6 +51,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
     const [importedFromTriggerId, setImportedFromTriggerId] = useState('')
     const [showImportDialog, setShowImportDialog] = useState(false)
     const [pendingImportTriggerId, setPendingImportTriggerId] = useState('')
+    const [pendingImportVersionId, setPendingImportVersionId] = useState('')
 
     const [showExportDialog, setShowExportDialog] = useState(false)
     const [exportMode, setExportMode] = useState<'new' | 'version'>('new')
@@ -119,11 +120,18 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
 
     const markDirty = () => setConfigApplied(false)
 
+    const onImportTriggerChange = (triggerId: string) => {
+        setPendingImportTriggerId(triggerId)
+        const t = props.pinocchioConfig.triggers.find(tr => tr.id === triggerId)
+        const defaultVersion = t?.versions.find(v => v.enabled) ?? t?.versions[0]
+        setPendingImportVersionId(defaultVersion?.id ?? '')
+    }
+
     const confirmImportTrigger = () => {
         const t = props.pinocchioConfig.triggers.find(tr => tr.id === pendingImportTriggerId)
         if (t) {
             if (t.trigger === 'artifact' || t.trigger === 'business') setTriggerType(t.trigger)
-            const v = t.versions.find(v => v.enabled) ?? t.versions[0]
+            const v = t.versions.find(v => v.id === pendingImportVersionId) ?? t.versions[0]
             if (v) {
                 setLlm(v.llm)
                 setSteps(v.steps)
@@ -138,6 +146,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
         }
         setShowImportDialog(false)
         setPendingImportTriggerId('')
+        setPendingImportVersionId('')
     }
 
     const openExportDialog = () => {
@@ -518,24 +527,33 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={showImportDialog} onClose={() => { setShowImportDialog(false); setPendingImportTriggerId('') }}>
+            <Dialog open={showImportDialog} onClose={() => { setShowImportDialog(false); setPendingImportTriggerId(''); setPendingImportVersionId('') }} PaperProps={{ sx: { width: 400, height: 340 } }}>
                 <DialogTitle>Import from trigger</DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1, minWidth: 320 }}>
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1, px: 3, overflow: 'hidden' }}>
                     <Typography variant='body2' color='warning.main'>
                         This will overwrite the current playground configuration (LLM, steps, tools, system and prompt).
                     </Typography>
                     <FormControl variant='standard' fullWidth>
-                        <Select value={pendingImportTriggerId} onChange={e => setPendingImportTriggerId(e.target.value)} displayEmpty>
+                        <InputLabel>Trigger</InputLabel>
+                        <Select value={pendingImportTriggerId} onChange={e => onImportTriggerChange(e.target.value)} displayEmpty>
                             <MenuItem value=''><Typography color='gray'><em>— select a trigger —</em></Typography></MenuItem>
                             {props.pinocchioConfig.triggers.map(t => (
                                 <MenuItem key={t.id} value={t.id}>{t.id}</MenuItem>
                             ))}
                         </Select>
                     </FormControl>
+                    <FormControl variant='standard' fullWidth disabled={!pendingImportTriggerId}>
+                        <InputLabel>Version</InputLabel>
+                        <Select value={pendingImportVersionId} onChange={e => setPendingImportVersionId(e.target.value)}>
+                            {(props.pinocchioConfig.triggers.find(t => t.id === pendingImportTriggerId)?.versions ?? []).map(v => (
+                                <MenuItem key={v.id} value={v.id}>{v.id}{v.enabled ? ' ✓' : ''}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                 </DialogContent>
-                <DialogActions>
-                    <Button variant='contained' onClick={confirmImportTrigger} disabled={!pendingImportTriggerId}>Import</Button>
-                    <Button onClick={() => { setShowImportDialog(false); setPendingImportTriggerId('') }}>Cancel</Button>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button variant='contained' onClick={confirmImportTrigger} disabled={!pendingImportTriggerId || !pendingImportVersionId}>Import</Button>
+                    <Button onClick={() => { setShowImportDialog(false); setPendingImportTriggerId(''); setPendingImportVersionId('') }}>Cancel</Button>
                 </DialogActions>
             </Dialog>
         </Dialog>

@@ -43,8 +43,7 @@ For example, you can have three Log plugin instances open at the same time — o
 
 Kwirth lets you control which plugins are active at startup. Plugins can be individually enabled or disabled via the Kwirth configuration. This is useful to reduce the attack surface in production or to deploy lightweight Kwirth instances focused on a specific use case.
 
-!> **Screenshot needed** — Kwirth admin UI showing the plugin enable/disable configuration panel.
-
+![manageplugins](./_media/manage-plugins.png ':class=imageclass80')
 When a plugin is disabled, both its back endpoint and its entry in the front channel registry are removed, so users will not see the corresponding channel option in the resource selector.
 
 ## Managing plugins at runtime
@@ -57,7 +56,7 @@ Plugins are stored as Kubernetes ConfigMaps and loaded dynamically at startup an
 
 The easiest way to manage plugins is through the built-in Plugin Manager, accessible from the Kwirth settings menu.
 
-!> **Screenshot needed** — Plugin Manager dialog showing the plugin registry list with Install/Uninstall buttons.
+![plugininstall](./_media/plugin-install.png ':class=imageclass80')
 
 The dialog shows the curated plugin registry (fetched from the Kwirth manifest) with the available plugins, their version, and description. To install a plugin, click **Install** — Kwirth downloads the package, stores it in Kubernetes ConfigMaps, and activates it immediately. No restart required.
 
