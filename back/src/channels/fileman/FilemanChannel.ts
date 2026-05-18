@@ -1,6 +1,7 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
+import { IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IChannel } from '../IChannel'
 import { Readable, Writable } from 'stream'
 import { Request, Response } from 'express'
 import { v4 as uuid } from 'uuid'

@@ -1,6 +1,7 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType } from '@kwirthmagnify/kwirth-common';
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
+import { IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IChannel } from '../IChannel'
 import { Informer, KubernetesObject, makeInformer, ObjectCache } from '@kubernetes/client-node'
 import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources, restartController } from '../../tools/KubernetesTools'

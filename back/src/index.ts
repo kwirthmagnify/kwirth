@@ -31,13 +31,13 @@ import { IConfigMaps } from './tools/IConfigMap'
 import { DockerSecrets } from './tools/DockerSecrets'
 import { DockerConfigMaps } from './tools/DockerConfigMaps'
 
-import { IBackChannelObject, IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
+import { IBackChannelObject } from '@kwirthmagnify/kwirth-common'
+import { IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
 import { LogChannel } from './channels/log/LogChannel'
 import { AlertChannel } from './channels/alert/AlertChannel'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { OpsChannel } from './channels/ops/OpsChannel'
 import { TrivyChannel } from './channels/trivy/TrivyChannel'
-import { EchoChannel } from './channels/echo/EchoChannel'
 import { FilemanChannel } from './channels/fileman/FilemanChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 // NewsChannel and PinocchioChannel removed — now loaded as plugins
@@ -65,6 +65,7 @@ import { PluginManager } from './tools/PluginManager'
 import { PluginApi } from './api/PluginApi'
 import { ProviderManager } from './tools/ProviderManager'
 import { ProviderApi } from './api/ProviderApi'
+import { SenderManager } from './tools/SenderManager'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -115,13 +116,13 @@ const envChannelMetricsEnabled = (process.env.CHANNEL_METRICS || 'true').toLower
 const envChannelAlertEnabled = (process.env.CHANNEL_ALERT || 'true').toLowerCase() === 'true'
 const envChannelOpsEnabled = (process.env.CHANNEL_OPS || 'true').toLowerCase() === 'true'
 const envChannelTrivyEnabled = (process.env.CHANNEL_TRIVY || 'true').toLowerCase() === 'true'
-const envChannelEchoEnabled = (process.env.CHANNEL_ECHO || 'true').toLowerCase() === 'true'
 const envChannelFilemanEnabled = (process.env.CHANNEL_FILEMAN || 'true').toLowerCase() === 'true'
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 
 const runningInstances:IRunningInstance[] = []
 let pluginManager: PluginManager | undefined
 let providerManager: ProviderManager | undefined
+let senderManager: SenderManager | undefined
 
 const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
@@ -137,9 +138,8 @@ registeredChannels.set('metrics', MetricsChannel)
 registeredChannels.set('ops', OpsChannel)
 registeredChannels.set('trivy', TrivyChannel)
 registeredChannels.set('fileman', FilemanChannel)
-registeredChannels.set('echo', EchoChannel)
 registeredChannels.set('magnify', MagnifyChannel)
-// 'news' 'topology' and 'pinocchio' channels loaded dynamically by PluginManager
+// 'echo', 'news', 'topology' and 'pinocchio' channels loaded dynamically by PluginManager
 
 if (envCommand!==undefined) {
     switch(envCommand) {
@@ -1371,7 +1371,6 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (envChannelOpsEnabled) requiredChannels.push('ops')
         if (envChannelTrivyEnabled) requiredChannels.push('trivy')
         if (envChannelFilemanEnabled) requiredChannels.push('fileman')
-        if (envChannelEchoEnabled) requiredChannels.push('echo')
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
         // plugin channels: load installed plugins and add their ids to requiredChannels
         if (!pluginManager) {
@@ -1390,6 +1389,12 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             await providerManager.init()
             await providerManager.loadAll(registeredProviders)
             providerManager.loadDevProviders(registeredProviders)
+        }
+
+        // sender plugins: load installed senders
+        if (!senderManager) {
+            senderManager = new SenderManager()
+            senderManager.loadDevSenders()
         }
 
         logInfo(ELogComponent.CORE, 'Required channels:')
@@ -1482,9 +1487,11 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                     if (content) return JSON.parse(content);
                     return undefined;
                 }
-            }
+            },
+            senders: senderManager
         }
 
+        runningInstance.clusterInfo.senders = senderManager
         runningInstance.backChannelObject = backChannelObject
         await setKubernetesClusterKwirthRequirements(runningInstance, localKwirthData, runningInstance.clusterInfo, backChannelObject)
         runningInstance.clusterInfo.type = localKwirthData.clusterType

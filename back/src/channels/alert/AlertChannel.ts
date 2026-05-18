@@ -2,7 +2,8 @@ import { IInstanceConfig, ISignalMessage, EClusterType, IInstanceConfigResponse,
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel';
+import { IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { EAlertSeverity, IAlertInstanceConfig, IAlertMessage } from './AlertTypes';
 

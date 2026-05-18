@@ -1,5 +1,5 @@
 import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
-import { EClusterType, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
+import { EClusterType, IInstanceConfig, ISenderAccess } from '@kwirthmagnify/kwirth-common'
 import Docker from 'dockerode'
 import { DockerTools } from '../tools/DockerTools'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
@@ -49,6 +49,7 @@ export class ClusterInfo {
     public saToken!: ServiceAccountToken
     public token: string|undefined   // needed just for connecting to kubelet and extract metrics
     public providers!: IProvider[]
+    public senders?: ISenderAccess
     public vcpus: number = 0
     public memory: number = 0
     public type: EClusterType = EClusterType.KUBERNETES

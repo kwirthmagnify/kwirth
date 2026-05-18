@@ -1,4 +1,15 @@
 {
-  "pinocchio": "../plugins/pinocchio/dist",
-  "topology": "../plugins/topology/dist"
+  "channels": {
+    "echo": "../plugins/echo/dist",
+    "pinocchio": "../plugins/pinocchio/dist",
+    "topology": "../plugins/topology/dist"
+  },
+  "providers": {
+    "kafka": "../providers/kafka/dist",
+    "otel": "../providers/otel/dist"
+  },
+  "senders": {
+    "console": "../senders/console/dist",
+    "file": "../senders/file/dist"
+  }
 }

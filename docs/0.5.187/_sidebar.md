@@ -19,6 +19,7 @@
 * [Channel Architecture](channelarch)
 * [Plugins](plugins)
 * [Providers](providers)
+* [Senders](senders)
 * [Channels](channels)
 * [Security](security)
 * [Common tasks](commontasks)

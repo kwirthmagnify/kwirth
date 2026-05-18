@@ -1,3 +1,5 @@
+import { ISenderAccess } from './Sender'
+
 //transient
 enum ClusterTypeEnum {
     KUBERNETES = 'kubernetes',
@@ -54,6 +56,7 @@ interface IBackChannelObject {
     logTrace?(message: unknown): void
     logWarning?(message: unknown): void
     logError?(message: unknown): void
+    senders?: ISenderAccess
 }
 
 export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, IBackChannelRequirements, IBackChannelObject }

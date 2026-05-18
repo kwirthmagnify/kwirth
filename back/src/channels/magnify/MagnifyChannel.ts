@@ -1,6 +1,7 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, EClusterType} from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelObject, IBackChannelRequirements, IChannel } from '../IChannel'
+import { IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { CoreV1EventList, V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
 import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'

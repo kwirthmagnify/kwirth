@@ -33,7 +33,6 @@ import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
 import { LogChannel } from './channels/log/LogChannel'
-import { EchoChannel } from './channels/echo/EchoChannel'
 import { AlertChannel } from './channels/alert/AlertChannel'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { OpsChannel } from './channels/ops/OpsChannel'
@@ -303,7 +302,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     useEffect( () => {
         // only first time
         frontChannels.set('log', LogChannel)
-        frontChannels.set('echo', EchoChannel)
         frontChannels.set('alert', AlertChannel)
         frontChannels.set('metrics', MetricsChannel)
         frontChannels.set('trivy', TrivyChannel)

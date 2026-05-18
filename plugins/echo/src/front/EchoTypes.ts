@@ -1,4 +1,4 @@
-import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
+import { IInstanceMessage } from '@kwirthmagnify/kwirth-common'
 
 export interface IEchoMessage extends IInstanceMessage {
     msgtype: 'echomessage'

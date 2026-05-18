@@ -1,7 +1,7 @@
 export interface IEchoData {
     lines: string[]
-    paused:boolean
-    started:boolean
+    paused: boolean
+    started: boolean
 }
 
 export class EchoData implements IEchoData {
