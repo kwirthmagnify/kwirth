@@ -49,6 +49,7 @@ import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
 import { PluginDialog } from './components/PluginDialog'
 import { ProviderDialog } from './components/ProviderDialog'
+import { SenderDialog } from './components/SenderDialog'
 
 interface IAppProps {
     backendUrl:string
@@ -198,6 +199,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showSettingsCluster, setShowSettingsCluster]=useState<boolean>(false)
     const [showPluginDialog, setShowPluginDialog]=useState<boolean>(false)
     const [showProviderDialog, setShowProviderDialog]=useState<boolean>(false)
+    const [showSenderDialog, setShowSenderDialog]=useState<boolean>(false)
     const [initialMessage, setInitialMessage]=useState<string>('')
 
     // last & favs
@@ -1404,6 +1406,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageProviders:
                 setShowProviderDialog(true)
                 break
+            case MenuDrawerOption.ManageSenders:
+                setShowSenderDialog(true)
+                break
             case MenuDrawerOption.ExportWorkspaces:
                 let workspacesToExport:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
                 if (workspacesToExport.length===0) {
@@ -1808,6 +1813,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} /> }
                 { showPluginDialog && <PluginDialog onClose={() => setShowPluginDialog(false)} onPluginLoaded={loadPluginFront} onPluginUnloaded={unloadPluginFront} /> }
                 { showProviderDialog && <ProviderDialog onClose={() => setShowProviderDialog(false)} /> }
+                { showSenderDialog && <SenderDialog onClose={() => setShowSenderDialog(false)} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }

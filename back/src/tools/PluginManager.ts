@@ -32,6 +32,8 @@ export class PluginManager {
     private configMaps: IConfigMaps
     private installedIds: string[] = []
     private devPlugins = new Map<string, IDevPlugin>()
+    private devWatchers = new Map<string, fs.FSWatcher>()
+    onDevPluginReloaded?: (id: string, ChannelClass: TChannelConstructor) => void
 
     constructor(configMaps: IConfigMaps) {
         this.configMaps = configMaps
@@ -109,10 +111,11 @@ export class PluginManager {
         this.reloadDevBack(id, backPath, registeredChannels)
 
         try {
-            fs.watch(backPath, { persistent: false }, () => {
+            const watcher = fs.watch(backPath, () => {
                 logInfo(ELogComponent.CORE, `[dev] Plugin '${id}' back.js changed — hot-reloading`)
                 this.reloadDevBack(id, backPath, registeredChannels)
             })
+            this.devWatchers.set(id, watcher)
         } catch (err) {
             logError(ELogComponent.CORE, `[dev] Cannot watch '${backPath}': ${err}`)
         }
@@ -127,7 +130,9 @@ export class PluginManager {
             const pluginModule = require(backPath)
             const ChannelClass = pluginModule.default ?? Object.values(pluginModule).find(v => typeof v === 'function')
             if (ChannelClass) {
-                registeredChannels.set(id, ChannelClass as TChannelConstructor)
+                const ctor = ChannelClass as TChannelConstructor
+                registeredChannels.set(id, ctor)
+                this.onDevPluginReloaded?.(id, ctor)
                 logInfo(ELogComponent.CORE, `[dev] Plugin '${id}' backend channel reloaded`)
             }
         } catch (err) {

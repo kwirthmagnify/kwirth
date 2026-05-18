@@ -8,7 +8,8 @@
       "Bash(cp c:/github/aisdkvercel/kwirth/common-back/dist/*.js c:/github/aisdkvercel/kwirth/senders/console/node_modules/@kwirthmagnify/kwirth-common-back/dist/)",
       "Bash(cp c:/github/aisdkvercel/kwirth/common-back/dist/*.d.ts c:/github/aisdkvercel/kwirth/senders/console/node_modules/@kwirthmagnify/kwirth-common-back/dist/)",
       "Bash(cp c:/github/aisdkvercel/kwirth/common-back/dist/*.js c:/github/aisdkvercel/kwirth/senders/file/node_modules/@kwirthmagnify/kwirth-common-back/dist/)",
-      "Bash(cp c:/github/aisdkvercel/kwirth/common-back/dist/*.d.ts c:/github/aisdkvercel/kwirth/senders/file/node_modules/@kwirthmagnify/kwirth-common-back/dist/)"
+      "Bash(cp c:/github/aisdkvercel/kwirth/common-back/dist/*.d.ts c:/github/aisdkvercel/kwirth/senders/file/node_modules/@kwirthmagnify/kwirth-common-back/dist/)",
+      "PowerShell(Move-Item -Path \"c:/github/aisdkvercel/kwirth/senders/email\" -Destination \"c:/github/aisdkvercel/kwirth/senders/email-resend\")"
     ]
   }
 }

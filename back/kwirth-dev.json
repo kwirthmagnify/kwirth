@@ -10,6 +10,19 @@
   },
   "senders": {
     "console": "../senders/console/dist",
-    "file": "../senders/file/dist"
+    "file": "../senders/file/dist",
+    "email-resend": "../senders/email-resend/dist",
+    "email-smtp": "../senders/email-smtp/dist"
+  },
+  "senderConfigs": {
+    "email-resend": [
+      {
+        "name": "default",
+        "apiKey": "${RESEND_API_KEY}",
+        "from": "kwirth@resend.dev",
+        "to": "${RESEND_TO}",
+        "subject": "Kwirth notification"
+      }
+    ]
   }
 }

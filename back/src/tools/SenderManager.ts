@@ -1,18 +1,65 @@
-import { ISender, ISenderAccess, ISenderConfig, ISenderMessage, TSenderConstructor } from '@kwirthmagnify/kwirth-common-back'
-import { ELogComponent, logError, logInfo } from './Logging'
+import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage, TSenderConstructor } from '@kwirthmagnify/kwirth-common-back'
+import { IConfigMaps } from './IConfigMap'
+import { ELogComponent, logError, logInfo, logWarning } from './Logging'
+import tar from 'tar'
+import os from 'os'
 import path from 'path'
 import fs from 'fs'
+import zlib from 'zlib'
+import https from 'https'
+import http from 'http'
 
-export { ISender, ISenderConfig, ISenderMessage }
+export interface ISenderMeta {
+    id: string
+    name: string
+    displayName?: string
+    version: string
+    description: string
+    website?: string
+    installedFrom?: string
+    backStored?: boolean
+}
+
+export { ISenderConfig, ISenderMessage }
+
+const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
 interface IDevSender {
     distPath: string
+    meta: ISenderMeta
 }
 
 export class SenderManager implements ISenderAccess {
+    private configMaps: IConfigMaps
     private registeredSenders = new Map<string, TSenderConstructor>()
     private instances = new Map<string, ISender>()
     private devSenders = new Map<string, IDevSender>()
+    private devWatchers = new Map<string, fs.FSWatcher>()
+    private configStore = new Map<string, Map<string, ISenderConfig>>()
+    private installedIds: string[] = []
+
+    constructor(configMaps: IConfigMaps) {
+        this.configMaps = configMaps
+    }
+
+    async init(): Promise<void> {
+        const index = (await this.configMaps.read('kwirth-senders-index', [])) as ISenderMeta[]
+        this.installedIds = (index || []).map(s => s.id)
+    }
+
+    getInstalledIds(): string[] {
+        return this.installedIds
+    }
+
+    getDevIds(): string[] {
+        return Array.from(this.devSenders.keys())
+    }
+
+    isDevSender(id: string): boolean {
+        return this.devSenders.has(id)
+    }
+
+    // ── Dev loading ─────────────────────────────────────────────────────────────
 
     loadDevSenders(): void {
         const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
@@ -28,21 +75,64 @@ export class SenderManager implements ISenderAccess {
         }
     }
 
+    loadDevSenderConfigs(): void {
+        const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
+        if (!fs.existsSync(devConfigPath)) return
+        try {
+            const raw = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8'))
+            const configsMap: Record<string, ISenderConfig[]> = raw.senderConfigs ?? {}
+            for (const [senderId, configs] of Object.entries(configsMap)) {
+                for (const config of configs) {
+                    this.addConfigInternal(senderId, this.interpolateEnvVars(config))
+                }
+            }
+        } catch (err) {
+            logError(ELogComponent.CORE, `Failed to load kwirth-dev.json (senderConfigs): ${err}`)
+        }
+    }
+
+    async loadPersistedConfigs(): Promise<void> {
+        const data = (await this.configMaps.read('kwirth-sender-configs', {})) as Record<string, ISenderConfig[]>
+        for (const [senderId, configs] of Object.entries(data ?? {})) {
+            for (const config of configs) {
+                this.addConfigInternal(senderId, config)
+            }
+        }
+    }
+
+    private interpolateEnvVars(obj: ISenderConfig): ISenderConfig {
+        const json = JSON.stringify(obj).replace(/\$\{([^}]+)\}/g, (_, varName) => {
+            const value = process.env[varName]
+            if (!value) logWarning(ELogComponent.CORE, `Sender config references undefined env var: ${varName}`)
+            return value ?? ''
+        })
+        return JSON.parse(json)
+    }
+
     private registerDevSender(id: string, distPath: string): void {
         const absPath = path.resolve(distPath)
         const backPath = path.join(absPath, 'back.js')
+        const metaPath = path.join(absPath, 'package.json')
 
-        this.devSenders.set(id, { distPath: absPath })
+        const meta: ISenderMeta = { id, name: id, version: 'dev', description: 'dev sender', installedFrom: 'dev' }
+        try {
+            const pkg = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+            meta.name = pkg.name ?? id
+            meta.displayName = pkg.displayName
+            meta.version = pkg.version ?? 'dev'
+            meta.description = pkg.description ?? ''
+            meta.website = pkg.website
+        } catch {}
+
+        this.devSenders.set(id, { distPath: absPath, meta })
         this.reloadDevBack(id, backPath)
 
         try {
-            fs.watch(backPath, { persistent: false }, () => {
+            const watcher = fs.watch(backPath, () => {
                 logInfo(ELogComponent.CORE, `[dev] Sender '${id}' back.js changed — hot-reloading`)
-                // Preserve configs before reload
-                const configs = this.instances.get(id)?.getConfigNames().map(name => name) ?? []
                 this.reloadDevBack(id, backPath)
-                logInfo(ELogComponent.CORE, `[dev] Sender '${id}' reloaded (${configs.length} config(s) will need re-registering)`)
             })
+            this.devWatchers.set(id, watcher)
         } catch (err) {
             logError(ELogComponent.CORE, `[dev] Cannot watch '${backPath}': ${err}`)
         }
@@ -58,7 +148,6 @@ export class SenderManager implements ISenderAccess {
             const SenderClass: TSenderConstructor = mod.default ?? Object.values(mod).find(v => typeof v === 'function') as TSenderConstructor
             if (SenderClass) {
                 this.registeredSenders.set(id, SenderClass)
-                // Re-create instance so the hot-reload takes effect
                 this.instances.delete(id)
                 logInfo(ELogComponent.CORE, `[dev] Sender '${id}' backend reloaded`)
             } else {
@@ -69,11 +158,176 @@ export class SenderManager implements ISenderAccess {
         }
     }
 
-    // ── Public API ─────────────────────────────────────────────────────────────
+    // ── Persistent install/uninstall ────────────────────────────────────────────
 
-    /**
-     * Returns the singleton instance for a sender type, creating it if needed.
-     */
+    async loadAll(): Promise<void> {
+        const index = (await this.configMaps.read('kwirth-senders-index', [])) as ISenderMeta[] || []
+        for (const meta of index) {
+            try {
+                let backJs: string | undefined
+                if (meta.backStored === false) {
+                    backJs = await this.fetchJsFromSource(meta)
+                } else {
+                    const backData = await this.configMaps.read(`kwirth-sender-${meta.id}-back`)
+                    if (backData?.code)
+                        backJs = backData.compressed ? zlib.gunzipSync(Buffer.from(backData.code, 'base64')).toString('utf-8') : backData.code
+                }
+                if (backJs) await this.loadBackSender(meta.id, backJs)
+                else logError(ELogComponent.CORE, `Sender '${meta.id}' has no back.js — skipping`)
+            } catch (err) {
+                logError(ELogComponent.CORE, `Failed to load sender '${meta.id}': ${err}`)
+            }
+        }
+    }
+
+    private async loadBackSender(id: string, backJs: string): Promise<void> {
+        const tmpPath = path.join(os.tmpdir(), `kwirth-sender-${id}-back.js`)
+        fs.writeFileSync(tmpPath, backJs)
+        try {
+            if (require.cache[require.resolve(tmpPath)]) delete require.cache[require.resolve(tmpPath)]
+            const mod = require(tmpPath)
+            const SenderClass = mod.default ?? Object.values(mod).find(v => typeof v === 'function')
+            if (SenderClass) {
+                this.registeredSenders.set(id, SenderClass as TSenderConstructor)
+                logInfo(ELogComponent.CORE, `Sender '${id}' backend registered`)
+            } else {
+                logError(ELogComponent.CORE, `Sender '${id}' back.js exports no sender class`)
+            }
+        } catch (err) {
+            logError(ELogComponent.CORE, `Error loading sender '${id}' backend: ${err}`)
+        }
+    }
+
+    async install(tarGzUrl: string, installedFrom?: string): Promise<ISenderMeta> {
+        const tmpTgz = path.join(os.tmpdir(), `kwirth-sender-${Date.now()}.tgz`)
+        let tmpDir = path.join(os.tmpdir(), `kwirth-sender-extract-${Date.now()}`)
+        fs.mkdirSync(tmpDir, { recursive: true })
+
+        const isLocalPath = tarGzUrl.startsWith('file://') || (!tarGzUrl.startsWith('http://') && !tarGzUrl.startsWith('https://'))
+
+        try {
+            if (isLocalPath) {
+                const localPath = tarGzUrl.startsWith('file://') ? new URL(tarGzUrl).pathname.replace(/^\/([A-Za-z]:)/, '$1') : tarGzUrl
+                fs.copyFileSync(localPath, tmpTgz)
+            } else {
+                await this.downloadFile(tarGzUrl, tmpTgz)
+            }
+            await tar.x({ file: tmpTgz, cwd: tmpDir })
+
+            let metaPath = path.join(tmpDir, 'package.json')
+            let backPath = path.join(tmpDir, 'back.js')
+
+            if (!fs.existsSync(metaPath) || !fs.existsSync(backPath)) {
+                tmpDir = path.join(tmpDir, 'package')
+                metaPath = path.join(tmpDir, 'package.json')
+                backPath = path.join(tmpDir, 'back.js')
+                if (!fs.existsSync(metaPath) || !fs.existsSync(backPath))
+                    throw new Error('Invalid sender bundle: missing package.json or back.js')
+            }
+
+            const meta: ISenderMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+
+            if (this.installedIds.includes(meta.id))
+                throw new Error(`Sender '${meta.id}' is already installed`)
+
+            meta.installedFrom = installedFrom ?? tarGzUrl
+            const backJs = fs.readFileSync(backPath, 'utf-8')
+
+            const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')
+            meta.backStored = backCompressed.length <= CONFIGMAP_SIZE_LIMIT
+            if (!meta.backStored)
+                logInfo(ELogComponent.CORE, `Sender '${meta.id}' back.js exceeds configmap limit — will fetch from source on startup`)
+
+            await this.configMaps.write(`kwirth-sender-${meta.id}-meta`, meta)
+            if (meta.backStored) await this.configMaps.write(`kwirth-sender-${meta.id}-back`, { code: backCompressed, compressed: true })
+
+            const index = (await this.configMaps.read('kwirth-senders-index', []) as ISenderMeta[]) || []
+            const existingIdx = index.findIndex(s => s.id === meta.id)
+            if (existingIdx >= 0) index[existingIdx] = meta
+            else index.push(meta)
+            await this.configMaps.write('kwirth-senders-index', index)
+            if (!this.installedIds.includes(meta.id)) this.installedIds.push(meta.id)
+
+            await this.loadBackSender(meta.id, backJs)
+            logInfo(ELogComponent.CORE, `Sender '${meta.id}' v${meta.version} installed`)
+            return meta
+        } finally {
+            fs.rmSync(tmpDir, { recursive: true, force: true })
+            if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz)
+        }
+    }
+
+    async installFromBuffer(buffer: Buffer): Promise<ISenderMeta> {
+        const tmpTgz = path.join(os.tmpdir(), `kwirth-sender-upload-${Date.now()}.tgz`)
+        fs.writeFileSync(tmpTgz, buffer)
+        try {
+            return await this.install(tmpTgz, 'local')
+        } finally {
+            if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz)
+        }
+    }
+
+    async uninstall(id: string): Promise<void> {
+        if (this.isDevSender(id)) throw new Error(`Sender '${id}' is a dev sender and cannot be uninstalled`)
+        this.instances.delete(id)
+        this.registeredSenders.delete(id)
+        this.installedIds = this.installedIds.filter(i => i !== id)
+
+        const index = (await this.configMaps.read('kwirth-senders-index', []) as ISenderMeta[]) || []
+        await this.configMaps.write('kwirth-senders-index', index.filter(s => s.id !== id))
+        await this.configMaps.write(`kwirth-sender-${id}-meta`, null)
+        await this.configMaps.write(`kwirth-sender-${id}-back`, null)
+
+        const cacheFile = path.join(os.tmpdir(), `kwirth-sender-${id}-back.js`)
+        if (fs.existsSync(cacheFile)) fs.rmSync(cacheFile)
+
+        logInfo(ELogComponent.CORE, `Sender '${id}' uninstalled`)
+    }
+
+    async listInstalled(): Promise<Array<ISenderMeta & { configNames: string[] }>> {
+        const stored = (await this.configMaps.read('kwirth-senders-index', [])) as ISenderMeta[] || []
+        const devMetas = Array.from(this.devSenders.entries()).map(([id, dev]) => {
+            try {
+                const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website }
+            } catch {
+                return dev.meta
+            }
+        })
+        return [...stored, ...devMetas].map(meta => ({
+            ...meta,
+            configNames: this.instances.get(meta.id)?.getConfigNames() ?? []
+        }))
+    }
+
+    private async fetchJsFromSource(meta: ISenderMeta): Promise<string | undefined> {
+        const cacheFile = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-back.js`)
+        if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
+        if (!meta.installedFrom || meta.installedFrom === 'local') {
+            logError(ELogComponent.CORE, `Sender '${meta.id}' back.js not stored and has no remote source`)
+            return undefined
+        }
+        const tmpTgz = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-src-${Date.now()}.tgz`)
+        const tmpDir = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-src-${Date.now()}`)
+        fs.mkdirSync(tmpDir, { recursive: true })
+        try {
+            await this.downloadFile(meta.installedFrom, tmpTgz)
+            await tar.x({ file: tmpTgz, cwd: tmpDir })
+            const content = fs.readFileSync(path.join(tmpDir, 'back.js'), 'utf-8')
+            fs.writeFileSync(cacheFile, content)
+            logInfo(ELogComponent.CORE, `Sender '${meta.id}' back.js fetched from source and cached`)
+            return content
+        } catch (err) {
+            logError(ELogComponent.CORE, `Sender '${meta.id}' failed to fetch back.js from source: ${err}`)
+            return undefined
+        } finally {
+            fs.rmSync(tmpDir, { recursive: true, force: true })
+            if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz)
+        }
+    }
+
+    // ── Config management ───────────────────────────────────────────────────────
+
     getSender(id: string): ISender | undefined {
         if (this.instances.has(id)) return this.instances.get(id)
         const Ctor = this.registeredSenders.get(id)
@@ -84,30 +338,68 @@ export class SenderManager implements ISenderAccess {
         return instance
     }
 
-    /**
-     * Registers a named config on a sender, creating the sender instance if needed.
-     */
-    addConfig(senderId: string, config: ISenderConfig): boolean {
+    private addConfigInternal(senderId: string, config: ISenderConfig): boolean {
         const sender = this.getSender(senderId)
         if (!sender) {
             logError(ELogComponent.CORE, `Sender '${senderId}' not found — cannot add config '${config.name}'`)
             return false
         }
         sender.addConfig(config)
+        if (!this.configStore.has(senderId)) this.configStore.set(senderId, new Map())
+        this.configStore.get(senderId)!.set(config.name, { ...config })
         logInfo(ELogComponent.CORE, `Sender '${senderId}' config '${config.name}' registered`)
         return true
+    }
+
+    private persistConfigs(): void {
+        const data: Record<string, ISenderConfig[]> = {}
+        for (const [id, configs] of this.configStore) {
+            if (!this.isDevSender(id)) data[id] = Array.from(configs.values())
+        }
+        this.configMaps.write('kwirth-sender-configs', data).catch((err: unknown) =>
+            logError(ELogComponent.CORE, `Failed to persist sender configs: ${err}`)
+        )
+    }
+
+    addConfig(senderId: string, config: ISenderConfig): boolean {
+        const ok = this.addConfigInternal(senderId, config)
+        if (ok) this.persistConfigs()
+        return ok
     }
 
     removeConfig(senderId: string, configName: string): boolean {
         const sender = this.instances.get(senderId)
         if (!sender) return false
         sender.removeConfig(configName)
+        this.configStore.get(senderId)?.delete(configName)
+        this.persistConfigs()
         return true
     }
 
-    /**
-     * Sends a message through a specific sender + named config.
-     */
+    getSchema(senderId: string): ISenderFieldDef[] {
+        const sender = this.getSender(senderId)
+        return sender?.getConfigSchema?.() ?? []
+    }
+
+    getConfigs(senderId: string): ISenderConfig[] {
+        return Array.from(this.configStore.get(senderId)?.values() ?? [])
+    }
+
+    exportAll(): Record<string, ISenderConfig[]> {
+        const result: Record<string, ISenderConfig[]> = {}
+        for (const [id, configs] of this.configStore) {
+            result[id] = Array.from(configs.values())
+        }
+        return result
+    }
+
+    listSenders(): Array<{ id: string; configNames: string[] }> {
+        return Array.from(this.instances.entries()).map(([id, sender]) => ({
+            id,
+            configNames: sender.getConfigNames(),
+        }))
+    }
+
     async send(senderId: string, configName: string, message: ISenderMessage): Promise<void> {
         const sender = this.getSender(senderId)
         if (!sender) {
@@ -118,18 +410,11 @@ export class SenderManager implements ISenderAccess {
             logError(ELogComponent.CORE, `Sender '${senderId}' has no config '${configName}' — message dropped`)
             return
         }
-        await sender.send(configName, message)
-    }
-
-    listSenders(): Array<{ id: string; configNames: string[] }> {
-        return Array.from(this.instances.entries()).map(([id, sender]) => ({
-            id,
-            configNames: sender.getConfigNames(),
-        }))
-    }
-
-    getRegisteredIds(): string[] {
-        return Array.from(this.registeredSenders.keys())
+        try {
+            await sender.send(configName, message)
+        } catch (err) {
+            logError(ELogComponent.CORE, `Sender '${senderId}' send error: ${err}`)
+        }
     }
 
     async stopAll(): Promise<void> {
@@ -139,5 +424,28 @@ export class SenderManager implements ISenderAccess {
             }
         }
         this.instances.clear()
+    }
+
+    // ── Utilities ───────────────────────────────────────────────────────────────
+
+    private downloadFile(url: string, destPath: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const protocol = url.startsWith('https') ? https : http
+            const file = fs.createWriteStream(destPath)
+            protocol.get(url, { headers: { 'User-Agent': 'kwirth/1.0' } }, res => {
+                if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                    file.close()
+                    this.downloadFile(res.headers.location, destPath).then(resolve).catch(reject)
+                    return
+                }
+                if (res.statusCode && res.statusCode !== 200) {
+                    file.close()
+                    reject(new Error(`HTTP ${res.statusCode} downloading ${url}`))
+                    return
+                }
+                res.pipe(file)
+                file.on('finish', () => { file.close(); resolve() })
+            }).on('error', err => { file.close(); reject(err) })
+        })
     }
 }

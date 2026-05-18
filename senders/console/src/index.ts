@@ -1,4 +1,4 @@
-import { ISender, ISenderAccess, ISenderConfig, ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
+import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
@@ -64,6 +64,15 @@ export class ConsoleSender implements ISender {
         } else {
             console.log(line)
         }
+    }
+
+    getConfigSchema(): ISenderFieldDef[] {
+        return [
+            { name: 'name', label: 'Name', required: true },
+            { name: 'prefix', label: 'Prefix' },
+            { name: 'timestamps', label: 'Timestamps', type: 'boolean' },
+            { name: 'levels', label: 'Levels', type: 'boolean' },
+        ]
     }
 
     async startSender(_senders: ISenderAccess): Promise<void> {}

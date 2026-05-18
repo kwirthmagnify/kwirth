@@ -1,0 +1,35 @@
+[
+  {
+    "id": "console",
+    "name": "@kwirthmagnify/kwirth-sender-console",
+    "displayName": "Console Sender",
+    "version": "0.1.0",
+    "description": "Writes alert messages to stdout with configurable prefix, level tags and timestamps per named config.",
+    "url": "https://github.com/kwirthmagnify/kwirth/releases/download/senders-0.1.0/console-0.1.0.tgz"
+  },
+  {
+    "id": "file",
+    "name": "@kwirthmagnify/kwirth-sender-file",
+    "displayName": "File Sender",
+    "version": "0.1.0",
+    "description": "Appends alert messages to a log file with optional rotation, timestamps and level tags.",
+    "url": "https://github.com/kwirthmagnify/kwirth/releases/download/senders-0.1.0/file-0.1.0.tgz"
+  },
+  {
+    "id": "email-resend",
+    "name": "@kwirthmagnify/kwirth-sender-email-resend",
+    "displayName": "Email Sender (Resend)",
+    "version": "0.1.0",
+    "description": "Sends alert emails via the Resend API. Requires a Resend account and API key.",
+    "website": "https://resend.com",
+    "url": "https://github.com/kwirthmagnify/kwirth/releases/download/senders-0.1.0/email-resend-0.1.0.tgz"
+  },
+  {
+    "id": "email-smtp",
+    "name": "@kwirthmagnify/kwirth-sender-email-smtp",
+    "displayName": "Email Sender (SMTP)",
+    "version": "0.1.0",
+    "description": "Sends alert emails via SMTP. Supports TLS, STARTTLS and plain connections, with or without authentication.",
+    "url": "https://github.com/kwirthmagnify/kwirth/releases/download/senders-0.1.0/email-smtp-0.1.0.tgz"
+  }
+]

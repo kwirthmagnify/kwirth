@@ -65,6 +65,7 @@ import { PluginManager } from './tools/PluginManager'
 import { PluginApi } from './api/PluginApi'
 import { ProviderManager } from './tools/ProviderManager'
 import { ProviderApi } from './api/ProviderApi'
+import { SenderApi } from './api/SenderApi'
 import { SenderManager } from './tools/SenderManager'
 const fs = require('fs')
 
@@ -1218,6 +1219,10 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
             let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi)
             riRouter.use(`/providers`, providerApi.router)
         }
+        if (senderManager) {
+            let senderApi = new SenderApi(senderManager, apiKeyApi)
+            riRouter.use(`/senders`, senderApi.router)
+        }
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
 
@@ -1378,6 +1383,16 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             await pluginManager.init()
             await pluginManager.loadAll(registeredChannels)
             pluginManager.loadDevPlugins(registeredChannels)
+            pluginManager.onDevPluginReloaded = (id, ChannelClass) => {
+                for (const ri of runningInstances) {
+                    if (!ri.channels.has(id)) continue
+                    const newInstance = createChannelInstance(ChannelClass, ri.clusterInfo, ri.backChannelObject)
+                    if (newInstance) {
+                        ri.channels.set(id, newInstance)
+                        logInfo(ELogComponent.CORE, `[dev] Plugin '${id}' channel instance replaced in running instance`)
+                    }
+                }
+            }
         }
         for (const pluginId of [...pluginManager.getInstalledIds(), ...pluginManager.getDevIds()]) {
             if (!requiredChannels.includes(pluginId)) requiredChannels.push(pluginId)
@@ -1391,11 +1406,6 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             providerManager.loadDevProviders(registeredProviders)
         }
 
-        // sender plugins: load installed senders
-        if (!senderManager) {
-            senderManager = new SenderManager()
-            senderManager.loadDevSenders()
-        }
 
         logInfo(ELogComponent.CORE, 'Required channels:')
         for (let chanId of registeredChannels.keys()) {
@@ -1457,7 +1467,16 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
 const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstance:IRunningInstance) : Promise<void> => {
     try {
-        let backChannelObject: IBackChannelObject = {
+        if (!senderManager) {
+            senderManager = new SenderManager(runningInstance.configMaps)
+            await senderManager.init()
+            await senderManager.loadAll()
+            await senderManager.loadPersistedConfigs()
+            senderManager.loadDevSenders()
+            senderManager.loadDevSenderConfigs()
+        }
+
+    let backChannelObject: IBackChannelObject = {
             logInfo: (message: unknown) => logInfo(ELogComponent.CHANNEL, message),
             logTrace: (message: unknown) => logTrace(message),
             logWarning: (message: unknown) => logWarning(ELogComponent.CHANNEL, message),

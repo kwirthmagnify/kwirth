@@ -1,5 +1,4 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
-import { Request, Response } from 'express'
 import { IEchoInstanceConfig, IEchoMessageResponse } from '../front/EchoTypes'
 
 interface IAsset {
@@ -19,7 +18,7 @@ interface IInstance {
 
 class EchoChannel implements IChannel {
     readonly channelId = 'echo'
-    readonly requirements = { storage: false, providers: [] }
+    readonly requirements = { storage: false, providers: ['otel'] }
     clusterInfo: any
     backChannelObject: IBackChannelObject
     webSockets: { ws: WebSocket; lastRefresh: number; instances: IInstance[] }[] = []
@@ -45,8 +44,34 @@ class EchoChannel implements IChannel {
 
     getChannelScopeLevel = (scope: string): number => ['', 'none', 'cluster'].indexOf(scope)
 
-    startChannel = async () => {}
-    processProviderEvent(_providerId: string, _obj: unknown): void {}
+    startChannel = async () => {
+        const otelProvider = this.clusterInfo.providers?.find((p: any) => p.id === 'otel')
+        if (otelProvider) {
+            await otelProvider.addSubscriber(this, {
+                spaces: [{ name: 'echo', signals: ['traces', 'metrics', 'logs'] }]
+            })
+        }
+    }
+
+    processProviderEvent(_providerId: string, obj: any): void {
+        const event = obj?.last?.event
+        if (!event) return
+        for (const socket of this.webSockets) {
+            for (const instance of socket.instances) {
+                if (instance.paused) continue
+                const msg: IEchoMessageResponse = {
+                    msgtype: 'echomessageresponse',
+                    channel: 'echo',
+                    action: EInstanceMessageAction.NONE,
+                    flow: EInstanceMessageFlow.UNSOLICITED,
+                    type: EInstanceMessageType.DATA,
+                    instance: instance.instanceId,
+                    text: JSON.stringify(event)
+                }
+                socket.ws.send(JSON.stringify(msg))
+            }
+        }
+    }
     endpointRequest(_endpoint: string, _req: Request, _res: Response, _accessKey?: AccessKey): void {}
     websocketRequest(_newWebSocket: WebSocket, _instanceId: string, _instanceConfig: IInstanceConfig): void {}
 
@@ -74,6 +99,7 @@ class EchoChannel implements IChannel {
         if (!socket) {
             const len = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] })
             socket = this.webSockets[len - 1]
+            this.backChannelObject.senders?.send('email', 'default', { body: 'Echo started for instance '+instanceConfig.instance, subject: 'Info' })
         }
         let instance = socket.instances.find(i => i.instanceId === instanceConfig.instance)
         if (!instance) {
@@ -86,7 +112,7 @@ class EchoChannel implements IChannel {
             }
             socket.instances.push(instance)
 
-            // send senders only when adding first object
+            // send senders list only when adding first object
             let senders = this.backChannelObject.senders?.listSenders()
             if (senders) {
                 for (let s of senders) {
@@ -94,6 +120,7 @@ class EchoChannel implements IChannel {
                 }
             }            
         }
+
         const asset: IAsset = { podNamespace, podName, containerName }
         asset.interval = setInterval(
             (ws: WebSocket, i: IInstance, a: IAsset) => this.sendData(ws, i, a),

@@ -1,4 +1,4 @@
-import { ISender, ISenderAccess, ISenderConfig, ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
+import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
 import fs from 'fs'
 import path from 'path'
 
@@ -81,6 +81,16 @@ export class FileSender implements ISender {
 
         fs.appendFileSync(resolved, line, 'utf-8')
         this.lineCounts.set(configName, (this.lineCounts.get(configName) ?? 0) + 1)
+    }
+
+    getConfigSchema(): ISenderFieldDef[] {
+        return [
+            { name: 'name', label: 'Name', required: true },
+            { name: 'filePath', label: 'File path', required: true },
+            { name: 'timestamps', label: 'Timestamps', type: 'boolean' },
+            { name: 'levels', label: 'Levels', type: 'boolean' },
+            { name: 'maxLines', label: 'Max lines', type: 'number' },
+        ]
     }
 
     async startSender(_senders: ISenderAccess): Promise<void> {}
