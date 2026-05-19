@@ -46,6 +46,12 @@
     .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--border); }
     .nav-links a.magnify-link { color: var(--orange); }
     .nav-links a.magnify-link:hover { color: var(--orange2); background: rgba(245,130,10,.1); }
+    .nav-item { position: relative; }
+    .nav-item > a::after { content: ' ▾'; font-size: 0.65rem; opacity: .5; }
+    .nav-dropdown { display: none; position: absolute; top: calc(100% + 8px); left: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; min-width: 200px; z-index: 300; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
+    .nav-item:hover .nav-dropdown { display: flex; flex-direction: column; gap: 1px; }
+    .nav-dropdown a { display: block !important; padding: 6px 10px !important; border-radius: 5px; color: var(--muted) !important; font-size: 0.82rem; white-space: nowrap; background: transparent !important; }
+    .nav-dropdown a:hover { color: var(--text) !important; background: var(--border) !important; }
     .nav-spacer { flex: 1; }
     .nav-gh { display: flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 0.875rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); transition: all .2s; }
     .nav-gh:hover { color: var(--text); border-color: var(--muted); }
@@ -201,13 +207,14 @@
     <span>kwirth</span>
   </a>
   <div class="nav-links">
-    <a href="getting-started.html">Getting Started</a>
-    <a href="plugins.html">Plugins</a>
-    <a href="providers.html">Providers</a>
-    <a href="senders.html">Senders</a>
+    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="#features">Features</a><a href="#install">Quick Install</a><a href="#architecture">Architecture</a><a href="#plugins">Plugins &amp; Senders</a><a href="#about">About</a></div></div>
+    <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
+    <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
+    <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
+    <div class="nav-item"><a href="senders.html">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
     <a href="documentation/">Documentation</a>
-    <a href="project.html">Project</a>
-    <a href="roadmap.html">Roadmap</a>
+    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
+    <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
   </div>
   <div class="nav-spacer"></div>
   <a class="nav-gh" href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">
