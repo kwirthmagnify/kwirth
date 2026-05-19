@@ -28,8 +28,8 @@
       --mono:      'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
     }
 
-    html { scroll-behavior: smooth; }
-    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.6; overflow-x: hidden; }
+    html { scroll-behavior: smooth; scroll-padding-top: 70px; overflow-x: clip; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.6; }
 
     /* NAV */
     nav {
@@ -39,14 +39,13 @@
       border-bottom: 1px solid var(--border);
     }
     .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-    .nav-logo svg { width: 32px; height: 32px; }
-    .nav-logo span { font-size: 1.2rem; font-weight: 700; color: var(--orange); letter-spacing: -0.3px; }
+    .nav-logo span { font-size: 1.1rem; font-weight: 700; color: var(--orange); line-height: 1; }
     .nav-links { display: flex; gap: 6px; margin-left: 36px; }
-    .nav-links a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; transition: all .2s; }
+    .nav-links a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; line-height: 1.7; transition: all .2s; }
     .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--border); }
     .nav-links a.magnify-link { color: var(--orange); }
     .nav-links a.magnify-link:hover { color: var(--orange2); background: rgba(245,130,10,.1); }
-    .nav-item { position: relative; }
+    .nav-item { position: relative; display: inline-flex; align-items: center; }
     .nav-item > a::after { content: ' ▾'; font-size: 0.65rem; opacity: .5; }
     .nav-dropdown { display: none; position: absolute; top: 100%; padding-top: 8px; left: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; min-width: 200px; z-index: 300; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
     .nav-item:hover .nav-dropdown { display: flex; flex-direction: column; gap: 1px; }
@@ -186,15 +185,42 @@
     .footer-bottom a { color: var(--muted); text-decoration: none; }
     .footer-bottom a:hover { color: var(--text); }
 
+    .nav-hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; background: none; border: 1px solid var(--border); cursor: pointer; padding: 5px 7px; border-radius: 6px; margin-left: auto; }
+    .nav-hamburger span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; transition: transform .25s, opacity .25s; }
+    .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+    .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .mobile-menu { display: none; position: fixed; top: 62px; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 99; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--border); }
+    .mobile-menu.open { display: block; }
+    .mobile-section { border-bottom: 1px solid var(--border); }
+    .mobile-section-head { display: block; padding: 15px 24px; color: var(--text); text-decoration: none; font-size: 0.95rem; font-weight: 600; }
+    .mobile-section-head.active { color: var(--orange); }
+    .mobile-sub { display: none; padding: 0 24px 14px 40px; flex-direction: column; }
+    .mobile-section.open .mobile-sub { display: flex; }
+    .mobile-sub a { padding: 6px 0; color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+    .mobile-section-head-row { display: flex; align-items: stretch; }
+    .mobile-section-head-row .mobile-section-head { flex: 1; }
+    .mobile-chevron { background: none; border: none; border-left: 1px solid var(--border); color: var(--muted); font-size: 0.8rem; padding: 0 18px; cursor: pointer; transition: transform .2s; flex-shrink: 0; }
+    .mobile-section.open .mobile-chevron { transform: rotate(-180deg); }
     @media (max-width: 768px) {
       nav { padding: 0 16px; }
-      .nav-links { display: none; }
+      .nav-links { display: none !important; }
+      .nav-spacer { display: none !important; }
+      .nav-hamburger { display: flex !important; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); margin-left: 0; }
+      .nav-gh { display: flex !important; margin-left: auto; margin-right: 54px; font-size: 0.8rem; padding: 4px 8px; }
+      .nav-gh svg { display: none; }
+      .btn-nav { display: none !important; }
       section { padding: 60px 20px; }
       .stats { flex-direction: column; }
       .stat { border-right: none; border-bottom: 1px solid var(--border); }
       .magnify-grid { grid-template-columns: 1fr; gap: 32px; }
       .download-grid { grid-template-columns: 1fr; }
       .footer-grid { grid-template-columns: 1fr 1fr; }
+      .about-grid { grid-template-columns: 1fr !important; gap: 32px !important; padding: 0 20px !important; }
+      .about-grid > div:last-child img { max-width: 180px; }
+      .plugins-cards { grid-template-columns: 1fr !important; }
+      body { overflow-x: clip; }
+      .code-block pre { white-space: pre-wrap; word-break: break-word; overflow-x: visible; }
     }
   </style>
 </head>
@@ -203,7 +229,7 @@
 <!-- NAVIGATION -->
 <nav>
   <a class="nav-logo" href="/">
-    <img src="_media/favicon.ico" width="24px"/>
+    <img src="_media/favicon.ico" width="24" height="24" style="display:block"/>
     <span>kwirth</span>
   </a>
   <div class="nav-links">
@@ -212,9 +238,9 @@
     <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
     <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
     <div class="nav-item"><a href="senders.html">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
-    <a href="documentation/">Documentation</a>
     <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
     <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
+    <a href="documentation/">Documentation</a>
   </div>
   <div class="nav-spacer"></div>
   <a class="nav-gh" href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">
@@ -222,7 +248,9 @@
     GitHub
   </a>
   <a class="btn-nav" href="getting-started.html">Get Started</a>
+  <button class="nav-hamburger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<div class="mobile-menu" id="mobile-menu"></div>
 
 <!-- HERO -->
 <section class="hero">
@@ -493,7 +521,7 @@
   <h2 class="section-title">Extend with Plugins, Providers &amp; Senders</h2>
   <p class="section-sub">Three independent subsystems let you add new capabilities without modifying core. All are hot-reloadable — no pod restart needed.</p>
 
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:40px;">
+  <div class="plugins-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:40px;">
     <a href="plugins.html" style="text-decoration:none;">
       <div class="feature-card" style="height:100%;">
         <div class="feature-icon">&#x1F9E9;</div>
@@ -567,7 +595,7 @@
 
 <!-- ABOUT -->
 <section id="about" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:80px 0;">
-  <div style="max-width:1200px;margin:0 auto;padding:0 40px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;">
+  <div class="about-grid" style="max-width:1200px;margin:0 auto;padding:0 40px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;">
     <div>
       <div style="display:inline-block;background:rgba(245,130,10,.1);border:1px solid rgba(245,130,10,.25);color:var(--orange);padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;">About</div>
       <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;margin-bottom:20px;letter-spacing:-0.5px;">The story behind Kwirth</h2>
@@ -659,6 +687,31 @@
       a.classList.toggle('active', a.getAttribute('href') === '#' + current)
     })
   })
+</script>
+<script>
+;(function(){
+  var btn=document.querySelector('.nav-hamburger'),menu=document.getElementById('mobile-menu')
+  document.querySelector('.nav-links').childNodes.forEach(function(n){
+    if(n.nodeType!==1)return
+    var sec=document.createElement('div');sec.className='mobile-section'
+    if(n.classList&&n.classList.contains('nav-item')){
+      var a=n.querySelector(':scope>a').cloneNode(true)
+      a.className='mobile-section-head'+(a.classList.contains('active')?' active':'')
+      var drops=n.querySelectorAll('.nav-dropdown a')
+      if(drops.length){
+        var row=document.createElement('div');row.className='mobile-section-head-row';row.appendChild(a)
+        var chev=document.createElement('button');chev.className='mobile-chevron';chev.setAttribute('aria-label','expand');chev.textContent='▾'
+        chev.addEventListener('click',function(e){e.stopPropagation();sec.classList.toggle('open')})
+        row.appendChild(chev);sec.appendChild(row)
+        var sub=document.createElement('div');sub.className='mobile-sub';drops.forEach(function(d){sub.appendChild(d.cloneNode(true))});sec.appendChild(sub)
+      }else{sec.appendChild(a)}
+    }else if(n.tagName==='A'){var cl=n.cloneNode(true);cl.className='mobile-section-head';sec.appendChild(cl)}
+    menu.appendChild(sec)
+  })
+  var ghS=document.createElement('div');ghS.className='mobile-section';var ghA=document.createElement('a');ghA.href='https://github.com/kwirthmagnify/kwirth';ghA.target='_blank';ghA.rel='noopener';ghA.className='mobile-section-head';ghA.textContent='★ GitHub';ghS.appendChild(ghA);menu.appendChild(ghS)
+  btn.addEventListener('click',function(){var o=btn.classList.toggle('open');menu.classList.toggle('open',o);btn.setAttribute('aria-expanded',o)})
+  menu.addEventListener('click',function(e){if(e.target.tagName==='A'){btn.classList.remove('open');menu.classList.remove('open');btn.setAttribute('aria-expanded','false')}})
+})()
 </script>
 </body>
 </html>

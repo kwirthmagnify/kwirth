@@ -7,6 +7,7 @@
   <link rel="icon" type="image/x-icon" href="_media/favicon.ico">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 70px; overflow-x: clip; }
     :root {
       --bg: #060a12; --bg2: #0d1420; --bg3: #111827; --card: #0f1929; --border: #1e2d40;
       --orange: #f5820a; --orange2: #ff9a2e; --teal: #2dd4bf; --blue: #58a6ff;
@@ -21,10 +22,10 @@
     .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .nav-logo span { font-size: 1.1rem; font-weight: 700; color: var(--orange); }
     .nav-spacer { flex: 1; }
-    .nav-links { display: flex; gap: 6px; margin-left: 28px; }
+    .nav-links { display: flex; gap: 6px; margin-left: 36px; }
     .nav-links a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; transition: all .2s; }
     .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--border); }
-    .nav-item { position: relative; }
+    .nav-item { position: relative; display: inline-flex; align-items: center; }
     .nav-item > a::after { content: ' ▾'; font-size: 0.65rem; opacity: .5; }
     .nav-dropdown { display: none; position: absolute; top: 100%; padding-top: 8px; left: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; min-width: 200px; z-index: 300; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
     .nav-item:hover .nav-dropdown { display: flex; flex-direction: column; gap: 1px; }
@@ -85,32 +86,63 @@
     .btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--text); text-decoration: none; padding: 11px 24px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; border: 1px solid var(--border); transition: all .2s; margin-left: 12px; }
     .btn-secondary:hover { border-color: var(--muted); }
 
-    @media (max-width: 640px) {
+    .nav-gh { display: flex; align-items: center; color: var(--muted); text-decoration: none; font-size: 0.875rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); transition: all .2s; }
+    .nav-gh:hover { color: var(--text); border-color: var(--muted); }
+    .nav-hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; background: none; border: 1px solid var(--border); cursor: pointer; padding: 5px 7px; border-radius: 6px; margin-left: auto; }
+    .nav-hamburger span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; transition: transform .25s, opacity .25s; }
+    .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+    .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .mobile-menu { display: none; position: fixed; top: 62px; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 99; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--border); }
+    .mobile-menu.open { display: block; }
+    .mobile-section { border-bottom: 1px solid var(--border); }
+    .mobile-section-head { display: block; padding: 15px 24px; color: var(--text); text-decoration: none; font-size: 0.95rem; font-weight: 600; }
+    .mobile-section-head.active { color: var(--orange); }
+    .mobile-sub { display: none; padding: 0 24px 14px 40px; flex-direction: column; }
+    .mobile-section.open .mobile-sub { display: flex; }
+    .mobile-sub a { padding: 6px 0; color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+    .mobile-section-head-row { display: flex; align-items: stretch; }
+    .mobile-section-head-row .mobile-section-head { flex: 1; }
+    .mobile-chevron { background: none; border: none; border-left: 1px solid var(--border); color: var(--muted); font-size: 0.8rem; padding: 0 18px; cursor: pointer; transition: transform .2s; flex-shrink: 0; }
+    .mobile-section.open .mobile-chevron { transform: rotate(-180deg); }
+    @media (max-width: 768px) {
       .container { padding: 80px 20px 60px; }
       nav { padding: 0 16px; }
-      .nav-links { display: none; }
+      .nav-links { display: none !important; }
+      .nav-spacer { display: none !important; }
+      .nav-hamburger { display: flex !important; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); margin-left: 0; }
+      .nav-gh { display: flex !important; margin-left: auto; margin-right: 54px; font-size: 0.8rem; padding: 4px 8px; }
+      .btn-nav { display: none !important; }
+      body { overflow-x: clip; }
+      .container { max-width: 100%; }
+      .code-block pre { white-space: pre-wrap; word-break: break-word; overflow-x: visible; }
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { width: max-content; min-width: 100%; }
+      h1 { font-size: 1.8rem; }
     }
   </style>
 </head>
 <body>
 <nav>
   <a class="nav-logo" href="/">
-    <img src="_media/favicon.ico" width="24px"/>
+    <img src="_media/favicon.ico" width="24" height="24" style="display:block"/>
     <span>kwirth</span>
   </a>
   <div class="nav-links">
-    <a href="/">Home</a>
+    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="/#features">Features</a><a href="/#install">Quick Install</a><a href="/#architecture">Architecture</a><a href="/#plugins">Plugins &amp; Senders</a><a href="/#about">About</a></div></div>
     <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
     <div class="nav-item"><a href="plugins.html" class="active">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
     <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
     <div class="nav-item"><a href="senders.html">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
-    <a href="documentation/">Documentation</a>
     <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Tech Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
     <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
+    <a href="documentation/">Documentation</a>
   </div>
   <div class="nav-spacer"></div>
-  <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;font-size:0.875rem;padding:6px 12px;border:1px solid var(--border);border-radius:6px;">GitHub</a>
+  <a class="nav-gh" href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">GitHub</a>
+  <button class="nav-hamburger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<div class="mobile-menu" id="mobile-menu"></div>
 
 <div class="container">
   <a class="btn-back" href="/">&#8592; Back to home</a>
@@ -212,6 +244,31 @@ window.__kwirth_plugins__['my-plugin'] = MyPluginPanel
     <a class="btn-secondary" href="https://github.com/kwirthmagnify/kwirth/tree/master/plugins/echo" target="_blank" rel="noopener">Echo plugin source</a>
   </div>
 </div>
-<script>document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')})</script>
+<script>
+document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')})
+;(function(){
+  var btn=document.querySelector('.nav-hamburger'),menu=document.getElementById('mobile-menu')
+  document.querySelector('.nav-links').childNodes.forEach(function(n){
+    if(n.nodeType!==1)return
+    var sec=document.createElement('div');sec.className='mobile-section'
+    if(n.classList&&n.classList.contains('nav-item')){
+      var a=n.querySelector(':scope>a').cloneNode(true)
+      a.className='mobile-section-head'+(a.classList.contains('active')?' active':'')
+      var drops=n.querySelectorAll('.nav-dropdown a')
+      if(drops.length){
+        var row=document.createElement('div');row.className='mobile-section-head-row';row.appendChild(a)
+        var chev=document.createElement('button');chev.className='mobile-chevron';chev.setAttribute('aria-label','expand');chev.textContent='▾'
+        chev.addEventListener('click',function(e){e.stopPropagation();sec.classList.toggle('open')})
+        row.appendChild(chev);sec.appendChild(row)
+        var sub=document.createElement('div');sub.className='mobile-sub';drops.forEach(function(d){sub.appendChild(d.cloneNode(true))});sec.appendChild(sub)
+      }else{sec.appendChild(a)}
+    }else if(n.tagName==='A'){var cl=n.cloneNode(true);cl.className='mobile-section-head';sec.appendChild(cl)}
+    menu.appendChild(sec)
+  })
+  var ghS=document.createElement('div');ghS.className='mobile-section';var ghA=document.createElement('a');ghA.href='https://github.com/kwirthmagnify/kwirth';ghA.target='_blank';ghA.rel='noopener';ghA.className='mobile-section-head';ghA.textContent='★ GitHub';ghS.appendChild(ghA);menu.appendChild(ghS)
+  btn.addEventListener('click',function(){var o=btn.classList.toggle('open');menu.classList.toggle('open',o);btn.setAttribute('aria-expanded',o)})
+  menu.addEventListener('click',function(e){if(e.target.tagName==='A'){btn.classList.remove('open');menu.classList.remove('open');btn.setAttribute('aria-expanded','false')}})
+})()
+</script>
 </body>
 </html>
