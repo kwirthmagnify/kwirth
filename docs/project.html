@@ -22,7 +22,7 @@
     .nav-spacer { flex: 1; }
     .nav-links { display: flex; gap: 6px; margin-left: 28px; }
     .nav-links a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; transition: all .2s; }
-    .nav-links a:hover { color: var(--text); background: var(--border); }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--border); }
     .container { max-width: 900px; margin: 0 auto; padding: 100px 40px 80px; }
     h1 { font-size: 2.4rem; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.5px; }
     .lead { color: var(--muted); font-size: 1.1rem; margin-bottom: 48px; max-width: 600px; }
@@ -53,17 +53,17 @@
 <body>
 <nav>
   <a class="nav-logo" href="/">
-    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-      <rect width="32" height="32" rx="8" fill="#f5820a" fill-opacity=".15"/>
-      <path d="M8 22L16 10l8 12" stroke="#f5820a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="16" cy="10" r="2.5" fill="#f5820a"/>
-    </svg>
+    <img src="_media/favicon.ico" width="24px"/>
     <span>kwirth</span>
   </a>
   <div class="nav-links">
     <a href="/">Home</a>
     <a href="getting-started.html">Getting Started</a>
+    <a href="plugins.html">Plugins</a>
+    <a href="providers.html">Providers</a>
+    <a href="senders.html">Senders</a>
     <a href="documentation/">Documentation</a>
+    <a href="project.html" class="active">Project</a>
     <a href="roadmap.html">Roadmap</a>
   </div>
   <div class="nav-spacer"></div>
