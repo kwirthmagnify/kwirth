@@ -25,7 +25,7 @@
     .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--border); }
     .nav-item { position: relative; }
     .nav-item > a::after { content: ' ▾'; font-size: 0.65rem; opacity: .5; }
-    .nav-dropdown { display: none; position: absolute; top: calc(100% + 8px); left: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; min-width: 200px; z-index: 300; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
+    .nav-dropdown { display: none; position: absolute; top: 100%; padding-top: 8px; left: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; min-width: 200px; z-index: 300; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
     .nav-item:hover .nav-dropdown { display: flex; flex-direction: column; gap: 1px; }
     .nav-dropdown a { display: block !important; padding: 6px 10px !important; border-radius: 5px; color: var(--muted) !important; font-size: 0.82rem; white-space: nowrap; background: transparent !important; }
     .nav-dropdown a:hover { color: var(--text) !important; background: var(--border) !important; }
