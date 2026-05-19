@@ -24,6 +24,12 @@
     .nav-links { display: flex; gap: 6px; margin-left: 28px; }
     .nav-links a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; transition: all .2s; }
     .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--border); }
+    .nav-item { position: relative; }
+    .nav-item > a::after { content: ' ▾'; font-size: 0.65rem; opacity: .5; }
+    .nav-dropdown { display: none; position: absolute; top: calc(100% + 8px); left: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; min-width: 200px; z-index: 300; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
+    .nav-item:hover .nav-dropdown { display: flex; flex-direction: column; gap: 1px; }
+    .nav-dropdown a { display: block !important; padding: 6px 10px !important; border-radius: 5px; color: var(--muted) !important; font-size: 0.82rem; white-space: nowrap; background: transparent !important; }
+    .nav-dropdown a:hover { color: var(--text) !important; background: var(--border) !important; }
 
     .container { max-width: 1000px; margin: 0 auto; padding: 100px 40px 80px; }
     .btn-back { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 0.875rem; margin-bottom: 32px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
@@ -61,12 +67,21 @@
     /* Category label */
     .cat-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 40px 0 16px; }
 
-    /* ARCH */
-    .arch-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; margin-top: 24px; font-family: var(--mono); font-size: 0.85rem; line-height: 1.9; color: var(--muted); overflow-x: auto; white-space: pre; }
-    .arch-box pre { white-space: pre; background: transparent; border: none; padding: 0; margin: 0; font-size: inherit; line-height: inherit; color: inherit; }
-    .arch-box .hl { color: var(--purple); }
-    .arch-box .hl2 { color: var(--orange); }
-    .arch-box .hl3 { color: var(--blue); }
+    /* ARCH DIAGRAM */
+    .arch-diagram { margin-top: 24px; display: flex; flex-direction: column; align-items: flex-start; gap: 0; font-family: var(--mono); font-size: 0.875rem; }
+    .arch-caller { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; color: var(--text); font-weight: 600; }
+    .arch-call-label { margin: 4px 0 4px 24px; color: var(--muted); font-size: 0.8rem; }
+    .arch-arrow { margin-left: 12px; color: var(--purple); font-size: 1.2rem; line-height: 1; margin-bottom: 4px; }
+    .arch-manager { background: var(--bg2); border: 1px solid var(--purple); border-radius: 10px; overflow: hidden; width: 100%; max-width: 580px; }
+    .arch-manager-title { background: rgba(163,113,247,.12); padding: 8px 16px; color: var(--purple); font-weight: 700; font-size: 0.85rem; border-bottom: 1px solid rgba(163,113,247,.25); }
+    .arch-rows { display: flex; flex-direction: column; }
+    .arch-row { display: flex; align-items: center; gap: 0; padding: 7px 16px; border-bottom: 1px solid var(--border); }
+    .arch-row:last-child { border-bottom: none; }
+    .arch-row.routing .arch-id { color: var(--orange); }
+    .arch-id { color: var(--purple); min-width: 100px; font-weight: 600; }
+    .arch-sep { color: var(--muted); margin: 0 12px; flex-shrink: 0; }
+    .arch-dest { color: var(--muted); }
+    .hl2 { color: var(--orange); }
 
     /* INTERFACE */
     .iface-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
@@ -102,12 +117,13 @@
   </a>
   <div class="nav-links">
     <a href="/">Home</a>
-    <a href="getting-started.html">Getting Started</a>
-    <a href="plugins.html">Plugins</a>
-    <a href="providers.html">Providers</a>
-    <a href="senders.html" class="active">Senders</a>
+    <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
+    <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
+    <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
+    <div class="nav-item"><a href="senders.html" class="active">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
     <a href="documentation/">Documentation</a>
-    <a href="roadmap.html">Roadmap</a>
+    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
+    <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
   </div>
   <div class="nav-spacer"></div>
   <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;font-size:0.875rem;padding:6px 12px;border:1px solid var(--border);border-radius:6px;">GitHub</a>
@@ -126,20 +142,22 @@
   <p>Senders are <strong>fire-and-forget output adapters</strong> that sit alongside the channel and provider subsystems. Any channel or provider calls <code>senders.send(id, configName, message)</code> and the sender subsystem takes care of delivery.</p>
   <p>Each sender can hold <strong>multiple named configurations</strong>, so a single <code>email-smtp</code> sender can deliver to several different inboxes simultaneously, each identified by a config name. Senders are installed and configured from the <strong>Manage Senders</strong> dialog in the Kwirth UI without writing any code.</p>
 
-  <div class="arch-box">
-Channel / Provider
-       │  senders.send(<span class="hl2">'email-smtp'</span>, <span class="hl2">'alerts'</span>, { body: '...' })
-       ▼
-  <span class="hl">SenderManager</span>
-  ┌──────────────────────────────────────────────────────────┐
-  │  <span class="hl2">console</span>    ──►  stdout / stderr                         │
-  │  <span class="hl2">file</span>       ──►  rotating log file                       │
-  │  <span class="hl2">email-smtp</span> ──►  SMTP inbox                              │
-  │  <span class="hl2">tee</span>        ──►  fans out to multiple senders             │
-  │  <span class="hl2">regex</span>      ──►  routes/drops based on pattern rules      │
-  │  <span class="hl2">composite</span>  ──►  full visual routing pipeline             │
-  │  <span class="hl2">timed</span>      ──►  time-window gating (business hours, etc) │
-  └──────────────────────────────────────────────────────────┘
+  <div class="arch-diagram">
+    <div class="arch-caller">Channel / Provider</div>
+    <div class="arch-call-label">senders.send(<span class="hl2">'email-smtp'</span>, <span class="hl2">'alerts'</span>, { body: '...' })</div>
+    <div class="arch-arrow">▼</div>
+    <div class="arch-manager">
+      <div class="arch-manager-title">SenderManager</div>
+      <div class="arch-rows">
+        <div class="arch-row"><span class="arch-id">console</span><span class="arch-sep">→</span><span class="arch-dest">stdout / stderr</span></div>
+        <div class="arch-row"><span class="arch-id">file</span><span class="arch-sep">→</span><span class="arch-dest">rotating log file</span></div>
+        <div class="arch-row"><span class="arch-id">email-smtp</span><span class="arch-sep">→</span><span class="arch-dest">SMTP inbox</span></div>
+        <div class="arch-row routing"><span class="arch-id">tee</span><span class="arch-sep">→</span><span class="arch-dest">fans out to multiple senders</span></div>
+        <div class="arch-row routing"><span class="arch-id">regex</span><span class="arch-sep">→</span><span class="arch-dest">routes / drops based on pattern rules</span></div>
+        <div class="arch-row routing"><span class="arch-id">composite</span><span class="arch-sep">→</span><span class="arch-dest">full visual routing pipeline</span></div>
+        <div class="arch-row routing"><span class="arch-id">timed</span><span class="arch-sep">→</span><span class="arch-dest">time-window gating (business hours, etc.)</span></div>
+      </div>
+    </div>
   </div>
 
   <h2>Built-in senders</h2>
@@ -266,5 +284,6 @@ export default SlackSender</pre></div>
     <a class="btn-secondary" href="https://github.com/kwirthmagnify/kwirth/tree/master/senders" target="_blank" rel="noopener">Browse sender sources</a>
   </div>
 </div>
+<script>document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')})</script>
 </body>
 </html>
