@@ -1,0 +1,20 @@
+{
+    "id": "timed",
+    "name": "@kwirthmagnify/kwirth-sender-timed",
+    "publisher": "@kwirthmagnify",
+    "version": "0.1.0",
+    "displayName": "Timed Sender",
+    "description": "Timed sender for Kwirth — routes or drops messages based on time-of-day windows and day-of-week rules",
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs"
+    },
+    "dependencies": {
+        "@kwirthmagnify/kwirth-common-back": "^0.5.6"
+    },
+    "devDependencies": {
+        "@types/node": "^20.12.13",
+        "esbuild": "^0.27.2",
+        "typescript": "^5.4.0"
+    }
+}

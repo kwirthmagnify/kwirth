@@ -4,7 +4,7 @@ import {
     DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch,
     TextField, Tooltip, Typography
 } from '@mui/material'
-import { Add, CheckCircle, Delete, Download, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send } from '@mui/icons-material'
+import { Add, CheckCircle, Delete, Download, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 
@@ -18,6 +18,7 @@ interface ISenderFieldDef {
     type?: 'text' | 'number' | 'boolean' | 'password' | 'select'
     required?: boolean
     options?: string[]
+    labels?: string[]
 }
 
 interface ISenderManifestEntry {
@@ -39,6 +40,7 @@ interface IInstalledSender {
     website?: string
     installedFrom?: string
     configNames: string[]
+    hasFront?: boolean
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,6 +75,9 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     const [formValues, setFormValues] = useState<ConfigValues>({})
     const [saving, setSaving] = useState(false)
 
+    // Dynamic sender front loading
+    const [frontLoaded, setFrontLoaded] = useState<Record<string, boolean>>({})
+
     const fileInputRef = useRef<HTMLInputElement>(null)
     const senderFileInputRef = useRef<HTMLInputElement>(null)
     const configImportFileRef = useRef<HTMLInputElement>(null)
@@ -81,6 +86,22 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         loadInstalled()
         fetchManifest()
     }, [])
+
+    // Load dynamic sender front when a sender with hasFront is expanded
+    useEffect(() => {
+        if (!expandedId) return
+        const sender = installed.find(s => s.id === expandedId)
+        if (!sender?.hasFront) return
+        if (window.__kwirth_senders__?.[expandedId]) {
+            setFrontLoaded(prev => ({ ...prev, [expandedId]: true }))
+            return
+        }
+        const script = document.createElement('script')
+        script.src = `${backendUrl}/senders/${expandedId}/front`
+        script.onload = () => setFrontLoaded(prev => ({ ...prev, [expandedId]: true }))
+        script.onerror = () => setError(`Failed to load UI for sender "${expandedId}"`)
+        document.head.appendChild(script)
+    }, [expandedId, installed])
 
     const loadInstalled = async () => {
         try {
@@ -110,6 +131,11 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         setExpandedId(id)
         setShowAddForm(false)
         setFormValues({})
+
+        // Senders with a custom front handle their own config UI
+        const sender = installed.find(s => s.id === id)
+        if (sender?.hasFront) return
+
         setSchema([])
         setLoadingConfigs(true)
         try {
@@ -315,11 +341,13 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
     const renderField = (f: ISenderFieldDef) => {
         const value = formValues[f.name] ?? (f.type === 'boolean' ? false : '')
+
         if (f.type === 'boolean') return (
             <FormControlLabel key={f.name}
                 control={<Switch size='small' checked={!!value} onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.checked }))} />}
                 label={<Typography variant='body2'>{f.label}</Typography>} />
         )
+
         if (f.type === 'select' && f.options) return (
             <Box key={f.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant='body2' sx={{ minWidth: 90 }}>{f.label}{f.required ? ' *' : ''}</Typography>
@@ -327,10 +355,43 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                     onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))}
                     sx={{ minWidth: 130 }}>
                     <MenuItem value=''><em>—</em></MenuItem>
-                    {f.options.map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}
+                    {f.options.map((o, i) => <MenuItem key={o} value={o}>{f.labels?.[i] ?? o}</MenuItem>)}
                 </Select>
             </Box>
         )
+
+        if (f.name.endsWith('SenderId')) return (
+            <Box key={f.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant='body2' sx={{ minWidth: 90 }}>{f.label}{f.required ? ' *' : ''}</Typography>
+                <Select size='small' value={value || ''} displayEmpty
+                    onChange={e => {
+                        const senderIdField = f.name
+                        const configField = senderIdField.replace(/SenderId$/, 'ConfigName')
+                        setFormValues(prev => ({ ...prev, [senderIdField]: e.target.value, [configField]: '' }))
+                    }}
+                    sx={{ minWidth: 160 }}>
+                    <MenuItem value=''><em>—</em></MenuItem>
+                    {installed.map(s => <MenuItem key={s.id} value={s.id}>{s.displayName || s.id}</MenuItem>)}
+                </Select>
+            </Box>
+        )
+
+        if (f.name.endsWith('ConfigName')) {
+            const linkedSenderId = formValues[f.name.replace(/ConfigName$/, 'SenderId')] as string | undefined
+            const configNames = installed.find(s => s.id === linkedSenderId)?.configNames ?? []
+            return (
+                <Box key={f.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant='body2' sx={{ minWidth: 90 }}>{f.label}{f.required ? ' *' : ''}</Typography>
+                    <Select size='small' value={value || ''} displayEmpty disabled={!linkedSenderId}
+                        onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))}
+                        sx={{ minWidth: 160 }}>
+                        <MenuItem value=''><em>—</em></MenuItem>
+                        {configNames.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                    </Select>
+                </Box>
+            )
+        }
+
         return (
             <TextField key={f.name} size='small'
                 label={`${f.label}${f.required ? ' *' : ''}`}
@@ -368,7 +429,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                 <Stack direction='row' spacing={0.5}>
                     <Tooltip title='Configure'>
                         <IconButton size='small' color='primary' onClick={() => expandSender(sender.id)}>
-                            <Add fontSize='small' />
+                            <Settings fontSize='small' />
                         </IconButton>
                     </Tooltip>
                     <Tooltip title={sender.installedFrom === 'dev' ? 'Dev senders cannot be uninstalled' : 'Uninstall'}>
@@ -384,6 +445,9 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     )
 
     // ─── Render ───────────────────────────────────────────────────────────────
+
+    const expandedSender = installed.find(s => s.id === expandedId)
+    const CustomFront = expandedSender?.hasFront ? window.__kwirth_senders__?.[expandedId!] : undefined
 
     return (
         <>
@@ -498,7 +562,16 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                 <Button onClick={props.onClose}>Close</Button>
             </DialogActions>
         </Dialog>
-        {expandedId && (
+
+        {/* Custom sender front (composite, timed, etc.) */}
+        {expandedId && expandedSender?.hasFront && (
+            frontLoaded[expandedId] && CustomFront
+                ? <CustomFront onClose={() => setExpandedId(undefined)} backendUrl={backendUrl} accessString={accessString} />
+                : null
+        )}
+
+        {/* Generic config dialog for senders without a custom front */}
+        {expandedId && !expandedSender?.hasFront && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '560px' } }}>
                 <DialogTitle>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
                 <DialogContent>

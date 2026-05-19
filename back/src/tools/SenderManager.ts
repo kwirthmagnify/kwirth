@@ -18,6 +18,7 @@ export interface ISenderMeta {
     website?: string
     installedFrom?: string
     backStored?: boolean
+    frontStored?: boolean
 }
 
 export { ISenderConfig, ISenderMessage }
@@ -37,6 +38,7 @@ export class SenderManager implements ISenderAccess {
     private devWatchers = new Map<string, fs.FSWatcher>()
     private configStore = new Map<string, Map<string, ISenderConfig>>()
     private installedIds: string[] = []
+    private installedMetas = new Map<string, ISenderMeta>()
 
     constructor(configMaps: IConfigMaps) {
         this.configMaps = configMaps
@@ -45,6 +47,7 @@ export class SenderManager implements ISenderAccess {
     async init(): Promise<void> {
         const index = (await this.configMaps.read('kwirth-senders-index', [])) as ISenderMeta[]
         this.installedIds = (index || []).map(s => s.id)
+        for (const meta of (index || [])) this.installedMetas.set(meta.id, meta)
     }
 
     getInstalledIds(): string[] {
@@ -57,6 +60,51 @@ export class SenderManager implements ISenderAccess {
 
     isDevSender(id: string): boolean {
         return this.devSenders.has(id)
+    }
+
+    hasFront(id: string): boolean {
+        const dev = this.devSenders.get(id)
+        if (dev) return fs.existsSync(path.join(dev.distPath, 'front.js'))
+        // installed sender: check stored front flag
+        const meta = this.getInstalledMeta(id)
+        return meta?.frontStored === true || meta?.frontStored === false  // frontStored present means front exists
+    }
+
+    async getFrontJs(id: string): Promise<string | undefined> {
+        const dev = this.devSenders.get(id)
+        if (dev) {
+            try { return fs.readFileSync(path.join(dev.distPath, 'front.js'), 'utf-8') } catch { return undefined }
+        }
+        // installed sender
+        const metaData = await this.configMaps.read(`kwirth-sender-${id}-meta`) as ISenderMeta | null
+        if (!metaData) return undefined
+        if (metaData.frontStored === false) return this.fetchFrontJsFromSource(metaData)
+        const data = await this.configMaps.read(`kwirth-sender-${id}-front`)
+        if (!data?.code) return undefined
+        return data.compressed ? zlib.gunzipSync(Buffer.from(data.code, 'base64')).toString('utf-8') : data.code
+    }
+
+    private getInstalledMeta(id: string): ISenderMeta | undefined {
+        return this.installedMetas.get(id)
+    }
+
+    private async fetchFrontJsFromSource(meta: ISenderMeta): Promise<string | undefined> {
+        const cacheFile = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-front.js`)
+        if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
+        if (!meta.installedFrom || meta.installedFrom === 'local') return undefined
+        const tmpTgz = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-frontsrc-${Date.now()}.tgz`)
+        const tmpDir = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-frontsrc-${Date.now()}`)
+        fs.mkdirSync(tmpDir, { recursive: true })
+        try {
+            await this.downloadFile(meta.installedFrom, tmpTgz)
+            await (await import('tar')).x({ file: tmpTgz, cwd: tmpDir })
+            const content = fs.readFileSync(path.join(tmpDir, 'front.js'), 'utf-8')
+            fs.writeFileSync(cacheFile, content)
+            return content
+        } catch { return undefined } finally {
+            fs.rmSync(tmpDir, { recursive: true, force: true })
+            if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz)
+        }
     }
 
     // ── Dev loading ─────────────────────────────────────────────────────────────
@@ -238,6 +286,17 @@ export class SenderManager implements ISenderAccess {
             if (!meta.backStored)
                 logInfo(ELogComponent.CORE, `Sender '${meta.id}' back.js exceeds configmap limit — will fetch from source on startup`)
 
+            // optional front.js
+            const frontPath = path.join(tmpDir, 'front.js')
+            if (fs.existsSync(frontPath)) {
+                const frontJs = fs.readFileSync(frontPath, 'utf-8')
+                const frontCompressed = zlib.gzipSync(Buffer.from(frontJs, 'utf-8')).toString('base64')
+                meta.frontStored = frontCompressed.length <= CONFIGMAP_SIZE_LIMIT
+                if (!meta.frontStored)
+                    logInfo(ELogComponent.CORE, `Sender '${meta.id}' front.js exceeds configmap limit — will fetch from source on request`)
+                if (meta.frontStored) await this.configMaps.write(`kwirth-sender-${meta.id}-front`, { code: frontCompressed, compressed: true })
+            }
+
             await this.configMaps.write(`kwirth-sender-${meta.id}-meta`, meta)
             if (meta.backStored) await this.configMaps.write(`kwirth-sender-${meta.id}-back`, { code: backCompressed, compressed: true })
 
@@ -247,6 +306,7 @@ export class SenderManager implements ISenderAccess {
             else index.push(meta)
             await this.configMaps.write('kwirth-senders-index', index)
             if (!this.installedIds.includes(meta.id)) this.installedIds.push(meta.id)
+            this.installedMetas.set(meta.id, meta)
 
             await this.loadBackSender(meta.id, backJs)
             logInfo(ELogComponent.CORE, `Sender '${meta.id}' v${meta.version} installed`)
@@ -277,9 +337,13 @@ export class SenderManager implements ISenderAccess {
         await this.configMaps.write('kwirth-senders-index', index.filter(s => s.id !== id))
         await this.configMaps.write(`kwirth-sender-${id}-meta`, null)
         await this.configMaps.write(`kwirth-sender-${id}-back`, null)
+        await this.configMaps.write(`kwirth-sender-${id}-front`, null)
+        this.installedMetas.delete(id)
 
-        const cacheFile = path.join(os.tmpdir(), `kwirth-sender-${id}-back.js`)
-        if (fs.existsSync(cacheFile)) fs.rmSync(cacheFile)
+        for (const suffix of ['back.js', 'front.js']) {
+            const cacheFile = path.join(os.tmpdir(), `kwirth-sender-${id}-${suffix}`)
+            if (fs.existsSync(cacheFile)) fs.rmSync(cacheFile)
+        }
 
         logInfo(ELogComponent.CORE, `Sender '${id}' uninstalled`)
     }
@@ -296,7 +360,8 @@ export class SenderManager implements ISenderAccess {
         })
         return [...stored, ...devMetas].map(meta => ({
             ...meta,
-            configNames: this.instances.get(meta.id)?.getConfigNames() ?? []
+            configNames: this.instances.get(meta.id)?.getConfigNames() ?? [],
+            hasFront: this.hasFront(meta.id),
         }))
     }
 

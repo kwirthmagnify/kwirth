@@ -12,7 +12,11 @@
     "console": "../senders/console/dist",
     "file": "../senders/file/dist",
     "email-resend": "../senders/email-resend/dist",
-    "email-smtp": "../senders/email-smtp/dist"
+    "email-smtp": "../senders/email-smtp/dist",
+    "tee": "../senders/tee/dist",
+    "regex": "../senders/regex/dist",
+    "composite": "../senders/composite/dist",
+    "timed": "../senders/timed/dist"
   },
   "senderConfigs": {
     "email-resend": [

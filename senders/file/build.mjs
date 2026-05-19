@@ -5,7 +5,7 @@ import path from 'path'
 fs.mkdirSync('dist', { recursive: true })
 
 await esbuild.build({
-    entryPoints: ['src/index.ts'],
+    entryPoints: ['src/back/index.ts'],
     bundle: true,
     format: 'cjs',
     platform: 'node',

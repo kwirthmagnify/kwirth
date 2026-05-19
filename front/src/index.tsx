@@ -13,10 +13,12 @@ declare global {
     interface Window {
         __kwirth__: { React: typeof React; MUI: { material: typeof MUIMaterial; icons: typeof MUIIcons }; kwirthCommon: typeof kwirthCommon }
         __kwirth_plugins__: Record<string, any>
+        __kwirth_senders__: Record<string, React.ComponentType<any>>
     }
 }
 window.__kwirth__ = { React, MUI: { material: MUIMaterial, icons: MUIIcons }, kwirthCommon }
 window.__kwirth_plugins__ = {}
+window.__kwirth_senders__ = {}
 
 //const isElectron = true
 const isElectron = navigator.userAgent.toLowerCase().indexOf(' electron/') >= 0

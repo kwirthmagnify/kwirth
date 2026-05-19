@@ -1,0 +1,141 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: otel-dotnet-test
+  namespace: default
+  labels:
+    app: otel-dotnet-test
+spec:
+  containers:
+    - name: otel-dotnet-test
+      image: mcr.microsoft.com/dotnet/sdk:8.0
+      command: [sh, -c]
+      args:
+        - |
+          mkdir -p /app
+
+          cat > /app/OtelSim.csproj << 'CSPROJ'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net8.0</TargetFramework>
+              <Nullable>enable</Nullable>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <LangVersion>latest</LangVersion>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0" />
+            </ItemGroup>
+          </Project>
+          CSPROJ
+
+          cat > /app/Program.cs << 'CSHARP'
+          using Microsoft.Extensions.Logging;
+          using OpenTelemetry;
+          using OpenTelemetry.Logs;
+          using OpenTelemetry.Metrics;
+          using OpenTelemetry.Resources;
+          using OpenTelemetry.Trace;
+          using System.Diagnostics;
+          using System.Diagnostics.Metrics;
+
+          var endpoint    = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:3883/otlp";
+          var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "otel-dotnet-test";
+
+          var resource = ResourceBuilder.CreateDefault().AddService(serviceName, serviceVersion: "1.0.0");
+
+          using var tracerProvider = Sdk.CreateTracerProviderBuilder()
+              .SetResourceBuilder(resource)
+              .AddSource(serviceName)
+              .AddOtlpExporter(o => o.Endpoint = new Uri($"{endpoint}/v1/traces"))
+              .Build();
+
+          using var meterProvider = Sdk.CreateMeterProviderBuilder()
+              .SetResourceBuilder(resource)
+              .AddMeter(serviceName)
+              .AddOtlpExporter(o => o.Endpoint = new Uri($"{endpoint}/v1/metrics"))
+              .Build();
+
+          using var loggerFactory = LoggerFactory.Create(b => b
+              .SetMinimumLevel(LogLevel.Debug)
+              .AddOpenTelemetry(o => {
+                  o.SetResourceBuilder(resource);
+                  o.AddOtlpExporter(e => e.Endpoint = new Uri($"{endpoint}/v1/logs"));
+              }));
+
+          var logger      = loggerFactory.CreateLogger("OtelSimulator");
+          var activitySrc = new ActivitySource(serviceName);
+          var meter       = new Meter(serviceName, "1.0.0");
+
+          var requestCounter = meter.CreateCounter<long>("test.requests.total", description: "Total requests");
+          var latencyHisto   = meter.CreateHistogram<double>("test.request.duration", unit: "ms");
+          meter.CreateObservableGauge("test.active_users", () => new Random().Next(1, 51), description: "Active users");
+
+          string[] routes = ["/api/orders", "/api/users", "/api/products"];
+          var rnd         = new Random();
+          int iteration   = 0;
+
+          logger.LogInformation("otel-dotnet-test started, .NET {Version}", Environment.Version);
+
+          var cts = new CancellationTokenSource();
+          Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+
+          while (!cts.IsCancellationRequested) {
+              var route   = routes[iteration % routes.Length];
+              iteration++;
+              bool isError = rnd.NextDouble() < 0.15;
+              int  latency = rnd.Next(20, 320);
+
+              Console.WriteLine($"[otel-dotnet-test] iteration {iteration} - {route}");
+
+              using var span = activitySrc.StartActivity("handle-request");
+              span?.SetTag("http.method", "GET");
+              span?.SetTag("http.route", route);
+              span?.SetTag("iteration", iteration);
+
+              using (var dbSpan = activitySrc.StartActivity("db.query")) {
+                  dbSpan?.SetTag("db.system", "postgresql");
+                  dbSpan?.SetTag("db.statement", $"SELECT * FROM items WHERE route = '{route}'");
+                  dbSpan?.SetTag("db.rows_returned", rnd.Next(0, 100));
+
+                  await Task.Delay(latency);
+
+                  if (isError) {
+                      span?.SetStatus(ActivityStatusCode.Error, "Internal server error");
+                      span?.SetTag("http.status_code", 500);
+                      dbSpan?.SetStatus(ActivityStatusCode.Error, "Connection timeout");
+                      logger.LogError("Request failed on iteration {Iteration}: DB connection timeout, route={Route}", iteration, route);
+                      requestCounter.Add(1, new("status", "error"), new("route", route));
+                  } else {
+                      span?.SetTag("http.status_code", 200);
+                      logger.LogInformation("Request completed in {Latency}ms, route={Route}", latency, route);
+                      requestCounter.Add(1, new("status", "ok"), new("route", route));
+                  }
+
+                  latencyHisto.Record(latency, new("route", route), new("status", isError ? "error" : "ok"));
+              }
+
+              try { await Task.Delay(5000, cts.Token); } catch (OperationCanceledException) { break; }
+          }
+          CSHARP
+
+          cd /app && dotnet run -c Release
+      env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://192.168.1.131:3883/otlp"
+        - name: OTEL_SERVICE_NAME
+          value: "otel-dotnet-test"
+        - name: OTEL_METRIC_EXPORT_INTERVAL
+          value: "10000"
+        - name: DOTNET_CLI_TELEMETRY_OPTOUT
+          value: "1"
+        - name: DOTNET_NOLOGO
+          value: "1"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+  restartPolicy: Never

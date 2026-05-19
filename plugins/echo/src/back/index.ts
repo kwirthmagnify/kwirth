@@ -73,7 +73,23 @@ class EchoChannel implements IChannel {
         }
     }
     endpointRequest(_endpoint: string, _req: Request, _res: Response, _accessKey?: AccessKey): void {}
-    websocketRequest(_newWebSocket: WebSocket, _instanceId: string, _instanceConfig: IInstanceConfig): void {}
+
+    websocketRequest(newWebSocket: WebSocket, instanceId: string, instanceConfig: IInstanceConfig): void {
+        let socket = this.webSockets.find(s => s.ws === newWebSocket)
+        if (!socket) {
+            const len = this.webSockets.push({ ws: newWebSocket, lastRefresh: Date.now(), instances: [] })
+            socket = this.webSockets[len - 1]
+        }
+        if (!socket.instances.find(i => i.instanceId === instanceId)) {
+            socket.instances.push({
+                accessKey: accessKeyDeserialize(instanceConfig.accessKey),
+                instanceId,
+                configData: instanceConfig.data,
+                paused: false,
+                assets: [],
+            })
+        }
+    }
 
     containsAsset = (webSocket: WebSocket, podNamespace: string, podName: string, containerName: string): boolean => {
         const socket = this.webSockets.find(s => s.ws === webSocket)

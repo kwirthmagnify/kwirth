@@ -905,7 +905,6 @@ class MagnifyChannel implements IChannel {
 
     private async executeApply (webSocket:WebSocket, instance:IInstance, params:string[]) {
         try {
-            logInfo(ELogComponent.CHANNEL, params)
             for (let param of params) {
                 try {
                     const res = yaml.load(param)

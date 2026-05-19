@@ -206,6 +206,9 @@
     <a href="#install">Install</a>
     <a href="#architecture">Architecture</a>
     <a href="getting-started.html">Getting Started</a>
+    <a href="plugins.html">Plugins</a>
+    <a href="providers.html">Providers</a>
+    <a href="senders.html">Senders</a>
     <a href="documentation/">Documentation</a>
     <a href="project.html">Project</a>
     <a href="roadmap.html">Roadmap</a>
@@ -497,8 +500,36 @@
 <!-- EXTENSIBILITY -->
 <section id="plugins">
   <div class="section-tag">Extensibility</div>
-  <h2 class="section-title">Extend with Plugins &amp; Providers</h2>
-  <p class="section-sub">Kwirth has a full plugin system for adding new front-end channels and a provider system for injecting new data sources — all hot-reloadable without restarting the pod.</p>
+  <h2 class="section-title">Extend with Plugins, Providers &amp; Senders</h2>
+  <p class="section-sub">Three independent subsystems let you add new capabilities without modifying core. All are hot-reloadable — no pod restart needed.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:40px;">
+    <a href="plugins.html" style="text-decoration:none;">
+      <div class="feature-card" style="height:100%;">
+        <div class="feature-icon">&#x1F9E9;</div>
+        <h3>Plugins</h3>
+        <p style="margin-bottom:12px;">New UI panels and Kubernetes observability modes — logs, metrics, events, exec, AI. Plugins can have both a backend and a frontend component.</p>
+        <span class="feature-tag tag-core">&#x2192; Learn more</span>
+      </div>
+    </a>
+    <a href="providers.html" style="text-decoration:none;">
+      <div class="feature-card" style="height:100%;">
+        <div class="feature-icon">&#x1F50C;</div>
+        <h3>Providers</h3>
+        <p style="margin-bottom:12px;">Backend data sources and cluster connectors. Ingest data from Kafka, OpenTelemetry, or any custom source and expose it through Kwirth's streaming API.</p>
+        <span class="feature-tag tag-ai">&#x2192; Learn more</span>
+      </div>
+    </a>
+    <a href="senders.html" style="text-decoration:none;">
+      <div class="feature-card" style="height:100%;">
+        <div class="feature-icon">&#x1F4E4;</div>
+        <h3>Senders</h3>
+        <p style="margin-bottom:12px;">Outbound notification adapters. Push alerts and messages to email, files, consoles, or custom pipelines with built-in routing, filtering, and time-window gating.</p>
+        <span class="feature-tag tag-security">&#x2192; Learn more</span>
+      </div>
+    </a>
+  </div>
+
   <div class="plugins-grid">
     <div class="plugin-card">
       <h4>&#x1F4E6; Trivy Plugin</h4>
@@ -559,7 +590,9 @@
       <a href="#features">Features</a>
       <a href="#magnify">Magnify</a>
       <a href="#install">Installation</a>
-      <a href="#plugins">Plugins</a>
+      <a href="plugins.html">Plugins</a>
+      <a href="providers.html">Providers</a>
+      <a href="senders.html">Senders</a>
       <a href="roadmap.html">Roadmap</a>
     </div>
     <div class="footer-col">

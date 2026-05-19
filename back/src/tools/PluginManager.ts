@@ -231,8 +231,9 @@ export class PluginManager {
             if (!meta.backStored) logInfo(ELogComponent.CORE, `Plugin '${meta.id}' back.js (${Math.round(backCompressed.length / 1024)}KB) exceeds configmap limit — will fetch from source on startup`)
             if (!meta.frontStored) logInfo(ELogComponent.CORE, `Plugin '${meta.id}' front.js (${Math.round(frontCompressed.length / 1024)}KB) exceeds configmap limit — will fetch from source on request`)
 
-            await this.configMaps.write(`kwirth-plugin-${meta.id}-meta`, meta)
-            if (meta.backStored) await this.configMaps.write(`kwirth-plugin-${meta.id}-back`, { code: backCompressed, compressed: true })
+            const backEntry: Record<string, unknown> = { meta }
+            if (meta.backStored) { backEntry.code = backCompressed; backEntry.compressed = true }
+            await this.configMaps.write(`kwirth-plugin-${meta.id}-back`, backEntry)
             if (meta.frontStored) await this.configMaps.write(`kwirth-plugin-${meta.id}-front`, { code: frontCompressed, compressed: true })
 
             const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
@@ -268,7 +269,6 @@ export class PluginManager {
 
         const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
         await this.configMaps.write('kwirth-plugins-index', index.filter(p => p.id !== id))
-        await this.configMaps.write(`kwirth-plugin-${id}-meta`, null)
         await this.configMaps.write(`kwirth-plugin-${id}-back`, null)
         await this.configMaps.write(`kwirth-plugin-${id}-front`, null)
 
@@ -301,8 +301,10 @@ export class PluginManager {
     }
 
     async getFrontJs(id: string): Promise<string | undefined> {
-        const meta = await this.configMaps.read(`kwirth-plugin-${id}-meta`) as IPluginMeta | null
-        if (meta?.frontStored === false) return this.fetchJsFromSource(meta, 'front.js')
+        const backData = await this.configMaps.read(`kwirth-plugin-${id}-back`) as { meta: IPluginMeta, code?: string, compressed?: boolean } | null
+        const meta = backData?.meta
+        if (!meta) return undefined
+        if (meta.frontStored === false) return this.fetchJsFromSource(meta, 'front.js')
         const data = await this.configMaps.read(`kwirth-plugin-${id}-front`)
         if (!data?.code) return undefined
         if (data.compressed) return zlib.gunzipSync(Buffer.from(data.code, 'base64')).toString('utf-8')

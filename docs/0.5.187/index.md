@@ -134,3 +134,32 @@ Once installed, you can access kwirth directly and easily from a browser at: htt
 Depending on the options you used when starting Kwirth External you may need to change the port or access a specific path, for example: http://localhost:3885/kwirth.
 
 Please review configuration and start options [here](./installation?id=Docker%20&%20External).
+
+## Extend Kwirth
+
+Kwirth is designed to be extended without modifying its core. Three independent extension subsystems let you add new capabilities at runtime:
+
+| Subsystem | Purpose | Documentation |
+|---|---|---|
+| **[Plugins](plugins)** | New UI panels and Kubernetes observability modes (logs, metrics, events, exec…). Plugins can have both a backend and a frontend component. | [→ Plugins](plugins) |
+| **[Providers](providers)** | Backend data sources and cluster connectors. A provider can ingest data from non-Kubernetes sources and expose it through the standard Kwirth streaming API. | [→ Providers](providers) |
+| **[Senders](senders)** | Outbound notification adapters. Channels and providers use senders to push alerts and messages to external destinations (email, files, consoles, pipelines…). | [→ Senders](senders) |
+
+All three types follow the same lifecycle: build a self-contained bundle, install it via the management UI or `kwirth-dev.json`, and Kwirth hot-reloads it without a restart.
+
+## About Kwirth
+
+After hiring several branding and marketing firms, the project settled on the name **Klogs** (Kubernetes logs). That was the original idea.
+
+On January 1 2024, **Niklaus Wirth** — the legendary computer scientist behind Pascal, Modula, and Oberon, and winner of the 1984 Turing Award — passed away. As a tribute, the project was renamed: *K*ubernetes *Wirth*, or ni*K*laus *Wirth* → **Kwirth**.
+
+Starting with Kwirth 0.5.21, **Magnify** was introduced with a double meaning:
+
+- **Magnify channel** — a Kwirth channel for managing Kubernetes clusters beyond plain observability.
+- **Kwirth Magnify** — the desktop edition of Kwirth (Windows, macOS, Linux), on par with Lens, K9s, or Headlamp.
+
+At the same time, a new logo arrived: a stylized **'K'** in the **Roy Lichtenstein** pop-art style. The connection is deliberate — Lichtenstein used the *Ben-Day dots* technique. Look at a comic with a magnifying glass and you don't see solid colors; you see a matrix of dots the eye reads as a whole. Kwirth works the same way: it takes the individual "dots" of Kubernetes (logs, metrics, events) and magnifies them into a bold, clear, actionable view.
+
+![kwirth logo](https://kwirthmagnify.github.io/kwirth/_media/kwirth-last.png ':class=imageclass20')
+
+→ [Full about page](about)

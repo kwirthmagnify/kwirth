@@ -9,7 +9,19 @@
       "Bash(cp c:/github/aisdkvercel/kwirth/common-back/dist/*.d.ts c:/github/aisdkvercel/kwirth/senders/console/node_modules/@kwirthmagnify/kwirth-common-back/dist/)",
       "Bash(cp c:/github/aisdkvercel/kwirth/common-back/dist/*.js c:/github/aisdkvercel/kwirth/senders/file/node_modules/@kwirthmagnify/kwirth-common-back/dist/)",
       "Bash(cp c:/github/aisdkvercel/kwirth/common-back/dist/*.d.ts c:/github/aisdkvercel/kwirth/senders/file/node_modules/@kwirthmagnify/kwirth-common-back/dist/)",
-      "PowerShell(Move-Item -Path \"c:/github/aisdkvercel/kwirth/senders/email\" -Destination \"c:/github/aisdkvercel/kwirth/senders/email-resend\")"
+      "PowerShell(Move-Item -Path \"c:/github/aisdkvercel/kwirth/senders/email\" -Destination \"c:/github/aisdkvercel/kwirth/senders/email-resend\")",
+      "Skill(ctx-stats)",
+      "Skill(ctx-stats:*)",
+      "Skill(ctx-upgrade)",
+      "Skill(ctx-upgrade:*)",
+      "Bash(mkdir -p c:/github/aisdkvercel/kwirth/senders/tee/src)",
+      "Bash(Remove-Item -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\components\\\\SenderDesignerDialog.tsx\" -Force)",
+      "Bash(Remove-Item -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\components\\\\senderdesigner\" -Recurse -Force)",
+      "Bash(Write-Host \"Deleted\")",
+      "mcp__plugin_context-mode_context-mode__ctx_index"
+    ],
+    "additionalDirectories": [
+      "c:\\github\\aisdkvercel\\kwirth\\senders\\tee"
     ]
   }
 }

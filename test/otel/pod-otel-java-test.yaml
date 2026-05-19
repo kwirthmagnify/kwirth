@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: otel-java-test
+  namespace: default
+  labels:
+    app: otel-java-test
+spec:
+  containers:
+    - name: otel-java-test
+      image: eclipse-temurin:21-jdk
+      command: [sh, -c]
+      args:
+        - |
+          echo "Downloading OTel Java agent..."
+          wget -q -O /tmp/otel-javaagent.jar \
+            https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.7.0/opentelemetry-javaagent.jar
+          echo "Agent: $(wc -c < /tmp/otel-javaagent.jar) bytes"
+
+          mkdir -p /app
+
+          cat > /app/OtelSimulator.java << 'JAVASRC'
+          import com.sun.net.httpserver.HttpServer;
+          import com.sun.net.httpserver.HttpHandler;
+          import com.sun.net.httpserver.HttpExchange;
+          import java.io.IOException;
+          import java.io.OutputStream;
+          import java.net.InetSocketAddress;
+          import java.net.URI;
+          import java.net.http.HttpClient;
+          import java.net.http.HttpRequest;
+          import java.net.http.HttpResponse;
+          import java.util.Random;
+          import java.util.logging.Level;
+          import java.util.logging.Logger;
+
+          public class OtelSimulator {
+              private static final Logger     log    = Logger.getLogger("OtelSimulator");
+              private static final Random     rnd    = new Random();
+              private static final HttpClient http   = HttpClient.newHttpClient();
+              private static final String[]   ROUTES = {"/api/orders", "/api/users", "/api/products"};
+              private static int iteration = 0;
+
+              public static void main(String[] args) throws Exception {
+                  HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+                  server.createContext("/api/orders",   new SimHandler("orders"));
+                  server.createContext("/api/users",    new SimHandler("users"));
+                  server.createContext("/api/products", new SimHandler("products"));
+                  server.start();
+                  log.info("OtelSimulator started on :8080");
+
+                  while (true) {
+                      String route = ROUTES[iteration % ROUTES.length];
+                      iteration++;
+                      try {
+                          HttpResponse<String> resp = http.send(
+                              HttpRequest.newBuilder()
+                                  .uri(URI.create("http://localhost:8080" + route))
+                                  .GET().build(),
+                              HttpResponse.BodyHandlers.ofString());
+                          log.info("Iteration " + iteration + " - " + route + " -> " + resp.statusCode());
+                      } catch (Exception e) {
+                          log.log(Level.SEVERE, "Request failed on iteration " + iteration, e);
+                      }
+                      Thread.sleep(5000);
+                  }
+              }
+
+              static class SimHandler implements HttpHandler {
+                  private final String name;
+                  SimHandler(String name) { this.name = name; }
+
+                  @Override
+                  public void handle(HttpExchange ex) throws IOException {
+                      boolean err    = rnd.nextDouble() < 0.15;
+                      String  body   = err ? "{\"error\":\"simulated\"}" : "{\"status\":\"ok\"}";
+                      int     status = err ? 500 : 200;
+                      if (err) log.log(Level.SEVERE, "Simulated error on /api/" + name);
+                      else     log.info("OK /api/" + name);
+                      byte[] bytes = body.getBytes();
+                      ex.getResponseHeaders().add("Content-Type", "application/json");
+                      ex.sendResponseHeaders(status, bytes.length);
+                      try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }
+                  }
+              }
+          }
+          JAVASRC
+
+          javac -d /app /app/OtelSimulator.java && echo "Compiled OK"
+          exec java -javaagent:/tmp/otel-javaagent.jar -cp /app OtelSimulator
+      env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://192.168.1.131:3883/otlp"
+        - name: OTEL_SERVICE_NAME
+          value: "otel-java-test"
+        - name: OTEL_TRACES_EXPORTER
+          value: "otlp"
+        - name: OTEL_METRICS_EXPORTER
+          value: "otlp"
+        - name: OTEL_LOGS_EXPORTER
+          value: "otlp"
+        - name: OTEL_METRIC_EXPORT_INTERVAL
+          value: "10000"
+        - name: OTEL_BSP_SCHEDULE_DELAY
+          value: "2000"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+  restartPolicy: Never

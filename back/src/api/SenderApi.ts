@@ -108,6 +108,13 @@ export class SenderApi {
             }
         })
 
+        this.router.get('/:id/front', async (req: Request, res: Response) => {
+            const js = await this.senderManager.getFrontJs(req.params.id)
+            if (js === undefined) return void res.status(404).send('Not found')
+            res.setHeader('Content-Type', 'application/javascript')
+            res.send(js)
+        })
+
         this.router.get('/:id/schema', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             res.json(this.senderManager.getSchema(req.params.id))

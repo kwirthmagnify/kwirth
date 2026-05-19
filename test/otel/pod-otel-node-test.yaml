@@ -1,0 +1,190 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: otel-node-test
+  namespace: default
+  labels:
+    app: otel-node-test
+spec:
+  containers:
+    - name: otel-node-test
+      image: node:20-slim
+      command: [sh, -c]
+      args:
+        - |
+          mkdir -p /app/src
+
+          cat > /app/package.json << 'PKGJSON'
+          {
+            "name": "otel-test",
+            "version": "1.0.0",
+            "private": true,
+            "scripts": { "build": "tsc", "start": "node dist/index.js" },
+            "dependencies": {
+              "@opentelemetry/api": "^1.9.0",
+              "@opentelemetry/api-logs": "^0.57.0",
+              "@opentelemetry/exporter-logs-otlp-http": "^0.57.0",
+              "@opentelemetry/exporter-metrics-otlp-http": "^0.57.0",
+              "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
+              "@opentelemetry/resources": "^1.26.0",
+              "@opentelemetry/sdk-logs": "^0.57.0",
+              "@opentelemetry/sdk-metrics": "^1.26.0",
+              "@opentelemetry/sdk-node": "^0.57.0"
+            },
+            "devDependencies": {
+              "@types/node": "^22.0.0",
+              "typescript": "^5.0.0"
+            }
+          }
+          PKGJSON
+
+          cat > /app/tsconfig.json << 'TSCONFIG'
+          {
+            "compilerOptions": {
+              "target": "ES2020",
+              "module": "commonjs",
+              "lib": ["ES2020"],
+              "outDir": "./dist",
+              "rootDir": "./src",
+              "strict": true,
+              "esModuleInterop": true,
+              "skipLibCheck": true
+            },
+            "include": ["src"]
+          }
+          TSCONFIG
+
+          cat > /app/src/instrumentation.ts << 'INSTRUMENTATION'
+          import { NodeSDK, api } from '@opentelemetry/sdk-node'
+          import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+          import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
+          import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
+          import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics'
+          import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs'
+          import { Resource } from '@opentelemetry/resources'
+
+          api.diag.setLogger(new api.DiagConsoleLogger(), api.DiagLogLevel.WARN)
+
+          const endpoint    = process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:3883/otlp'
+          const serviceName = process.env.OTEL_SERVICE_NAME ?? 'otel-test'
+
+          const sdk = new NodeSDK({
+              resource: new Resource({
+                  'service.name': serviceName,
+                  'service.version': '1.0.0',
+              }),
+              traceExporter: new OTLPTraceExporter({
+                  url: `${endpoint}/v1/traces`,
+              }),
+              metricReader: new PeriodicExportingMetricReader({
+                  exporter: new OTLPMetricExporter({ url: `${endpoint}/v1/metrics` }),
+                  exportIntervalMillis: 10_000,
+              }),
+              logRecordProcessor: new BatchLogRecordProcessor(
+                  new OTLPLogExporter({ url: `${endpoint}/v1/logs` })
+              ),
+          })
+
+          sdk.start()
+          console.log(`[otel-test] SDK started — endpoint: ${endpoint} — service: ${serviceName}`)
+
+          process.on('SIGTERM', () => sdk.shutdown().finally(() => process.exit(0)))
+          INSTRUMENTATION
+
+          cat > /app/src/index.ts << 'INDEX'
+          import './instrumentation'
+          import { trace, metrics, context, SpanStatusCode } from '@opentelemetry/api'
+          import { logs, SeverityNumber } from '@opentelemetry/api-logs'
+
+          const tracer = trace.getTracer('otel-test', '1.0.0')
+          const meter  = metrics.getMeter('otel-test', '1.0.0')
+          const logger = logs.getLogger('otel-test', '1.0.0')
+
+          const requestCounter = meter.createCounter('test.requests.total', {
+              description: 'Total number of simulated requests',
+          })
+          const latencyHistogram = meter.createHistogram('test.request.duration', {
+              description: 'Simulated request duration',
+              unit: 'ms',
+          })
+          const activeUsersGauge = meter.createObservableGauge('test.active_users', {
+              description: 'Simulated number of active users',
+          })
+          activeUsersGauge.addCallback(obs => obs.observe(Math.floor(Math.random() * 50) + 1))
+
+          let iteration = 0
+
+          function simulateRequest(): void {
+              iteration++
+              const isError = Math.random() < 0.15
+              const route   = ['/api/orders', '/api/users', '/api/products'][iteration % 3]
+
+              console.log(`[otel-test] iteration ${iteration} — ${route}`)
+
+              const span = tracer.startSpan('handle-request', {
+                  attributes: { 'http.method': 'GET', 'http.route': route, 'iteration': iteration },
+              })
+
+              context.with(trace.setSpan(context.active(), span), () => {
+                  const dbSpan  = tracer.startSpan('db.query')
+                  const latency = Math.floor(Math.random() * 300) + 20
+
+                  setTimeout(() => {
+                      dbSpan.setAttribute('db.system', 'postgresql')
+                      dbSpan.setAttribute('db.statement', `SELECT * FROM items WHERE route = '${route}'`)
+                      dbSpan.setAttribute('db.rows_returned', Math.floor(Math.random() * 100))
+
+                      if (isError) {
+                          dbSpan.setStatus({ code: SpanStatusCode.ERROR, message: 'Connection timeout' })
+                          span.setStatus({ code: SpanStatusCode.ERROR, message: 'Internal server error' })
+                          span.setAttribute('http.status_code', 500)
+                          logger.emit({
+                              severityNumber: SeverityNumber.ERROR,
+                              severityText: 'ERROR',
+                              body: `Request failed on iteration ${iteration}: DB connection timeout`,
+                              attributes: { iteration, 'http.route': route, 'http.status_code': 500, 'latency_ms': latency },
+                          })
+                          requestCounter.add(1, { status: 'error', route })
+                      } else {
+                          span.setAttribute('http.status_code', 200)
+                          logger.emit({
+                              severityNumber: SeverityNumber.INFO,
+                              severityText: 'INFO',
+                              body: `Request completed in ${latency}ms`,
+                              attributes: { iteration, 'http.route': route, 'http.status_code': 200, 'latency_ms': latency },
+                          })
+                          requestCounter.add(1, { status: 'ok', route })
+                      }
+
+                      latencyHistogram.record(latency, { route, status: isError ? 'error' : 'ok' })
+                      dbSpan.end()
+                      span.end()
+                  }, latency)
+              })
+          }
+
+          logger.emit({
+              severityNumber: SeverityNumber.INFO,
+              severityText: 'INFO',
+              body: 'otel-test application started',
+              attributes: { 'node.version': process.version },
+          })
+
+          setInterval(simulateRequest, 5_000)
+          simulateRequest()
+          INDEX
+
+          cd /app && npm install --no-audit --no-fund && npm run build && node dist/index.js
+      env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://192.168.1.131:3883/otlp"
+        - name: OTEL_SERVICE_NAME
+          value: "otel-test"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "128Mi"
+        limits:
+          cpu: "200m"
+          memory: "256Mi"
+  restartPolicy: Never

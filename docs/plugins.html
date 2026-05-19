@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plugins — Kwirth</title>
+  <link rel="icon" type="image/x-icon" href="_media/favicon.ico">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #060a12; --bg2: #0d1420; --bg3: #111827; --card: #0f1929; --border: #1e2d40;
+      --orange: #f5820a; --orange2: #ff9a2e; --teal: #2dd4bf; --blue: #58a6ff;
+      --green: #3fb950; --yellow: #e3b341; --red: #ff7b72;
+      --text: #e6edf3; --muted: #8b949e;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.7; }
+    a { color: var(--blue); }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; padding: 0 40px; height: 62px; background: rgba(6,10,18,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo span { font-size: 1.1rem; font-weight: 700; color: var(--orange); }
+    .nav-spacer { flex: 1; }
+    .nav-links { display: flex; gap: 6px; margin-left: 28px; }
+    .nav-links a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; transition: all .2s; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--border); }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 100px 40px 80px; }
+    .btn-back { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 0.875rem; margin-bottom: 32px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
+    .btn-back:hover { color: var(--text); border-color: var(--muted); }
+
+    /* HERO */
+    .page-hero { margin-bottom: 64px; }
+    .section-tag { display: inline-block; background: rgba(245,130,10,.1); border: 1px solid rgba(245,130,10,.25); color: var(--orange); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
+    h1 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; margin-bottom: 16px; letter-spacing: -0.5px; }
+    h1 .accent { background: linear-gradient(135deg, var(--orange), var(--orange2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .lead { color: var(--muted); font-size: 1.1rem; max-width: 660px; line-height: 1.7; }
+
+    h2 { font-size: 1.45rem; font-weight: 700; margin: 52px 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+    h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+    p { margin-bottom: 14px; color: var(--muted); }
+    p strong { color: var(--text); }
+    ul { margin: 10px 0 14px 24px; color: var(--muted); }
+    ul li { margin-bottom: 6px; }
+
+    /* PLUGIN CARDS */
+    .plugins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 28px; }
+    .plugin-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 26px; transition: all .25s; display: flex; flex-direction: column; }
+    .plugin-card:hover { border-color: rgba(245,130,10,.4); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.4); }
+    .plugin-card .icon { font-size: 2rem; margin-bottom: 14px; }
+    .plugin-card h3 { font-size: 1rem; color: var(--text); margin-bottom: 8px; }
+    .plugin-card p { font-size: 0.875rem; color: var(--muted); flex: 1; }
+    .plugin-badge { display: inline-block; font-size: 0.7rem; padding: 2px 9px; border-radius: 10px; margin-top: 14px; font-weight: 600; }
+    .badge-available { background: rgba(63,185,80,.1); color: var(--green); border: 1px solid rgba(63,185,80,.2); }
+    .badge-planned { background: rgba(139,148,158,.1); color: var(--muted); border: 1px solid var(--border); }
+    .badge-dev { background: rgba(88,166,255,.1); color: var(--blue); border: 1px solid rgba(88,166,255,.2); }
+
+    /* ARCH DIAGRAM */
+    .arch-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; margin-top: 24px; font-family: var(--mono); font-size: 0.85rem; line-height: 1.8; color: var(--muted); }
+    .arch-box .hl { color: var(--orange); }
+    .arch-box .hl2 { color: var(--blue); }
+
+    /* INTERFACE */
+    .iface-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+    .iface-row { display: flex; gap: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
+    .iface-name { font-family: var(--mono); font-size: 0.85rem; color: var(--orange); min-width: 220px; }
+    .iface-desc { font-size: 0.85rem; color: var(--muted); }
+
+    /* CODE */
+    .code-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 20px 0; }
+    .code-block pre { padding: 20px 24px; overflow-x: auto; font-family: var(--mono); font-size: 0.82rem; line-height: 1.7; color: var(--text); }
+
+    /* CTA */
+    .cta-box { background: linear-gradient(135deg, rgba(245,130,10,.07) 0%, rgba(45,212,191,.04) 100%); border: 1px solid rgba(245,130,10,.2); border-radius: 14px; padding: 40px; margin-top: 64px; text-align: center; }
+    .cta-box h2 { border: none; margin: 0 0 10px; padding: 0; font-size: 1.5rem; }
+    .cta-box p { max-width: 480px; margin: 0 auto 24px; }
+    .btn-primary { display: inline-flex; align-items: center; gap: 8px; background: var(--orange); color: white; text-decoration: none; padding: 11px 24px; border-radius: 8px; font-size: 0.95rem; font-weight: 700; transition: all .2s; }
+    .btn-primary:hover { background: var(--orange2); }
+    .btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--text); text-decoration: none; padding: 11px 24px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; border: 1px solid var(--border); transition: all .2s; margin-left: 12px; }
+    .btn-secondary:hover { border-color: var(--muted); }
+
+    @media (max-width: 640px) {
+      .container { padding: 80px 20px 60px; }
+      nav { padding: 0 16px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8" fill="#f5820a" fill-opacity=".15"/>
+      <path d="M8 22L16 10l8 12" stroke="#f5820a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="16" cy="10" r="2.5" fill="#f5820a"/>
+    </svg>
+    <span>kwirth</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="getting-started.html">Getting Started</a>
+    <a href="plugins.html" class="active">Plugins</a>
+    <a href="providers.html">Providers</a>
+    <a href="senders.html">Senders</a>
+    <a href="documentation/">Documentation</a>
+    <a href="roadmap.html">Roadmap</a>
+  </div>
+  <div class="nav-spacer"></div>
+  <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;font-size:0.875rem;padding:6px 12px;border:1px solid var(--border);border-radius:6px;">GitHub</a>
+</nav>
+
+<div class="container">
+  <a class="btn-back" href="/">&#8592; Back to home</a>
+
+  <div class="page-hero">
+    <div class="section-tag">Extensibility</div>
+    <h1>Kwirth <span class="accent">Plugins</span></h1>
+    <p class="lead">Plugins extend Kwirth with new UI channels and backend capabilities — all hot-reloadable without restarting the pod. Build once, install anywhere.</p>
+  </div>
+
+  <h2>What is a plugin?</h2>
+  <p>A Kwirth plugin is a self-contained bundle that adds a <strong>new channel tab</strong> to the Kwirth front-end and, optionally, a <strong>backend component</strong> that runs alongside Kwirth's core. Plugins follow the same lifecycle as built-in channels: the user selects a cluster, opens a tab, and the plugin takes over rendering and data fetching.</p>
+  <p>Plugins are packaged as a <strong>.tgz file</strong> containing a CJS backend bundle (<code>back.js</code>), an IIFE frontend bundle (<code>front.js</code>), and a <code>package.json</code> manifest. Once installed, Kwirth hot-reloads them — no pod restart required.</p>
+
+  <div class="arch-box">
+    <span class="hl">Browser</span>  →  Kwirth front  →  loads <span class="hl2">front.js</span> (IIFE, registers on window.__kwirth_plugins__)
+    <br>
+    <span class="hl">Kwirth back</span>  →  loads <span class="hl2">back.js</span> (CJS, registers IPlugin / IChannel)
+    <br>
+    <span class="hl">Plugin</span>  →  receives ClusterInfo, WebSocket session, senders, providers
+  </div>
+
+  <h2>Available plugins</h2>
+  <div class="plugins-grid">
+    <div class="plugin-card">
+      <div class="icon">&#x1F6E1;&#xFE0F;</div>
+      <h3>Trivy Security Scanner</h3>
+      <p>Container image vulnerability scanning via Trivy operator integration. CVE details, SBOM, audit checks, and exposed secrets in a unified view.</p>
+      <span class="plugin-badge badge-available">Available</span>
+    </div>
+    <div class="plugin-card">
+      <div class="icon">&#x1F916;</div>
+      <h3>Pinocchio AI</h3>
+      <p>Autonomous AI agent for cluster analysis. Detects anomalies, explains errors, and suggests fixes. Configurable with any LLM provider via OpenAI-compatible API.</p>
+      <span class="plugin-badge badge-available">Available</span>
+    </div>
+    <div class="plugin-card">
+      <div class="icon">&#x1F4E1;</div>
+      <h3>Echo</h3>
+      <p>Reference plugin and development scaffold. A minimal working plugin with both frontend and backend components — use it as a starting point for your own plugin.</p>
+      <span class="plugin-badge badge-dev">Dev / Reference</span>
+    </div>
+    <div class="plugin-card">
+      <div class="icon">&#x1F4CA;</div>
+      <h3>Grafana Datasource</h3>
+      <p>Grafana datasource plugin for embedding Kwirth log streams and metrics directly in Grafana dashboards.</p>
+      <span class="plugin-badge badge-planned">Planned</span>
+    </div>
+    <div class="plugin-card">
+      <div class="icon">&#x1F4DD;</div>
+      <h3>Audit Logger</h3>
+      <p>Structured audit trail for all Kwirth user actions — API key usage, config changes, plugin installs — exportable as JSON or forwarded via senders.</p>
+      <span class="plugin-badge badge-planned">Planned</span>
+    </div>
+    <div class="plugin-card">
+      <div class="icon">&#x2699;&#xFE0F;</div>
+      <h3>Your Plugin</h3>
+      <p>Any new observability mode, management tool, or integration you can imagine. The plugin API gives you full access to cluster state, WebSocket sessions, and the sender subsystem.</p>
+      <span class="plugin-badge badge-dev">Build your own</span>
+    </div>
+  </div>
+
+  <h2>Plugin interface</h2>
+  <p>Every backend plugin must implement the <strong>IPlugin</strong> interface exported from <code>@kwirthmagnify/kwirth-common-back</code>:</p>
+  <div class="iface-grid">
+    <div class="iface-row"><span class="iface-name">id: string</span><span class="iface-desc">Unique identifier (e.g. <code>"trivy"</code>, <code>"pinocchio"</code>)</span></div>
+    <div class="iface-row"><span class="iface-name">getChannel(clusterInfo)</span><span class="iface-desc">Returns an IChannel instance that handles a specific cluster connection</span></div>
+    <div class="iface-row"><span class="iface-name">startPlugin(context)</span><span class="iface-desc">Called once at startup — receive senders, providers, and cluster context</span></div>
+    <div class="iface-row"><span class="iface-name">stopPlugin()</span><span class="iface-desc">Called on graceful shutdown</span></div>
+    <div class="iface-row"><span class="iface-name">getConfigSchema?()</span><span class="iface-desc">Optional — returns field definitions so the UI can render a config form</span></div>
+  </div>
+
+  <h2>Build your own plugin</h2>
+  <p>Plugins follow a simple project structure. The backend compiles to CJS (<code>dist/back.js</code>), the frontend to an IIFE (<code>dist/front.js</code>) that registers on <code>window.__kwirth_plugins__</code>. Both are bundled with esbuild.</p>
+
+  <div class="code-block"><pre>senders/my-plugin/
+  src/
+    back/index.ts     ← implements IPlugin
+    front/index.tsx   ← registers on window.__kwirth_plugins__['my-plugin']
+  build.mjs           ← esbuild script
+  package.json        ← includes id, displayName, version, description</pre></div>
+
+  <p>The frontend bundle receives <code>backendUrl</code> and <code>accessString</code> as props so it can make authenticated API calls without importing from Kwirth core:</p>
+
+  <div class="code-block"><pre>// src/front/index.tsx
+import MyPluginPanel from './MyPluginPanel'
+window.__kwirth_plugins__ = window.__kwirth_plugins__ ?? {}
+window.__kwirth_plugins__['my-plugin'] = MyPluginPanel
+
+// Props your component receives:
+// { backendUrl: string, accessString: string, clusterName: string }</pre></div>
+
+  <p>See the <strong>echo</strong> plugin in <code>plugins/echo/</code> for a complete working example, and the full API reference in the <a href="documentation/#/0.5.187/developing">developer docs</a>.</p>
+
+  <div class="cta-box">
+    <h2>Ready to build a plugin?</h2>
+    <p>The full plugin API reference, lifecycle documentation, and development guide are in the Kwirth docs.</p>
+    <a class="btn-primary" href="documentation/#/0.5.187/developing">Developer docs &#x2192;</a>
+    <a class="btn-secondary" href="https://github.com/kwirthmagnify/kwirth/tree/master/plugins/echo" target="_blank" rel="noopener">Echo plugin source</a>
+  </div>
+</div>
+</body>
+</html>
