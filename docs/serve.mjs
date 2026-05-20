@@ -4,8 +4,21 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-const ROOT = path.dirname(fileURLToPath(import.meta.url))
-const PORT = process.argv[2] ? parseInt(process.argv[2]) : 4000
+const __dir = path.dirname(fileURLToPath(import.meta.url))
+
+// Usage: node serve.mjs [port] [path]  or  node serve.mjs [path] [port]
+// Accepts port (number) and path (string) in any order after the script name.
+let PORT = 4000
+let ROOT = __dir
+
+for (const arg of process.argv.slice(2)) {
+  const n = parseInt(arg, 10)
+  if (!isNaN(n) && String(n) === arg.trim()) {
+    PORT = n
+  } else {
+    ROOT = path.isAbsolute(arg) ? arg : path.resolve(__dir, arg)
+  }
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -65,6 +78,7 @@ const server = http.createServer((req, res) => {
 })
 
 server.listen(PORT, () => {
-  console.log(`\n  kwirth docs  →  http://localhost:${PORT}\n`)
+  console.log(`\n  kwirth docs  →  http://localhost:${PORT}`)
+  console.log(`  serving      →  ${ROOT}\n`)
   console.log('  Press Ctrl+C to stop.\n')
 })

@@ -18,7 +18,10 @@
       "Bash(Remove-Item -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\components\\\\SenderDesignerDialog.tsx\" -Force)",
       "Bash(Remove-Item -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\components\\\\senderdesigner\" -Recurse -Force)",
       "Bash(Write-Host \"Deleted\")",
-      "mcp__plugin_context-mode_context-mode__ctx_index"
+      "mcp__plugin_context-mode_context-mode__ctx_index",
+      "Bash(rtk wc *)",
+      "Bash(node \"c:/github/aisdkvercel/kwirth/docs/test/transform-k.mjs\")",
+      "Bash(rtk curl *)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee"

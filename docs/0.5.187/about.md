@@ -21,7 +21,7 @@ Starting with Kwirth 0.5.21, we launched **Magnify**, which has, in fact, a doub
 
 At the same time we introduced a new logo: a stylized, capitalized 'K' in the **Roy Lichtenstein** style. Why? We love pop-art, and the pieces Lichtenstein created look like watching a comic through a magnifier. Therefore, our *Lichtensteinized* 'K' is from now on the new Kwirth logo.
 
-![kwirthlogo](https://kwirthmagnify.github.io/kwirth/_media/kwirth-last.png ':class=imageclass20')
+![kwirthlogo](https://kwirthmagnify.github.io/kwirth/_media/favicon.ico ':class=imageclass10')
 
 ### Why Lichtenstein?
 The connection between **Roy Lichtenstein** and Kwirth Magnify is not accidental. Lichtenstein was a master of the **"Ben-Day dots"** technique. When you look at a comic book with a magnifying glass, you don't see solid colors; you see a matrix of small, individual dots that the eye perceives as a whole.
