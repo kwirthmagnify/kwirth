@@ -5,7 +5,20 @@ import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
 import { IChannel } from '../IChannel'
 import { Request, Response } from 'express'
-import { EAlertSeverity, IAlertInstanceConfig, IAlertMessage } from './AlertTypes';
+import { EAlertSeverity, IAlertInstanceConfig, IAlertMessage, IAlertMetricRule, TAlertMetricOperator } from './AlertTypes'
+import { IMetricsCluster } from '../../providers/metrics/IMetricsModel'
+
+const evaluateMetricRule = (actual: number, operator: TAlertMetricOperator, threshold: number): boolean => {
+    switch (operator) {
+        case '<':  return actual < threshold
+        case '<=': return actual <= threshold
+        case '>':  return actual > threshold
+        case '>=': return actual >= threshold
+        case '==': return actual === threshold
+        case '!=': return actual !== threshold
+        default:   return false
+    }
+}
 
 interface IAsset {
     podNamespace:string,
@@ -16,10 +29,17 @@ interface IAsset {
     buffer: string
 }        
 
+interface IAlertState {
+    firing: boolean
+    lastFired: number
+}
+
 interface IInstance {
-    instanceId:string, 
+    instanceId:string,
     assets: IAsset[]
     regExps: Map<EAlertSeverity, RegExp[]>
+    metricRules: IAlertMetricRule[]
+    alertStates: Map<string, IAlertState>
     paused:boolean
 }
 
@@ -27,7 +47,7 @@ class AlertChannel implements IChannel {
     readonly channelId = 'alert'
     readonly requirements: IBackChannelRequirements = {
         storage: false,
-        providers: []
+        providers: ['metrics']
     }
     clusterInfo : ClusterInfo
     backChannelObject: IBackChannelObject
@@ -50,8 +70,6 @@ class AlertChannel implements IChannel {
             modifiable: false,
             reconnectable: true,
             metrics: false,
-            //events: false,
-            //providers: [],
             sources: [ EClusterType.DOCKER, EClusterType.KUBERNETES ],
             endpoints: [],
             websocket: false,
@@ -65,9 +83,53 @@ class AlertChannel implements IChannel {
     }
 
     startChannel = async () =>  {
+        this.clusterInfo.addSubscriber('metrics', this, {})
     }
 
     processProviderEvent(providerId:string, obj:any) : void {
+        if (providerId !== 'metrics') return
+        const event = obj as IMetricsCluster
+        for (const socketObj of this.webSockets) {
+            for (const instance of socketObj.instances) {
+                if (instance.paused || instance.metricRules.length === 0) continue
+                for (const asset of instance.assets) {
+                    for (const rule of instance.metricRules) {
+                        const stateKey = `${asset.podName}/${asset.containerName}/${rule.metric}`
+                        for (const node of event.nodes) {
+                            const containerKey = `${asset.podNamespace}/${asset.podName}/${asset.containerName}/${rule.metric}`
+                            const containerEntry = node.containerMetricValues.get(containerKey)
+                            const podEntry = containerEntry === undefined
+                                ? node.podMetricValues.get(`${asset.podNamespace}/${asset.podName}/${rule.metric}`)
+                                : undefined
+                            const resolved = containerEntry?.value ?? podEntry?.value
+                            if (resolved !== undefined) {
+                                const triggered = evaluateMetricRule(resolved, rule.operator, rule.value)
+                                const state = instance.alertStates.get(stateKey) ?? { firing: false, lastFired: 0 }
+                                if (triggered) {
+                                    let shouldFire = false
+                                    if (rule.mode === 'leading-edge') {
+                                        shouldFire = !state.firing
+                                    } else if (rule.mode === 'cooldown') {
+                                        const elapsed = Date.now() - state.lastFired
+                                        shouldFire = state.lastFired === 0 || elapsed >= rule.cooldown * 1000
+                                    } else {
+                                        shouldFire = true
+                                    }
+                                    if (shouldFire) {
+                                        this.sendMetricAlert(socketObj.ws, asset.podNamespace, asset.podName, asset.containerName, rule.severity,
+                                            `Metric ${rule.metric} = ${resolved.toFixed(2)} ${rule.operator} ${rule.value}`, instance.instanceId)
+                                        state.lastFired = Date.now()
+                                    }
+                                }
+                                state.firing = triggered
+                                instance.alertStates.set(stateKey, state)
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     websocketRequest(newWebSocket: WebSocket, instanceId: string, instanceConfig: IInstanceConfig): void {
@@ -93,7 +155,7 @@ class AlertChannel implements IChannel {
         return false
     }
 
-    async startDockerStream (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string, regExps: Map<EAlertSeverity, RegExp[]>): Promise<void> {
+    async startDockerStream (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string, regExps: Map<EAlertSeverity, RegExp[]>, metricRules: IAlertMetricRule[]): Promise<void> {
         try {
             let id = await this.clusterInfo.dockerTools.getContainerId(podName, containerName)
             if (!id) {
@@ -111,14 +173,16 @@ class AlertChannel implements IChannel {
             let instance = instances.find(i => i.instanceId === instanceConfig.instance)
             if (!instance) {
                 let len = socket?.instances.push ({
-                    instanceId: instanceConfig.instance, 
+                    instanceId: instanceConfig.instance,
                     regExps,
+                    metricRules,
+                    alertStates: new Map(),
                     paused:false,
                     assets:[]
                 })
                 instance = socket?.instances[len-1]
             }
-            
+
             let asset:IAsset = {
                 podNamespace,
                 podName,
@@ -147,7 +211,7 @@ class AlertChannel implements IChannel {
         }
     }
 
-    async startKubernetesStream (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string, regExps:Map<EAlertSeverity, RegExp[]>): Promise<void> {
+    async startKubernetesStream (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string, regExps:Map<EAlertSeverity, RegExp[]>, metricRules: IAlertMetricRule[]): Promise<void> {
         try {
             let socket = this.webSockets.find(s => s.ws === webSocket)
             if (!socket) {
@@ -161,12 +225,14 @@ class AlertChannel implements IChannel {
                 let len = socket?.instances.push ({
                     instanceId: instanceConfig.instance,
                     regExps,
+                    metricRules,
+                    alertStates: new Map(),
                     paused:false,
                     assets:[]
                 })
                 instance = socket?.instances[len-1]
             }
-            
+
             let asset:IAsset = {
                 podNamespace,
                 podName,
@@ -215,12 +281,14 @@ class AlertChannel implements IChannel {
             regExps.push(new RegExp (regStr))
         regexes.set(EAlertSeverity.ERROR, regExps)
 
+        const metricRules: IAlertMetricRule[] = (instanceConfig.data as IAlertInstanceConfig).metricRules ?? []
+
         if (this.clusterInfo.type === EClusterType.DOCKER) {
-            this.startDockerStream(webSocket, instanceConfig, podNamespace, podName, containerName, regexes)
+            this.startDockerStream(webSocket, instanceConfig, podNamespace, podName, containerName, regexes, metricRules)
             return true
         }
         else if (this.clusterInfo.type === EClusterType.KUBERNETES) {
-            this.startKubernetesStream(webSocket, instanceConfig, podNamespace, podName, containerName, regexes)
+            this.startKubernetesStream(webSocket, instanceConfig, podNamespace, podName, containerName, regexes, metricRules)
             return true
         }
         else {
@@ -445,6 +513,24 @@ class AlertChannel implements IChannel {
             msgtype: 'alertmessage'
         }
         webSocket.send(JSON.stringify(alertMessage))   
+    }
+
+    sendMetricAlert = (webSocket: WebSocket, podNamespace: string, podName: string, containerName: string, severity: EAlertSeverity, text: string, instanceId: string): void => {
+        let alertMessage: IAlertMessage = {
+            action: EInstanceMessageAction.NONE,
+            flow: EInstanceMessageFlow.UNSOLICITED,
+            instance: instanceId,
+            type: EInstanceMessageType.DATA,
+            namespace: podNamespace,
+            pod: podName,
+            container: containerName,
+            channel: EInstanceMessageChannel.ALERT,
+            text,
+            timestamp: new Date(),
+            severity,
+            msgtype: 'alertmessage'
+        }
+        webSocket.send(JSON.stringify(alertMessage))
     }
 
     processAlertSeverity = (webSocket:WebSocket, asset:IAsset, alertSeverity:EAlertSeverity, regexes:RegExp[], line:string, instaceId:string): void => {

@@ -18,7 +18,7 @@ export class AlertChannel implements IChannel {
         clusterInfo: false,
         exit: false,
         frontChannels: false,
-        metrics: false,
+        metrics: true,
         notifier: true,
         notifications: true,
         setup: true,

@@ -1,4 +1,4 @@
-import { IAlertInstanceConfig } from "./AlertTypes"
+import { IAlertInstanceConfig, IAlertMetricRule } from "./AlertTypes"
 
 interface IAlertConfig {
     maxAlerts: number
@@ -12,6 +12,7 @@ class AlertInstanceConfig implements IAlertInstanceConfig{
     regexInfo:string[] = []
     regexWarning:string[] = []
     regexError:string[] = []
+    metricRules:IAlertMetricRule[] = []
 }
 
 export type { IAlertConfig }

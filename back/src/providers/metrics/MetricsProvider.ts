@@ -569,6 +569,7 @@ export class MetricsProvider implements IProvider {
             for (let node of clusterInfo.nodes.values()) {
                 nodes.push(await this.readNodeMetrics(node))
             }
+            this.enrichWithSyntheticMetrics(nodes)
             let usage = this.getClusterUsage()
             this.loadingClusterMetrics = false
             return { metricsInterval: this.metricsInterval, cluster:usage, nodes }
@@ -625,6 +626,72 @@ export class MetricsProvider implements IProvider {
         catch (err) {
             logError(ELogComponent.CORE, 'Error starting metrics provider')
             logError(ELogComponent.CORE, JSON.stringify(err))
+        }
+    }
+
+    private enrichWithSyntheticMetrics(nodes: IMetricsNode[]): void {
+        const totalMemory = this.clusterInfo.memory
+        const totalVcpus = this.clusterInfo.vcpus
+        const interval = this.metricsInterval
+
+        for (const node of nodes) {
+            const prevNode = this.prevRead?.nodes.find(n => n.name === node.name)
+
+            const containerEntries = Array.from(node.containerMetricValues.entries())
+            for (const [key, entry] of containerEntries) {
+                const lastSlash = key.lastIndexOf('/')
+                const prefix = key.substring(0, lastSlash + 1)
+                const metricName = key.substring(lastSlash + 1)
+
+                switch (metricName) {
+                    case 'container_memory_working_set_bytes': {
+                        const pct = totalMemory > 0 ? (entry.value / totalMemory) * 100 : 0
+                        node.containerMetricValues.set(`${prefix}kwirth_container_memory_percentage`, { value: pct, timestamp: entry.timestamp })
+                        break
+                    }
+                    case 'container_cpu_usage_seconds_total': {
+                        const prevEntry = prevNode?.containerMetricValues.get(key)
+                        const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
+                        const pct = totalVcpus > 0 && interval > 0 ? (delta / interval) / totalVcpus * 100 : 0
+                        node.containerMetricValues.set(`${prefix}kwirth_container_cpu_percentage`, { value: pct, timestamp: entry.timestamp })
+                        break
+                    }
+                    case 'container_fs_writes_bytes_total': {
+                        const prevEntry = prevNode?.containerMetricValues.get(key)
+                        const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
+                        node.containerMetricValues.set(`${prefix}kwirth_container_write_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp })
+                        break
+                    }
+                    case 'container_fs_reads_bytes_total': {
+                        const prevEntry = prevNode?.containerMetricValues.get(key)
+                        const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
+                        node.containerMetricValues.set(`${prefix}kwirth_container_read_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp })
+                        break
+                    }
+                }
+            }
+
+            const podEntries = Array.from(node.podMetricValues.entries())
+            for (const [key, entry] of podEntries) {
+                const lastSlash = key.lastIndexOf('/')
+                const prefix = key.substring(0, lastSlash + 1)
+                const metricName = key.substring(lastSlash + 1)
+
+                switch (metricName) {
+                    case 'container_network_transmit_bytes_total': {
+                        const prevEntry = prevNode?.podMetricValues.get(key)
+                        const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
+                        node.podMetricValues.set(`${prefix}kwirth_container_transmit_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp })
+                        break
+                    }
+                    case 'container_network_receive_bytes_total': {
+                        const prevEntry = prevNode?.podMetricValues.get(key)
+                        const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
+                        node.podMetricValues.set(`${prefix}kwirth_container_receive_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp })
+                        break
+                    }
+                }
+            }
         }
     }
 
