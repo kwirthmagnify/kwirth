@@ -1,12 +1,13 @@
 import { Checkbox, DialogContent, DialogTitle, FormControlLabel, IconButton, Stack, TextField, Typography } from '@mui/material'
 import { IFileObject } from '@jfvilas/react-file-manager'
-import { ChangeEvent, useState } from 'react'
-import { Close, Fullscreen, FullscreenExit, Minimize, PinDrop, Place, Search } from '@mui/icons-material'
+import { ChangeEvent, useRef, useState } from 'react'
+import { Search } from '@mui/icons-material'
 import { objectClone, objectSearch } from '../Tools'
 import { getIconFromKind } from '../../../tools/Constants-React'
 // @ts-ignore
 import './ResizableDialog.css'
-import { ResizableDialog } from './ResizableDialog'
+import { ResizableDialog, IResizableDialogHandle } from './ResizableDialog'
+import { WindowTitleButtons } from './WindowTitleButtons'
 import { IContentWindow } from '../MagnifyTabContent'
 import { useKeyboard } from '../../../tools/useKeyboard'
 
@@ -25,6 +26,7 @@ export interface IArtifactSearchProps extends IContentWindow {
 }
 
 const ArtifactSearch: React.FC<IArtifactSearchProps> = (props:IArtifactSearchProps) => {
+    const dialogRef = useRef<IResizableDialogHandle>(null)
     const [searchText, setSearchText] = useState(props.data.searchText)
     const [includeStatus, setIncludeStatus] = useState(props.data.includeStatus)
     const [merge, setMerge] = useState(props.data.merge)
@@ -41,6 +43,11 @@ const ArtifactSearch: React.FC<IArtifactSearchProps> = (props:IArtifactSearchPro
 	const handleIsMaximized = () => {
 		props.onWindowChange(props.id, !isMaximized, props.x, props.y, props.width, props.height)
 		setIsMaximized(!isMaximized)
+	}
+
+	const handleSnap = (position: 'left' | 'right') => {
+		setIsMaximized(false)
+		dialogRef.current?.snapTo(position)
 	}
 
     const onSearchChange = (event:ChangeEvent<HTMLInputElement>) => {
@@ -106,25 +113,14 @@ const ArtifactSearch: React.FC<IArtifactSearchProps> = (props:IArtifactSearchPro
     }
 
     return (
-        <ResizableDialog id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
+        <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
             <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
                 <Stack direction={'row'} alignItems={'center'}>                    
                     <Typography sx={{flexGrow:1}} variant='body2'></Typography>
                     <Typography variant='body2'><Search />&nbsp;{artifactSearchData.scope===':cluster:'?'All cluster':'Namespace: '+artifactSearchData.scope}</Typography>
                     <Typography sx={{flexGrow:1}} variant='body2'></Typography>
 
-                    <IconButton size="small" onClick={() => props.onMinimize(props.id)}>
-                        <Minimize fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => props.onTop(props.id)}>
-                        {props.atTop? <PinDrop sx={{color:'info.main'}} fontSize="small" /> : <Place fontSize="small" />}
-                    </IconButton>
-                    <IconButton size="small" onClick={handleIsMaximized}>
-                        {isMaximized ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
-                    </IconButton>
-                    <IconButton size="small" onClick={() => props.onClose(props.id)} sx={{ '&:hover': { color: 'error.main' } }}>
-                        <Close fontSize="small" />
-                    </IconButton>
+                    <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
                 </Stack>
             </DialogTitle>
 

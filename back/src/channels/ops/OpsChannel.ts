@@ -129,7 +129,7 @@ class OpsChannel implements IChannel {
                 wso.close()
                 let socket = this.webSockets.find(s => s.instances.some(i => i.instanceId === instanceId))
                 if (socket?.ws) {
-                    if(status.status === 'Success') {
+                    if (status.status === 'Success' || status.reason === 'NonZeroExitCode') {
                         this.sendSignalMessage(socket.ws,EInstanceMessageAction.NONE, EInstanceMessageFlow.UNSOLICITED, ESignalMessageLevel.INFO, instanceConfig.instance, `XTerm session to ${namespace}/${podName}/${containerName} ended`)
                     }
                     else {

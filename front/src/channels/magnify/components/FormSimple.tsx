@@ -1,4 +1,4 @@
-import { Button, DialogActions, Menu, MenuItem, Select, Stack, Switch, TextField, Typography } from '@mui/material'
+import { Button, Checkbox, DialogActions, FormControlLabel, List, ListItem, Menu, MenuItem, Select, Stack, Switch, TextField, Typography } from '@mui/material'
 import React, { useState, useEffect } from 'react'
 import { objectClone } from '../Tools'
 
@@ -125,6 +125,24 @@ const FormSimple: React.FC<IFormSimpleProps> = (props: IFormSimpleProps) => {
                                     {asyncResults[key] !== undefined ? asyncResults[key] : '...'}
                                 </Typography>
                             )}
+                        {/* Array con available+value -> checklist */}
+                        {value && typeof value === 'object' && Array.isArray(value.available) && Array.isArray(value.value) && (
+                            <List dense disablePadding sx={{ maxHeight: 200, overflowY: 'auto', width: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 1, mt: 0.5 }}>
+                                {value.available.map((item: string, i: number) => (
+                                    <ListItem key={i} disablePadding sx={{ px: 1 }}>
+                                        <FormControlLabel
+                                            control={<Checkbox size='small' checked={value.value.includes(item)} onChange={(e) => {
+                                                const next = e.target.checked
+                                                    ? [...value.value, item]
+                                                    : value.value.filter((v: string) => v !== item)
+                                                handleObjectValueChange(key, 'value', next)
+                                            }}/>}
+                                            label={<Typography variant='caption'>{item}</Typography>}
+                                        />
+                                    </ListItem>
+                                ))}
+                            </List>
+                        )}
                         </Stack>
                     )
                 })}

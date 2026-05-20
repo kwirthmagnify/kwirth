@@ -75,6 +75,7 @@ const OpsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setSelectedTerminal(undefined)
         opsData.selectedTerminal = undefined
         setRefresh(Math.random())
+        props.onEnd?.()
     }
 
     const onAsyncData = (data:any) => {

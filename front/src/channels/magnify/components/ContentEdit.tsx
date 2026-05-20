@@ -4,14 +4,15 @@ import { useEffect, useRef, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { EditorState } from "@codemirror/state"
 import { yaml } from '@codemirror/lang-yaml'
-import { Close, Edit, EditOff, Fullscreen, FullscreenExit, Minimize, PinDrop, Place } from '@mui/icons-material'
+import { Edit, EditOff } from '@mui/icons-material'
 import { objectEqual, reorderJsonYamlObject } from '../Tools'
 import { search, openSearchPanel, searchKeymap } from '@codemirror/search'
 import { EditorView, keymap } from '@codemirror/view'
 import { defaultKeymap } from '@codemirror/commands'
 import { foldCode } from '@codemirror/language'
 import { IContentWindow } from '../MagnifyTabContent'
-import { ResizableDialog } from './ResizableDialog'
+import { ResizableDialog, IResizableDialogHandle } from './ResizableDialog'
+import { WindowTitleButtons } from './WindowTitleButtons'
 import { MsgBoxButtons, MsgBoxYesNo } from '../../../tools/MsgBox'
 import { oneDark } from '@codemirror/theme-one-dark'
 
@@ -37,7 +38,8 @@ const ContentEdit: React.FC<IContentEditProps> = (props:IContentEditProps) => {
 
     const [msgBox, setMsgBox] = useState(<></>)
     const [code, setCode] = useState<string>('')
-    const editorChanged = useRef<boolean>(false)
+    const dialogRef = useRef<IResizableDialogHandle>(null)
+const editorChanged = useRef<boolean>(false)
 
     const containerRef = useRef<HTMLDivElement>(null);
     const editorViewRef = useRef<EditorView | null>(null);
@@ -139,6 +141,11 @@ const ContentEdit: React.FC<IContentEditProps> = (props:IContentEditProps) => {
 		setIsMaximized(!isMaximized)
 	}
 
+	const handleSnap = (position: 'left' | 'right') => {
+		setIsMaximized(false)
+		dialogRef.current?.snapTo(position)
+	}
+
     const updateEditorValue= (newCode:any) => {
         contentEditData.code = newCode
         setCode(newCode)
@@ -149,7 +156,7 @@ const ContentEdit: React.FC<IContentEditProps> = (props:IContentEditProps) => {
     }
 
     return (<>
-        <ResizableDialog id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
+        <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
             <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
                 <Stack direction={'row'} alignItems={'center'}>
                     <Typography sx={{flexGrow:1}}></Typography>
@@ -157,18 +164,7 @@ const ContentEdit: React.FC<IContentEditProps> = (props:IContentEditProps) => {
 
                     <Typography sx={{flexGrow:1}}></Typography>
 
-                    <IconButton size="small" onClick={() => props.onMinimize(props.id)}>
-                        <Minimize fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => props.onTop(props.id)}>
-                        {props.atTop? <PinDrop sx={{color:'info.main'}} fontSize="small" /> : <Place fontSize="small" />}
-                    </IconButton>
-                    <IconButton size="small" onClick={handleIsMaximized}>
-                        {isMaximized ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
-                    </IconButton>
-                    <IconButton size="small" onClick={tryClose} sx={{ '&:hover': { color: 'error.main' } }}>
-                        <Close fontSize="small" />
-                    </IconButton>
+                    <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={tryClose} onSnap={handleSnap} />
                 </Stack>
             </DialogTitle>
 

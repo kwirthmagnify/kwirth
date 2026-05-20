@@ -20,6 +20,10 @@ const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         if (metricsBoxRef.current) setMetricsBoxTop(metricsBoxRef.current.getBoundingClientRect().top)
     })
 
+    const onViewConfigChange = (name:string, mvc: IMetricViewConfig) => {
+        metricsConfig.metricsDefault[name] = mvc
+    }
+
     const onSetMetricDefault = (name:string, mvc: IMetricViewConfig) => {
         if (props.channelObject.updateChannelSettings && props.channelObject.channelSettings) {
             if (!props.channelObject.channelSettings.channelConfig) props.channelObject.channelSettings.channelConfig = new MetricsConfig()
@@ -120,7 +124,7 @@ const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     return data.get(assetName)!.get(metric)!
                 })
                 allCharts.push(
-                    <Chart key={metricDefinition.metric} metricDefinition={metricDefinition} names={assetNames} series={series} colour={'#888'} chartType={metricsConfig.chart} stack={metricsConfig.stack} numSeries={series.length} tooltip={true} labels={true} onSetDefault={onSetMetricDefault} viewConfig={metricsConfig.metricsDefault[metricDefinition.metric] as IMetricViewConfig} onRemove={onChartRemove}
+                    <Chart key={metricDefinition.metric} metricDefinition={metricDefinition} names={assetNames} series={series} colour={'#888'} chartType={metricsConfig.chart} stack={metricsConfig.stack} numSeries={series.length} tooltip={true} labels={true} onSetDefault={onSetMetricDefault} onViewConfigChange={onViewConfigChange} viewConfig={metricsConfig.metricsDefault[metricDefinition.metric] as IMetricViewConfig} onRemove={onChartRemove}
                         configurable={metricsConfig.configurable}
                         height={metricsConfig.lineHeight}
                         compact={metricsConfig.compact}
@@ -151,16 +155,17 @@ const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                         return <Chart key={metricDefinition.metric}
                             colour={METRICSCOLOURS[index]}
                             labels={true}
-                            tooltip={true} 
+                            tooltip={true}
                             names={[asset]}
                             series={[series]}
-                            chartType={metricsConfig.chart} 
+                            chartType={metricsConfig.chart}
                             stack={metricsConfig.stack}
-                            viewConfig={metricsConfig.metricsDefault[metricDefinition.metric] as IMetricViewConfig} 
+                            viewConfig={metricsConfig.metricsDefault[metricDefinition.metric] as IMetricViewConfig}
                             numSeries={series.length}
-                            metricDefinition={metricDefinition} 
+                            metricDefinition={metricDefinition}
                             onRemove={onChartRemove}
-                            onSetDefault={onSetMetricDefault} 
+                            onSetDefault={onSetMetricDefault}
+                            onViewConfigChange={onViewConfigChange}
                             height={metricsConfig.lineHeight}
                             configurable={metricsConfig.configurable}
                             compact={metricsConfig.compact}

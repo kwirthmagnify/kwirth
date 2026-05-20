@@ -30,6 +30,7 @@ export interface IChartProps {
     viewConfig : IMetricViewConfig
     onSetDefault?: (name:string, mvc: IMetricViewConfig) => void
     onRemove: (assetNames:string[], metricName:string) => void
+    onViewConfigChange?: (name:string, mvc: IMetricViewConfig) => void
 }
 
 export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
@@ -96,11 +97,21 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
         )
     }
 
+    const notifyViewConfigChange = (overrides: Partial<IMetricViewConfig>) => {
+        props.onViewConfigChange?.(props.metricDefinition.metric, {
+            displayName: props.metricDefinition.metric,
+            chartType, configurable: props.configurable, compact,
+            legend, stack, tooltip, labels,
+            ...overrides
+        })
+    }
+
     const menuChartOptionSelected = (opt:EMenuChartOption, data:any) => {
         setAnchorMenuChart(null)
         switch (opt) {
             case EMenuChartOption.Stack:
                 setStack(!stack)
+                notifyViewConfigChange({ stack: !stack })
                 break
             case EMenuChartOption.Remove:
                 if (props.onRemove) props.onRemove(props.names, props.metricDefinition.metric)
@@ -117,7 +128,7 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
                 const separator = ",";
                 const csvContent = headers.join(separator) + "\n" + rows.map(r => r.join(separator)).join("\n")
                 const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
-                
+
                 const link = document.createElement("a")
                 link.href = URL.createObjectURL(blob)
                 link.download = `${props.metricDefinition.metric}.csv`
@@ -125,12 +136,15 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
                 break
             case EMenuChartOption.Tooltip:
                 setTooltip(!tooltip)
+                notifyViewConfigChange({ tooltip: !tooltip })
                 break
             case EMenuChartOption.Labels:
                 setLabels(!labels)
+                notifyViewConfigChange({ labels: !labels })
                 break
             case EMenuChartOption.Legend:
                 setLegend(!legend)
+                notifyViewConfigChange({ legend: !legend })
                 break
             case EMenuChartOption.Default:
                 if (props.onSetDefault) {
@@ -148,8 +162,9 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
                 break
             default:
                 setChartType(data as EChartType)
+                notifyViewConfigChange({ chartType: data as EChartType })
                 break
-        } 
+        }
     }
 
     const renderLabel = (data:any) => {

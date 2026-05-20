@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { DialogTitle, DialogContent, DialogActions, Button, Typography, Stack, Tooltip, IconButton, Box } from '@mui/material'
-import { Close, ContentCopy, FullscreenExit, Fullscreen, Minimize, PinDrop, Place } from '@mui/icons-material'
+import { ContentCopy } from '@mui/icons-material'
 // @ts-ignore
 import './ResizableDialog.css'
-import { ResizableDialog } from './ResizableDialog'
+import { ResizableDialog, IResizableDialogHandle } from './ResizableDialog'
+import { WindowTitleButtons } from './WindowTitleButtons'
 import { IContentWindow } from '../MagnifyTabContent'
 import { IFileObject, ISpaceMenuItem } from '@jfvilas/react-file-manager'
 import { DetailsObject, IDetailsSection } from './DetailsObject'
@@ -30,6 +31,7 @@ export interface IContentDetailsProps extends IContentWindow {
 }
 
 const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
+	const dialogRef = useRef<IResizableDialogHandle>(null)
 	const newObject = useRef<any>(props.data.source.data.origin)
 	const [containsEdit, setContainsEdit] = useState<boolean>(false)
 	const [dataChanged, setDataChanged] = useState<boolean>(false)
@@ -72,6 +74,11 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
 		setIsMaximized(!isMaximized)
 	}
 
+	const handleSnap = (position: 'left' | 'right') => {
+		setIsMaximized(false)
+		dialogRef.current?.snapTo(position)
+	}
+
     const onChangeData = (path:string, data:any) => {
         if (props.data.source.data.origin.kind === 'ConfigMap') {
             _.set(newObject.current, path, data)
@@ -83,7 +90,7 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
     }
 
 	return (<>
-		<ResizableDialog id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
+		<ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
 			<DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
 				<Stack direction='row' alignItems={'center'} spacing={1}>
 					<Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold', flexShrink: 0}}>
@@ -113,20 +120,7 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
 
 					<Typography sx={{ flexGrow: 1}}/>
 
-					<Stack direction="row" spacing={0.5} className="no-drag">
-						<IconButton size="small" onClick={() => props.onMinimize(props.id)}>
-							<Minimize fontSize="small" />
-						</IconButton>
-						<IconButton size="small" onClick={() => props.onTop(props.id)}>
-							{props.atTop? <PinDrop sx={{color:'info.main'}} fontSize="small" /> : <Place fontSize="small" />}
-						</IconButton>
-						<IconButton size="small" onClick={handleIsMaximized}>
-							{isMaximized ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
-						</IconButton>
-						<IconButton size="small" onClick={() => props.onClose(props.id)} sx={{ '&:hover': { color: 'error.main' } }}>
-							<Close fontSize="small" />
-						</IconButton>
-					</Stack>
+					<WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
 				</Stack>
 			</DialogTitle>
 

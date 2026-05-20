@@ -1,17 +1,29 @@
 // MIXED (Gemini-Julio)
-import React, { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useRef, useImperativeHandle } from 'react'
 import { Dialog, Paper, Box, useTheme } from '@mui/material'
 import Draggable, { DraggableData } from 'react-draggable'
 import { ResizableBox, ResizeCallbackData } from 'react-resizable'
 
+export interface IResizableDialogHandle {
+    snapTo: (position: 'left' | 'right') => void
+}
+
 const CustomHandle = React.forwardRef<HTMLDivElement, any>((props, ref) => {
     const { handleAxis, ...restProps } = props
-    const isSE = handleAxis === 'se'
+    const isTop = handleAxis === 'ne' || handleAxis === 'nw'
+    const isRight = handleAxis === 'se' || handleAxis === 'ne'
+    const cursors: Record<string, string> = { se: 'nwse-resize', sw: 'nesw-resize', ne: 'nesw-resize', nw: 'nwse-resize' }
     const style: React.CSSProperties = {
-        position: 'absolute', bottom: 3, [isSE ? 'right' : 'left']: 3,
-        width: '12px', height: '12px', zIndex: 20, cursor: isSE ? 'nwse-resize' : 'sw-resize',
-        borderRight: isSE ? '3px solid #bdbdbd' : 'none', borderLeft: !isSE ? '3px solid #bdbdbd' : 'none',
-        borderBottom: '3px solid #bdbdbd', borderRadius: isSE ? '0 0 4px 0' : '0 0 0 4px',
+        position: 'absolute',
+        [isTop ? 'top' : 'bottom']: 3,
+        [isRight ? 'right' : 'left']: 3,
+        width: '12px', height: '12px', zIndex: 20,
+        cursor: cursors[handleAxis] ?? 'pointer',
+        borderRight: isRight ? '3px solid #bdbdbd' : 'none',
+        borderLeft: !isRight ? '3px solid #bdbdbd' : 'none',
+        borderTop: isTop ? '3px solid #bdbdbd' : 'none',
+        borderBottom: !isTop ? '3px solid #bdbdbd' : 'none',
+        borderRadius: handleAxis === 'se' ? '0 0 4px 0' : handleAxis === 'sw' ? '0 0 0 4px' : handleAxis === 'ne' ? '0 4px 0 0' : '4px 0 0 0',
     }
     return <div ref={ref} style={style} {...restProps} />
 })
@@ -36,15 +48,30 @@ interface IResizableDialogProps {
     x?: number; y?: number; width?: number; height?: number
 }
 
-const ResizableDialog: React.FC<IResizableDialogProps> = ({ id, children, isMaximized = false, isActive = false, onFocus, onWindowChange, x = 100, y = 50, width = 800, height = 600 }) => {
+function ResizableDialogImpl(
+    { id, children, isMaximized = false, isActive = false, onFocus, onWindowChange, x = 100, y = 50, width = 800, height = 600 }: IResizableDialogProps,
+    ref: React.ForwardedRef<IResizableDialogHandle>
+) {
     const [isDragging, setIsDragging] = useState(false)
     const [isResizing, setIsResizing] = useState(false)
     const [layout, setLayout] = useState({ x, y, width, height })
-    
+
     const contentRef = useRef<HTMLDivElement>(null)
     const snapshotRef = useRef<HTMLDivElement>(null)
     const paperRef = useRef<HTMLDivElement>(null)
     const theme = useTheme()
+
+    useImperativeHandle(ref, () => ({
+        snapTo: (position: 'left' | 'right') => {
+            const half = Math.floor(window.innerWidth / 2)
+            const h = window.innerHeight
+            const newLayout = position === 'left'
+                ? { x: 0, y: 0, width: half, height: h }
+                : { x: half, y: 0, width: half, height: h }
+            setLayout(newLayout)
+            onWindowChange?.(id, false, newLayout.x, newLayout.y, newLayout.width, newLayout.height)
+        }
+    }))
 
     // Crea un clon estático del contenido para el Drag
     const createSnapshot = () => {
@@ -77,8 +104,10 @@ const ResizableDialog: React.FC<IResizableDialogProps> = ({ id, children, isMaxi
     const handleResize = useCallback((_e: any, { size, handle }: ResizeCallbackData) => {
         setLayout(prev => {
             let newX = prev.x
-            if (handle === 'sw') newX = prev.x - (size.width - prev.width)
-            return { ...prev, width: size.width, height: size.height, x: newX }
+            let newY = prev.y
+            if (handle === 'sw' || handle === 'nw') newX = prev.x - (size.width - prev.width)
+            if (handle === 'ne' || handle === 'nw') newY = prev.y - (size.height - prev.height)
+            return { ...prev, width: size.width, height: size.height, x: newX, y: newY }
         })
     }, [])
 
@@ -100,7 +129,7 @@ const ResizableDialog: React.FC<IResizableDialogProps> = ({ id, children, isMaxi
                 width={isMaximized ? window.innerWidth : layout.width}
                 height={isMaximized ? window.innerHeight : layout.height}
                 onResizeStart={handleResizeStart} onResize={handleResize} onResizeStop={handleResizeStop}
-                resizeHandles={isMaximized ? [] : ['se', 'sw']}
+                resizeHandles={isMaximized ? [] : ['se', 'sw', 'ne', 'nw']}
                 handle={(axis, ref) => <CustomHandle handleAxis={axis} ref={ref} />}
             >
                 <Box sx={{
@@ -158,5 +187,7 @@ const ResizableDialog: React.FC<IResizableDialogProps> = ({ id, children, isMaxi
         </Dialog>
     )
 }
+
+const ResizableDialog = React.forwardRef(ResizableDialogImpl)
 
 export { ResizableDialog }

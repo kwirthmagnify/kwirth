@@ -25,6 +25,7 @@ interface ISetupProps extends ISetupPropsBase {
 
 interface IContentProps extends IContentPropsBase {
     channelObject: IChannelObject
+    onEnd?: () => void
 }
 
 export { EChannelRefreshAction, ENotifyLevel }

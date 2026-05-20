@@ -30,7 +30,9 @@
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
-      "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\FileManager\\FileList"
+      "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\FileManager\\FileList",
+      "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\FileManager",
+      "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\components\\SearchInput"
     ]
   }
 }

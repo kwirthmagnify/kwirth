@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAsync } from 'react-use'
 import { Box, DialogContent, DialogTitle, Divider, IconButton, Popover, Stack, Typography } from '@mui/material'
-import { Close, Fullscreen, FullscreenExit, Info, Minimize, PauseCircle, PinDrop, Place, PlayCircle, Settings, StopCircle } from '@mui/icons-material'
+import { Fullscreen, FullscreenExit, Info, PauseCircle, PlayCircle, Settings, StopCircle } from '@mui/icons-material'
 
 import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelObject, IContentProps } from '../../IChannel'
@@ -9,7 +9,8 @@ import { createChannelInstance } from '../../../tools/ChannelTools'
 import { ENotifyLevel } from '../../../tools/Global'
 import { MagnifyUserPreferences } from './MagnifyUserPreferences'
 import { IContentWindow } from '../MagnifyTabContent'
-import { ResizableDialog } from './ResizableDialog'
+import { ResizableDialog, IResizableDialogHandle } from './ResizableDialog'
+import { WindowTitleButtons } from './WindowTitleButtons'
 import { FormSimple } from './FormSimple'
 import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
@@ -74,7 +75,8 @@ export interface IContentExternalObject {
 
 const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternalProps) => {
     let contentExternalData:IContentExternalData = props.data
-    const containerRef = useRef<HTMLDivElement>(null)
+    const dialogRef = useRef<IResizableDialogHandle>(null)
+const containerRef = useRef<HTMLDivElement>(null)
     const [ msgBox, setMsgBox ] = useState(<></>)
     const [ anchorHelp, setAnchorHelp ] = useState<undefined | HTMLElement>(undefined)
     const [ anchorConfig, setAnchorConfig ] = useState<undefined | HTMLElement>(undefined)
@@ -94,10 +96,14 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                     contentExternalData.formConfig = { lines: 5000, showNames:false, timestamp:false, startDiagnostics: false }
                     setLogConfig(contentExternalData.content)
                     break
-                case 'metrics':
-                    contentExternalData.formConfig = { aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true}
+                case 'metrics': {
+                    const allMetrics = Array.from(contentExternalData.channelObject?.metricsList?.keys() || []).filter((k:string) => k.startsWith('container_') || k.startsWith('kwirth_'))
+                    const defaultMetrics = ['kwirth_container_cpu_percentage','kwirth_container_memory_percentage', 'kwirth_container_transmit_mbps', 'kwirth_container_receive_mbps', 'kwirth_container_write_mbps', 'kwirth_container_read_mbps']
+                    const currentMetrics = (contentExternalData.content?.externalChannelObject?.instanceConfig as IMetricsInstanceConfig)?.metrics
+                    contentExternalData.formConfig = { aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true, metrics: { available: allMetrics, value: currentMetrics?.length ? currentMetrics : defaultMetrics } }
                     setMetricsConfig(contentExternalData.content)
                     break
+                }
                 case 'ops':
                     contentExternalData.formConfig = {}
                     setOpsConfig(contentExternalData.content)
@@ -635,7 +641,8 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 
         let ChannelTabContent = contentExternalData.content.externalChannel.TabContent
         let channelProps:IContentProps = {
-            channelObject: contentExternalData.content.externalChannelObject!
+            channelObject: contentExternalData.content.externalChannelObject!,
+            onEnd: () => props.onClose(props.id)
         }
         // we need this ref for getting focus statis con terms. We need this for capturing keys ONLUY for terminal in focus (due to global keyboard listeners)
         return channelProps.channelObject.channelId==='ops'?
@@ -653,6 +660,11 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
 	const handleIsMaximized = () => {
 		props.onWindowChange(props.id, !isMaximized, props.x, props.y, props.width, props.height)
 		setIsMaximized(!isMaximized)
+	}
+
+	const handleSnap = (position: 'left' | 'right') => {
+		setIsMaximized(false)
+		dialogRef.current?.snapTo(position)
 	}
 
     const onConfigApply = (values:any) => {
@@ -677,7 +689,9 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
                 metricsConfig.merge = values.merge
                 metricsConfig.depth = values.depth
                 metricsConfig.legend = values.legend
+                metricsConfig.chart = values.type?.value ?? metricsConfig.chart
                 metricsInstanceConfig.aggregate = values.aggregate
+                metricsInstanceConfig.metrics = values.metrics?.value ?? metricsInstanceConfig.metrics
                 stop()
                 play()
                 break
@@ -704,41 +718,30 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
     }
 
     return (<>
-        <ResizableDialog id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
+        <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
             <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
                 <Stack direction={'row'} alignItems={'center'}>
-                    <IconButton onClick={play} disabled={!contentExternalData.options.autostart || (contentExternalData.content?.externalChannelStarted && !contentExternalData.content?.externalChannelPaused)}>
-                        <PlayCircle/>
+                    <IconButton size="small" onClick={play} disabled={!contentExternalData.options.autostart || (contentExternalData.content?.externalChannelStarted && !contentExternalData.content?.externalChannelPaused)}>
+                        <PlayCircle fontSize="small"/>
                     </IconButton>
-                    <IconButton onClick={pause} disabled={!contentExternalData.options.pauseable || !contentExternalData.content?.externalChannelStarted || contentExternalData.content?.externalChannelPaused}>
-                        <PauseCircle/>
+                    <IconButton size="small" onClick={pause} disabled={!contentExternalData.options.pauseable || !contentExternalData.content?.externalChannelStarted || contentExternalData.content?.externalChannelPaused}>
+                        <PauseCircle fontSize="small"/>
                     </IconButton>
-                    <IconButton onClick={stop} disabled={!contentExternalData.options.stoppable || !contentExternalData.content?.externalChannelStarted}>
-                        <StopCircle/>
+                    <IconButton size="small" onClick={stop} disabled={!contentExternalData.options.stoppable || !contentExternalData.content?.externalChannelStarted}>
+                        <StopCircle fontSize="small"/>
                     </IconButton>
-                    <IconButton disabled={!contentExternalData.options.configurable} onClick={(event) => setAnchorConfig(event.target as HTMLElement)}>
-                        <Settings/>
+                    <IconButton size="small" disabled={!contentExternalData.options.configurable} onClick={(event) => setAnchorConfig(event.target as HTMLElement)}>
+                        <Settings fontSize="small"/>
                     </IconButton>
-                    <IconButton onClick={(event) => setAnchorHelp(event.currentTarget)}>
-                        <Info/>
+                    <IconButton size="small" onClick={(event) => setAnchorHelp(event.currentTarget)}>
+                        <Info fontSize="small"/>
                     </IconButton>
                     
                     <Typography sx={{flexGrow:1}}></Typography>
                     <Typography>{contentExternalData.content?.externalChannel?.getChannelIcon()}&nbsp;{props.title}</Typography>
                     <Typography sx={{flexGrow:1}}></Typography>
 
-                    <IconButton size="small" onClick={() => props.onMinimize(props.id)}>
-                        <Minimize fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => props.onTop(props.id)}>
-                        {props.atTop? <PinDrop sx={{color:'info.main'}} fontSize="small" /> : <Place fontSize="small" />}
-                    </IconButton>
-                    <IconButton size="small" onClick={handleIsMaximized}>
-                        {isMaximized ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
-                    </IconButton>
-                    <IconButton size="small" onClick={() => props.onClose(props.id)} sx={{ '&:hover': { color: 'error.main' } }}>
-                        <Close fontSize="small" />
-                    </IconButton>
+                    <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
                 </Stack>
             </DialogTitle>
 

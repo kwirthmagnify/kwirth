@@ -35,7 +35,6 @@ en App.tsx/Homepage: no añadir a last ni fav un tab que se carga desde una acci
 
 MAGNIFY FRONT
   kwirthworks, kubeworks
-  window arrange (left-right, small on bottom, 4 windows, etc...)
   content external, poder hacer restart del content (por si se deconecta o lo que sea)
   improve DetailsObject
     always use rootObj, and just change the path, so trace-back can be used ofr detecting data changed origin
@@ -48,8 +47,7 @@ MAGNIFY BACK
 
 RFM
   añadir ... en leftmenu cuando hay mas de xx opciones (xx configurable, con valor por defecto)
-  añadir regex y caps al search (ya esta implementado pero no en el UI)
-  revisar ajuste de columnas (config, resize, add, remove....)
+  revisar ajuste de columnas en magnify (en RFM ya esta)
 
 
 
