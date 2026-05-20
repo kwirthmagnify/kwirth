@@ -83,7 +83,7 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
     }
 
 	return (<>
-		<ResizableDialog id={props.id} isMaximized={isMaximized} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
+		<ResizableDialog id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
 			<DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
 				<Stack direction='row' alignItems={'center'} spacing={1}>
 					<Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold', flexShrink: 0}}>

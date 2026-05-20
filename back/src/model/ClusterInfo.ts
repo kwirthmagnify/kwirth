@@ -8,8 +8,9 @@ import { IChannel } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
 
 export interface INodeInfo {
-    name:string
-    ip:string
+    name: string
+    ip: string
+    maxPods: number
 }
 
 export interface IPendingWebsocket {
@@ -166,6 +167,7 @@ export class ClusterInfo {
                     var nodeData:INodeInfo = {
                         name: node.metadata?.name!,
                         ip: node.status?.addresses!.find(address => address.type === 'InternalIP')?.address!,
+                        maxPods: parseInt(node.status?.allocatable?.['pods'] ?? '110', 10)
                     }
                     nodes.set(nodeData.name, nodeData)
                 }

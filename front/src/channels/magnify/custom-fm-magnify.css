@@ -36,6 +36,10 @@
   background-color: var(--mui-palette-background-default) !important;
 }
 
+.custom-fm-magnify .files-container .own-layout * {
+  user-select: text !important;
+}
+
 .custom-fm-magnify .category-view, .custom-fm-magnify .toggle-view {
     background-color: var(--mui-palette-background-paper) !important;
     background-image: linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05)) !important;

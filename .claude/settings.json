@@ -21,10 +21,16 @@
       "mcp__plugin_context-mode_context-mode__ctx_index",
       "Bash(rtk wc *)",
       "Bash(node \"c:/github/aisdkvercel/kwirth/docs/test/transform-k.mjs\")",
-      "Bash(rtk curl *)"
+      "Bash(rtk curl *)",
+      "Read(//c/github/jfvilas/react-file-manager/frontend/src/FileManager/**)",
+      "Bash(cd \"C:/github/jfvilas/react-file-manager/frontend\" && rtk npm run build 2>&1)",
+      "Read(//c/github/jfvilas/react-file-manager/frontend/**)",
+      "Bash(cp \"C:/github/jfvilas/react-file-manager/frontend/dist/react-file-manager.es.js\" \"C:/github/aisdkvercel/kwirth/front/node_modules/@jfvilas/react-file-manager/dist/react-file-manager.es.js\")",
+      "Bash(cp \"C:/github/jfvilas/react-file-manager/frontend/dist/style.css\" \"C:/github/aisdkvercel/kwirth/front/node_modules/@jfvilas/react-file-manager/dist/style.css\")"
     ],
     "additionalDirectories": [
-      "c:\\github\\aisdkvercel\\kwirth\\senders\\tee"
+      "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
+      "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\FileManager\\FileList"
     ]
   }
 }

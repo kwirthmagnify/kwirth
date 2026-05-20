@@ -704,7 +704,7 @@ const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternal
     }
 
     return (<>
-        <ResizableDialog id={props.id} isMaximized={isMaximized} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
+        <ResizableDialog id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
             <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
                 <Stack direction={'row'} alignItems={'center'}>
                     <IconButton onClick={play} disabled={!contentExternalData.options.autostart || (contentExternalData.content?.externalChannelStarted && !contentExternalData.content?.externalChannelPaused)}>

@@ -31,12 +31,12 @@ const PaperComponent = React.forwardRef<HTMLDivElement, any>((props, ref) => {
 })
 
 interface IResizableDialogProps {
-    id: string; children: React.ReactNode; isMaximized?: boolean; onFocus?: () => void;
+    id: string; children: React.ReactNode; isMaximized?: boolean; isActive?: boolean; onFocus?: () => void;
     onWindowChange?: (id: string, isMaximized: boolean, x: number, y: number, width: number, height: number) => void
     x?: number; y?: number; width?: number; height?: number
 }
 
-const ResizableDialog: React.FC<IResizableDialogProps> = ({ id, children, isMaximized = false, onFocus, onWindowChange, x = 100, y = 50, width = 800, height = 600 }) => {
+const ResizableDialog: React.FC<IResizableDialogProps> = ({ id, children, isMaximized = false, isActive = false, onFocus, onWindowChange, x = 100, y = 50, width = 800, height = 600 }) => {
     const [isDragging, setIsDragging] = useState(false)
     const [isResizing, setIsResizing] = useState(false)
     const [layout, setLayout] = useState({ x, y, width, height })
@@ -103,10 +103,19 @@ const ResizableDialog: React.FC<IResizableDialogProps> = ({ id, children, isMaxi
                 resizeHandles={isMaximized ? [] : ['se', 'sw']}
                 handle={(axis, ref) => <CustomHandle handleAxis={axis} ref={ref} />}
             >
-                <Box sx={{ 
-                    display: 'flex', flexDirection: 'column', height: '100%', width: '100%', 
+                <Box sx={{
+                    display: 'flex', flexDirection: 'column', height: '100%', width: '100%',
                     position: 'relative', overflow: 'hidden', bgcolor: 'background.paper',
-                    border: `1px solid ${theme.palette.divider}`
+                    border: theme.palette.mode === 'dark'
+                        ? `1px solid ${isActive ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.05)'}`
+                        : `1px solid ${theme.palette.divider}`,
+                    boxShadow: theme.palette.mode === 'dark'
+                        ? isActive
+                            ? '0 1px 0 rgba(255,255,255,0.12) inset, 0 12px 40px rgba(0,0,0,1), 0 4px 12px rgba(0,0,0,0.8)'
+                            : '0 2px 8px rgba(0,0,0,0.6)'
+                        : undefined,
+                    opacity: theme.palette.mode === 'dark' && !isActive ? 0.6 : 1,
+                    transition: 'box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease',
                 }}>
                     {/* 1. MODO RESIZE: No renderizamos nada (máximo rendimiento) */}
                     {isResizing && (
@@ -129,15 +138,17 @@ const ResizableDialog: React.FC<IResizableDialogProps> = ({ id, children, isMaxi
                     {/* 3. MODO NORMAL: El contenido vivo */}
                     <Box ref={contentRef} sx={{ display: (isDragging || isResizing) ? 'none' : 'block', width: '100%', height: '100%' }}>
                         <Box sx={{
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            height: '100%', 
-                            width: '100%', 
-                            border: theme.palette.mode === 'dark'? '1px solid #333' : '1px solid #ccc', 
+                            display: 'flex',
+                            flexDirection: 'column',
+                            height: '100%',
+                            width: '100%',
+                            border: theme.palette.mode === 'dark'
+                                ? `1px solid ${isActive ? '#444' : '#1e1e1e'}`
+                                : '1px solid #ccc',
                             backgroundColor: theme.palette.background.default,
                             position: 'relative',
                             borderRadius: isMaximized ? 0 : '4px',
-                            overflow: 'hidden'     
+                            overflow: 'hidden'
                         }}>
                             {children}
                         </Box>

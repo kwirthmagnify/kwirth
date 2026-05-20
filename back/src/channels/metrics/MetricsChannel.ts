@@ -497,6 +497,13 @@ class MetricsChannel implements IChannel {
         }
 
         for (let metricName of (instanceConfig.data as IMetricsConfig).metrics) {
+            if (metricName.startsWith('kwirth_cluster_')) {
+                const lastRead = this.metricsCluster[this.metricsCluster.length - 1]
+                const clusterValue = lastRead.clusterMetricValues?.get(metricName)?.value ?? 0
+                assetMetrics.values.push({ metricName, metricValue: clusterValue })
+                continue
+            }
+
             let sourceMetricName = metricName
             if (metricName === 'kwirth_container_memory_percentage') sourceMetricName = 'container_memory_working_set_bytes'
             if (metricName === 'kwirth_container_cpu_percentage') sourceMetricName = 'container_cpu_usage_seconds_total'

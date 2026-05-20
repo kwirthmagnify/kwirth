@@ -412,6 +412,12 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
+    const addWindow = (win: IContentWindow) => {
+        magnifyData.windows.forEach(w => w.atFront = false)
+        magnifyData.windows.push(win)
+        setTick(t => t+1)
+    }
+
     const onWindowChange = (id:string, isMaximized:boolean, x:number,y:number,width:number,height:number) => {
         const existingWindow = magnifyData.windows.find(w => w.id === id)
         if (!existingWindow) return
@@ -462,8 +468,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 onTop: onWindowTop,
                 onClose: onWindowClose,
             }
-            magnifyData.windows.push(win)
-            setTick(t => t+1)
+            addWindow(win)
         }
 
         // we request a fresh events list
@@ -505,8 +510,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             onClose: onWindowClose,
             selectedFiles: []
         }
-        magnifyData.windows.push(win)
-        setTick(t => t+1)
+        addWindow(win)
     }
 
     const launchObjectDelete = (p:string[]) => {
@@ -563,8 +567,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             onMinimize: onWindowMinimize,
             onClose: onWindowClose,
         }
-        magnifyData.windows.push(win)
-        setTick(t => t+1)
+        addWindow(win)
     }
 
     const launchObjectExternal = (channel:string, files:IFileObject[], view: EInstanceConfigView, data:any, container: string|undefined ) => {
@@ -609,8 +612,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             onMinimize: onWindowMinimize,
             onClose: onWindowClose,
         }
-        magnifyData.windows.push(win)
-        setTick(t => t+1)
+        addWindow(win)
     }
 
     const launchSearch = (p:string[]) => {
@@ -652,8 +654,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             onMinimize: onWindowMinimize,
             onClose: onWindowClose,
         }
-        magnifyData.windows.push(win)
-        setTick(t => t+1)
+        addWindow(win)
     }
 
     // *********************************************************
@@ -914,8 +915,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     onClose: onWindowClose,
                     selectedFiles: []
                 }
-                magnifyData.windows.push(win)
-                setTick(t => t+1)
+                addWindow(win)
 
 
 
@@ -1135,8 +1135,8 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         let index = magnifyData.windows.findIndex(w => w.id === id)
         if (index<0) return
         magnifyData.windows.splice(index, 1)
-        //+++ correct this in order to: bring to front the highest window THAT IS NOT MINIMIZED (not just the last)
-        if (magnifyData.windows.length>0) bringWindowToFront(magnifyData.windows[magnifyData.windows.length-1].id)
+        const lastVisible = [...magnifyData.windows].reverse().find(w => w.visible)
+        if (lastVisible) bringWindowToFront(lastVisible.id)
         setTick(t=>t+1)
     }
 

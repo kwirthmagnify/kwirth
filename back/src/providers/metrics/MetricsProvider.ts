@@ -266,43 +266,45 @@ export class MetricsProvider implements IProvider {
         // add kwirth container metrics
         text += '# HELP kwirth_container_memory_percentage Percentage of memory used by object from the whole cluster\n'
         text += '# TYPE kwirth_container_memory_percentage gauge\n'
-        text += 'kwirth_container_memory_percentage{container="xxx",id="kwirth",image="doker.io/kwirth",name="kwirth",namespace="default",pod="kwirth-5b9ddf4fd4-tl25h",scope="container"} 0 1733656438512\n'
 
         text += '# HELP kwirth_container_cpu_percentage Percentage of cpu used from the whole cluster\n'
         text += '# TYPE kwirth_container_cpu_percentage gauge\n'
-        text += 'kwirth_container_cpu_percentage{container="xxx",id="kwirth",image="doker.io/kwirth",name="kwirth",namespace="default",pod="kwirth-5b9ddf4fd4-tl25h",scope="container"} 0 1733656438512\n'
 
         text += '# HELP kwirth_container_random_counter Accumulated container random values\n'
         text += '# TYPE kwirth_container_random_counter counter\n'
-        text += `kwirth_container_random_counter{container="",id="kwirth",image="doker.io/kwirth",name="kwirth",namespace="default",pod="kwirth-5b9ddf4fd4-tl25h",scope="container"} 0 1733656438512\n`
 
         text += '# HELP kwirth_container_random_gauge Instant container random values\n'
         text += '# TYPE kwirth_container_random_gauge gauge\n'
-        text += `kwirth_container_random_gauge{container="",id="kwirth",image="doker.io/kwirth",name="kwirth",namespace="default",pod="kwirth-5b9ddf4fd4-tl25h",scope="container"} 0 1733656438512\n`
 
         text += '# HELP kwirth_container_transmit_percentage Percentage of data sent in relation to the whole cluster\n'
         text += '# TYPE kwirth_container_transmit_percentage gauge\n'
-        text += 'kwirth_container_transmit_percentage{container="",id="kwirth",image="doker.io/kwirth",name="kwirth",namespace="default",pod="kwirth-5b9ddf4fd4-tl25h"} 0 1733656438512\n'
 
         text += '# HELP kwirth_container_receive_percentage Percentage of data received in relation to the whole cluster\n'
         text += '# TYPE kwirth_container_receive_percentage gauge\n'
-        text += 'kwirth_container_receive_percentage{container="",id="kwirth",image="doker.io/kwirth",name="kwirth",namespace="default",pod="kwirth-5b9ddf4fd4-tl25h"} 0 1733656438512\n'
 
         text += '# HELP kwirth_container_transmit_mbps Mbps of data sent over the last period\n'
         text += '# TYPE kwirth_container_transmit_mbps gauge\n'
-        text += 'kwirth_container_transmit_mbps{container="",id="kwirth",image="doker.io/kwirth",name="kwirth",namespace="default",pod="kwirth-5b9ddf4fd4-tl25h"} 0 1733656438512\n'
 
         text += '# HELP kwirth_container_receive_mbps Mbps of data received over the last period\n'
         text += '# TYPE kwirth_container_receive_mbps gauge\n'
-        text += 'kwirth_container_receive_mbps{container="",id="kwirth",image="doker.io/kwirth",name="kwirth",namespace="default",pod="kwirth-5b9ddf4fd4-tl25h"} 0 1733656438512\n'
 
         text += '# HELP kwirth_container_write_mbps Mbps of data written to storage the last period\n'
         text += '# TYPE kwirth_container_write_mbps gauge\n'
-        text += 'kwirth_container_write_mbps{container="",id="kwirth",image="doker.io/kwirth",name="kwirth",namespace="default",pod="kwirth-5b9ddf4fd4-tl25h"} 0 1733656438512\n'
 
         text += '# HELP kwirth_container_read_mbps Mbps of data read from storage over the last period\n'
         text += '# TYPE kwirth_container_read_mbps gauge\n'
-        text += 'kwirth_container_read_mbps{container="",id="kwirth",image="doker.io/kwirth",name="kwirth",namespace="default",pod="kwirth-5b9ddf4fd4-tl25h"} 0 1733656438512\n'
+
+        text += '# HELP kwirth_cluster_total_pods Total number of running pods in the cluster\n'
+        text += '# TYPE kwirth_cluster_total_pods gauge\n'
+
+        text += '# HELP kwirth_cluster_pods_percentage Percentage of cluster pod capacity in use\n'
+        text += '# TYPE kwirth_cluster_pods_percentage gauge\n'
+
+        text += '# HELP kwirth_cluster_memory_percentage Percentage of total cluster memory in use\n'
+        text += '# TYPE kwirth_cluster_memory_percentage gauge\n'
+
+        text += '# HELP kwirth_cluster_cpu_percentage Percentage of total cluster CPU in use\n'
+        text += '# TYPE kwirth_cluster_cpu_percentage gauge\n'
 
         return text
     }
@@ -569,10 +571,10 @@ export class MetricsProvider implements IProvider {
             for (let node of clusterInfo.nodes.values()) {
                 nodes.push(await this.readNodeMetrics(node))
             }
-            this.enrichWithSyntheticMetrics(nodes)
+            const clusterMetricValues = this.enrichWithSyntheticMetrics(nodes)
             let usage = this.getClusterUsage()
             this.loadingClusterMetrics = false
-            return { metricsInterval: this.metricsInterval, cluster:usage, nodes }
+            return { metricsInterval: this.metricsInterval, cluster:usage, nodes, clusterMetricValues }
         }
         catch (err) {
             logError(ELogComponent.PROVIDER, 'Error reading cluster metrics')
@@ -629,7 +631,7 @@ export class MetricsProvider implements IProvider {
         }
     }
 
-    private enrichWithSyntheticMetrics(nodes: IMetricsNode[]): void {
+    private enrichWithSyntheticMetrics(nodes: IMetricsNode[]): Map<string, {value: number, timestamp: number}> {
         const totalMemory = this.clusterInfo.memory
         const totalVcpus = this.clusterInfo.vcpus
         const interval = this.metricsInterval
@@ -693,6 +695,41 @@ export class MetricsProvider implements IProvider {
                 }
             }
         }
+
+        // cluster-level synthetic metrics
+        const clusterMetricValues: Map<string, {value: number, timestamp: number}> = new Map()
+        const now = Date.now()
+
+        // total pods: count distinct namespace/pod prefixes across all nodes
+        const podKeys = new Set<string>()
+        for (const node of nodes) {
+            for (const key of node.podMetricValues.keys()) {
+                const parts = key.split('/')
+                if (parts.length >= 2) podKeys.add(`${parts[0]}/${parts[1]}`)
+            }
+        }
+        clusterMetricValues.set('kwirth_cluster_total_pods', { value: podKeys.size, timestamp: now })
+        const maxPods = Array.from(this.clusterInfo.nodes.values()).reduce((sum, n) => sum + n.maxPods, 0)
+        const podsPct = maxPods > 0 ? (podKeys.size / maxPods) * 100 : 0
+        clusterMetricValues.set('kwirth_cluster_pods_percentage', { value: podsPct, timestamp: now })
+
+        // cluster memory and cpu from node summaries
+        let memUsed = 0, memTotal = 0, cpuUsedNano = 0
+        for (const node of nodes) {
+            if (node.summary?.memory) {
+                memUsed += node.summary.memory.usageBytes
+                memTotal += node.summary.memory.usageBytes + node.summary.memory.availableBytes
+            }
+            if (node.summary?.cpu) {
+                cpuUsedNano += node.summary.cpu.usageNanoCores
+            }
+        }
+        const memPct = memTotal > 0 ? (memUsed / memTotal) * 100 : 0
+        const cpuPct = this.clusterInfo.vcpus > 0 ? (cpuUsedNano / (this.clusterInfo.vcpus * 1e9)) * 100 : 0
+        clusterMetricValues.set('kwirth_cluster_memory_percentage', { value: memPct, timestamp: now })
+        clusterMetricValues.set('kwirth_cluster_cpu_percentage', { value: cpuPct, timestamp: now })
+
+        return clusterMetricValues
     }
 
     stopProvider = async () => {

@@ -11,6 +11,7 @@ export interface IMetricsCluster {
     metricsInterval: number
     cluster: IMetricsClusterUsage
     nodes: IMetricsNode[]
+    clusterMetricValues: Map<string, {value: number, timestamp: number}>
 }
 
 export interface IMetricsNode {

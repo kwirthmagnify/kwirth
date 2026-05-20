@@ -95,6 +95,30 @@ class AlertChannel implements IChannel {
                 for (const asset of instance.assets) {
                     for (const rule of instance.metricRules) {
                         const stateKey = `${asset.podName}/${asset.containerName}/${rule.metric}`
+                        const clusterEntry = event.clusterMetricValues?.get(rule.metric)
+                        if (clusterEntry !== undefined) {
+                            const triggered = evaluateMetricRule(clusterEntry.value, rule.operator, rule.value)
+                            const state = instance.alertStates.get(stateKey) ?? { firing: false, lastFired: 0 }
+                            if (triggered) {
+                                let shouldFire = false
+                                if (rule.mode === 'leading-edge') {
+                                    shouldFire = !state.firing
+                                } else if (rule.mode === 'cooldown') {
+                                    const elapsed = Date.now() - state.lastFired
+                                    shouldFire = state.lastFired === 0 || elapsed >= rule.cooldown * 1000
+                                } else {
+                                    shouldFire = true
+                                }
+                                if (shouldFire) {
+                                    this.sendMetricAlert(socketObj.ws, asset.podNamespace, asset.podName, asset.containerName, rule.severity,
+                                        `Metric ${rule.metric} = ${clusterEntry.value.toFixed(2)} ${rule.operator} ${rule.value}`, instance.instanceId)
+                                    state.lastFired = Date.now()
+                                }
+                            }
+                            state.firing = triggered
+                            instance.alertStates.set(stateKey, state)
+                            continue
+                        }
                         for (const node of event.nodes) {
                             const containerKey = `${asset.podNamespace}/${asset.podName}/${asset.containerName}/${rule.metric}`
                             const containerEntry = node.containerMetricValues.get(containerKey)

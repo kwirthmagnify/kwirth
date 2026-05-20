@@ -28,7 +28,6 @@ PROBAR TODO ESTO CON UN CLUSTER VACIO
 KWIRTH
 add shortcuts on RFM (right item. for instacne: "pod" -> changefolder('/workload/pod',)), user-configurable
 en los last tabs deberiamos poder saber a que nos vamos a conectar antes de conectarnos (un tooltip o asin)
-channel metrics: añadir metricas sinteticas: numero de pods en nodo, percentage de pods
 añadir gestion centralizada de timeouts e intervasl en front y en back [codigo mas abajo]
 fileman: mantener la conexion con el pod abierta para que la navegacion por el filesystem sea mas fluida
 en App.tsx/Homepage: no añadir a last ni fav un tab que se carga desde una accion de homepage
@@ -48,7 +47,6 @@ MAGNIFY FRONT
 MAGNIFY BACK
 
 RFM
-  en los fileitem, cuando le fila es muy alta, el nombre del fileitem se esta alineando arriab, y deberia ir al centro
   añadir ... en leftmenu cuando hay mas de xx opciones (xx configurable, con valor por defecto)
   añadir regex y caps al search (ya esta implementado pero no en el UI)
   revisar ajuste de columnas (config, resize, add, remove....)
