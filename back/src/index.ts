@@ -600,31 +600,36 @@ const watchDockerPods = async (ri:IRunningInstance, _apiPath:string, queryParams
 }
 
 const watchKubernetesPods = async (ri:IRunningInstance, apiPath:string, queryParams:any, webSocket:WebSocket, instanceConfig:IInstanceConfig) => {
-    try {
-        const watch = new Watch(ri.clusterInfo.kubeConfig)
-
-        await watch.watch(apiPath, queryParams, (eventType:string, obj:any) => {
-            let podName:string = obj.metadata.name
-            let podNamespace:string = obj.metadata.namespace
-
-            let containerNames:string[] = obj.spec.containers.map( (c: any) => c.name)
-            processEvent(eventType, obj, webSocket, instanceConfig, podNamespace, podName, containerNames, ri)
-        },
-        (err) => {
-            if (err !== null) {
-                logError(ELogComponent.CORE, 'Generic error starting watchPods')
-                logError(ELogComponent.CORE, err)
-                sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, JSON.stringify(err), instanceConfig, ri.channels)
-            }
-            else {
-                // watch method launches a 'done' invocation several minutes after starting streaming, I don't know why.
-            }
-        })
+    while (true) {
+        const wsState = (webSocket as any).readyState
+        if (wsState !== undefined && wsState !== 1) break
+        let serverTimeout = false
+        try {
+            const watch = new Watch(ri.clusterInfo.kubeConfig)
+            const params = { ...queryParams, timeoutSeconds: 900 }
+            await watch.watch(apiPath, params, (eventType:string, obj:any) => {
+                let podName:string = obj.metadata.name
+                let podNamespace:string = obj.metadata.namespace
+                let containerNames:string[] = obj.spec.containers.map( (c: any) => c.name)
+                processEvent(eventType, obj, webSocket, instanceConfig, podNamespace, podName, containerNames, ri)
+            },
+            (err) => {
+                if (err !== null) {
+                    logError(ELogComponent.CORE, 'Generic error starting watchPods')
+                    logError(ELogComponent.CORE, err)
+                    sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, JSON.stringify(err), instanceConfig, ri.channels)
+                }
+                else {
+                    serverTimeout = true
+                }
+            })
+        }
+        catch (err) {
+            logError(ELogComponent.CORE, 'Error watching kubernetes pods')
+            logError(ELogComponent.CORE, err)
+        }
+        if (!serverTimeout) break
     }
-    catch (err) {
-        logError(ELogComponent.CORE, 'Error watching kubernetes pods')
-        logError(ELogComponent.CORE, err)
-    }        
 }
 
 const watchPods = async (ri:IRunningInstance, apiPath:string, queryParams:any, webSocket:WebSocket, instanceConfig:IInstanceConfig) => {

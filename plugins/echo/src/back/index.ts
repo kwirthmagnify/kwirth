@@ -147,7 +147,18 @@ class EchoChannel implements IChannel {
         return true
     }
 
-    deleteObject = async (_webSocket: WebSocket, _instanceConfig: IInstanceConfig, _podNamespace: string, _podName: string, _containerName: string): Promise<boolean> => true
+    deleteObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
+        const instance = this.getInstance(webSocket, instanceConfig.instance)
+        if (instance) {
+            const matchesPod = (a: IAsset) => a.podNamespace===podNamespace && a.podName===podName
+            const toRemove = instance.assets.filter(a => matchesPod(a) && (containerName==='' || a.containerName===containerName))
+            for (const asset of toRemove) {
+                if (asset.interval) clearInterval(asset.interval)
+            }
+            instance.assets = instance.assets.filter(a => !(matchesPod(a) && (containerName==='' || a.containerName===containerName)))
+        }
+        return true
+    }
 
     pauseContinueInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void => {
         const instance = this.getInstance(webSocket, instanceConfig.instance)

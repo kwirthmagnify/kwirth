@@ -358,7 +358,8 @@ class FilemanChannel implements IChannel {
     deleteObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containerName:string) : Promise<boolean> => {
         let instance = this.getInstance(webSocket, instanceConfig.instance)
         if (instance) {
-            instance.assets = instance.assets.filter(a => a.podNamespace!==podNamespace && a.podName!==podName && a.containerName!==containerName)
+            const matchesPod = (a: IAsset) => a.podNamespace===podNamespace && a.podName===podName
+            instance.assets = instance.assets.filter(a => !(matchesPod(a) && (containerName==='' || a.containerName===containerName)))
             return true
         }
         else {
@@ -418,8 +419,9 @@ class FilemanChannel implements IChannel {
     removeConnection = (webSocket: WebSocket): void => {
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (socket) {
-            for (let instance of socket.instances) {
-                this.removeInstance (webSocket, instance.instanceId)
+            const ids = socket.instances.map(i => i.instanceId)
+            for (const id of ids) {
+                this.removeInstance(webSocket, id)
             }
             let pos = this.webSockets.findIndex(s => s.ws === webSocket)
             this.webSockets.splice(pos,1)

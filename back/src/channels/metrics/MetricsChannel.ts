@@ -295,6 +295,11 @@ class MetricsChannel implements IChannel {
     }
 
     deleteObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containerName:string) : Promise<boolean> => {
+        const socket = this.webSockets.find(s => s.ws === webSocket)
+        const instance = socket?.instances.find(i => i.instanceId === instanceConfig.instance)
+        if (instance) {
+            instance.assets = instance.assets.filter(a => !(a.podNamespace===podNamespace && a.podName===podName && (containerName==='' || a.containerName===containerName)))
+        }
         return true
     }
     
@@ -398,12 +403,10 @@ class MetricsChannel implements IChannel {
     removeConnection(webSocket: WebSocket): void {
         let socket = this.webSockets.find(entry => entry.ws === webSocket)
         if (socket) {
-            let instances = socket.instances
-            if (instances) {
-                for (var i=0;i<instances.length;i++) {
-                    logInfo(ELogComponent.CHANNEL, `Interval for instance ${instances[i].instanceId} has been removed`)
-                    this.removeInstance(webSocket, instances[i].instanceId)
-                }
+            const ids = socket.instances.map(i => i.instanceId)
+            for (const id of ids) {
+                logInfo(ELogComponent.CHANNEL, `Interval for instance ${id} has been removed`)
+                this.removeInstance(webSocket, id)
             }
             var pos = this.webSockets.findIndex(s => s.ws === webSocket)
             this.webSockets.splice(pos,1)

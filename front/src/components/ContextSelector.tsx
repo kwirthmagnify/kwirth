@@ -156,17 +156,17 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                     <Tab key='local' value={0} label='Local (Kubeconfig)'/>
                     <Tab key='remote' value={1} label='remote (Kwirth)'/>
                 </Tabs>
-                
+
                 { selectedTab === 0 &&
                     <Stack direction={'column'} sx={{height:300}}>
                         <Stack direction={'row'} sx={{width:'100%'}}>
                             <TextField label={'Filter'} value={filterLocal} onChange={(e) => setFilterLocal(e.target.value)} sx={{width:'100%', ml:2, mr:2}} variant={'standard'}></TextField>
-                            <FormControlLabel control={<Checkbox />} checked={showActive} onChange={() => setShowActive(!showActive)} label={'Show\u00a0only\u00a0active'}/>
+                            <FormControlLabel control={<Checkbox />} checked={showActive} onChange={() => setShowActive(!showActive)} label={'Show only active'}/>
                         </Stack>
                         <Stack direction={'column'} sx={{height:300, overflowY:'auto' }}>
                             <List>
                             {
-                                localContexts.filter(c => c.cluster.includes(filterLocal)).filter(c => !showActive || (showActive && c.status)).map(c => 
+                                localContexts.filter(c => c.cluster.includes(filterLocal)).filter(c => !showActive || (showActive && c.status)).map(c =>
                                     <ListItemButton key={c.cluster} onClick={() => selectLocal(c.cluster)}>
                                         <Tooltip title={c.cluster}>
                                             <Typography>{c.cluster.substring(0,50)+(c.cluster.length>60?'...':'')}</Typography>
@@ -186,14 +186,14 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                         <TextField label={'Filter'} value={filterRemote} onChange={(e) => setFilterRemote(e.target.value)} sx={{ml:2, mr:2}} variant={'standard'}></TextField>
                         <List>
                         {
-                            remoteClusters.filter(c => c.name.includes(filterRemote)).map(c => 
+                            remoteClusters.filter(c => c.name.includes(filterRemote)).map(c =>
                                 <Stack key={c.name} direction={'row'} sx={{wodth:'100%'}}>
                                     <ListItemButton onClick={() => props.onContextSelectorRemote(c.name, c.url, c.accessString)}>
                                         <Typography>{c.name}</Typography>
                                     </ListItemButton>
                                     <IconButton onClick={() => deleteRemoteCluster(c.name)}>
                                         <Delete />
-                                    </IconButton>                                    
+                                    </IconButton>
                                 </Stack>
                             )
                         }

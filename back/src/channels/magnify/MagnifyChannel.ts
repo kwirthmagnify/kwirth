@@ -301,8 +301,9 @@ class MagnifyChannel implements IChannel {
     removeConnection = (webSocket: WebSocket): void => {
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (socket) {
-            for (let instance of socket.instances) {
-                this.removeInstance (webSocket, instance.instanceId)
+            const ids = socket.instances.map(i => i.instanceId)
+            for (const id of ids) {
+                this.removeInstance(webSocket, id)
             }
             let pos = this.webSockets.findIndex(s => s.ws === webSocket)
             this.webSockets.splice(pos,1)

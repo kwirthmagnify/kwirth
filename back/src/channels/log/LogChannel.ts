@@ -128,15 +128,20 @@ class LogChannel implements IChannel {
             if (webSocket.bufferedAmount === 0) {
                 asset.msg.text = text
                 webSocket.send(JSON.stringify(asset.msg))
-            } 
+            }
             else {
                 asset.passThroughStream!.pause()
                 const interval = setInterval((w:WebSocket, a:IAsset) => {
+                    const state = (w as any).readyState
+                    if (state !== undefined && state !== 1) {
+                        clearInterval(interval)
+                        return
+                    }
                     if (w.bufferedAmount === 0) {
                         clearInterval(interval)
                         a.passThroughStream!.resume()
                         a.msg.text = text
-                        w.send(JSON.stringify(a.msg)) // volver a intentar
+                        w.send(JSON.stringify(a.msg))
                     }
                 }, 100, webSocket, asset)
             }
@@ -328,7 +333,27 @@ class LogChannel implements IChannel {
                 previous: Boolean(logConfig.previous),
                 ...(logConfig.fromStart? {} : {sinceSeconds: sinceSeconds})
             }
-            await this.clusterInfo.logApi.log(podNamespace, podName, containerName, asset.passThroughStream, streamConfig)
+            const maxRetries = 24  // 24 × 5s = 2 minutes (covers image pull from remote registry)
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    await this.clusterInfo.logApi.log(podNamespace, podName, containerName, asset.passThroughStream, streamConfig)
+                    break
+                }
+                catch (err: any) {
+                    const isPodNotReady = err?.code === 400
+                    if (isPodNotReady && attempt < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, 5000))
+                        // abort if asset was removed while waiting (pod deleted)
+                        const instance = this.getInstance(webSocket, instanceConfig.instance)
+                        if (!instance?.assets.some(a => a.podNamespace === podNamespace && a.podName === podName && a.containerName === containerName)) break
+                    }
+                    else {
+                        console.log('Generic error starting pod log', err)
+                        this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, (err as any).stack, instanceConfig)
+                        break
+                    }
+                }
+            }
         }
         catch (err) {
             console.log('Generic error starting pod log', err)
@@ -349,7 +374,13 @@ class LogChannel implements IChannel {
     deleteObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containerName:string) : Promise<boolean> => {
         let instance = this.getInstance(webSocket, instanceConfig.instance)
         if (instance) {
-            instance.assets = instance.assets.filter(a => a.podNamespace!==podNamespace && a.podName!==podName && a.containerName!==containerName)
+            const matchesPod = (a: IAsset) => a.podNamespace===podNamespace && a.podName===podName
+            const toRemove = instance.assets.filter(a => matchesPod(a) && (containerName==='' || a.containerName===containerName))
+            for (const asset of toRemove) {
+                asset.passThroughStream?.destroy()
+                ;(asset.readableStream as stream.Readable | undefined)?.destroy()
+            }
+            instance.assets = instance.assets.filter(a => !(matchesPod(a) && (containerName==='' || a.containerName===containerName)))
             return true
         }
         else {
@@ -408,10 +439,8 @@ class LogChannel implements IChannel {
                 if (pos>=0) {
                     let instance = instances[pos]
                     for (let asset of instance.assets) {
-                        if (asset.passThroughStream)
-                            asset.passThroughStream.removeAllListeners()
-                        else
-                            console.log(`logStream not found of instance id ${instanceId} and asset ${asset.podNamespace}/${asset.podName}/${asset.containerName}`)
+                        asset.passThroughStream?.destroy()
+                        ;(asset.readableStream as stream.Readable | undefined)?.destroy()
                     }
                     instances.splice(pos,1)
                 }
@@ -435,8 +464,9 @@ class LogChannel implements IChannel {
     removeConnection(webSocket: WebSocket): void {
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (socket) {
-            for (let instance of socket.instances) {
-                this.removeInstance (webSocket, instance.instanceId)
+            const ids = socket.instances.map(i => i.instanceId)
+            for (const id of ids) {
+                this.removeInstance(webSocket, id)
             }
             let pos = this.webSockets.findIndex(s => s.ws === webSocket)
             this.webSockets.splice(pos,1)

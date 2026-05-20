@@ -176,23 +176,28 @@
   <h2>Connect your first cluster</h2>
   <p>Kwirth can monitor any number of Kubernetes clusters. The cluster where Kwirth runs is auto-connected. To add a remote cluster:</p>
   <ol style="margin-left:24px;color:var(--muted);">
-    <li style="margin-bottom:8px">In the Kwirth UI, go to <strong style="color:var(--text)">Settings → Clusters</strong></li>
-    <li style="margin-bottom:8px">Click <strong style="color:var(--text)">Add cluster</strong> and provide the API server URL and a service account token with appropriate RBAC permissions</li>
+    <li style="margin-bottom:8px">In the Kwirth UI, go to <strong style="color:var(--text)">Settings → Manage clusters list</strong></li>
+    <li style="margin-bottom:8px">Click <strong style="color:var(--text)">NEW</strong> and provide the API server URL and a proper API Key</li>
     <li style="margin-bottom:8px">Test the connection and save</li>
   </ol>
 
   <h2>Open your first channel</h2>
-  <p>Click <strong style="color:var(--text)">+ New tab</strong> in the top bar to choose a channel:</p>
+  <p>Use the <strong style="color:var(--text)">resource selector</strong> just below the top bar. You need to specify what is your cluster and your target 'view'
+  (the whole cluster, one or more namespaces, one or more controller, one or more pods or even a set of containers belonging to different pods). Then choose a channel type,
+  for example:</p>
   <ul style="margin-left:24px;color:var(--muted);margin-bottom:16px;">
     <li style="margin-bottom:6px"><strong style="color:var(--orange)">Log</strong> — select a namespace and one or more pods to start streaming logs immediately</li>
     <li style="margin-bottom:6px"><strong style="color:var(--orange)">Magnify</strong> — explore your entire cluster in a file-manager interface</li>
     <li style="margin-bottom:6px"><strong style="color:var(--orange)">Metrics</strong> — see real-time CPU and memory for your workloads</li>
+    <li style="margin-bottom:6px"><strong style="color:var(--orange)">Topology</strong> — see and manage your cluster un 3D</li>
     <li style="margin-bottom:6px"><strong style="color:var(--orange)">Pinocchio</strong> — configure your LLM provider and start AI analysis</li>
   </ul>
+  <p>Click the <strong style="color:var(--text)">ADD</strong> button and you will get a new tab added. On the tab settinigs just select <strong style="color:var(--text)">START</strong>
+  and the magic begins.</p>
 
-  <h2>Install Magnify as a Desktop App</h2>
-  <p>Kwirth Magnify is also available as a standalone desktop application. Download the installer for your platform from GitHub Releases and point it to your Kwirth instance URL.</p>
-  <div class="callout"><strong>Info:</strong> The desktop app connects to any running Kwirth instance. You still need at least one Kwirth pod in your cluster — the desktop app is just a native UI wrapper for the Magnify channel.</div>
+  <h2>Install Kwirth Desktop</h2>
+  <p>Kwirth is also available as a standalone desktop application. Download the installer for your platform from GitHub Releases.</p>
+  <div class="callout"><strong>Info:</strong> Kwirth Desktop has two connection modes: it can connect directly to any Kubernetes cluster using your local kubeconfig credentials (no Kwirth pod required), or it can connect to a cluster where Kwirth is already installed to take advantage of all server-side features.</div>
   <p><a href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">&#x2B07; Download Magnify Desktop from GitHub Releases</a></p>
 
   <h2>Next steps</h2>

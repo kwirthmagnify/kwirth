@@ -218,7 +218,12 @@ class OpsChannel implements IChannel {
     }
 
     deleteObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containerName:string) : Promise<boolean> => {
-        return true        
+        const socket = this.webSockets.find(s => s.ws === webSocket)
+        const instance = socket?.instances.find(i => i.instanceId === instanceConfig.instance)
+        if (instance) {
+            instance.assets = instance.assets.filter((a: IAsset) => !(a.podNamespace===podNamespace && a.podName===podName && (containerName==='' || a.containerName===containerName)))
+        }
+        return true
     }
     
     pauseContinueInstance(webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void {
@@ -278,8 +283,9 @@ class OpsChannel implements IChannel {
     removeConnection(webSocket: WebSocket): void {
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (socket) {
-            for (let instance of socket.instances) {
-                this.removeInstance (webSocket, instance.instanceId)
+            const ids = socket.instances.map(i => i.instanceId)
+            for (const id of ids) {
+                this.removeInstance(webSocket, id)
             }
             let pos = this.webSockets.findIndex(s => s.ws === webSocket)
             this.webSockets.splice(pos,1)

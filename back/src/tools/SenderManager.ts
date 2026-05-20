@@ -433,7 +433,7 @@ export class SenderManager implements ISenderAccess {
     }
 
     removeConfig(senderId: string, configName: string): boolean {
-        const sender = this.instances.get(senderId)
+        const sender = this.getSender(senderId)
         if (!sender) return false
         sender.removeConfig(configName)
         this.configStore.get(senderId)?.delete(configName)

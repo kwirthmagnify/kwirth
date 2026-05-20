@@ -230,7 +230,18 @@ class AlertChannel implements IChannel {
     }
 
     deleteObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containerName:string) : Promise<boolean> => {
-        return true        
+        const socket = this.webSockets.find(s => s.ws === webSocket)
+        const instance = socket?.instances.find(i => i.instanceId === instanceConfig.instance)
+        if (instance) {
+            const matchesPod = (a: IAsset) => a.podNamespace===podNamespace && a.podName===podName
+            const toRemove = instance.assets.filter((a: IAsset) => matchesPod(a) && (containerName==='' || a.containerName===containerName))
+            for (const asset of toRemove) {
+                asset.passThroughStream?.destroy()
+                ;(asset.readableStream as stream.Readable | undefined)?.destroy()
+            }
+            instance.assets = instance.assets.filter((a: IAsset) => !(matchesPod(a) && (containerName==='' || a.containerName===containerName)))
+        }
+        return true
     }
     
     pauseContinueInstance(webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void {
@@ -282,11 +293,9 @@ class AlertChannel implements IChannel {
                 let pos = instances.findIndex(t => t.instanceId === instanceId)
                 if (pos>=0) {
                     let instance = instances[pos]
-                    for (var asset of instance.assets) {
-                        if (asset.passThroughStream)
-                            asset.passThroughStream.removeAllListeners()
-                        else
-                            console.log(`Alert stream not found of instance id ${instanceId} and asset ${asset.podNamespace}/${asset.podName}/${asset.containerName}`)
+                    for (const asset of instance.assets) {
+                        asset.passThroughStream?.destroy()
+                        ;(asset.readableStream as stream.Readable | undefined)?.destroy()
                     }
                     instances.splice(pos,1)
                 }
@@ -314,8 +323,9 @@ class AlertChannel implements IChannel {
     removeConnection(webSocket: WebSocket): void {
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (socket) {
-            for (let instance of socket.instances) {
-                this.removeInstance (webSocket, instance.instanceId)
+            const ids = socket.instances.map(i => i.instanceId)
+            for (const id of ids) {
+                this.removeInstance(webSocket, id)
             }
             let pos = this.webSockets.findIndex(s => s.ws === webSocket)
             this.webSockets.splice(pos,1)

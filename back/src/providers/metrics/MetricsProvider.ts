@@ -128,7 +128,7 @@ export class MetricsProvider implements IProvider {
         )
     }
 
-    stopMetricsInterval = () => clearTimeout(this.metricsIntervalRef)
+    stopMetricsInterval = () => clearInterval(this.metricsIntervalRef)
 
     public getMetricsList() {
         return Array.from(this.metricsList.keys()).map ( metricName => { return { metric:metricName, ...this.metricsList.get(metricName)} })
@@ -261,7 +261,7 @@ export class MetricsProvider implements IProvider {
         if (response.ok)
             text = await response.text()
         else
-            logError(ELogComponent.CHANNEL, `Error reading metrics from '${url}' ${response.status}: ${response.statusText}`)
+            logError(ELogComponent.PROVIDER, `Error reading metrics from '${url}' ${response.status}: ${response.statusText}`)
 
         // add kwirth container metrics
         text += '# HELP kwirth_container_memory_percentage Percentage of memory used by object from the whole cluster\n'

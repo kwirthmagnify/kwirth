@@ -128,7 +128,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
 
     const deletePipeline = async (name: string) => {
         const res = await fetch(`${backendUrl}/senders/composite/configs/${encodeURIComponent(name)}`, authDelete(accessString))
-        if (!res.ok) { setError(`Failed to delete pipeline "${name}"`); return }
+        if (!res.ok && res.status !== 404) { setError(`Failed to delete pipeline "${name}"`); return }
         setPipelines(prev => { const n = { ...prev }; delete n[name]; return n })
         if (selectedName === name) { setSelectedName(undefined); setFlow(undefined); setDirty(false) }
     }

@@ -215,7 +215,11 @@ export class TopologyChannel {
                 this.webSockets.push({ ws, lastRefresh: Date.now(), instances: [] })
                 entry = this.webSockets[this.webSockets.length - 1]
             }
-            if (entry.instances.some(i => i.instanceId === instanceConfig.instance)) return true
+            const existing = entry.instances.find(i => i.instanceId === instanceConfig.instance)
+            if (existing) {
+                await this.sendSnapshot(ws, existing)
+                return true
+            }
 
             const ns = instanceConfig.namespace
             const namespaces: string[] = ns && ns !== '' && ns !== '*all'
@@ -249,7 +253,12 @@ export class TopologyChannel {
         return true
     }
 
-    deleteObject = async (): Promise<boolean> => false
+    deleteObject = async (ws: WebSocket, instanceConfig: IInstanceConfig): Promise<boolean> => {
+        const entry = this.webSockets.find(s => s.ws === ws)
+        const inst = entry?.instances.find(i => i.instanceId === instanceConfig.instance)
+        if (inst) await this.sendSnapshot(ws, inst)
+        return true
+    }
 
     containsAsset  = (): boolean => false
     containsInstance(instanceId: string): boolean {

@@ -20,7 +20,7 @@ export class EventsProvider implements IProvider {
     readonly requiresApiKeyApi: boolean = false
     public apiKeyApi: ApiKeyApi|undefined
 
-    private resourceWatchers: Map<string, Watch>
+    private resourceWatchers: Map<string, { watch: Watch, stopped: boolean }>
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IEventsSubscriber>
 
@@ -56,26 +56,30 @@ export class EventsProvider implements IProvider {
         let retryCount = 0
         let currentWaitTime = INITIAL_WAIT
 
-        const watch = new Watch(this.clusterInfo.kubeConfig)
+        const entry = { watch: new Watch(this.clusterInfo.kubeConfig), stopped: false }
+        this.resourceWatchers.set(resourcePath, entry)
+
         const watchLoop = async () => {
+            if (entry.stopped) return
             try {
-                await watch.watch(
+                await entry.watch.watch(
                     resourcePath,
                     {
                         timeoutSeconds: 3600
-                    }, 
+                    },
                     (type, apiObj) => {
                         retryCount = 0
                         currentWaitTime = INITIAL_WAIT
                         if (apiObj && apiObj.metadata) eventHandler(type, apiObj, this.subscribers)
                     },
                     (err) => {
+                        if (entry.stopped) return
                         const errorMsg = err?.message || err?.Error || "Unknown error"
                         logError(ELogComponent.PROVIDER, `[${resourcePath}] Watcher ended: ${errorMsg}`)
 
                         if (retryCount < MAX_RETRIES) {
                             retryCount++
-                            logInfo(ELogComponent.PROVIDER, `[${resourcePath}] Retry ${retryCount}/${MAX_RETRIES}. Waiting ${currentWaitTime / 1000}s...`)                            
+                            logInfo(ELogComponent.PROVIDER, `[${resourcePath}] Retry ${retryCount}/${MAX_RETRIES}. Waiting ${currentWaitTime / 1000}s...`)
                             setTimeout(watchLoop, currentWaitTime)
                             currentWaitTime *= 2
                         }
@@ -84,9 +88,10 @@ export class EventsProvider implements IProvider {
                             this.resourceWatchers.delete(resourcePath)
                         }
                     }
-                );
+                )
             }
             catch (error: any) {
+                if (entry.stopped) return
                 if (retryCount < MAX_RETRIES) {
                     retryCount++
                     logError(ELogComponent.PROVIDER, `[${resourcePath}] Error: ${error.message}. Retry ${retryCount} in ${currentWaitTime / 1000}s`)
@@ -95,14 +100,11 @@ export class EventsProvider implements IProvider {
                 }
                 else {
                     this.resourceWatchers.delete(resourcePath)
-                    // @ts-ignore
-                    if (typeof watch.abort === 'function') watcher.abort()
                 }
             }
         }
 
         watchLoop()
-        this.resourceWatchers.set(resourcePath, watch)
     }
 
     private handleEvent = (type: string, obj: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
@@ -141,20 +143,18 @@ export class EventsProvider implements IProvider {
     private stopCrdInstanceWatcher = (crd: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
         const kindName = crd.spec.names.kind;
         const resourcePath = `/apis/${crd.spec.group}/${crd.spec.versions[0].name}/${crd.spec.names.plural}`
-        const watcher = this.resourceWatchers.get(resourcePath)
+        const entry = this.resourceWatchers.get(resourcePath)
 
         for (let subscriber of subscribersList.values()) {
             subscriber.crdInstances = subscriber.crdInstances.filter(k => k !== kindName)
         }
 
-        if (watcher) {
+        if (entry) {
             logWarning(ELogComponent.PROVIDER, `Stopping watcher for CRD: ${kindName} at ${resourcePath}`)
+            entry.stopped = true
             try {
                 // @ts-ignore
-                if (typeof watcher.abort === 'function') {
-                    // @ts-ignore
-                    watcher.abort();
-                }
+                if (typeof entry.watch.abort === 'function') entry.watch.abort()
             }
             catch (e) {
                 logError(ELogComponent.PROVIDER, 'Error aborting watcher:')
@@ -205,6 +205,17 @@ export class EventsProvider implements IProvider {
     }
 
     stopProvider = async () => {
+        for (const [path, entry] of this.resourceWatchers) {
+            entry.stopped = true
+            try {
+                // @ts-ignore
+                if (typeof entry.watch.abort === 'function') entry.watch.abort()
+            }
+            catch (e) {
+                logError(ELogComponent.PROVIDER, `Error aborting watcher for ${path}: ${e}`)
+            }
+        }
+        this.resourceWatchers.clear()
     }
 
 }
