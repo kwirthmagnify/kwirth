@@ -21,7 +21,7 @@ Providers is one of the data-streaming subsystems inside Kwirth, and it is very 
 
 What follows is an architectural view of the provider/channel subsystem.
 
-![provider-arch](./_media/ch-images/providers-arch.png)
+![provider-arch](./_media/ch-images/providers-arch.png ':class=imageclass80')
 
 
 ## Developing

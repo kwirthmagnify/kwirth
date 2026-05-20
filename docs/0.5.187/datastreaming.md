@@ -79,7 +79,7 @@ ws.send(JSON.stringify(logConfig))
 
 If everything is ok, the Kwirth server would start sending log messages. What follows is a stream of JSON messages sent by the websocket
 
-![datastreaming](./_media/datastreaming.png)
+![datastreaming](./_media/datastreaming.png ':class=imageclass80')
 
 ### Metrics channel
 Metrics streaming means sending resource metrics from server to client.

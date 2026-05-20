@@ -62,11 +62,11 @@ There currently exist two flavours of Kwirth Desktop:
 
 Kwirth Desktop is an Electron application whose login page is specifically designed for local work (the same you would do with Lens, K9s, or Headlamp). Therefore, Kwirth Desktop does not connect to a specific Kubernetes cluster by default; instead, it shows the user all the contexts available in their local `kubeconfig` file. Cluster status and availability will be refreshed automatically, as shown in the following image:
 
-![local context selection](./_media/context-selection-local.png)
+![local context selection](./_media/context-selection-local.png ':class=imageclass80')
 
 If you want to connect to a cluster using any other type of Kwirth installation (like Docker, External or Kubernetes), you can add as many clusters as you want in the 'Remote cluster' selection.
 
-![local context selection](./_media/context-selection-remote.png)
+![local context selection](./_media/context-selection-remote.png ':class=imageclass80')
 
 !> Please refer to **architectural discussions** on the best way to consume Kwirth data-streams.
 

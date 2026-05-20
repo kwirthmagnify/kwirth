@@ -11,7 +11,7 @@ As we said before, Kwirth needs just one pod **with no persistence** for running
 
 What follows is a self-explaining architecture of a typical deployment of Kwirth.
 
-![Kwirth architecture](./_media/kwirth-kwirth-arch.png)
+![Kwirth architecture](./_media/kwirth-kwirth-arch.png ':class=imageclass80')
 
 # Kwirth deployment options
 As of Kwirth 0.5.21 Kwirth can be installed/deployed in several different ways:
@@ -45,4 +45,4 @@ What follows is an architectural view of the different ways you can deliver Kwir
 
 There exist no functional differences between these options; however, performance is significantly better when accessing the Kube API server from within the cluster (Kwirth Kubernetes Deployment) compared to accessing it from **OUTSIDE** (Magnify, Docker, or External) due to network latency and authentication overhead. Feel free to try them out and ask us for recommendations!
 
-![Kwirth family architecture](./_media/kwirth-family.png)
+![Kwirth family architecture](./_media/kwirth-family.png  ':class=imageclass80')
