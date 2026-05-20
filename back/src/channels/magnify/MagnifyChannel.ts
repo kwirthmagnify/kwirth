@@ -431,32 +431,40 @@ class MagnifyChannel implements IChannel {
                 
                 case EMagnifyCommand.CLUSTERINFO:
                     this.sendDataMessage(webSocket, instance, '1', EMagnifyCommand.CLUSTERINFO, JSON.stringify((await this.clusterInfo.versionApi.getCode())))
-                    break
+                    return
 
                 case EMagnifyCommand.USAGE:
                     this.sendDataMessage(webSocket, instance, '1', EMagnifyCommand.USAGE, JSON.stringify(await this.getUsage(magnifyMessage.params![0])))
-                    break
+                    return
 
                 case EMagnifyCommand.POD:
                     switch (magnifyMessage.params![0]) {
                         case 'evict':
                             await podEvict(this.clusterInfo.coreApi, magnifyMessage.params![1], magnifyMessage.params![2])
-                            break
+                            this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, `Pod '${magnifyMessage.params![1]}/${magnifyMessage.params![2]}' successfully evicted`)
+                            return
                         case 'work':
                             // +++ this is expected to be used for KubeWorks
                             let podName = await podWork(this.clusterInfo.coreApi, magnifyMessage.params![1])
                             this.sendDataMessage(webSocket, instance, '1', EMagnifyCommand.POD, JSON.stringify(['work',podName]))
-                            break
+                            return
+                        default:
+                            this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, 'Invalid POD command')
+                            console.error('Invalid POD command')
+                            return
                     }
-                    break
 
                 case EMagnifyCommand.INGRESSCLASS:
                     switch (magnifyMessage.params![0]) {
                         case 'default':
                             await setIngressClassAsDefault(this.clusterInfo.networkApi, magnifyMessage.params![1])
-                            break
+                            this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, `Ingress class '${magnifyMessage.params![1]}}' successfully set`)
+                            return
+                        default:
+                            this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, 'Invalid IngressClass command')
+                            console.error('Invalid IngressClass command')
+                            return
                     }
-                    break
 
                 case EMagnifyCommand.IMAGE:
                     switch (magnifyMessage.params![0]) {
@@ -468,9 +476,12 @@ class MagnifyChannel implements IChannel {
                             throttleExcute('image-delete-node', async () => {
                                 this.sendDataMessage(webSocket, instance, magnifyMessage.id, EMagnifyCommand.LIST, JSON.stringify(await this.clusterInfo.coreApi.listNode()))
                             })
-                            break
+                            return
+                        default:
+                            this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, 'Invalid Image command')
+                            console.error('Invalid Image command')
+                            return
                     }
-                    break
 
                 case EMagnifyCommand.NODE:
                     switch (magnifyMessage.params![0]) {
@@ -486,7 +497,12 @@ class MagnifyChannel implements IChannel {
                         case 'drain':
                             await nodeDrain(this.clusterInfo.coreApi, magnifyMessage.params![1])
                             break
+                        default:
+                            this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, 'Invalid node command')
+                            console.error('Invalid node command')
+                            return
                     }
+                    this.sendDataMessage(webSocket, instance, '1', EMagnifyCommand.NODE, `Node successfully ${magnifyMessage.params![0]}`)
                     break
 
                 case EMagnifyCommand.LISTCRD: {
@@ -524,14 +540,18 @@ class MagnifyChannel implements IChannel {
                     switch(magnifyMessage.params?.[0]) {
                         case 'restart':
                             restartController(magnifyMessage.params[1], magnifyMessage.params[2], magnifyMessage.params[3], this.clusterInfo)
-                        break
+                            break
                         case 'scale':
                             scaleController(magnifyMessage.params[1], magnifyMessage.params[2], magnifyMessage.params[3], +magnifyMessage.params[4], this.clusterInfo)
-                        break
+                            break
+                        default:
+                            this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, 'Invalid controller command')
+                            console.error('Invalid node command')
+                            return
                     }
+                    this.sendDataMessage(webSocket, instance, '1', EMagnifyCommand.NODE, `Controller successfully ${magnifyMessage.params![0]}`)
                     return
                 }
-
                 case EMagnifyCommand.CRONJOB: {
                     switch (magnifyMessage.params![0]) {
                         case 'trigger':
@@ -543,8 +563,13 @@ class MagnifyChannel implements IChannel {
                         case 'resume':
                             await cronJobStatus(magnifyMessage.params![1], magnifyMessage.params![2], false, this.clusterInfo.batchApi)
                             break
+                        default:
+                            this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, 'Invalid cronjon command')
+                            console.error('Invalid node command')
+                            return
                     }
-                    break
+                    this.sendDataMessage(webSocket, instance, '1', EMagnifyCommand.NODE, `CronJob successfully ${magnifyMessage.params![0]}`)
+                    return
                 }
 
                 default:

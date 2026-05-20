@@ -1,7 +1,7 @@
 call ..\version\version.cmd
 
 del \github\releases\*.exe
-del \github\releases\*.exe.blockmap
+del \github\releases\*blockmap
 del \github\releases\*.AppImage
 
 call npm run dist -- -c.extraMetadata.version=%KWIRTH_VERSION%

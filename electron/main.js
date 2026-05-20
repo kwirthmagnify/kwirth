@@ -163,6 +163,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('will-quit', () => {
-  process.exit(0)
+app.on('will-quit', (event) => {
+  event.preventDefault()
+  process.kill(process.pid, 'SIGTERM')
 })

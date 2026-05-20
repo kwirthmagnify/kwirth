@@ -30,7 +30,7 @@
 			"output": "dist" 
 		},
 		"win": {
-			"icon": "kwirth-last.ico",
+			"icon": "kwirth-transparent.ico",
 			"target": [
 				{
 					"target": "nsis", 
@@ -43,7 +43,7 @@
 			]
 		},
 		"linux": {
-			"icon": "kwirth-last.png",
+			"icon": "kwirth-transparent.png",
 			"target": ["AppImage"], 
 			"category": "Utility",
 			"executableArgs": ["--no-sandbox"]

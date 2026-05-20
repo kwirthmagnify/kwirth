@@ -1834,13 +1834,16 @@ const configureForward = (localClusterInfo:ClusterInfo, expressApp:Application) 
     })
 }
 
+let httpServer: http.Server | undefined
+let wsServer: WebSocketServer | undefined
+
 const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, instances:IRunningInstance[], localProcessClientMessage:(webSocket: WebSocket, message: string, ri:IRunningInstance) => Promise<void>) => {
     try {
         // create HTTP and WS servers
         logInfo(ELogComponent.CORE, 'Creating HTTP server...')
-        const httpServer = http.createServer(expressApp)
+        httpServer = http.createServer(expressApp)
         logInfo(ELogComponent.CORE, 'Creating WS server...')
-        const wsServer = new WebSocketServer({ server: httpServer, skipUTF8Validation:true  })
+        wsServer = new WebSocketServer({ server: httpServer, skipUTF8Validation:true  })
 
         wsServer.on('connection', (webSocket:WebSocket, req:IncomingMessage) => {
             const ipHeader = req.headers['x-forwarded-for']
@@ -1930,8 +1933,12 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
 const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthData) => {
     const handleNodeProcessSignal = (signal:any) => {
         logWarning(ELogComponent.CORE, `⚠️ Signal ${signal} received. We just close everything.`)
+        wsServer?.clients.forEach(client => client.terminate())
+        wsServer?.close()
+        httpServer?.closeAllConnections()
+        httpServer?.close()
         process.exit(0)
-    }   
+    }
 
     const exitAndLog = async (signal:any, reason:any, promise:any, err: any, origin: any, exitCode:number, waitSeconds: number) => {
         if (reason) {
