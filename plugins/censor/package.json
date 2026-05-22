@@ -1,11 +1,11 @@
 {
-    "id": "pinocchio",
-    "name": "Pinocchio",
+    "id": "censor",
+    "name": "Censor",
     "publisher": "@kwirthmagnify",
     "version": "0.1.0",
     "website": "https://kwirthmagnify.dev",
-    "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
-    "icon": "AutoFixHigh",
+    "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
+    "icon": "FilterList",
     "type": "module",
     "scripts": {
         "build": "node build.mjs",
@@ -15,16 +15,12 @@
         "@kwirthmagnify/kwirth-common-ai": "file:../../common-ai",
         "@kwirthmagnify/kwirth-common-front": "^0.5.2",
         "ai": "^6.0.174",
-        "lodash": "^4.17.21",
-        "nunjucks": "^3.2.4",
         "zod": "^4.3.6"
     },
     "devDependencies": {
         "@mui/icons-material": "7.1.2",
         "@mui/material": "7.1.2",
-        "@types/lodash": "^4.17.0",
         "@types/node": "^20.12.13",
-        "@types/nunjucks": "^3.2.6",
         "@types/react": "^18.3.0",
         "esbuild": "^0.27.2",
         "react": "^18.3.0",

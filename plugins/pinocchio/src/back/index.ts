@@ -1,19 +1,10 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject } from '@kwirthmagnify/kwirth-common'
-import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage, IPlaygroundRequest } from './PinocchioConfig'
+import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
+import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS } from '@kwirthmagnify/kwirth-common-ai'
+import { buildModel, loadModels } from '@kwirthmagnify/kwirth-common-ai/back'
 import { Request, Response } from 'express'
 import { z } from 'zod'
-
-// AI stuff
-import { loadModels } from './Utils'
 import { generateText, Output, stepCountIs } from 'ai'
-
-// AI models
-import { createOpenAI, OpenAILanguageModelChatOptions } from '@ai-sdk/openai'
-import { createGroq, GroqLanguageModelOptions } from '@ai-sdk/groq'
-import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { createDeepSeek } from '@ai-sdk/deepseek'
-import { createGoogleGenerativeAI, GoogleLanguageModelOptions } from '@ai-sdk/google'
-import { createMistral, MistralLanguageModelOptions } from '@ai-sdk/mistral'
 
 // tools
 import { getToolByName, IToolContext, toolInfoList } from './Tools'
@@ -98,7 +89,7 @@ export class PinocchioChannel {
             crdInstances: [],
             syncCrdInstances: false
         })
-        let provs = await this.backChannelObject.readStorage!('pinocchio-providers', true)
+        let provs = await this.backChannelObject.readStorage!(STORAGE_KEY_PROVIDERS, true)
         if (provs) this.providers = provs
         let config = await this.backChannelObject.readStorage!('pinocchio-config', false) as IPinocchioConfig
         if (config) this.pinocchioConfig = config
@@ -125,16 +116,16 @@ export class PinocchioChannel {
         return ['', 'none', 'cluster'].indexOf(scope)
     }
 
-    buildModelInvocation = async (trigger: IConfigTrigger, version: IConfigTriggerVersion, event: IEventsProviderEvent|IBusinessProviderEvent|any) : Promise<IModelInvocation|undefined> => {
+    buildModelInvocation = async (trigger: IConfigTrigger, version: IConfigTriggerVersion, event: IEventsProviderEvent|IBusinessProviderEvent|unknown) : Promise<IModelInvocation|undefined> => {
         let prompt
         let llm = this.pinocchioConfig.llms.find(l => l.id === version.llm)
         if (!llm) {
             this.broadcastError(`Cannot find LLM with id '${version.llm}'`)
             return undefined
         }
-        let key = llm.useProviderKey? this.providers.find(p => p.name === llm!.provider)?.key : llm.key
-        if (!key) {
-            this.broadcastError(`Cannot get provider API key for LLM '${version.llm}'`)
+        const model = buildModel(llm, this.providers)
+        if (!model) {
+            this.broadcastError(`Cannot build model for LLM '${version.llm}' (provider: ${llm.provider})`)
             return undefined
         }
         switch(trigger.trigger) {
@@ -186,108 +177,34 @@ export class PinocchioChannel {
             tools[toolName] = getToolByName(toolName, context)
         }
 
-        switch(llm.provider) {
-            case 'deepseek':
-                const deepseek = createDeepSeek({ apiKey: key })
-                return {
-                    llmProviderId: llm.provider,
-                    llmModelId: llm.model,
-                    model: deepseek(llm.model),
-                    providerOptions: {
-                        openai: {} satisfies OpenAILanguageModelChatOptions
-                    },
-                    errorPath: '',
-                    temperature,
-                    tools,
-                    prompt,
-                    system
-                }
+        let providerOptions: Record<string, unknown> = {}
+        let errorPath = ''
+        switch (llm.provider) {
             case 'google':
-                const google = createGoogleGenerativeAI({ apiKey: key })
-                return {
-                    llmProviderId: llm.provider,
-                    llmModelId: llm.model,
-                    model: google(llm.model),
-                    providerOptions: {
-                        google: {
-                            structuredOutputs: true,
-                        } satisfies GoogleLanguageModelOptions
-                    },
-                    errorPath: 'lastError.data.error.message',
-                    temperature,
-                    tools,
-                    prompt,
-                    system
-                }
-            case 'openrouter':
-                const openRouter = createOpenRouter({ apiKey: key })
-                return {
-                    llmProviderId: llm.provider,
-                    llmModelId: llm.model,
-                    model: openRouter(llm.model),
-                    providerOptions: {},
-                    errorPath: '',
-                    temperature,
-                    tools,
-                    prompt,
-                    system
-                }
-            case 'groq':
-                const groq = createGroq({ apiKey: key })
-                return {
-                    llmProviderId: llm.provider,
-                    llmModelId: llm.model,
-                    model: groq(llm.model),
-                    providerOptions: {
-                        groq: {
-                            structuredOutputs: true
-                        } satisfies GroqLanguageModelOptions
-                    },
-                    errorPath: '',
-                    temperature,
-                    tools,
-                    prompt,
-                    system
-                }
-            case 'kwirth':
+                providerOptions = { google: { structuredOutputs: true } }
+                errorPath = 'lastError.data.error.message'
                 break
-            case 'openai':
-                const openai = createOpenAI({ apiKey: key })
-                return {
-                    llmProviderId: llm.provider,
-                    llmModelId: llm.model,
-                    model: openai(llm.model),
-                    providerOptions: {
-                        openai: {} satisfies OpenAILanguageModelChatOptions
-                    },
-                    errorPath: '',
-                    temperature,
-                    tools,
-                    prompt,
-                    system
-                }
+            case 'groq':
+                providerOptions = { groq: { structuredOutputs: true } }
+                break
             case 'mistral':
-                const mistral = createMistral({ apiKey: key })
-                return {
-                    llmProviderId: llm.provider,
-                    llmModelId: llm.model,
-                    model: mistral(llm.model),
-                    providerOptions: {
-                        mistral: {
-                            strictJsonSchema: true,
-                            structuredOutputs: true
-                        } satisfies MistralLanguageModelOptions
-                    },
-                    errorPath: '',
-                    temperature,
-                    tools,
-                    prompt,
-                    system
-                }
+                providerOptions = { mistral: { strictJsonSchema: true, structuredOutputs: true } }
+                break
             default:
-                this.broadcastError(`Cannot find LLM provider '${llm.provider}'`)
+                providerOptions = { openai: {} }
         }
-        return undefined
+
+        return {
+            llmProviderId: llm.provider,
+            llmModelId: llm.model,
+            model,
+            providerOptions,
+            errorPath,
+            temperature,
+            tools,
+            prompt,
+            system
+        }
     }
 
     async processProviderEvent(providerId:string, event: IEventsProviderEvent|IBusinessProviderEvent|any) : Promise<void> {
@@ -481,16 +398,17 @@ export class PinocchioChannel {
                     this.executeConfigGet()
                     break
                 case EPinocchioCommand.CONFIGSET:
-                    let config:IPinocchioConfig = pinocchioMessage.data
+                    let config:IPinocchioConfig = pinocchioMessage.data as IPinocchioConfig
                     this.pinocchioConfig = config
                     await this.backChannelObject.writeStorage!('pinocchio-config', false, config)
+                    if (config.llms?.length) await this.backChannelObject.writeStorage!(STORAGE_KEY_LLMS, false, config.llms)
                     this.executeConfigGet()
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Config updated')
                     break
                 case EPinocchioCommand.PROVIDERSSET:
-                    let provs:IConfigProvider[] = pinocchioMessage.data
+                    let provs:IConfigProvider[] = pinocchioMessage.data as IConfigProvider[]
                     this.providers = provs
-                    await this.backChannelObject.writeStorage!('pinocchio-providers', true, provs)
+                    await this.backChannelObject.writeStorage!(STORAGE_KEY_PROVIDERS, true, provs)
                     await loadModels(this.providers, this.backChannelObject)
                     this.executeProvidersGet()
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Providers updated')

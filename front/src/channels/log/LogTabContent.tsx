@@ -4,11 +4,7 @@ import { IContentProps } from '../IChannel'
 import { useEffect, useRef, useState } from 'react'
 import { Error, Warning } from '@mui/icons-material'
 import { ILogConfig, LogConfig } from './LogConfig'
-
-const cleanANSI = (text: string): string => {
-    const regexAnsi = /\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g;
-    return text.replace(regexAnsi, '') // replace all matches with empty strings
-}
+import { cleanANSI } from '@kwirthmagnify/kwirth-common-front'
 
 const LogTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let logData:ILogData = props.channelObject.data || new LogData()

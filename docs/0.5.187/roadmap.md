@@ -14,11 +14,11 @@ We cite here some interesting capabilities that are missing today:
   - [HUMAN] ~~`kwirth`, **Event streaming**. It seems interesting to have an event streaming service (like logging or metrics) for monitoring all events that take place inside the Kubernetes cluster (object lifecycle, admin commands...).~~ DONE!
   - [HUMAN] ~~`kwirth`, **Websocket multi-service**. Currently, we support exchanging information on a websocket that belongs to different services. We need to add a 'service instance id' to allow several instances of the same service to coexist in the same websocket.~~ DONE!
   - [HUMAN] ~~`kwirth`, **Helm**. Add Ingress support to Helm Charts.~~ DONE!
-  - `alert`, **Alerting metrics**. We want Kwirth to be able to alert you based on metrics thresholds, not just log messages.
+  - [AI] ~~`alert`, **Alerting metrics**. We want Kwirth to be able to alert you based on metrics thresholds, not just log messages.~~ Finally DONE!!!
   - `kwirth`, **Session**. We need to manage frontend sessions and store access keys into the browser's `localStorage`.
   - [HUMAN] ~~`kwirth`, **Terminal**. Add xterm support (with dedicated websocket) for implementing real shell sessions (not just TTY in HTML).~~ DONE via Ops channel!
   - [HUMAN] ~~`kwirth`, **Dashboards**. Add workspace channel (grafana-like), and implement multi-channel websockets.~~ DONE via Magnify channel!
-  - `kwirth`, **AI capabilities**. Integrate AI-driven insights for log analysis, anomaly detection or artifact analysis.
+  - [AI] ~~`kwirth`, **AI capabilities**. Integrate AI-driven insights for log analysis, anomaly detection or artifact analysis.~~ DONE! (via 'pinocchio' and 'censor' channels)
   - `kwirth`, **SSO**, implement Single Sing-On capabilities.
   - `kwirth`, **IdP**, implement integrations with external Identity Providers (EntraID, AD, Cognito, Keycloak, LDAP...)
   - `kwirth`, **Standard tokens**, implement JWT support (with scopes that match the VIEW system implemented inside Kwirth)
@@ -31,15 +31,15 @@ We cite here some interesting capabilities that are missing today:
   - [AI] ~~`kwirth`, **Extensibility**, implement a plugin system for front channels, back channels, something like esm.sh.~~
   - `magnify`, **Data management**, for being able to work with big clusters, we should be able to filter data management sync by namespace.
   - `kwirth`, **Networking**, evaluate creation of a 'network diagnostics' channel, or an item action for diagnosing a pod.
-  - `kwirth`, **Workspace**, workspaces should be exportable/importable by selecting a different than the one the workspace was builded for.
+  - `kwirth`, **Workspace**, workspaces should be exportable/importable by selecting a different cluster than the one the workspace was builded for.
   - [HUMAN] ~~`magnify`, **UX/UI**, improve filtering (add node filters (and other) on RFM).~~ DONE!
   - [AI] ~~`kwirth`, **Extensibility**, implement a pluggable system for providers.~~
   - `kwirth`, **Mixed sources**, create a channel (or any other mechanism) for aggregating data from different sources under the same channel.
   - `magnify`, **Artifact configuration**, normally all classical artifacts from Kubernetes are added to a specific section inside Kwirth Magnify (workload, cluster, config, custom...). Let's take an example: with the arrival of Gateway API, all related resources (GatewayClass, GatewayApi, HTTPRoute...) are being shown as CRD and CRD instances. But, possibly a user would expect to get those information insde 'Network' section, nor 'Customization' section. For this to be something flexible and user-customizable, MAgnify must provide a mechanism to configure what top category (workload, network, config) any Kind belongs to. This way, the user can, for example, show HTTPRoute inside network (like Ingress resources), while other Gateway API resources can be kept inside 'Custom'.
   - `kwirth`, **Installation**, update Helm to support GatewayAPI
   - `pinocchio`, **Changes to artifacts**, when the channels (thanks to the use of an LLM) suggests modifying an artifact, we need to implement to methods: modify the object (a pod or whatever) via the Kubernetes mutating webhook, or propagate the changes to a repository when the cluster being managed via an IaC platform (ArgoCD, Flux) and a templating or kustomization mechanism (Kustomize, Helm or whatever).
-  - `kwirth`, **OpenTelemetry Provider**, once the providers subsystem is up and running, we wish to add support for OTel protocol (OTLP) for ingesting telemetry data like logs, traces, metrics, application events... It is important to have a clear view and take an optime decision on how to implement this. We see two ways: add a specific provider and then stream data to current channels (logs, metrics...), or create new channels for exposing OTel data received on the OTel provider. 
-  - `kwirth`, **Kafka Provider**, once the providers subsystem is up and running, we wish to add support for receiving events via Kafka protocol. 
+  - [AI] ~~`kwirth`, **OpenTelemetry Provider**, once the providers subsystem is up and running, we wish to add support for OTel protocol (OTLP) for ingesting telemetry data like logs, traces, metrics, application events... It is important to have a clear view and take an optime decision on how to implement this. We see two ways: add a specific provider and then stream data to current channels (logs, metrics...), or create new channels for exposing OTel data received on the OTel provider. ~~ DONE!
+  - [AI] ~~`kwirth`, **Kafka Provider**, once the providers subsystem is up and running, we wish to add support for receiving events via Kafka protocol. ~~
   - [IA] ~~`pinocchio`, **versioning**, add governance to trigger/llm configuration by adding versioning (not just enable/disable).~~ DONE!
   - `pinocchio`, **notifiers**, add notifiers integration, so alerts can be send to subscribers, not just having a log of findings.
   - `pinocchio`, **scanning**, add more config for exclusions/inclusions (f.i., exclude trivy scans from pinocchio scans). Add pinocchio console management.
@@ -48,3 +48,4 @@ We cite here some interesting capabilities that are missing today:
   - `pinocchio`, **debugging**, working with tools is tricky, since there is no explanations about what LLM's is doing, so we should instrument the tools in order to have clear information on how are they doing and how the LLM is using them.
   - [AI] ~~`topology`, **Topology**, create a channel for whoung graphically all the computing resources ins side teh cluster, showing dependencies and relationships, as well as a fkkuent visual navigation system.~~ DONE!
   - `kwirth`, **CNCF**, prepare project to donate to [CNCF](https://www.cncf.io/).
+  

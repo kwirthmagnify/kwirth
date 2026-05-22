@@ -26,13 +26,25 @@
       "Bash(cd \"C:/github/jfvilas/react-file-manager/frontend\" && rtk npm run build 2>&1)",
       "Read(//c/github/jfvilas/react-file-manager/frontend/**)",
       "Bash(cp \"C:/github/jfvilas/react-file-manager/frontend/dist/react-file-manager.es.js\" \"C:/github/aisdkvercel/kwirth/front/node_modules/@jfvilas/react-file-manager/dist/react-file-manager.es.js\")",
-      "Bash(cp \"C:/github/jfvilas/react-file-manager/frontend/dist/style.css\" \"C:/github/aisdkvercel/kwirth/front/node_modules/@jfvilas/react-file-manager/dist/style.css\")"
+      "Bash(cp \"C:/github/jfvilas/react-file-manager/frontend/dist/style.css\" \"C:/github/aisdkvercel/kwirth/front/node_modules/@jfvilas/react-file-manager/dist/style.css\")",
+      "Bash(Get-ChildItem -Path 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\src\\\\channels' -Recurse -Include *.ts)",
+      "PowerShell(head -50)",
+      "PowerShell(Test-Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\" && \\(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\" | Select-Object Name\\))",
+      "PowerShell(Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio\\\\node_modules\\\\zod\\\\package.json\" | Select-String '\"version\"' | Select-Object -First 1; ls \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio\\\\node_modules\\\\zod\" | Where-Object { $_.Name -match \"v4|v3\" })",
+      "PowerShell(Move-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\smart-censor\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\")",
+      "PowerShell(robocopy \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\smart-censor\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\" /E /XD node_modules dist /NP /NFL /NDL 2>&1)",
+      "PowerShell(Remove-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\smart-censor\" -Recurse -Force -Confirm:$false 2>&1)",
+      "Bash(Get-ChildItem -Path 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-front\\\\src' -File -Recurse)",
+      "PowerShell(\\(Get-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-front\"\\).LinkType; ls \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-front\" | Select-Object Name -First 5)",
+      "PowerShell(\\(Get-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-ai\"\\).LinkType)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
       "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\FileManager\\FileList",
       "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\FileManager",
-      "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\components\\SearchInput"
+      "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\components\\SearchInput",
+      "c:\\github\\aisdkvercel\\kwirth\\common-front\\dist",
+      "c:\\github\\aisdkvercel\\kwirth\\common-ai\\dist"
     ]
   }
 }

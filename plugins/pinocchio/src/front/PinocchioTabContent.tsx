@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Stack, Typography } from '@mui/material'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
-import { EPinocchioCommand, IAnalysis, IConfigProvider, IConfigTrigger, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
+import { EPinocchioCommand, IAnalysis, IConfigTrigger, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
 import { PinocchioConfigTrigger } from './PinocchioConfigTrigger'
-import { PinocchioConfigLlm } from './PinocchioConfigLlm'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { PinocchioConfigProvider } from './PinocchioConfigProvider'
+import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
+import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import React from 'react'
 import { MenuConfig } from './MenuConfig'
 import { PinocchioImportExport } from './PinocchioImportExport'
@@ -138,7 +138,28 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setShowConfigLlm(false)
     }
 
-    const pinocchioConfigProviderClose = (providers:IConfigProvider[]|undefined) => {
+    const aiConfigLlmClose = (llms: ILlm[] | undefined) => {
+        if (llms) {
+            const updated: IPinocchioConfig = { ...pinocchioData.config, llms }
+            pinocchioData.config = updated
+            let msg:IPinocchioMessage = {
+                channel: 'pinocchio',
+                msgtype: 'pinocchiomessage',
+                id: '1',
+                accessKey: props.channelObject.accessString!,
+                instance: props.channelObject.instanceId,
+                command: EPinocchioCommand.CONFIGSET,
+                action: EInstanceMessageAction.COMMAND,
+                flow: EInstanceMessageFlow.REQUEST,
+                type: EInstanceMessageType.DATA,
+                data: updated
+            }
+            props.channelObject.webSocket?.send(JSON.stringify(msg))
+        }
+        setShowConfigLlm(false)
+    }
+
+    const pinocchioConfigProviderClose = (providers:ILlmProvider[]|undefined) => {
         if (providers) {
             pinocchioData.providers = providers
             let msg:IPinocchioMessage = {
@@ -282,8 +303,8 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             </CardContent>
         </Card>}
         { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable.map(t => t.name)} onClose={pinocchioConfigClose} />}
-        { showConfigLlm && <PinocchioConfigLlm pinocchioConfig={pinocchioData.config} providers={pinocchioData.providers} onClose={pinocchioConfigClose} />}
-        { showConfigProvider && <PinocchioConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
+        { showConfigLlm && <AiConfigLlm llms={pinocchioData.config.llms} providers={pinocchioData.providers} onClose={aiConfigLlmClose} />}
+        { showConfigProvider && <AiConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
         { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} onStateChange={pinocchioPlaygroundStateChange} />}
         { showImportExport && <PinocchioImportExport providers={pinocchioData.providers} config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} providers={pinocchioData.providers} pinocchioConfig={pinocchioData.config} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}

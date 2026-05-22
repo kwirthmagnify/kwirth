@@ -94,3 +94,5 @@ export interface IChannel {
     getExternalHelpContent?: () => ReactNode
     onExternalConfigApply?: (channelObject: IChannelObject, values: any) => boolean
 }
+
+export const cleanANSI = (text: string): string => text.replace(/\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g, '')

@@ -1,4 +1,9 @@
 import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
+import { ILlm, ILlmModel, ILlmProvider } from "@kwirthmagnify/kwirth-common-ai"
+
+export type IConfigModel = ILlmModel
+export type IConfigProvider = ILlmProvider
+export type IConfigLlm = ILlm
 
 export const kindsAvailable = ['Pod', 'Deployment', 'DaemonSet', 'StatefulSet', 'ReplicaSet', 'Job', 'CronJob','ReplicationController', 'Service', 'Ingress', 'HTTPRoute']
 
@@ -34,26 +39,13 @@ export interface IAnalysis {
         input?:number,
         output?:number
     }
-    pod?: any
+    pod?: unknown
     text?: string
 }
 
 export interface IMessage {
     timestamp: number
     text: string
-}
-
-export interface IConfigModel {
-    id: string
-    name: string
-    description: string
-    type: 'text'|'image'|'video'|'other'
-}
-
-export interface IConfigProvider {
-    name: string
-    key: string
-    models: IConfigModel[]
 }
 
 export interface IConfigTriggerVersion {
@@ -76,16 +68,6 @@ export interface IConfigTrigger {
     trigger: string
     kind?: string
     versions: IConfigTriggerVersion[]
-}
-
-export interface IConfigLlm {
-    id: string
-    provider: string
-    model: string
-    temperature: number
-    useProviderKey: boolean
-    key: string
-    data?: any
 }
 
 export interface IPlaygroundState {
@@ -114,7 +96,7 @@ export interface IPinocchioConfig {
     playground?: IPlaygroundState
 }
 
-export class PinocchioConfig  implements IPinocchioConfig {
+export class PinocchioConfig implements IPinocchioConfig {
     triggers: IConfigTrigger[] = []
     llms: IConfigLlm[] = []
 }
@@ -132,7 +114,7 @@ export interface IPinocchioMessage extends IInstanceMessage {
     id: string
     instance: string
     command: EPinocchioCommand
-    data?: any
+    data?: unknown
 }
 
 export interface IPinocchioMessageResponse extends IInstanceMessage {

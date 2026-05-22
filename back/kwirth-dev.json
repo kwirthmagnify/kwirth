@@ -2,6 +2,7 @@
   "channels": {
     "echo": "../plugins/echo/dist",
     "pinocchio": "../plugins/pinocchio/dist",
+    "censor": "../plugins/censor/dist",
     "topology": "../plugins/topology/dist"
   },
   "providers": {
