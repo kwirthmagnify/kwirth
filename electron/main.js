@@ -138,7 +138,12 @@ async function createMainWindow() {
 
 		const loadApp = () => {
 			win.loadURL(`http://localhost:${port}/`).then( () => {
-				setTimeout(() => {if (splash && !splash.isDestroyed()) splash.destroy()}, 2000)				
+				setTimeout(() => {
+                    if (splash && !splash.isDestroyed()) {
+                        splash.destroy()
+                        splash = null
+                    }
+                }, 2000)				
 			})
 			.catch(() => {
 				console.log('Waiting for backend to be ready...')
@@ -164,6 +169,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', (event) => {
-  event.preventDefault()
+  //event.preventDefault()
   process.kill(process.pid, 'SIGTERM')
 })

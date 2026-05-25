@@ -7,7 +7,7 @@
 	},
 	"main": "main.js",
 	"version": "0.0.0",
-	"description": "Kwirth magnify is a desktop software for managing your Kubernetes clusters. It is based on Kwirth OSS, that can be deployed to your Desktop, as an external server or directly inside your Kubernetes cluster as a Pod",
+	"description": "Kwirth Magnify Desktop",
 	"homepage": "https://kwirthmagnify.dev",
 	"scripts": {
 		"start": "electron .",

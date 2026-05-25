@@ -1001,7 +1001,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             if (tab.channel) {
                 instanceConfig.scope = tab.channel.getScope()
                 instanceConfig.data = tab.channelObject.instanceConfig
-                console.log(instanceConfig)
                 tab.ws.send(JSON.stringify(instanceConfig))
                 tab.channelStarted = true
                 tab.channelPaused = false

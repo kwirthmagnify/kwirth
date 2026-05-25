@@ -1223,6 +1223,9 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             case 'cordon':
                 launchNodeCordon([path])
                 break
+            case 'shell':
+                launchNodeShell([path])
+                break
             case 'uncordon':
                 launchNodeUnCordon([path])
                 break

@@ -46,7 +46,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     type: EInstanceMessageType
     instance: string
-    kind: 'received' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets'
+    kind: 'received' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags'
     analyzing?: boolean
     text?: string
     namespace?: string
@@ -327,9 +327,16 @@ export class CensorChannel {
                 this.backChannelObject.logWarning?.(`[censor] no LLM configured for instance ${instance.instanceId}`)
                 return
             }
+            if (this.providers.length === 0) {
+                const stored: ILlmProvider[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_PROVIDERS, true)) ?? []
+                if (stored.length > 0) {
+                    this.providers = stored
+                    await loadModels(this.providers, this.backChannelObject)
+                }
+            }
             const model = buildModel(instance.llm, this.providers)
             if (!model) {
-                this.backChannelObject.logWarning?.(`[censor] could not build model for LLM '${instance.llm.id}' (provider: ${instance.llm.provider}, useProviderKey: ${instance.llm.useProviderKey}, hasOwnKey: ${!!instance.llm.key}, knownProviders: [${this.providers.map(p => `${p.name}:${p.key ? 'hasKey' : 'noKey'}`).join(', ')}])`)
+                this.backChannelObject.logWarning?.(`[censor] could not build model for LLM '${instance.llm.id}'`)
                 return
             }
 
@@ -380,6 +387,16 @@ export class CensorChannel {
             for (const val of Object.values((output ?? {}) as Record<string, unknown>)) {
                 if (Array.isArray(val)) patterns.push(...val.filter((v): v is string => typeof v === 'string'))
             }
+
+            const allTags: string[] = []
+            for (const item of ((output as any).info ?? [])) {
+                if (Array.isArray(item.tags)) {
+                    for (const t of item.tags) {
+                        if (typeof t === 'string' && !allTags.includes(t)) allTags.push(t)
+                    }
+                }
+            }
+            if (allTags.length > 0) this.sendTags(webSocket, instance, allTags)
 
             const warnings: { original: string, explanation: string, tags: string[] }[] = (output as any).info
                 ?.filter((x: any) => x.type === 'warn')
@@ -453,6 +470,15 @@ export class CensorChannel {
             action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED,
             type: EInstanceMessageType.DATA, instance: instance.instanceId,
             kind: 'llminput', text
+        } as ICensorMessage))
+    }
+
+    private sendTags = (webSocket: WebSocket, instance: IInstance, tags: string[]) => {
+        webSocket.send(JSON.stringify({
+            msgtype: 'censormessage', channel: 'censor',
+            action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED,
+            type: EInstanceMessageType.DATA, instance: instance.instanceId,
+            kind: 'tags', tags
         } as ICensorMessage))
     }
 

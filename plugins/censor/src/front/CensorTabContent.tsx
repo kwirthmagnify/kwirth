@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Box, Button, Card, CardContent, CardHeader, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, IconButton, InputLabel, List, ListItem, ListItemText, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Card, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItem, ListItemText, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { DeleteOutline as DeleteOutlineIcon } from '@mui/icons-material'
 import { cleanANSI, IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
@@ -23,6 +23,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [exampleJsonError, setExampleJsonError] = useState('')
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
+    const [activeTagFilters, setActiveTagFilters] = useState<string[]>([])
+    const [tagFilterAnd, setTagFilterAnd] = useState(false)
 
     useEffect(() => {
         if (contentRef.current) setContentTop(contentRef.current.getBoundingClientRect().top)
@@ -178,12 +180,44 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     )}
 
                     {/* Tab 4 — LLM warnings */}
-                    {tab === 4 && data.llmWarningLines.map((w, i) => (
-                        <Box key={i} sx={{ display: 'flex', flexDirection: 'column', px: 0.5, py: 0.25, borderBottom: 1, borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}>
-                            <Typography variant='caption' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{w.original}</Typography>
-                            <Typography variant='caption' color='text.secondary' sx={{ fontStyle: 'italic' }}>{w.explanation}</Typography>
-                        </Box>
-                    ))}
+                    {tab === 4 && <>
+                        {data.allTags.length > 0 && (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, px: 0.5, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
+                                {data.allTags.map(tag => (
+                                    <Chip key={tag} label={tag} size='small'
+                                        color={activeTagFilters.includes(tag) ? 'primary' : 'default'}
+                                        variant={activeTagFilters.includes(tag) ? 'filled' : 'outlined'}
+                                        onClick={() => setActiveTagFilters(prev =>
+                                            prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                        )}
+                                        sx={{ fontSize: '10px', height: 20 }} />
+                                ))}
+                                <FormControlLabel
+                                    control={<Switch size='small' checked={tagFilterAnd} disabled={activeTagFilters.length < 2} onChange={e => setTagFilterAnd(e.target.checked)} />}
+                                    label={<Typography variant='caption'>{tagFilterAnd ? 'All' : 'Any'}</Typography>}
+                                    sx={{ ml: 0.5, mr: 0 }} />
+                            </Box>
+                        )}
+                        {data.llmWarningLines
+                            .filter(w => {
+                                if (activeTagFilters.length === 0) return true
+                                return tagFilterAnd
+                                    ? activeTagFilters.every(t => w.tags.includes(t))
+                                    : activeTagFilters.some(t => w.tags.includes(t))
+                            })
+                            .map((w, i) => (
+                                <Box key={i} sx={{ display: 'flex', flexDirection: 'column', px: 0.5, py: 0.25, borderBottom: 1, borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}>
+                                    {w.tags.length > 0 && (
+                                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 0.25 }}>
+                                            {w.tags.map(t => <Chip key={t} label={t} size='small' variant='outlined' sx={{ fontSize: '10px', height: 18 }} />)}
+                                        </Box>
+                                    )}
+                                    <Typography variant='caption' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{w.original}</Typography>
+                                    <Typography variant='caption' color='text.secondary' sx={{ fontStyle: 'italic' }}>{w.explanation}</Typography>
+                                </Box>
+                            ))
+                        }
+                    </>}
 
                 </Box>
             </CardContent>

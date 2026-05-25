@@ -15,7 +15,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     action: EInstanceMessageAction
     instance: string
-    kind?: 'received' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets'
+    kind?: 'received' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags'
     assets?: ICensorAsset[]
     analyzing?: boolean
     text?: string
@@ -81,8 +81,12 @@ export class CensorChannel implements IChannel {
                     if (data.llmOutputLines.length > MAX_DISPLAY_LINES) data.llmOutputLines.splice(0, data.llmOutputLines.length - MAX_DISPLAY_LINES)
                 }
                 else if (msg.kind === 'llmwarning' && msg.text !== undefined) {
-                    data.llmWarningLines.push({ original: msg.text, explanation: msg.explanation ?? '' })
+                    const tags = msg.tags ?? []
+                    data.llmWarningLines.push({ original: msg.text, explanation: msg.explanation ?? '', tags })
                     if (data.llmWarningLines.length > MAX_DISPLAY_LINES) data.llmWarningLines.splice(0, data.llmWarningLines.length - MAX_DISPLAY_LINES)
+                    for (const tag of tags) {
+                        if (!data.allTags.includes(tag)) data.allTags.push(tag)
+                    }
                 }
                 else if (msg.kind === 'regex' && msg.pattern !== undefined) {
                     if (!data.regexes.some((r: ICensorRegex) => r.pattern === msg.pattern)) {
@@ -108,6 +112,11 @@ export class CensorChannel implements IChannel {
                 }
                 else if (msg.kind === 'assets' && msg.assets !== undefined) {
                     data.assets = msg.assets
+                }
+                else if (msg.kind === 'tags' && msg.tags !== undefined) {
+                    for (const tag of msg.tags) {
+                        if (!data.allTags.includes(tag)) data.allTags.push(tag)
+                    }
                 }
                 return { action: EChannelRefreshAction.REFRESH }
 
@@ -150,6 +159,7 @@ export class CensorChannel implements IChannel {
         data.llmInputLines = []
         data.llmOutputLines = []
         data.llmWarningLines = []
+        data.allTags = []
         data.regexes = []
         data.assets = []
         data.processedCount = 0
