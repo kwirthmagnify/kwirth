@@ -45,6 +45,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     }, [data.receivedLines.length, data.llmInputLines.length, data.llmOutputLines.length, data.llmWarningLines.length, tab, warningAutoScroll])
 
     useEffect(() => {
+        if (showConfig) return
         setConfigName(data.instanceConfig.name ?? '')
         setConfigVersion(data.instanceConfig.version ?? '1')
         setLlmId(data.instanceConfig.llmId ?? '')
