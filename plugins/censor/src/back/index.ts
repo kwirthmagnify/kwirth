@@ -13,16 +13,21 @@ const DEFAULT_SYSTEM = 'You are a log analysis assistant. Analyze the provided l
 const DEFAULT_USER_PROMPT = (count: number) => `Analyze these ${count} log lines:`
 
 export interface ICensorInstanceConfig {
+    name: string
+    version: string
     llmId: string
     system?: string
     batchSize?: number
     exampleJson?: string
     temperature?: number
+    active?: boolean
 }
 
 export enum ECensorCommand {
     CONFIGGET = 'configget',
     CONFIGSET = 'configset',
+    CONFIGSAVE = 'configsave',
+    CONFIGDELETE = 'configdelete',
     PROVIDERSAVAILABLE = 'providersavailable',
     PROVIDERSGET = 'providersget',
     PROVIDERSSET = 'providersset',
@@ -59,6 +64,7 @@ interface ICensorMessage {
     processedCount?: number
     llmCount?: number
     instanceConfig?: ICensorInstanceConfig
+    configs?: ICensorInstanceConfig[]
     llms?: ILlm[]
     providers?: ILlmProvider[]
     providersAvailable?: string[]
@@ -190,6 +196,25 @@ export class CensorChannel {
                     kind: 'providers', providers: this.providers
                 } as ICensorMessage))
                 return true
+            case ECensorCommand.CONFIGSAVE: {
+                const cfgToSave = msg.data as ICensorInstanceConfig
+                let configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
+                if (cfgToSave.active) configs = configs.map(c => ({ ...c, active: false }))
+                const idx = configs.findIndex(c => c.name === cfgToSave.name && c.version === cfgToSave.version)
+                if (idx >= 0) configs[idx] = cfgToSave
+                else configs.push(cfgToSave)
+                await this.backChannelObject.writeStorage!('censor-configs', false, configs)
+                await this.executeConfigGet(webSocket, instance)
+                return true
+            }
+            case ECensorCommand.CONFIGDELETE: {
+                const { name, version } = msg.data as { name: string, version: string }
+                const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
+                const filtered = configs.filter(c => !(c.name === name && c.version === version))
+                await this.backChannelObject.writeStorage!('censor-configs', false, filtered)
+                await this.executeConfigGet(webSocket, instance)
+                return true
+            }
             case ECensorCommand.ANALYZESTART:
                 instance.analyzing = true
                 instance.lineBuffer = []
@@ -244,7 +269,7 @@ export class CensorChannel {
             const len = socket.instances.push({
                 instanceId: instanceConfig.instance,
                 accessKey: accessKeyDeserialize(instanceConfig.accessKey),
-                cfg: { llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}' },
+                cfg: { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}' },
                 assets: [],
                 paused: false,
                 analyzing: false,
@@ -256,7 +281,7 @@ export class CensorChannel {
             })
             instance = socket.instances[len - 1]
 
-            const savedCfg: ICensorInstanceConfig = (await this.backChannelObject.readStorage!('censor-config', false)) ?? { llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}' }
+            const savedCfg: ICensorInstanceConfig = (await this.backChannelObject.readStorage!('censor-config', false)) ?? { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}' }
             const cfg: ICensorInstanceConfig = (instanceConfig.data as ICensorInstanceConfig)?.llmId ? (instanceConfig.data as ICensorInstanceConfig) : savedCfg
             const llms: ILlm[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
             const llm = cfg.llmId ? llms.find(l => l.id === cfg.llmId) : undefined
@@ -376,7 +401,7 @@ export class CensorChannel {
             this.sendLlmOutput(webSocket, instance, JSON.stringify(output, null, 2))
 
             // no tocar estas tres lineas, la respuesta del LLM tiene de momento este formato.
-            const patterns: string[] = (output as any).info.filter((x:any) => x.type==='discard').map((x:any) => x.regex)
+            const patterns: string[] = ((output as any).info ?? []).filter((x:any) => x.type==='discard').map((x:any) => x.regex)
             console.log('patterns')
             console.log(patterns)
 
@@ -428,6 +453,7 @@ export class CensorChannel {
 
     private executeConfigGet = async (webSocket: WebSocket, instance: IInstance): Promise<void> => {
         const llms: ILlm[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
+        const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
         const storedProviders: ILlmProvider[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_PROVIDERS, true)) ?? []
         if (storedProviders.length > 0) {
             // reuse already-loaded models; load only providers not yet known
@@ -448,6 +474,7 @@ export class CensorChannel {
             instance: instance.instanceId,
             kind: 'config',
             instanceConfig: instance.cfg,
+            configs,
             llms,
             providers: this.providers,
             providersAvailable: PROVIDERS_AVAILABLE

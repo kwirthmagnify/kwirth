@@ -43,6 +43,7 @@ export interface ICensorData {
     providers: ILlmProvider[]
     providersAvailable: string[]
     instanceConfig: ICensorInstanceConfig
+    configs: ICensorInstanceConfig[]
 }
 
 export class CensorData implements ICensorData {
@@ -61,5 +62,6 @@ export class CensorData implements ICensorData {
     llms: ILlm[] = []
     providers: ILlmProvider[] = []
     providersAvailable: string[] = []
-    instanceConfig: ICensorInstanceConfig = { llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":["example regex"]}', temperature: 0.2 }
+    instanceConfig: ICensorInstanceConfig = { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":["example regex"]}', temperature: 0.2, active: false }
+    configs: ICensorInstanceConfig[] = []
 }

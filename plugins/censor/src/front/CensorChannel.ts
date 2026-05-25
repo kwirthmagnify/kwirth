@@ -29,6 +29,7 @@ interface ICensorMessage {
     processedCount?: number
     llmCount?: number
     instanceConfig?: ICensorInstanceConfig
+    configs?: ICensorInstanceConfig[]
     llms?: ILlm[]
     providers?: ILlmProvider[]
     providersAvailable?: string[]
@@ -102,6 +103,7 @@ export class CensorChannel implements IChannel {
                     if (msg.providers !== undefined) data.providers = msg.providers
                     if (msg.providersAvailable !== undefined) data.providersAvailable = msg.providersAvailable
                     if (msg.instanceConfig) data.instanceConfig = msg.instanceConfig
+                    if (msg.configs !== undefined) data.configs = msg.configs
                 }
                 else if (msg.kind === 'providers') {
                     if (msg.providers !== undefined) data.providers = msg.providers

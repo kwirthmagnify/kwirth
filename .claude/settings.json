@@ -36,7 +36,10 @@
       "PowerShell(Remove-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\smart-censor\" -Recurse -Force -Confirm:$false 2>&1)",
       "Bash(Get-ChildItem -Path 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-front\\\\src' -File -Recurse)",
       "PowerShell(\\(Get-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-front\"\\).LinkType; ls \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-front\" | Select-Object Name -First 5)",
-      "PowerShell(\\(Get-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-ai\"\\).LinkType)"
+      "PowerShell(\\(Get-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-ai\"\\).LinkType)",
+      "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio\\\\src\\\\front\" -Recurse -Include \"*.tsx\", \"*.ts\")",
+      "Bash(Select-Object -First 30)",
+      "Bash(Format-Table Name, FullName)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
