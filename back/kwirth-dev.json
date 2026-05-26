@@ -1,4 +1,7 @@
 {
+  "daemons": {
+    "censor": "../daemons/censor/dist"
+  },
   "channels": {
     "echo": "../plugins/echo/dist",
     "pinocchio": "../plugins/pinocchio/dist",

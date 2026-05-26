@@ -39,7 +39,21 @@
       "PowerShell(\\(Get-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-ai\"\\).LinkType)",
       "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio\\\\src\\\\front\" -Recurse -Include \"*.tsx\", \"*.ts\")",
       "Bash(Select-Object -First 30)",
-      "Bash(Format-Table Name, FullName)"
+      "Bash(Format-Table Name, FullName)",
+      "Bash(cmd /c \"dir /AL c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\")",
+      "Bash(cmd /c \"mklink /J c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common\")",
+      "Bash(cmd /c \"dir c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\")",
+      "Bash(cmd /c \"dir c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common\\\\dist\")",
+      "PowerShell($src = \"C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common\\\\dist\"; $dst = \"C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common\\\\dist\"; if \\(Test-Path $dst\\) { Remove-Item $dst -Recurse -Force }; Copy-Item $src $dst -Recurse; Get-ChildItem $dst | Where-Object { $_.Name -match \"Daemon|index\" } | Select-Object Name)",
+      "Bash(npm config *)",
+      "Bash(npm version *)",
+      "Bash(npm view *)",
+      "Bash(xargs grep -l \"interface ISetupProps\\\\|export.*ISetupProps\")",
+      "Bash(xargs grep -l \"interface ISetupProps\")",
+      "Bash(xargs grep -l \"SetupDialog\\\\|ISetupProps\")",
+      "Bash(xargs grep -l \"interface IChannelSettings\\\\|export.*IChannelSettings\")",
+      "PowerShell(Test-Path 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-ai' ; Get-ChildItem -Path 'c:\\\\github\\\\aisdkvercel\\\\kwirth' | Where-Object {$_.PSIsContainer} | Select-Object Name)",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common && npm run build 2>&1 | Where-Object { $_ -match 'error|Error|success|Built|done' } | Select-Object -Last 10)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
@@ -47,7 +61,8 @@
       "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\FileManager",
       "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\components\\SearchInput",
       "c:\\github\\aisdkvercel\\kwirth\\common-front\\dist",
-      "c:\\github\\aisdkvercel\\kwirth\\common-ai\\dist"
+      "c:\\github\\aisdkvercel\\kwirth\\common-ai\\dist",
+      "c:\\github\\aisdkvercel\\kwirth\\common-back\\dist"
     ]
   }
 }

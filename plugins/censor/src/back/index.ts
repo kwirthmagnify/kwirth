@@ -1,9 +1,10 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IDaemonInstanceConfig, IDaemonEvent, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS } from '@kwirthmagnify/kwirth-common-ai'
 import { buildModel, loadModels, zodFromExample } from '@kwirthmagnify/kwirth-common-ai/back'
 import { PassThrough } from 'stream'
 import * as stream from 'stream'
 import { generateText, Output } from 'ai'
+import { randomUUID } from 'crypto'
 
 const BATCH_SIZE = 50
 
@@ -33,7 +34,22 @@ export enum ECensorCommand {
     PROVIDERSSET = 'providersset',
     ANALYZESTART = 'analyzestart',
     ANALYZESTOP = 'analyzestop',
-    REGEXDELETE = 'regexdelete'
+    REGEXDELETE = 'regexdelete',
+    SESSIONLIST = 'sessionlist',
+    SESSIONSTART = 'sessionstart',
+    SESSIONSTOP = 'sessionstop',
+    SESSIONCONNECT = 'sessionconnect',
+    SESSIONDISCONNECT = 'sessiondisconnect'
+}
+
+interface ICensorSession {
+    id: string
+    description: string
+    namespace: string
+    group?: string
+    pod?: string
+    container?: string
+    createdAt?: string
 }
 
 const PROVIDERS_AVAILABLE = ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek']
@@ -51,7 +67,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     type: EInstanceMessageType
     instance: string
-    kind: 'received' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags'
+    kind: 'received' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
     analyzing?: boolean
     text?: string
     namespace?: string
@@ -69,6 +85,10 @@ interface ICensorMessage {
     providers?: ILlmProvider[]
     providersAvailable?: string[]
     assets?: { namespace: string, pod: string, container: string }[]
+    sessions?: ICensorSession[]
+    sessionId?: string
+    sessionDescription?: string
+    regexes?: { pattern: string, example: string, explanation: string }[]
 }
 
 interface IAsset {
@@ -88,6 +108,7 @@ interface IAccumRegex {
 interface IInstance {
     instanceId: string
     accessKey: AccessKey
+    instanceConfig: IInstanceConfig
     cfg: ICensorInstanceConfig
     assets: IAsset[]
     paused: boolean
@@ -98,6 +119,8 @@ interface IInstance {
     regexes: IAccumRegex[]
     llmBusy: boolean
     llm?: ILlm
+    sessionId?: string
+    sessionUnsub?: () => void
 }
 
 export class CensorChannel {
@@ -216,16 +239,24 @@ export class CensorChannel {
                 return true
             }
             case ECensorCommand.ANALYZESTART:
-                instance.analyzing = true
-                instance.lineBuffer = []
-                await this.backChannelObject.writeStorage!('censor-analyzing', false, true)
-                this.sendAnalyzing(webSocket, instance, true)
+                if (instance.sessionId) {
+                    const dm = this.backChannelObject.daemonManager
+                    if (dm) dm.sendCommand(instance.sessionId, 'analyzestart', null)
+                } else {
+                    instance.analyzing = true
+                    instance.lineBuffer = []
+                    this.sendAnalyzing(webSocket, instance, true)
+                }
                 return true
             case ECensorCommand.ANALYZESTOP:
-                instance.analyzing = false
-                instance.lineBuffer = []
-                await this.backChannelObject.writeStorage!('censor-analyzing', false, false)
-                this.sendAnalyzing(webSocket, instance, false)
+                if (instance.sessionId) {
+                    const dm = this.backChannelObject.daemonManager
+                    if (dm) dm.sendCommand(instance.sessionId, 'analyzestop', null)
+                } else {
+                    instance.analyzing = false
+                    instance.lineBuffer = []
+                    this.sendAnalyzing(webSocket, instance, false)
+                }
                 return true
             case ECensorCommand.REGEXDELETE: {
                 const pattern = msg.data as string
@@ -240,8 +271,142 @@ export class CensorChannel {
                 await loadModels(this.providers, this.backChannelObject)
                 await this.executeConfigGet(webSocket, instance)
                 return true
+            case ECensorCommand.SESSIONLIST: {
+                const dm = this.backChannelObject.daemonManager
+                if (!dm) return false
+                const sessions = this.buildSessionList(dm.listInstances('censor'))
+                webSocket.send(JSON.stringify({ msgtype: 'censormessage', channel: 'censor', action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.DATA, instance: instance.instanceId, kind: 'sessions', sessions } as ICensorMessage))
+                return true
+            }
+            case ECensorCommand.SESSIONSTART: {
+                const dm = this.backChannelObject.daemonManager
+                if (!dm) return false
+                const { description } = msg.data as { description: string }
+                const id = randomUUID()
+                const ic = instance.instanceConfig
+                const daemonInstanceConfig: IDaemonInstanceConfig = {
+                    id, daemonId: 'censor', description,
+                    view: ic.view, namespace: ic.namespace,
+                    ...(ic.group ? { group: ic.group } : {}),
+                    ...(ic.pod ? { pod: ic.pod } : {}),
+                    ...(ic.container ? { container: ic.container } : {}),
+                    data: instance.cfg, started: true,
+                    createdAt: new Date().toISOString()
+                }
+                await dm.createInstance('censor', daemonInstanceConfig)
+                // Push LLMs and providers into daemon's own storage so it can work autonomously
+                const llmsForDaemon: ILlm[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
+                await dm.sendCommand(id, 'configset', { ...instance.cfg, _llms: llmsForDaemon })
+                await dm.sendCommand(id, 'providersset', this.providers)
+                // Sync analyzing state before seeding pods so addObject restores it correctly from storage
+                if (!instance.analyzing) await dm.sendCommand(id, 'analyzestop', null)
+                // Seed daemon with pods the channel already has open
+                for (const asset of instance.assets) {
+                    await dm.directAddObject(id, asset.namespace, asset.pod, asset.container)
+                }
+                if (instance.sessionUnsub) instance.sessionUnsub()
+                instance.sessionId = id
+                instance.sessionUnsub = dm.subscribe(id, (event: IDaemonEvent) => this.forwardDaemonEvent(webSocket, instance, event))
+                const sessions = this.buildSessionList(dm.listInstances('censor'))
+                webSocket.send(JSON.stringify({ msgtype: 'censormessage', channel: 'censor', action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.DATA, instance: instance.instanceId, kind: 'sessionstarted', sessionId: id, sessionDescription: description, sessions, analyzing: instance.analyzing } as ICensorMessage))
+                await this.backChannelObject.writeStorage!('censor-selected-session', false, id)
+                return true
+            }
+            case ECensorCommand.SESSIONCONNECT: {
+                const dm = this.backChannelObject.daemonManager
+                if (!dm) return false
+                const sessionId = msg.data as string
+                const allInstances = dm.listInstances('censor')
+                const target = allInstances.find(s => s.id === sessionId)
+                if (!target) return false
+                if (instance.sessionUnsub) instance.sessionUnsub()
+                instance.sessionId = sessionId
+
+                const subscribeToSession = () => {
+                    if (instance.sessionUnsub) instance.sessionUnsub()
+                    instance.sessionUnsub = dm.subscribe(sessionId, (event: IDaemonEvent) => this.forwardDaemonEvent(webSocket, instance, event))
+                }
+                subscribeToSession()
+
+                // Gather all session state before notifying frontend (avoids timing issues with separate messages)
+                type IStats = { processedCount: number, llmCount: number, analyzing: boolean }
+                type IRegexEntry = { pattern: string, example: string, explanation: string }
+                let stats: IStats | null = null
+                let regexes: IRegexEntry[] = []
+                try {
+                    stats = await dm.sendCommand(sessionId, 'statsget', null) as IStats | null
+                    if (!stats) {
+                        // Daemon instance not running (e.g. server restarted) — seed it from channel assets
+                        for (const asset of instance.assets) await dm.directAddObject(sessionId, asset.namespace, asset.pod, asset.container)
+                        subscribeToSession()
+                        stats = await dm.sendCommand(sessionId, 'statsget', null) as IStats | null
+                    }
+                    const regexResult = await dm.sendCommand(sessionId, 'regexget', null) as { regexes: IRegexEntry[] } | null
+                    if (regexResult?.regexes) regexes = regexResult.regexes
+                    // Sync providers (with API keys) to daemon — namespaces differ between channel and daemon storage
+                    if (this.providers.length > 0) await dm.sendCommand(sessionId, 'providersset', this.providers)
+                } catch { /* ignore */ }
+
+                const sessions = this.buildSessionList(allInstances)
+                webSocket.send(JSON.stringify({
+                    msgtype: 'censormessage', channel: 'censor',
+                    action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.RESPONSE,
+                    type: EInstanceMessageType.DATA, instance: instance.instanceId,
+                    kind: 'sessionconnected', sessionId, sessionDescription: target.description, sessions,
+                    processedCount: stats?.processedCount ?? 0,
+                    llmCount: stats?.llmCount ?? 0,
+                    analyzing: stats?.analyzing ?? false,
+                    regexes
+                } as ICensorMessage))
+                await this.backChannelObject.writeStorage!('censor-selected-session', false, sessionId)
+                return true
+            }
+            case ECensorCommand.SESSIONDISCONNECT: {
+                const disconnectedSessionId = instance.sessionId
+                if (instance.sessionUnsub) {
+                    instance.sessionUnsub()
+                    instance.sessionUnsub = undefined
+                    instance.sessionId = undefined
+                }
+                if (disconnectedSessionId) {
+                    const savedId = await this.backChannelObject.readStorage!('censor-selected-session', false) as string | null
+                    if (savedId === disconnectedSessionId) await this.backChannelObject.writeStorage!('censor-selected-session', false, null)
+                }
+                webSocket.send(JSON.stringify({ msgtype: 'censormessage', channel: 'censor', action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.DATA, instance: instance.instanceId, kind: 'sessiondisconnected' } as ICensorMessage))
+                return true
+            }
+            case ECensorCommand.SESSIONSTOP: {
+                const dm = this.backChannelObject.daemonManager
+                if (!dm) return false
+                const sessionId = msg.data as string
+                if (instance.sessionId === sessionId && instance.sessionUnsub) {
+                    instance.sessionUnsub()
+                    instance.sessionUnsub = undefined
+                    instance.sessionId = undefined
+                }
+                await dm.stopInstance(sessionId)
+                const savedId = await this.backChannelObject.readStorage!('censor-selected-session', false) as string | null
+                if (savedId === sessionId) await this.backChannelObject.writeStorage!('censor-selected-session', false, null)
+                const sessions = this.buildSessionList(dm.listInstances('censor'))
+                webSocket.send(JSON.stringify({ msgtype: 'censormessage', channel: 'censor', action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.DATA, instance: instance.instanceId, kind: 'sessionstopped', sessionId, sessions } as ICensorMessage))
+                return true
+            }
         }
         return false
+    }
+
+    private buildSessionList(instances: IDaemonInstanceConfig[]): ICensorSession[] {
+        return instances.filter(s => s.daemonId === 'censor').map(s => ({ id: s.id, description: s.description, namespace: s.namespace, group: s.group, pod: s.pod, container: s.container, createdAt: s.createdAt }))
+    }
+
+    private forwardDaemonEvent(webSocket: WebSocket, instance: IInstance, event: IDaemonEvent): void {
+        webSocket.send(JSON.stringify({
+            msgtype: 'censormessage', channel: 'censor',
+            action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED,
+            type: EInstanceMessageType.DATA, instance: instance.instanceId,
+            kind: event.type as ICensorMessage['kind'],
+            ...(event.data as object)
+        }))
     }
 
     async endpointRequest(_endpoint: string, _req: unknown, _res: unknown): Promise<void> {}
@@ -269,6 +434,7 @@ export class CensorChannel {
             const len = socket.instances.push({
                 instanceId: instanceConfig.instance,
                 accessKey: accessKeyDeserialize(instanceConfig.accessKey),
+                instanceConfig,
                 cfg: { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}' },
                 assets: [],
                 paused: false,
@@ -281,19 +447,22 @@ export class CensorChannel {
             })
             instance = socket.instances[len - 1]
 
-            const savedCfg: ICensorInstanceConfig = (await this.backChannelObject.readStorage!('censor-config', false)) ?? { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}' }
-            const cfg: ICensorInstanceConfig = (instanceConfig.data as ICensorInstanceConfig)?.llmId ? (instanceConfig.data as ICensorInstanceConfig) : savedCfg
+            let savedCfg: ICensorInstanceConfig | null = (await this.backChannelObject.readStorage!('censor-config', false)) as ICensorInstanceConfig | null
+            if (!savedCfg?.llmId) {
+                const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
+                savedCfg = configs.find(c => c.active) ?? savedCfg
+            }
+            const defaultCfg: ICensorInstanceConfig = { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}' }
+            const cfg: ICensorInstanceConfig = (instanceConfig.data as ICensorInstanceConfig)?.llmId ? (instanceConfig.data as ICensorInstanceConfig) : (savedCfg ?? defaultCfg)
             const llms: ILlm[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
             const llm = cfg.llmId ? llms.find(l => l.id === cfg.llmId) : undefined
             if (cfg.llmId && !llm) {
                 this.backChannelObject.logWarning?.(`[censor] LLM '${cfg.llmId}' not found in shared storage`)
             }
-            const savedAnalyzing: boolean = (await this.backChannelObject.readStorage!('censor-analyzing', false)) ?? false
-
             instance.cfg = cfg
             instance.llm = llm
-            instance.analyzing = savedAnalyzing
-            this.sendAnalyzing(webSocket, instance, instance.analyzing)
+            this.sendAnalyzing(webSocket, instance, false)
+            await this.executeConfigGet(webSocket, instance)
         }
 
         if (instance.assets.some(a => a.namespace === ns && a.pod === pod && a.container === container)) return true
@@ -309,6 +478,12 @@ export class CensorChannel {
             this.sendAssets(webSocket, instance!)
         })
 
+        // If this channel is connected to a daemon session, seed it with this asset too
+        if (instance.sessionId) {
+            const dm = this.backChannelObject.daemonManager
+            if (dm) await dm.directAddObject(instance.sessionId, ns, pod, container)
+        }
+
         const logApi = (this.clusterInfo as { logApi: { log: (ns: string, pod: string, container: string, stream: stream.PassThrough, opts: unknown) => Promise<void> } }).logApi
         logApi.log(ns, pod, container, logStream, { follow: true, pretty: false, timestamps: false, tailLines: 1 })
             .catch(err => {
@@ -322,8 +497,11 @@ export class CensorChannel {
     }
 
     private processChunk = (webSocket: WebSocket, instance: IInstance, asset: IAsset, chunk: string) => {
-        if (instance.paused || !instance.analyzing) return
+        if (instance.paused) return
         const lines = chunk.split('\n').filter(l => l.trim() !== '')
+        // When a session is active the daemon owns everything — don't duplicate events
+        if (instance.sessionId) return
+        if (!instance.analyzing) return
         for (const line of lines) {
             instance.processedCount++
             this.sendReceivedLine(webSocket, instance, asset, line)
@@ -465,6 +643,13 @@ export class CensorChannel {
             if (needsLoad.length > 0) await loadModels(needsLoad, this.backChannelObject)
             this.providers = merged
         }
+        // Include saved session ID so the frontend can auto-reconnect after page reload
+        let pendingSessionId: string | undefined
+        const savedSessionId = await this.backChannelObject.readStorage!('censor-selected-session', false) as string | null
+        const dm = this.backChannelObject.daemonManager
+        if (savedSessionId && dm) {
+            if (dm.listInstances('censor').some(s => s.id === savedSessionId)) pendingSessionId = savedSessionId
+        }
         const msg: ICensorMessage = {
             msgtype: 'censormessage',
             channel: 'censor',
@@ -477,7 +662,8 @@ export class CensorChannel {
             configs,
             llms,
             providers: this.providers,
-            providersAvailable: PROVIDERS_AVAILABLE
+            providersAvailable: PROVIDERS_AVAILABLE,
+            sessionId: pendingSessionId
         }
         webSocket.send(JSON.stringify(msg))
     }
@@ -604,6 +790,7 @@ export class CensorChannel {
         const instance = this.getInstance(webSocket, instanceConfig.instance)
         if (instance) {
             for (const asset of instance.assets) asset.passThroughStream.destroy()
+            if (instance.sessionUnsub) instance.sessionUnsub()
             this.removeInstance(webSocket, instanceConfig.instance)
             this.sendSignalMessage(webSocket, EInstanceMessageAction.STOP, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instanceConfig.instance, 'Smart censor instance stopped')
         }
@@ -629,6 +816,7 @@ export class CensorChannel {
         if (socket) {
             for (const instance of socket.instances) {
                 for (const asset of instance.assets) asset.passThroughStream.destroy()
+                if (instance.sessionUnsub) instance.sessionUnsub()
             }
             const pos = this.connections.findIndex(s => s.webSocket === webSocket)
             this.connections.splice(pos, 1)

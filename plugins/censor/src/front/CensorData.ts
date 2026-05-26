@@ -1,5 +1,5 @@
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
-import { ICensorInstanceConfig } from './CensorConfig'
+import { ICensorInstanceConfig, ICensorSession } from './CensorConfig'
 
 export interface ICensorLine {
     text: string
@@ -44,6 +44,10 @@ export interface ICensorData {
     providersAvailable: string[]
     instanceConfig: ICensorInstanceConfig
     configs: ICensorInstanceConfig[]
+    sessions: ICensorSession[]
+    connectedSessionId: string | null
+    connectedSessionDescription: string | null
+    pendingSessionId: string | null | undefined
 }
 
 export class CensorData implements ICensorData {
@@ -64,4 +68,8 @@ export class CensorData implements ICensorData {
     providersAvailable: string[] = []
     instanceConfig: ICensorInstanceConfig = { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":["example regex"]}', temperature: 0.2, active: false }
     configs: ICensorInstanceConfig[] = []
+    sessions: ICensorSession[] = []
+    connectedSessionId: string | null = null
+    connectedSessionDescription: string | null = null
+    pendingSessionId: string | null | undefined = undefined
 }

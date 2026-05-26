@@ -172,6 +172,8 @@ export class ConfigApi {
                     else {
                         let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
                         if (accessKey) {
+                            console.log('req.url')
+                            console.log(req.url)
                             result = await AuthorizationManagement.getAllowedPods(this.clusterInfo.coreApi, this.clusterInfo.appsApi, req.params.namespace, req.params.controller, accessKey)
                         }
                         else {

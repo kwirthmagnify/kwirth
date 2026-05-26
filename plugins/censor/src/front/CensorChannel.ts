@@ -3,7 +3,7 @@ import { EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EIn
 import { IChannel, IChannelObject, IContentProps, ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { CensorSetup, CensorIcon } from './CensorSetup'
 import { CensorTabContent } from './CensorTabContent'
-import { CensorConfig, ICensorInstanceConfig } from './CensorConfig'
+import { CensorConfig, ECensorCommand, ICensorConfig, ICensorInstanceConfig, ICensorSession } from './CensorConfig'
 import { CensorData, ICensorAsset, ICensorData, ICensorRegex } from './CensorData'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 
@@ -15,7 +15,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     action: EInstanceMessageAction
     instance: string
-    kind?: 'received' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags'
+    kind?: 'received' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
     assets?: ICensorAsset[]
     analyzing?: boolean
     text?: string
@@ -33,6 +33,10 @@ interface ICensorMessage {
     llms?: ILlm[]
     providers?: ILlmProvider[]
     providersAvailable?: string[]
+    sessions?: ICensorSession[]
+    sessionId?: string
+    sessionDescription?: string
+    regexes?: ICensorRegex[]
 }
 
 export class CensorChannel implements IChannel {
@@ -42,14 +46,14 @@ export class CensorChannel implements IChannel {
     TabContent: FC<IContentProps> = CensorTabContent
     requirements: IChannelRequirements = {
         accessString: true,
-        clusterUrl: false,
+        clusterUrl: true,
         clusterInfo: false,
         exit: false,
         frontChannels: false,
         metrics: false,
         notifier: true,
         notifications: true,
-        setup: false,
+        setup: true,
         settings: false,
         palette: false,
         userSettings: false,
@@ -104,6 +108,18 @@ export class CensorChannel implements IChannel {
                     if (msg.providersAvailable !== undefined) data.providersAvailable = msg.providersAvailable
                     if (msg.instanceConfig) data.instanceConfig = msg.instanceConfig
                     if (msg.configs !== undefined) data.configs = msg.configs
+                    if (msg.sessionId && data.pendingSessionId === undefined) data.pendingSessionId = msg.sessionId
+                    if (data.pendingSessionId && channelObject.instanceId) {
+                        channelObject.webSocket?.send(JSON.stringify({
+                            msgtype: 'censormessage', channel: 'censor',
+                            action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.REQUEST,
+                            type: EInstanceMessageType.DATA,
+                            accessKey: channelObject.accessString!,
+                            instance: channelObject.instanceId,
+                            command: ECensorCommand.SESSIONCONNECT, data: data.pendingSessionId
+                        }))
+                        data.pendingSessionId = null
+                    }
                 }
                 else if (msg.kind === 'providers') {
                     if (msg.providers !== undefined) data.providers = msg.providers
@@ -120,6 +136,55 @@ export class CensorChannel implements IChannel {
                         if (!data.allTags.includes(tag)) data.allTags.push(tag)
                     }
                 }
+                else if (msg.kind === 'sessions' && msg.sessions !== undefined) {
+                    data.sessions = msg.sessions
+                }
+                else if (msg.kind === 'sessionstarted' && msg.sessionId !== undefined) {
+                    data.connectedSessionId = msg.sessionId
+                    data.connectedSessionDescription = msg.sessionDescription ?? null
+                    if (msg.sessions !== undefined) data.sessions = msg.sessions
+                    if (msg.analyzing !== undefined) data.analyzing = msg.analyzing
+                    ;(channelObject.config as ICensorConfig).selectedSessionId = msg.sessionId
+                }
+                else if (msg.kind === 'sessionconnected' && msg.sessionId !== undefined) {
+                    data.connectedSessionId = msg.sessionId
+                    data.connectedSessionDescription = msg.sessionDescription ?? null
+                    if (msg.sessions !== undefined) data.sessions = msg.sessions
+                    if (msg.processedCount !== undefined) data.processedCount = msg.processedCount
+                    if (msg.llmCount !== undefined) data.llmCount = msg.llmCount
+                    if (msg.analyzing !== undefined) data.analyzing = msg.analyzing
+                    if (msg.regexes) {
+                        for (const r of msg.regexes) {
+                            if (!data.regexes.some((x: ICensorRegex) => x.pattern === r.pattern)) {
+                                data.regexes.push(r)
+                            }
+                        }
+                    }
+                    ;(channelObject.config as ICensorConfig).selectedSessionId = msg.sessionId
+                }
+                else if (msg.kind === 'sessionstopped') {
+                    if (data.connectedSessionId === msg.sessionId) {
+                        data.connectedSessionId = null
+                        data.connectedSessionDescription = null
+                        const cfg = channelObject.config as ICensorConfig
+                        if (cfg.selectedSessionId === msg.sessionId) cfg.selectedSessionId = null
+                    }
+                    if (msg.sessions !== undefined) data.sessions = msg.sessions
+                }
+                else if (msg.kind === 'sessiondisconnected') {
+                    data.connectedSessionId = null
+                    data.connectedSessionDescription = null
+                    data.receivedLines = []
+                    data.llmInputLines = []
+                    data.llmOutputLines = []
+                    data.llmWarningLines = []
+                    data.allTags = []
+                    data.regexes = []
+                    data.processedCount = 0
+                    data.llmCount = 0
+                    data.analyzing = false
+                    ;(channelObject.config as ICensorConfig).selectedSessionId = null
+                }
                 return { action: EChannelRefreshAction.REFRESH }
 
             case EInstanceMessageType.SIGNAL:
@@ -127,14 +192,6 @@ export class CensorChannel implements IChannel {
                 if (signalMessage.flow === EInstanceMessageFlow.RESPONSE && signalMessage.action === EInstanceMessageAction.START) {
                     if (signalMessage.instance) {
                         channelObject.instanceId = signalMessage.instance
-                        channelObject.webSocket?.send(JSON.stringify({
-                            msgtype: 'censormessage', channel: 'censor',
-                            action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.REQUEST,
-                            type: EInstanceMessageType.DATA,
-                            accessKey: channelObject.accessString!,
-                            instance: signalMessage.instance,
-                            command: 'configget'
-                        }))
                     } else {
                         channelObject.notify?.(this.channelId, signalMessage.level as unknown as ENotifyLevel, signalMessage.text || '')
                     }
@@ -157,6 +214,7 @@ export class CensorChannel implements IChannel {
 
     startChannel(channelObject: IChannelObject): boolean {
         const data: ICensorData = channelObject.data
+        const config: ICensorConfig = channelObject.config
         data.receivedLines = []
         data.llmInputLines = []
         data.llmOutputLines = []
@@ -168,6 +226,10 @@ export class CensorChannel implements IChannel {
         data.llmCount = 0
         data.paused = false
         data.started = true
+        data.sessions = []
+        data.connectedSessionId = null
+        data.connectedSessionDescription = null
+        data.pendingSessionId = config.selectedSessionId
         return true
     }
 

@@ -1,4 +1,5 @@
 import { ISenderAccess } from './Sender'
+import { IDaemonManager } from './Daemon'
 
 //transient
 enum ClusterTypeEnum {
@@ -57,6 +58,7 @@ interface IBackChannelObject {
     logWarning?(message: unknown): void
     logError?(message: unknown): void
     senders?: ISenderAccess
+    daemonManager?: IDaemonManager
 }
 
 export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, IBackChannelRequirements, IBackChannelObject }

@@ -637,6 +637,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setBackendUrl(props.backendUrl)
             setLogged(false)
         }
+        newTab.channelObject.stopChannel = () => stopTabChannel(newTab)
         if (newTab.channel.requirements.userSettings) {
             // console.log(user)
             // this is reallyreallyreally tricky. 

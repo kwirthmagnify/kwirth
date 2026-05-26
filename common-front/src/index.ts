@@ -59,6 +59,7 @@ export interface IChannelObject {
     setPalette?: (palette: string) => void
     notify?: (channelId: string | undefined, level: ENotifyLevel, message: string) => void
     exit?: () => void
+    stopChannel?: () => void
 }
 
 export interface ISetupProps {

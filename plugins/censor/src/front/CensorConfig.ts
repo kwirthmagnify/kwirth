@@ -6,15 +6,32 @@ export enum ECensorCommand {
     ANALYZESTART = 'analyzestart',
     ANALYZESTOP = 'analyzestop',
     REGEXDELETE = 'regexdelete',
-    PROVIDERSSET = 'providersset'
+    PROVIDERSSET = 'providersset',
+    SESSIONLIST = 'sessionlist',
+    SESSIONSTART = 'sessionstart',
+    SESSIONSTOP = 'sessionstop',
+    SESSIONCONNECT = 'sessionconnect',
+    SESSIONDISCONNECT = 'sessiondisconnect'
+}
+
+export interface ICensorSession {
+    id: string
+    description: string
+    namespace: string
+    group?: string
+    pod?: string
+    container?: string
+    createdAt?: string
 }
 
 export interface ICensorConfig {
     maxLines: number
+    selectedSessionId?: string | null
 }
 
 export class CensorConfig implements ICensorConfig {
     maxLines = 1000
+    selectedSessionId: string | null | undefined = undefined
 }
 
 export interface ICensorInstanceConfig {

@@ -512,7 +512,8 @@ export class AuthorizationManagement {
                 const validPodNames = AuthorizationManagement.getValidValues([podName], resource.pods.split(','))
                 if (validPodNames.includes(podName)) {
                     
-                    if (controller === '') return podName
+                    // +++ this is the case for pods without controller. should be something like controller!==null, but it depends on how front app invokes the configApi
+                    if (controller === 'Not Applicable') return podName
 
                     if (pod.metadata?.ownerReferences) {
                         const controllerName = await this.getPodControllerName(appsApi, pod, true)

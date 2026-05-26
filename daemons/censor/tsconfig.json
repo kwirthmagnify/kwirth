@@ -3,18 +3,15 @@
         "target": "ES2020",
         "module": "ESNext",
         "moduleResolution": "bundler",
-        "jsx": "react",
-        "jsxFactory": "React.createElement",
-        "jsxFragmentFactory": "React.Fragment",
         "strict": true,
-        "lib": ["ES2020", "DOM"],
+        "lib": ["ES2020"],
         "types": ["node"],
         "skipLibCheck": true,
         "esModuleInterop": true,
+        "baseUrl": ".",
         "paths": {
             "@kwirthmagnify/kwirth-common": ["../../common/src/index.ts"],
             "@kwirthmagnify/kwirth-common-back": ["../../common-back/src/index.ts"],
-            "@kwirthmagnify/kwirth-common-front": ["../../common-front/src/index.ts"],
             "@kwirthmagnify/kwirth-common-ai": ["../../common-ai/src/index.ts"],
             "@kwirthmagnify/kwirth-common-ai/back": ["../../common-ai/src/back.ts"]
         }

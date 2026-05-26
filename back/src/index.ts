@@ -67,6 +67,7 @@ import { ProviderManager } from './tools/ProviderManager'
 import { ProviderApi } from './api/ProviderApi'
 import { SenderApi } from './api/SenderApi'
 import { SenderManager } from './tools/SenderManager'
+import { DaemonManager } from './tools/DaemonManager'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -124,6 +125,7 @@ const runningInstances:IRunningInstance[] = []
 let pluginManager: PluginManager | undefined
 let providerManager: ProviderManager | undefined
 let senderManager: SenderManager | undefined
+let daemonManager: DaemonManager | undefined
 
 const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
@@ -461,6 +463,8 @@ const addObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, po
         else {
             logError(ELogComponent.CORE, `Invalid channel ${instanceConfig.channel}`)
         }
+        // route to daemons (headless, independent of channel/websocket)
+        if (daemonManager) await daemonManager.routeAddObject(podNamespace, podName, containerName)
     }
     catch (err) {
         logError(ELogComponent.CORE, 'Error adding object')
@@ -476,6 +480,8 @@ const deleteObject = async (webSocket:WebSocket, _eventType:string, podNamespace
     else {
         logError(ELogComponent.CORE, `Invalid channel ${instanceConfig.channel}`)
     }
+    // route to daemons
+    if (daemonManager) await daemonManager.routeDeleteObject(podNamespace, podName, containerName)
 }
 
 const processEvent = async (eventType:string, obj: any, webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containers:string[], ri:IRunningInstance) => {
@@ -1231,6 +1237,50 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
 
+        riRouter.get('/daemons/instances', async (req: Request, res: Response) => {
+            try {
+                const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
+                if (!accessKey) return
+                const qDaemonId = req.query.daemonId as string | undefined
+                const instances = daemonManager ? daemonManager.listInstances(qDaemonId) : []
+                const enriched = await Promise.all(instances.map(async inst => {
+                    try {
+                        const stats = daemonManager ? await daemonManager.sendCommand(inst.id, 'statsget', null) as { analyzing?: boolean } | null : null
+                        return { ...inst, analyzing: stats?.analyzing ?? false }
+                    } catch { return { ...inst, analyzing: false } }
+                }))
+                res.json(enriched)
+            } catch (err) {
+                logError(ELogComponent.CORE, `GET /daemons/instances error: ${err}`)
+                res.status(500).json([])
+            }
+        })
+
+        riRouter.delete('/daemons/instances/:id', async (req: Request, res: Response) => {
+            try {
+                const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
+                if (!accessKey) return
+                if (daemonManager) await daemonManager.stopInstance(req.params.id)
+                res.json({ ok: true })
+            } catch (err) {
+                logError(ELogComponent.CORE, `DELETE /daemons/instances error: ${err}`)
+                res.status(500).json({ ok: false })
+            }
+        })
+
+        riRouter.post('/daemons/instances/:id/analyze', async (req: Request, res: Response) => {
+            try {
+                const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
+                if (!accessKey) return
+                const { analyzing } = req.body as { analyzing: boolean }
+                if (daemonManager) await daemonManager.sendCommand(req.params.id, analyzing ? 'analyzestart' : 'analyzestop', null)
+                res.json({ ok: true })
+            } catch (err) {
+                logError(ELogComponent.CORE, `POST /daemons/instances/analyze error: ${err}`)
+                res.status(500).json({ ok: false })
+            }
+        })
+
         for (let provider of ri.clusterInfo.providers) {
             if (provider.providesRouter) {
                 if (provider.router) {
@@ -1481,6 +1531,37 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             senderManager.loadDevSenderConfigs()
         }
 
+        if (!daemonManager) {
+            const backDaemonObject = {
+                logInfo: (message: unknown) => logInfo(ELogComponent.CHANNEL, message),
+                logTrace: (message: unknown) => logTrace(message),
+                logWarning: (message: unknown) => logWarning(ELogComponent.CHANNEL, message),
+                logError: (message: unknown) => logError(ELogComponent.CHANNEL, message),
+                writeStorage: async (id: string, secret: boolean, data: unknown) => {
+                    if (secret) {
+                        const base64Data = Buffer.from(JSON.stringify(data), 'utf8').toString('base64')
+                        await runningInstance.secrets.write('kwirth-store-daemon-' + id, { data: base64Data })
+                    } else {
+                        await runningInstance.configMaps.write('kwirth-store-daemon-' + id, JSON.stringify(data))
+                    }
+                },
+                readStorage: async (id: string, secret: boolean) => {
+                    if (secret) {
+                        const content = await runningInstance.secrets.read('kwirth-store-daemon-' + id)
+                        if (content?.data) return JSON.parse(Buffer.from(content.data, 'base64').toString('utf8'))
+                        return undefined
+                    } else {
+                        const content = await runningInstance.configMaps.read('kwirth-store-daemon-' + id)
+                        if (content) return JSON.parse(content)
+                        return undefined
+                    }
+                },
+                senders: senderManager
+            }
+            daemonManager = new DaemonManager(runningInstance.clusterInfo, runningInstance.configMaps, backDaemonObject)
+            await daemonManager.init()
+        }
+
     let backChannelObject: IBackChannelObject = {
             logInfo: (message: unknown) => logInfo(ELogComponent.CHANNEL, message),
             logTrace: (message: unknown) => logTrace(message),
@@ -1512,7 +1593,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                     return undefined;
                 }
             },
-            senders: senderManager
+            senders: senderManager,
+            daemonManager
         }
 
         runningInstance.clusterInfo.senders = senderManager

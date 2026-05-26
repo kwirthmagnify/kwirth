@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Box, Button, Card, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItem, ListItemButton, ListItemText, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
-import { Add as AddIcon, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon } from '@mui/icons-material'
+import { Box, Button, Card, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItem, ListItemButton, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
+import { Add as AddIcon, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon, MoreVert as MoreVertIcon } from '@mui/icons-material'
 import { cleanANSI, IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
@@ -8,6 +8,7 @@ import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import { ICensorData } from './CensorData'
 import { ECensorCommand, ICensorInstanceConfig } from './CensorConfig'
 import { CensorImportExport } from './CensorImportExport'
+import { CensorSessionStart } from './CensorSessionStart'
 import { MsgBoxButtons, MsgBoxYesNo } from './utils'
 
 const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
@@ -17,6 +18,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [, forceUpdate] = useState(0)
     const [tab, setTab] = useState(0)
     const [showConfig, setShowConfig] = useState(false)
+    const [showSessionStart, setShowSessionStart] = useState(false)
     const [configName, setConfigName] = useState('')
     const [configVersion, setConfigVersion] = useState('1')
     const [llmId, setLlmId] = useState('')
@@ -31,18 +33,24 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [msgBox, setMsgBox] = useState(<></>)
     const [activeTagFilters, setActiveTagFilters] = useState<string[]>([])
     const [tagFilterAnd, setTagFilterAnd] = useState(false)
+    const [regexAutoScroll, setRegexAutoScroll] = useState(true)
+    const [receivedAutoScroll, setReceivedAutoScroll] = useState(true)
+    const [llmInputAutoScroll, setLlmInputAutoScroll] = useState(true)
+    const [llmOutputAutoScroll, setLlmOutputAutoScroll] = useState(true)
     const [warningAutoScroll, setWarningAutoScroll] = useState(true)
     const [selectedConfigIndex, setSelectedConfigIndex] = useState<number | null>(null)
+    const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
 
     useEffect(() => {
         if (contentRef.current) setContentTop(contentRef.current.getBoundingClientRect().top)
     })
 
     useEffect(() => {
-        if (!contentRef.current || tab === 0) return
-        if (tab === 4 && !warningAutoScroll) return
+        if (!contentRef.current || tab === 5) return
+        const autoScrollMap: Record<number, boolean> = { 0: regexAutoScroll, 1: receivedAutoScroll, 2: llmInputAutoScroll, 3: llmOutputAutoScroll, 4: warningAutoScroll }
+        if (!autoScrollMap[tab]) return
         contentRef.current.scrollTo({ top: contentRef.current.scrollHeight, behavior: 'auto' })
-    }, [data.receivedLines.length, data.llmInputLines.length, data.llmOutputLines.length, data.llmWarningLines.length, tab, warningAutoScroll])
+    }, [data.regexes.length, data.receivedLines.length, data.llmInputLines.length, data.llmOutputLines.length, data.llmWarningLines.length, tab, regexAutoScroll, receivedAutoScroll, llmInputAutoScroll, llmOutputAutoScroll, warningAutoScroll])
 
     useEffect(() => {
         if (showConfig) return
@@ -161,21 +169,50 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         }
     }
 
+
+    const onSessionStart = (description: string) => {
+        setShowSessionStart(false)
+        sendCommand(ECensorCommand.SESSIONSTART, { description })
+    }
+
+    const deleteSession = () => {
+        setMenuAnchor(null)
+        if (!data.connectedSessionId) return
+        const url = props.channelObject.clusterUrl
+        const token = props.channelObject.accessString
+        if (!url || !token) return
+        fetch(`${url}/daemons/instances/${data.connectedSessionId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        sendCommand(ECensorCommand.SESSIONDISCONNECT)
+    }
+
     const panelHeight = `calc(100vh - ${contentTop}px - 16px)`
 
     return <>
         {data.started &&
         <Card sx={{ display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', mt: 1, minHeight: 0 }}>
             <CardHeader title={
-                <Stack direction='row' alignItems='center'>
-                    <Typography mr={3}><b>Filters:</b> {data.regexes.length}</Typography>
-                    <Typography mr={3}><b>Processed:</b> {data.processedCount}</Typography>
-                    <Typography mr={3} flex={1}><b>To LLM:</b> {data.llmCount}</Typography>
-                    <Button onClick={openConfig}>Config</Button>
+                <Stack direction='row' alignItems='center' spacing={1}>
+                    <Typography><b>Filters:</b> {data.regexes.length}</Typography>
+                    <Typography><b>Processed:</b> {data.processedCount}</Typography>
+                    <Typography flex={1}><b>To LLM:</b> {data.llmCount}</Typography>
+                    {data.connectedSessionId &&
+                        <Chip label={data.connectedSessionDescription ?? 'Session'} size='small' color='success' sx={{ maxWidth: 160 }} />
+                    }
                     <Button onClick={() => sendCommand(data.analyzing ? ECensorCommand.ANALYZESTOP : ECensorCommand.ANALYZESTART)}
-                        color={data.analyzing ? 'error' : 'success'} variant='outlined' size='small' sx={{ ml: 1 }}>
+                        color={data.analyzing ? 'error' : 'success'} variant='outlined' size='small'>
                         {data.analyzing ? 'Stop' : 'Start'}
                     </Button>
+                    <IconButton size='small' onClick={(e) => setMenuAnchor(e.currentTarget)}>
+                        <MoreVertIcon fontSize='small' />
+                    </IconButton>
+                    <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+                        <MenuItem onClick={() => { setMenuAnchor(null); openConfig() }}>Config</MenuItem>
+                        <MenuItem onClick={() => { setMenuAnchor(null); setShowSessionStart(true) }} disabled={!!data.connectedSessionId}>Launch</MenuItem>
+                        <MenuItem onClick={deleteSession} disabled={!data.connectedSessionId}>Delete session</MenuItem>
+                    </Menu>
                 </Stack>
             } />
             <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
@@ -188,6 +225,17 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     <Tab label={`Warnings (${data.llmWarningLines.length})`} />
                     <Tab label={`Objects (${data.assets.length})`} />
                 </Tabs>
+                {(tab === 0 || tab === 1 || tab === 2 || tab === 3) && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
+                        <Box sx={{ flex: 1 }} />
+                        <FormControlLabel
+                            control={<Switch size='small'
+                                checked={tab === 0 ? regexAutoScroll : tab === 1 ? receivedAutoScroll : tab === 2 ? llmInputAutoScroll : llmOutputAutoScroll}
+                                onChange={e => { if (tab === 0) setRegexAutoScroll(e.target.checked); else if (tab === 1) setReceivedAutoScroll(e.target.checked); else if (tab === 2) setLlmInputAutoScroll(e.target.checked); else setLlmOutputAutoScroll(e.target.checked) }} />}
+                            label={<Typography variant='caption'>Autoscroll</Typography>}
+                            sx={{ ml: 0.5, mr: 0 }} />
+                    </Box>
+                )}
                 {tab === 4 && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, px: 0.5, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
                         {data.allTags.map(tag => (
@@ -405,6 +453,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         )}
         {showImportExport && (
             <CensorImportExport configs={data.configs} onClose={importExportClose} />
+        )}
+        {showSessionStart && (
+            <CensorSessionStart onConfirm={onSessionStart} onClose={() => setShowSessionStart(false)} />
         )}
         {msgBox}
     </>
