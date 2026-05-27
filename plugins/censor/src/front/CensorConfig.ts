@@ -43,6 +43,10 @@ export interface ICensorInstanceConfig {
     exampleJson: string
     temperature: number
     active?: boolean
+    space?: string
+    type?: string
+    addTimestamp?: boolean
+    businessPath?: string
 }
 
 export class CensorInstanceConfig implements ICensorInstanceConfig {
@@ -54,4 +58,8 @@ export class CensorInstanceConfig implements ICensorInstanceConfig {
     exampleJson = '{"patterns":["example regex"]}'
     temperature = 0.2
     active = false
+    space = ''
+    type = ''
+    addTimestamp = false
+    businessPath = ''
 }

@@ -15,7 +15,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     action: EInstanceMessageAction
     instance: string
-    kind?: 'received' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
+    kind?: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
     assets?: ICensorAsset[]
     analyzing?: boolean
     text?: string
@@ -37,6 +37,7 @@ interface ICensorMessage {
     sessionId?: string
     sessionDescription?: string
     regexes?: ICensorRegex[]
+    timestamp?: string
 }
 
 export class CensorChannel implements IChannel {
@@ -76,6 +77,10 @@ export class CensorChannel implements IChannel {
                 if (msg.kind === 'received' && msg.text !== undefined) {
                     data.receivedLines.push({ text: msg.text, namespace: msg.namespace ?? '', pod: msg.pod ?? '', container: msg.container ?? '' })
                     if (data.receivedLines.length > MAX_DISPLAY_LINES) data.receivedLines.splice(0, data.receivedLines.length - MAX_DISPLAY_LINES)
+                }
+                else if (msg.kind === 'business' && msg.text !== undefined) {
+                    data.businessLines.push({ text: msg.text, namespace: msg.namespace ?? '', pod: msg.pod ?? '', container: msg.container ?? '', timestamp: msg.timestamp })
+                    if (data.businessLines.length > MAX_DISPLAY_LINES) data.businessLines.splice(0, data.businessLines.length - MAX_DISPLAY_LINES)
                 }
                 else if (msg.kind === 'llminput' && msg.text !== undefined) {
                     data.llmInputLines.push(msg.text)
@@ -175,6 +180,7 @@ export class CensorChannel implements IChannel {
                     data.connectedSessionId = null
                     data.connectedSessionDescription = null
                     data.receivedLines = []
+                    data.businessLines = []
                     data.llmInputLines = []
                     data.llmOutputLines = []
                     data.llmWarningLines = []
@@ -216,6 +222,7 @@ export class CensorChannel implements IChannel {
         const data: ICensorData = channelObject.data
         const config: ICensorConfig = channelObject.config
         data.receivedLines = []
+        data.businessLines = []
         data.llmInputLines = []
         data.llmOutputLines = []
         data.llmWarningLines = []

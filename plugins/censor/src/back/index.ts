@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IDaemonInstanceConfig, IDaemonEvent, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IDaemonInstanceConfig, IDaemonEvent } from '@kwirthmagnify/kwirth-common'
 import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS } from '@kwirthmagnify/kwirth-common-ai'
 import { buildModel, loadModels, zodFromExample } from '@kwirthmagnify/kwirth-common-ai/back'
 import { PassThrough } from 'stream'
@@ -22,6 +22,10 @@ export interface ICensorInstanceConfig {
     exampleJson?: string
     temperature?: number
     active?: boolean
+    space?: string
+    type?: string
+    addTimestamp?: boolean
+    businessPath?: string
 }
 
 export enum ECensorCommand {
@@ -54,6 +58,16 @@ interface ICensorSession {
 
 const PROVIDERS_AVAILABLE = ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek']
 
+const extractText = (data: unknown, path: string): string | undefined => {
+    const parts = path.split('.')
+    let cur: unknown = data
+    for (const part of parts) {
+        if (cur === null || typeof cur !== 'object') return undefined
+        cur = (cur as Record<string, unknown>)[part]
+    }
+    return cur !== undefined ? String(cur) : undefined
+}
+
 interface ICensorCommandMessage extends IInstanceMessage {
     msgtype: 'censormessage'
     command: ECensorCommand
@@ -67,7 +81,8 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     type: EInstanceMessageType
     instance: string
-    kind: 'received' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
+    kind: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
+    timestamp?: string
     analyzing?: boolean
     text?: string
     namespace?: string
@@ -127,7 +142,7 @@ export class CensorChannel {
     readonly channelId = 'censor'
     readonly requirements = {
         storage: true,
-        providers: ['events']
+        providers: ['events', 'business']
     }
     clusterInfo: unknown
     backChannelObject: IBackChannelObject
@@ -143,6 +158,31 @@ export class CensorChannel {
         const stored: ILlmProvider[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_PROVIDERS, true)) ?? []
         this.providers = stored
         await loadModels(this.providers, this.backChannelObject)
+    }
+
+    private rebuildBusinessSubscription(): void {
+        const spacesMap = new Map<string, Set<string>>()
+        const addSpace = (cfg: ICensorInstanceConfig) => {
+            this.backChannelObject.logInfo?.(`[censor] rebuildBusiness: businessPath='${cfg.businessPath}' space='${cfg.space}' type='${cfg.type}'`)
+            if (!cfg.businessPath) return
+            const spaceName = cfg.space ?? ''
+            if (!spaceName) return
+            const types = spacesMap.get(spaceName) ?? new Set<string>()
+            types.add(cfg.type ?? '')
+            spacesMap.set(spaceName, types)
+        }
+        for (const socket of this.connections) {
+            for (const instance of socket.instances) addSpace(instance.cfg)
+        }
+        const dm = this.backChannelObject.daemonManager
+        if (dm) {
+            for (const ic of dm.listInstances('censor')) addSpace(ic.data as ICensorInstanceConfig)
+        }
+        const spaces = Array.from(spacesMap.entries()).map(([name, types]) => ({ name, types: Array.from(types) }))
+        this.backChannelObject.logInfo?.(`[censor] rebuildBusiness: subscribing with spaces=${JSON.stringify(spaces)}`)
+        if (spaces.length > 0) {
+            (this.clusterInfo as { addSubscriber: (id: string, c: unknown, config: unknown) => void }).addSubscriber('business', this, { spaces })
+        }
     }
 
     getChannelData = (): BackChannelData => ({
@@ -164,18 +204,61 @@ export class CensorChannel {
     }
 
     processProviderEvent(providerId: string, event: unknown): void {
-        if (providerId !== 'events') return
-        const { type, obj } = event as { type: string, obj: { kind: string, metadata: { name: string, namespace: string } } }
-        if (obj.kind !== 'Pod' || type !== 'DELETED') return
+        if (providerId === 'events') {
+            const { type, obj } = event as { type: string, obj: { kind: string, metadata: { name: string, namespace: string } } }
+            if (obj.kind !== 'Pod' || type !== 'DELETED') return
+            const podName = obj.metadata.name
+            const namespace = obj.metadata.namespace
+            for (const socket of this.connections) {
+                for (const instance of socket.instances) {
+                    const before = instance.assets.length
+                    instance.assets = instance.assets.filter(a => !(a.pod === podName && a.namespace === namespace))
+                    if (instance.assets.length !== before) this.sendAssets(socket.webSocket, instance)
+                }
+            }
+            return
+        }
 
-        const podName = obj.metadata.name
-        const namespace = obj.metadata.namespace
-        for (const socket of this.connections) {
-            for (const instance of socket.instances) {
-                const before = instance.assets.length
-                instance.assets = instance.assets.filter(a => !(a.pod === podName && a.namespace === namespace))
-                if (instance.assets.length !== before) {
-                    this.sendAssets(socket.webSocket, instance)
+        if (providerId === 'business') {
+            const bEvent = event as { last: { event: { space: string, type: string, data: unknown } } }
+            const eventSpace = bEvent.last?.event?.space ?? ''
+            const eventType = bEvent.last?.event?.type ?? ''
+            const eventBody = bEvent.last?.event
+            this.backChannelObject.logInfo?.(`[censor] processProviderEvent business: space='${eventSpace}' type='${eventType}' body=${JSON.stringify(eventBody)} connections=${this.connections.length}`)
+            let daemonRouted = false
+            for (const socket of this.connections) {
+                for (const instance of socket.instances) {
+                    if (instance.sessionId) {
+                        if (!daemonRouted) {
+                            const dm = this.backChannelObject.daemonManager
+                            if (dm) { dm.routeProviderEvent('business', event); daemonRouted = true }
+                        }
+                        continue
+                    }
+                    if (!instance.cfg.businessPath) continue
+                    const cfgSpace = instance.cfg.space ?? ''
+                    const cfgType = instance.cfg.type ?? ''
+                    if (cfgSpace && cfgSpace !== eventSpace) continue
+                    if (cfgType && cfgType !== eventType) continue
+                    const text = extractText(eventBody, instance.cfg.businessPath)
+                    if (text === undefined) continue
+                    const ts = new Date().toISOString()
+                    const llmText = instance.cfg.addTimestamp ? `${ts} ${text}` : String(text)
+                    this.sendBusinessLine(socket.webSocket, instance, String(text), eventSpace, eventType, ts)
+                    if (instance.analyzing) {
+                        instance.processedCount++
+                        const clean = cleanANSI(llmText)
+                        const filtered = instance.regexes.some(r => { try { return r.compiled.test(clean) } catch { return false } })
+                        if (!filtered) {
+                            instance.lineBuffer.push(clean)
+                            const batchSize = instance.cfg.batchSize ?? BATCH_SIZE
+                            if (instance.lineBuffer.length >= batchSize && !instance.llmBusy) {
+                                const batch = instance.lineBuffer.splice(0, batchSize)
+                                this.callLlm(socket.webSocket, instance, batch)
+                            }
+                        }
+                        this.sendStats(socket.webSocket, instance)
+                    }
                 }
             }
         }
@@ -201,6 +284,7 @@ export class CensorChannel {
                 const llmList: ILlm[] = _llms ?? (await this.backChannelObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
                 instance.llm = llmList.find((l: ILlm) => l.id === instance.cfg.llmId)
                 await this.executeConfigGet(webSocket, instance)
+                this.rebuildBusinessSubscription()
                 return true
             }
             case ECensorCommand.PROVIDERSAVAILABLE:
@@ -310,6 +394,7 @@ export class CensorChannel {
                 const sessions = this.buildSessionList(dm.listInstances('censor'))
                 webSocket.send(JSON.stringify({ msgtype: 'censormessage', channel: 'censor', action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.DATA, instance: instance.instanceId, kind: 'sessionstarted', sessionId: id, sessionDescription: description, sessions, analyzing: instance.analyzing } as ICensorMessage))
                 await this.backChannelObject.writeStorage!('censor-selected-session', false, id)
+                this.rebuildBusinessSubscription()
                 return true
             }
             case ECensorCommand.SESSIONCONNECT: {
@@ -359,6 +444,7 @@ export class CensorChannel {
                     regexes
                 } as ICensorMessage))
                 await this.backChannelObject.writeStorage!('censor-selected-session', false, sessionId)
+                this.rebuildBusinessSubscription()
                 return true
             }
             case ECensorCommand.SESSIONDISCONNECT: {
@@ -392,7 +478,6 @@ export class CensorChannel {
                 return true
             }
         }
-        return false
     }
 
     private buildSessionList(instances: IDaemonInstanceConfig[]): ICensorSession[] {
@@ -463,6 +548,7 @@ export class CensorChannel {
             instance.llm = llm
             this.sendAnalyzing(webSocket, instance, false)
             await this.executeConfigGet(webSocket, instance)
+            this.rebuildBusinessSubscription()
         }
 
         if (instance.assets.some(a => a.namespace === ns && a.pod === pod && a.container === container)) return true
@@ -674,6 +760,15 @@ export class CensorChannel {
             action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED,
             type: EInstanceMessageType.DATA, instance: instance.instanceId,
             kind: 'received', text, namespace: asset.namespace, pod: asset.pod, container: asset.container
+        } as ICensorMessage))
+    }
+
+    private sendBusinessLine = (webSocket: WebSocket, instance: IInstance, text: string, space: string, eventType: string, timestamp: string) => {
+        webSocket.send(JSON.stringify({
+            msgtype: 'censormessage', channel: 'censor',
+            action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED,
+            type: EInstanceMessageType.DATA, instance: instance.instanceId,
+            kind: 'business', text, namespace: space, pod: eventType, container: '', timestamp
         } as ICensorMessage))
     }
 

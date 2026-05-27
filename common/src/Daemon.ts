@@ -52,4 +52,5 @@ export interface IDaemonManager {
     sendCommand(instanceId: string, command: string, data: unknown): Promise<unknown>
     routeAddObject(podNamespace: string, podName: string, containerName: string): Promise<void>
     directAddObject(instanceId: string, podNamespace: string, podName: string, containerName: string): Promise<void>
+    routeProviderEvent(providerId: string, event: unknown): void
 }

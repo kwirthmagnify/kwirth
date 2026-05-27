@@ -6,6 +6,7 @@ export interface ICensorLine {
     namespace: string
     pod: string
     container: string
+    timestamp?: string
 }
 
 export interface ICensorAsset {
@@ -28,6 +29,7 @@ export interface ICensorWarning {
 
 export interface ICensorData {
     receivedLines: ICensorLine[]
+    businessLines: ICensorLine[]
     llmInputLines: string[]
     llmOutputLines: string[]
     llmWarningLines: ICensorWarning[]
@@ -52,6 +54,7 @@ export interface ICensorData {
 
 export class CensorData implements ICensorData {
     receivedLines: ICensorLine[] = []
+    businessLines: ICensorLine[] = []
     llmInputLines: string[] = []
     llmOutputLines: string[] = []
     llmWarningLines: ICensorWarning[] = []

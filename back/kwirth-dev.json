@@ -20,7 +20,8 @@
     "tee": "../senders/tee/dist",
     "regex": "../senders/regex/dist",
     "composite": "../senders/composite/dist",
-    "timed": "../senders/timed/dist"
+    "timed": "../senders/timed/dist",
+    "teams": "../senders/teams/dist"
   },
   "senderConfigs": {
     "email-resend": [

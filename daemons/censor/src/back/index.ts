@@ -23,6 +23,20 @@ export interface ICensorInstanceConfig {
     exampleJson?: string
     temperature?: number
     active?: boolean
+    space?: string
+    type?: string
+    addTimestamp?: boolean
+    businessPath?: string
+}
+
+const extractText = (data: unknown, path: string): string | undefined => {
+    const parts = path.split('.')
+    let cur: unknown = data
+    for (const part of parts) {
+        if (cur === null || typeof cur !== 'object') return undefined
+        cur = (cur as Record<string, unknown>)[part]
+    }
+    return cur !== undefined ? String(cur) : undefined
 }
 
 export enum ECensorDaemonCommand {
@@ -73,7 +87,7 @@ export class CensorDaemon implements IDaemon {
     readonly daemonId = 'censor'
     readonly requirements: IBackDaemonRequirements = {
         storage: true,
-        providers: ['events']
+        providers: ['events', 'business']
     }
 
     private clusterInfo: unknown
@@ -214,17 +228,52 @@ export class CensorDaemon implements IDaemon {
     }
 
     processProviderEvent(providerId: string, event: unknown): void {
-        if (providerId !== 'events') return
-        const { type, obj } = event as { type: string, obj: { kind: string, metadata: { name: string, namespace: string } } }
-        if (obj.kind !== 'Pod' || type !== 'DELETED') return
+        if (providerId === 'events') {
+            const { type, obj } = event as { type: string, obj: { kind: string, metadata: { name: string, namespace: string } } }
+            if (obj.kind !== 'Pod' || type !== 'DELETED') return
+            const podName = obj.metadata.name
+            const namespace = obj.metadata.namespace
+            for (const inst of this.instances.values()) {
+                const before = inst.assets.length
+                inst.assets = inst.assets.filter(a => !(a.pod === podName && a.namespace === namespace))
+                if (inst.assets.length !== before) {
+                    this.broadcast(inst, 'assets', { assets: inst.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
+                }
+            }
+            return
+        }
 
-        const podName = obj.metadata.name
-        const namespace = obj.metadata.namespace
-        for (const inst of this.instances.values()) {
-            const before = inst.assets.length
-            inst.assets = inst.assets.filter(a => !(a.pod === podName && a.namespace === namespace))
-            if (inst.assets.length !== before) {
-                this.broadcast(inst, 'assets', { assets: inst.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
+        if (providerId === 'business') {
+            const bEvent = event as { last: { event: { space: string, type: string, data: unknown } } }
+            const eventSpace = bEvent.last?.event?.space ?? ''
+            const eventType = bEvent.last?.event?.type ?? ''
+            const eventBody = bEvent.last?.event
+            this.backDaemonObject.logInfo?.(`[censor-daemon] processProviderEvent business: space='${eventSpace}' type='${eventType}' instances=${this.instances.size}`)
+            for (const inst of this.instances.values()) {
+                if (!inst.cfg.businessPath) continue
+                const cfgSpace = inst.cfg.space ?? ''
+                const cfgType = inst.cfg.type ?? ''
+                if (cfgSpace && cfgSpace !== eventSpace) continue
+                if (cfgType && cfgType !== eventType) continue
+                const text = extractText(eventBody, inst.cfg.businessPath)
+                if (text === undefined) continue
+                const ts = new Date().toISOString()
+                const llmText = inst.cfg.addTimestamp ? `${ts} ${text}` : String(text)
+                this.broadcast(inst, 'business', { text: String(text), namespace: eventSpace, pod: eventType, container: '', timestamp: ts })
+                if (inst.analyzing) {
+                    inst.processedCount++
+                    const clean = cleanANSI(llmText)
+                    const filtered = inst.regexes.some(r => { try { return r.compiled.test(clean) } catch { return false } })
+                    if (!filtered) {
+                        inst.lineBuffer.push(clean)
+                        const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
+                        if (inst.lineBuffer.length >= batchSize && !inst.llmBusy) {
+                            const batch = inst.lineBuffer.splice(0, batchSize)
+                            this.callLlm(inst, batch)
+                        }
+                    }
+                    this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount })
+                }
             }
         }
     }

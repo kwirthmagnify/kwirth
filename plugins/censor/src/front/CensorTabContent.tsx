@@ -27,12 +27,17 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [temperature, setTemperature] = useState(0.2)
     const [exampleJson, setExampleJson] = useState('{"patterns":["example regex"]}')
     const [exampleJsonError, setExampleJsonError] = useState('')
+    const [space, setSpace] = useState('')
+    const [type, setType] = useState('')
+    const [addTimestamp, setAddTimestamp] = useState(false)
+    const [businessPath, setBusinessPath] = useState('')
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
     const [showImportExport, setShowImportExport] = useState(false)
     const [msgBox, setMsgBox] = useState(<></>)
     const [activeTagFilters, setActiveTagFilters] = useState<string[]>([])
     const [tagFilterAnd, setTagFilterAnd] = useState(false)
+    const [businessAutoScroll, setBusinessAutoScroll] = useState(true)
     const [regexAutoScroll, setRegexAutoScroll] = useState(true)
     const [receivedAutoScroll, setReceivedAutoScroll] = useState(true)
     const [llmInputAutoScroll, setLlmInputAutoScroll] = useState(true)
@@ -46,11 +51,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     })
 
     useEffect(() => {
-        if (!contentRef.current || tab === 5) return
-        const autoScrollMap: Record<number, boolean> = { 0: regexAutoScroll, 1: receivedAutoScroll, 2: llmInputAutoScroll, 3: llmOutputAutoScroll, 4: warningAutoScroll }
+        if (!contentRef.current || tab === 6) return
+        const autoScrollMap: Record<number, boolean> = { 0: regexAutoScroll, 1: receivedAutoScroll, 2: businessAutoScroll, 3: llmInputAutoScroll, 4: llmOutputAutoScroll, 5: warningAutoScroll }
         if (!autoScrollMap[tab]) return
         contentRef.current.scrollTo({ top: contentRef.current.scrollHeight, behavior: 'auto' })
-    }, [data.regexes.length, data.receivedLines.length, data.llmInputLines.length, data.llmOutputLines.length, data.llmWarningLines.length, tab, regexAutoScroll, receivedAutoScroll, llmInputAutoScroll, llmOutputAutoScroll, warningAutoScroll])
+    }, [data.regexes.length, data.receivedLines.length, data.llmInputLines.length, data.llmOutputLines.length, data.llmWarningLines.length, data.businessLines.length, tab, regexAutoScroll, receivedAutoScroll, llmInputAutoScroll, llmOutputAutoScroll, warningAutoScroll, businessAutoScroll])
 
     useEffect(() => {
         if (showConfig) return
@@ -62,6 +67,10 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setTemperature(data.instanceConfig.temperature ?? 0.2)
         setExampleJson(data.instanceConfig.exampleJson ?? '{"patterns":["example regex"]}')
         setExampleJsonError('')
+        setSpace(data.instanceConfig.space ?? '')
+        setType(data.instanceConfig.type ?? '')
+        setAddTimestamp(data.instanceConfig.addTimestamp ?? false)
+        setBusinessPath(data.instanceConfig.businessPath ?? '')
     }, [data.instanceConfig])
 
     useEffect(() => {
@@ -94,7 +103,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setShowConfig(true)
     }
 
-    const currentConfig = (): ICensorInstanceConfig => ({ name: configName, version: configVersion, llmId, system, batchSize, temperature, exampleJson })
+    const currentConfig = (): ICensorInstanceConfig => ({ name: configName, version: configVersion, llmId, system, batchSize, temperature, exampleJson, space, type, addTimestamp, businessPath })
 
     const saveConfig = () => {
         const cfg = currentConfig()
@@ -112,6 +121,10 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setTemperature(cfg.temperature ?? 0.2)
         setExampleJson(cfg.exampleJson ?? '{"patterns":["example regex"]}')
         setExampleJsonError('')
+        setSpace(cfg.space ?? '')
+        setType(cfg.type ?? '')
+        setAddTimestamp(cfg.addTimestamp ?? false)
+        setBusinessPath(cfg.businessPath ?? '')
     }
 
     const onConfigSelect = (cfg: ICensorInstanceConfig, i: number) => {
@@ -129,6 +142,10 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setTemperature(0.2)
         setExampleJson('{"patterns":["example regex"]}')
         setExampleJsonError('')
+        setSpace('')
+        setType('')
+        setAddTimestamp(false)
+        setBusinessPath('')
     }
 
     const onConfigSave = () => {
@@ -220,23 +237,24 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     sx={{ borderBottom: 1, borderColor: 'divider', px: 1, minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
                     <Tab label={`Regex (${data.regexes.length})`} />
                     <Tab label={`Received (${data.receivedLines.length})`} />
+                    <Tab label={`Business (${data.businessLines.length})`} />
                     <Tab label={`LLM Input (${data.llmInputLines.length})`} />
                     <Tab label={`LLM Responses (${data.llmOutputLines.length})`} />
                     <Tab label={`Warnings (${data.llmWarningLines.length})`} />
                     <Tab label={`Objects (${data.assets.length})`} />
                 </Tabs>
-                {(tab === 0 || tab === 1 || tab === 2 || tab === 3) && (
+                {(tab === 0 || tab === 1 || tab === 2 || tab === 3 || tab === 4) && (
                     <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
                         <Box sx={{ flex: 1 }} />
                         <FormControlLabel
                             control={<Switch size='small'
-                                checked={tab === 0 ? regexAutoScroll : tab === 1 ? receivedAutoScroll : tab === 2 ? llmInputAutoScroll : llmOutputAutoScroll}
-                                onChange={e => { if (tab === 0) setRegexAutoScroll(e.target.checked); else if (tab === 1) setReceivedAutoScroll(e.target.checked); else if (tab === 2) setLlmInputAutoScroll(e.target.checked); else setLlmOutputAutoScroll(e.target.checked) }} />}
+                                checked={tab === 0 ? regexAutoScroll : tab === 1 ? receivedAutoScroll : tab === 2 ? businessAutoScroll : tab === 3 ? llmInputAutoScroll : llmOutputAutoScroll}
+                                onChange={e => { if (tab === 0) setRegexAutoScroll(e.target.checked); else if (tab === 1) setReceivedAutoScroll(e.target.checked); else if (tab === 2) setBusinessAutoScroll(e.target.checked); else if (tab === 3) setLlmInputAutoScroll(e.target.checked); else setLlmOutputAutoScroll(e.target.checked) }} />}
                             label={<Typography variant='caption'>Autoscroll</Typography>}
                             sx={{ ml: 0.5, mr: 0 }} />
                     </Box>
                 )}
-                {tab === 4 && (
+                {tab === 5 && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, px: 0.5, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
                         {data.allTags.map(tag => (
                             <Chip key={tag} label={tag} size='small'
@@ -300,22 +318,39 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         </Box>
                     ))}
 
-                    {/* Tab 2 — Lines sent to LLM */}
-                    {tab === 2 && data.llmInputLines.map((line, i) => (
+                    {/* Tab 2 — Business events */}
+                    {tab === 2 && data.businessLines.map((line, i) => (
+                        <Box key={i} sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, '&:hover': { bgcolor: 'action.hover' }, px: 0.5, borderRadius: 0.5 }}>
+                            <Typography variant='caption' color='text.disabled' sx={{ minWidth: '120px', fontFamily: 'monospace', flexShrink: 0 }}>
+                                {line.namespace}/{line.pod}
+                            </Typography>
+                            {data.instanceConfig.addTimestamp && line.timestamp && (
+                                <Typography variant='caption' sx={{ minWidth: '80px', fontFamily: 'monospace', flexShrink: 0 }}>
+                                    [{line.timestamp.substring(11, 19)}]
+                                </Typography>
+                            )}
+                            <Typography variant='caption' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                {line.text}
+                            </Typography>
+                        </Box>
+                    ))}
+
+                    {/* Tab 3 — Lines sent to LLM */}
+                    {tab === 3 && data.llmInputLines.map((line, i) => (
                         <Typography key={i} variant='caption' sx={{ fontFamily: 'monospace', display: 'block', px: 0.5, wordBreak: 'break-all', '&:hover': { bgcolor: 'action.hover' } }}>
                             {line}
                         </Typography>
                     ))}
 
-                    {/* Tab 3 — LLM responses */}
-                    {tab === 3 && data.llmOutputLines.map((out, i) => (
+                    {/* Tab 4 — LLM responses */}
+                    {tab === 4 && data.llmOutputLines.map((out, i) => (
                         <Box key={i} sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '11px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                             {out}
                         </Box>
                     ))}
 
-                    {/* Tab 5 — Objects being analyzed */}
-                    {tab === 5 && (
+                    {/* Tab 6 — Objects being analyzed */}
+                    {tab === 6 && (
                         data.assets.length === 0
                             ? <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>No objects currently being analyzed.</Typography>
                             : <List dense disablePadding>
@@ -331,8 +366,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             </List>
                     )}
 
-                    {/* Tab 4 — LLM warnings */}
-                    {tab === 4 && <>
+                    {/* Tab 5 — LLM warnings */}
+                    {tab === 5 && <>
                         {data.llmWarningLines
                             .filter(w => {
                                 if (activeTagFilters.length === 0) return true
@@ -359,12 +394,12 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         </Card>}
 
         {showConfig && (
-            <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '900px', height: '65vh' } }}>
+            <Dialog open={true} PaperProps={{ sx: { width: '92vw', maxWidth: '1200px', height: '82vh' } }}>
                 <DialogTitle>Censor config</DialogTitle>
                 <DialogContent style={{ display: 'flex', height: '100%', overflow: 'hidden', padding: '8px 16px' }}>
 
                     {/* Left panel — config list */}
-                    <Box sx={{ flex: '0 0 200px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pr: 1 }}>
+                    <Box sx={{ flex: '0 0 230px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pr: 1 }}>
                         <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 'bold', px: 0.5, pt: 0.5 }}>Configs</Typography>
                         <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', border: 1, borderColor: 'divider', borderRadius: 1, mt: 0.5 }}>
                             <List dense sx={{ py: 0 }}>
@@ -424,6 +459,18 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 }}
                                 error={!!exampleJsonError} helperText={exampleJsonError || 'Must be valid JSON with double quotes'}
                                 fullWidth inputProps={{ style: { fontFamily: 'monospace', fontSize: '12px' } }} />
+                            <Box>
+                                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 'bold' }}>Business source</Typography>
+                                <Stack direction='row' spacing={2} alignItems='center' sx={{ mt: 0.5 }}>
+                                    <TextField label='Space' size='small' value={space} onChange={e => setSpace(e.target.value)} sx={{ flex: 1 }} placeholder='Leave empty for any' />
+                                    <TextField label='Type' size='small' value={type} onChange={e => setType(e.target.value)} sx={{ flex: 1 }} placeholder='Leave empty for any' />
+                                    <TextField label='Path (dot-notation)' size='small' value={businessPath} onChange={e => setBusinessPath(e.target.value)} sx={{ flex: 2 }} placeholder='e.g. data.message (empty = ignore)' />
+                                    <FormControlLabel
+                                        control={<Switch size='small' checked={addTimestamp} onChange={e => setAddTimestamp(e.target.checked)} />}
+                                        label={<Typography variant='caption'>Timestamp</Typography>}
+                                        sx={{ ml: 0.5, mr: 0, whiteSpace: 'nowrap' }} />
+                                </Stack>
+                            </Box>
                             <Stack direction='row' spacing={2} alignItems='center'>
                                 <Button variant='outlined' size='small' onClick={() => setShowConfigLlm(true)}>LLM config</Button>
                                 <Button variant='outlined' size='small' onClick={() => setShowConfigProvider(true)}>Provider config</Button>
