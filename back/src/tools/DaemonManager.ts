@@ -6,7 +6,6 @@ import { ELogComponent, logError, logInfo } from './Logging'
 import { TDaemonConstructor, createDaemonInstance } from '../daemons/IDaemon'
 import fs from 'fs'
 import path from 'path'
-import os from 'os'
 
 export interface IDaemonMeta {
     id: string
@@ -38,6 +37,10 @@ export class DaemonManager implements IDaemonManager {
     private devDaemons = new Map<string, IDevDaemon>()
     private devWatchers = new Map<string, fs.FSWatcher>()
 
+    processProviderEvent(providerId: string, event: unknown): void {
+        this.routeProviderEvent(providerId, event)
+    }
+
     constructor(clusterInfo: ClusterInfo, configMaps: IConfigMaps, backDaemonObject: IBackDaemonObject) {
         this.clusterInfo = clusterInfo
         this.configMaps = configMaps
@@ -62,6 +65,9 @@ export class DaemonManager implements IDaemonManager {
         }
         // Restore persisted instances
         await this.restoreInstances()
+        // Subscribe to providers required by daemons
+        this.subscribeToEventsProvider()
+        this.rebuildBusinessSubscription()
     }
 
     register(id: string, ctor: TDaemonConstructor): void {
@@ -75,6 +81,7 @@ export class DaemonManager implements IDaemonManager {
         if (!daemon) throw new Error(`Daemon '${daemonId}' not registered`)
         this.runningInstances.set(instanceConfig.id, { daemon, instanceConfig, subscribers: new Set() })
         await this.persistInstances()
+        this.rebuildBusinessSubscription()
         logInfo(ELogComponent.CORE, `Daemon instance '${instanceConfig.id}' (${daemonId}) created`)
     }
 
@@ -84,6 +91,7 @@ export class DaemonManager implements IDaemonManager {
         running.daemon.stopInstance(instanceId)
         this.runningInstances.delete(instanceId)
         await this.persistInstances()
+        this.rebuildBusinessSubscription()
         logInfo(ELogComponent.CORE, `Daemon instance '${instanceId}' stopped`)
     }
 
@@ -109,7 +117,12 @@ export class DaemonManager implements IDaemonManager {
     async sendCommand(instanceId: string, command: string, data: unknown): Promise<unknown> {
         const running = this.runningInstances.get(instanceId)
         if (!running) throw new Error(`Daemon instance '${instanceId}' not found`)
-        return running.daemon.processCommand(instanceId, command, data)
+        const result = await running.daemon.processCommand(instanceId, command, data)
+        if (command === 'configset' && data) {
+            running.instanceConfig.data = data
+            this.rebuildBusinessSubscription()
+        }
+        return result
     }
 
     // ── Pod event routing ───────────────────────────────────────────────────────
@@ -216,6 +229,11 @@ export class DaemonManager implements IDaemonManager {
                 continue
             }
             this.runningInstances.set(instanceConfig.id, { daemon, instanceConfig, subscribers: new Set() })
+            if (instanceConfig.data) {
+                await daemon.processCommand(instanceConfig.id, 'configset', instanceConfig.data).catch((err: unknown) =>
+                    logError(ELogComponent.CORE, `Failed to restore in-memory instance '${instanceConfig.id}': ${err}`)
+                )
+            }
             logInfo(ELogComponent.CORE, `Daemon instance '${instanceConfig.id}' (${instanceConfig.daemonId}) restored`)
         }
     }
@@ -226,6 +244,35 @@ export class DaemonManager implements IDaemonManager {
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
+
+    private subscribeToEventsProvider(): void {
+        const ci = this.clusterInfo as { providers?: { find: (fn: (p: { id: string }) => boolean) => { addSubscriber: (sub: unknown, cfg: unknown) => void } | undefined } }
+        const eventsProvider = ci.providers?.find(p => p.id === 'events')
+        if (eventsProvider) {
+            eventsProvider.addSubscriber(this, {})
+            logInfo(ELogComponent.CORE, `DaemonManager subscribed to 'events' provider`)
+        }
+    }
+
+    private rebuildBusinessSubscription(): void {
+        const ci = this.clusterInfo as { providers?: { find: (fn: (p: { id: string }) => boolean) => { addSubscriber: (sub: unknown, cfg: unknown) => void } | undefined } }
+        const businessProvider = ci.providers?.find(p => p.id === 'business')
+        if (!businessProvider) return
+        const spacesMap = new Map<string, Set<string>>()
+        for (const { daemon, instanceConfig } of this.runningInstances.values()) {
+            if (!daemon.requirements.providers.includes('business')) continue
+            const data = instanceConfig.data as { businessPath?: string, space?: string, type?: string } | undefined
+            if (!data?.businessPath || !data.space) continue
+            const types = spacesMap.get(data.space) ?? new Set<string>()
+            types.add(data.type ?? '')
+            spacesMap.set(data.space, types)
+        }
+        const spaces = Array.from(spacesMap.entries()).map(([name, types]) => ({ name, types: Array.from(types) }))
+        if (spaces.length > 0) {
+            businessProvider.addSubscriber(this, { spaces })
+            logInfo(ELogComponent.CORE, `DaemonManager subscribed to 'business' provider with spaces=${JSON.stringify(spaces)}`)
+        }
+    }
 
     private matchesScope(cfg: IDaemonInstanceConfig, ns: string, pod: string, container: string): boolean {
         if (cfg.namespace && cfg.namespace !== ns) return false

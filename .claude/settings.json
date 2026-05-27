@@ -55,7 +55,8 @@
       "PowerShell(Test-Path 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-ai' ; Get-ChildItem -Path 'c:\\\\github\\\\aisdkvercel\\\\kwirth' | Where-Object {$_.PSIsContainer} | Select-Object Name)",
       "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common && npm run build 2>&1 | Where-Object { $_ -match 'error|Error|success|Built|done' } | Select-Object -Last 10)",
       "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\\\\src\\\\back\")",
-      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\\\\dist\")"
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\\\\dist\")",
+      "Bash(grep -v \"^--$\")"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

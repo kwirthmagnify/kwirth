@@ -1526,8 +1526,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             senderManager = new SenderManager(runningInstance.configMaps)
             await senderManager.init()
             await senderManager.loadAll()
-            await senderManager.loadPersistedConfigs()
             senderManager.loadDevSenders()
+            await senderManager.loadPersistedConfigs()
             senderManager.loadDevSenderConfigs()
         }
 

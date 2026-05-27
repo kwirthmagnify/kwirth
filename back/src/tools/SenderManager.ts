@@ -419,7 +419,7 @@ export class SenderManager implements ISenderAccess {
     private persistConfigs(): void {
         const data: Record<string, ISenderConfig[]> = {}
         for (const [id, configs] of this.configStore) {
-            if (!this.isDevSender(id)) data[id] = Array.from(configs.values())
+            data[id] = Array.from(configs.values())
         }
         this.configMaps.write('kwirth-sender-configs', data).catch((err: unknown) =>
             logError(ELogComponent.CORE, `Failed to persist sender configs: ${err}`)

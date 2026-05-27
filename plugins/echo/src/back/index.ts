@@ -115,7 +115,6 @@ class EchoChannel implements IChannel {
         if (!socket) {
             const len = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] })
             socket = this.webSockets[len - 1]
-            this.backChannelObject.senders?.send('email', 'default', { body: 'Echo started for instance '+instanceConfig.instance, subject: 'Info' })
         }
         let instance = socket.instances.find(i => i.instanceId === instanceConfig.instance)
         if (!instance) {
@@ -127,6 +126,9 @@ class EchoChannel implements IChannel {
                 assets: []
             }
             socket.instances.push(instance)
+            const sid = instanceConfig.data?.senderId
+            const scn = instanceConfig.data?.senderConfigName
+            if (sid && scn) this.backChannelObject.senders?.send(sid, scn, { body: 'Echo started for instance ' + instanceConfig.instance, subject: 'Info' })
 
             // send senders list only when adding first object
             let senders = this.backChannelObject.senders?.listSenders()

@@ -10,4 +10,6 @@ export class EchoConfig implements IEchoConfig {
 
 export class EchoInstanceConfig implements IEchoInstanceConfig {
     interval = 5
+    senderId?: string
+    senderConfigName?: string
 }

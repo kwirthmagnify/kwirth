@@ -15,4 +15,6 @@ export interface IEchoMessageResponse extends IInstanceMessage {
 
 export interface IEchoInstanceConfig {
     interval: number
+    senderId?: string
+    senderConfigName?: string
 }

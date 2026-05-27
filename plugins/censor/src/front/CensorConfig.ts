@@ -47,6 +47,8 @@ export interface ICensorInstanceConfig {
     type?: string
     addTimestamp?: boolean
     businessPath?: string
+    senderId?: string
+    senderConfigName?: string
 }
 
 export class CensorInstanceConfig implements ICensorInstanceConfig {
@@ -62,4 +64,6 @@ export class CensorInstanceConfig implements ICensorInstanceConfig {
     type = ''
     addTimestamp = false
     businessPath = ''
+    senderId = ''
+    senderConfigName = ''
 }

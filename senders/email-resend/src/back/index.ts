@@ -10,7 +10,7 @@ export interface IEmailSenderConfig extends ISenderConfig {
 }
 
 export class EmailSender implements ISender {
-    readonly id = 'email'
+    readonly id = 'email-resend'
     private configs = new Map<string, IEmailSenderConfig>()
     private clients = new Map<string, Resend>()
 

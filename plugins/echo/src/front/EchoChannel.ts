@@ -13,8 +13,8 @@ export class EchoChannel implements IChannel {
     TabContent: FC<IContentProps> = EchoTabContent
     channelId = 'echo'
     requirements: IChannelRequirements = {
-        accessString: false,
-        clusterUrl: false,
+        accessString: true,
+        clusterUrl: true,
         clusterInfo: false,
         exit: false,
         frontChannels: false,

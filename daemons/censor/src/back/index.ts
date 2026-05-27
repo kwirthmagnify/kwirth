@@ -27,6 +27,8 @@ export interface ICensorInstanceConfig {
     type?: string
     addTimestamp?: boolean
     businessPath?: string
+    senderId?: string
+    senderConfigName?: string
 }
 
 const extractText = (data: unknown, path: string): string | undefined => {
@@ -248,15 +250,27 @@ export class CensorDaemon implements IDaemon {
             const eventSpace = bEvent.last?.event?.space ?? ''
             const eventType = bEvent.last?.event?.type ?? ''
             const eventBody = bEvent.last?.event
-            this.backDaemonObject.logInfo?.(`[censor-daemon] processProviderEvent business: space='${eventSpace}' type='${eventType}' instances=${this.instances.size}`)
+            this.backDaemonObject.logInfo?.(`[censor-daemon] business event: space='${eventSpace}' type='${eventType}' instances=${this.instances.size} body=${JSON.stringify(eventBody).slice(0, 200)}`)
             for (const inst of this.instances.values()) {
-                if (!inst.cfg.businessPath) continue
+                if (!inst.cfg.businessPath) {
+                    this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: no businessPath`)
+                    continue
+                }
                 const cfgSpace = inst.cfg.space ?? ''
                 const cfgType = inst.cfg.type ?? ''
-                if (cfgSpace && cfgSpace !== eventSpace) continue
-                if (cfgType && cfgType !== eventType) continue
+                if (cfgSpace && cfgSpace !== eventSpace) {
+                    this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: space mismatch cfg='${cfgSpace}' event='${eventSpace}'`)
+                    continue
+                }
+                if (cfgType && cfgType !== eventType) {
+                    this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: type mismatch cfg='${cfgType}' event='${eventType}'`)
+                    continue
+                }
                 const text = extractText(eventBody, inst.cfg.businessPath)
-                if (text === undefined) continue
+                if (text === undefined) {
+                    this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: extractText returned undefined for path='${inst.cfg.businessPath}'`)
+                    continue
+                }
                 const ts = new Date().toISOString()
                 const llmText = inst.cfg.addTimestamp ? `${ts} ${text}` : String(text)
                 this.broadcast(inst, 'business', { text: String(text), namespace: eventSpace, pod: eventType, container: '', timestamp: ts })
@@ -267,9 +281,15 @@ export class CensorDaemon implements IDaemon {
                     if (!filtered) {
                         inst.lineBuffer.push(clean)
                         const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
+                        this.backDaemonObject.logInfo?.(`[censor-daemon] business buffered: bufLen=${inst.lineBuffer.length} batchSize=${batchSize} llmBusy=${inst.llmBusy}`)
                         if (inst.lineBuffer.length >= batchSize && !inst.llmBusy) {
                             const batch = inst.lineBuffer.splice(0, batchSize)
                             this.callLlm(inst, batch)
+                        }
+                        else {
+                            if (inst.llmBusy) {
+                                this.backDaemonObject.logInfo?.(`[censor-daemon] business buffered but LLM busy`)
+                            }
                         }
                     }
                     this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount })
@@ -289,15 +309,24 @@ export class CensorDaemon implements IDaemon {
                 return { instanceConfig: inst.cfg, configs, llms, providers: this.providers }
             }
             case ECensorDaemonCommand.CONFIGSET: {
-                if (!inst) return null
                 const raw = data as ICensorInstanceConfig & { _llms?: ILlm[] }
                 const { _llms, ...cfg } = raw
-                inst.cfg = cfg as ICensorInstanceConfig
-                await this.backDaemonObject.writeStorage!('censor-config', false, inst.cfg)
+                let target = inst
+                if (!target) {
+                    target = {
+                        instanceId,
+                        cfg: cfg as ICensorInstanceConfig,
+                        assets: [], analyzing: true, processedCount: 0, llmCount: 0,
+                        lineBuffer: [], regexes: [], llmBusy: false, subscribers: new Set()
+                    }
+                    this.instances.set(instanceId, target)
+                }
+                target.cfg = cfg as ICensorInstanceConfig
+                await this.backDaemonObject.writeStorage!('censor-config', false, target.cfg)
                 if (_llms) await this.backDaemonObject.writeStorage!(STORAGE_KEY_LLMS, false, _llms)
                 const llmList: ILlm[] = _llms ?? (await this.backDaemonObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
-                inst.llm = llmList.find((l: ILlm) => l.id === inst!.cfg.llmId)
-                return { instanceConfig: inst.cfg }
+                target.llm = llmList.find((l: ILlm) => l.id === target!.cfg.llmId)
+                return { instanceConfig: target.cfg }
             }
             case ECensorDaemonCommand.CONFIGSAVE: {
                 const cfgToSave = data as ICensorInstanceConfig
@@ -441,6 +470,7 @@ export class CensorDaemon implements IDaemon {
 
     private async callLlm(inst: IDaemonInstance, lines: string[]): Promise<void> {
         console.log('CALLLLM')
+        console.log(lines)
         inst.llmBusy = true
         try {
             if (!inst.llm) {
@@ -521,7 +551,19 @@ export class CensorDaemon implements IDaemon {
                 (output as any).info?.filter((x: any) => x.type === 'warn')
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     .map((x: any) => ({ original: x.original ?? '', explanation: x.explanation ?? '', tags: Array.isArray(x.tags) ? x.tags.filter((t: unknown) => typeof t === 'string') : [] })) ?? []
-            for (const w of warnings) this.broadcast(inst, 'llmwarning', { text: w.original, explanation: w.explanation, tags: w.tags })
+            for (const w of warnings) {
+                this.broadcast(inst, 'llmwarning', { text: w.original, explanation: w.explanation, tags: w.tags })
+                const sid = inst.cfg.senderId
+                const scn = inst.cfg.senderConfigName
+                if (sid && scn) {
+                    const tagStr = w.tags.length > 0 ? ` [${w.tags.join(', ')}]` : ''
+                    this.backDaemonObject.senders?.send(sid, scn, {
+                        body: `${w.original}\n\n${w.explanation}${tagStr}`,
+                        subject: `Censor warning${tagStr}`,
+                        level: 'warning'
+                    })
+                }
+            }
 
             for (const pattern of patterns) {
                 if (typeof pattern !== 'string') continue

@@ -31,6 +31,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [type, setType] = useState('')
     const [addTimestamp, setAddTimestamp] = useState(false)
     const [businessPath, setBusinessPath] = useState('')
+    const [senderId, setSenderId] = useState('')
+    const [senderConfigName, setSenderConfigName] = useState('')
+    const [senderEntries, setSenderEntries] = useState<Array<{ senderId: string; configName: string }>>([])
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
     const [showImportExport, setShowImportExport] = useState(false)
@@ -71,7 +74,26 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setType(data.instanceConfig.type ?? '')
         setAddTimestamp(data.instanceConfig.addTimestamp ?? false)
         setBusinessPath(data.instanceConfig.businessPath ?? '')
+        setSenderId(data.instanceConfig.senderId ?? '')
+        setSenderConfigName(data.instanceConfig.senderConfigName ?? '')
     }, [data.instanceConfig])
+
+    useEffect(() => {
+        if (!showConfig) return
+        const url = props.channelObject.clusterUrl
+        const token = props.channelObject.accessString
+        if (!url || !token) return
+        fetch(`${url}/senders`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => r.json())
+            .then((data: Array<{ id: string; configNames: string[] }>) => {
+                const entries: Array<{ senderId: string; configName: string }> = []
+                for (const s of data) {
+                    for (const cn of s.configNames ?? []) entries.push({ senderId: s.id, configName: cn })
+                }
+                setSenderEntries(entries)
+            })
+            .catch(() => {})
+    }, [showConfig])
 
     useEffect(() => {
         if (!showConfig || selectedConfigIndex !== null) return
@@ -103,7 +125,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setShowConfig(true)
     }
 
-    const currentConfig = (): ICensorInstanceConfig => ({ name: configName, version: configVersion, llmId, system, batchSize, temperature, exampleJson, space, type, addTimestamp, businessPath })
+    const currentConfig = (): ICensorInstanceConfig => ({ name: configName, version: configVersion, llmId, system, batchSize, temperature, exampleJson, space, type, addTimestamp, businessPath, senderId, senderConfigName })
 
     const saveConfig = () => {
         const cfg = currentConfig()
@@ -125,6 +147,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setType(cfg.type ?? '')
         setAddTimestamp(cfg.addTimestamp ?? false)
         setBusinessPath(cfg.businessPath ?? '')
+        setSenderId(cfg.senderId ?? '')
+        setSenderConfigName(cfg.senderConfigName ?? '')
     }
 
     const onConfigSelect = (cfg: ICensorInstanceConfig, i: number) => {
@@ -146,6 +170,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setType('')
         setAddTimestamp(false)
         setBusinessPath('')
+        setSenderId('')
+        setSenderConfigName('')
     }
 
     const onConfigSave = () => {
@@ -469,6 +495,30 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                         control={<Switch size='small' checked={addTimestamp} onChange={e => setAddTimestamp(e.target.checked)} />}
                                         label={<Typography variant='caption'>Timestamp</Typography>}
                                         sx={{ ml: 0.5, mr: 0, whiteSpace: 'nowrap' }} />
+                                </Stack>
+                            </Box>
+                            <Box>
+                                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 'bold' }}>Sender</Typography>
+                                <Stack direction='row' spacing={2} alignItems='center' sx={{ mt: 0.5 }}>
+                                    <FormControl size='small' sx={{ flex: 1 }}>
+                                        <InputLabel>Sender config</InputLabel>
+                                        <Select label='Sender config' value={senderId && senderConfigName ? `${senderId}::${senderConfigName}` : ''}
+                                            onChange={e => {
+                                                const val = e.target.value
+                                                if (!val) { setSenderId(''); setSenderConfigName('') }
+                                                else { const [sid, scn] = val.split('::'); setSenderId(sid); setSenderConfigName(scn) }
+                                            }}>
+                                            <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
+                                            {senderEntries.map(e => (
+                                                <MenuItem key={`${e.senderId}::${e.configName}`} value={`${e.senderId}::${e.configName}`}>
+                                                    <Stack direction='row' spacing={1} alignItems='center'>
+                                                        <Chip label={e.senderId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
+                                                        <Typography variant='body2'>{e.configName}</Typography>
+                                                    </Stack>
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
                                 </Stack>
                             </Box>
                             <Stack direction='row' spacing={2} alignItems='center'>

@@ -26,6 +26,8 @@ export interface ICensorInstanceConfig {
     type?: string
     addTimestamp?: boolean
     businessPath?: string
+    senderId?: string
+    senderConfigName?: string
 }
 
 export enum ECensorCommand {
@@ -174,10 +176,6 @@ export class CensorChannel {
         for (const socket of this.connections) {
             for (const instance of socket.instances) addSpace(instance.cfg)
         }
-        const dm = this.backChannelObject.daemonManager
-        if (dm) {
-            for (const ic of dm.listInstances('censor')) addSpace(ic.data as ICensorInstanceConfig)
-        }
         const spaces = Array.from(spacesMap.entries()).map(([name, types]) => ({ name, types: Array.from(types) }))
         this.backChannelObject.logInfo?.(`[censor] rebuildBusiness: subscribing with spaces=${JSON.stringify(spaces)}`)
         if (spaces.length > 0) {
@@ -225,16 +223,9 @@ export class CensorChannel {
             const eventType = bEvent.last?.event?.type ?? ''
             const eventBody = bEvent.last?.event
             this.backChannelObject.logInfo?.(`[censor] processProviderEvent business: space='${eventSpace}' type='${eventType}' body=${JSON.stringify(eventBody)} connections=${this.connections.length}`)
-            let daemonRouted = false
             for (const socket of this.connections) {
                 for (const instance of socket.instances) {
-                    if (instance.sessionId) {
-                        if (!daemonRouted) {
-                            const dm = this.backChannelObject.daemonManager
-                            if (dm) { dm.routeProviderEvent('business', event); daemonRouted = true }
-                        }
-                        continue
-                    }
+                    if (instance.sessionId) continue
                     if (!instance.cfg.businessPath) continue
                     const cfgSpace = instance.cfg.space ?? ''
                     const cfgType = instance.cfg.type ?? ''
@@ -283,6 +274,10 @@ export class CensorChannel {
                 if (_llms) await this.backChannelObject.writeStorage!(STORAGE_KEY_LLMS, false, _llms)
                 const llmList: ILlm[] = _llms ?? (await this.backChannelObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
                 instance.llm = llmList.find((l: ILlm) => l.id === instance.cfg.llmId)
+                if (instance.sessionId) {
+                    const dm = this.backChannelObject.daemonManager
+                    if (dm) await dm.sendCommand(instance.sessionId, 'configset', instance.cfg).catch(() => {})
+                }
                 await this.executeConfigGet(webSocket, instance)
                 this.rebuildBusinessSubscription()
                 return true
@@ -430,6 +425,8 @@ export class CensorChannel {
                     if (regexResult?.regexes) regexes = regexResult.regexes
                     // Sync providers (with API keys) to daemon — namespaces differ between channel and daemon storage
                     if (this.providers.length > 0) await dm.sendCommand(sessionId, 'providersset', this.providers)
+                    // Sync current channel config (includes senderId/senderConfigName) to daemon
+                    await dm.sendCommand(sessionId, 'configset', instance.cfg)
                 } catch { /* ignore */ }
 
                 const sessions = this.buildSessionList(allInstances)
@@ -797,6 +794,16 @@ export class CensorChannel {
             type: EInstanceMessageType.DATA, instance: instance.instanceId,
             kind: 'llmwarning', text, explanation, tags
         } as ICensorMessage))
+        const sid = instance.cfg.senderId
+        const scn = instance.cfg.senderConfigName
+        if (sid && scn) {
+            const tagStr = tags.length > 0 ? ` [${tags.join(', ')}]` : ''
+            this.backChannelObject.senders?.send(sid, scn, {
+                body: `${text}\n\n${explanation}${tagStr}`,
+                subject: `Censor warning${tagStr}`,
+                level: 'warning'
+            })
+        }
     }
 
     private sendLlmOutput = (webSocket: WebSocket, instance: IInstance, text: string) => {
