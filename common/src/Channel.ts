@@ -38,7 +38,7 @@ interface KwirthData {
     clusterName: string
     clusterType: EClusterType
     inCluster: boolean
-    isElectron: boolean
+    isDesktop: boolean
     namespace: string
     deployment: string
     metricsInterval: number

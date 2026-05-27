@@ -13,8 +13,8 @@ export class AlertChannel implements IChannel {
     TabContent: FC<IContentProps> = AlertTabContent
     channelId = 'alert'
     requirements:IChannelRequirements = {
-        accessString: false,
-        clusterUrl: false,
+        accessString: true,
+        clusterUrl: true,
         clusterInfo: false,
         exit: false,
         frontChannels: false,

@@ -33,4 +33,6 @@ export interface IAlertInstanceConfig {
     regexWarning: string[],
     regexError: string[],
     metricRules: IAlertMetricRule[],
+    senderId?: string
+    senderConfigName?: string
 }

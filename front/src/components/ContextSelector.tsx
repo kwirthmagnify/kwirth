@@ -6,7 +6,7 @@ import { Delete } from '@mui/icons-material'
 import { AccessKey } from '@kwirthmagnify/kwirth-common'
 
 interface IContextSelectorProps {
-    isElectron: boolean
+    isDesktop: boolean
     onContextSelectorLocal: (name:string, accessKey:AccessKey) => void,
     onContextSelectorRemote: (name:string, url:string, accessString:string) => void
 }
@@ -43,10 +43,10 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                 setLocalContexts(contexts)
                 update(contexts)
 
-                if (props.isElectron) intId.current = setInterval(update, 5000, contexts)
+                if (props.isDesktop) intId.current = setInterval(update, 5000, contexts)
 
                 let rc: {name:string, url:string, accessString:string}[] | null = null
-                if (props.isElectron) rc = await (window as any).kwirth.storeGet('remoteClusters')
+                if (props.isDesktop) rc = await (window as any).kwirth.storeGet('remoteClusters')
                 else { const raw = localStorage.getItem('remoteClusters'); if (raw) rc = JSON.parse(raw) }
                 if (rc) setRemoteClusters(rc)
             }
@@ -94,7 +94,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
     }
 
     const saveRemoteClusters = async (clusters: {name:string, url:string, accessString:string}[]) => {
-        if (props.isElectron) await (window as any).kwirth.storeSet('remoteClusters', clusters)
+        if (props.isDesktop) await (window as any).kwirth.storeSet('remoteClusters', clusters)
         else localStorage.setItem('remoteClusters', JSON.stringify(clusters))
     }
 

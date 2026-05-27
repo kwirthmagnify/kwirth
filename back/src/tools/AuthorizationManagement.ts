@@ -40,7 +40,7 @@ export class AuthorizationManagement {
                 else {
                     let key = apiKeyApi.apiKeys.find(apiKey => accessKeySerialize(apiKey.accessKey)===receivedAccessKeyStr)
                     if (!key) {
-                        if (!apiKeyApi.isElectron) await apiKeyApi.refreshKeys()
+                        if (!apiKeyApi.isDesktop) await apiKeyApi.refreshKeys()
                         key = apiKeyApi.apiKeys.find(apiKey => accessKeySerialize(apiKey.accessKey)===receivedAccessKeyStr)
                         if (!key) {
                             logWarning(ELogComponent.AUTH, 'Inexistent key on validKey: '+receivedAccessKeyStr)
@@ -87,7 +87,7 @@ export class AuthorizationManagement {
             else {
                 var key = apiKeyApi.apiKeys.find(apiKey => accessKeySerialize(apiKey.accessKey)===receivedAccessString)
                 if (!key) {
-                    if (!apiKeyApi.isElectron) await apiKeyApi.refreshKeys()
+                    if (!apiKeyApi.isDesktop) await apiKeyApi.refreshKeys()
                     key = apiKeyApi.apiKeys.find(apiKey => accessKeySerialize(apiKey.accessKey)===receivedAccessString)
                     if (!key) {
                         logWarning(ELogComponent.AUTH, 'Inexistent key on getKey: '+receivedAccessString)

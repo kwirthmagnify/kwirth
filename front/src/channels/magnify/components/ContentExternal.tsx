@@ -45,7 +45,7 @@ export interface IContentExternalOptions {
 
 export interface IContentExternalData {
     isInitialized: boolean
-    isElectron: boolean
+    isDesktop: boolean
     channelId: string
     options: IContentExternalOptions
     formConfig: any
@@ -266,7 +266,7 @@ const containerRef = useRef<HTMLDivElement>(null)
             ws: undefined,
             externalChannel: newChannel,
             externalChannelObject: {
-                isElectron: contentExternalData.isElectron,
+                isDesktop: contentExternalData.isDesktop,
                 clusterName: contentExternalData.channelObject?.clusterName!,
                 instanceId: '',
                 view: contentExternalData.contentView,

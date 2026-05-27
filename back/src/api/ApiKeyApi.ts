@@ -9,18 +9,18 @@ export class ApiKeyApi {
     public apiKeys: ApiKey[] = []
     private configMaps: IConfigMaps
     public masterKey: string
-    public isElectron: boolean
+    public isDesktop: boolean
 
-    private constructor(configMaps: IConfigMaps, masterKey: string, isElectron:boolean) {
+    private constructor(configMaps: IConfigMaps, masterKey: string, isDesktop:boolean) {
         this.configMaps = configMaps
         this.masterKey = masterKey
-        this.isElectron = isElectron
+        this.isDesktop = isDesktop
         this.initializeRoutes()
     }
 
-    public static async create(configMaps: IConfigMaps, masterKey: string, isElectron: boolean): Promise<ApiKeyApi|undefined> {    
+    public static async create(configMaps: IConfigMaps, masterKey: string, isDesktop: boolean): Promise<ApiKeyApi|undefined> {    
         try {
-            const instance = new ApiKeyApi(configMaps, masterKey, isElectron)
+            const instance = new ApiKeyApi(configMaps, masterKey, isDesktop)
             const result = await configMaps.read('kwirth.keys', [])
             const cleanKeys = AuthorizationManagement.cleanApiKeys(result)
             instance.apiKeys = cleanKeys

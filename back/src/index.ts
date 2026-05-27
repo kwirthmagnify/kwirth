@@ -30,6 +30,8 @@ import { ISecrets } from './tools/ISecrets'
 import { IConfigMaps } from './tools/IConfigMap'
 import { DockerSecrets } from './tools/DockerSecrets'
 import { DockerConfigMaps } from './tools/DockerConfigMaps'
+import { NodeConfigMaps } from './tools/NodeConfigMaps'
+import { NodeSecrets } from './tools/NodeSecrets'
 
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common'
 import { IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
@@ -77,7 +79,7 @@ const fs = require('fs')
 // }
 
 const runningEnv = {
-  isElectron: process.env.FORCE==='electron' || !!(process.versions && process.versions.electron),
+  isDesktop: process.env.FORCE==='desktop' || !!(process.versions && (process.versions as any).electron) || !!(globalThis as any).__TAURI__,
   isDocker: process.env.FORCE==='docker' || fs.existsSync('/.dockerenv'),
   isK8s: process.env.FORCE==='k8s' || !!process.env.KUBERNETES_SERVICE_HOST,
   isTTY: !!process.stdout.isTTY
@@ -217,8 +219,8 @@ if (envCommand!==undefined) {
 const getExecutionEnvironment = async (context:string|undefined):Promise<string> => {
     logInfo(ELogComponent.CORE, 'Detecting execution environment...')
 
-    logInfo(ELogComponent.CORE, 'Trying Electron...')    
-    if (runningEnv.isElectron) return 'electron'
+    logInfo(ELogComponent.CORE, 'Trying Desktop (Tauri)...')
+    if (runningEnv.isDesktop) return 'desktop'
 
     logInfo(ELogComponent.CORE, 'Trying Kubernetes...')
     if (runningEnv.isK8s) return 'kubernetes'
@@ -244,7 +246,7 @@ const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthD
             const pod = pods.items.find(p => p.metadata?.name === podName)  
             if (pod && pod.metadata?.namespace) {
                 let depName = (await AuthorizationManagement.getPodControllerName(appsApi, pod, true)) || ''
-                return { clusterName: 'inCluster', namespace: pod.metadata.namespace, deployment:depName, inCluster:true, isElectron:false, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, metricsInterval:15, channels: [] }
+                return { clusterName: 'inCluster', namespace: pod.metadata.namespace, deployment:depName, inCluster:true, isDesktop:false, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, metricsInterval:15, channels: [] }
             }
             else {
                 // kwirth is supposed to be running outside of cluster, so we look for kwirth users config in order to detect namespace
@@ -253,7 +255,7 @@ const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthD
                 if (!usersSecret) usersSecret = allSecrets.find(s => s.metadata?.name === 'kwirth.users')
                 if (usersSecret) {
                     // this namespace will be used to access secrets and configmaps
-                    return { clusterName: 'inCluster', namespace:usersSecret.metadata?.namespace!, deployment:'', inCluster:false, isElectron:runningEnv.isElectron, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, metricsInterval:15, channels: [] }
+                    return { clusterName: 'inCluster', namespace:usersSecret.metadata?.namespace!, deployment:'', inCluster:false, isDesktop:runningEnv.isDesktop, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, metricsInterval:15, channels: [] }
                 }
                 else {
                     // kwirth is running outside, but wants to use kubernetes secrets for storing creds, and they don't exsit
@@ -322,9 +324,9 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         clusterInfo.logApi = new Log(clusterInfo.kubeConfig)
         clusterInfo.apisApi = kubeConfig.makeApiClient(ApisApi)
 
-        if (runningEnv.isElectron || runningEnv.isDocker) {
+        if (runningEnv.isDesktop || runningEnv.isDocker) {
             // do nothing, since we will use kubeconfig credentials
-            logInfo(ELogComponent.CORE, 'SA Token will not be created under isElectron or isDocker contexts')
+            logInfo(ELogComponent.CORE, 'SA Token will not be created under isDesktop or isDocker contexts')
         }
         else {
             let saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
@@ -345,7 +347,20 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         let configMaps
         let secrets
 
-        if (runningEnv.isDocker) {
+        if (runningEnv.isDesktop) {
+            logInfo(ELogComponent.CORE, 'Using local filesystem storage (desktop/Tauri mode)')
+            configMaps = new NodeConfigMaps()
+            secrets = new NodeSecrets()
+            let users:{ [username:string]:string } = await secrets.read('kwirth-users')
+            if (!users) {
+                logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users secret')
+                users = {
+                    admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXI6Ojo6In0='
+                }
+                await secrets.write('kwirth-users', users)
+            }
+        }
+        else if (runningEnv.isDocker) {
             logInfo(ELogComponent.CORE, `Configuration paths:  ${envConfigMapPath} ${envSecretPath}`)
             configMaps = new DockerConfigMaps(clusterInfo.coreApi, envConfigMapPath)
             secrets = new DockerSecrets(clusterInfo.coreApi, envSecretPath)
@@ -1158,7 +1173,7 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
     try {
         const riRouter = express.Router()
 
-        let result = await ApiKeyApi.create(ri.configMaps, envMasterKey, runningEnv.isElectron)
+        let result = await ApiKeyApi.create(ri.configMaps, envMasterKey, runningEnv.isDesktop)
         if (!result) {
             logError(ELogComponent.CORE, 'Could not get apikeyapi setting up routes')
             return false
@@ -1626,11 +1641,11 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                     logInfo(ELogComponent.CORE, 'FORWARD for kubernetes Kwirth cannot be started since Kwirth must have a root path specified (like /kwirth, for example). Kwirth cannot FORWARD if it is running on root (/) path')
                 }
             }
-            else if (runningInstance.kwirthData.isElectron) {
+            else if (runningInstance.kwirthData.isDesktop) {
                 logInfo(ELogComponent.CORE, 'FORWARD for electron should be implemented')
             }
             else {
-                logInfo(ELogComponent.CORE, 'FORWARD not avialable (not inCluster and not isElectron)')
+                logInfo(ELogComponent.CORE, 'FORWARD not avialable (not inCluster and not isDesktop)')
             }
         }
         else {
@@ -1989,7 +2004,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                         logWarning(ELogComponent.CORE, `Connection from IP ${ip} to channel ${channel.getChannelData().id} has been interrupted.`)
                     }
                 }
-                if (runningEnv.isElectron) {
+                if (runningEnv.isDesktop) {
                     // +++ if session is electron, we remove everything and stop everything
                 }
             }
@@ -2127,7 +2142,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
             kwirthData = {
                 namespace: 'default',
                 deployment: '',
-                isElectron: true,
+                isDesktop: true,
                 inCluster: false,
                 version: VERSION,
                 lastVersion: VERSION,
@@ -2142,7 +2157,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
             kwirthData = {
                 namespace: '',
                 deployment: '',
-                isElectron: runningEnv.isElectron,
+                isDesktop: runningEnv.isDesktop,
                 inCluster: false,
                 version: VERSION,
                 lastVersion: VERSION,
@@ -2156,7 +2171,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
             kwirthData = {
                 namespace: '',
                 deployment: '',
-                isElectron: false,
+                isDesktop: false,
                 inCluster: false,
                 version: VERSION,
                 lastVersion: VERSION,
@@ -2196,7 +2211,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
     }
     app.use(`${envRootPath}`, (req, res, next) => {
         if (req.path.startsWith(`${envRootPath}/front`) || req.path === '/') return next()
-        if (runningEnv.isElectron && req.path.startsWith('/core/electron/')) return next()
+        if (runningEnv.isDesktop && req.path.startsWith('/core/electron/')) return next()
         if (req.path.startsWith(`${envRootPath}/core/auth/`)) return next()
 
         const activeRI = runningInstances.find(r => r.active)

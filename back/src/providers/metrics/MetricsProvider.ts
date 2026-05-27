@@ -234,7 +234,7 @@ export class MetricsProvider implements IProvider {
             options = { headers: { Authorization: 'Bearer ' + this.clusterInfo.token} }
         }
         else {
-            if (this.kwirthData.isElectron) {
+            if (this.kwirthData.isDesktop) {
                 // outside URL plus kubeconfig creds
                 let cluster = this.clusterInfo.kubeConfig.getCurrentCluster()
                 //url = `${cluster!.server}/api/v1/nodes/${node.kubernetesNode.metadata?.name}/proxy${path}`

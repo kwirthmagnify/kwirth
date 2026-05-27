@@ -53,7 +53,7 @@ import { SenderDialog } from './components/SenderDialog'
 
 interface IAppProps {
     backendUrl:string
-    isElectron: boolean
+    isDesktop: boolean
     auth: string
 }
 
@@ -393,7 +393,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const fillTabSummary = async (tab:ITabSummary) => {
         let namespacesArray:string[] = []
         if (tab.channelObject.clusterName === '$cluster') {
-            if (props.isElectron)
+            if (props.isDesktop)
                 tab.channelObject.clusterName = 'inElectron'
             else
                 tab.channelObject.clusterName = 'inCluster'
@@ -475,7 +475,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
             // get previously configured clusters
             let clusterList:Cluster[]=[]
-            if (!props.isElectron) {
+            if (!props.isDesktop) {
                 let response = await fetch (`${backendUrl}/store/${user?.id}/clusters/list`, addGetAuthorization(accessString))
                 if (response.status===200) {
                     clusterList = JSON.parse (await response.json())
@@ -496,7 +496,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const readLoggedUserSettings = async () => {
-        if (props.isElectron) {
+        if (props.isDesktop) {
             let settingsStr = localStorage.getItem('settingsGeneral')
             if (settingsStr) {
                 userSettingsRef.current = JSON.parse(settingsStr) as Settings
@@ -518,7 +518,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     const writeLoggedUserSettings = async (user:IUser) => {
         if (user) {
-            if (props.isElectron) {
+            if (props.isDesktop) {
                 localStorage.setItem('settingsGeneral', JSON.stringify(userSettingsRef.current))
             }
             else {
@@ -614,7 +614,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 pod: pods,
                 container: containers,
                 config: undefined,
-                isElectron: props.isElectron,
+                isDesktop: props.isDesktop,
                 data: undefined,
                 instanceConfig: undefined,
                 channelId: newChannel.channelId
@@ -1680,11 +1680,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
     
     if (!logged) {
-        //if (props.isElectron) {
+        //if (props.isDesktop) {
         if (props.auth === 'kubeconfig') {
             return <div style={{ backgroundImage:`url('./turbo-pascal.png')`, backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', width: '100vw', height: '100vh' }} >
                 <SessionContext.Provider value={{ user, accessString: accessString, logged, backendUrl }}>
-                    <ContextSelector onContextSelectorLocal={onContextSelectorLocal} onContextSelectorRemote={onContextSelectorRemote} isElectron={props.isElectron}/>
+                    <ContextSelector onContextSelectorLocal={onContextSelectorLocal} onContextSelectorRemote={onContextSelectorRemote} isDesktop={props.isDesktop}/>
                 </SessionContext.Provider>
             </div>
         }

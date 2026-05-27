@@ -591,7 +591,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             height,
             data: {
                 isInitialized: false,
-                isElectron: props.channelObject.isElectron,
+                isDesktop: props.channelObject.isDesktop,
                 channelObject: props.channelObject,
                 settings: magnifyData.userPreferences,
                 channelId: channel,
@@ -692,7 +692,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     //             if (b === MsgBoxButtons.Yes) props.channelObject.exit?.()
     //         }))
     //     },
-    //     (name:string,currentFolder:IFileObject, selectedItems:IFileObject[]) => props.channelObject.isElectron,
+    //     (name:string,currentFolder:IFileObject, selectedItems:IFileObject[]) => props.channelObject.isDesktop,
     //     (name:string,currentFolder:IFileObject, selectedItems:IFileObject[]) => true
     // )
     setLeftItem(spcClassOverview, 'kwirthworks', (p:string[],

@@ -41,6 +41,8 @@ interface IInstance {
     metricRules: IAlertMetricRule[]
     alertStates: Map<string, IAlertState>
     paused:boolean
+    senderId?: string
+    senderConfigName?: string
 }
 
 class AlertChannel implements IChannel {    
@@ -179,14 +181,14 @@ class AlertChannel implements IChannel {
         return false
     }
 
-    async startDockerStream (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string, regExps: Map<EAlertSeverity, RegExp[]>, metricRules: IAlertMetricRule[]): Promise<void> {
+    async startDockerStream (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string, regExps: Map<EAlertSeverity, RegExp[]>, metricRules: IAlertMetricRule[], senderId?: string, senderConfigName?: string): Promise<void> {
         try {
             let id = await this.clusterInfo.dockerTools.getContainerId(podName, containerName)
             if (!id) {
                 this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Cannot obtain Id for container ${podName}/${containerName}`,instanceConfig)
                 return
             }
-                             
+
             let socket = this.webSockets.find(s => s.ws === webSocket)
             if (!socket) {
                 let len = this.webSockets.push( {ws:webSocket, lastRefresh: Date.now(), instances:[]} )
@@ -202,7 +204,9 @@ class AlertChannel implements IChannel {
                     metricRules,
                     alertStates: new Map(),
                     paused:false,
-                    assets:[]
+                    assets:[],
+                    senderId,
+                    senderConfigName
                 })
                 instance = socket?.instances[len-1]
             }
@@ -235,7 +239,7 @@ class AlertChannel implements IChannel {
         }
     }
 
-    async startKubernetesStream (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string, regExps:Map<EAlertSeverity, RegExp[]>, metricRules: IAlertMetricRule[]): Promise<void> {
+    async startKubernetesStream (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string, regExps:Map<EAlertSeverity, RegExp[]>, metricRules: IAlertMetricRule[], senderId?: string, senderConfigName?: string): Promise<void> {
         try {
             let socket = this.webSockets.find(s => s.ws === webSocket)
             if (!socket) {
@@ -252,7 +256,9 @@ class AlertChannel implements IChannel {
                     metricRules,
                     alertStates: new Map(),
                     paused:false,
-                    assets:[]
+                    assets:[],
+                    senderId,
+                    senderConfigName
                 })
                 instance = socket?.instances[len-1]
             }
@@ -305,14 +311,17 @@ class AlertChannel implements IChannel {
             regExps.push(new RegExp (regStr))
         regexes.set(EAlertSeverity.ERROR, regExps)
 
-        const metricRules: IAlertMetricRule[] = (instanceConfig.data as IAlertInstanceConfig).metricRules ?? []
+        const alertData = instanceConfig.data as IAlertInstanceConfig
+        const metricRules: IAlertMetricRule[] = alertData.metricRules ?? []
+        const senderId = alertData.senderId
+        const senderConfigName = alertData.senderConfigName
 
         if (this.clusterInfo.type === EClusterType.DOCKER) {
-            this.startDockerStream(webSocket, instanceConfig, podNamespace, podName, containerName, regexes, metricRules)
+            this.startDockerStream(webSocket, instanceConfig, podNamespace, podName, containerName, regexes, metricRules, senderId, senderConfigName)
             return true
         }
         else if (this.clusterInfo.type === EClusterType.KUBERNETES) {
-            this.startKubernetesStream(webSocket, instanceConfig, podNamespace, podName, containerName, regexes, metricRules)
+            this.startKubernetesStream(webSocket, instanceConfig, podNamespace, podName, containerName, regexes, metricRules, senderId, senderConfigName)
             return true
         }
         else {
@@ -522,6 +531,7 @@ class AlertChannel implements IChannel {
     sendAlert = (webSocket:WebSocket, podNamespace:string, podName:string, containerName:string, alertSeverity:EAlertSeverity, line:string, instanceId: string): void => {
         // line includes timestamp at front (beacuse of log stream configuration when starting logstream)
         let i = line.indexOf(' ')
+        const text = line.substring(i + 1)
         let alertMessage: IAlertMessage = {
             action: EInstanceMessageAction.NONE,
             flow: EInstanceMessageFlow.UNSOLICITED,
@@ -531,12 +541,13 @@ class AlertChannel implements IChannel {
             pod: podName,
             container: containerName,
             channel: EInstanceMessageChannel.ALERT,
-            text: line.substring(i + 1),
+            text,
             timestamp: new Date(line.substring(0, i)),
             severity: alertSeverity,
             msgtype: 'alertmessage'
         }
-        webSocket.send(JSON.stringify(alertMessage))   
+        webSocket.send(JSON.stringify(alertMessage))
+        this.fireSender(webSocket, instanceId, alertSeverity, `${podNamespace}/${podName}/${containerName}: ${text}`)
     }
 
     sendMetricAlert = (webSocket: WebSocket, podNamespace: string, podName: string, containerName: string, severity: EAlertSeverity, text: string, instanceId: string): void => {
@@ -555,6 +566,17 @@ class AlertChannel implements IChannel {
             msgtype: 'alertmessage'
         }
         webSocket.send(JSON.stringify(alertMessage))
+        this.fireSender(webSocket, instanceId, severity, `${podNamespace}/${podName}/${containerName}: ${text}`)
+    }
+
+    private fireSender = (webSocket: WebSocket, instanceId: string, severity: EAlertSeverity, text: string): void => {
+        const instance = this.webSockets.find(s => s.ws === webSocket)?.instances.find(i => i.instanceId === instanceId)
+        if (!instance?.senderId || !instance.senderConfigName) return
+        this.backChannelObject.senders?.send(instance.senderId, instance.senderConfigName, {
+            subject: `Alert [${severity}]`,
+            body: text,
+            level: severity
+        })
     }
 
     processAlertSeverity = (webSocket:WebSocket, asset:IAsset, alertSeverity:EAlertSeverity, regexes:RegExp[], line:string, instaceId:string): void => {

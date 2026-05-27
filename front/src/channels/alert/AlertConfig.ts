@@ -13,6 +13,8 @@ class AlertInstanceConfig implements IAlertInstanceConfig{
     regexWarning:string[] = []
     regexError:string[] = []
     metricRules:IAlertMetricRule[] = []
+    senderId = ''
+    senderConfigName = ''
 }
 
 export type { IAlertConfig }

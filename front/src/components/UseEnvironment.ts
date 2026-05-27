@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 export function useEnvironment() {
-  const [isElectron, setIsElectron] = useState(false);
+  const [isDesktop, setIsElectron] = useState(false);
 
   useEffect(() => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -10,5 +10,5 @@ export function useEnvironment() {
     }
   }, []);
 
-  return { isElectron, isBrowser: !isElectron };
+  return { isDesktop, isBrowser: !isDesktop };
 }

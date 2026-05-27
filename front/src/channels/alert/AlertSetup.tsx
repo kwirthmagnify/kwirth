@@ -1,10 +1,15 @@
-import React, { useState, ChangeEvent, useRef } from 'react'
+import React, { useState, ChangeEvent, useEffect, useRef } from 'react'
 import { Autocomplete, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Select, SelectChangeEvent, Stack, TextField, Typography } from '@mui/material'
 import { ISetupProps } from '../IChannel'
 import { IAlertConfig, AlertInstanceConfig, AlertConfig } from './AlertConfig'
 import { Warning } from '@mui/icons-material'
 import { TextToolTip } from '../../tools/FrontTools'
 import { EAlertSeverity, IAlertInstanceConfig, IAlertMetricRule, TAlertMetricOperator, TAlertTriggerMode } from './AlertTypes'
+
+interface ISenderEntry {
+    senderId: string
+    configName: string
+}
 
 const AlertIcon = <Warning />
 
@@ -24,6 +29,13 @@ const AlertSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
     const defaultRef = useRef<HTMLInputElement|null>(null)
 
     const allMetricsList = props.channelObject?.metricsList
+    const [senderEntries, setSenderEntries] = useState<ISenderEntry[]>([])
+    const [selectedSender, setSelectedSender] = useState<string>(
+        alertInstanceConfig.senderId && alertInstanceConfig.senderConfigName
+            ? `${alertInstanceConfig.senderId}::${alertInstanceConfig.senderConfigName}`
+            : ''
+    )
+
     const [metricRules, setMetricRules] = useState<IAlertMetricRule[]>(alertInstanceConfig.metricRules ?? [])
     const [newMetric, setNewMetric] = useState<string | null>(null)
     const [newOperator, setNewOperator] = useState<TAlertMetricOperator>('>')
@@ -34,12 +46,38 @@ const AlertSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
 
     const metricOptions = allMetricsList ? Array.from(allMetricsList.keys()).sort() : []
 
+    useEffect(() => {
+        const url = props.channelObject.clusterUrl
+        const token = props.channelObject.accessString
+        if (!url || !token) return
+        fetch(`${url}/senders`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => r.json())
+            .then((data: Array<{ id: string; configNames: string[] }>) => {
+                const entries: ISenderEntry[] = []
+                for (const s of data) {
+                    for (const cn of s.configNames ?? []) {
+                        entries.push({ senderId: s.id, configName: cn })
+                    }
+                }
+                setSenderEntries(entries)
+            })
+            .catch(() => {})
+    }, [])
+
     const ok = () => {
         alertConfig.maxAlerts = maxAlerts
         alertInstanceConfig.regexInfo = regexInfo
         alertInstanceConfig.regexWarning = regexWarning
         alertInstanceConfig.regexError = regexError
         alertInstanceConfig.metricRules = metricRules
+        if (selectedSender) {
+            const [sid, cn] = selectedSender.split('::')
+            alertInstanceConfig.senderId = sid
+            alertInstanceConfig.senderConfigName = cn
+        } else {
+            alertInstanceConfig.senderId = ''
+            alertInstanceConfig.senderConfigName = ''
+        }
         props.onChannelSetupClosed(props.channel,
         {
             channelId: props.channel.channelId,
@@ -187,6 +225,19 @@ const AlertSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
                             />
                         )}
                     </Stack>
+
+                    <Typography variant='subtitle2' sx={{fontWeight:'bold'}}>Sender</Typography>
+                    <Select value={selectedSender} onChange={(e: SelectChangeEvent) => setSelectedSender(e.target.value)} displayEmpty size='small' variant='standard'>
+                        <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
+                        {senderEntries.map(e => (
+                            <MenuItem key={`${e.senderId}::${e.configName}`} value={`${e.senderId}::${e.configName}`}>
+                                <Stack direction='row' spacing={1} alignItems='center'>
+                                    <Chip label={e.senderId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
+                                    <Typography variant='body2'>{e.configName}</Typography>
+                                </Stack>
+                            </MenuItem>
+                        ))}
+                    </Select>
                 </Stack>
             </DialogContent>
             <DialogActions>

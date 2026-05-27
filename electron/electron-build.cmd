@@ -1,8 +1,8 @@
 call ..\version\version.cmd
 
 del \github\releases\*.exe
-del \github\releases\*blockmap
 del \github\releases\*.AppImage
+del .\dist\*.blockmap
 
 call npm run dist -- -c.extraMetadata.version=%KWIRTH_VERSION%
 move dist\*.exe \github\releases
