@@ -1748,11 +1748,9 @@ const launchDesktop = async (localKwirthData:KwirthData, expressApp:Application)
                         logError(ELogComponent.CORE, err)
                     }
                 })
-                expressApp.get('/core/desktop/kube-available', (req:Request, res:Response) => {
-                    const rawUrl = req.query.url as string
-                    if (!rawUrl) { res.status(400).json(false); return }
+                const checkKubeAvailable = (rawUrl: string): Promise<boolean> => new Promise((resolve) => {
                     let responded = false
-                    const respond = (value: boolean) => { if (responded) return; responded = true; res.status(200).json(value) }
+                    const respond = (value: boolean) => { if (responded) return; responded = true; resolve(value) }
                     try {
                         const parsed = new URL(rawUrl)
                         const options = { hostname: parsed.hostname, port: parsed.port || 443, path: '/version', method: 'GET', rejectUnauthorized: false }
@@ -1774,6 +1772,12 @@ const launchDesktop = async (localKwirthData:KwirthData, expressApp:Application)
                         request.end()
                     }
                     catch { respond(false) }
+                })
+                expressApp.post('/core/desktop/kube-available', async (req:Request, res:Response) => {
+                    const urls: string[] = req.body?.urls
+                    if (!Array.isArray(urls) || urls.length === 0) { res.status(400).json({}); return }
+                    const results = await Promise.all(urls.map(url => checkKubeAvailable(url).then(ok => [url, ok] as [string, boolean])))
+                    res.status(200).json(Object.fromEntries(results))
                 })
                 expressApp.delete('/core/desktop/kubeconfig', (req:Request,res:Response) => {
                     try {

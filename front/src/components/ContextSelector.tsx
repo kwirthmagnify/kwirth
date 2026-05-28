@@ -67,17 +67,19 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
 
 
     const updateContextsStatus = async (contexts: IContext[], onUpdate: (updatedCtx: IContext) => void) => {
-        const promises = contexts.map(async (context) => {
-            try {
-                const resp = await fetch(backendUrl + '/core/desktop/kube-available?url=' + encodeURIComponent(context.server))
-                onUpdate({ ...context, status: resp.ok ? await resp.json() : false })
-            }
-            catch {
-                onUpdate({ ...context, status: false })
-            }
-        })
-
-        await Promise.allSettled(promises)
+        try {
+            const urls = contexts.map(c => c.server)
+            const resp = await fetch(backendUrl + '/core/desktop/kube-available', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ urls })
+            })
+            const results: Record<string, boolean> = resp.ok ? await resp.json() : {}
+            contexts.forEach(context => onUpdate({ ...context, status: results[context.server] ?? false }))
+        }
+        catch {
+            contexts.forEach(context => onUpdate({ ...context, status: false }))
+        }
     }
 
     const update = (contexts:IContext[]) =>  {
