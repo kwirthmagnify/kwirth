@@ -96,6 +96,8 @@ interface ICensorMessage {
     tags?: string[]
     processedCount?: number
     llmCount?: number
+    tokensIn?: number
+    tokensOut?: number
     instanceConfig?: ICensorInstanceConfig
     configs?: ICensorInstanceConfig[]
     llms?: ILlm[]
@@ -132,6 +134,8 @@ interface IInstance {
     analyzing: boolean
     processedCount: number
     llmCount: number
+    tokensIn: number
+    tokensOut: number
     lineBuffer: string[]
     regexes: IAccumRegex[]
     llmBusy: boolean
@@ -409,7 +413,7 @@ export class CensorChannel {
                 subscribeToSession()
 
                 // Gather all session state before notifying frontend (avoids timing issues with separate messages)
-                type IStats = { processedCount: number, llmCount: number, analyzing: boolean }
+                type IStats = { processedCount: number, llmCount: number, tokensIn: number, tokensOut: number, analyzing: boolean }
                 type IRegexEntry = { pattern: string, example: string, explanation: string }
                 let stats: IStats | null = null
                 let regexes: IRegexEntry[] = []
@@ -437,6 +441,8 @@ export class CensorChannel {
                     kind: 'sessionconnected', sessionId, sessionDescription: target.description, sessions,
                     processedCount: stats?.processedCount ?? 0,
                     llmCount: stats?.llmCount ?? 0,
+                    tokensIn: stats?.tokensIn ?? 0,
+                    tokensOut: stats?.tokensOut ?? 0,
                     analyzing: stats?.analyzing ?? false,
                     regexes
                 } as ICensorMessage))
@@ -523,6 +529,8 @@ export class CensorChannel {
                 analyzing: false,
                 processedCount: 0,
                 llmCount: 0,
+                tokensIn: 0,
+                tokensOut: 0,
                 lineBuffer: [],
                 regexes: [],
                 llmBusy: false
@@ -652,13 +660,16 @@ export class CensorChannel {
             this.sendStats(webSocket, instance)
             for (const line of lines) this.sendLlmInputLine(webSocket, instance, line)
 
-            const { output } = await generateText({
+            const { output, usage } = await generateText({
                 model, system, prompt,
                 temperature: instance.cfg.temperature ?? 0.2,
                 providerOptions: providerOptions as never,
                 output: Output.object({ schema })
             })
 
+            instance.tokensIn += usage.inputTokens ?? 0
+            instance.tokensOut += usage.outputTokens ?? 0
+            this.sendStats(webSocket, instance)
             this.sendLlmOutput(webSocket, instance, JSON.stringify(output, null, 2))
 
             // no tocar estas tres lineas, la respuesta del LLM tiene de momento este formato.
@@ -841,7 +852,9 @@ export class CensorChannel {
             instance: instance.instanceId,
             kind: 'stats',
             processedCount: instance.processedCount,
-            llmCount: instance.llmCount
+            llmCount: instance.llmCount,
+            tokensIn: instance.tokensIn,
+            tokensOut: instance.tokensOut
         }
         webSocket.send(JSON.stringify(msg))
     }

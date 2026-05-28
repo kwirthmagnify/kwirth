@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Kwirth Magnify</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 450px; height: 300px; overflow: hidden;
+      background: #111111;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      user-select: none;
+    }
+    .logo-wrap {
+      display: flex; flex-direction: row;
+      align-items: center; gap: 16px;
+    }
+    .logo-img { width: 72px; height: 72px; }
+    .logo-text {
+      font-size: 52px; font-weight: 900;
+      color: #F07820;
+      letter-spacing: 2px;
+      text-shadow: 3px 3px 0 #000, -1px -1px 0 #000;
+      line-height: 1;
+    }
+    .tagline {
+      margin-top: 14px;
+      font-size: 12px; font-weight: 600;
+      color: #888;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    .spinner {
+      margin-top: 28px; width: 32px; height: 32px;
+      border: 3px solid rgba(240,120,32,0.2);
+      border-top-color: #F07820;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .version { position: absolute; bottom: 12px; right: 16px; font-size: 11px; color: #333; }
+    .runtime { position: absolute; bottom: 12px; left: 16px; font-size: 11px; color: #333; }
+  </style>
+</head>
+<body>
+  <div class="logo-wrap">
+    <img class="logo-img" src="kwirth-transparent.png" alt="K">
+    <span class="logo-text">kwirth</span>
+  </div>
+  <div class="tagline">Kubernetes Explorer</div>
+  <div class="spinner"></div>
+  <div class="runtime">electron</div>
+  <div class="version">v0.0.0</div>
+</body>
+</html>

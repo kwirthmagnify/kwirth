@@ -1,5 +1,5 @@
 const { VERSION } = require('./version')
-const { app, BrowserWindow,  BaseWindow, nativeImage, ImageView, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const portfinder = require('portfinder')
@@ -89,24 +89,21 @@ ipcMain.handle('store-set', async (event, key, value) => {
 async function createMainWindow() {
     console.log('Starting Kwirth Desktop...')
 
-	let splash = new BaseWindow({
+	let splash = new BrowserWindow({
         width: 450,
         height: 300,
         frame: false,
         alwaysOnTop: true,
         center: true,
 		resizable: false,
-        show: false
+        show: false,
+        webPreferences: { nodeIntegration: false }
     })
-
-	const splashPath = path.join(__dirname, 'splash.png')
-	const splashView = new ImageView()
-	const splashImage = nativeImage.createFromPath(splashPath)
-	let resizedImage = splashImage.resize({ width: 450, height: 300, quality: 'best' })
-	splashView.setImage(resizedImage)
-	splash.setContentView(splashView)
-
-	splash.show()
+	splash.loadFile(path.join(__dirname, 'splash.html'))
+	splash.webContents.on('did-finish-load', () => {
+		splash.webContents.executeJavaScript(`document.querySelector('.version').textContent = 'v${VERSION}'`)
+		splash.show()
+	})
 
 	setTimeout( async () => {
 		const win = new BrowserWindow({

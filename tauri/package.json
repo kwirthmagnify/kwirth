@@ -1,0 +1,14 @@
+{
+  "name": "kwirth-magnify",
+  "version": "0.0.0",
+  "description": "Kwirth Magnify Desktop (Tauri)",
+  "scripts": {
+    "tauri": "tauri",
+    "build": "tauri build",
+    "dev": "tauri dev"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@yao-pkg/pkg": "^5"
+  }
+}

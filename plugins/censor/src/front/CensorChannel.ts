@@ -28,6 +28,8 @@ interface ICensorMessage {
     tags?: string[]
     processedCount?: number
     llmCount?: number
+    tokensIn?: number
+    tokensOut?: number
     instanceConfig?: ICensorInstanceConfig
     configs?: ICensorInstanceConfig[]
     llms?: ILlm[]
@@ -106,6 +108,8 @@ export class CensorChannel implements IChannel {
                 else if (msg.kind === 'stats') {
                     if (msg.processedCount !== undefined) data.processedCount = msg.processedCount
                     if (msg.llmCount !== undefined) data.llmCount = msg.llmCount
+                    if (msg.tokensIn !== undefined) data.tokensIn = msg.tokensIn
+                    if (msg.tokensOut !== undefined) data.tokensOut = msg.tokensOut
                 }
                 else if (msg.kind === 'config') {
                     if (msg.llms !== undefined) data.llms = msg.llms
@@ -157,6 +161,8 @@ export class CensorChannel implements IChannel {
                     if (msg.sessions !== undefined) data.sessions = msg.sessions
                     if (msg.processedCount !== undefined) data.processedCount = msg.processedCount
                     if (msg.llmCount !== undefined) data.llmCount = msg.llmCount
+                    if (msg.tokensIn !== undefined) data.tokensIn = msg.tokensIn
+                    if (msg.tokensOut !== undefined) data.tokensOut = msg.tokensOut
                     if (msg.analyzing !== undefined) data.analyzing = msg.analyzing
                     if (msg.regexes) {
                         for (const r of msg.regexes) {
@@ -188,6 +194,8 @@ export class CensorChannel implements IChannel {
                     data.regexes = []
                     data.processedCount = 0
                     data.llmCount = 0
+                    data.tokensIn = 0
+                    data.tokensOut = 0
                     data.analyzing = false
                     ;(channelObject.config as ICensorConfig).selectedSessionId = null
                 }
@@ -231,6 +239,8 @@ export class CensorChannel implements IChannel {
         data.assets = []
         data.processedCount = 0
         data.llmCount = 0
+        data.tokensIn = 0
+        data.tokensOut = 0
         data.paused = false
         data.started = true
         data.sessions = []

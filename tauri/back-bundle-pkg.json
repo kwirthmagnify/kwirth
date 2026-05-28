@@ -1,0 +1,9 @@
+{
+  "name": "kwirth-backend",
+  "version": "1.0.0",
+  "main": "bundle.js",
+  "pkg": {
+    "assets": [],
+    "scripts": []
+  }
+}

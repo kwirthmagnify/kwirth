@@ -18,9 +18,6 @@ export interface IDaemonInstanceConfig {
 
 export interface BackDaemonData {
     id: string
-    resourced: boolean
-    cluster: boolean
-    sources: string[]
 }
 
 export interface IBackDaemonRequirements {

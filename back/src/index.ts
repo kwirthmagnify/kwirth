@@ -20,6 +20,7 @@ import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdent
 import { ManageClusterApi } from './api/ManageClusterApi'
 import { AuthorizationManagement } from './tools/AuthorizationManagement'
 
+import * as https from 'https'
 import express, { NextFunction, Request, Response} from 'express'
 import cookieParser from 'cookie-parser'
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware'
@@ -88,7 +89,7 @@ const app : Application = express()
 
 interface IRunningInstance {
     id: string
-    electronContext?: string
+    desktopContext?: string
     clusterInfo: ClusterInfo
     kwirthData: KwirthData
     secrets: ISecrets
@@ -1398,7 +1399,7 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
         let lastVersion = await getLastKwirthVersion(ri.kwirthData)
         if (lastVersion) ri.kwirthData.lastVersion = lastVersion
     
-        // show root contents for electron debuggunng purposes
+        // show root contents for desktop debugging purposes
         fs.readdir('.', (err:any, currentFiles:any) => {
             if (err) {
                 logError(ELogComponent.CORE, 'Error reading folder data:')
@@ -1642,10 +1643,10 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                 }
             }
             else if (runningInstance.kwirthData.isDesktop) {
-                logInfo(ELogComponent.CORE, 'FORWARD for electron should be implemented')
+                logInfo(ELogComponent.CORE, 'FORWARD for desktop should be implemented')
             }
             else {
-                logInfo(ELogComponent.CORE, 'FORWARD not avialable (not inCluster and not isDesktop)')
+                logInfo(ELogComponent.CORE, 'FORWARD not available (not inCluster and not isDesktop)')
             }
         }
         else {
@@ -1724,14 +1725,14 @@ const launchDocker = async (context:string|undefined, localKwirthData:KwirthData
     }
 }
 
-const launchElectron = async (localKwirthData:KwirthData, expressApp:Application) : Promise<void> => {
+const launchDesktop = async (localKwirthData:KwirthData, expressApp:Application) : Promise<void> => {
     try {
-        logInfo(ELogComponent.CORE, 'Start Electron Kwirth')
+        logInfo(ELogComponent.CORE, 'Start Desktop Kwirth')
         if (localKwirthData) {
             logInfo(ELogComponent.CORE, `Initial kwirthData`)
             logInfo(ELogComponent.CORE, localKwirthData)
             try {
-                expressApp.get('/core/electron/kubeconfig', (req:Request,res:Response) => {
+                expressApp.get('/core/desktop/kubeconfig', (req:Request,res:Response) => {
                     try {
                         let kubeConfig = new KubeConfig()
                         kubeConfig.loadFromDefault()
@@ -1747,11 +1748,38 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                         logError(ELogComponent.CORE, err)
                     }
                 })
-                expressApp.delete('/core/electron/kubeconfig', (req:Request,res:Response) => {
+                expressApp.get('/core/desktop/kube-available', (req:Request, res:Response) => {
+                    const rawUrl = req.query.url as string
+                    if (!rawUrl) { res.status(400).json(false); return }
+                    let responded = false
+                    const respond = (value: boolean) => { if (responded) return; responded = true; res.status(200).json(value) }
+                    try {
+                        const parsed = new URL(rawUrl)
+                        const options = { hostname: parsed.hostname, port: parsed.port || 443, path: '/version', method: 'GET', rejectUnauthorized: false }
+                        let timer: ReturnType<typeof setTimeout>
+                        const request = https.request(options, (hres) => {
+                            let raw = ''
+                            hres.on('data', (chunk: string) => raw += chunk)
+                            hres.on('end', () => {
+                                clearTimeout(timer)
+                                if (hres.statusCode === 200 || hres.statusCode === 401 || hres.statusCode === 403) {
+                                    try { const json = JSON.parse(raw); respond(!!(json.kind === 'Status' || json.major || json.gitVersion)) }
+                                    catch { respond(false) }
+                                }
+                                else { respond(false) }
+                            })
+                        })
+                        timer = setTimeout(() => { request.destroy(); respond(false) }, 2500)
+                        request.on('error', () => { clearTimeout(timer); respond(false) })
+                        request.end()
+                    }
+                    catch { respond(false) }
+                })
+                expressApp.delete('/core/desktop/kubeconfig', (req:Request,res:Response) => {
                     try {
                         let contextName = req.body.context
                         if (contextName) {
-                            let ri = runningInstances.find(r => r.electronContext === contextName)
+                            let ri = runningInstances.find(r => r.desktopContext === contextName)
                             if (ri) {
                                 // +++ implement remove runninginstance? or keep them started?
                                 res.status(200).json({})
@@ -1769,21 +1797,21 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
                         logError(ELogComponent.CORE, err)
                     }
                 })
-                expressApp.post('/core/electron/kubeconfig', async (req:Request, res:Response) => {
+                expressApp.post('/core/desktop/kubeconfig', async (req:Request, res:Response) => {
                     try {
                         let contextName:string = req.body.context
-                        logInfo(ELogComponent.CORE, 'Activating context for electron use: '+contextName)
+                        logInfo(ELogComponent.CORE, 'Activating context for desktop use: '+contextName)
                         if (contextName) {
-                            let existingRunningInstance = runningInstances.find(r => r.electronContext === contextName)
+                            let existingRunningInstance = runningInstances.find(r => r.desktopContext === contextName)
                             if (existingRunningInstance) {
                                 logInfo(ELogComponent.CORE, 'Already activated '+contextName)
                                 activateRunningInstance(existingRunningInstance)
-                                res.status(200).json(existingRunningInstance.apiKeyApi?.apiKeys[0])  // we just reuse the first inElectron ApiKey (there should be no other kind of Api Keysstsored)
+                                res.status(200).json(existingRunningInstance.apiKeyApi?.apiKeys[0])  // we just reuse the first desktop ApiKey (there should be no other kind of Api Keysstsored)
                             }
                             else {
                                 let runningInstance = await createRunningInstance(contextName, localKwirthData) 
                                 if (runningInstance) {
-                                    runningInstance.electronContext = contextName
+                                    runningInstance.desktopContext = contextName
                                     await prepareRunningInstance(localKwirthData, runningInstance)
                                     runningInstances.push(runningInstance)
                                     activateRunningInstance(runningInstance)
@@ -1791,7 +1819,7 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
 
                                     logInfo(ELogComponent.CORE, 'Creating instance for context' + contextName)
                                     // +++ we should be using a common function for creating api key
-                                    let description = 'Volatile key for electron'
+                                    let description = 'Volatile key for desktop'
                                     let expire:number = Date.now() + 10000000000  // 4 months
                                     let days:number = 1
                                     let accessKey:AccessKey = { id: uuid(), type: 'volatile', resources: 'cluster::::' }
@@ -1823,11 +1851,11 @@ const launchElectron = async (localKwirthData:KwirthData, expressApp:Application
             }
         }
         else {
-            logError(ELogComponent.CORE, 'Cannot get kwirthdata launching Electron, exiting...')
+            logError(ELogComponent.CORE, 'Cannot get kwirthdata launching desktop, exiting...')
         }    
     }
     catch (err) {
-        logError(ELogComponent.CORE, 'Error launching electron')
+        logError(ELogComponent.CORE, 'Error launching desktop')
         logError(ELogComponent.CORE, err)
     }
 }
@@ -2005,7 +2033,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                     }
                 }
                 if (runningEnv.isDesktop) {
-                    // +++ if session is electron, we remove everything and stop everything
+                    // +++ if session is desktop, we remove everything and stop everything
                 }
             }
         })
@@ -2138,7 +2166,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
 
     let kwirthData:KwirthData
     switch (exenv) {
-        case 'electron':
+        case 'desktop':
             kwirthData = {
                 namespace: 'default',
                 deployment: '',
@@ -2146,7 +2174,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
                 inCluster: false,
                 version: VERSION,
                 lastVersion: VERSION,
-                clusterName: 'inElectron',
+                clusterName: 'inDesktop',
                 clusterType: EClusterType.KUBERNETES,
                 metricsInterval: 15,
                 channels: []
@@ -2211,7 +2239,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
     }
     app.use(`${envRootPath}`, (req, res, next) => {
         if (req.path.startsWith(`${envRootPath}/front`) || req.path === '/') return next()
-        if (runningEnv.isDesktop && req.path.startsWith('/core/electron/')) return next()
+        if (runningEnv.isDesktop && req.path.startsWith('/core/desktop/')) return next()
         if (req.path.startsWith(`${envRootPath}/core/auth/`)) return next()
 
         const activeRI = runningInstances.find(r => r.active)
@@ -2247,8 +2275,8 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
     createHttpServers(kwirthData, app, runningInstances, processClientMessage)
 
     switch (exenv) {
-        case 'electron':
-            await launchElectron(kwirthData, app)
+        case 'desktop':
+            await launchDesktop(kwirthData, app)
             break
         case 'windowsdocker':
         case 'linuxdocker':

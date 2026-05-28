@@ -37,7 +37,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
     useEffect(() => {
         const fetchData = async () => {
             try {
-                let resp = await fetch(backendUrl + '/core/electron/kubeconfig')
+                let resp = await fetch(backendUrl + '/core/desktop/kubeconfig')
                 let contexts = await resp.json() as IContext[]
 
                 setLocalContexts(contexts)
@@ -69,10 +69,10 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
     const updateContextsStatus = async (contexts: IContext[], onUpdate: (updatedCtx: IContext) => void) => {
         const promises = contexts.map(async (context) => {
             try {
-                const isAvailable = await (window as any).kwirth.kubeApiAvailable(context.server);
-                onUpdate({ ...context, status: isAvailable })
+                const resp = await fetch(backendUrl + '/core/desktop/kube-available?url=' + encodeURIComponent(context.server))
+                onUpdate({ ...context, status: resp.ok ? await resp.json() : false })
             }
-            catch (error) {
+            catch {
                 onUpdate({ ...context, status: false })
             }
         })
@@ -127,7 +127,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
         setWaiting(true)
         try {
             let payload = JSON.stringify({ context:name })
-            let resp = await fetch(backendUrl+'/core/electron/kubeconfig', { method:'POST', body:payload, headers: {'Content-Type':'application/json'} } )
+            let resp = await fetch(backendUrl+'/core/desktop/kubeconfig', { method:'POST', body:payload, headers: {'Content-Type':'application/json'} } )
             if (resp.status === 200) {
                 let jresp = await resp.json()
                 let sc = 0
@@ -137,6 +137,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                     sc = resp2.status
                 } while (sc!==200)
                 props.onContextSelectorLocal(name, jresp.accessKey as AccessKey)
+                return
             }
             else {
                 console.log('ERROR obtaining config info')
@@ -188,7 +189,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                         {
                             remoteClusters.filter(c => c.name.includes(filterRemote)).map(c =>
                                 <Stack key={c.name} direction={'row'} sx={{wodth:'100%'}}>
-                                    <ListItemButton onClick={() => props.onContextSelectorRemote(c.name, c.url, c.accessString)}>
+                                    <ListItemButton onClick={() => { setWaiting(true); props.onContextSelectorRemote(c.name, c.url, c.accessString) }}>
                                         <Typography>{c.name}</Typography>
                                     </ListItemButton>
                                     <IconButton onClick={() => deleteRemoteCluster(c.name)}>

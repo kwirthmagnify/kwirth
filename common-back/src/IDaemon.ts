@@ -1,5 +1,4 @@
 import { IDaemonInstanceConfig, BackDaemonData, IBackDaemonRequirements } from '@kwirthmagnify/kwirth-common'
-import { Request, Response } from 'express'
 
 export interface IDaemon {
     readonly daemonId: string
@@ -20,6 +19,4 @@ export interface IDaemon {
     processCommand(instanceId: string, command: string, data: unknown): Promise<unknown>
 
     subscribe(instanceId: string, callback: (event: unknown) => void): () => void
-
-    endpointRequest(endpoint: string, req: Request, res: Response): Promise<void>
 }

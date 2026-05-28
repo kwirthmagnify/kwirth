@@ -5,7 +5,6 @@ import { buildModel, loadModels, zodFromExample } from '@kwirthmagnify/kwirth-co
 import { PassThrough } from 'stream'
 import * as stream from 'stream'
 import { generateText, Output } from 'ai'
-import { Request, Response } from 'express'
 
 const BATCH_SIZE = 50
 
@@ -17,16 +16,22 @@ const DEFAULT_USER_PROMPT = (count: number) => `Analyze these ${count} log lines
 export interface ICensorInstanceConfig {
     name: string
     version: string
+
+    // for invoking LLM
     llmId: string
     system?: string
     batchSize?: number
     exampleJson?: string
     temperature?: number
     active?: boolean
+
+    // for ingesting business events
     space?: string
     type?: string
     addTimestamp?: boolean
     businessPath?: string
+
+    // for alerting
     senderId?: string
     senderConfigName?: string
 }
@@ -78,6 +83,8 @@ interface IDaemonInstance {
     analyzing: boolean
     processedCount: number
     llmCount: number
+    tokensIn: number
+    tokensOut: number
     lineBuffer: string[]
     regexes: IAccumRegex[]
     llmBusy: boolean
@@ -105,10 +112,7 @@ export class CensorDaemon implements IDaemon {
 
     getDaemonData(): BackDaemonData {
         return {
-            id: 'censor',
-            resourced: true,
-            cluster: false,
-            sources: ['kubernetes']
+            id: 'censor'
         }
     }
 
@@ -138,6 +142,8 @@ export class CensorDaemon implements IDaemon {
                 analyzing: false,
                 processedCount: 0,
                 llmCount: 0,
+                tokensIn: 0,
+                tokensOut: 0,
                 lineBuffer: [],
                 regexes: [],
                 llmBusy: false,
@@ -158,12 +164,14 @@ export class CensorDaemon implements IDaemon {
             // Restore persisted session state if available (e.g. after server restart)
             try {
                 const savedState = await this.backDaemonObject.readStorage!(`censor-state-${instanceConfig.id}`, false) as {
-                    processedCount?: number, llmCount?: number, analyzing?: boolean,
+                    processedCount?: number, llmCount?: number, tokensIn?: number, tokensOut?: number, analyzing?: boolean,
                     regexes?: { pattern: string, example: string, explanation: string }[]
                 } | null
                 if (savedState) {
                     if (savedState.processedCount !== undefined) inst.processedCount = savedState.processedCount
                     if (savedState.llmCount !== undefined) inst.llmCount = savedState.llmCount
+                    if (savedState.tokensIn !== undefined) inst.tokensIn = savedState.tokensIn
+                    if (savedState.tokensOut !== undefined) inst.tokensOut = savedState.tokensOut
                     if (savedState.analyzing !== undefined) inst.analyzing = savedState.analyzing
                     if (savedState.regexes) {
                         for (const r of savedState.regexes) {
@@ -292,16 +300,16 @@ export class CensorDaemon implements IDaemon {
                             }
                         }
                     }
-                    this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount })
+                    this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut })
                 }
             }
         }
     }
 
-    async processCommand(instanceId: string, command: string, data: unknown): Promise<unknown> {
+    async processCommand(instanceId: string, command: ECensorDaemonCommand, data: unknown): Promise<unknown> {
         const inst = this.instances.get(instanceId)
 
-        switch (command as ECensorDaemonCommand) {
+        switch (command) {
             case ECensorDaemonCommand.CONFIGGET: {
                 if (!inst) return null
                 const llms: ILlm[] = (await this.backDaemonObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
@@ -388,12 +396,12 @@ export class CensorDaemon implements IDaemon {
             case ECensorDaemonCommand.STATSGET:
                 if (!inst) {
                     try {
-                        const saved = await this.backDaemonObject.readStorage!(`censor-state-${instanceId}`, false) as { processedCount?: number, llmCount?: number, analyzing?: boolean } | null
-                        if (saved) return { processedCount: saved.processedCount ?? 0, llmCount: saved.llmCount ?? 0, analyzing: saved.analyzing ?? true }
+                        const saved = await this.backDaemonObject.readStorage!(`censor-state-${instanceId}`, false) as { processedCount?: number, llmCount?: number, tokensIn?: number, tokensOut?: number, analyzing?: boolean } | null
+                        if (saved) return { processedCount: saved.processedCount ?? 0, llmCount: saved.llmCount ?? 0, tokensIn: saved.tokensIn ?? 0, tokensOut: saved.tokensOut ?? 0, analyzing: saved.analyzing ?? true }
                     } catch {}
                     return null
                 }
-                return { processedCount: inst.processedCount, llmCount: inst.llmCount, analyzing: inst.analyzing }
+                return { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, analyzing: inst.analyzing }
             case 'analyzestate':
                 if (inst) this.broadcast(inst, 'analyzing', { analyzing: inst.analyzing })
                 return { analyzing: inst?.analyzing ?? false }
@@ -426,8 +434,6 @@ export class CensorDaemon implements IDaemon {
         return () => inst.subscribers.delete(callback)
     }
 
-    async endpointRequest(_endpoint: string, _req: Request, _res: Response): Promise<void> {}
-
     // ── Internal ────────────────────────────────────────────────────────────────
 
     private broadcast(inst: IDaemonInstance, kind: string, data: Record<string, unknown>): void {
@@ -439,6 +445,8 @@ export class CensorDaemon implements IDaemon {
         await this.backDaemonObject.writeStorage?.(`censor-state-${inst.instanceId}`, false, {
             processedCount: inst.processedCount,
             llmCount: inst.llmCount,
+            tokensIn: inst.tokensIn,
+            tokensOut: inst.tokensOut,
             analyzing: inst.analyzing,
             regexes: inst.regexes.map(r => ({ pattern: r.pattern, example: r.example, explanation: r.explanation }))
         })
@@ -465,7 +473,7 @@ export class CensorDaemon implements IDaemon {
                 this.callLlm(inst, batch)
             }
         }
-        this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount })
+        this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut })
     }
 
     private async callLlm(inst: IDaemonInstance, lines: string[]): Promise<void> {
@@ -511,16 +519,19 @@ export class CensorDaemon implements IDaemon {
             const schema = zodFromExample(example)
 
             inst.llmCount += lines.length
-            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount })
+            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut })
             for (const line of lines) this.broadcast(inst, 'llminput', { text: line })
 
-            const { output } = await generateText({
+            const { output, usage } = await generateText({
                 model, system, prompt,
                 temperature: inst.cfg.temperature ?? 0.2,
                 providerOptions: providerOptions as never,
                 output: Output.object({ schema })
             })
 
+            inst.tokensIn += usage.inputTokens ?? 0
+            inst.tokensOut += usage.outputTokens ?? 0
+            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut })
             this.broadcast(inst, 'llmoutput', { text: JSON.stringify(output, null, 2) })
 
             const patterns: string[] = ((output as any).info ?? []).filter((x: any) => x.type === 'discard').map((x: any) => x.regex)

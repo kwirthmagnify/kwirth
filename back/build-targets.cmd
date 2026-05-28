@@ -11,3 +11,7 @@ cd ..\back
 cd ..\electron
 call electron-build.cmd
 cd ..\back
+
+cd ..\tauri
+call tauri-build.cmd
+cd ..\back

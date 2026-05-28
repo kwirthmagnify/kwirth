@@ -6,50 +6,70 @@
 		"url": "https://github.com/jfvilas"
 	},
 	"main": "main.js",
-	"version": "0.0.0",
+	"version": "0.5.122",
 	"description": "Kwirth Magnify Desktop",
 	"homepage": "https://kwirthmagnify.dev",
 	"scripts": {
 		"start": "electron .",
 		"dist": "electron-builder",
 		"dist:win": "electron-builder --win",
-    	"dist:linux": "electron-builder --linux",
-    	"dist:mac": "electron-builder --mac"
+		"dist:linux": "electron-builder --linux",
+		"dist:mac": "electron-builder --mac"
 	},
 	"build": {
 		"appId": "com.github.kwirth",
+		"productName": "kwirth-magnify-0.5.122-e",
 		"files": [
 			"./main.js",
 			"./preload.js",
-			"./splash.png",
+			"./splash.html",
+			"./kwirth-transparent.png",
 			"./version.js",
 			"./bundle/**/*"
 		],
 		"asar": false,
 		"directories": {
-			"output": "dist" 
+			"output": "dist"
+		},
+		"nsis": {
+			"artifactName": "${productName}-installer.${ext}"
+		},
+		"portable": {
+			"artifactName": "${productName}.${ext}"
 		},
 		"win": {
 			"icon": "kwirth-transparent.ico",
 			"target": [
 				{
-					"target": "nsis", 
-					"arch": ["x64"]
+					"target": "nsis",
+					"arch": [
+						"x64"
+					]
 				},
 				{
-					"target": "portable", 
-					"arch": ["x64"]
+					"target": "portable",
+					"arch": [
+						"x64"
+					]
 				}
 			]
 		},
 		"linux": {
 			"icon": "kwirth-transparent.png",
-			"target": ["AppImage"], 
+			"artifactName": "${productName}.${ext}",
+			"target": [
+				"AppImage"
+			],
 			"category": "Utility",
-			"executableArgs": ["--no-sandbox"]
+			"executableArgs": [
+				"--no-sandbox"
+			]
 		},
 		"mac": {
-			"target": ["dmg", "zip"],
+			"target": [
+				"dmg",
+				"zip"
+			],
 			"category": "public.app-category.utilities"
 		}
 	},

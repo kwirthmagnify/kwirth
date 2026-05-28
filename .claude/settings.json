@@ -56,7 +56,15 @@
       "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common && npm run build 2>&1 | Where-Object { $_ -match 'error|Error|success|Built|done' } | Select-Object -Last 10)",
       "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\\\\src\\\\back\")",
       "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\\\\dist\")",
-      "Bash(grep -v \"^--$\")"
+      "Bash(grep -v \"^--$\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:d[k] for k in ['scripts','main'] if k in d}, indent=2\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('dependencies',{}\\), indent=2\\)\\)\")",
+      "Bash(cp c:/github/aisdkvercel/kwirth/common-front/dist/index.d.ts c:/github/aisdkvercel/kwirth/front/node_modules/@kwirthmagnify/kwirth-common-front/dist/index.d.ts)",
+      "Bash(cp c:/github/aisdkvercel/kwirth/common-front/dist/index.js c:/github/aisdkvercel/kwirth/front/node_modules/@kwirthmagnify/kwirth-common-front/dist/index.js)",
+      "Bash(rm -rf c:/github/aisdkvercel/kwirth/front/node_modules/.cache && echo \"cache cleared\")",
+      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
+      "Bash(xargs grep -l \"nsis\\\\|wix\\\\|installerFilename\")",
+      "Bash(xargs grep -A5 \"tauri\")"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
@@ -65,7 +73,8 @@
       "C:\\github\\jfvilas\\react-file-manager\\frontend\\src\\components\\SearchInput",
       "c:\\github\\aisdkvercel\\kwirth\\common-front\\dist",
       "c:\\github\\aisdkvercel\\kwirth\\common-ai\\dist",
-      "c:\\github\\aisdkvercel\\kwirth\\common-back\\dist"
+      "c:\\github\\aisdkvercel\\kwirth\\common-back\\dist",
+      "c:\\github\\aisdkvercel\\kwirth\\front\\node_modules\\.cache"
     ]
   }
 }

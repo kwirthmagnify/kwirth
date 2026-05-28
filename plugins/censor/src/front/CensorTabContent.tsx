@@ -240,7 +240,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                 <Stack direction='row' alignItems='center' spacing={1}>
                     <Typography><b>Filters:</b> {data.regexes.length}</Typography>
                     <Typography><b>Processed:</b> {data.processedCount}</Typography>
-                    <Typography flex={1}><b>To LLM:</b> {data.llmCount}</Typography>
+                    <Typography><b>To LLM:</b> {data.llmCount}</Typography>
+                    <Typography flex={1}><b>Tokens:</b> {data.tokensIn.toLocaleString()} in / {data.tokensOut.toLocaleString()} out</Typography>
                     {data.connectedSessionId &&
                         <Chip label={data.connectedSessionDescription ?? 'Session'} size='small' color='success' sx={{ maxWidth: 160 }} />
                     }
