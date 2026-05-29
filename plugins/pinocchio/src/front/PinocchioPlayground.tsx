@@ -131,6 +131,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
         const t = props.pinocchioConfig.triggers.find(tr => tr.id === pendingImportTriggerId)
         if (t) {
             if (t.trigger === 'artifact' || t.trigger === 'business') setTriggerType(t.trigger)
+            if (t.trigger === 'artifact') setArtifactKind(t.kind ?? '')
             const v = t.versions.find(v => v.id === pendingImportVersionId) ?? t.versions[0]
             if (v) {
                 setLlm(v.llm)
@@ -269,63 +270,47 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 </Stack>
                 <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mt: 1 }}>
                     <Tab label='LLM' />
-                    <Tab label='Input' />
                     <Tab label='Call' />
-                    <Tab label='Results' />
+                    <Tab label={`IN (${newContent.filter(item => !('findings' in item || 'report' in item) && (item as IMessage).role !== 'llm').length})`} />
+                    <Tab label={`OUT (${newContent.filter(item => 'findings' in item || 'report' in item || (item as IMessage).role === 'llm').length})`} />
                 </Tabs>
             </DialogTitle>
 
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', pt: 2, overflow: 'hidden' }}>
 
-                {/* Tab 0: LLM */}
+                {/* Tab 0: LLM + Input */}
                 {tab === 0 && (
-                    <Stack spacing={3} sx={{ maxWidth: 420, mx: 'auto', width: '100%', pt: 3, px: 2 }}>
-                        <FormControl variant='standard' fullWidth>
-                            <InputLabel>LLM</InputLabel>
-                            <Select value={llm} onChange={e => { setLlm(e.target.value); markDirty() }}>
-                                {props.pinocchioConfig.llms.map(l => (
-                                    <MenuItem key={l.id} value={l.id}>{l.id}</MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <TextField
-                            label='Max steps'
-                            type='number'
-                            variant='standard'
-                            value={steps}
-                            onChange={e => { setSteps(Math.max(1, +e.target.value)); markDirty() }}
-                            fullWidth
-                        />
-                        <Box>
-                            <Button size='small' startIcon={<Upload />} onClick={() => setShowImportDialog(true)}>Import from trigger</Button>
-                        </Box>
-                    </Stack>
-                )}
-
-                {/* Tab 1: Input */}
-                {tab === 1 && (
-                    <Stack spacing={2} sx={{ height: '100%', overflow: 'hidden', px: 2, pt: 1 }}>
-                        <Stack direction='row' spacing={2} alignItems='center' sx={{ flex: '0 0 auto' }}>
+                    <Stack spacing={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', px: 2, pt: 1 }}>
+                        <Stack direction='row' spacing={2} alignItems='flex-end' sx={{ flex: '0 0 auto' }}>
+                            <FormControl variant='standard' sx={{ minWidth: 160 }}>
+                                <InputLabel>LLM</InputLabel>
+                                <Select value={llm} onChange={e => { setLlm(e.target.value); markDirty() }}>
+                                    {props.pinocchioConfig.llms.map(l => <MenuItem key={l.id} value={l.id}>{l.id}</MenuItem>)}
+                                </Select>
+                            </FormControl>
+                            <TextField label='Max steps' type='number' variant='standard' value={steps} onChange={e => { setSteps(Math.max(1, +e.target.value)); markDirty() }} sx={{ width: 80 }} />
+                            <Box sx={{ flex: 1 }} />
                             <ToggleButtonGroup value={triggerType} exclusive size='small' onChange={(_, v) => { if (v) setTriggerType(v) }}>
                                 <ToggleButton value='business'>Business</ToggleButton>
                                 <ToggleButton value='artifact'>Artifact</ToggleButton>
                             </ToggleButtonGroup>
-                            {triggerType === 'artifact' ? (
-                                <FormControl variant='standard' sx={{ minWidth: 160 }}>
-                                    <InputLabel>Artifact Kind</InputLabel>
-                                    <Select value={artifactKind} onChange={e => setArtifactKind(e.target.value)}>
-                                        {kindsAvailable.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
-                                    </Select>
-                                </FormControl>
-                            ) : (
-                                <>
-                                    <TextField label='Space' variant='standard' size='small' value={eventSpace} onChange={e => setEventSpace(e.target.value)} sx={{ flex: 1 }} />
-                                    <TextField label='Type' variant='standard' size='small' value={eventType} onChange={e => setEventType(e.target.value)} sx={{ flex: 1 }} />
-                                    <IconButton size='small' onClick={e => openHistory(e, 'spacetype')} disabled={spaceTypeHistory.length === 0}>
-                                        <HistoryOutlined sx={{ fontSize: 14 }} />
-                                    </IconButton>
-                                </>
-                            )}
+                            <Box sx={{ width: 310, flexShrink: 0, display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                                {triggerType === 'artifact' ? (
+                                    <FormControl variant='standard' fullWidth>
+                                        <InputLabel shrink>Artifact Kind</InputLabel>
+                                        <Select value={artifactKind} onChange={e => setArtifactKind(e.target.value)}>
+                                            {kindsAvailable.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
+                                        </Select>
+                                    </FormControl>
+                                ) : (
+                                    <>
+                                        <TextField label='Space' variant='standard' size='small' value={eventSpace} onChange={e => setEventSpace(e.target.value)} sx={{ width: 120 }} />
+                                        <TextField label='Type' variant='standard' size='small' value={eventType} onChange={e => setEventType(e.target.value)} sx={{ width: 120 }} />
+                                        <IconButton size='small' onClick={e => openHistory(e, 'spacetype')} disabled={spaceTypeHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
+                                    </>
+                                )}
+                            </Box>
+                            <Button size='small' startIcon={<Upload />} onClick={() => setShowImportDialog(true)}>Import from trigger</Button>
                         </Stack>
                         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                             <Stack direction='row' alignItems='center' spacing={0.5}>
@@ -336,20 +321,16 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                                     <HistoryOutlined sx={{ fontSize: 14 }} />
                                 </IconButton>
                             </Stack>
-                            <TextareaAutosize
-                                value={eventData}
-                                onChange={e => setEventData(e.target.value)}
-                                minRows={18}
-                                style={{ width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, overflowY: 'auto' }}
-                                placeholder='Enter the artifact or JSON payload…'
-                            />
+                            <textarea value={eventData} onChange={e => setEventData(e.target.value)}
+                                style={{ flex: 1, resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13 }}
+                                placeholder='Enter the artifact or JSON payload…' />
                         </Box>
                     </Stack>
                 )}
 
-                {/* Tab 2: Call */}
-                {tab === 2 && (
-                    <Stack spacing={1} sx={{ height: '100%', overflow: 'hidden', px: 2, pt: 1 }}>
+                {/* Tab 1: Call */}
+                {tab === 1 && (
+                    <Stack spacing={1} sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', px: 2, pt: 1 }}>
                         <Stack direction='row' alignItems='flex-end' spacing={1} sx={{ flex: '0 0 auto' }}>
                             <FormControl variant='standard' sx={{ minWidth: 140 }}>
                                 <InputLabel>Prompt type</InputLabel>
@@ -384,73 +365,88 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                                 </Select>
                             </FormControl>
                         </Stack>
-                        <Box sx={{ flex: '0 0 auto' }}>
-                            <Stack direction='row' alignItems='center' spacing={0.5}>
-                                <Typography variant='caption' color='text.secondary'>System</Typography>
-                                <IconButton size='small' onClick={e => openHistory(e, 'system')} disabled={systemHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
-                            </Stack>
-                            <TextareaAutosize value={system} onChange={e => { setSystem(e.target.value); markDirty() }} minRows={4} maxRows={4} style={{ width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13 }} placeholder='Enter system prompt…' />
+                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '8px' }}>
+                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ flexShrink: 0 }}>
+                                    <Typography variant='caption' color='text.secondary'>System</Typography>
+                                    <IconButton size='small' onClick={e => openHistory(e, 'system')} disabled={systemHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
+                                </Stack>
+                                <textarea value={system} onChange={e => { setSystem(e.target.value); markDirty() }} style={{ flex: 1, resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, minHeight: 0 }} placeholder='Enter system prompt…' />
+                            </Box>
+                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ flexShrink: 0 }}>
+                                    <Typography variant='caption' color='text.secondary'>Prompt</Typography>
+                                    <IconButton size='small' onClick={e => openHistory(e, 'prompt')} disabled={promptHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
+                                </Stack>
+                                <textarea value={prompt} onChange={e => { setPrompt(e.target.value); markDirty() }} disabled={promptType === 'artifact'} style={{ flex: 1, resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, minHeight: 0 }} placeholder='Enter the prompt template…' />
+                            </Box>
                         </Box>
-                        <Box sx={{ flex: 1 }}>
-                            <Stack direction='row' alignItems='center' spacing={0.5}>
-                                <Typography variant='caption' color='text.secondary'>Prompt</Typography>
-                                <IconButton size='small' onClick={e => openHistory(e, 'prompt')} disabled={promptHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
-                            </Stack>
-                            <TextareaAutosize value={prompt} onChange={e => { setPrompt(e.target.value); markDirty() }} minRows={8} maxRows={8} style={{ width: '100%', resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13 }} placeholder='Enter the prompt template…' />
-                        </Box>
-                    </Stack>
-                )}
-
-                {/* Tab 3: Results */}
-                {tab === 3 && (
-                    <Stack spacing={2} sx={{ height: '100%', overflow: 'hidden', px: 2, pt: 1 }}>
-                        <Stack direction='row' spacing={2} alignItems='center' sx={{ flex: '0 0 auto' }}>
+                        <Stack direction='row' spacing={1} sx={{ flex: '0 0 auto', pt: 1 }}>
+                            <Button size='small' startIcon={<FileDownload />} onClick={openExportDialog}>Export</Button>
+                            <Box sx={{ flex: 1 }} />
                             <Tooltip title='Upload LLM, steps, tools and system to backend'>
                                 <span>
-                                    <Button
-                                        variant={configApplied ? 'text' : 'outlined'}
-                                        startIcon={configApplied ? <CheckCircleOutline color='success' /> : <Upload />}
-                                        onClick={handleApply}
-                                        disabled={!llm}
-                                        color={configApplied ? 'success' : 'primary'}
-                                    >
+                                    <Button variant={configApplied ? 'text' : 'outlined'} startIcon={configApplied ? <CheckCircleOutline color='success' /> : <Upload />} onClick={handleApply} disabled={!llm} color={configApplied ? 'success' : 'primary'}>
                                         {configApplied ? 'Config applied' : 'Apply Config'}
                                     </Button>
                                 </span>
                             </Tooltip>
                             <Tooltip title={!configApplied ? 'Apply config first' : `Send ${triggerType} event to the backend`}>
                                 <span>
-                                    <Button
-                                        variant='contained'
-                                        startIcon={<Bolt />}
-                                        onClick={handleFire}
-                                        disabled={!configApplied || firing}
-                                    >
+                                    <Button variant='contained' startIcon={<Bolt />} onClick={handleFire} disabled={!configApplied || firing}>
                                         {firing ? 'Firing…' : 'Fire'}
                                     </Button>
                                 </span>
                             </Tooltip>
-                            <Box sx={{ flex: 1 }} />
-                            <Tooltip title='Export current config as trigger or version'>
-                                <Button size='small' startIcon={<FileDownload />} onClick={openExportDialog}>Export</Button>
-                            </Tooltip>
                         </Stack>
-                        <Box sx={{ flex: 1, overflowY: 'auto', bgcolor: 'action.hover', borderRadius: 1, p: 1 }}>
-                            <Typography variant='caption' color='text.secondary'>Results</Typography>
-                            {newContent.length === 0
-                                ? <Typography variant='body2' color='text.disabled' sx={{ ml: 1 }}>No results yet — apply config then fire.</Typography>
-                                : newContent.map((item, i) => renderItem(item, i))
-                            }
-                        </Box>
                     </Stack>
+                )}
+
+                {/* Tab 2: IN */}
+                {tab === 2 && (
+                    <Box sx={{ flex: 1, overflowY: 'auto', bgcolor: 'action.hover', borderRadius: 1, p: 1, mx: 2, mt: 1 }}>
+                        {newContent.filter(item => !('findings' in item || 'report' in item) && (item as IMessage).role !== 'llm').length === 0
+                            ? <Typography variant='body2' color='text.disabled'>No input yet — fire an event first.</Typography>
+                            : newContent.filter(item => !('findings' in item || 'report' in item) && (item as IMessage).role !== 'llm').map((item, i) => renderItem(item, i))
+                        }
+                    </Box>
+                )}
+
+                {/* Tab 3: OUT */}
+                {tab === 3 && (
+                    <Box sx={{ flex: 1, overflowY: 'auto', bgcolor: 'action.hover', borderRadius: 1, p: 1, mx: 2, mt: 1 }}>
+                        {newContent.filter(item => 'findings' in item || 'report' in item || (item as IMessage).role === 'llm').length === 0
+                            ? <Typography variant='body2' color='text.disabled'>No results yet — apply config then fire.</Typography>
+                            : newContent.filter(item => 'findings' in item || 'report' in item || (item as IMessage).role === 'llm').map((item, i) => {
+                                if ((item as IMessage).role === 'llm') {
+                                    const msg = item as IMessage
+                                    return (
+                                        <Typography key={i} variant='body2' sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', mb: 0.5 }}>
+                                            <span style={{ color: 'gray' }}>{new Date(msg.timestamp).toLocaleTimeString()} </span>
+                                            {msg.text}
+                                        </Typography>
+                                    )
+                                }
+                                const a = item as IAnalysis
+                                return (
+                                    <Box key={i} sx={{ mb: 1, pb: 1, borderBottom: 1, borderColor: 'divider' }}>
+                                        {a.text && <Typography variant='caption' color='text.secondary'>{new Date(a.timestamp).toLocaleTimeString()} {a.text}</Typography>}
+                                        {(a.findings ?? []).map((f, fi) => (
+                                            <Typography key={fi} variant='body2' sx={{ fontFamily: 'monospace', fontSize: 12 }}>
+                                                <b>[{f.level}]</b> {f.description}
+                                            </Typography>
+                                        ))}
+                                        {a.report && <Typography variant='body2' color='text.secondary' sx={{ fontStyle: 'italic', fontSize: 12 }}>Report available</Typography>}
+                                    </Box>
+                                )
+                            })
+                        }
+                    </Box>
                 )}
 
             </DialogContent>
 
-            <DialogActions sx={{ justifyContent: 'space-between' }}>
-                <Box>
-                    {tab < 3 && <Button onClick={() => setTab(t => t + 1)}>Next</Button>}
-                </Box>
+            <DialogActions>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button variant='contained' onClick={() => saveAndClose()}>Save</Button>
                     <Button onClick={() => props.onClose()}>Cancel</Button>
@@ -534,7 +530,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                         This will overwrite the current playground configuration (LLM, steps, tools, system and prompt).
                     </Typography>
                     <FormControl variant='standard' fullWidth>
-                        <InputLabel>Trigger</InputLabel>
+                        <InputLabel shrink>Trigger</InputLabel>
                         <Select value={pendingImportTriggerId} onChange={e => onImportTriggerChange(e.target.value)} displayEmpty>
                             <MenuItem value=''><Typography color='gray'><em>— select a trigger —</em></Typography></MenuItem>
                             {props.pinocchioConfig.triggers.map(t => (
@@ -543,7 +539,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                         </Select>
                     </FormControl>
                     <FormControl variant='standard' fullWidth disabled={!pendingImportTriggerId}>
-                        <InputLabel>Version</InputLabel>
+                        <InputLabel shrink>Version</InputLabel>
                         <Select value={pendingImportVersionId} onChange={e => setPendingImportVersionId(e.target.value)}>
                             {(props.pinocchioConfig.triggers.find(t => t.id === pendingImportTriggerId)?.versions ?? []).map(v => (
                                 <MenuItem key={v.id} value={v.id}>{v.id}{v.enabled ? ' ✓' : ''}</MenuItem>

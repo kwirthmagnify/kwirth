@@ -15,7 +15,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     action: EInstanceMessageAction
     instance: string
-    kind?: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
+    kind?: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
     assets?: ICensorAsset[]
     analyzing?: boolean
     text?: string
@@ -30,6 +30,7 @@ interface ICensorMessage {
     llmCount?: number
     tokensIn?: number
     tokensOut?: number
+    pendingCount?: number
     instanceConfig?: ICensorInstanceConfig
     configs?: ICensorInstanceConfig[]
     llms?: ILlm[]
@@ -100,6 +101,10 @@ export class CensorChannel implements IChannel {
                         if (!data.allTags.includes(tag)) data.allTags.push(tag)
                     }
                 }
+                else if (msg.kind === 'llmerror' && msg.text !== undefined) {
+                    data.llmErrorLines.push({ text: msg.text, timestamp: msg.timestamp ?? new Date().toISOString() })
+                    if (data.llmErrorLines.length > MAX_DISPLAY_LINES) data.llmErrorLines.splice(0, data.llmErrorLines.length - MAX_DISPLAY_LINES)
+                }
                 else if (msg.kind === 'regex' && msg.pattern !== undefined) {
                     if (!data.regexes.some((r: ICensorRegex) => r.pattern === msg.pattern)) {
                         data.regexes.push({ pattern: msg.pattern, example: msg.example ?? '', explanation: msg.explanation ?? '' })
@@ -110,6 +115,7 @@ export class CensorChannel implements IChannel {
                     if (msg.llmCount !== undefined) data.llmCount = msg.llmCount
                     if (msg.tokensIn !== undefined) data.tokensIn = msg.tokensIn
                     if (msg.tokensOut !== undefined) data.tokensOut = msg.tokensOut
+                    if (msg.pendingCount !== undefined) data.pendingCount = msg.pendingCount
                 }
                 else if (msg.kind === 'config') {
                     if (msg.llms !== undefined) data.llms = msg.llms
@@ -117,18 +123,7 @@ export class CensorChannel implements IChannel {
                     if (msg.providersAvailable !== undefined) data.providersAvailable = msg.providersAvailable
                     if (msg.instanceConfig) data.instanceConfig = msg.instanceConfig
                     if (msg.configs !== undefined) data.configs = msg.configs
-                    if (msg.sessionId && data.pendingSessionId === undefined) data.pendingSessionId = msg.sessionId
-                    if (data.pendingSessionId && channelObject.instanceId) {
-                        channelObject.webSocket?.send(JSON.stringify({
-                            msgtype: 'censormessage', channel: 'censor',
-                            action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.REQUEST,
-                            type: EInstanceMessageType.DATA,
-                            accessKey: channelObject.accessString!,
-                            instance: channelObject.instanceId,
-                            command: ECensorCommand.SESSIONCONNECT, data: data.pendingSessionId
-                        }))
-                        data.pendingSessionId = null
-                    }
+                    if (msg.sessions !== undefined) data.sessions = msg.sessions
                 }
                 else if (msg.kind === 'providers') {
                     if (msg.providers !== undefined) data.providers = msg.providers
@@ -196,6 +191,7 @@ export class CensorChannel implements IChannel {
                     data.llmCount = 0
                     data.tokensIn = 0
                     data.tokensOut = 0
+                    data.pendingCount = 0
                     data.analyzing = false
                     ;(channelObject.config as ICensorConfig).selectedSessionId = null
                 }

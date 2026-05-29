@@ -46,7 +46,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [llmInputAutoScroll, setLlmInputAutoScroll] = useState(true)
     const [llmOutputAutoScroll, setLlmOutputAutoScroll] = useState(true)
     const [warningAutoScroll, setWarningAutoScroll] = useState(true)
+    const [llmErrorAutoScroll, setLlmErrorAutoScroll] = useState(true)
     const [selectedConfigIndex, setSelectedConfigIndex] = useState<number | null>(null)
+    const [configActive, setConfigActive] = useState(false)
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
 
     useEffect(() => {
@@ -54,11 +56,18 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     })
 
     useEffect(() => {
-        if (!contentRef.current || tab === 6) return
-        const autoScrollMap: Record<number, boolean> = { 0: regexAutoScroll, 1: receivedAutoScroll, 2: businessAutoScroll, 3: llmInputAutoScroll, 4: llmOutputAutoScroll, 5: warningAutoScroll }
-        if (!autoScrollMap[tab]) return
-        contentRef.current.scrollTo({ top: contentRef.current.scrollHeight, behavior: 'auto' })
-    }, [data.regexes.length, data.receivedLines.length, data.llmInputLines.length, data.llmOutputLines.length, data.llmWarningLines.length, data.businessLines.length, tab, regexAutoScroll, receivedAutoScroll, llmInputAutoScroll, llmOutputAutoScroll, warningAutoScroll, businessAutoScroll])
+        if (!contentRef.current) return
+        const shouldScroll =
+            (tab === 1 && regexAutoScroll) ||
+            (tab === 2 && receivedAutoScroll) ||
+            (tab === 3 && businessAutoScroll) ||
+            (tab === 4 && llmInputAutoScroll) ||
+            (tab === 5 && llmOutputAutoScroll) ||
+            (tab === 6 && warningAutoScroll) ||
+            (tab === 7 && llmErrorAutoScroll)
+        if (!shouldScroll) return
+        contentRef.current.scrollTop = contentRef.current.scrollHeight
+    }, [data.regexes.length, data.receivedLines.length, data.llmInputLines.length, data.llmOutputLines.length, data.llmWarningLines.length, data.llmErrorLines.length, data.businessLines.length, tab, regexAutoScroll, receivedAutoScroll, llmInputAutoScroll, llmOutputAutoScroll, warningAutoScroll, llmErrorAutoScroll, businessAutoScroll])
 
     useEffect(() => {
         if (showConfig) return
@@ -149,6 +158,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setBusinessPath(cfg.businessPath ?? '')
         setSenderId(cfg.senderId ?? '')
         setSenderConfigName(cfg.senderConfigName ?? '')
+        setConfigActive(cfg.active ?? false)
     }
 
     const onConfigSelect = (cfg: ICensorInstanceConfig, i: number) => {
@@ -172,12 +182,12 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setBusinessPath('')
         setSenderId('')
         setSenderConfigName('')
+        setConfigActive(false)
     }
 
     const onConfigSave = () => {
         const cfg = currentConfig()
-        const active = selectedConfigIndex !== null ? (data.configs[selectedConfigIndex]?.active ?? false) : false
-        sendCommand(ECensorCommand.CONFIGSAVE, { ...cfg, active })
+        sendCommand(ECensorCommand.CONFIGSAVE, { ...cfg, active: configActive })
     }
 
     const onConfigDelete = () => {
@@ -192,7 +202,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
     const onConfigToggleActive = (i: number) => {
         const cfg = data.configs[i]
-        sendCommand(ECensorCommand.CONFIGSAVE, { ...cfg, active: !(cfg.active ?? false) })
+        const newActive = !(cfg.active ?? false)
+        if (selectedConfigIndex === i) setConfigActive(newActive)
+        sendCommand(ECensorCommand.CONFIGSAVE, { ...cfg, active: newActive })
     }
 
     const aiConfigLlmClose = (llms: ILlm[] | undefined) => {
@@ -238,13 +250,47 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         <Card sx={{ display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', mt: 1, minHeight: 0 }}>
             <CardHeader title={
                 <Stack direction='row' alignItems='center' spacing={1}>
-                    <Typography><b>Filters:</b> {data.regexes.length}</Typography>
                     <Typography><b>Processed:</b> {data.processedCount}</Typography>
-                    <Typography><b>To LLM:</b> {data.llmCount}</Typography>
-                    <Typography flex={1}><b>Tokens:</b> {data.tokensIn.toLocaleString()} in / {data.tokensOut.toLocaleString()} out</Typography>
+                    <Typography><b>Pending:</b> {data.pendingCount}</Typography>
+                    <Typography><b>LLM calls:</b> {data.llmCount}</Typography>
+                    <Typography><b>Tokens:</b> {(data.tokensIn ?? 0).toLocaleString()} in / {(data.tokensOut ?? 0).toLocaleString()} out</Typography>
+                    { (() => {
+                        const batchSize = data.instanceConfig.batchSize || 50
+                        const llmLines = (data.llmCount ?? 0) * batchSize
+                        const avgTkPerLine = llmLines > 0 ? (data.tokensIn ?? 0) / llmLines : 0
+                        const filteredLines = data.processedCount - data.pendingCount - llmLines
+                        const savedTk = filteredLines > 0 && avgTkPerLine > 0 ? Math.round(filteredLines * avgTkPerLine) : 0
+                        const pct = savedTk > 0 ? Math.round(savedTk / (data.tokensIn + savedTk) * 100) : 0
+                        const selectedLlm = data.llms.find(l => l.id === data.instanceConfig.llmId)
+                        const icpm = selectedLlm?.inputCostPerMillion ?? 0
+                        const ocpm = selectedLlm?.outputCostPerMillion ?? 0
+                        const spent = (icpm > 0 || ocpm > 0) ? (data.tokensIn / 1_000_000 * icpm + data.tokensOut / 1_000_000 * ocpm) : 0
+                        const savedCost = icpm > 0 && savedTk > 0 ? (savedTk / 1_000_000 * icpm) : 0
+                        return <>
+                            { savedTk > 0 && <Typography color='success.main'><b>Saved ~{savedTk.toLocaleString()} tk ({pct}%)</b></Typography> }
+                            { savedCost > 0 && <Typography color='success.main'><b>~{savedCost.toFixed(4)}€ saved</b></Typography> }
+                            { spent > 0 && <Typography color='warning.main'><b>{spent.toFixed(4)}€ spent</b></Typography> }
+                            <Typography flex={1} />
+                        </>
+                    })() }
                     {data.connectedSessionId &&
                         <Chip label={data.connectedSessionDescription ?? 'Session'} size='small' color='success' sx={{ maxWidth: 160 }} />
                     }
+                    { data.instanceConfig.name && (
+                        <Stack direction='column' alignItems='flex-end' spacing={0}>
+                            <Typography variant='caption' color='text.secondary'>
+                                {data.instanceConfig.name} (v{data.instanceConfig.version})
+                            </Typography>
+                            { (() => {
+                                const llm = data.llms.find(l => l.id === data.instanceConfig.llmId)
+                                return llm ? (
+                                    <Typography variant='caption' color='text.disabled' sx={{ fontSize: '10px' }}>
+                                        {llm.provider} / {llm.model}
+                                    </Typography>
+                                ) : null
+                            })() }
+                        </Stack>
+                    )}
                     <Button onClick={() => sendCommand(data.analyzing ? ECensorCommand.ANALYZESTOP : ECensorCommand.ANALYZESTART)}
                         color={data.analyzing ? 'error' : 'success'} variant='outlined' size='small'>
                         {data.analyzing ? 'Stop' : 'Start'}
@@ -254,7 +300,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     </IconButton>
                     <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
                         <MenuItem onClick={() => { setMenuAnchor(null); openConfig() }}>Config</MenuItem>
-                        <MenuItem onClick={() => { setMenuAnchor(null); setShowSessionStart(true) }} disabled={!!data.connectedSessionId}>Launch</MenuItem>
+                        <MenuItem onClick={() => { setMenuAnchor(null); setShowSessionStart(true) }} disabled={!!data.connectedSessionId || !data.analyzing}>Launch</MenuItem>
                         <MenuItem onClick={deleteSession} disabled={!data.connectedSessionId}>Delete session</MenuItem>
                     </Menu>
                 </Stack>
@@ -262,26 +308,27 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
                 <Tabs value={tab} onChange={(_, v) => setTab(v)} variant='scrollable' scrollButtons='auto'
                     sx={{ borderBottom: 1, borderColor: 'divider', px: 1, minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
+                    <Tab label={`Objects (${data.assets.length})`} />
                     <Tab label={`Regex (${data.regexes.length})`} />
-                    <Tab label={`Received (${data.receivedLines.length})`} />
+                    <Tab label={`Logstream (${data.receivedLines.length})`} />
                     <Tab label={`Business (${data.businessLines.length})`} />
                     <Tab label={`LLM Input (${data.llmInputLines.length})`} />
                     <Tab label={`LLM Responses (${data.llmOutputLines.length})`} />
-                    <Tab label={`Warnings (${data.llmWarningLines.length})`} />
-                    <Tab label={`Objects (${data.assets.length})`} />
+                    <Tab label={`Issues (${data.llmWarningLines.length})`} />
+                    <Tab label={`LLM Errors (${data.llmErrorLines.length})`} />
                 </Tabs>
-                {(tab === 0 || tab === 1 || tab === 2 || tab === 3 || tab === 4) && (
+                {(tab === 1 || tab === 2 || tab === 3 || tab === 4 || tab === 5 || tab === 7) && (
                     <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
                         <Box sx={{ flex: 1 }} />
                         <FormControlLabel
                             control={<Switch size='small'
-                                checked={tab === 0 ? regexAutoScroll : tab === 1 ? receivedAutoScroll : tab === 2 ? businessAutoScroll : tab === 3 ? llmInputAutoScroll : llmOutputAutoScroll}
-                                onChange={e => { if (tab === 0) setRegexAutoScroll(e.target.checked); else if (tab === 1) setReceivedAutoScroll(e.target.checked); else if (tab === 2) setBusinessAutoScroll(e.target.checked); else if (tab === 3) setLlmInputAutoScroll(e.target.checked); else setLlmOutputAutoScroll(e.target.checked) }} />}
+                                checked={tab === 1 ? regexAutoScroll : tab === 2 ? receivedAutoScroll : tab === 3 ? businessAutoScroll : tab === 4 ? llmInputAutoScroll : tab === 5 ? llmOutputAutoScroll : llmErrorAutoScroll}
+                                onChange={e => { if (tab === 1) setRegexAutoScroll(e.target.checked); else if (tab === 2) setReceivedAutoScroll(e.target.checked); else if (tab === 3) setBusinessAutoScroll(e.target.checked); else if (tab === 4) setLlmInputAutoScroll(e.target.checked); else if (tab === 5) setLlmOutputAutoScroll(e.target.checked); else setLlmErrorAutoScroll(e.target.checked) }} />}
                             label={<Typography variant='caption'>Autoscroll</Typography>}
                             sx={{ ml: 0.5, mr: 0 }} />
                     </Box>
                 )}
-                {tab === 5 && (
+                {tab === 6 && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, px: 0.5, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
                         {data.allTags.map(tag => (
                             <Chip key={tag} label={tag} size='small'
@@ -308,8 +355,25 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
                 <Box ref={contentRef} sx={{ overflowY: 'auto', height: panelHeight }}>
 
-                    {/* Tab 0 — Regex list */}
+                    {/* Tab 0 — Objects being analyzed */}
                     {tab === 0 && (
+                        data.assets.length === 0
+                            ? <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>No objects currently being analyzed.</Typography>
+                            : <List dense disablePadding>
+                                {data.assets.map((asset, i) => (
+                                    <ListItem key={i} disableGutters sx={{ px: 0.5 }}>
+                                        <ListItemText
+                                            primary={`${asset.pod} / ${asset.container}`}
+                                            secondary={asset.namespace}
+                                            primaryTypographyProps={{ variant: 'caption', fontFamily: 'monospace', fontSize: '11px' }}
+                                            secondaryTypographyProps={{ variant: 'caption', fontSize: '10px' }} />
+                                    </ListItem>
+                                ))}
+                            </List>
+                    )}
+
+                    {/* Tab 1 — Regex list */}
+                    {tab === 1 && (
                         data.regexes.length === 0
                             ? <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>
                                 No filters yet. Waiting for first {batchSize} lines...
@@ -333,8 +397,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             </List>
                     )}
 
-                    {/* Tab 1 — All received lines */}
-                    {tab === 1 && data.receivedLines.map((line, i) => (
+                    {/* Tab 2 — All received lines */}
+                    {tab === 2 && data.receivedLines.map((line, i) => (
                         <Box key={i} sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, '&:hover': { bgcolor: 'action.hover' }, px: 0.5, borderRadius: 0.5 }}>
                             <Typography variant='caption' color='text.disabled' sx={{ minWidth: '160px', fontFamily: 'monospace', flexShrink: 0 }}>
                                 {line.pod}/{line.container}
@@ -345,8 +409,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         </Box>
                     ))}
 
-                    {/* Tab 2 — Business events */}
-                    {tab === 2 && data.businessLines.map((line, i) => (
+                    {/* Tab 3 — Business events */}
+                    {tab === 3 && data.businessLines.map((line, i) => (
                         <Box key={i} sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, '&:hover': { bgcolor: 'action.hover' }, px: 0.5, borderRadius: 0.5 }}>
                             <Typography variant='caption' color='text.disabled' sx={{ minWidth: '120px', fontFamily: 'monospace', flexShrink: 0 }}>
                                 {line.namespace}/{line.pod}
@@ -362,39 +426,22 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         </Box>
                     ))}
 
-                    {/* Tab 3 — Lines sent to LLM */}
-                    {tab === 3 && data.llmInputLines.map((line, i) => (
+                    {/* Tab 4 — Lines sent to LLM */}
+                    {tab === 4 && data.llmInputLines.map((line, i) => (
                         <Typography key={i} variant='caption' sx={{ fontFamily: 'monospace', display: 'block', px: 0.5, wordBreak: 'break-all', '&:hover': { bgcolor: 'action.hover' } }}>
                             {line}
                         </Typography>
                     ))}
 
-                    {/* Tab 4 — LLM responses */}
-                    {tab === 4 && data.llmOutputLines.map((out, i) => (
+                    {/* Tab 5 — LLM responses */}
+                    {tab === 5 && data.llmOutputLines.map((out, i) => (
                         <Box key={i} sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '11px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                             {out}
                         </Box>
                     ))}
 
-                    {/* Tab 6 — Objects being analyzed */}
-                    {tab === 6 && (
-                        data.assets.length === 0
-                            ? <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>No objects currently being analyzed.</Typography>
-                            : <List dense disablePadding>
-                                {data.assets.map((asset, i) => (
-                                    <ListItem key={i} disableGutters sx={{ px: 0.5 }}>
-                                        <ListItemText
-                                            primary={`${asset.pod} / ${asset.container}`}
-                                            secondary={asset.namespace}
-                                            primaryTypographyProps={{ variant: 'caption', fontFamily: 'monospace', fontSize: '11px' }}
-                                            secondaryTypographyProps={{ variant: 'caption', fontSize: '10px' }} />
-                                    </ListItem>
-                                ))}
-                            </List>
-                    )}
-
-                    {/* Tab 5 — LLM warnings */}
-                    {tab === 5 && <>
+                    {/* Tab 6 — Issues */}
+                    {tab === 6 && <>
                         {data.llmWarningLines
                             .filter(w => {
                                 if (activeTagFilters.length === 0) return true
@@ -415,6 +462,14 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             ))
                         }
                     </>}
+
+                    {/* Tab 7 — LLM Errors */}
+                    {tab === 7 && data.llmErrorLines.map((e, i) => (
+                        <Box key={i} sx={{ display: 'flex', flexDirection: 'column', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}>
+                            <Typography variant='caption' color='text.disabled' sx={{ fontFamily: 'monospace', fontSize: '10px' }}>{e.timestamp}</Typography>
+                            <Typography variant='caption' color='error.main' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{e.text}</Typography>
+                        </Box>
+                    ))}
 
                 </Box>
             </CardContent>

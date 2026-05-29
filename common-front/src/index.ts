@@ -97,3 +97,4 @@ export interface IChannel {
 }
 
 export const cleanANSI = (text: string): string => text.replace(/\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g, '')
+export { MarkdownViewer } from './MarkdownViewer'

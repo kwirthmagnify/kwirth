@@ -22,5 +22,7 @@ export interface ILlm {
     temperature: number
     useProviderKey: boolean
     key: string
+    inputCostPerMillion?: number
+    outputCostPerMillion?: number
     data?: unknown
 }

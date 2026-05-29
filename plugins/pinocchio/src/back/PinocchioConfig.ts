@@ -34,6 +34,7 @@ export interface IAnalysis {
         description: string
         level: 'low'|'medium'|'high'|'critical'
     }[],
+    report?: string
     timestamp: number
     usage?: {
         input?:number,
@@ -46,6 +47,8 @@ export interface IAnalysis {
 export interface IMessage {
     timestamp: number
     text: string
+    role?: 'llm'
+    playground?: true
 }
 
 export interface IConfigTriggerVersion {

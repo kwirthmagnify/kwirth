@@ -33,11 +33,13 @@ export interface ICensorData {
     llmInputLines: string[]
     llmOutputLines: string[]
     llmWarningLines: ICensorWarning[]
+    llmErrorLines: { text: string, timestamp: string }[]
     allTags: string[]
     regexes: ICensorRegex[]
     assets: ICensorAsset[]
     processedCount: number
     llmCount: number
+    pendingCount: number
     tokensIn: number
     tokensOut: number
     paused: boolean
@@ -60,11 +62,13 @@ export class CensorData implements ICensorData {
     llmInputLines: string[] = []
     llmOutputLines: string[] = []
     llmWarningLines: ICensorWarning[] = []
+    llmErrorLines: { text: string, timestamp: string }[] = []
     allTags: string[] = []
     regexes: ICensorRegex[] = []
     assets: ICensorAsset[] = []
     processedCount = 0
     llmCount = 0
+    pendingCount = 0
     tokensIn = 0
     tokensOut = 0
     paused = false

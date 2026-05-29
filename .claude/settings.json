@@ -64,7 +64,9 @@
       "Bash(rm -rf c:/github/aisdkvercel/kwirth/front/node_modules/.cache && echo \"cache cleared\")",
       "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
       "Bash(xargs grep -l \"nsis\\\\|wix\\\\|installerFilename\")",
-      "Bash(xargs grep -A5 \"tauri\")"
+      "Bash(xargs grep -A5 \"tauri\")",
+      "PowerShell(\\(Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\dist\\\\back.js\" -TotalCount 71040\\)[-20..-1])",
+      "Bash(xargs grep -l \"interface IBackChannelObject\")"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

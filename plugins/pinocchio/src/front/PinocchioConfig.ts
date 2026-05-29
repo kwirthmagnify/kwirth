@@ -46,6 +46,8 @@ export interface IAnalysis {
 export interface IMessage {
     timestamp: number
     text: string
+    role?: 'llm'
+    playground?: true
 }
 
 export interface IConfigTriggerVersion {

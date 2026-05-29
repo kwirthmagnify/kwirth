@@ -53,6 +53,8 @@ interface IBackChannelRequirements {
 interface IBackChannelObject {
     writeStorage?(id: string, secret: boolean, data: any): Promise<void>
     readStorage?(id: string, secret: boolean): Promise<any>
+    writeStorageCommon?(id: string, secret: boolean, data: any): Promise<void>
+    readStorageCommon?(id: string, secret: boolean): Promise<any>
     logInfo?(message: unknown): void
     logTrace?(message: unknown): void
     logWarning?(message: unknown): void

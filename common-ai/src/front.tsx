@@ -49,23 +49,27 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
     const [temperature, setTemperature] = useState(0)
     const [useProviderKey, setUseProviderKey] = useState(true)
     const [key, setKey] = useState('')
+    const [inputCostPerMillion, setInputCostPerMillion] = useState<number | ''>(0)
+    const [outputCostPerMillion, setOutputCostPerMillion] = useState<number | ''>(0)
 
     const onLlmSelected = (index: number) => {
         const l = llms[index]
         if (l) {
             setId(l.id); setProvider(l.provider); setModel(l.model)
             setTemperature(l.temperature); setUseProviderKey(l.useProviderKey); setKey(l.key)
+            setInputCostPerMillion(l.inputCostPerMillion ?? 0)
+            setOutputCostPerMillion(l.outputCostPerMillion ?? 0)
             setSelectedIndex(index)
         }
     }
 
     const onNew = () => {
         setSelectedIndex(null); setId(''); setProvider(''); setModel('')
-        setTemperature(0); setUseProviderKey(false); setKey('')
+        setTemperature(0); setUseProviderKey(false); setKey(''); setInputCostPerMillion(0); setOutputCostPerMillion(0)
     }
 
     const onAdd = () => {
-        const llm: ILlm = { id, provider, model, temperature, useProviderKey, key }
+        const llm: ILlm = { id, provider, model, temperature, useProviderKey, key, inputCostPerMillion: inputCostPerMillion === '' ? 0 : inputCostPerMillion, outputCostPerMillion: outputCostPerMillion === '' ? 0 : outputCostPerMillion }
         const updated = [...llms]
         if (selectedIndex !== null) updated[selectedIndex] = llm
         else updated.push(llm)
@@ -80,7 +84,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
     }
 
     return (
-        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: '80vw', maxWidth: '800px', height: '55vh' } }}>
+        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: '80vw', maxWidth: '800px', height: '78vh' } }}>
             <DialogTitle>AI — LLM config</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '40%' }}>
@@ -118,6 +122,10 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                 </Select>
                             </FormControl>
                             <TextField value={temperature} onChange={e => setTemperature(+e.target.value)} label='Model temperature' variant='standard' type='number' fullWidth />
+                            <Stack direction='row' spacing={1}>
+                                <TextField value={inputCostPerMillion} onChange={e => setInputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Input cost / M tokens (€/$)' variant='standard' type='number' fullWidth inputProps={{ min: 0, step: 0.01 }} />
+                                <TextField value={outputCostPerMillion} onChange={e => setOutputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Output cost / M tokens (€/$)' variant='standard' type='number' fullWidth inputProps={{ min: 0, step: 0.01 }} />
+                            </Stack>
                             <Stack direction='row' alignItems='center'>
                                 <Typography flex={1}>Use provider API Key (or enter a specific one)</Typography>
                                 <Checkbox checked={useProviderKey} onChange={e => setUseProviderKey(e.target.checked)} />

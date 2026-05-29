@@ -28,6 +28,8 @@ export interface IBackDaemonRequirements {
 export interface IBackDaemonObject {
     writeStorage?(id: string, secret: boolean, data: unknown): Promise<void>
     readStorage?(id: string, secret: boolean): Promise<unknown>
+    writeStorageCommon?(id: string, secret: boolean, data: unknown): Promise<void>
+    readStorageCommon?(id: string, secret: boolean): Promise<unknown>
     logInfo?(message: unknown): void
     logTrace?(message: unknown): void
     logWarning?(message: unknown): void

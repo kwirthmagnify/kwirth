@@ -1,8 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Backdrop, Box, Button, Checkbox, CircularProgress, Dialog, DialogContent, DialogTitle, FormControlLabel, IconButton, List, ListItemButton, Stack, Tab, Tabs, TextField, Tooltip, Typography} from '@mui/material'
+import { Backdrop, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, List, ListItemButton, Stack, Tab, Tabs, TextField, Tooltip, Typography} from '@mui/material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { InputBox } from '../tools/FrontTools'
-import { Delete } from '@mui/icons-material'
+import { Delete, Edit } from '@mui/icons-material'
 import { AccessKey } from '@kwirthmagnify/kwirth-common'
 
 interface IContextSelectorProps {
@@ -20,18 +19,24 @@ interface IContext {
     status?: boolean
 }
 
+interface IClusterDialogData {
+    name: string
+    url: string
+    accessString: string
+}
+
 const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelectorProps) => {
     const {backendUrl} = useContext(SessionContext) as SessionContextType
     const [selectedTab, setSelectedTab] = useState(0)
     const [localContexts, setLocalContexts] = useState<IContext[]>([])
     const [remoteClusters, setRemoteClusters] = useState<{name:string, url:string, accessString:string}[]>([])
-    const [inputBoxTitle, setInputBoxTitle] = useState<any>()
-    const [inputBoxMessage, setInputBoxMessage] = useState<any>()
-    const [inputBoxResult, setInputBoxResult] = useState<(result:any) => void>()
     const [showActive, setShowActive] = useState(true)
     const [waiting, setWaiting] = useState(false)
     const [filterLocal, setFilterLocal] = useState('')
     const [filterRemote, setFilterRemote] = useState('')
+    const [clusterDialogOpen, setClusterDialogOpen] = useState(false)
+    const [clusterDialogData, setClusterDialogData] = useState<IClusterDialogData>({ name: '', url: '', accessString: '' })
+    const [clusterDialogEditIndex, setClusterDialogEditIndex] = useState<number | null>(null)
     const intId = useRef<any>()
 
     useEffect(() => {
@@ -64,7 +69,6 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
             }
         };
     }, [])
-
 
     const updateContextsStatus = async (contexts: IContext[], onUpdate: (updatedCtx: IContext) => void) => {
         try {
@@ -100,23 +104,29 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
         else localStorage.setItem('remoteClusters', JSON.stringify(clusters))
     }
 
-    const addRemoteCluster = () => {
-        setInputBoxResult ( () => (name:any) => {
-            setInputBoxResult ( () => (url:any) => {
-                setInputBoxResult ( () => (accessString:any) => {
-                    console.log(name, url, accessString)
-                    let newRemotes = [...remoteClusters, { name, url, accessString }]
-                    saveRemoteClusters(newRemotes)
-                    setRemoteClusters(newRemotes)
-                })
-                setInputBoxMessage('Enter Kwirth access string')
-                setInputBoxTitle('Add cluster')
-            })
-            setInputBoxMessage('Enter Kwirth URL')
-            setInputBoxTitle('Add cluster')
-        })
-        setInputBoxMessage('Enter cluster name')
-        setInputBoxTitle('Add cluster')
+    const openAddClusterDialog = () => {
+        setClusterDialogData({ name: '', url: '', accessString: '' })
+        setClusterDialogEditIndex(null)
+        setClusterDialogOpen(true)
+    }
+
+    const openEditClusterDialog = (index: number) => {
+        const c = remoteClusters[index]
+        setClusterDialogData({ name: c.name, url: c.url, accessString: c.accessString })
+        setClusterDialogEditIndex(index)
+        setClusterDialogOpen(true)
+    }
+
+    const saveClusterDialog = async () => {
+        const { name, url, accessString } = clusterDialogData
+        let newRemotes
+        if (clusterDialogEditIndex === null)
+            newRemotes = [...remoteClusters, { name, url, accessString }]
+        else
+            newRemotes = remoteClusters.map((c, i) => i === clusterDialogEditIndex ? { name, url, accessString } : c)
+        await saveRemoteClusters(newRemotes)
+        setRemoteClusters(newRemotes)
+        setClusterDialogOpen(false)
     }
 
     const deleteRemoteCluster = (name:string) => {
@@ -164,7 +174,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                     <Stack direction={'column'} sx={{height:300}}>
                         <Stack direction={'row'} sx={{width:'100%'}}>
                             <TextField label={'Filter'} value={filterLocal} onChange={(e) => setFilterLocal(e.target.value)} sx={{width:'100%', ml:2, mr:2}} variant={'standard'}></TextField>
-                            <FormControlLabel control={<Checkbox />} checked={showActive} onChange={() => setShowActive(!showActive)} label={'Show only active'}/>
+                            <FormControlLabel control={<Checkbox />} checked={showActive} onChange={() => setShowActive(!showActive)} label={'Show only active'}/>
                         </Stack>
                         <Stack direction={'column'} sx={{height:300, overflowY:'auto' }}>
                             <List>
@@ -189,11 +199,14 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                         <TextField label={'Filter'} value={filterRemote} onChange={(e) => setFilterRemote(e.target.value)} sx={{ml:2, mr:2}} variant={'standard'}></TextField>
                         <List>
                         {
-                            remoteClusters.filter(c => c.name.includes(filterRemote)).map(c =>
-                                <Stack key={c.name} direction={'row'} sx={{wodth:'100%'}}>
+                            remoteClusters.filter(c => c.name.includes(filterRemote)).map((c, i) =>
+                                <Stack key={c.name} direction={'row'} sx={{width:'100%'}}>
                                     <ListItemButton onClick={() => { setWaiting(true); props.onContextSelectorRemote(c.name, c.url, c.accessString) }}>
                                         <Typography>{c.name}</Typography>
                                     </ListItemButton>
+                                    <IconButton onClick={() => openEditClusterDialog(i)}>
+                                        <Edit />
+                                    </IconButton>
                                     <IconButton onClick={() => deleteRemoteCluster(c.name)}>
                                         <Delete />
                                     </IconButton>
@@ -202,13 +215,28 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                         }
                         </List>
                     </Stack>
-                    <Button onClick={addRemoteCluster} sx={{ml:1, mt:1}}>Add cluster</Button>
+                    <Button onClick={openAddClusterDialog} sx={{ml:1, mt:1}}>Add cluster</Button>
                     </>
                 }
 
             </DialogContent>
         </Dialog>
-        <InputBox title={inputBoxTitle} message={inputBoxMessage} onClose={() => setInputBoxTitle(undefined)} onResult={inputBoxResult} width='300px'/>
+
+        <Dialog open={clusterDialogOpen} disableRestoreFocus>
+            <DialogTitle>{clusterDialogEditIndex === null ? 'Add cluster' : 'Edit cluster'}</DialogTitle>
+            <DialogContent sx={{width: 420, height: 210}}>
+                <Stack direction='column' spacing={2} sx={{mt: 1}}>
+                    <TextField label='Name' value={clusterDialogData.name} onChange={e => setClusterDialogData(d => ({...d, name: e.target.value}))} fullWidth size='small'/>
+                    <TextField label='Kwirth URL' value={clusterDialogData.url} onChange={e => setClusterDialogData(d => ({...d, url: e.target.value}))} fullWidth size='small'/>
+                    <TextField label='Access string' value={clusterDialogData.accessString} onChange={e => setClusterDialogData(d => ({...d, accessString: e.target.value}))} fullWidth size='small'/>
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={saveClusterDialog} disabled={!clusterDialogData.name || !clusterDialogData.url}>Save</Button>
+                <Button onClick={() => setClusterDialogOpen(false)}>Cancel</Button>
+            </DialogActions>
+        </Dialog>
+
         {waiting && <Backdrop
             sx={(theme) => ({ color: '#fff', zIndex: theme.zIndex.drawer + 10000 })}
             open={true}

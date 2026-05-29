@@ -143,13 +143,32 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             MuiAppBar: {
                 styleOverrides: {
                     root: ({ theme }) => ({
-                        backgroundImage: 'none', 
-                        backgroundColor: theme.palette.mode === 'dark' 
+                        backgroundImage: 'none',
+                        backgroundColor: theme.palette.mode === 'dark'
                             ? theme.palette.grey[900]
                             : theme.palette.primary.main,
                     }),
                 },
-            },            
+            },
+
+            MuiCssBaseline: {
+                styleOverrides: (theme) => ({
+                    '::-webkit-scrollbar': {
+                        width: '8px',
+                        height: '8px',
+                    },
+                    '::-webkit-scrollbar-thumb': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
+                        borderRadius: '4px',
+                    },
+                    '::-webkit-scrollbar-track': {
+                        background: 'transparent',
+                    },
+                    '::-webkit-scrollbar-corner': {
+                        background: 'transparent',
+                    },
+                }),
+            },
         },
     }), [mode])
 

@@ -89,10 +89,14 @@ export class PinocchioChannel {
             crdInstances: [],
             syncCrdInstances: false
         })
-        let provs = await this.backChannelObject.readStorage!(STORAGE_KEY_PROVIDERS, true)
+        let provs = await this.backChannelObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)
         if (provs) this.providers = provs
         let config = await this.backChannelObject.readStorage!('pinocchio-config', false) as IPinocchioConfig
         if (config) this.pinocchioConfig = config
+        try {
+            const sharedLlms = await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)
+            if (sharedLlms?.length) this.pinocchioConfig.llms = sharedLlms
+        } catch { /* shared LLMs not yet configured */ }
         loadModels(this.providers, this.backChannelObject)
     }
 
@@ -291,7 +295,9 @@ export class PinocchioChannel {
                                                     description: z.string().min(1),
                                                     level: z.enum(['low', 'medium', 'high', 'critical']),
                                                 })
-                                            )
+                                            ),
+                                            report: z.string().min(1),
+                                            hardened_yaml: z.string().min(1)
                                         }),
                                     }),
                                     system: system||'You are a very polite AI system',
@@ -301,6 +307,8 @@ export class PinocchioChannel {
                                 let analysis:IAnalysis = {
                                     text: `${eventsEvent.type} ${eventsEvent.obj.kind} '${eventsEvent.obj.metadata.name}' in namespace '${eventsEvent.obj.metadata.namespace}' [LLM:${llmProviderId}/${llmModelId}, IN:${usage.inputTokens}, OUT:${usage.outputTokens}]`,
                                     findings: output.findings,
+                                    ...(output.report? {report: output.report}:{}),
+                                    ...(output.hardened_yaml? {hardened_yaml: output.hardened_yaml}:{}),
                                     timestamp: Date.now(),
                                     usage: {
                                         input: usage.inputTokens,
@@ -401,14 +409,14 @@ export class PinocchioChannel {
                     let config:IPinocchioConfig = pinocchioMessage.data as IPinocchioConfig
                     this.pinocchioConfig = config
                     await this.backChannelObject.writeStorage!('pinocchio-config', false, config)
-                    if (config.llms?.length) await this.backChannelObject.writeStorage!(STORAGE_KEY_LLMS, false, config.llms)
+                    if (config.llms?.length) await this.backChannelObject.writeStorageCommon!(STORAGE_KEY_LLMS, false, config.llms)
                     this.executeConfigGet()
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Config updated')
                     break
                 case EPinocchioCommand.PROVIDERSSET:
                     let provs:IConfigProvider[] = pinocchioMessage.data as IConfigProvider[]
                     this.providers = provs
-                    await this.backChannelObject.writeStorage!(STORAGE_KEY_PROVIDERS, true, provs)
+                    await this.backChannelObject.writeStorageCommon!(STORAGE_KEY_PROVIDERS, true, provs)
                     await loadModels(this.providers, this.backChannelObject)
                     this.executeProvidersGet()
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Providers updated')
@@ -451,11 +459,11 @@ export class PinocchioChannel {
             if (!invocation) return
             const { model, temperature, providerOptions, tools, prompt: effectivePrompt } = invocation
 
-            this.broadcastMessage(`[Playground] type: ${triggerType}`)
-            this.broadcastMessage(`[Playground] llm: ${version.llm}`)
-            this.broadcastMessage(`[Playground] system: ${version.system || '(none)'}`)
-            this.broadcastMessage(`[Playground] prompt: ${effectivePrompt}`)
-            this.broadcastMessage(`[Playground] tools: ${version.tools.join(', ') || '(none)'}`)
+            this.broadcastPlaygroundMessage(`[Playground] type: ${triggerType}`)
+            this.broadcastPlaygroundMessage(`[Playground] llm: ${version.llm}`)
+            this.broadcastPlaygroundMessage(`[Playground] system: ${version.system || '(none)'}`)
+            this.broadcastPlaygroundMessage(`[Playground] prompt: ${effectivePrompt}`)
+            this.broadcastPlaygroundMessage(`[Playground] tools: ${version.tools.join(', ') || '(none)'}`)
 
             let activeTools = tools
             if (version.autoTools && Object.keys(tools).length > 0) {
@@ -468,7 +476,7 @@ export class PinocchioChannel {
                     prompt: `Task: ${effectivePrompt}\n\nAvailable tools: ${toolListStr}`
                 })
                 const selectedNames = selectionText.split(',').map(s => s.trim()).filter(n => n in tools)
-                this.broadcastMessage(`[Auto tools] selected: ${selectedNames.join(', ') || '(none)'}`)
+                this.broadcastPlaygroundMessage(`[Auto tools] selected: ${selectedNames.join(', ') || '(none)'}`)
                 activeTools = Object.fromEntries(selectedNames.map(n => [n, tools[n]]))
             }
 
@@ -487,11 +495,11 @@ export class PinocchioChannel {
                 const s = step as unknown as { toolCalls: unknown[]; toolResults: unknown[] }
                 for (const toolCall of (s.toolCalls ?? [])) {
                     const tc = toolCall as { toolName: string; input: unknown }
-                    this.broadcastMessage(`[Tool call] ${tc.toolName}(${JSON.stringify(tc.input)})`)
+                    this.broadcastPlaygroundMessage(`[Tool call] ${tc.toolName}(${JSON.stringify(tc.input)})`)
                 }
                 for (const toolResult of (s.toolResults ?? [])) {
                     const tr = toolResult as { toolName: string; output: unknown }
-                    this.broadcastMessage(`[Tool result] ${tr.toolName}: ${JSON.stringify(tr.output)}`)
+                    this.broadcastPlaygroundMessage(`[Tool result] ${tr.toolName}: ${JSON.stringify(tr.output)}`)
                     toolLines.push(`${tr.toolName}: ${JSON.stringify(tr.output)}`)
                 }
             }
@@ -514,11 +522,11 @@ export class PinocchioChannel {
                 totalOut += usage2.outputTokens ?? 0
             }
 
-            this.broadcastMessage(`[Playground] response: ${finalResponse || '(empty)'}`)
-            this.broadcastMessage(`[Playground] tokens: ${totalIn} in / ${totalOut} out — ${steps.length} step(s)`)
+            this.broadcastPlaygroundMessage(`[Playground] response: ${finalResponse || '(empty)'}`, 'llm')
+            this.broadcastPlaygroundMessage(`[Playground] tokens: ${totalIn} in / ${totalOut} out — ${steps.length} step(s)`, 'llm')
         }
         catch (err: any) {
-            this.broadcastMessage(`[Sandbox error] ${err.message ?? String(err)}`)
+            this.broadcastPlaygroundMessage(`[Sandbox error] ${err.message ?? String(err)}`)
         }
     }
 
@@ -634,6 +642,10 @@ export class PinocchioChannel {
     // *************************************************************************************
 
     executeConfigGet = async () => {
+        try {
+            const sharedLlms = await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)
+            if (sharedLlms?.length) this.pinocchioConfig.llms = sharedLlms
+        } catch (err) { this.backChannelObject.logWarning?.(`[pinocchio] error reading shared LLMs: ${err}`) }
         for (let connection of this.connections) {
             for (let instance of connection.instances) {
                 let msgConfig:IPinocchioMessageResponse = {
@@ -651,6 +663,13 @@ export class PinocchioChannel {
     }
 
     executeProvidersGet = async () => {
+        try {
+            const freshProviders = await this.backChannelObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)
+            if (freshProviders?.length) {
+                this.providers = freshProviders
+                await loadModels(this.providers, this.backChannelObject)
+            }
+        } catch { /* ignore */ }
         for (let connection of this.connections) {
             for (let instance of connection.instances) {
                 let msgProviders:IPinocchioMessageResponse = {
@@ -675,10 +694,18 @@ export class PinocchioChannel {
         }
     }
 
-    private broadcastMessage = (text:string) => {
+    private broadcastMessage = (text:string, role?: 'llm') => {
         for (let connection of this.connections) {
             for (let instance of connection.instances) {
-                this.sendMessage(connection.webSocket, instance, {timestamp:Date.now(), text})
+                this.sendMessage(connection.webSocket, instance, {timestamp:Date.now(), text, role})
+            }
+        }
+    }
+
+    private broadcastPlaygroundMessage = (text:string, role?: 'llm') => {
+        for (let connection of this.connections) {
+            for (let instance of connection.instances) {
+                this.sendMessage(connection.webSocket, instance, {timestamp:Date.now(), text, role, playground: true})
             }
         }
     }

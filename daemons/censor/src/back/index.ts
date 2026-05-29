@@ -88,6 +88,8 @@ interface IDaemonInstance {
     lineBuffer: string[]
     regexes: IAccumRegex[]
     llmBusy: boolean
+    llmErrorCooldownUntil: number
+    ephemeral?: boolean
     llm?: ILlm
     subscribers: Set<(event: unknown) => void>
 }
@@ -117,7 +119,7 @@ export class CensorDaemon implements IDaemon {
     }
 
     async startDaemon(): Promise<void> {
-        const stored: ILlmProvider[] = (await this.backDaemonObject.readStorage!(STORAGE_KEY_PROVIDERS, true)) ?? []
+        const stored: ILlmProvider[] = (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)) ?? []
         this.providers = stored
         await loadModels(this.providers, this.backDaemonObject)
     }
@@ -151,39 +153,16 @@ export class CensorDaemon implements IDaemon {
             }
             this.instances.set(instanceConfig.id, inst)
 
-            const savedCfg: ICensorInstanceConfig = (await this.backDaemonObject.readStorage!('censor-config', false)) ?? inst.cfg
+            const savedCfg: ICensorInstanceConfig = inst.cfg
             const dataCfg = instanceConfig.data as ICensorInstanceConfig | undefined
             const cfg = dataCfg?.llmId ? dataCfg : savedCfg
-            const llms: ILlm[] = (await this.backDaemonObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
+            const llms: ILlm[] = (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
             const llm = cfg.llmId ? llms.find(l => l.id === cfg.llmId) : undefined
 
             inst.cfg = cfg
             inst.llm = llm
             inst.analyzing = true
-
-            // Restore persisted session state if available (e.g. after server restart)
-            try {
-                const savedState = await this.backDaemonObject.readStorage!(`censor-state-${instanceConfig.id}`, false) as {
-                    processedCount?: number, llmCount?: number, tokensIn?: number, tokensOut?: number, analyzing?: boolean,
-                    regexes?: { pattern: string, example: string, explanation: string }[]
-                } | null
-                if (savedState) {
-                    if (savedState.processedCount !== undefined) inst.processedCount = savedState.processedCount
-                    if (savedState.llmCount !== undefined) inst.llmCount = savedState.llmCount
-                    if (savedState.tokensIn !== undefined) inst.tokensIn = savedState.tokensIn
-                    if (savedState.tokensOut !== undefined) inst.tokensOut = savedState.tokensOut
-                    if (savedState.analyzing !== undefined) inst.analyzing = savedState.analyzing
-                    if (savedState.regexes) {
-                        for (const r of savedState.regexes) {
-                            try { inst.regexes.push({ pattern: r.pattern, compiled: new RegExp(r.pattern), example: r.example, explanation: r.explanation }) }
-                            catch { /* skip invalid regex */ }
-                        }
-                    }
-                }
-            } catch { /* key not found yet — first run */ }
-
-            // Persist initial state so server restarts can restore it before any LLM call
-            await this.persistState(inst)
+            inst.ephemeral = !!(instanceConfig.data as any)?.ephemeral
 
             // Wire any subscribers that registered before this instance was created in memory
             const pending = this.pendingSubscribers.get(instanceConfig.id)
@@ -234,7 +213,6 @@ export class CensorDaemon implements IDaemon {
         for (const asset of inst.assets) asset.passThroughStream.destroy()
         this.instances.delete(instanceId)
         this.pendingSubscribers.delete(instanceId)
-        this.backDaemonObject.writeStorage?.(`censor-state-${instanceId}`, false, null)
     }
 
     processProviderEvent(providerId: string, event: unknown): void {
@@ -290,7 +268,7 @@ export class CensorDaemon implements IDaemon {
                         inst.lineBuffer.push(clean)
                         const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
                         this.backDaemonObject.logInfo?.(`[censor-daemon] business buffered: bufLen=${inst.lineBuffer.length} batchSize=${batchSize} llmBusy=${inst.llmBusy}`)
-                        if (inst.lineBuffer.length >= batchSize && !inst.llmBusy) {
+                        if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
                             const batch = inst.lineBuffer.splice(0, batchSize)
                             this.callLlm(inst, batch)
                         }
@@ -300,7 +278,7 @@ export class CensorDaemon implements IDaemon {
                             }
                         }
                     }
-                    this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut })
+                    this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length })
                 }
             }
         }
@@ -312,7 +290,7 @@ export class CensorDaemon implements IDaemon {
         switch (command) {
             case ECensorDaemonCommand.CONFIGGET: {
                 if (!inst) return null
-                const llms: ILlm[] = (await this.backDaemonObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
+                const llms: ILlm[] = (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
                 const configs: ICensorInstanceConfig[] = (await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []
                 return { instanceConfig: inst.cfg, configs, llms, providers: this.providers }
             }
@@ -325,14 +303,14 @@ export class CensorDaemon implements IDaemon {
                         instanceId,
                         cfg: cfg as ICensorInstanceConfig,
                         assets: [], analyzing: true, processedCount: 0, llmCount: 0,
-                        lineBuffer: [], regexes: [], llmBusy: false, subscribers: new Set()
+                        tokensIn: 0, tokensOut: 0,
+                        lineBuffer: [], regexes: [], llmBusy: false, llmErrorCooldownUntil: 0, subscribers: new Set()
                     }
                     this.instances.set(instanceId, target)
                 }
                 target.cfg = cfg as ICensorInstanceConfig
-                await this.backDaemonObject.writeStorage!('censor-config', false, target.cfg)
-                if (_llms) await this.backDaemonObject.writeStorage!(STORAGE_KEY_LLMS, false, _llms)
-                const llmList: ILlm[] = _llms ?? (await this.backDaemonObject.readStorage!(STORAGE_KEY_LLMS, false)) ?? []
+                if (_llms) await this.backDaemonObject.writeStorageCommon!(STORAGE_KEY_LLMS, false, _llms)
+                const llmList: ILlm[] = _llms ?? (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
                 target.llm = llmList.find((l: ILlm) => l.id === target!.cfg.llmId)
                 return { instanceConfig: target.cfg }
             }
@@ -360,7 +338,7 @@ export class CensorDaemon implements IDaemon {
             case ECensorDaemonCommand.PROVIDERSSET: {
                 const newProviders = data as ILlmProvider[]
                 this.providers = newProviders
-                await this.backDaemonObject.writeStorage!(STORAGE_KEY_PROVIDERS, true, newProviders)
+                await this.backDaemonObject.writeStorageCommon!(STORAGE_KEY_PROVIDERS, true, newProviders)
                 await loadModels(this.providers, this.backDaemonObject)
                 return { providers: this.providers }
             }
@@ -394,13 +372,7 @@ export class CensorDaemon implements IDaemon {
                 return { regexes: inst.regexes.map(r => ({ pattern: r.pattern, example: r.example, explanation: r.explanation })) }
             }
             case ECensorDaemonCommand.STATSGET:
-                if (!inst) {
-                    try {
-                        const saved = await this.backDaemonObject.readStorage!(`censor-state-${instanceId}`, false) as { processedCount?: number, llmCount?: number, tokensIn?: number, tokensOut?: number, analyzing?: boolean } | null
-                        if (saved) return { processedCount: saved.processedCount ?? 0, llmCount: saved.llmCount ?? 0, tokensIn: saved.tokensIn ?? 0, tokensOut: saved.tokensOut ?? 0, analyzing: saved.analyzing ?? true }
-                    } catch {}
-                    return null
-                }
+                if (!inst) return null
                 return { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, analyzing: inst.analyzing }
             case 'analyzestate':
                 if (inst) this.broadcast(inst, 'analyzing', { analyzing: inst.analyzing })
@@ -441,15 +413,8 @@ export class CensorDaemon implements IDaemon {
         for (const cb of inst.subscribers) cb(event)
     }
 
-    private async persistState(inst: IDaemonInstance): Promise<void> {
-        await this.backDaemonObject.writeStorage?.(`censor-state-${inst.instanceId}`, false, {
-            processedCount: inst.processedCount,
-            llmCount: inst.llmCount,
-            tokensIn: inst.tokensIn,
-            tokensOut: inst.tokensOut,
-            analyzing: inst.analyzing,
-            regexes: inst.regexes.map(r => ({ pattern: r.pattern, example: r.example, explanation: r.explanation }))
-        })
+    private async persistState(_inst: IDaemonInstance): Promise<void> {
+        // state is kept in memory only; lost on backend restart
     }
 
     private processChunk(inst: IDaemonInstance, asset: IAsset, chunk: string): void {
@@ -468,25 +433,24 @@ export class CensorDaemon implements IDaemon {
             }
 
             const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
-            if (inst.lineBuffer.length >= batchSize && !inst.llmBusy) {
+            if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
                 const batch = inst.lineBuffer.splice(0, batchSize)
                 this.callLlm(inst, batch)
             }
         }
-        this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut })
+        this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length })
     }
 
     private async callLlm(inst: IDaemonInstance, lines: string[]): Promise<void> {
-        console.log('CALLLLM')
-        console.log(lines)
         inst.llmBusy = true
+        let success = false
         try {
             if (!inst.llm) {
                 this.backDaemonObject.logWarning?.(`[censor-daemon] no LLM configured for instance ${inst.instanceId}`)
                 return
             }
             if (this.providers.length === 0) {
-                const stored: ILlmProvider[] = (await this.backDaemonObject.readStorage!(STORAGE_KEY_PROVIDERS, true)) ?? []
+                const stored: ILlmProvider[] = (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)) ?? []
                 if (stored.length > 0) {
                     this.providers = stored
                     await loadModels(this.providers, this.backDaemonObject)
@@ -518,8 +482,8 @@ export class CensorDaemon implements IDaemon {
             }
             const schema = zodFromExample(example)
 
-            inst.llmCount += lines.length
-            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut })
+            inst.llmCount++
+            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length })
             for (const line of lines) this.broadcast(inst, 'llminput', { text: line })
 
             const { output, usage } = await generateText({
@@ -531,7 +495,7 @@ export class CensorDaemon implements IDaemon {
 
             inst.tokensIn += usage.inputTokens ?? 0
             inst.tokensOut += usage.outputTokens ?? 0
-            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut })
+            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length })
             this.broadcast(inst, 'llmoutput', { text: JSON.stringify(output, null, 2) })
 
             const patterns: string[] = ((output as any).info ?? []).filter((x: any) => x.type === 'discard').map((x: any) => x.regex)
@@ -591,12 +555,23 @@ export class CensorDaemon implements IDaemon {
                 }
             }
             await this.persistState(inst)
+            success = true
         }
         catch (err) {
             this.backDaemonObject.logError?.(`[censor-daemon] LLM call error: ${err}`)
+            this.broadcast(inst, 'llmerror', { text: String(err), timestamp: new Date().toISOString() })
+            inst.lineBuffer.unshift(...lines)
+            inst.llmErrorCooldownUntil = Date.now() + 5_000
         }
         finally {
             inst.llmBusy = false
+            if (success) {
+                const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
+                if (inst.lineBuffer.length >= batchSize) {
+                    const batch = inst.lineBuffer.splice(0, batchSize)
+                    this.callLlm(inst, batch)
+                }
+            }
         }
     }
 }

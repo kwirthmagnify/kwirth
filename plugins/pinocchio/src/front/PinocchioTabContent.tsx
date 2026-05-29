@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Box, Button, Card, CardContent, CardHeader, Stack, Typography } from '@mui/material'
+import { Box, Button, Card, CardContent, CardHeader, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
@@ -11,7 +11,7 @@ import React from 'react'
 import { MenuConfig } from './MenuConfig'
 import { PinocchioImportExport } from './PinocchioImportExport'
 import { PinocchioPlayground } from './PinocchioPlayground'
-import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
+import { IChannelObject, MarkdownViewer } from '@kwirthmagnify/kwirth-common-front'
 
 interface IContentProps {
     webSocket?: WebSocket
@@ -26,11 +26,14 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const [isAtBottom, setIsAtBottom] = useState(true)
     const [pinocchioBoxTop, setPinocchioBoxTop] = useState(0)
     const [showPlayground, setShowPlayground] = useState(false)
+    const playgroundStartIndex = useRef<number | null>(null)
     const [showConfigTrigger, setShowConfigTrigger] = useState(false)
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
     const [showImportExport, setShowImportExport] = useState(false)
     const [anchorMenu, setAnchorMenu] = useState<Element | undefined>(undefined)
+    const [reportContent, setReportContent] = useState<string | null>(null)
+    const [, forceUpdate] = useState(0)
     const priorityOrder = {
         'critical': 0,
         'high': 1,
@@ -73,16 +76,23 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const showContent = () => {
         if (!pinocchioData || !pinocchioData.content) return <></>
+        const visibleContent = (playgroundStartIndex.current !== null
+            ? pinocchioData.content.slice(0, playgroundStartIndex.current)
+            : pinocchioData.content
+        ).filter(item => !(item as IMessage).playground)
         return (<>
-            {pinocchioData.content.map((item, index) => {
-                if (typeof item !== 'string') {
+            {visibleContent.map((item, index) => {
+                if (typeof item !== 'string' && ('findings' in item || 'report' in item)) {
                     let analysis = item as IAnalysis
                     return (
                         <React.Fragment key={index}>
                             {analysis.text && (
-                                <Typography variant='body1' sx={{ mt: 2 }}>
-                                    {new Date(analysis.timestamp).toISOString()} {analysis.text}
-                                </Typography>
+                                <Stack direction='row' alignItems='center' sx={{ mt: 2 }}>
+                                    <Typography variant='body1' sx={{ flex: 1 }}>
+                                        {new Date(analysis.timestamp).toISOString()} {analysis.text}
+                                    </Typography>
+                                    <Button size='small' variant='outlined' disabled={!analysis.report} onClick={() => setReportContent(analysis.report ?? null)}>Report</Button>
+                                </Stack>
                             )}
 
                             {analysis.findings && [...analysis.findings]
@@ -106,11 +116,11 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 }
                 else {
                     let message = item as IMessage
-                    return <>
+                    return <React.Fragment key={index}>
                         <Typography variant='body1' sx={{ mt: 2 }}>
                             {new Date(message.timestamp).toISOString()} {message.text}
                         </Typography>
-                    </>
+                    </React.Fragment>
                 }
             })}
             <span ref={messagesEndRef} style={{ float: 'left', clear: 'both' }} />
@@ -207,6 +217,10 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     const pinocchioPlaygroundClose = (newTrigger?: IConfigTrigger) => {
+        if (playgroundStartIndex.current !== null) {
+            pinocchioData.content = pinocchioData.content.slice(0, playgroundStartIndex.current)
+            playgroundStartIndex.current = null
+        }
         setShowPlayground(false)
         if (!newTrigger) return
         const updatedConfig: IPinocchioConfig = {
@@ -290,8 +304,12 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 <Stack direction={'row'} alignItems={'center'}>
                     <Typography marginRight={'32px'}><b>Events:</b> {pinocchioData.content.length}</Typography>
                     <Typography marginRight={'32px'} flex={1}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {pinocchioData.paused?'paused':pinocchioData.started?'started':'stopped'}</Typography>
-                    <Button onClick={() => setShowPlayground(true)}>Playground</Button>
-                    <Button onClick={(event) => setAnchorMenu(event.currentTarget)}>Config</Button>
+                    <Button onClick={() => { pinocchioData.content = [{ timestamp: Date.now(), text: 'Findings cleared' } as IMessage]; forceUpdate(n => n + 1) }}>Clear</Button>
+                    <Button onClick={() => { playgroundStartIndex.current = pinocchioData.content.length; setShowPlayground(true) }}>Playground</Button>
+                    <Button onClick={(event) => {
+                        props.channelObject.webSocket?.send(JSON.stringify({ channel: 'pinocchio', msgtype: 'pinocchiomessage', id: '1', accessKey: props.channelObject.accessString!, instance: props.channelObject.instanceId, command: EPinocchioCommand.CONFIGGET, action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.DATA }))
+                        setAnchorMenu(event.currentTarget)
+                    }}>Config</Button>
                 </Stack>}>
             </CardHeader>
                 <CardContent sx={{flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
@@ -308,6 +326,17 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} onStateChange={pinocchioPlaygroundStateChange} />}
         { showImportExport && <PinocchioImportExport providers={pinocchioData.providers} config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} providers={pinocchioData.providers} pinocchioConfig={pinocchioData.config} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
+        { reportContent !== null && (
+            <Dialog open={true} onClose={() => setReportContent(null)} PaperProps={{ sx: { width: '60vw', maxWidth: '900px', maxHeight: '70vh' } }}>
+                <DialogTitle>Report</DialogTitle>
+                <DialogContent sx={{ pt: 2, px: 3, pb: 1 }}>
+                    <MarkdownViewer content={reportContent} />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setReportContent(null)}>Close</Button>
+                </DialogActions>
+            </Dialog>
+        )}
     </>
 }
 export { PinocchioTabContent }

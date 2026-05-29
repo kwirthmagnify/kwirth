@@ -50,6 +50,8 @@ import { IncomingMessage } from 'http'
 import fileUpload from 'express-fileupload'
 import v8 from 'node:v8'
 import http from 'http'
+import os from 'os'
+import path from 'path'
 import bodyParser from 'body-parser'
 import cors from 'cors'
 import { Application } from 'express-serve-static-core'
@@ -220,7 +222,7 @@ if (envCommand!==undefined) {
 const getExecutionEnvironment = async (context:string|undefined):Promise<string> => {
     logInfo(ELogComponent.CORE, 'Detecting execution environment...')
 
-    logInfo(ELogComponent.CORE, 'Trying Desktop (Tauri)...')
+    logInfo(ELogComponent.CORE, 'Trying Desktop (Electron/Tauri)...')
     if (runningEnv.isDesktop) return 'desktop'
 
     logInfo(ELogComponent.CORE, 'Trying Kubernetes...')
@@ -1558,7 +1560,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                         const base64Data = Buffer.from(JSON.stringify(data), 'utf8').toString('base64')
                         await runningInstance.secrets.write('kwirth-store-daemon-' + id, { data: base64Data })
                     } else {
-                        await runningInstance.configMaps.write('kwirth-store-daemon-' + id, JSON.stringify(data))
+                        await runningInstance.configMaps.write('kwirth-store-daemon-' + id, data === null ? null : JSON.stringify(data))
                     }
                 },
                 readStorage: async (id: string, secret: boolean) => {
@@ -1568,6 +1570,25 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                         return undefined
                     } else {
                         const content = await runningInstance.configMaps.read('kwirth-store-daemon-' + id)
+                        if (content) return JSON.parse(content)
+                        return undefined
+                    }
+                },
+                writeStorageCommon: async (id: string, secret: boolean, data: unknown) => {
+                    if (secret) {
+                        const base64Data = Buffer.from(JSON.stringify(data), 'utf8').toString('base64')
+                        await runningInstance.secrets.write('kwirth-store-common-' + id, { data: base64Data })
+                    } else {
+                        await runningInstance.configMaps.write('kwirth-store-common-' + id, data === null ? null : JSON.stringify(data))
+                    }
+                },
+                readStorageCommon: async (id: string, secret: boolean) => {
+                    if (secret) {
+                        const content = await runningInstance.secrets.read('kwirth-store-common-' + id)
+                        if (content?.data) return JSON.parse(Buffer.from(content.data, 'base64').toString('utf8'))
+                        return undefined
+                    } else {
+                        const content = await runningInstance.configMaps.read('kwirth-store-common-' + id)
                         if (content) return JSON.parse(content)
                         return undefined
                     }
@@ -1585,28 +1606,46 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             logError: (message: unknown) => logError(ELogComponent.CHANNEL, message),
             writeStorage: async (id: string, secret: boolean, data: any) => {
                 if (secret) {
-                    const jsonString = JSON.stringify(data);
-                    const base64Data = Buffer.from(jsonString, 'utf8').toString('base64');
-                    
-                    await runningInstance.secrets.write('kwirth-store-channel-' + id, { 
-                        data: base64Data 
-                    });
+                    const base64Data = Buffer.from(JSON.stringify(data), 'utf8').toString('base64')
+                    await runningInstance.secrets.write('kwirth-store-channel-' + id, { data: base64Data })
                 } else {
-                    await runningInstance.configMaps.write('kwirth-store-channel-' + id, JSON.stringify(data));
+                    await runningInstance.configMaps.write('kwirth-store-channel-' + id, JSON.stringify(data))
                 }
             },
             readStorage: async (id: string, secret: boolean) => {
                 if (secret) {
-                    let content = await runningInstance.secrets.read('kwirth-store-channel-' + id);
+                    let content = await runningInstance.secrets.read('kwirth-store-channel-' + id)
                     if (content && content['data']) {
-                        const decodedString = Buffer.from(content['data'], 'base64').toString('utf8');
-                        return JSON.parse(decodedString);
+                        const decodedString = Buffer.from(content['data'], 'base64').toString('utf8')
+                        return JSON.parse(decodedString)
                     }
-                    return undefined;
+                    return undefined
                 } else {
-                    let content = await runningInstance.configMaps.read('kwirth-store-channel-' + id);
-                    if (content) return JSON.parse(content);
-                    return undefined;
+                    let content = await runningInstance.configMaps.read('kwirth-store-channel-' + id)
+                    if (content) return JSON.parse(content)
+                    return undefined
+                }
+            },
+            writeStorageCommon: async (id: string, secret: boolean, data: any) => {
+                if (secret) {
+                    const base64Data = Buffer.from(JSON.stringify(data), 'utf8').toString('base64')
+                    await runningInstance.secrets.write('kwirth-store-common-' + id, { data: base64Data })
+                } else {
+                    await runningInstance.configMaps.write('kwirth-store-common-' + id, JSON.stringify(data))
+                }
+            },
+            readStorageCommon: async (id: string, secret: boolean) => {
+                if (secret) {
+                    let content = await runningInstance.secrets.read('kwirth-store-common-' + id)
+                    if (content && content['data']) {
+                        const decodedString = Buffer.from(content['data'], 'base64').toString('utf8')
+                        return JSON.parse(decodedString)
+                    }
+                    return undefined
+                } else {
+                    let content = await runningInstance.configMaps.read('kwirth-store-common-' + id)
+                    if (content) return JSON.parse(content)
+                    return undefined
                 }
             },
             senders: senderManager,
@@ -2121,6 +2160,56 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
             catch {
                 console.log('Error writing secure exit info. Waiting for 1h before finishing')
                 await new Promise((resolve) => setTimeout(resolve, 60*60*1000))
+            }
+        }
+
+        if (runningEnv.isDesktop) {
+            try {
+                const kwirthDir = path.join(os.homedir(), '.kwirth')
+                if (!fs.existsSync(kwirthDir)) fs.mkdirSync(kwirthDir, { recursive: true })
+                const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+                const crashPath = path.join(kwirthDir, `crash-${stamp}.log`)
+                const mem = process.memoryUsage()
+                const error = err instanceof Error ? err : (err ? new Error(String(err)) : undefined)
+                const lines = [
+                    `=== Kwirth Desktop Crash Report ===`,
+                    `Timestamp : ${new Date().toISOString()}`,
+                    ``,
+                    `--- Error ---`,
+                    `Message   : ${error?.message ?? '(none)'}`,
+                    `Name      : ${error?.name ?? '(none)'}`,
+                    `Stack     :`,
+                    error?.stack ?? '(no stack)',
+                    ``,
+                    reason ? `Reason    : ${JSON.stringify(reason)}` : '',
+                    promise ? `Promise   : ${JSON.stringify(promise)}` : '',
+                    origin ? `Origin    : ${origin}` : '',
+                    ``,
+                    `--- Process ---`,
+                    `PID       : ${process.pid}`,
+                    `Platform  : ${process.platform} ${process.arch}`,
+                    `Node      : ${process.version}`,
+                    `Electron  : ${(process.versions as any).electron ?? 'n/a'}`,
+                    `Uptime    : ${process.uptime().toFixed(1)}s`,
+                    ``,
+                    `--- Memory (bytes) ---`,
+                    `RSS       : ${mem.rss}`,
+                    `HeapTotal : ${mem.heapTotal}`,
+                    `HeapUsed  : ${mem.heapUsed}`,
+                    `External  : ${mem.external}`,
+                    ``,
+                    `--- Environment ---`,
+                    `CONTEXT   : ${process.env.CONTEXT ?? ''}`,
+                    `ROOTPATH  : ${process.env.ROOTPATH ?? ''}`,
+                    `PORT      : ${process.env.PORT ?? ''}`,
+                    `FORCE     : ${process.env.FORCE ?? ''}`,
+                    `AUTH      : ${process.env.AUTH ?? ''}`,
+                ].filter(l => l !== '')
+                fs.writeFileSync(crashPath, lines.join('\n'), 'utf8')
+                logError(ELogComponent.CORE, `Crash log written to ${crashPath}`)
+            }
+            catch (writeErr) {
+                console.error('Failed to write desktop crash log:', writeErr)
             }
         }
 
