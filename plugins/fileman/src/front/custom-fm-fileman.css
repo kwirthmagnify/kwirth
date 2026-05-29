@@ -14,7 +14,6 @@
 }
 
 .custom-fm-fileman .files-container {
-  /* background-color: #f0f0f0; */
   background-color: var(--mui-palette-background-default) !important;
   box-sizing: initial !important;
 }
@@ -33,5 +32,5 @@
 }
 
 .custom-fm-fileman .item-action:hover {
-  background-color: var(--mui-palette-action-hover) !important;  
+  background-color: var(--mui-palette-action-hover) !important;
 }

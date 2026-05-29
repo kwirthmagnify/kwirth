@@ -25,8 +25,8 @@ import { IOpsData } from '../../ops/OpsData'
 import { TerminalManager } from '../../ops/terminal/TerminalManager'
 import { IOpsInstanceConfig } from '../../ops/OpsTypes'
 
-import { IFilemanData } from '../../fileman/FilemanData'
-import { IFilemanConfig } from '../../fileman/FilemanConfig'
+interface IFilemanData { paused: boolean; started: boolean; files: any[]; currentPath: string; ri: string | undefined; unlock?: () => void }
+interface IFilemanConfig { [key: string]: any }
 
 import { ITrivyData } from '../../trivy/TrivyData'
 import { ITrivyInstanceConfig } from '../../trivy/TrivyTypes'

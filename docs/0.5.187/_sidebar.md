@@ -18,6 +18,7 @@
 * [Data streaming](datastreaming)
 * [Channel Architecture](channelarch)
 * [Plugins](plugins)
+* [Daemons](daemons)
 * [Providers](providers)
 * [Senders](senders)
 * [Channels](channels)

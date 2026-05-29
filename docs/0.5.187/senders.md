@@ -130,6 +130,7 @@ Kwirth ships with eight senders split into two categories:
 | `file` | Appends to a log file with optional line-count rotation |
 | `email-resend` | Sends email via the [Resend](https://resend.com) API |
 | `email-smtp` | Sends email via SMTP — TLS, STARTTLS, or plain |
+| `teams` | Posts a message card to a Microsoft Teams channel via incoming webhook |
 
 **Routing senders** — intercept and route messages to other senders:
 
@@ -196,6 +197,38 @@ Config reference (`ISmtpSenderConfig`):
 | `from` | `string` | ✓ | Sender address |
 | `to` | `string \| string[]` | ✓ | Default recipient(s) |
 | `subject` | `string` | — | Default subject |
+
+### teams
+
+Posts messages to a **Microsoft Teams** channel using an [incoming webhook](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook). Messages are formatted as Adaptive MessageCards with colour-coding by severity level.
+
+Config reference (`ITeamsSenderConfig`):
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | `string` | ✓ | Config identifier |
+| `webhookUrl` | `string` | ✓ | Incoming webhook URL from the Teams channel connector |
+| `title` | `string` | — | Default card title when the message has no `subject` |
+
+Colour mapping by `ISenderMessage.level`:
+
+| Level | Colour |
+|---|---|
+| `error` | Red `#FF0000` |
+| `warning` | Orange `#FFA500` |
+| `info` | Teams blue `#0078D4` |
+| `debug` | Gray `#808080` |
+| _(none)_ | Teams blue `#0078D4` |
+
+Example config:
+
+```json
+{
+  "name": "ops-channel",
+  "webhookUrl": "https://your-org.webhook.office.com/webhookb2/...",
+  "title": "Kwirth alert"
+}
+```
 
 ## Managing senders from the UI
 

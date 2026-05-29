@@ -41,9 +41,8 @@ import { AlertChannel } from './channels/alert/AlertChannel'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { OpsChannel } from './channels/ops/OpsChannel'
 import { TrivyChannel } from './channels/trivy/TrivyChannel'
-import { FilemanChannel } from './channels/fileman/FilemanChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
-// NewsChannel and PinocchioChannel removed — now loaded as plugins
+// NewsChannel, PinocchioChannel and FilemanChannel removed — now loaded as plugins
 
 import { IncomingMessage } from 'http'
 
@@ -123,7 +122,6 @@ const envChannelMetricsEnabled = (process.env.CHANNEL_METRICS || 'true').toLower
 const envChannelAlertEnabled = (process.env.CHANNEL_ALERT || 'true').toLowerCase() === 'true'
 const envChannelOpsEnabled = (process.env.CHANNEL_OPS || 'true').toLowerCase() === 'true'
 const envChannelTrivyEnabled = (process.env.CHANNEL_TRIVY || 'true').toLowerCase() === 'true'
-const envChannelFilemanEnabled = (process.env.CHANNEL_FILEMAN || 'true').toLowerCase() === 'true'
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 
 const runningInstances:IRunningInstance[] = []
@@ -145,7 +143,6 @@ registeredChannels.set('alert', AlertChannel)
 registeredChannels.set('metrics', MetricsChannel)
 registeredChannels.set('ops', OpsChannel)
 registeredChannels.set('trivy', TrivyChannel)
-registeredChannels.set('fileman', FilemanChannel)
 registeredChannels.set('magnify', MagnifyChannel)
 // 'echo', 'news', 'topology' and 'pinocchio' channels loaded dynamically by PluginManager
 
@@ -1448,7 +1445,6 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (envChannelMetricsEnabled) requiredChannels.push('metrics')
         if (envChannelOpsEnabled) requiredChannels.push('ops')
         if (envChannelTrivyEnabled) requiredChannels.push('trivy')
-        if (envChannelFilemanEnabled) requiredChannels.push('fileman')
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
         // plugin channels: load installed plugins and add their ids to requiredChannels
         if (!pluginManager) {

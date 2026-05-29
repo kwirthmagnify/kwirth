@@ -1,12 +1,12 @@
-import { FC } from 'react'
-import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '../IChannel'
+import React, { FC } from 'react'
+import { IChannel, IChannelObject, IChannelRequirements, IContentProps, ISetupProps, EChannelRefreshAction, ENotifyLevel } from '@kwirthmagnify/kwirth-common-front'
+import { IChannelMessageAction } from '@kwirthmagnify/kwirth-common-front'
 import { FilemanInstanceConfig, FilemanConfig } from './FilemanConfig'
 import { FilemanSetup, FilemanIcon } from './FilemanSetup'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageEvent, IInstanceMessage, ISignalMessage } from "@kwirthmagnify/kwirth-common"
 import { EFilemanCommand, FilemanData, IFilemanMessageResponse, IFilemanData } from './FilemanData'
 import { FilemanTabContent } from './FilemanTabContent'
 import { v4 as uuid } from 'uuid'
-import { ENotifyLevel } from '../../tools/Global'
 import { IFileObject } from '@jfvilas/react-file-manager'
 
 interface IFilemanMessage extends IInstanceMessage {
@@ -27,8 +27,8 @@ export class FilemanChannel implements IChannel {
     SetupDialog: FC<ISetupProps> = FilemanSetup
     TabContent: FC<IContentProps> = FilemanTabContent
     channelId = 'fileman'
-    
-    requirements:IChannelRequirements = {
+
+    requirements: IChannelRequirements = {
         accessString: true,
         clusterUrl: true,
         clusterInfo: false,
@@ -44,131 +44,112 @@ export class FilemanChannel implements IChannel {
         webSocket: true
     }
 
-    getScope() { return 'fileman$read'}
+    getScope() { return 'fileman$read' }
     getChannelIcon(): JSX.Element { return FilemanIcon }
 
     getSetupVisibility(): boolean { return this.setupVisible }
-    setSetupVisibility(visibility:boolean): void { this.setupVisible = visibility }
+    setSetupVisibility(visibility: boolean): void { this.setupVisible = visibility }
 
     processChannelMessage(channelObject: IChannelObject, wsEvent: MessageEvent): IChannelMessageAction {
-        let msg:IFilemanMessage = JSON.parse(wsEvent.data)
+        let msg: IFilemanMessage = JSON.parse(wsEvent.data)
 
-        let filemanData:IFilemanData = channelObject.data
+        let filemanData: IFilemanData = channelObject.data
         switch (msg.type) {
             case EInstanceMessageType.DATA: {
                 let response = JSON.parse(wsEvent.data) as IFilemanMessageResponse
-                switch(response.action) {
+                switch (response.action) {
                     case EInstanceMessageAction.COMMAND: {
-                        switch(response.command) {
-                            case EFilemanCommand.HOME:
+                        switch (response.command) {
+                            case EFilemanCommand.HOME: {
                                 let data = response.data as string[]
-                                let nss = Array.from (new Set (data.map(n => n.split('/')[0])))
+                                let nss = Array.from(new Set(data.map(n => n.split('/')[0])))
                                 nss.forEach(ns => {
-                                    if (!filemanData.files.some(f => f.path === '/'+ ns)) {
-                                        filemanData.files.push ({ name: ns, isDirectory: true, path: '/'+ ns, class:'namespace' })
+                                    if (!filemanData.files.some(f => f.path === '/' + ns)) {
+                                        filemanData.files.push({ name: ns, isDirectory: true, path: '/' + ns, class: 'namespace' })
                                     }
-                                    let podNames = Array.from (new Set (data.filter(a => a.split('/')[0]===ns).map(o => o.split('/')[1])))
+                                    let podNames = Array.from(new Set(data.filter(a => a.split('/')[0] === ns).map(o => o.split('/')[1])))
                                     podNames.forEach(p => {
-                                        if (!filemanData.files.some(f => f.path === '/'+ns+'/'+p)) {
-                                            filemanData.files.push({ name: p, isDirectory: true, path: '/'+ns+'/'+p, class:'pod' })
+                                        if (!filemanData.files.some(f => f.path === '/' + ns + '/' + p)) {
+                                            filemanData.files.push({ name: p, isDirectory: true, path: '/' + ns + '/' + p, class: 'pod' })
                                         }
-                                        let conts = Array.from (new Set (data.filter(a => a.split('/')[0]===ns && a.split('/')[1]===p).map(o => o.split('/')[2])))
+                                        let conts = Array.from(new Set(data.filter(a => a.split('/')[0] === ns && a.split('/')[1] === p).map(o => o.split('/')[2])))
                                         conts.forEach(c => {
-                                            if (!filemanData.files.some(f => f.path === '/'+ns+'/'+p+'/'+c)) {
-                                                filemanData.files.push ({ name: c, isDirectory: true, path: '/'+ns+'/'+p+'/'+c, class:'container' })
+                                            if (!filemanData.files.some(f => f.path === '/' + ns + '/' + p + '/' + c)) {
+                                                filemanData.files.push({ name: c, isDirectory: true, path: '/' + ns + '/' + p + '/' + c, class: 'container' })
                                             }
                                         })
                                     })
                                 })
-                                filemanData.files=[...filemanData.files]
-                                return {
-                                    action: EChannelRefreshAction.REFRESH
-                                }
-                            case EFilemanCommand.DIR:
+                                filemanData.files = [...filemanData.files]
+                                return { action: EChannelRefreshAction.REFRESH }
+                            }
+                            case EFilemanCommand.DIR: {
                                 filemanData.unlock?.()
                                 let content = JSON.parse(response.data)
-                                if (content.status!=='Success') {
-                                    channelObject.notify?.('fileman', ENotifyLevel.ERROR, 'ERROR: '+ (content.text || content.message))
-                                }
-                                else {
+                                if (content.status !== 'Success') {
+                                    channelObject.notify?.('fileman', ENotifyLevel.ERROR, 'ERROR: ' + (content.text || content.message))
+                                } else {
                                     for (let o of content.metadata.object) {
-                                        let name = o.name.split('/')[o.name.split('/').length-1]
-                                        let e:IFileObject = {
+                                        let name = o.name.split('/')[o.name.split('/').length - 1]
+                                        let e: IFileObject = {
                                             name,
-                                            isDirectory: (o.type===1),
+                                            isDirectory: (o.type === 1),
                                             path: o.name,
-                                            ...(o.type===0? {class:'file'}:{}),
-                                            data: {
-                                                updatedAt: new Date(+o.time).toISOString(),
-                                                size: +o.size
-                                            }
+                                            ...(o.type === 0 ? { class: 'file' } : {}),
+                                            data: { updatedAt: new Date(+o.time).toISOString(), size: +o.size }
                                         }
                                         filemanData.files = filemanData.files.filter(f => f.path !== e.path)
-                                        filemanData.files.push (e)
+                                        filemanData.files.push(e)
                                     }
                                 }
-                                return {
-                                    action: EChannelRefreshAction.REFRESH
-                                }
+                                return { action: EChannelRefreshAction.REFRESH }
+                            }
                             case EFilemanCommand.RENAME: {
                                 let content = JSON.parse(response.data)
-                                if (content.status!=='Success') {
-                                    channelObject.notify?.('fileman', ENotifyLevel.ERROR, 'ERROR: '+ (content.text || content.message))
+                                if (content.status !== 'Success') {
+                                    channelObject.notify?.('fileman', ENotifyLevel.ERROR, 'ERROR: ' + (content.text || content.message))
                                 }
-                                return {
-                                    action: EChannelRefreshAction.REFRESH
-                                }
+                                return { action: EChannelRefreshAction.REFRESH }
                             }
                             case EFilemanCommand.DELETE: {
                                 let content = JSON.parse(response.data)
-                                if (content.status==='Success') {
+                                if (content.status === 'Success') {
                                     let fname = content.metadata.object
                                     filemanData.files = filemanData.files.filter(f => f.path !== fname)
-                                    filemanData.files = filemanData.files.filter(f => !f.path.startsWith(fname+'/'))
+                                    filemanData.files = filemanData.files.filter(f => !f.path.startsWith(fname + '/'))
+                                } else {
+                                    channelObject.notify?.('fileman', ENotifyLevel.ERROR, 'ERROR: ' + (content.text || content.message))
                                 }
-                                else {
-                                    channelObject.notify?.('fileman', ENotifyLevel.ERROR, 'ERROR: '+ (content.text || content.message))
-                                }
-                                return {
-                                    action: EChannelRefreshAction.REFRESH
-                                }
+                                return { action: EChannelRefreshAction.REFRESH }
                             }
                             case EFilemanCommand.MOVE:
                             case EFilemanCommand.COPY:
                             case EFilemanCommand.CREATE: {
                                 let content = JSON.parse(response.data)
-                                if (content.status==='Success') {
+                                if (content.status === 'Success') {
                                     filemanData.files = filemanData.files.filter(f => f.path !== content.metadata.object)
-                                    let e:IFileObject = {
+                                    let e: IFileObject = {
                                         name: (content.metadata.object as string).split('/').slice(-1)[0],
-                                        isDirectory: (content.metadata.type===1),
+                                        isDirectory: (content.metadata.type === 1),
                                         path: content.metadata.object,
-                                        ...(content.metadata.type===0? {class:'file'}:{}),
-                                        data: {
-                                            updatedAt: new Date(+content.metadata.time).toISOString(),
-                                            size: +content.metadata.size
-                                        }
+                                        ...(content.metadata.type === 0 ? { class: 'file' } : {}),
+                                        data: { updatedAt: new Date(+content.metadata.time).toISOString(), size: +content.metadata.size }
                                     }
                                     filemanData.files.push(e)
+                                } else {
+                                    channelObject.notify?.('fileman', ENotifyLevel.ERROR, 'ERROR: ' + (content.text || content.message))
                                 }
-                                else {
-                                    channelObject.notify?.('fileman', ENotifyLevel.ERROR, 'ERROR: '+ (content.text || content.message))
-                                }
-                                return {
-                                    action: EChannelRefreshAction.REFRESH
-                                }
+                                return { action: EChannelRefreshAction.REFRESH }
                             }
                         }
                     }
                 }
-                return {
-                    action: EChannelRefreshAction.NONE
-                }
+                return { action: EChannelRefreshAction.NONE }
             }
-            case EInstanceMessageType.SIGNAL:
+            case EInstanceMessageType.SIGNAL: {
                 let signalMessage = JSON.parse(wsEvent.data) as ISignalMessage
                 if (signalMessage.flow === EInstanceMessageFlow.RESPONSE) {
-                    switch(signalMessage.action) {
+                    switch (signalMessage.action) {
                         case EInstanceMessageAction.START:
                             channelObject.instanceId = signalMessage.instance
                             break
@@ -181,24 +162,19 @@ export class FilemanChannel implements IChannel {
                         default:
                             if (signalMessage.text) channelObject.notify?.('fileman', signalMessage.level as any as ENotifyLevel, signalMessage.text)
                     }
-                }
-                else if (signalMessage.flow === EInstanceMessageFlow.UNSOLICITED) {
-
+                } else if (signalMessage.flow === EInstanceMessageFlow.UNSOLICITED) {
                     if (signalMessage.event === ESignalMessageEvent.ADD) {
                         if (!filemanData.ri) {
-                            // just connected, we request endpoints id for uload/dload
-                            let instanceConfig:IInstanceMessage = {
+                            let instanceConfig: IInstanceMessage = {
                                 action: EInstanceMessageAction.RI,
                                 channel: 'fileman',
                                 flow: EInstanceMessageFlow.REQUEST,
                                 type: EInstanceMessageType.SIGNAL,
                                 instance: channelObject.instanceId
                             }
-                            channelObject.webSocket!.send(JSON.stringify( instanceConfig ))
+                            channelObject.webSocket!.send(JSON.stringify(instanceConfig))
                         }
-
-                        // just connected, we request HOME dir
-                        let filemanMessage:IFilemanMessage = {
+                        let filemanMessage: IFilemanMessage = {
                             flow: EInstanceMessageFlow.REQUEST,
                             action: EInstanceMessageAction.COMMAND,
                             channel: 'fileman',
@@ -214,75 +190,59 @@ export class FilemanChannel implements IChannel {
                             params: [],
                             msgtype: 'filemanmessage'
                         }
-                        channelObject.webSocket!.send(JSON.stringify( filemanMessage ))
-
+                        channelObject.webSocket!.send(JSON.stringify(filemanMessage))
                         if (signalMessage.text) channelObject.notify?.('fileman', signalMessage.level as any as ENotifyLevel, signalMessage.text)
-                    }
-                    else if (signalMessage.event === ESignalMessageEvent.DELETE) {
-                        filemanData.files = filemanData.files.filter(f => !f.path.startsWith('/'+signalMessage.namespace+'/'+signalMessage.pod+'/'))
-                        filemanData.files = filemanData.files.filter(f => f.path!=='/'+signalMessage.namespace+'/'+signalMessage.pod)
+                    } else if (signalMessage.event === ESignalMessageEvent.DELETE) {
+                        filemanData.files = filemanData.files.filter(f => !f.path.startsWith('/' + signalMessage.namespace + '/' + signalMessage.pod + '/'))
+                        filemanData.files = filemanData.files.filter(f => f.path !== '/' + signalMessage.namespace + '/' + signalMessage.pod)
                         if (signalMessage.text) channelObject.notify?.('fileman', signalMessage.level as any as ENotifyLevel, signalMessage.text)
-                    }
-                    else {
+                    } else {
                         if (signalMessage.text) channelObject.notify?.('fileman', signalMessage.level as any as ENotifyLevel, signalMessage.text)
                     }
                 }
-                return {
-                    action: EChannelRefreshAction.REFRESH
-                }
+                return { action: EChannelRefreshAction.REFRESH }
+            }
             default:
                 console.log(`Invalid message type ${msg.type}`)
-                return {
-                    action: EChannelRefreshAction.NONE
-                }
+                return { action: EChannelRefreshAction.NONE }
         }
     }
 
-    async initChannel(channelObject:IChannelObject): Promise<boolean> {
+    async initChannel(channelObject: IChannelObject): Promise<boolean> {
         channelObject.instanceConfig = new FilemanInstanceConfig()
-        let config = new FilemanConfig()
-        let data = new FilemanData()
-
-        channelObject.config = config
-        channelObject.data = data
-
+        channelObject.config = new FilemanConfig()
+        channelObject.data = new FilemanData()
         return false
     }
 
-    startChannel(channelObject:IChannelObject): boolean {
-        let filemanData:IFilemanData = channelObject.data
+    startChannel(channelObject: IChannelObject): boolean {
+        let filemanData: IFilemanData = channelObject.data
         filemanData.paused = false
-        filemanData.started = true;
-        filemanData.files=[]
-        filemanData.currentPath='/'
+        filemanData.started = true
+        filemanData.files = []
+        filemanData.currentPath = '/'
         return true
     }
 
-    pauseChannel(channelObject:IChannelObject): boolean {
-        let filemanData:IFilemanData = channelObject.data
+    pauseChannel(channelObject: IChannelObject): boolean {
+        let filemanData: IFilemanData = channelObject.data
         filemanData.paused = true
         return false
     }
 
-    continueChannel(channelObject:IChannelObject): boolean {
-        let filemanData:IFilemanData = channelObject.data
+    continueChannel(channelObject: IChannelObject): boolean {
+        let filemanData: IFilemanData = channelObject.data
         filemanData.paused = false
         return true
     }
 
     stopChannel(channelObject: IChannelObject): boolean {
-        let filemanData:IFilemanData = channelObject.data
+        let filemanData: IFilemanData = channelObject.data
         filemanData.paused = false
         filemanData.started = false
         return true
     }
 
-    socketDisconnected(channelObject: IChannelObject): boolean {
-        return false
-    }
-    
-    socketReconnect(channelObject: IChannelObject): boolean {
-        return false
-    }
-
-}    
+    socketDisconnected(_channelObject: IChannelObject): boolean { return false }
+    socketReconnect(_channelObject: IChannelObject): boolean { return false }
+}

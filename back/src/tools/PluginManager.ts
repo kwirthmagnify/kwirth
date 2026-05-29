@@ -176,7 +176,8 @@ export class PluginManager {
                 return dev.meta
             }
         })
-        return [...stored, ...devMetas]
+        const devIds = new Set(devMetas.map(m => m.id))
+        return [...stored.filter(p => !devIds.has(p.id)), ...devMetas]
     }
 
     async install(tarGzUrl: string, registeredChannels: Map<string, TChannelConstructor>, installedFrom?: string): Promise<IPluginMeta> {

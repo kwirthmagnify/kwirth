@@ -39,7 +39,6 @@ import { OpsChannel } from './channels/ops/OpsChannel'
 import { TrivyChannel } from './channels/trivy/TrivyChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 import { getMetricsNames, ENotifyLevel, readClusterInfo } from './tools/Global'
-import { FilemanChannel } from './channels/fileman/FilemanChannel'
 import { Homepage } from './components/Homepage'
 import { DEFAULTLASTTABS, IColors, TABSELECTEDCOLORS, TABUNSELECTEDCOLORS } from './tools/Constants'
 import { createChannelInstance } from './tools/ChannelTools'
@@ -327,7 +326,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         frontChannels.set('metrics', MetricsChannel)
         frontChannels.set('trivy', TrivyChannel)
         frontChannels.set('ops', OpsChannel)
-        frontChannels.set('fileman', FilemanChannel)
         frontChannels.set('magnify', MagnifyChannel)
     },[])
 

@@ -137,6 +137,165 @@ These plugins are bundled with Kwirth and enabled by default:
 | `echo` | Reference plugin — useful for testing connectivity | [Channels → Echo](./channels?id=echo) |
 | `news` | RSS news feed reader — test/demo plugin | [Channels → News](./channels?id=news) |
 
+## Plugin reference
+
+### echo
+
+The **Echo** plugin is the official reference implementation. It periodically sends a configurable test message for every watched resource, which makes it ideal for verifying connectivity, testing sender pipelines, or learning how to build a plugin.
+
+**Instance config (`IEchoInstanceConfig`):**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `interval` | `number` | `5` | Seconds between messages |
+| `senderId` | `string` | — | Optional sender to notify on start |
+| `senderConfigName` | `string` | — | Config name for the sender above |
+
+**Channel config (`IEchoConfig`):**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `maxLines` | `number` | `3` | Maximum lines kept in the tab view |
+
+The Echo plugin also subscribes to the **OTel provider** — if an OpenTelemetry provider is active, Echo forwards incoming traces, metrics, and logs to all running instances.
+
+---
+
+### news
+
+The **News** plugin polls a set of RSS feeds and streams news items to the frontend tab in real time. Items are deduplicated across polls so each link is shown only once per session.
+
+**Feeds available:**
+
+| Feed key | Source |
+|---|---|
+| `kubernetes` | `kubernetes.io` official blog |
+| `ai` | TechCrunch AI section |
+
+**Instance config (`INewsInstanceConfig`):**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `selectedFeeds` | `string[]` | `['kubernetes','ai']` | Which feed keys to subscribe to |
+
+**Channel config (`INewsChannelConfig`):**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `maxItems` | `number` | `50` | Maximum items kept in the tab view |
+
+The poll interval is 5 minutes. The plugin does not require any Kubernetes resource — it works with `cluster: true` and selects any cluster-level object as its trigger.
+
+---
+
+### censor
+
+The **Censor** plugin intercepts log streams from selected containers and runs them through an LLM to identify and filter out noise. It builds a growing set of regular expressions from the LLM analysis and applies them in-process to avoid sending every log line to the LLM.
+
+**How it works:**
+
+1. Log lines are accumulated in a buffer (configurable batch size).
+2. When the buffer reaches `batchSize`, the batch is sent to the configured LLM with a system prompt asking it to return noise-matching regular expressions.
+3. Newly learned regexes are added to the local filter list and applied to all subsequent lines.
+4. Filtered lines, raw lines, LLM input/output, and stats (tokens in/out, processed/pending counts) are all streamed back to the frontend tab.
+
+**Instance config (`ICensorInstanceConfig`):**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `string` | — | Config name |
+| `llmId` | `string` | — | ID of the LLM to use (from the shared LLM list) |
+| `system` | `string` | _(built-in)_ | System prompt sent to the LLM |
+| `batchSize` | `number` | `50` | Lines to accumulate before triggering an LLM call |
+| `exampleJson` | `string` | `{"patterns":[""]}` | Expected JSON output schema — drives structured output |
+| `temperature` | `number` | `0.2` | LLM temperature |
+| `active` | `boolean` | `false` | Whether filtering is active on start |
+| `senderId` | `string` | — | Sender to use for alerts |
+| `senderConfigName` | `string` | — | Config name for the sender above |
+
+The plugin also supports **sessions**: a session captures the live log stream from a specific container into a named session object that can be connected and disconnected independently.
+
+The Censor plugin requires the **events** and **business** providers to be active.
+
+?> The headless version of Censor is available as the [Censor daemon](./daemons). Use the daemon when you want log filtering without opening a Kwirth tab.
+
+---
+
+### pinocchio
+
+The **Pinocchio** plugin is the AI/LLM integration layer for Kwirth. It watches Kubernetes object lifecycle events (Pods, Deployments, Services, Ingresses, and more) and business data events, and runs configurable LLM-powered analyses on them. Results (findings with severity levels, explanations, and token usage) are streamed to the frontend tab in real time.
+
+**Key concepts:**
+
+- **Trigger**: a rule that says "when a Kubernetes object of kind X is created/modified/deleted — or when a business event arrives in space Y — invoke this LLM version".
+- **Version**: a trigger can have multiple versions, each with a different LLM, system prompt, and tool set. Only one version is active at a time.
+- **Playground**: an interactive mode where you can test any prompt + LLM combination against a real or synthetic event payload without setting up triggers.
+
+**Trigger config (`IConfigTrigger`):**
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | Unique trigger identifier |
+| `trigger` | `'artifact' \| 'business'` | Whether it fires on Kubernetes events or business data |
+| `kind` | `string` | Kubernetes kind to watch (e.g. `'Pod'`, `'Deployment'`) — only for `artifact` triggers |
+| `versions` | `IConfigTriggerVersion[]` | List of versioned configurations for this trigger |
+
+**Trigger version config (`IConfigTriggerVersion`):**
+
+| Field | Type | Description |
+|---|---|---|
+| `llm` | `string` | LLM ID to invoke |
+| `system` | `string` | System prompt (plain text or Jinja2 template) |
+| `promptType` | `'jinja' \| 'artifact'` | Whether the prompt is a Jinja2 template or uses the artifact body directly |
+| `prompt` | `string` | User prompt template |
+| `action` | `'inform' \| 'cancel' \| 'repair'` | What to do with the finding |
+| `steps` | `number` | Maximum LLM agent steps |
+| `tools` | `string[]` | Tool names available to the LLM |
+| `spaces` | `string[]` | Business spaces to subscribe to (for business triggers) |
+| `enabled` | `boolean` | Whether this version is active |
+
+**Supported Kubernetes kinds:**
+`Pod`, `Deployment`, `DaemonSet`, `StatefulSet`, `ReplicaSet`, `Job`, `CronJob`, `ReplicationController`, `Service`, `Ingress`, `HTTPRoute`
+
+The plugin requires the **events**, **business**, and **metrics** providers.
+
+LLMs are configured via the shared LLM list (Settings → Manage LLMs). Supported providers: `google`, `openai`, `openrouter`, `mistral`, `groq`, `deepseek` — all accessed through the Vercel AI SDK.
+
+---
+
+### topology
+
+The **Topology** plugin renders an interactive **3D visualization** of your Kubernetes cluster. Nodes represent workloads, services, ingresses, and persistent volumes; edges represent ownership and service-selection relationships. You can orbit, zoom, and pan the 3D canvas, click nodes to inspect them, and hide or filter by kind or namespace.
+
+**Supported node kinds:** `Ingress`, `Service`, `Deployment`, `StatefulSet`, `DaemonSet`, `ReplicaSet`, `Job`, `CronJob`, `Pod`, `PersistentVolumeClaim`
+
+**Node status colours** reflect the real-time state: Running (green), Pending (yellow), Failed (red), Succeeded (blue), Terminating (orange), Unknown (gray), and PVC-specific states (Bound, Released, Lost).
+
+**Channel config (`ITopologyConfig`):**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `showPods` | `boolean` | `true` | Show Pod nodes |
+| `showServices` | `boolean` | `true` | Show Service nodes |
+| `showIngresses` | `boolean` | `true` | Show Ingress nodes |
+| `showDeployments` | `boolean` | `true` | Show Deployment nodes |
+| `showStatefulSets` | `boolean` | `true` | Show StatefulSet nodes |
+| `showDaemonSets` | `boolean` | `true` | Show DaemonSet nodes |
+| `showJobs` | `boolean` | `false` | Show Job nodes |
+| `showCronJobs` | `boolean` | `false` | Show CronJob nodes |
+| `showPvcs` | `boolean` | `true` | Show PersistentVolumeClaim nodes |
+| `showOnlyRunning` | `boolean` | `false` | Hide non-running workloads |
+| `edgeAnimated` | `boolean` | `true` | Animate edge flow |
+| `labelSize` | `number` | `12` | Font size for node labels (px) |
+| `nodeSpacingFactor` | `number` | `0.5` | Multiplier for the 3D layout spacing |
+| `gridColumns` | `number` | `8` | Columns in the initial grid layout |
+
+**Instance config (`ITopologyInstanceConfig`):** optional filters by pod name, service name, ingress name, or group (`Kind/name` format). Leave empty to show the full cluster.
+
+The Topology plugin requires the **events** provider and is cluster-scoped (no specific resource needed).
+
+---
+
 ## Developing your own plugin
 
 If you want to build a custom plugin, you need to implement two TypeScript interfaces: one for the back side and one for the front side. The back interface defines how your plugin integrates with Kwirth core (WebSocket routing, Kubernetes events, instance management), and the front interface defines the React components (setup dialog, tab content) and the lifecycle callbacks.

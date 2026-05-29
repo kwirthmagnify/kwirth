@@ -19,9 +19,17 @@
     {
         "id": "echo",
         "version": "0.1.0",
-        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-echo-0.1.0.tgz",
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.1.0.tgz",
         "name": "Echo",
         "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
         "icon": "Science"
+    },
+    {
+        "id": "fileman",
+        "version": "0.1.0",
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.1.0.tgz",
+        "name": "Fileman",
+        "description": "Fileman plugin for in-container file management live",
+        "icon": "FolderCopyTwoTone"
     }
 ]

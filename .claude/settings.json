@@ -66,7 +66,14 @@
       "Bash(xargs grep -l \"nsis\\\\|wix\\\\|installerFilename\")",
       "Bash(xargs grep -A5 \"tauri\")",
       "PowerShell(\\(Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\dist\\\\back.js\" -TotalCount 71040\\)[-20..-1])",
-      "Bash(xargs grep -l \"interface IBackChannelObject\")"
+      "Bash(xargs grep -l \"interface IBackChannelObject\")",
+      "PowerShell(@\\(\"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\src\\\\version.ts\", \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\version.ts\"\\) | ForEach-Object { Write-Host \"=== $_ ===\"; if \\(Test-Path $_\\) { Get-Content $_ } else { Write-Host \"Not found\" } })",
+      "Bash(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\src\\\\channels\\\\fileman\")",
+      "Bash(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\fileman\")",
+      "Bash(Get-ChildItem -Recurse \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\" -File)",
+      "Bash(Sort-Object FullName)",
+      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\src\\\\channels\\\\fileman\" -Confirm:$false)",
+      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\fileman\" -Confirm:$false)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

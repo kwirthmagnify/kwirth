@@ -1,53 +1,69 @@
-import { useEffect, useRef, useState } from 'react'
-import { IChannelObject } from '../IChannel'
+import React, { useEffect, useRef, useState } from 'react'
+import { IChannelObject, ENotifyLevel } from '@kwirthmagnify/kwirth-common-front'
 import { EFilemanCommand, IFilemanMessage, IFilemanData } from './FilemanData'
-import { Box } from '@mui/material'
-import { AccountTree, Edit, InfoOutlined, Visibility } from '@mui/icons-material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material'
+import { AccountTree, Edit, InfoOutlined, Visibility, AccountTreeOutlined, HexagonOutlined, DataObjectOutlined } from '@mui/icons-material'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { IError, IFileManagerHandle, IFileObject } from '@jfvilas/react-file-manager'
 import { FileManager } from '@jfvilas/react-file-manager'
 import { v4 as uuid } from 'uuid'
-import { addGetAuthorization, addPostAuthorization } from '../../tools/AuthorizationManagement'
-import { MsgBoxOk } from '../../tools/MsgBox'
-import { ENotifyLevel } from '../../tools/Global'
 import { FileEditDialog } from './FileEditDialog'
-// @ts-ignore
-import '@jfvilas/react-file-manager/dist/style.css'
-// @ts-ignore
-import './custom-fm-fileman.css'
-import { getIconFromKind } from '../../tools/Constants-React'
+
+// ─── Inline auth helpers ────────────────────────────────────────────────────
+const addGetAuthorization = (accessString: string) => ({
+    headers: { 'Authorization': 'Bearer ' + accessString }
+})
+const addPostAuthorization = (accessString: string, body: string) => ({
+    method: 'POST' as const,
+    headers: { 'Authorization': 'Bearer ' + accessString, 'Content-Type': 'application/json' },
+    body
+})
+
+// ─── Inline info dialog (replaces MsgBoxOk) ────────────────────────────────
+const MsgBoxOk = (title: string, content: string, setter: (v: React.ReactNode) => void): React.ReactNode => (
+    <Dialog open>
+        <DialogTitle sx={{ pb: 1 }}>{title}</DialogTitle>
+        <DialogContent dividers>
+            <Typography component='div' dangerouslySetInnerHTML={{ __html: content }} />
+        </DialogContent>
+        <DialogActions>
+            <Button variant='contained' onClick={() => setter(null)}>OK</Button>
+        </DialogActions>
+    </Dialog>
+)
+
+// ─── Inline icons for K8s kinds ────────────────────────────────────────────
+const makeIcon = (kind: string, size: number): JSX.Element => {
+    const sx = { fontSize: size }
+    if (kind === 'Namespace') return <AccountTreeOutlined sx={sx} />
+    if (kind === 'Pod') return <HexagonOutlined sx={sx} />
+    if (kind === 'Container') return <DataObjectOutlined sx={sx} />
+    return <HexagonOutlined sx={sx} />
+}
 
 interface IContentProps {
     webSocket?: WebSocket
     channelObject: IChannelObject
 }
 
-const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
+const FilemanTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const filemanBoxRef = useRef<HTMLDivElement | null>(null)
     const fileManagerRef = useRef<IFileManagerHandle>(null)
     const [logBoxTop, setLogBoxTop] = useState(0)
-    const [msgBox, setMsgBox] = useState(<></>)
+    const [msgBox, setMsgBox] = useState<React.ReactNode>(null)
     const [editDialog, setEditDialog] = useState<React.ReactNode>(null)
 
-    let filemanData:IFilemanData = props.channelObject.data
-    let permissions={
-        create: true,
-        delete: true,
-        download: true,
-        copy: true,
-        move: true,
-        rename: true,
-        upload: true
-    }
+    let filemanData: IFilemanData = props.channelObject.data
+    let permissions = { create: true, delete: true, download: true, copy: true, move: true, rename: true, upload: true }
 
-    useEffect( () => {
+    useEffect(() => {
         filemanData.unlock = fileManagerRef.current?.unlock
     }, [fileManagerRef.current])
 
     let icons = new Map()
-    icons.set('namespace', { open:getIconFromKind('Namespace', 24), closed:getIconFromKind('Namespace', 24), grid:getIconFromKind('Namespace', 50), list:getIconFromKind('Namespace', 24), default:getIconFromKind('Namespace', 24) })
-    icons.set('pod', { open:getIconFromKind('Pod', 24), closed:getIconFromKind('Pod', 24), grid:getIconFromKind('Pod', 50), list:getIconFromKind('Pod', 24), default:getIconFromKind('Pod', 24) })
-    icons.set('container', { open:getIconFromKind('Container', 24), closed:getIconFromKind('Container', 24), grid:getIconFromKind('Container', 44), list:getIconFromKind('Container', 24), default:getIconFromKind('Container', 24)})
+    icons.set('namespace', { open: makeIcon('Namespace', 24), closed: makeIcon('Namespace', 24), grid: makeIcon('Namespace', 50), list: makeIcon('Namespace', 24), default: makeIcon('Namespace', 24) })
+    icons.set('pod', { open: makeIcon('Pod', 24), closed: makeIcon('Pod', 24), grid: makeIcon('Pod', 50), list: makeIcon('Pod', 24), default: makeIcon('Pod', 24) })
+    icons.set('container', { open: makeIcon('Container', 24), closed: makeIcon('Container', 24), grid: makeIcon('Container', 44), list: makeIcon('Container', 24), default: makeIcon('Container', 24) })
 
     let actions = new Map()
     actions.set('namespace', [
@@ -56,8 +72,8 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             icon: <AccountTree fontSize='small' color='success' />,
             onClick: async (files: IFileObject[]) => {
                 let namespace = files[0].name
-                let data = await((await fetch(`${props.channelObject.clusterUrl}/config/${namespace}/groups`, addGetAuthorization(props.channelObject.accessString!))).json())
-                let info = `Controllers inside ${namespace} namespace:<br/><br/>` + data.map((ns:any) => '<b>-</b> '+ ns.name + '<br/>').join('')
+                let data = await ((await fetch(`${props.channelObject.clusterUrl}/config/${namespace}/groups`, addGetAuthorization(props.channelObject.accessString!))).json())
+                let info = `Controllers inside ${namespace} namespace:<br/><br/>` + data.map((ns: any) => '<b>-</b> ' + ns.name + '<br/>').join('')
                 setMsgBox(MsgBoxOk('Namespace info', info, setMsgBox))
             }
         },
@@ -90,7 +106,7 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 try {
                     const content = await fetchFileContent(file)
                     if (content === null) return
-                    setEditDialog(<FileEditDialog filename={file.path} content={content} readOnly onSave={async () => {}} onClose={() => setEditDialog(null)} />)
+                    setEditDialog(<FileEditDialog filename={file.path} content={content} readOnly onSave={async () => { }} onClose={() => setEditDialog(null)} />)
                 } catch (error) {
                     props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.ERROR, `Error reading file ${file.path}: ${error}`)
                 }
@@ -125,61 +141,47 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     ])
 
-
     let level = filemanData.currentPath.split('/').length - 1
-    if (level<3) {
-        permissions = {
-            create: false,
-            delete: false,
-            download: false,
-            copy: false,
-            move: false,
-            rename: false,
-            upload: false
-        }
+    if (level < 3) {
+        permissions = { create: false, delete: false, download: false, copy: false, move: false, rename: false, upload: false }
     }
 
     useEffect(() => {
         if (filemanBoxRef.current) setLogBoxTop(filemanBoxRef.current.getBoundingClientRect().top)
     })
 
-    interface IFileUploadConfig  { 
+    interface IFileUploadConfig {
         url: string
-        method?: "POST" | "PUT"
+        method?: 'POST' | 'PUT'
         headers?: { [key: string]: string }
     }
 
-    let fileUploadConfig:IFileUploadConfig = {
+    let fileUploadConfig: IFileUploadConfig = {
         url: `${props.channelObject.clusterUrl}/${filemanData.ri}/channel/fileman/upload?key=${props.channelObject.instanceId}`,
-        method:'POST',
-        headers: {
-            'Authorization': 'Bearer '+ props.channelObject.accessString
-        }
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + props.channelObject.accessString }
     }
 
     const onDelete = (files: IFileObject[]) => {
         for (let file of files) {
-            let [namespace,pod,container] = file.path.split('/').slice(1)
+            let [namespace, pod, container] = file.path.split('/').slice(1)
             filemanData.files = filemanData.files.filter(f => f.path !== file.path)
             sendCommand(EFilemanCommand.DELETE, namespace, pod, container, [file.path])
         }
     }
 
     const onCreateFolder = async (name: string, parentFolder: IFileObject) => {
-        let [namespace,pod,container] = parentFolder.path.split('/').slice(1)
+        let [namespace, pod, container] = parentFolder.path.split('/').slice(1)
         sendCommand(EFilemanCommand.CREATE, namespace, pod, container, [parentFolder.path + '/' + name])
     }
 
     const onDownload = async (files: IFileObject[]) => {
         for (let file of files) {
             const url = `${props.channelObject.clusterUrl}/${filemanData.ri}/channel/fileman/download?key=${props.channelObject.instanceId}&filename=${file.path}`
-            
             try {
-                const response = await fetch(url, addGetAuthorization(props.channelObject.accessString || 'have-no-access-string'))
-
+                const response = await fetch(url, addGetAuthorization(props.channelObject.accessString || ''))
                 if (response.ok) {
                     const blob = await response.blob()
-
                     const link = document.createElement('a')
                     link.href = URL.createObjectURL(blob)
                     link.download = file.path.split('/').slice(-1)[0]
@@ -188,96 +190,65 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     link.click()
                     document.body.removeChild(link)
                     URL.revokeObjectURL(link.href)
-                }
-                else {
-                    console.error(`Error downloading file: ${file.path}`)
+                } else {
                     props.channelObject.notify?.(undefined, ENotifyLevel.ERROR, `Error downloading file ${file.path}: (${response.status}) ${await response.text()}`)
                 }
-            }
-            catch (error) {
-                console.error(`Error downloading file: ${file.path}`, error)
+            } catch (error) {
                 props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.ERROR, `Error downloading file ${file.path}: ${error}`)
             }
         }
     }
 
-    const onPaste = (files: IFileObject[], destFolder:IFileObject, operation:string) => {
-        let command = operation==='move'? EFilemanCommand.MOVE : EFilemanCommand.COPY
+    const onPaste = (files: IFileObject[], destFolder: IFileObject, operation: string) => {
+        let command = operation === 'move' ? EFilemanCommand.MOVE : EFilemanCommand.COPY
         for (let file of files) {
-            let [namespace,pod,container] = file.path.split('/').slice(1)
+            let [namespace, pod, container] = file.path.split('/').slice(1)
             sendCommand(command, namespace, pod, container, [file.path, destFolder.path])
-        }        
+        }
     }
 
-    const onError = (error: IError, file: IFileObject) => {
+    const onError = (error: IError, _file: IFileObject) => {
         props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.ERROR, error.message)
     }
 
-    const onRename	= (file: IFileObject, newName: string) => {
-        let [namespace,pod,container] = file.path.split('/').slice(1)
-        filemanData.files = filemanData.files.filter (f => f.path!==file.path)
+    const onRename = (file: IFileObject, newName: string) => {
+        let [namespace, pod, container] = file.path.split('/').slice(1)
+        filemanData.files = filemanData.files.filter(f => f.path !== file.path)
         sendCommand(EFilemanCommand.RENAME, namespace, pod, container, [file.path, newName])
     }
 
     const onRefresh = () => {
         if (level >= 3) {
-            filemanData.files = filemanData.files.filter ( f => !f.path.startsWith(filemanData.currentPath+'/'))
-            getLocalDir(filemanData.currentPath+'/')
-        }
-        else {
+            filemanData.files = filemanData.files.filter(f => !f.path.startsWith(filemanData.currentPath + '/'))
+            getLocalDir(filemanData.currentPath + '/')
+        } else {
             sendCommand(EFilemanCommand.HOME, '', '', '', [])
         }
-
     }
 
-    const sendCommand = (command: EFilemanCommand, namespace:string, pod:string, container:string,  params:string[]) => {
+    const sendCommand = (command: EFilemanCommand, namespace: string, pod: string, container: string, params: string[]) => {
         if (!props.channelObject.webSocket) return
-        
-        let filemanMessage:IFilemanMessage = {
-            flow: EInstanceMessageFlow.REQUEST,
-            action: EInstanceMessageAction.COMMAND,
-            channel: 'fileman',
-            type: EInstanceMessageType.DATA,
-            accessKey: props.channelObject.accessString!,
-            instance: props.channelObject.instanceId,
-            id: uuid(),
-            command: command,
-            namespace: namespace,
-            group: '',
-            pod: pod,
-            container: container,
-            params: params,
-            msgtype: 'filemanmessage'
+        let filemanMessage: IFilemanMessage = {
+            flow: EInstanceMessageFlow.REQUEST, action: EInstanceMessageAction.COMMAND, channel: 'fileman',
+            type: EInstanceMessageType.DATA, accessKey: props.channelObject.accessString!, instance: props.channelObject.instanceId,
+            id: uuid(), command, namespace, group: '', pod, container, params, msgtype: 'filemanmessage'
         }
-        let payload = JSON.stringify( filemanMessage )
-        props.channelObject.webSocket.send(payload)
+        props.channelObject.webSocket.send(JSON.stringify(filemanMessage))
     }
 
-    const getLocalDir = (folder:string) => {
-        let [namespace,pod,container] = folder.split('/').slice(1)
-        let filemanMessage:IFilemanMessage = {
-            flow: EInstanceMessageFlow.REQUEST,
-            action: EInstanceMessageAction.COMMAND,
-            channel: 'fileman',
-            type: EInstanceMessageType.DATA,
-            accessKey: props.channelObject.accessString!,
-            instance: props.channelObject.instanceId,
-            id: uuid(),
-            command: EFilemanCommand.DIR,
-            namespace: namespace,
-            group: '',
-            pod: pod,
-            container: container,
-            params: [folder],
-            msgtype: 'filemanmessage'
+    const getLocalDir = (folder: string) => {
+        let [namespace, pod, container] = folder.split('/').slice(1)
+        let filemanMessage: IFilemanMessage = {
+            flow: EInstanceMessageFlow.REQUEST, action: EInstanceMessageAction.COMMAND, channel: 'fileman',
+            type: EInstanceMessageType.DATA, accessKey: props.channelObject.accessString!, instance: props.channelObject.instanceId,
+            id: uuid(), command: EFilemanCommand.DIR, namespace, group: '', pod, container, params: [folder], msgtype: 'filemanmessage'
         }
-        let payload = JSON.stringify( filemanMessage )
-        if (props.channelObject.webSocket) props.channelObject.webSocket.send(payload)
+        if (props.channelObject.webSocket) props.channelObject.webSocket.send(JSON.stringify(filemanMessage))
     }
 
-    const onFolderChange = (folder:string) => {
+    const onFolderChange = (folder: string) => {
         filemanData.currentPath = folder
-        folder +='/'
+        folder += '/'
         let level = folder.split('/').length - 1
         if (level > 3) {
             fileManagerRef.current?.lock()
@@ -285,20 +256,19 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
-    const onFileUploading = (file: IFileObject, parentFolder: IFileObject) => { 
+    const onFileUploading = (file: IFileObject, _parentFolder: IFileObject) => {
         return { filename: filemanData.currentPath + '/' + file.name }
     }
 
-    const onFileUploaded = () => { 
-    }
+    const onFileUploaded = () => { }
 
-    const onFileUploadError = (file: IFileObject, parentFolder: IFileObject) => { 
+    const onFileUploadError = (file: IFileObject, _parentFolder: IFileObject) => {
         return { filename: filemanData.currentPath + '/' + file.name }
     }
 
     return <>
-        { filemanData.started &&
-            <Box ref={filemanBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', flexGrow:1, height: `calc(100vh - ${logBoxTop}px - 16px)`, px: 0.625, mt: 1}}>
+        {filemanData.started &&
+            <Box ref={filemanBoxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', flexGrow: 1, height: `calc(100vh - ${logBoxTop}px - 16px)`, px: 0.625, mt: 1 }}>
                 <FileManager
                     ref={fileManagerRef}
                     files={filemanData.files}
@@ -330,10 +300,11 @@ const FilemanTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     minFileActionsLevel={3}
                     openMode='none'
                 />
-                { msgBox }
-                { editDialog }
+                {msgBox}
+                {editDialog}
             </Box>
         }
     </>
 }
+
 export { FilemanTabContent }
