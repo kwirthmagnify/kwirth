@@ -6,4 +6,5 @@ set currentversion=%major%.%minor%.%level%
 docker image rm kwirth:%CURRENTVERSION%
 set DOCKER_BUILDKIT=1
 set COMPOSE_DOCKER_CLI_BUILD=0
-docker build . -t kwirth:%CURRENTVERSION% -t kwirth:latest
+node build-image.mjs kwirth:%CURRENTVERSION%
+docker tag kwirth:%CURRENTVERSION% kwirth:latest

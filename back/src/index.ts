@@ -1454,6 +1454,8 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (!pluginManager) {
             pluginManager = new PluginManager(runningInstance.configMaps)
             await pluginManager.init()
+            const bundledPluginsPath = process.env.BUNDLED_PLUGINS_PATH
+            if (bundledPluginsPath) await pluginManager.installBundled(bundledPluginsPath, registeredChannels)
             await pluginManager.loadAll(registeredChannels)
             pluginManager.loadDevPlugins(registeredChannels)
             pluginManager.onDevPluginReloaded = (id, ChannelClass) => {

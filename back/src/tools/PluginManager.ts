@@ -329,6 +329,24 @@ export class PluginManager {
         }
     }
 
+    async installBundled(dir: string, registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
+        if (!fs.existsSync(dir)) return
+        const files = fs.readdirSync(dir).filter(f => f.endsWith('.tgz'))
+        for (const file of files) {
+            const filePath = path.join(dir, file)
+            try {
+                const meta = await this.install(filePath, registeredChannels, 'bundled')
+                logInfo(ELogComponent.CORE, `Bundled plugin '${meta.id}' v${meta.version} installed`)
+            } catch (err: any) {
+                if (err?.message?.includes('already installed')) {
+                    logInfo(ELogComponent.CORE, `Bundled plugin '${file}' already installed — skipping`)
+                } else {
+                    logError(ELogComponent.CORE, `Failed to install bundled plugin '${file}': ${err}`)
+                }
+            }
+        }
+    }
+
     private downloadFile(url: string, destPath: string): Promise<void> {
         return new Promise((resolve, reject) => {
             const protocol = url.startsWith('https') ? https : http

@@ -3,8 +3,8 @@ setlocal
 
 del c:\github\releases\*-t-installer.exe
 del c:\github\releases\*-t.msi
-del .\src-tauri\target\release\bundle\msi\*.* /y /q
-del .\src-tauri\target\release\bundle\nsis\*.* /y /q
+del .\src-tauri\target\release\bundle\msi\*.* /q
+del .\src-tauri\target\release\bundle\nsis\*.* /q
 
 call ..\version\version.cmd
 set VER=%KWIRTH_VERSION:"=%
@@ -25,6 +25,9 @@ echo [tauri-build] Generating Tauri icons from electron source...
 copy ..\electron\kwirth-transparent.png src-tauri\icons\source.png
 copy ..\electron\kwirth-transparent.png src-tauri\resources\kwirth-transparent.png
 call npx @tauri-apps/cli icon src-tauri\icons\source.png
+
+echo [tauri-build] Downloading bundled plugins...
+node ..\scripts\fetch-bundled-plugins.mjs ..\back\kwirth-bundled-plugins.json src-tauri\resources\bundled-plugins
 
 echo [tauri-build] Building kwirth-backend sidecar (Windows x64)...
 copy back-bundle-pkg.json ..\back\bundle\package.json

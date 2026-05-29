@@ -190,6 +190,18 @@ class NewsChannel {
         })
     }
 
+    private decodeHtmlEntities = (text: string): string => {
+        return text
+            .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+            .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&apos;/g, "'")
+            .replace(/&nbsp;/g, ' ')
+    }
+
     private parseRssItems = (xml: string, source: string, category: string): INewsItem[] => {
         const items: INewsItem[] = []
         const itemRegex = /<item>([\s\S]*?)<\/item>/g
@@ -202,9 +214,9 @@ class NewsChannel {
             const pubDate = (/<pubDate>([\s\S]*?)<\/pubDate>/.exec(itemXml))?.[1] || new Date().toISOString()
             if (title.trim() && link.trim()) {
                 items.push({
-                    title: title.trim(),
+                    title: this.decodeHtmlEntities(title.trim()),
                     link: link.trim(),
-                    description: description.replace(/<[^>]*>/g, '').trim().substring(0, 300),
+                    description: this.decodeHtmlEntities(description.replace(/<[^>]*>/g, '').trim().substring(0, 300)),
                     pubDate: pubDate.trim(),
                     source,
                     category

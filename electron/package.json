@@ -6,11 +6,13 @@
 		"url": "https://github.com/jfvilas"
 	},
 	"main": "main.js",
-	"version": "0.5.128",
+	"version": "0.5.131",
 	"description": "Kwirth Magnify Desktop",
 	"homepage": "https://kwirthmagnify.dev",
 	"scripts": {
 		"start": "electron .",
+		"fetch-plugins": "node ../scripts/fetch-bundled-plugins.mjs ../back/kwirth-bundled-plugins.json bundled-plugins",
+		"predist": "node ../scripts/fetch-bundled-plugins.mjs ../back/kwirth-bundled-plugins.json bundled-plugins",
 		"dist": "electron-builder",
 		"dist:win": "electron-builder --win",
 		"dist:linux": "electron-builder --linux",
@@ -18,14 +20,15 @@
 	},
 	"build": {
 		"appId": "com.github.kwirth",
-		"productName": "kwirth-magnify-0.5.128-e",
+		"productName": "kwirth-magnify-0.5.131-e",
 		"files": [
 			"./main.js",
 			"./preload.js",
 			"./splash.html",
 			"./kwirth-transparent.png",
 			"./version.js",
-			"./bundle/**/*"
+			"./bundle/**/*",
+			"./bundled-plugins/**/*"
 		],
 		"asar": false,
 		"directories": {
