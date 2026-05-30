@@ -19,9 +19,6 @@ import { IMetricsConfig, IMetricsInstanceConfig } from '../../metrics/MetricsCon
 import { EMetricsConfigMode } from '../../metrics/MetricsTypes'
 import { IMetricsData } from '../../metrics/MetricsData'
 import { EChartType } from '../../metrics/MenuChart'
-import { ILogConfig } from '../../log/LogConfig'
-import { ILogData } from '../../log/LogData'
-import { ELogSortOrder, ILogInstanceConfig } from '../../log/LogTypes'
 
 interface IFilemanData { paused: boolean; started: boolean; files: any[]; currentPath: string; ri: string | undefined; unlock?: () => void }
 interface IFilemanConfig { [key: string]: any }
@@ -83,10 +80,23 @@ const containerRef = useRef<HTMLDivElement>(null)
             if (!contentExternalData.content) return
 
             switch(contentExternalData.channelId) {
-                case 'log':
-                    contentExternalData.formConfig = { lines: 5000, showNames:false, timestamp:false, startDiagnostics: false }
-                    setLogConfig(contentExternalData.content)
+                case 'log': {
+                    const chLog = contentExternalData.content?.externalChannel
+                    if (chLog?.prepareExternalChannel) {
+                        const setup = chLog.prepareExternalChannel(contentExternalData.contentView, props.selectedFiles, props.container ?? '')
+                        contentExternalData.content!.externalChannelObject!.data = setup.data
+                        contentExternalData.content!.externalChannelObject!.config = setup.config
+                        contentExternalData.content!.externalChannelObject!.instanceConfig = setup.instanceConfig
+                        contentExternalData.content!.externalChannelObject!.config.maxMessages = contentExternalData.settings?.logLines ?? 5000
+                    }
+                    contentExternalData.formConfig = {
+                        lines: contentExternalData.settings?.logLines ?? 5000,
+                        showNames: false,
+                        timestamp: false,
+                        startDiagnostics: false
+                    }
                     break
+                }
                 case 'metrics': {
                     const allMetrics = Array.from(contentExternalData.channelObject?.metricsList?.keys() || []).filter((k:string) => k.startsWith('container_') || k.startsWith('kwirth_'))
                     const defaultMetrics = ['kwirth_container_cpu_percentage','kwirth_container_memory_percentage', 'kwirth_container_transmit_mbps', 'kwirth_container_receive_mbps', 'kwirth_container_write_mbps', 'kwirth_container_read_mbps']
@@ -329,36 +339,6 @@ const containerRef = useRef<HTMLDivElement>(null)
             console.log('Received invalid channel in message: ', instanceMessage)
             contentExternalData.onNotify(undefined, ENotifyLevel.ERROR, `'Received invalid channel in message: ${instanceMessage.channel}`)
         }
-    }
-
-    const setLogConfig = (c:IContentExternalObject) => {
-        let logConfig:ILogConfig = {
-            fromNowOn: false,
-            startDiagnostics: false,
-            follow: true,
-            showNames: false,
-            maxMessages: contentExternalData.settings.logLines,
-            maxPerPodMessages: 500,
-            sortOrder: ELogSortOrder.TIME
-        }
-        let logInstanceConfig:ILogInstanceConfig = {
-            previous: false,
-            timestamp: false,
-            fromStart: false
-            // no startTime implies 1800 seconds back in time
-        }
-        let logData:ILogData = {
-            messages: [],
-            pending: false,
-            backgroundNotification: false,
-            counters: new Map(),
-            buffers: new Map(),
-            paused: false,
-            started: false
-        }
-        c.externalChannelObject!.data = logData
-        c.externalChannelObject!.config = logConfig
-        c.externalChannelObject!.instanceConfig = logInstanceConfig
     }
 
     const setMetricsConfig = (c:IContentExternalObject) => {
@@ -619,16 +599,17 @@ const containerRef = useRef<HTMLDivElement>(null)
         //setChannelFormConfig(values)
         contentExternalData.formConfig = values
         switch(contentExternalData.channelId) {
-            case 'log':
-                let logConfig = contentExternalData.content!.externalChannelObject!.config as ILogConfig
+            case 'log': {
+                const logConfig = contentExternalData.content!.externalChannelObject!.config as any
                 logConfig.maxMessages = values.lines
                 logConfig.showNames = values.showNames
                 logConfig.startDiagnostics = values.startDiagnostics
-                let logInstanceConfig = contentExternalData.content!.externalChannelObject!.instanceConfig as ILogInstanceConfig
+                const logInstanceConfig = contentExternalData.content!.externalChannelObject!.instanceConfig as any
                 logInstanceConfig.timestamp = values.timestamp
                 stop()
                 play()
                 break
+            }
             case 'metrics':
                 let metricsConfig = contentExternalData.content!.externalChannelObject!.config as IMetricsConfig
                 let metricsInstanceConfig = contentExternalData.content!.externalChannelObject!.instanceConfig as IMetricsInstanceConfig

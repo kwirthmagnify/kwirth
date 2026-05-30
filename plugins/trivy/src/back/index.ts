@@ -2,8 +2,11 @@ import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKey
 import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources, createCrdInformer, ICrdInformerHandlers } from '@kwirthmagnify/kwirth-common-back'
 import { ETrivyCommand, IKnown, ITrivyMessage, ITrivyMessageResponse, IUnknown } from './TrivyTypes'
+import zlib from 'zlib'
 // @ts-ignore
-import trivyOperatorYaml from './trivy-operator-0.30.1.yaml'
+import trivyOperatorYamlGz from './trivy-operator-0.30.1.yaml'
+
+const trivyOperatorYaml = zlib.gunzipSync(Buffer.from(trivyOperatorYamlGz, 'base64')).toString('utf-8')
 
 const TRIVY_API_VERSION = 'v1alpha1'
 const TRIVY_API_GROUP = 'aquasecurity.github.io'

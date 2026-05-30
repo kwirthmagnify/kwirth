@@ -2,6 +2,19 @@ import * as React from 'react'
 import * as MUIMaterial from '@mui/material'
 import * as MUIIcons from '@mui/icons-material'
 import * as kwirthCommon from '@kwirthmagnify/kwirth-common'
+import * as kwirthCommonFront from '@kwirthmagnify/kwirth-common-front'
+import * as xDatePickers from '@mui/x-date-pickers'
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment'
+import * as moment from 'moment'
+import * as codeMirrorView from '@codemirror/view'
+import * as codeMirrorState from '@codemirror/state'
+import * as codeMirrorCommands from '@codemirror/commands'
+import * as codeMirrorSearch from '@codemirror/search'
+import * as codeMirrorLanguage from '@codemirror/language'
+import * as codeMirrorLangYaml from '@codemirror/lang-yaml'
+import * as codeMirrorThemeOneDark from '@codemirror/theme-one-dark'
+import * as uiwReactCodeMirror from '@uiw/react-codemirror'
+import * as jfvilasReactFileManager from '@jfvilas/react-file-manager'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { SnackbarProvider } from 'notistack'
@@ -11,12 +24,12 @@ import './index.css'
 
 declare global {
     interface Window {
-        __kwirth__: { React: typeof React; MUI: { material: typeof MUIMaterial; icons: typeof MUIIcons }; kwirthCommon: typeof kwirthCommon }
+        __kwirth__: { React: typeof React; MUI: { material: typeof MUIMaterial; icons: typeof MUIIcons }; kwirthCommon: typeof kwirthCommon; kwirthCommonFront: typeof kwirthCommonFront; xDatePickers: typeof xDatePickers; adapterMoment: typeof AdapterMoment; moment: typeof moment; codeMirrorView: typeof codeMirrorView; codeMirrorState: typeof codeMirrorState; codeMirrorCommands: typeof codeMirrorCommands; codeMirrorSearch: typeof codeMirrorSearch; codeMirrorLanguage: typeof codeMirrorLanguage; codeMirrorLangYaml: typeof codeMirrorLangYaml; codeMirrorThemeOneDark: typeof codeMirrorThemeOneDark; uiwReactCodeMirror: typeof uiwReactCodeMirror; jfvilasReactFileManager: typeof jfvilasReactFileManager }
         __kwirth_plugins__: Record<string, any>
         __kwirth_senders__: Record<string, React.ComponentType<any>>
     }
 }
-window.__kwirth__ = { React, MUI: { material: MUIMaterial, icons: MUIIcons }, kwirthCommon }
+window.__kwirth__ = { React, MUI: { material: MUIMaterial, icons: MUIIcons }, kwirthCommon, kwirthCommonFront, xDatePickers, adapterMoment: AdapterMoment, moment, codeMirrorView, codeMirrorState, codeMirrorCommands, codeMirrorSearch, codeMirrorLanguage, codeMirrorLangYaml, codeMirrorThemeOneDark, uiwReactCodeMirror, jfvilasReactFileManager }
 window.__kwirth_plugins__ = {}
 window.__kwirth_senders__ = {}
 

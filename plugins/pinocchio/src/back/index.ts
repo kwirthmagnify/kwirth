@@ -3,8 +3,7 @@ import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IC
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS } from '@kwirthmagnify/kwirth-common-ai'
 import { buildModel, loadModels } from '@kwirthmagnify/kwirth-common-ai/back'
 import { Request, Response } from 'express'
-import { z } from 'zod'
-import { generateText, Output, stepCountIs } from 'ai'
+import { generateText, Output, stepCountIs, z } from '@kwirthmagnify/kwirth-common-ai/back'
 
 // tools
 import { getToolByName, IToolContext, toolInfoList } from './Tools'

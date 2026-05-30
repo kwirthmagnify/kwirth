@@ -381,7 +381,6 @@ const rfmSetup = (
                         else {
                             isOwner = f.data.origin.metadata.ownerReferences?.some((o:any) => o.kind === controllerKind && o.name === rootObj.metadata.name) || false
                         }
-                        //+++if (isOwner) return f
                         return isOwner
                     })
                     return allPods.map(f => f.data.origin)

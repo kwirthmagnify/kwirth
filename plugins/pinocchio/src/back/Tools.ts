@@ -1,5 +1,4 @@
-import { tool } from "ai"
-import z from "zod"
+import { tool, z } from "@kwirthmagnify/kwirth-common-ai/back"
 import { exec } from "child_process"
 import { promisify } from "util"
 

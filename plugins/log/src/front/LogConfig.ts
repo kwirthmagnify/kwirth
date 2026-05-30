@@ -3,18 +3,14 @@ import { ELogSortOrder, ILogInstanceConfig } from "./LogTypes"
 interface ILogConfig {
     startDiagnostics: boolean
     fromNowOn: boolean
-
-    // for general log viewing
     follow: boolean
     maxMessages: number
     showNames: boolean
-
-    // for start diagnostics
     maxPerPodMessages: number
     sortOrder: ELogSortOrder
 }
 
-class LogConfig implements ILogConfig{
+class LogConfig implements ILogConfig {
     startDiagnostics = false
     fromNowOn: boolean = false
     follow = true
@@ -24,7 +20,7 @@ class LogConfig implements ILogConfig{
     showNames = false
 }
 
-class LogInstanceConfig implements ILogInstanceConfig{
+class LogInstanceConfig implements ILogInstanceConfig {
     previous = false
     timestamp = true
     fromStart = false

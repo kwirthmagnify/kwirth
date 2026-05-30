@@ -132,8 +132,6 @@ class FilemanChannel {
     processProviderEvent(_providerId: string, _obj: any): void { }
 
     async endpointRequest(endpoint: string, req: Request, res: Response, accessKey: AccessKey): Promise<void> {
-        console.log(`[fileman] endpointRequest: ${endpoint} ${req.method} ${req.url}`)
-
         let instanceId = req.query['key'] as string
         let socket = this.webSockets.find(ws => ws.instances.some(i => i.accessKey.id === accessKey.id && i.instanceId === instanceId))
         if (!socket) {

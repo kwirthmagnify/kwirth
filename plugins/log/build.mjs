@@ -76,7 +76,7 @@ await esbuild.build({
     format: 'iife',
     outfile: 'dist/front.js',
     plugins: [kwirthGlobalsPlugin],
-    loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'text' },
+    loader: { '.tsx': 'tsx', '.ts': 'ts' },
     jsx: 'transform',
     jsxFactory: 'React.createElement',
     jsxFragment: 'React.Fragment',

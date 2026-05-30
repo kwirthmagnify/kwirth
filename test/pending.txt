@@ -1,5 +1,5 @@
 ******************ERRORES
-
+al instalar fileman, no monota las rotas de httprequest (uload y dload)
 RFM
 
 TRIVY

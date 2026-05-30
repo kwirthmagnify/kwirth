@@ -7,6 +7,7 @@ import { addGetAuthorization } from '../tools/AuthorizationManagement'
 import { BackChannelData, EClusterType, EInstanceConfigView, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
 import { ITabObject } from '../model/ITabObject'
 import { getIconFromKind } from '../tools/Constants-React'
+import { TChannelConstructor } from '../channels/IChannel'
 
 interface IResourceSelected {
     channelId: string
@@ -27,6 +28,7 @@ interface IResourceSelectorProps {
     backChannels: BackChannelData[]
     tabs: ITabObject[]
     sx: SxProps
+    frontChannels?: Map<string, TChannelConstructor>
 }
 
 interface IController {
@@ -46,7 +48,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     const [pods, setPods] = useState<string[]>([])
     const [allContainers, setAllContainers] = useState<string[]>([])
     const [containers, setContainers] = useState<string[]>([])
-    const [channel, setChannel] = useState(props.backChannels.length>0? props.backChannels[0].id : 'log')
+    const [channel, setChannel] = useState(props.backChannels.length>0? props.backChannels[0].id : '')
     const [msgBox, setMsgBox] = useState(<></>)
 
     let isDocker = cluster.kwirthData?.clusterType === EClusterType.DOCKER
@@ -399,11 +401,29 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             </FormControl>
 
             <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={cluster.name === ''}>
-                <InputLabel >Channel</InputLabel>
-                <Select value={props.backChannels.length>0?channel:''} onChange={onChangeChannel}> 
-                    { props.backChannels.map(c => 
-                        <MenuItem key={c.id} value={c.id} disabled={(view===EInstanceConfigView.CLUSTER && !c.cluster)}>{c.id}</MenuItem>)
-                    }
+                <InputLabel>Channel</InputLabel>
+                <Select
+                    value={props.backChannels.length>0?channel:''}
+                    onChange={onChangeChannel}
+                    renderValue={(v) => {
+                        if (!v) return undefined
+                        const cls = props.frontChannels?.get(v as string)
+                        const icon = cls ? React.cloneElement(new cls().getChannelIcon(), { sx: { fontSize: 14, verticalAlign: 'middle', mr: 0.5 } }) : null
+                        return <>{icon}<span>{v as string}</span></>
+                    }}
+                >
+                    { props.backChannels.map(c => {
+                        const cls = props.frontChannels?.get(c.id)
+                        const icon = cls ? React.cloneElement(new cls().getChannelIcon(), { sx: { fontSize: 18, mr: 0.5 } }) : null
+                        return (
+                            <MenuItem key={c.id} value={c.id} disabled={(view===EInstanceConfigView.CLUSTER && !c.cluster)}>
+                                <Stack direction='row' alignItems='center'>
+                                    {icon}
+                                    <span>{c.id}</span>
+                                </Stack>
+                            </MenuItem>
+                        )
+                    })}
                 </Select>
             </FormControl>
 

@@ -1,6 +1,18 @@
 import esbuild from 'esbuild'
 import fs from 'fs'
 import path from 'path'
+import zlib from 'zlib'
+
+const yamlGzipPlugin = {
+    name: 'yaml-gzip',
+    setup(build) {
+        build.onLoad({ filter: /\.yaml$/ }, (args) => {
+            const content = fs.readFileSync(args.path)
+            const compressed = zlib.gzipSync(content).toString('base64')
+            return { contents: `module.exports = "${compressed}"`, loader: 'js' }
+        })
+    },
+}
 
 const kwirthGlobalsPlugin = {
     name: 'kwirth-globals',
@@ -10,12 +22,45 @@ const kwirthGlobalsPlugin = {
             '@mui/material': 'window.__kwirth__.MUI.material',
             '@mui/icons-material': 'window.__kwirth__.MUI.icons',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
+            '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
+            '@mui/x-date-pickers': 'window.__kwirth__.xDatePickers',
+            '@mui/x-date-pickers/AdapterMoment': 'window.__kwirth__.adapterMoment',
+            'moment': 'window.__kwirth__.moment',
+            '@codemirror/view': 'window.__kwirth__.codeMirrorView',
+            '@codemirror/state': 'window.__kwirth__.codeMirrorState',
+            '@codemirror/commands': 'window.__kwirth__.codeMirrorCommands',
+            '@codemirror/search': 'window.__kwirth__.codeMirrorSearch',
+            '@codemirror/language': 'window.__kwirth__.codeMirrorLanguage',
+            '@codemirror/lang-yaml': 'window.__kwirth__.codeMirrorLangYaml',
+            '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
+            '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
+            '@jfvilas/react-file-manager': 'window.__kwirth__.jfvilasReactFileManager',
+
         }
         for (const pkg of Object.keys(globals)) {
             build.onResolve({ filter: new RegExp(`^${pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }, () => ({ path: pkg, namespace: 'kwirth-globals' }))
         }
         build.onLoad({ filter: /.*/, namespace: 'kwirth-globals' }, (args) => ({
-            contents: `module.exports = ${globals[args.path]}`,
+            contents: `const _m = ${globals[args.path]}; module.exports = (typeof _m === 'function' && !_m.__esModule) ? Object.assign({default:_m,__esModule:true},_m) : _m;`,
+            loader: 'js',
+        }))
+    },
+}
+
+const kwirthBackGlobalsPlugin = {
+    name: 'kwirth-back-globals',
+    setup(build) {
+        const backGlobals = {
+            '@kwirthmagnify/kwirth-common': 'global.__kwirth_back__.kwirthCommon',
+            '@kwirthmagnify/kwirth-common-back': 'global.__kwirth_back__.kwirthCommonBack',
+            '@kwirthmagnify/kwirth-common-ai': 'global.__kwirth_back__.kwirthCommonAi',
+            '@kwirthmagnify/kwirth-common-ai/back': 'global.__kwirth_back__.kwirthCommonAiBack',
+        }
+        build.onResolve({ filter: /^@kwirthmagnify\/kwirth-common(-ai(\/back)?|-back)?$/ }, (args) => {
+            if (backGlobals[args.path]) return { path: args.path, namespace: 'kwirth-back-globals' }
+        })
+        build.onLoad({ filter: /.*/, namespace: 'kwirth-back-globals' }, (args) => ({
+            contents: 'module.exports = ' + backGlobals[args.path],
             loader: 'js',
         }))
     },
@@ -45,8 +90,9 @@ await esbuild.build({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
+    plugins: [kwirthBackGlobalsPlugin, yamlGzipPlugin],
     external: ['express', '@kwirthmagnify/kwirth-common-back'],
-    loader: { '.ts': 'ts', '.yaml': 'text' },
+    loader: { '.ts': 'ts' },
     minify: false,
 })
 console.log('Built dist/back.js')

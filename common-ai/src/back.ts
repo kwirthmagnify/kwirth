@@ -113,6 +113,10 @@ const inferZod = (value: unknown): z.ZodTypeAny => {
     return z.unknown()
 }
 
+// Re-export AI SDK symbols so plugins can use them without bundling the SDK
+export { generateText, Output, stepCountIs, tool } from 'ai'
+export { z } from 'zod'
+
 export const zodFromExample = (example: Record<string, unknown>): z.ZodObject<Record<string, z.ZodTypeAny>> => {
     const shape: Record<string, z.ZodTypeAny> = {}
     for (const [key, value] of Object.entries(example)) {

@@ -3912,12 +3912,7 @@ spaces.set('classOverview', {
                 icon: <HomeRepairService fontSize='small'/>,
                 text: 'Kube works',
                 permission: true,
-            },
-            // {
-            //     name: 'exit',
-            //     text: 'Exit',
-            //     permission: true
-            // },
+            }
         ]
     }
 )

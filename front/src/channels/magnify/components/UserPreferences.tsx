@@ -42,18 +42,6 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
     const [showAbout, setShowAbout] = useState(false)
     const podExplanation = `Paste here a complete YAML of a pod that will be launched when a user selects this action in Magnify 'Overview' top menu ('Kwirth Works' action)`
 
-    // useEffect( () => {
-    //     // this is needed because preferences are being shown INSIDE react-file-manager, so we don't want key to be propagated
-    //     // +++ change RFM for ignoring key if layout of type 'own' is being shown.
-    //     const handleKeyDown = (event: KeyboardEvent) => {
-    //         event.stopPropagation()
-    //     }
-
-    //     window.addEventListener('keydown', handleKeyDown, true)
-    //     return () => {
-    //         window.removeEventListener('keydown', handleKeyDown, true)
-    //     }
-    // })
     useKeyboard()
     
     const save = () => {

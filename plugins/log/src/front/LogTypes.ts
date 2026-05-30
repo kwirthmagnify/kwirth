@@ -11,7 +11,7 @@ export interface ILogMessage extends IInstanceMessage {
     timestamp?: Date
     text: string
     namespace: string
-    pod:string
+    pod: string
     container: string
 }
 

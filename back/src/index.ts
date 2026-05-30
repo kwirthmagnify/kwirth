@@ -35,8 +35,11 @@ import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common'
+import * as _kwirthCommon from '@kwirthmagnify/kwirth-common'
+import * as _kwirthCommonBack from '@kwirthmagnify/kwirth-common-back'
+import * as _kwirthCommonAi from '@kwirthmagnify/kwirth-common-ai'
+import * as _kwirthCommonAiBack from '@kwirthmagnify/kwirth-common-ai/back'
 import { IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
-import { LogChannel } from './channels/log/LogChannel'
 import { AlertChannel } from './channels/alert/AlertChannel'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
@@ -54,7 +57,6 @@ import cors from 'cors'
 import { Application } from 'express-serve-static-core'
 import * as crypto from 'crypto'
 
-// Providers +++ convert into plugin
 import { createProviderInstance, TProviderConstructor } from './providers/IProvider'
 import { EventsProvider } from './providers/events/EventsProvider'
 import { ValidatingProvider } from './providers/validating/ValidatingProvider'
@@ -77,6 +79,9 @@ const fs = require('fs')
 //     logInfo(ELogComponent.CORE, `🚀 Petición iniciada a: ${args[0]}`);
 //     return originalFetch(...args);
 // }
+
+// Expose shared packages as Node globals so plugins can use them without bundling
+;(global as any).__kwirth_back__ = { kwirthCommon: _kwirthCommon, kwirthCommonBack: _kwirthCommonBack, kwirthCommonAi: _kwirthCommonAi, kwirthCommonAiBack: _kwirthCommonAiBack }
 
 const runningEnv = {
   isDesktop: process.env.FORCE==='desktop' || !!(process.versions && (process.versions as any).electron) || !!(globalThis as any).__TAURI__,
@@ -115,7 +120,6 @@ const envAnsiLog = process.env.ANSILOG !== undefined ? process.env.ANSILOG === '
 const envExitLog = process.env.EXITLOG !== undefined ? process.env.EXITLOG === 'true' : true
 const envConfigMapPath = process.env.CONFIGMAPPATH !== undefined ? process.env.CONFIGMAPPATH : '.'
 const envSecretPath = process.env.SECRETPATH !== undefined ? process.env.SECRETPATH : '.'
-const envChannelLogEnabled = (process.env.CHANNEL_LOG || 'true').toLowerCase() === 'true'
 const envChannelMetricsEnabled = (process.env.CHANNEL_METRICS || 'true').toLowerCase() === 'true'
 const envChannelAlertEnabled = (process.env.CHANNEL_ALERT || 'true').toLowerCase() === 'true'
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
@@ -134,7 +138,6 @@ registeredProviders.set('business', BusinessProvider)
 registeredProviders.set('metrics', MetricsProvider)
 
 const registeredChannels = new Map<string, TChannelConstructor>()
-registeredChannels.set('log', LogChannel)
 registeredChannels.set('alert', AlertChannel)
 registeredChannels.set('metrics', MetricsChannel)
 registeredChannels.set('magnify', MagnifyChannel)
@@ -153,62 +156,6 @@ if (envCommand!==undefined) {
             process.exit(1)
     }
 }
-
-// +++TEST
-// interface TimerInfo {
-//   type: 'Interval' | 'Timeout';
-//   createdAt: string;
-//   ms: number | undefined;
-// }
-
-// declare global {
-//   // Usamos 'any' aquí para el ID para evitar el conflicto entre number (Browser) y Timeout (Node)
-//   var activeTimers: Map<any, TimerInfo>;
-// }
-// global.activeTimers = new Map();
-
-// const originalSetInterval = global.setInterval;
-// const originalClearInterval = global.clearInterval;
-
-// (global as any).setInterval = (handler: TimerHandler, timeout?: number, ...args: any[]) => {
-//   const id = originalSetInterval(handler, timeout, ...args);
-//   global.activeTimers.set(id, {
-//     type: 'Interval',
-//     createdAt: new Date().toLocaleTimeString(),
-//     ms: timeout
-//   });
-//   return id;
-// };
-
-// (global as any).clearInterval = (id: any) => {
-//   global.activeTimers.delete(id);
-//   originalClearInterval(id);
-// };
-
-// // --- Interceptar TIMEOUTS ---
-// const originalSetTimeout = global.setTimeout;
-// const originalClearTimeout = global.clearTimeout;
-
-// (global as any).setTimeout = (handler: TimerHandler, timeout?: number, ...args: any[]) => {
-//   const id = originalSetTimeout((...innerArgs: any[]) => {
-//     global.activeTimers.delete(id);
-//     if (typeof handler === 'function') {
-//       handler(...innerArgs);
-//     }
-//   }, timeout, ...args);
-
-//   global.activeTimers.set(id, {
-//     type: 'Timeout',
-//     createdAt: new Date().toLocaleTimeString(),
-//     ms: timeout
-//   });
-//   return id;
-// };
-
-// (global as any).clearTimeout = (id: any) => {
-//   global.activeTimers.delete(id);
-//   originalClearTimeout(id);
-// };
 
 const getExecutionEnvironment = async (context:string|undefined):Promise<string> => {
     logInfo(ELogComponent.CORE, 'Detecting execution environment...')
@@ -1434,7 +1381,6 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
         // Channel management
         let requiredChannels = []
-        if (envChannelLogEnabled) requiredChannels.push('log')
         if (envChannelAlertEnabled) requiredChannels.push('alert')
         if (envChannelMetricsEnabled) requiredChannels.push('metrics')
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')

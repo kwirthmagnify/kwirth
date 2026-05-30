@@ -81,7 +81,20 @@
       "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\src\\\\back\")",
       "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\src\\\\front\\\\components\")",
       "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\src\\\\channels\\\\trivy\" -Confirm:$false)",
-      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\trivy\" -Confirm:$false)"
+      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\trivy\" -Confirm:$false)",
+      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\src\\\\channels\\\\log\" -Confirm:$false)",
+      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\log\" -Confirm:$false)",
+      "Bash(node scripts/add-back-globals.mjs)",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-ai && npm run build 2>&1 | Where-Object { $_ -match 'error|warning|built' -or $_ -eq '' } | Select-Object -Last 5)",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-ai && npm run build 2>&1; Write-Host \"Exit: $LASTEXITCODE\")",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-ai && npm run build 2>&1 | Select-Object -Last 3; Write-Host \"Exit: $LASTEXITCODE\")",
+      "Read(//c/github/aisdkvercel/kwirth/back/node_modules/@kwirthmagnify/kwirth-common-ai/**)",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back && npm install 2>&1 | Select-Object -Last 2; $p = \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-ai\"; Write-Host \"Target: $\\(\\(Get-Item $p\\).Target\\)\")",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-ai && npm run build 2>&1 | Select-Object -Last 2; Write-Host \"Exit: $LASTEXITCODE\")",
+      "PowerShell($f = \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\dist\\\\back.js\"; Write-Host \"trivy back.js: $\\([math]::Round\\(\\(Get-Item $f\\).Length/1024,1\\)\\) KB\")",
+      "PowerShell($f = \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\fileman\\\\dist\\\\front.js\"; Write-Host \"fileman front.js: $\\([math]::Round\\(\\(Get-Item $f\\).Length/1024,1\\)\\) KB\")",
+      "Bash(cd /c/github/jfvilas/react-file-manager/frontend && find . -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\\\\\) | head -20)",
+      "Read(//c/c/github/jfvilas/react-file-manager/**)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
@@ -91,7 +104,8 @@
       "c:\\github\\aisdkvercel\\kwirth\\common-front\\dist",
       "c:\\github\\aisdkvercel\\kwirth\\common-ai\\dist",
       "c:\\github\\aisdkvercel\\kwirth\\common-back\\dist",
-      "c:\\github\\aisdkvercel\\kwirth\\front\\node_modules\\.cache"
+      "c:\\github\\aisdkvercel\\kwirth\\front\\node_modules\\.cache",
+      "C:\\github\\jfvilas\\react-file-manager\\frontend"
     ]
   }
 }

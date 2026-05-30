@@ -32,7 +32,6 @@ import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanc
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
-import { LogChannel } from './channels/log/LogChannel'
 import { AlertChannel } from './channels/alert/AlertChannel'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
@@ -319,7 +318,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     useEffect( () => {
         // only first time
-        frontChannels.set('log', LogChannel)
         frontChannels.set('alert', AlertChannel)
         frontChannels.set('metrics', MetricsChannel)
         frontChannels.set('magnify', MagnifyChannel)
@@ -1761,7 +1759,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
 
                 { !fullscreenTab && 
-                    <ResourceSelector clusters={clusters} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected}/>
+                    <ResourceSelector clusters={clusters} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected} frontChannels={frontChannels}/>
                 }
                 
                 <Stack direction={'column'} display={'flex'} flexDirection={'column'} sx={{minHeight:0, height:'100%', flexGrow:1}}>
@@ -1819,7 +1817,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                             <TabContent key={selectedTab.current?.name} channel={selectedTab.current?.channel} channelObject={selectedTab.current?.channelObject} />
                         </Box>
                     }
-                    { !selectedTab.current && 
+                    { !selectedTab.current &&
                         <Box sx={{ display: 'flex', flexDirection: 'column', height:'100%', minHeight:0 }}>
                             <Homepage lastTabs={lastTabs} favTabs={favTabs} lastWorkspaces={lastWorkspaces} favWorkspaces={favWorkspaces} onHomepageSelectTab={onHomepageSelectTab} onRestoreTabParameters={onHomepageRestoreParameters} onSelectWorkspace={onHomepageSelectWorkspace} onRestoreWorkspace={onHomepageRestoreWorkspace} frontChannels={frontChannels} onUpdateTabs={onHomepageUpdateTabs} cluster={clusters.find(c => c.name === selectedClusterName)} clusters={clusters} onUpdateWorkspaces={onHomepageUpdateWorkspaces} dataCpu={dataCpu.current} dataMemory={dataMemory.current} dataNetwork={dataNetwork.current}/>
                         </Box>

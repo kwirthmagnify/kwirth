@@ -564,7 +564,7 @@ class MagnifyChannel implements IChannel {
             path: buildPath('PodDisruptionBudget', obj.metadata.name, obj.metadata.namespace),
             class: 'PodDisruptionBudget',
             data: {
-                ...(existingPod?.data ? { cpu: existingPod.data.cpu, memory: existingPod.data.memory} : {}), // +++ test
+                ...(existingPod?.data ? { cpu: existingPod.data.cpu, memory: existingPod.data.memory} : {}),
                 namespace: obj.metadata.namespace,
                 minAvailable: obj.spec.minAvailable || '',
                 maxUnavailable: obj.spec.maxUnavailable || '',
