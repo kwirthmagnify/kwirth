@@ -1,6 +1,7 @@
 {
     "id": "trivy",
     "name": "Trivy",
+    "displayName": "Trivy",
     "publisher": "@kwirthmagnify",
     "version": "0.1.0",
     "website": "https://kwirthmagnify.dev",
@@ -17,7 +18,6 @@
         "@kwirthmagnify/kwirth-common-front": "^0.5.2"
     },
     "devDependencies": {
-        "@kubernetes/client-node": "^1.4.0",
         "@mui/icons-material": "7.1.2",
         "@mui/material": "7.1.2",
         "@types/node": "^20.12.13",

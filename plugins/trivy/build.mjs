@@ -45,7 +45,7 @@ await esbuild.build({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
-    external: ['express', '@kubernetes/client-node', '@kwirthmagnify/kwirth-common-back'],
+    external: ['express', '@kwirthmagnify/kwirth-common-back'],
     loader: { '.ts': 'ts', '.yaml': 'text' },
     minify: false,
 })

@@ -1294,7 +1294,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
     }
 
-    const loadWorkspace = async (name: string) => {
+    const loadWorkspace = async (name: string, autoStart: boolean = true) => {
         let errors = ''
         clearTabs()
 
@@ -1304,13 +1304,18 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             for (let t of newWorkspace.tabs) {
                 let clusterName = t.channelObject.clusterName
                 if (!clusters.find(c => c.name === clusterName)) {
-                    errors += `Cluster '${clusterName}' used in tab ${t.name} does not exsist<br/><br/>`
+                    errors += `Cluster '${clusterName}' used in tab '${t.name}' does not exist — tab will be skipped<br/><br/>`
+                }
+                if (!frontChannels.has(t.channel.channelId)) {
+                    errors += `Channel '${t.channel.channelId}' used in tab '${t.name}' is not available (plugin not installed?) — tab will be skipped<br/><br/>`
                 }
             }
             if (errors!=='') setMsgBox(MsgBoxOkError('Kwirth',`Some errors have been detected when loading workspace:<br/><br/>${errors}`, setMsgBox))
             setCurrentWorkspaceName(name)
             setCurrentWorkspaceDescription(newWorkspace.description)
             for (let t of newWorkspace.tabs) {
+                if (!clusters.find(c => c.name === t.channelObject.clusterName)) continue
+                if (!frontChannels.has(t.channel.channelId)) continue
                 let res:IResourceSelected = {
                     channelId: t.channel.channelId,
                     clusterName: t.channelObject.clusterName,
@@ -1321,7 +1326,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     containers: t.channelObject.container.split(','),
                     name: t.name
                 }
-                onResourceSelectorAdd(res, false, undefined)
+                onResourceSelectorAdd(res, autoStart, undefined)
             }
 
             if (!lastWorkspaces.some(workspace => workspace.name === newWorkspace.name)) {
@@ -1574,7 +1579,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const onHomepageSelectWorkspace = (workspace: IWorkspaceSummary): void => {
-        loadWorkspace(workspace.name)
+        loadWorkspace(workspace.name, true)
+    }
+
+    const onHomepageRestoreWorkspace = (workspace: IWorkspaceSummary): void => {
+        loadWorkspace(workspace.name, false)
     }
     
     const onHomepageUpdateTabs = (last: ITabSummary[], fav: ITabSummary[]): void => {
@@ -1812,7 +1821,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     }
                     { !selectedTab.current && 
                         <Box sx={{ display: 'flex', flexDirection: 'column', height:'100%', minHeight:0 }}>
-                            <Homepage lastTabs={lastTabs} favTabs={favTabs} lastWorkspaces={lastWorkspaces} favWorkspaces={favWorkspaces} onHomepageSelectTab={onHomepageSelectTab} onRestoreTabParameters={onHomepageRestoreParameters} onSelectWorkspace={onHomepageSelectWorkspace} frontChannels={frontChannels} onUpdateTabs={onHomepageUpdateTabs} cluster={clusters.find(c => c.name === selectedClusterName)} clusters={clusters} onUpdateWorkspaces={onHomepageUpdateWorkspaces} dataCpu={dataCpu.current} dataMemory={dataMemory.current} dataNetwork={dataNetwork.current}/>
+                            <Homepage lastTabs={lastTabs} favTabs={favTabs} lastWorkspaces={lastWorkspaces} favWorkspaces={favWorkspaces} onHomepageSelectTab={onHomepageSelectTab} onRestoreTabParameters={onHomepageRestoreParameters} onSelectWorkspace={onHomepageSelectWorkspace} onRestoreWorkspace={onHomepageRestoreWorkspace} frontChannels={frontChannels} onUpdateTabs={onHomepageUpdateTabs} cluster={clusters.find(c => c.name === selectedClusterName)} clusters={clusters} onUpdateWorkspaces={onHomepageUpdateWorkspaces} dataCpu={dataCpu.current} dataMemory={dataMemory.current} dataNetwork={dataNetwork.current}/>
                         </Box>
                     }
 

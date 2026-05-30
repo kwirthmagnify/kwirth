@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { Box,  Card, CardContent, CardHeader, Collapse, Divider, IconButton, Stack, Tooltip, Typography } from '@mui/material'
+import { Box, Card, CardContent, CardHeader, Collapse, Divider, Fade, IconButton, Stack, Tooltip, Typography } from '@mui/material'
 import { IWorkspaceSummary } from '../model/IWorkspace'
 import { ITabSummary } from '../model/ITabObject'
-import { Delete, ExpandLess, ExpandMore, FactCheck, OpenInBrowser, Star } from '@mui/icons-material'
+import { Delete, ExpandLess, ExpandMore, FactCheck, HelpOutline, OpenInBrowser, Star } from '@mui/icons-material'
 import { TChannelConstructor } from '../channels/IChannel'
 import { Cluster } from '../model/Cluster'
 import { GaugeComponent } from 'react-gauge-component'
@@ -27,6 +27,7 @@ interface IHomepageProps {
     onRestoreTabParameters: (tab:ITabSummary) => void
     onHomepageSelectTab: (tab:ITabSummary) => void
     onSelectWorkspace: (workspace:IWorkspaceSummary) => void
+    onRestoreWorkspace: (workspace:IWorkspaceSummary) => void
     onUpdateTabs: (last:ITabSummary[], fav:ITabSummary[]) => void
     onUpdateWorkspaces: (last:IWorkspaceSummary[], fav:IWorkspaceSummary[]) => void
     dataCpu: {value:number}[]
@@ -135,10 +136,11 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                     <CardContent sx={{overflowY:'auto', overflowX:'hidden', minHeight:'50%', maxHeight:'50%' }}>
                     {
                         tabList.map(tab => {
-                            let channelIcon = <Box sx={{minWidth:'24px'}}/>
-
                             const channelClass = props.frontChannels.get(tab.channel)
-                            if (channelClass) channelIcon = new channelClass()!.getChannelIcon()
+                            const channelAvailable = !!channelClass
+                            let channelIcon: JSX.Element = channelAvailable
+                                ? new channelClass()!.getChannelIcon()
+                                : <HelpOutline sx={{ minWidth: '24px', color: 'warning.main' }} />
 
                             let viewIcon = <></>
                             switch (tab.channelObject.view) {
@@ -162,11 +164,11 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                             let name = tab.name
                             if (name.length>50) name = name.substring(0,25) + '...' + name.substring(name.length-25)
 
-                            let disabled = (!props.clusters.find(c => c.name === tab.channelObject.clusterName)) && tab.channelObject.clusterName!=='$cluster'
+                            let disabled = !channelAvailable || ((!props.clusters.find(c => c.name === tab.channelObject.clusterName)) && tab.channelObject.clusterName!=='$cluster')
 
                             return <Stack key={listType+tab.name+tab.channel} direction={'row'} alignItems={'center'} flex={1}>
-                                <Tooltip title={tab.channel}>
-                                    {channelIcon}
+                                <Tooltip title={channelAvailable ? tab.channel : `Channel '${tab.channel}' is not available — plugin may not be installed`}>
+                                    <span style={{ display: 'inline-flex' }}>{channelIcon}</span>
                                 </Tooltip>
                                 <Typography>&nbsp;</Typography>
                                 <Tooltip title={`View: ${tab.channelObject.view}`}>
@@ -218,12 +220,18 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                     { workspaceList.map (workspace => {
                         return <Stack key={listType+workspace.name} direction={'row'} spacing={1} alignItems={'baseline'}>
                             <Typography>{workspace.name}</Typography>
-                            <Typography fontSize={'12px'}>{workspace.description}</Typography>                            
+                            <Typography fontSize={'12px'}>{workspace.description}</Typography>
                             <Typography flexGrow={1}/>
-                            <IconButton onClick={() => props.onSelectWorkspace(workspace)
-}>
-                                <OpenInBrowser/>
-                            </IconButton>
+                            <Tooltip title='Open workspace and start all tabs'>
+                                <IconButton onClick={() => props.onSelectWorkspace(workspace)}>
+                                    <OpenInBrowser/>
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title='Open workspace without starting tabs'>
+                                <IconButton onClick={() => props.onRestoreWorkspace(workspace)}>
+                                    <FactCheck/>
+                                </IconButton>
+                            </Tooltip>
                             { listType !== EListType.FAV && 
                                 <IconButton onClick={() => toFavWorkspaces(workspace)}>
                                     <Star/>
@@ -329,7 +337,8 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
         <Stack sx={{ display:'flex', flexDirection:'column', m:3}} spacing={2}>
             <Card sx={{width:'100%', alignSelf:'center', transition: 'all 0.3s ease'}}>
                 <CardHeader sx={{borderBottom:(cardExpanded?1:0), borderColor:'divider'}}
-                    title={<>
+                    title={<Fade key={cardExpanded ? 'expanded' : 'collapsed'} in={true} timeout={350}>
+                        <Box>
                         {cardExpanded && <Typography variant="h6">Cluster details</Typography>}
                         {!cardExpanded && <Stack direction={'row'}>
                             <Typography><b>Cluster: </b>{props.cluster?.clusterInfo?.name}</Typography>
@@ -382,7 +391,8 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 </Stack>
                             </Tooltip>
                         </Stack>}
-                    </>}
+                        </Box>
+                    </Fade>}
                     action={
                         <IconButton onClick={handleCardToggle} aria-label="expandir/colapsar">
                             {cardExpanded ? <ExpandLess /> : <ExpandMore />}

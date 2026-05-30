@@ -1,4 +1,5 @@
 const jsYaml = require('js-yaml')
+const k8s = require('@kubernetes/client-node')
 
 async function applyResource(resource: any, clusterInfo: any): Promise<string> {
     try {
@@ -94,6 +95,26 @@ async function getSelector(kind: string, namespace: string, name: string, cluste
         console.log('[KubernetesTools] Error getting selector:', err)
     }
     return undefined
+}
+
+export interface ICrdInformerHandlers {
+    onAdd?: (obj: any) => void
+    onUpdate?: (obj: any) => void
+    onDelete?: (obj: any) => void
+    onError?: (err: any) => void
+}
+
+export function createCrdInformer(clusterInfo: any, apiGroup: string, apiVersion: string, plural: string, handlers: ICrdInformerHandlers): any {
+    const path = `/apis/${apiGroup}/${apiVersion}/${plural}`
+    const listFunction = () =>
+        clusterInfo.crdApi.listCustomObjectForAllNamespaces({ group: apiGroup, version: apiVersion, plural })
+            .then((res: any) => res as { items: any[] })
+    const informer = k8s.makeInformer(clusterInfo.kubeConfig, path, listFunction)
+    if (handlers.onAdd)    informer.on('add',    handlers.onAdd)
+    if (handlers.onUpdate) informer.on('update', handlers.onUpdate)
+    if (handlers.onDelete) informer.on('delete', handlers.onDelete)
+    if (handlers.onError)  informer.on('error',  handlers.onError)
+    return informer
 }
 
 export async function restartController(kind: string, namespace: string, name: string, clusterInfo: any): Promise<void> {

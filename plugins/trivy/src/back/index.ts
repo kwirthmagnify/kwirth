@@ -1,7 +1,6 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType, IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
-import { Informer, KubernetesObject, makeInformer, ObjectCache } from '@kubernetes/client-node'
 import { Request, Response } from 'express'
-import { applyAllResources, deleteAllResources } from '@kwirthmagnify/kwirth-common-back'
+import { applyAllResources, deleteAllResources, createCrdInformer, ICrdInformerHandlers } from '@kwirthmagnify/kwirth-common-back'
 import { ETrivyCommand, IKnown, ITrivyMessage, ITrivyMessageResponse, IUnknown } from './TrivyTypes'
 // @ts-ignore
 import trivyOperatorYaml from './trivy-operator-0.30.1.yaml'
@@ -12,8 +11,6 @@ const TRIVY_API_VULN_PLURAL = 'vulnerabilityreports'
 const TRIVY_API_AUDIT_PLURAL = 'configauditreports'
 const TRIVY_API_SBOM_PLURAL = 'sbomreports'
 const TRIVY_API_EXPOSED_PLURAL = 'exposedsecretreports'
-
-type TInformer = (Informer<KubernetesObject> & ObjectCache<KubernetesObject>) | undefined
 
 export interface IAsset {
     podNamespace: string
@@ -36,7 +33,7 @@ class TrivyChannel {
     readonly requirements: IBackChannelRequirements = { storage: false, providers: [] }
     clusterInfo: any
     backChannelObject: IBackChannelObject
-    informers: Map<string, TInformer> = new Map()
+    informers: Map<string, any> = new Map()
     webSockets: { ws: WebSocket, lastRefresh: number, instances: IInstance[] }[] = []
 
     constructor(clusterInfo: any, backChannelObject: IBackChannelObject) {
@@ -214,25 +211,21 @@ class TrivyChannel {
     }
 
     createInformer = (webSocket: WebSocket, instance: IInstance, plural: string) => {
-        const path = `/apis/${TRIVY_API_GROUP}/${TRIVY_API_VERSION}/${plural}`
-        const listFunction = () =>
-            this.clusterInfo.crdApi.listCustomObjectForAllNamespaces({ group: TRIVY_API_GROUP, version: TRIVY_API_VERSION, plural }).then((res: any) => {
-                const typedBody = res as { items: KubernetesObject[] }
-                return typedBody
-            })
-        const informer = makeInformer(this.clusterInfo.kubeConfig, path, listFunction)
-        informer.on('add', (obj: any) => this.processInformerEvent(webSocket, instance, plural, 'add', obj))
-        informer.on('update', (obj: any) => this.processInformerEvent(webSocket, instance, plural, 'update', obj))
-        informer.on('delete', (obj: any) => this.processInformerEvent(webSocket, instance, plural, 'delete', obj))
-        informer.on('error', (err: any) => {
-            try {
-                console.error('[trivy] Informer error:', err)
-                if (err['HTTP-Code'] === '404' || err.statusCode === 404)
-                    console.log('[trivy] CRD not found, informer will not restart')
-                else
-                    setTimeout(() => { informer.start(); console.log('[trivy] Informer restarted') }, 5000)
-            } catch (e) { console.error('[trivy] Error managing informer error:', e) }
-        })
+        const handlers: ICrdInformerHandlers = {
+            onAdd:    (obj: any) => this.processInformerEvent(webSocket, instance, plural, 'add', obj),
+            onUpdate: (obj: any) => this.processInformerEvent(webSocket, instance, plural, 'update', obj),
+            onDelete: (obj: any) => this.processInformerEvent(webSocket, instance, plural, 'delete', obj),
+            onError:  (err: any) => {
+                try {
+                    console.error('[trivy] Informer error:', err)
+                    if (err['HTTP-Code'] === '404' || err.statusCode === 404)
+                        console.log('[trivy] CRD not found, informer will not restart')
+                    else
+                        setTimeout(() => { informer.start(); console.log('[trivy] Informer restarted') }, 5000)
+                } catch (e) { console.error('[trivy] Error managing informer error:', e) }
+            }
+        }
+        const informer = createCrdInformer(this.clusterInfo, TRIVY_API_GROUP, TRIVY_API_VERSION, plural, handlers)
         return informer
     }
 

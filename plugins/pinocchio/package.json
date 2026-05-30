@@ -1,6 +1,7 @@
 {
     "id": "pinocchio",
     "name": "Pinocchio",
+    "displayName": "Pinocchio",
     "publisher": "@kwirthmagnify",
     "version": "0.1.0",
     "website": "https://kwirthmagnify.dev",
