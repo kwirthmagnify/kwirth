@@ -1,4 +1,3 @@
-import { Terminal } from 'xterm'
 import { TerminalManager } from './terminal/TerminalManager'
 
 export interface IXTerm {
@@ -9,7 +8,7 @@ export interface IXTerm {
     connected: boolean
     selected: boolean
     socket: WebSocket | undefined
-    terminal: Terminal|undefined
+    terminal: any
 }
 
 export interface IWebsocketRequest {
@@ -31,21 +30,17 @@ export interface IOpsData {
     websocketRequest: IWebsocketRequest
     terminalManager: TerminalManager
     selectedTerminal: string | undefined
-    onDescribeResponse?: (data:any) => void
+    onDescribeResponse?: (data: any) => void
     startCommand: string[]
 }
 
 export class OpsData implements IOpsData {
-    messages:string[] = []
+    messages: string[] = []
     selectedTerminal: undefined
     terminalManager: TerminalManager = new TerminalManager()
     paused = false
     started = false
-    websocketRequest: IWebsocketRequest = {
-        namespace: '',
-        pod: '',
-        container: ''
-    }
+    websocketRequest: IWebsocketRequest = { namespace: '', pod: '', container: '' }
     scopedObjects = []
     startCommand = ['/bin/sh']
 }

@@ -1,8 +1,5 @@
 import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
 
-export interface OpsConfig {
-}
-
 export enum EOpsCommand {
     DESCRIBE = 'describe',
     EXECUTE = 'execute',
@@ -35,10 +32,6 @@ export interface IOpsMessageResponse extends IInstanceMessage {
     data?: any
 }
 
-interface IOpsInstanceConfig {
+export interface IOpsInstanceConfig {
     sessionKeepAlive: boolean
-}
-
-class OpsInstanceConfig implements IOpsInstanceConfig{
-    sessionKeepAlive = true
 }

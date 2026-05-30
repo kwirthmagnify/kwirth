@@ -39,7 +39,6 @@ import { IChannel, createChannelInstance, TChannelConstructor } from './channels
 import { LogChannel } from './channels/log/LogChannel'
 import { AlertChannel } from './channels/alert/AlertChannel'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
-import { OpsChannel } from './channels/ops/OpsChannel'
 import { TrivyChannel } from './channels/trivy/TrivyChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 // NewsChannel, PinocchioChannel and FilemanChannel removed — now loaded as plugins
@@ -120,7 +119,6 @@ const envSecretPath = process.env.SECRETPATH !== undefined ? process.env.SECRETP
 const envChannelLogEnabled = (process.env.CHANNEL_LOG || 'true').toLowerCase() === 'true'
 const envChannelMetricsEnabled = (process.env.CHANNEL_METRICS || 'true').toLowerCase() === 'true'
 const envChannelAlertEnabled = (process.env.CHANNEL_ALERT || 'true').toLowerCase() === 'true'
-const envChannelOpsEnabled = (process.env.CHANNEL_OPS || 'true').toLowerCase() === 'true'
 const envChannelTrivyEnabled = (process.env.CHANNEL_TRIVY || 'true').toLowerCase() === 'true'
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 
@@ -141,7 +139,6 @@ const registeredChannels = new Map<string, TChannelConstructor>()
 registeredChannels.set('log', LogChannel)
 registeredChannels.set('alert', AlertChannel)
 registeredChannels.set('metrics', MetricsChannel)
-registeredChannels.set('ops', OpsChannel)
 registeredChannels.set('trivy', TrivyChannel)
 registeredChannels.set('magnify', MagnifyChannel)
 // 'echo', 'news', 'topology' and 'pinocchio' channels loaded dynamically by PluginManager
@@ -1443,7 +1440,6 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (envChannelLogEnabled) requiredChannels.push('log')
         if (envChannelAlertEnabled) requiredChannels.push('alert')
         if (envChannelMetricsEnabled) requiredChannels.push('metrics')
-        if (envChannelOpsEnabled) requiredChannels.push('ops')
         if (envChannelTrivyEnabled) requiredChannels.push('trivy')
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
         // plugin channels: load installed plugins and add their ids to requiredChannels

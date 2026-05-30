@@ -99,7 +99,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const [ , setTick] = useState<number>(0)
 
-    const BUILTIN_CHANNELS = new Set(['log', 'echo', 'alert', 'metrics', 'trivy', 'ops', 'fileman', 'magnify'])
+    const BUILTIN_CHANNELS = new Set(['log', 'echo', 'alert', 'metrics', 'trivy', 'magnify'])
 
     // RFM categories
     const onCategoryFilter = (categoryKey:string, f:IFileObject) : boolean => {
@@ -777,8 +777,8 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
         setLeftItem(spcPod,'log', (p:string[], currentTarget:Element) => podGroupAction('log', p, currentTarget))
         setLeftItem(spcPod,'metrics', (p:string[], currentTarget:Element) => podGroupAction('metrics', p, currentTarget))
-        setLeftItem(spcPod,'ops', (p:string[], currentTarget:Element) => podSingleAction('ops', p, currentTarget))
-        setLeftItem(spcPod,'fileman', (p:string[], currentTarget:Element) => podGroupAction('fileman', p, currentTarget))
+        setLeftItem(spcPod,'ops', (p:string[], currentTarget:Element) => podSingleAction('ops', p, currentTarget), () => props.channelObject.frontChannels?.has('ops') ?? false)
+        setLeftItem(spcPod,'fileman', (p:string[], currentTarget:Element) => podGroupAction('fileman', p, currentTarget), () => props.channelObject.frontChannels?.has('fileman') ?? false)
         setLeftItem(spcPod,'trivy', (p:string[], currentTarget:Element) => podGroupAction('trivy', p, currentTarget))
         setLeftItem(spcPod,'topology', (p:string[]) => {
             let f = magnifyData.files.filter(x => p.includes(x.path))
@@ -806,7 +806,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setLeftItem(spcDeployment,'restart', launchControllerRestart)
         setLeftItem(spcDeployment,'log', (p) => launchControllerChannel(p,'log'))
         setLeftItem(spcDeployment,'metrics', (p) => launchControllerChannel(p,'metrics'))
-        setLeftItem(spcDeployment,'fileman', (p) => launchControllerChannel(p,'fileman'))
+        setLeftItem(spcDeployment,'fileman', (p) => launchControllerChannel(p,'fileman'), () => props.channelObject.frontChannels?.has('fileman') ?? false)
         setLeftItem(spcDeployment,'trivy', (p) => launchControllerChannel(p,'trivy'))
         setLeftItem(spcDeployment,'topology', (p) => launchControllerChannel(p,'topology'), () => props.channelObject.frontChannels?.has('topology') ?? false)
 
@@ -822,7 +822,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setLeftItem(spcReplicaSet,'scale', launchControllerScale)
         setLeftItem(spcReplicaSet,'log', (p) => launchControllerChannel(p,'log'))
         setLeftItem(spcReplicaSet,'metrics', (p) => launchControllerChannel(p,'metrics'))
-        setLeftItem(spcReplicaSet,'fileman', (p) => launchControllerChannel(p,'fileman'))
+        setLeftItem(spcReplicaSet,'fileman', (p) => launchControllerChannel(p,'fileman'), () => props.channelObject.frontChannels?.has('fileman') ?? false)
         setLeftItem(spcReplicaSet,'trivy', (p) => launchControllerChannel(p,'trivy'))
         setLeftItem(spcReplicaSet,'topology', (p) => launchControllerChannel(p,'topology'), () => props.channelObject.frontChannels?.has('topology') ?? false)
 
@@ -832,7 +832,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setLeftItem(spcReplicationController,'scale', launchControllerScale)
         setLeftItem(spcReplicationController,'log', (p) => launchControllerChannel(p,'log'))
         setLeftItem(spcReplicationController,'metrics', (p) => launchControllerChannel(p,'metrics'))
-        setLeftItem(spcReplicationController,'fileman', (p) => launchControllerChannel(p,'fileman'))
+        setLeftItem(spcReplicationController,'fileman', (p) => launchControllerChannel(p,'fileman'), () => props.channelObject.frontChannels?.has('fileman') ?? false)
         setLeftItem(spcReplicationController,'trivy', (p) => launchControllerChannel(p,'trivy'))
         setLeftItem(spcReplicationController,'topology', (p) => launchControllerChannel(p,'topology'), () => props.channelObject.frontChannels?.has('topology') ?? false)
 
@@ -842,14 +842,14 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setLeftItem(spcStatefulSet,'restart', launchControllerRestart)
         setLeftItem(spcStatefulSet,'log', (p) => launchControllerChannel(p,'log'))
         setLeftItem(spcStatefulSet,'metrics', (p) => launchControllerChannel(p,'metrics'))
-        setLeftItem(spcStatefulSet,'fileman', (p) => launchControllerChannel(p,'fileman'))
+        setLeftItem(spcStatefulSet,'fileman', (p) => launchControllerChannel(p,'fileman'), () => props.channelObject.frontChannels?.has('fileman') ?? false)
         setLeftItem(spcStatefulSet,'trivy', (p) => launchControllerChannel(p,'trivy'))
         setLeftItem(spcStatefulSet,'topology', (p) => launchControllerChannel(p,'topology'), () => props.channelObject.frontChannels?.has('topology') ?? false)
 
         let spcJob = spaces.get('Job')!
         setLeftItem(spcJob,'log', (p) => launchControllerChannel(p,'log'))
         setLeftItem(spcJob,'metrics', (p) => launchControllerChannel(p,'metrics'))
-        setLeftItem(spcJob,'fileman', (p) => launchControllerChannel(p,'fileman'))
+        setLeftItem(spcJob,'fileman', (p) => launchControllerChannel(p,'fileman'), () => props.channelObject.frontChannels?.has('fileman') ?? false)
         setLeftItem(spcJob,'trivy', (p) => launchControllerChannel(p,'trivy'))
         setLeftItem(spcJob,'topology', (p) => launchControllerChannel(p,'topology'), () => props.channelObject.frontChannels?.has('topology') ?? false)
         

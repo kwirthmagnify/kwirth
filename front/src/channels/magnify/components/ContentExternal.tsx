@@ -19,21 +19,14 @@ import { IMetricsConfig, IMetricsInstanceConfig } from '../../metrics/MetricsCon
 import { EMetricsConfigMode } from '../../metrics/MetricsTypes'
 import { IMetricsData } from '../../metrics/MetricsData'
 import { EChartType } from '../../metrics/MenuChart'
-
-import { ESwitchKey, IOpsConfig } from '../../ops/OpsConfig'
-import { IOpsData } from '../../ops/OpsData'
-import { TerminalManager } from '../../ops/terminal/TerminalManager'
-import { IOpsInstanceConfig } from '../../ops/OpsTypes'
-
-interface IFilemanData { paused: boolean; started: boolean; files: any[]; currentPath: string; ri: string | undefined; unlock?: () => void }
-interface IFilemanConfig { [key: string]: any }
-
 import { ITrivyData } from '../../trivy/TrivyData'
 import { ITrivyInstanceConfig } from '../../trivy/TrivyTypes'
-
 import { ILogConfig } from '../../log/LogConfig'
 import { ILogData } from '../../log/LogData'
 import { ELogSortOrder, ILogInstanceConfig } from '../../log/LogTypes'
+
+interface IFilemanData { paused: boolean; started: boolean; files: any[]; currentPath: string; ri: string | undefined; unlock?: () => void }
+interface IFilemanConfig { [key: string]: any }
 
 export interface IContentExternalOptions {
     pauseable: boolean
@@ -104,10 +97,6 @@ const containerRef = useRef<HTMLDivElement>(null)
                     setMetricsConfig(contentExternalData.content)
                     break
                 }
-                case 'ops':
-                    contentExternalData.formConfig = {}
-                    setOpsConfig(contentExternalData.content)
-                    break
                 case 'fileman':
                     contentExternalData.formConfig = {}
                     setFilemanConfig(contentExternalData.content)
@@ -298,6 +287,7 @@ const containerRef = useRef<HTMLDivElement>(null)
         newContent.ws.onmessage = (event:MessageEvent) => wsOnMessage(event)
         newContent.ws.onerror = (event) => () => { console.log('WebSocket error:'+event, new Date().toISOString()) }
         newContent.ws.onclose = (event:CloseEvent) => { console.log('WebSocket disconnect:'+event.reason, new Date().toISOString()) }
+        if (newChannel.requirements.webSocket) newContent.externalChannelObject!.webSocket = newContent.ws
         return newContent
     }
 
@@ -390,40 +380,6 @@ const containerRef = useRef<HTMLDivElement>(null)
         c.externalChannelObject!.data = metricsData
         c.externalChannelObject!.config = metricsConfig
         c.externalChannelObject!.instanceConfig = metricsInstanceConfig
-    }
-
-    const setOpsConfig = (c:IContentExternalObject) => {
-        let opsData:IOpsData = {
-            scopedObjects: [],
-            paused: false,
-            started: false,
-            websocketRequest: {
-                namespace: '',
-                pod: '',
-                container: ''
-            },
-            terminalManager: new TerminalManager(),
-            selectedTerminal: undefined,
-            startCommand: contentExternalData.options.data?.nodeShell? ['/bin/sh','-c','chroot /host /bin/sh'] : ['/bin/sh']
-        }
-        let onlyContName = c.externalChannelObject!.container.split('+')[1]
-        let onlyPodName = c.externalChannelObject!.container.split('+')[0]
-        let opsConfig:IOpsConfig = {
-            accessKey: ESwitchKey.DISABLED,
-            launchShell: true,
-            shell: {
-                namespace: c.externalChannelObject!.namespace,
-                pod: onlyPodName,
-                container: onlyContName
-            }
-        }
-        let opsInstanceConfig:IOpsInstanceConfig = {
-            sessionKeepAlive: false
-        }
-        c.externalChannelObject!.webSocket = contentExternalData.content!.ws
-        c.externalChannelObject!.data = opsData
-        c.externalChannelObject!.config = opsConfig
-        c.externalChannelObject!.instanceConfig = opsInstanceConfig
     }
 
     const setFilemanConfig = (c:IContentExternalObject) => {

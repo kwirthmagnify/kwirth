@@ -15,13 +15,14 @@ interface IOpsConfig {
     shell?: IScopedObject
 }
 
-class OpsConfig implements IOpsConfig{
-    accessKey =  ESwitchKey.DISABLED
+class OpsConfig implements IOpsConfig {
+    accessKey = ESwitchKey.DISABLED
     launchShell = false
 }
 
-class OpsInstanceConfig implements IOpsInstanceConfig{
+class OpsInstanceConfig implements IOpsInstanceConfig {
     sessionKeepAlive = true
 }
+
 export type { IOpsConfig }
 export { OpsConfig, OpsInstanceConfig }

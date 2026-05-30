@@ -38,4 +38,3 @@ export interface IOpsMessageResponse extends IInstanceMessage {
 export interface IOpsInstanceConfig {
     sessionKeepAlive: boolean
 }
-

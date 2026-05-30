@@ -31,5 +31,13 @@
         "name": "Fileman",
         "description": "Fileman plugin for in-container file management live",
         "icon": "FolderCopyTwoTone"
+    },
+    {
+        "id": "ops",
+        "version": "0.1.0",
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.1.0.tgz",
+        "name": "Fileman",
+        "description": "Ops Kwirth plugin for shell & operations against cluster workload",
+        "icon": "Shell"
     }
 ]

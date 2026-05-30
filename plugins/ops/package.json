@@ -1,0 +1,32 @@
+{
+    "id": "ops",
+    "name": "Ops",
+    "publisher": "@kwirthmagnify",
+    "version": "0.1.0",
+    "website": "https://kwirthmagnify.dev",
+    "description": "Ops channel plugin for Kwirth",
+    "icon": "Terminal",
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "watch": "node watch.mjs"
+    },
+    "dependencies": {
+        "@kwirthmagnify/kwirth-common": "^0.5.4",
+        "@kwirthmagnify/kwirth-common-front": "^0.5.2",
+        "react-json-view-lite": "^1.0.0",
+        "uuid": "^11.1.0",
+        "xterm": "^5.3.0",
+        "xterm-addon-fit": "^0.8.0"
+    },
+    "devDependencies": {
+        "@mui/icons-material": "7.1.2",
+        "@mui/material": "7.1.2",
+        "@types/node": "^20.12.13",
+        "@types/react": "^18.3.0",
+        "esbuild": "^0.27.2",
+        "react": "^18.3.0",
+        "react-dom": "^18.3.0",
+        "typescript": "^5.4.0"
+    }
+}

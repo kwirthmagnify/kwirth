@@ -35,7 +35,6 @@ import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAc
 import { LogChannel } from './channels/log/LogChannel'
 import { AlertChannel } from './channels/alert/AlertChannel'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
-import { OpsChannel } from './channels/ops/OpsChannel'
 import { TrivyChannel } from './channels/trivy/TrivyChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 import { getMetricsNames, ENotifyLevel, readClusterInfo } from './tools/Global'
@@ -325,7 +324,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         frontChannels.set('alert', AlertChannel)
         frontChannels.set('metrics', MetricsChannel)
         frontChannels.set('trivy', TrivyChannel)
-        frontChannels.set('ops', OpsChannel)
         frontChannels.set('magnify', MagnifyChannel)
     },[])
 
