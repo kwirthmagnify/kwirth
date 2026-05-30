@@ -2,7 +2,7 @@ import React from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { IContentProps } from '../IChannel'
 import { EMagnifyCommand, IMagnifyMessage, IMagnifyData } from './MagnifyData'
-import { Box, Button, Stack, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { ICategory, IError, IFileManagerHandle, IFileManagerMenuItem, IFileObject } from '@jfvilas/react-file-manager'
 import { FileManager } from '@jfvilas/react-file-manager'
@@ -17,7 +17,27 @@ import { ContentDetails, IDetailsData } from './components/ContentDetails'
 import { ContentEdit, IContentEditData } from './components/ContentEdit'
 import { MenuContainers } from './components/MenuContainers'
 import { buildPath } from './MagnifyChannel'
-import { InputBox } from '../../tools/FrontTools'
+const InputBox: React.FC<{ title?: any; default?: any; message?: any; width: string; onClose: () => void; onResult?: (result: any) => void }> = (props) => {
+    const inputRef = useRef<HTMLInputElement>(null)
+    if (!props.title) return null
+    return (
+        <Dialog open onClose={() => { props.onClose(); props.onResult?.(undefined) }}>
+            <DialogTitle>{props.title}</DialogTitle>
+            <DialogContent>
+                <Stack sx={{ mt: 2 }} direction='column'>
+                    {typeof props.message === 'string'
+                        ? <Typography component='div' sx={{ ml: 2 }}><div dangerouslySetInnerHTML={{ __html: props.message }} /></Typography>
+                        : props.message}
+                    <TextField key={props.message?.toString()} inputRef={inputRef} sx={{ width: props.width }} defaultValue={props.default} />
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => { props.onClose(); props.onResult?.(inputRef.current?.value) }}>ok</Button>
+                <Button onClick={() => props.onClose()}>cancel</Button>
+            </DialogActions>
+        </Dialog>
+    )
+}
 import { templates } from './components/Templates'
 // @ts-ignore
 import '@jfvilas/react-file-manager/dist/style.css'
