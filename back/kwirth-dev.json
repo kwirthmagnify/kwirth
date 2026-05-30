@@ -4,7 +4,8 @@
   },
   "channels": {
     "pinocchio": "../plugins/pinocchio/dist",
-    "censor": "../plugins/censor/dist"
+    "censor": "../plugins/censor/dist",
+    "trivy": "../plugins/trivy/dist"
   },
   "providers": {
     "kafka": "../providers/kafka/dist",

@@ -3,6 +3,8 @@ setlocal
 
 del c:\github\releases\*-t-installer.exe
 del c:\github\releases\*-t.msi
+del c:\github\releases\*-t.deb
+del c:\github\releases\*-t.AppImage
 del .\src-tauri\target\release\bundle\msi\*.* /q
 del .\src-tauri\target\release\bundle\nsis\*.* /q
 
@@ -45,6 +47,21 @@ xcopy /e /i /q ..\back\bundle\front src-tauri\target\release\front
 
 echo [tauri-build] Installer is in src-tauri\target\release\bundle\
 
-echo [tauri-build] Done! MSI and EXE moved to releases
+echo [tauri-build] Moving Windows installers to releases...
 powershell -Command "Get-ChildItem 'src-tauri\target\release\bundle\msi\*.msi' | Select-Object -First 1 | Move-Item -Destination \github\releases\kwirth-magnify-%VER%-t.msi"
 powershell -Command "Get-ChildItem 'src-tauri\target\release\bundle\nsis\*.exe' | Select-Object -First 1 | Move-Item -Destination '\github\releases\kwirth-magnify-%VER%-t-installer.exe'"
+
+echo.
+echo [tauri-build] Building Linux (via WSL)...
+for /f "delims=" %%P in ('wsl wslpath -u "%CD%"') do set WSLDIR=%%P
+wsl bash -c "cd '%WSLDIR%' && ./tauri-build.sh"
+if errorlevel 1 (
+    echo [tauri-build] ERROR: Linux WSL build failed
+    exit /b 1
+)
+
+echo [tauri-build] Moving Linux packages to releases...
+powershell -Command "Get-ChildItem 'src-tauri\target\release\bundle\deb\*.deb' | Select-Object -First 1 | Move-Item -Destination '\github\releases\kwirth-magnify-%VER%-t.deb' -Force"
+powershell -Command "Get-ChildItem 'src-tauri\target\release\bundle\appimage\*.AppImage' | Select-Object -First 1 | Move-Item -Destination '\github\releases\kwirth-magnify-%VER%-t.AppImage' -Force"
+
+echo [tauri-build] All done! Releases in c:\github\releases\

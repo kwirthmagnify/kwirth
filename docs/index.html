@@ -399,35 +399,65 @@
 
     <!-- DESKTOP APP -->
     <div class="magnify-desktop" id="magnify-desktop">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-top:48px;">
-        <div>
-          <h3 class="magnify-desktop-title">Available as a Desktop App</h3>
-          <p class="magnify-desktop-sub">Kwirth Magnify can be installed as a native desktop application — no browser, no cluster access required beyond a Kwirth instance URL. Available for Windows and Linux.</p>
+      <div style="margin-top:48px;">
+        <h3 class="magnify-desktop-title">Available as a Desktop App</h3>
+        <p class="magnify-desktop-sub">Kwirth Magnify ships as two native desktop builds — pick the one that best fits your setup. Both connect to any Kwirth instance and support local kubeconfig clusters out of the box.</p>
 
-          <div class="download-grid">
-            <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
-              <div class="dl-platform">
-                <div class="dl-icon">&#xF000;</div>
-                <div>
-                  <div class="dl-name">Windows</div>
-                  <div class="dl-ext">.exe installer</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:24px;">
+          <!-- Electron -->
+          <div>
+            <p style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;">Electron build</p>
+            <div class="download-grid">
+              <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
+                <div class="dl-platform">
+                  <div class="dl-icon">&#xF000;</div>
+                  <div>
+                    <div class="dl-name">Windows</div>
+                    <div class="dl-ext">.exe installer</div>
+                  </div>
                 </div>
-              </div>
-              <div class="dl-btn">&#x2B07; Download</div>
-            </a>
-            <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
-              <div class="dl-platform">
-                <div class="dl-icon">&#x1F427;</div>
-                <div>
-                  <div class="dl-name">Linux</div>
-                  <div class="dl-ext">.AppImage</div>
+                <div class="dl-btn">&#x2B07; Download</div>
+              </a>
+              <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
+                <div class="dl-platform">
+                  <div class="dl-icon">&#x1F427;</div>
+                  <div>
+                    <div class="dl-name">Linux</div>
+                    <div class="dl-ext">.AppImage</div>
+                  </div>
                 </div>
-              </div>
-              <div class="dl-btn">&#x2B07; Download</div>
-            </a>
+                <div class="dl-btn">&#x2B07; Download</div>
+              </a>
+            </div>
           </div>
-          <p class="download-note">All releases available at <a href="https://github.com/kwirthmagnify/kwirth/releases" target="_blank" rel="noopener">github.com/kwirthmagnify/kwirth/releases</a></p>
+          <!-- Tauri -->
+          <div>
+            <p style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;">Tauri build <span style="font-size:0.7rem;background:rgba(63,185,80,.1);color:var(--green);border:1px solid rgba(63,185,80,.2);padding:1px 7px;border-radius:10px;font-weight:600;vertical-align:middle;">New</span></p>
+            <div class="download-grid">
+              <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
+                <div class="dl-platform">
+                  <div class="dl-icon">&#xF000;</div>
+                  <div>
+                    <div class="dl-name">Windows</div>
+                    <div class="dl-ext">.msi installer</div>
+                  </div>
+                </div>
+                <div class="dl-btn">&#x2B07; Download</div>
+              </a>
+              <a class="download-card" href="https://github.com/kwirthmagnify/kwirth/releases/latest" target="_blank" rel="noopener">
+                <div class="dl-platform">
+                  <div class="dl-icon">&#x1F427;</div>
+                  <div>
+                    <div class="dl-name">Linux</div>
+                    <div class="dl-ext">.AppImage</div>
+                  </div>
+                </div>
+                <div class="dl-btn">&#x2B07; Download</div>
+              </a>
+            </div>
+          </div>
         </div>
+        <p class="download-note" style="margin-top:16px;">All releases at <a href="https://github.com/kwirthmagnify/kwirth/releases" target="_blank" rel="noopener">github.com/kwirthmagnify/kwirth/releases</a></p>
       </div>
     </div>
   </div>
@@ -519,15 +549,15 @@
 <!-- EXTENSIBILITY -->
 <section id="plugins">
   <div class="section-tag">Extensibility</div>
-  <h2 class="section-title">Extend with Plugins, Providers &amp; Senders</h2>
-  <p class="section-sub">Three independent subsystems let you add new capabilities without modifying core. All are hot-reloadable — no pod restart needed.</p>
+  <h2 class="section-title">Extend with Plugins, Providers, Senders &amp; Daemons</h2>
+  <p class="section-sub">Four independent subsystems let you add new capabilities without modifying core. All are hot-reloadable — no pod restart needed.</p>
 
-  <div class="plugins-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:40px;">
+  <div class="plugins-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:40px;">
     <a href="plugins.html" style="text-decoration:none;">
       <div class="feature-card" style="height:100%;">
         <div class="feature-icon">&#x1F9E9;</div>
         <h3>Plugins</h3>
-        <p style="margin-bottom:12px;">New UI panels and Kubernetes observability modes — logs, metrics, events, exec, AI. Plugins can have both a backend and a frontend component.</p>
+        <p style="margin-bottom:12px;">New UI channels and Kubernetes observability modes. Plugins have both a backend and a frontend component, hot-loaded at runtime.</p>
         <span class="feature-tag tag-core">&#x2192; Learn more</span>
       </div>
     </a>
@@ -535,7 +565,7 @@
       <div class="feature-card" style="height:100%;">
         <div class="feature-icon">&#x1F50C;</div>
         <h3>Providers</h3>
-        <p style="margin-bottom:12px;">Backend data sources and cluster connectors. Ingest data from Kafka, OpenTelemetry, or any custom source and expose it through Kwirth's streaming API.</p>
+        <p style="margin-bottom:12px;">Backend data sources. Ingest data from Kafka, OpenTelemetry, business systems, or any custom source and feed it into channels and senders.</p>
         <span class="feature-tag tag-ai">&#x2192; Learn more</span>
       </div>
     </a>
@@ -543,42 +573,65 @@
       <div class="feature-card" style="height:100%;">
         <div class="feature-icon">&#x1F4E4;</div>
         <h3>Senders</h3>
-        <p style="margin-bottom:12px;">Outbound notification adapters. Push alerts and messages to email, files, consoles, or custom pipelines with built-in routing, filtering, and time-window gating.</p>
+        <p style="margin-bottom:12px;">Outbound notification adapters. Push alerts to email, Teams, log files, or complex routing pipelines with filtering and time-window gating.</p>
         <span class="feature-tag tag-security">&#x2192; Learn more</span>
+      </div>
+    </a>
+    <a href="daemons.html" style="text-decoration:none;">
+      <div class="feature-card" style="height:100%;">
+        <div class="feature-icon">&#x2699;&#xFE0F;</div>
+        <h3>Daemons</h3>
+        <p style="margin-bottom:12px;">Headless background workers. Run continuous processing tasks — log filtering, alerting, data forwarding — without any browser session.</p>
+        <span class="feature-tag tag-explorer">&#x2192; Learn more</span>
       </div>
     </a>
   </div>
 
   <div class="plugins-grid">
     <div class="plugin-card">
-      <h4>&#x1F4E6; Trivy Plugin</h4>
+      <h4>&#x1F9E9; Trivy Plugin</h4>
       <p>Security vulnerability scanning via Trivy operator integration.</p>
       <span class="plugin-badge">Available</span>
     </div>
     <div class="plugin-card">
-      <h4>&#x1F4E6; Pinocchio Plugin</h4>
-      <p>AI analysis engine — pluggable LLM backend, configurable prompts.</p>
+      <h4>&#x1F9E9; Pinocchio Plugin</h4>
+      <p>AI analysis engine — configurable LLM triggers for Kubernetes events and business data.</p>
       <span class="plugin-badge">Available</span>
     </div>
     <div class="plugin-card">
-      <h4>&#x1F4E6; Sample Provider</h4>
-      <p>Reference implementation for building custom data providers.</p>
+      <h4>&#x1F9E9; Censor Plugin</h4>
+      <p>LLM-based log noise filter — learns regex patterns automatically from your log stream.</p>
       <span class="plugin-badge">Available</span>
     </div>
     <div class="plugin-card">
-      <h4>&#x1F4E6; OpenTelemetry Provider</h4>
+      <h4>&#x1F50C; OpenTelemetry Provider</h4>
       <p>Ingest OTLP traces, metrics, and logs from any OTel-compatible source.</p>
-      <span class="plugin-badge planned">Planned</span>
+      <span class="plugin-badge">Available</span>
     </div>
     <div class="plugin-card">
-      <h4>&#x1F4E6; Kafka Provider</h4>
-      <p>Stream Kafka events into Kwirth channels for unified observability.</p>
-      <span class="plugin-badge planned">Planned</span>
+      <h4>&#x1F50C; Kafka Provider</h4>
+      <p>Stream Kafka topic events into Kwirth channels for unified observability.</p>
+      <span class="plugin-badge">Available</span>
     </div>
     <div class="plugin-card">
-      <h4>&#x1F4E6; Grafana Plugin</h4>
-      <p>Grafana datasource plugin for embedding Kwirth log streams in dashboards.</p>
-      <span class="plugin-badge planned">Planned</span>
+      <h4>&#x1F50C; Business Provider</h4>
+      <p>Push external business events into Kwirth via HTTP and react to them from AI channels.</p>
+      <span class="plugin-badge">Available</span>
+    </div>
+    <div class="plugin-card">
+      <h4>&#x1F4E4; email-smtp Sender</h4>
+      <p>Send alerts by email via any SMTP server — TLS, STARTTLS, or plain.</p>
+      <span class="plugin-badge">Available</span>
+    </div>
+    <div class="plugin-card">
+      <h4>&#x1F4E4; Teams Sender</h4>
+      <p>Post colour-coded message cards to Microsoft Teams via incoming webhook.</p>
+      <span class="plugin-badge">Available</span>
+    </div>
+    <div class="plugin-card">
+      <h4>&#x2699;&#xFE0F; Censor Daemon</h4>
+      <p>Headless log noise filtering — same LLM-powered analysis as the Censor plugin, running 24/7 without a browser tab.</p>
+      <span class="plugin-badge">Available</span>
     </div>
   </div>
 </section>

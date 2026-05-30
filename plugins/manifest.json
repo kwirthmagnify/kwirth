@@ -29,15 +29,23 @@
         "version": "0.1.0",
         "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.1.0.tgz",
         "name": "Fileman",
-        "description": "Fileman plugin for in-container file management live",
+        "description": "Fileman Kwirth plugin for in-container file management live",
         "icon": "FolderCopyTwoTone"
     },
     {
         "id": "ops",
         "version": "0.1.0",
         "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.1.0.tgz",
-        "name": "Fileman",
-        "description": "Ops Kwirth plugin for shell & operations against cluster workload",
-        "icon": "Shell"
+        "name": "Ops",
+        "description": "Ops plugin for Kwirth - Shell & operations against cluster workload",
+        "icon": "Terminal"
+    },
+    {
+        "id": "trivy",
+        "version": "0.1.0",
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.1.0.tgz",
+        "name": "Trivy",
+        "description": "Trivy plugin for Kwirth - Secret exposure, CVE's, audit and SBoM: all integrated in Kwirth",
+        "icon": "VerifiedUser"
     }
 ]

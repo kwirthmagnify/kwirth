@@ -76,7 +76,12 @@
       "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\fileman\" -Confirm:$false)",
       "Bash(grep -E '\\\\.ts$')",
       "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\src\\\\channels\\\\ops\" -Confirm:$false)",
-      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\ops\" -Confirm:$false)"
+      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\ops\" -Confirm:$false)",
+      "PowerShell(Copy-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\src\\\\channels\\\\trivy\\\\trivy-operator-0.30.1.yaml\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\src\\\\back\\\\trivy-operator-0.30.1.yaml\" -Force)",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\src\\\\back\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\src\\\\front\\\\components\")",
+      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\src\\\\channels\\\\trivy\" -Confirm:$false)",
+      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\trivy\" -Confirm:$false)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

@@ -139,6 +139,71 @@ These plugins are bundled with Kwirth and enabled by default:
 
 ## Plugin reference
 
+### fileman
+
+The **Fileman** plugin is a visual filesystem explorer for all Kubernetes containers. It presents a consolidated, navigable tree of every namespace → pod → container → filesystem path in the cluster, letting you browse, manage, and transfer files without `kubectl cp` or shell access.
+
+**What you can do:**
+
+- Navigate the full filesystem of any running container (image FS and mounted volumes) via a folder tree on the left and a file list on the right.
+- **Copy / move** files and folders — both within the same container and across different containers. Kwirth handles the cross-container transfer transparently.
+- **Download** files or folders. Folders are packaged as `.tar.gz` automatically.
+- **Upload** files from your local machine directly into any container.
+- **Rename** and **delete** files and folders via the action toolbar or right-click context menu.
+- Switch between **grid** and **list** view; list view shows file size, date, and permissions.
+
+**Setup:** No configuration is required. Select any resource in the resource selector and start the Fileman channel — the navigation tree populates within seconds.
+
+?> Navigation is **lazy**: Fileman only fetches directory contents when you expand them, keeping the initial load fast even on large clusters.
+
+!> When the resource selector includes a large number of namespaces or pods, the initial load of the top-level tree can be slow. Select a specific namespace or pod to speed things up.
+
+---
+
+### ops
+
+The **Ops** plugin provides day-to-day operational capabilities directly inside Kwirth: interactive shell sessions, pod and namespace restarts, object inspection, and one-shot command execution — all without leaving the browser.
+
+**Setup options:**
+
+| Field | Description |
+|---|---|
+| Keep-alive | Kwirth sends periodic keep-alive signals to shell sessions so they survive long periods of inactivity. Combined with Kwirth's reconnect support, sessions survive WebSocket drops too. |
+| Theme | Terminal colour scheme: `light`, `dark`, or `3270` (green-on-black mainframe style). |
+
+**Available commands** (typed in the Ops command bar):
+
+| Command | Description |
+|---|---|
+| `HELP` | Show the command reference |
+| `CLEAR` | Clear the output area |
+| `LIST` | List all resources the session is authorised to operate on |
+| `GET <object>` | Minimal info on a resource (e.g. `GET default`, `GET default/kwirth`) |
+| `DESCRIBE <object>` | Full Kubernetes describe output for a resource |
+| `EXECUTE <container> <cmd>` | Run a single shell command inside a container |
+| `RESTART <container>` | Restart a specific container inside a pod |
+| `RESTARTPOD <pod>` | Restart a pod |
+| `RESTARTNS <namespace>` | Restart all workloads in a namespace |
+| `DELETE <pod>` | Delete a pod (if controlled, equivalent to a restart) |
+| `XTERM <container>` | Open an interactive shell session in the tab |
+
+Object naming follows the pattern `namespace/pod/container` — omit trailing parts to operate at a broader scope (e.g. `default` for a whole namespace, `default/mypod` for a pod).
+
+**Shell sessions (XTERM):**
+
+Each `XTERM` opens a full TTY (`/bin/sh`) inside the target container. Multiple sessions can run simultaneously; they are assigned to function keys F1–F10 for instant switching:
+
+| Key | Action |
+|---|---|
+| F1–F10 | Switch directly to shell session 1–10 |
+| F11 | Show the session list picker |
+| F12 | Return to the Ops command bar (sessions stay alive) |
+| Ctrl-D / `exit` | End the current session |
+
+The Ops plugin requires cluster-scope access to restart namespaces and delete pods. For read-only operations (`GET`, `DESCRIBE`, `LIST`) a lower-privilege key is sufficient.
+
+---
+
 ### echo
 
 The **Echo** plugin is the official reference implementation. It periodically sends a configurable test message for every watched resource, which makes it ideal for verifying connectivity, testing sender pipelines, or learning how to build a plugin.

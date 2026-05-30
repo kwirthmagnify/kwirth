@@ -19,8 +19,6 @@ import { IMetricsConfig, IMetricsInstanceConfig } from '../../metrics/MetricsCon
 import { EMetricsConfigMode } from '../../metrics/MetricsTypes'
 import { IMetricsData } from '../../metrics/MetricsData'
 import { EChartType } from '../../metrics/MenuChart'
-import { ITrivyData } from '../../trivy/TrivyData'
-import { ITrivyInstanceConfig } from '../../trivy/TrivyTypes'
 import { ILogConfig } from '../../log/LogConfig'
 import { ILogData } from '../../log/LogData'
 import { ELogSortOrder, ILogInstanceConfig } from '../../log/LogTypes'
@@ -101,8 +99,20 @@ const containerRef = useRef<HTMLDivElement>(null)
                     contentExternalData.formConfig = {}
                     setFilemanConfig(contentExternalData.content)
                     break
-                case 'trivy':
+                case 'trivy': {
+                    const ch = contentExternalData.content?.externalChannel
+                    if (ch?.prepareExternalChannel) {
+                        const setup = ch.prepareExternalChannel(contentExternalData.contentView, props.selectedFiles, props.container ?? '')
+                        contentExternalData.content!.externalChannelObject!.data = setup.data
+                        contentExternalData.content!.externalChannelObject!.config = setup.config
+                        contentExternalData.content!.externalChannelObject!.instanceConfig = setup.instanceConfig
+                    }
+                    const trivyIc = contentExternalData.content!.externalChannelObject!.instanceConfig
                     contentExternalData.formConfig = {
+                        ignoreCritical: trivyIc?.ignoreCritical ?? false,
+                        ignoreHigh:     trivyIc?.ignoreHigh     ?? false,
+                        ignoreMedium:   trivyIc?.ignoreMedium   ?? false,
+                        ignoreLow:      trivyIc?.ignoreLow      ?? true,
                         'Status': {
                             text: 'Status',
                             asyncAction: async () => {
@@ -117,7 +127,7 @@ const containerRef = useRef<HTMLDivElement>(null)
                                 }
                             }
                         },
-                        'Install Trivy operator': { 
+                        'Install Trivy operator': {
                             button:'Install',
                             action: async () => {
                                 if (contentExternalData.content?.externalChannelObject?.data.ri) {
@@ -128,9 +138,9 @@ const containerRef = useRef<HTMLDivElement>(null)
                                 else {
                                     setMsgBox(MsgBoxOk('Trivy install', 'Running instance is not yet available, please try again in a few seconds', setMsgBox))
                                 }
-                            } 
+                            }
                         },
-                        'Remove Trivy operator': { 
+                        'Remove Trivy operator': {
                             button:'Remove',
                             action: async () => {
                                 if (contentExternalData.content?.externalChannelObject?.data.ri) {
@@ -141,11 +151,11 @@ const containerRef = useRef<HTMLDivElement>(null)
                                 else {
                                     setMsgBox(MsgBoxOk('Trivy install', 'Running instance is not yet available, please try again in a few seconds', setMsgBox))
                                 }
-                            } 
+                            }
                         }
                     }
-                    setTrivyConfig(contentExternalData.content)
                     break
+                }
                 default: {
                     const ch = contentExternalData.content?.externalChannel
                     if (ch?.prepareExternalChannel) {
@@ -399,25 +409,6 @@ const containerRef = useRef<HTMLDivElement>(null)
         c.externalChannelObject!.config = filemanConfig
     }
 
-    const setTrivyConfig = (c:IContentExternalObject) => {
-        let trivyInstanceConfig:ITrivyInstanceConfig = {
-            ignoreCritical: false,
-            ignoreHigh: false,
-            ignoreMedium: true,
-            ignoreLow: true
-        }
-        let trivyData:ITrivyData = {
-            mode: 'card',
-            paused: false,
-            started: false,
-            assets: [],
-            ri: undefined
-        }
-        c.externalChannelObject!.webSocket = contentExternalData.content!.ws
-        c.externalChannelObject!.data = trivyData
-        c.externalChannelObject!.instanceConfig = trivyInstanceConfig
-    }
-
     const play = () => {
         if (!contentExternalData.content || !contentExternalData.content.ws || !contentExternalData.content.externalChannel || !contentExternalData.content.externalChannelObject) return
 
@@ -655,14 +646,36 @@ const containerRef = useRef<HTMLDivElement>(null)
                 break
             case 'fileman':
                 break
-            case 'trivy':
-                let trivyConfig = contentExternalData.content!.externalChannelObject!.config as IMetricsConfig
-                let trivyInstanceConfig = contentExternalData.content!.externalChannelObject!.instanceConfig as IMetricsInstanceConfig
-                trivyConfig.width = values.width
-                trivyConfig.merge = values.merge
-                trivyConfig.depth = values.depth
-                trivyInstanceConfig.aggregate = values.aggregate
+            case 'trivy': {
+                const ic = contentExternalData.content!.externalChannelObject!.instanceConfig
+                ic.ignoreCritical = values.ignoreCritical ?? false
+                ic.ignoreHigh     = values.ignoreHigh     ?? false
+                ic.ignoreMedium   = values.ignoreMedium   ?? false
+                ic.ignoreLow      = values.ignoreLow      ?? true
+                // Restore action functions lost during FormSimple objectClone
+                contentExternalData.formConfig['Status'].asyncAction = async () => {
+                    try {
+                        if (contentExternalData.content?.externalChannelObject?.data.ri)
+                            return await (await fetch(`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=status`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))).text()
+                        return 'No RI. Wait a few seconds.'
+                    } catch { return 'N/A' }
+                }
+                contentExternalData.formConfig['Install Trivy operator'].action = async () => {
+                    if (contentExternalData.content?.externalChannelObject?.data.ri) {
+                        setMsgBox(MsgBoxWait('Trivy install', 'Wait for Trivy to start installation', setMsgBox))
+                        await fetch(`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=install`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))
+                        setMsgBox(MsgBoxOk('Install', 'Installation started, close this dialog and wait for Trivy to finish startup', setMsgBox))
+                    } else { setMsgBox(MsgBoxOk('Trivy install', 'Running instance is not yet available, please try again in a few seconds', setMsgBox)) }
+                }
+                contentExternalData.formConfig['Remove Trivy operator'].action = async () => {
+                    if (contentExternalData.content?.externalChannelObject?.data.ri) {
+                        setMsgBox(MsgBoxWait('Trivy remove', 'Wait for Trivy to start removing', setMsgBox))
+                        await fetch(`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=remove`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))
+                        setMsgBox(MsgBoxOk('Remove', 'Removing started, close this dialog and wait for Trivy to completely disappear from your cluster', setMsgBox))
+                    } else { setMsgBox(MsgBoxOk('Trivy remove', 'Running instance is not yet available, please try again in a few seconds', setMsgBox)) }
+                }
                 break
+            }
             case 'pinocchio':
                 break
             default: {
