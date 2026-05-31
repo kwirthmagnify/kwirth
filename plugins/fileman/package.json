@@ -1,38 +1,38 @@
 {
-    "id": "fileman",
-    "name": "Fileman",
-    "displayName": "Fileman",
-    "publisher": "@kwirthmagnify",
-    "version": "0.2.0",
-    "website": "https://kwirthmagnify.dev",
-    "description": "File Manager channel plugin for Kwirth",
-    "icon": "FolderCopyTwoTone",
-    "type": "module",
-    "scripts": {
-        "build": "node build.mjs",
-        "watch": "node watch.mjs"
-    },
-    "dependencies": {
-        "@jfvilas/parse-listing": "^1.0.1",
-        "@jfvilas/react-file-manager": "*",
-        "@kwirthmagnify/kwirth-common": "^0.5.4",
-        "@kwirthmagnify/kwirth-common-front": "^0.5.2",
-        "@uiw/react-codemirror": "^4.0.0",
-        "@codemirror/lang-yaml": "^6.0.0",
-        "@codemirror/view": "^6.0.0",
-        "@codemirror/commands": "^6.0.0",
-        "@codemirror/search": "^6.0.0",
-        "@codemirror/theme-one-dark": "^6.0.0",
-        "uuid": "^11.1.0"
-    },
-    "devDependencies": {
-        "@mui/icons-material": "7.1.2",
-        "@mui/material": "7.1.2",
-        "@types/node": "^20.12.13",
-        "@types/react": "^18.3.0",
-        "esbuild": "^0.27.2",
-        "react": "^18.3.0",
-        "react-dom": "^18.3.0",
-        "typescript": "^5.4.0"
-    }
+  "id": "fileman",
+  "name": "Fileman",
+  "displayName": "Fileman",
+  "publisher": "@kwirthmagnify",
+  "version": "0.2.1",
+  "website": "https://kwirthmagnify.dev",
+  "description": "File Manager channel plugin for Kwirth",
+  "icon": "FolderCopyTwoTone",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node watch.mjs"
+  },
+  "dependencies": {
+    "@jfvilas/parse-listing": "^1.0.1",
+    "@jfvilas/react-file-manager": "*",
+    "@kwirthmagnify/kwirth-common": "^0.5.4",
+    "@kwirthmagnify/kwirth-common-front": "^0.5.2",
+    "@uiw/react-codemirror": "^4.0.0",
+    "@codemirror/lang-yaml": "^6.0.0",
+    "@codemirror/view": "^6.0.0",
+    "@codemirror/commands": "^6.0.0",
+    "@codemirror/search": "^6.0.0",
+    "@codemirror/theme-one-dark": "^6.0.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@mui/icons-material": "7.1.2",
+    "@mui/material": "7.1.2",
+    "@types/node": "^20.12.13",
+    "@types/react": "^18.3.0",
+    "esbuild": "^0.27.2",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "typescript": "^5.4.0"
+  }
 }

@@ -1,27 +1,27 @@
 {
-    "id": "news",
-    "displayName": "News",
-    "publisher": "@kwirthmagnify",
-    "version": "0.2.0",
-    "description": "News channel plugin for Kwirth - displays Kubernetes and AI news feeds",
-    "icon": "Newspaper",
-    "type": "module",
-    "scripts": {
-        "build": "node build.mjs",
-        "watch": "node watch.mjs"
-    },
-    "dependencies": {
-        "@kwirthmagnify/kwirth-common": "^0.5.2",
-        "@kwirthmagnify/kwirth-common-front": "^0.5.2"
-    },
-    "devDependencies": {
-        "@mui/icons-material": "7.1.2",
-        "@mui/material": "7.1.2",
-        "@types/node": "^20.12.13",
-        "@types/react": "^18.3.0",
-        "esbuild": "^0.27.2",
-        "react": "^18.3.0",
-        "react-dom": "^18.3.0",
-        "typescript": "^5.4.0"
-    }
+  "id": "news",
+  "displayName": "News",
+  "publisher": "@kwirthmagnify",
+  "version": "0.2.1",
+  "description": "News channel plugin for Kwirth - displays Kubernetes and AI news feeds",
+  "icon": "Newspaper",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node watch.mjs"
+  },
+  "dependencies": {
+    "@kwirthmagnify/kwirth-common": "^0.5.2",
+    "@kwirthmagnify/kwirth-common-front": "^0.5.2"
+  },
+  "devDependencies": {
+    "@mui/icons-material": "7.1.2",
+    "@mui/material": "7.1.2",
+    "@types/node": "^20.12.13",
+    "@types/react": "^18.3.0",
+    "esbuild": "^0.27.2",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "typescript": "^5.4.0"
+  }
 }
