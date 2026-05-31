@@ -6,10 +6,14 @@ Starting with version 0.5, we have converted data sources (the ones we use for e
 
 Kwirth currently ships with the following providers:
 
-  - **[Tick](reference/tick)**. Just a demo provider, it creates a heartbeat every 5 seconds.
-  - **[Events](reference/events)**. Creates an event whenever a Kubernetes cluster event takes place.
-  - **[Validating](reference/validating)**. Creates an event whenever the Kubernetes API needs a validation from a Validating webhook.
-  - **[Business](reference/business)**. Ingests external business data into Kwirth via HTTP POST and distributes it to subscribed channels.
+  - **[Tick](reference/tick)**. Demo provider — fires a heartbeat every 5 seconds. Useful for testing channel subscriptions.
+  - **[Events](reference/events)**. Streams a Kwirth event whenever a Kubernetes cluster event takes place (Pod created, Deployment scaled, etc.).
+  - **[Validating](reference/validating)**. Creates an event whenever the Kubernetes API needs a response from a Validating webhook.
+  - **[Business](reference/business)**. Ingests external business data into Kwirth via HTTP POST and distributes it to subscribed channels by space/type.
+  - **[Metrics](reference/metrics)**. Polls the Kubernetes cAdvisor API on a configurable interval and distributes cluster-wide resource metrics to subscribed channels.
+  - **[Kafka](reference/kafka)**. Connects to one or more Kafka broker sets and distributes topic messages to channels via the same space/type routing model as Business.
+  - **[OpenTelemetry](reference/otel)**. Turns Kwirth into an OTLP/HTTP receiver — any OTel-instrumented service can push traces, metrics, and logs directly to Kwirth.
+  - **[Sample](reference/sample)**. Reference implementation for provider developers. Use it as a starting point for building custom providers.
 
 ## Architecture
 Providers is one of the data-streaming subsystems inside Kwirth, and it is very easy to understand. The provider subsystem offers a decoupling layer between the Kubernetes API and the channel subsystem, which adds these benefits:

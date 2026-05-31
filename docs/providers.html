@@ -166,6 +166,30 @@
   <h2>Available providers</h2>
   <div class="cards-grid">
     <div class="card">
+      <div class="icon">&#x23F1;&#xFE0F;</div>
+      <h3>Tick Provider</h3>
+      <p>Fires a periodic heartbeat event to all subscribing channels. Useful for time-driven logic, polling patterns, and testing channel subscriptions.</p>
+      <span class="badge badge-available">Available</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F4E3;</div>
+      <h3>Events Provider</h3>
+      <p>Streams a Kwirth event whenever a Kubernetes cluster event occurs — Pod created, Deployment scaled, node condition changed, and more.</p>
+      <span class="badge badge-available">Available</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F6E1;&#xFE0F;</div>
+      <h3>Validating Provider</h3>
+      <p>Intercepts Kubernetes admission webhook calls and exposes them as Kwirth events, enabling channels to inspect or react to every resource creation and update in real time.</p>
+      <span class="badge badge-available">Available</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F4CA;</div>
+      <h3>Metrics Provider</h3>
+      <p>Polls the Kubernetes cAdvisor API on a configurable interval and distributes cluster-wide CPU, memory, network, and disk metrics to all subscribing channels.</p>
+      <span class="badge badge-available">Available</span>
+    </div>
+    <div class="card">
       <div class="icon">&#x1F4E8;</div>
       <h3>Kafka Provider</h3>
       <p>Consume messages from one or more Kafka topics and stream them into Kwirth channels. Configurable topic list, consumer group, and Kafka broker URL.</p>
