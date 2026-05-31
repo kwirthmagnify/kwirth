@@ -87,8 +87,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                     props.dataNetwork.push({ value: (data.txmbps + data.rxmbps) || 0 })
                 })
                 .catch((err) => {
-                    console.error('Critical error receiving cluster metrics. Interval will be cancelled:', err)
-                    clearInterval(i)
+                    console.warn('Error receiving cluster metrics, will retry:', err)
                 });
         }, 3000, targetCluster)
         return () => clearInterval(i)

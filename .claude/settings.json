@@ -107,7 +107,10 @@
       "PowerShell(Get-ChildItem -Path \"C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\fileman\\\\src\" -Recurse -File | Where-Object { $_.Extension -match '\\\\.\\(ts|tsx\\)$' } | Select-Object FullName)",
       "Bash(Get-ChildItem -Path \"C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio\" -Directory)",
       "PowerShell($dir = \"$env:USERPROFILE\\\\.kwirth\\\\configmaps\"; if \\(Test-Path $dir\\) { Get-ChildItem $dir | Select-Object Name, Length } else { \"Directorio no existe\" })",
-      "PowerShell(Get-Content \"$env:USERPROFILE\\\\.kwirth\\\\configmaps\\\\kwirth-plugins-index\" | ConvertFrom-Json | ConvertTo-Json -Depth 10)"
+      "PowerShell(Get-Content \"$env:USERPROFILE\\\\.kwirth\\\\configmaps\\\\kwirth-plugins-index\" | ConvertFrom-Json | ConvertTo-Json -Depth 10)",
+      "Bash(del \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\electron\\\\electron-build-w.cmd\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\electron\\\\electron-build-l.cmd\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\tauri-build-e.cmd\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\tauri-build-t.cmd\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\tauri-build-w.cmd\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\tauri-build-l.cmd\")",
+      "Bash(dir \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\*.cmd\" /b)",
+      "Read(//c/github/aisdkvercel/kwirth/tauri/**)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

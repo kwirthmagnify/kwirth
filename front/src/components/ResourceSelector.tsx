@@ -54,14 +54,19 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     let isDocker = cluster.kwirthData?.clusterType === EClusterType.DOCKER
 
     const loadAllNamespaces = async (cluster:Cluster) => {
-        if (cluster) {
-            let response = await fetch(`${cluster.url}/config/namespace`, addGetAuthorization(cluster.accessString))
-            if (response.status!==200) {
-                setMsgBox(MsgBoxOkError('Resource Selector',`Error accessing cluster: ${JSON.stringify(response.status)}`, setMsgBox))
+        if (cluster?.url) {
+            try {
+                let response = await fetch(`${cluster.url}/config/namespace`, addGetAuthorization(cluster.accessString))
+                if (response.status!==200) {
+                    setMsgBox(MsgBoxOkError('Resource Selector',`Error accessing cluster: ${JSON.stringify(response.status)}`, setMsgBox))
+                }
+                else {
+                    let data = await response.json()
+                    setAllNamespaces(data)
+                }
             }
-            else {
-                let data = await response.json()
-                setAllNamespaces(data)
+            catch {
+                setMsgBox(MsgBoxOkError('Resource Selector', `Cannot reach cluster: ${cluster.url}`, setMsgBox))
             }
         }
     }

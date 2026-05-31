@@ -1,14 +1,14 @@
-call ..\version\version.cmd
-set VER=%KWIRTH_VERSION:"=%
+@echo off
+setlocal
 
-del \github\releases\*.exe
-del \github\releases\*.AppImage
-del .\dist\*.blockmap
+echo [electron-build] Building Windows...
+call electron-build-windows.cmd
+if errorlevel 1 ( echo [electron-build] ERROR: Windows build failed & exit /b 1 )
 
-node -e "var f='package.json',fs=require('fs'),p=JSON.parse(fs.readFileSync(f)),v='%VER%'.trim();p.version=v;p.build.productName='kwirth-magnify-'+v+'-e';fs.writeFileSync(f,JSON.stringify(p,null,'\t'))"
+echo.
+echo [electron-build] Building Linux...
+call electron-build-linux.cmd
+if errorlevel 1 ( echo [electron-build] ERROR: Linux build failed & exit /b 1 )
 
-call npm run dist:win
-move dist\*.exe \github\releases
-
-wsl -d Ubuntu bash -l -c "npm run dist:linux"
-move dist\*.AppImage \github\releases
+echo.
+echo [electron-build] All done! Releases in c:\github\releases\

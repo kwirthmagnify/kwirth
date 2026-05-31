@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# Load nvm if available (needed when invoked non-interactively from WSL)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+
+# Required for AppImage tools (linuxdeploy) to run in WSL without FUSE
+export APPIMAGE_EXTRACT_AND_RUN=1
+
 # portable sed -i: macOS requires an explicit backup extension
 sedi() {
     if [ "$(uname -s)" = "Darwin" ]; then
@@ -57,6 +64,31 @@ rm -f package.json
 cd ../../tauri
 
 echo "[tauri-build] Building Tauri application..."
+export CARGO_TARGET_DIR="$HOME/.kwirth-tauri-target"
+
+# Wrap linuxdeploy AppImages so they run without FUSE in WSL.
+# Python script written to /tmp (native Linux fs) via printf to guarantee LF-only endings.
+printf '%s\n' \
+    'import os, stat' \
+    'cache = os.path.expanduser("~/.cache/tauri")' \
+    'for name in ["linuxdeploy-x86_64.AppImage", "linuxdeploy-plugin-appimage.AppImage"]:' \
+    '    f = os.path.join(cache, name)' \
+    '    r = f + ".real"' \
+    '    if os.path.isfile(f) and not os.path.isfile(r):' \
+    '        os.rename(f, r)' \
+    '    if os.path.isfile(r):' \
+    '        open(f, "w", newline="").write("#!/bin/sh\nexport APPIMAGE_EXTRACT_AND_RUN=1\nexec \"" + r + "\" \"$@\"\n")' \
+    '        os.chmod(f, 0o755)' \
+    '        print("[tauri-build] Wrapped: " + f)' \
+    > /tmp/wrap-appimage.py
+python3 /tmp/wrap-appimage.py
+
 npx @tauri-apps/cli build --config "{\"productName\":\"kwirth-magnify-${VER}-t\"}"
+
+echo "[tauri-build] Copying bundles back to project path..."
+mkdir -p src-tauri/target/release/bundle/appimage
+mkdir -p src-tauri/target/release/bundle/deb
+cp "$CARGO_TARGET_DIR"/release/bundle/appimage/*.AppImage src-tauri/target/release/bundle/appimage/ 2>/dev/null || true
+cp "$CARGO_TARGET_DIR"/release/bundle/deb/*.deb          src-tauri/target/release/bundle/deb/      2>/dev/null || true
 
 echo "[tauri-build] Done! Check src-tauri/target/release/bundle/"

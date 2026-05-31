@@ -84,7 +84,16 @@ sudo apt install -y \
   libsoup-3.0-dev \
   libjavascriptcoregtk-4.1-dev \
   build-essential \
-  pkg-config
+  pkg-config \
+  squashfs-tools
+```
+
+`squashfs-tools` provides `unsquashfs`, which is required by `APPIMAGE_EXTRACT_AND_RUN=1` to extract AppImage bundles (linuxdeploy and its plugins) without FUSE.
+
+After installing squashfs-tools, register the env var system-wide so all processes (including those spawned by Tauri's bundler) inherit it:
+
+```sh
+grep -q APPIMAGE_EXTRACT_AND_RUN /etc/environment 2>/dev/null || echo "APPIMAGE_EXTRACT_AND_RUN=1" | sudo tee -a /etc/environment
 ```
 
 ## 6. Install Electron Linux build dependencies
@@ -94,6 +103,8 @@ sudo apt install -y fuse libfuse2
 ```
 
 > `fuse` / `libfuse2` are required for AppImage generation by electron-builder.
+
+?> **WSL note:** Tauri's AppImage bundler uses `linuxdeploy`, which is itself an AppImage. In WSL, FUSE is not available, so `linuxdeploy` cannot run normally. The build scripts set `APPIMAGE_EXTRACT_AND_RUN=1` automatically to work around this — no manual action needed.
 
 ## 7. Verify the setup
 
