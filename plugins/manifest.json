@@ -52,7 +52,7 @@
         "id": "log",
         "version": "0.2.0",
         "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.0.tgz",
-        "name": "Trivy",
+        "name": "Log",
         "description": "Log plugin for Kwirth - Aggregate an filter real-time Kubernetes logs",
         "icon": "Subject"
     },

@@ -83,6 +83,9 @@ printf '%s\n' \
     > /tmp/wrap-appimage.py
 python3 /tmp/wrap-appimage.py
 
+# Add tauri tool cache to PATH so linuxdeploy can find its plugins
+export PATH="$HOME/.cache/tauri:$PATH"
+
 npx @tauri-apps/cli build --config "{\"productName\":\"kwirth-magnify-${VER}-t\"}"
 
 echo "[tauri-build] Copying bundles back to project path..."
