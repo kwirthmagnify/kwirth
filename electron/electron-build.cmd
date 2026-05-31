@@ -7,8 +7,8 @@ del .\dist\*.blockmap
 
 node -e "var f='package.json',fs=require('fs'),p=JSON.parse(fs.readFileSync(f)),v='%VER%'.trim();p.version=v;p.build.productName='kwirth-magnify-'+v+'-e';fs.writeFileSync(f,JSON.stringify(p,null,'\t'))"
 
-call npm run dist
+call npm run dist:win
 move dist\*.exe \github\releases
 
-wsl -d alpine sh -c "npm run dist:linux"
+wsl -d Ubuntu bash -l -c "npm run dist:linux"
 move dist\*.AppImage \github\releases

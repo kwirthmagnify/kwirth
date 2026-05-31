@@ -3,9 +3,6 @@
     "censor": "../daemons/censor/dist"
   },
   "channels": {
-    "pinocchio": "../plugins/pinocchio/dist",
-    "censor": "../plugins/censor/dist",
-    "log": "../plugins/log/dist"
   },
   "providers": {
     "kafka": "../providers/kafka/dist",

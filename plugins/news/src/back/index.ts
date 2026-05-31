@@ -7,24 +7,7 @@ import http from 'http'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000
 
-interface INewsItem {
-    title: string
-    link: string
-    description: string
-    pubDate: string
-    source: string
-    category: string
-}
-
-interface INewsMessageResponse {
-    msgtype: 'newsmessageresponse'
-    channel: 'news'
-    type: EInstanceMessageType
-    action: EInstanceMessageAction
-    flow: EInstanceMessageFlow
-    instance: string
-    item?: INewsItem
-}
+import { INewsItem, INewsMessageResponse } from '../common/NewsTypes'
 
 const FEEDS: Record<string, { url: string; source: string }> = {
     kubernetes: { url: 'https://kubernetes.io/feed.xml', source: 'kubernetes.io' },

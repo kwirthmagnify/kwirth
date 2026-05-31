@@ -32,6 +32,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
     const [remoteClusters, setRemoteClusters] = useState<{name:string, url:string, accessString:string}[]>([])
     const [showActive, setShowActive] = useState(true)
     const [waiting, setWaiting] = useState(false)
+    const [loading, setLoading] = useState(true)
     const [filterLocal, setFilterLocal] = useState('')
     const [filterRemote, setFilterRemote] = useState('')
     const [clusterDialogOpen, setClusterDialogOpen] = useState(false)
@@ -57,6 +58,9 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
             }
             catch (err) {
                 console.error("Error loading contexts:", err)
+            }
+            finally {
+                setLoading(false)
             }
         }
 
@@ -177,19 +181,23 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                             <FormControlLabel control={<Checkbox />} checked={showActive} onChange={() => setShowActive(!showActive)} label={'Show only active'}/>
                         </Stack>
                         <Stack direction={'column'} sx={{height:300, overflowY:'auto' }}>
-                            <List>
-                            {
-                                localContexts.filter(c => c.cluster.includes(filterLocal)).filter(c => !showActive || (showActive && c.status)).map(c =>
-                                    <ListItemButton key={c.cluster} onClick={() => selectLocal(c.cluster)}>
-                                        <Tooltip title={c.cluster}>
-                                            <Typography>{c.cluster.substring(0,50)+(c.cluster.length>60?'...':'')}</Typography>
-                                        </Tooltip>
-                                        <Typography flexGrow={1}></Typography>
-                                        <Box sx={{width:12, height:12, borderRadius:'50%', bgcolor:c.status!==undefined? (c.status?'success.main':'error.main'):'gray', mr:1}}></Box>
-                                    </ListItemButton>
-                                )
+                            { loading
+                                ? <Typography sx={{ m: 2, color: 'text.secondary' }}>Loading...</Typography>
+                                : (() => {
+                                    const filtered = localContexts.filter(c => c.cluster.includes(filterLocal)).filter(c => !showActive || c.status)
+                                    return filtered.length === 0
+                                        ? <Typography sx={{ m: 2, color: 'text.secondary' }}>No active contexts found.</Typography>
+                                        : <List>{ filtered.map(c =>
+                                            <ListItemButton key={c.cluster} onClick={() => selectLocal(c.cluster)}>
+                                                <Tooltip title={c.cluster}>
+                                                    <Typography>{c.cluster.substring(0,50)+(c.cluster.length>60?'...':'')}</Typography>
+                                                </Tooltip>
+                                                <Typography flexGrow={1}></Typography>
+                                                <Box sx={{width:12, height:12, borderRadius:'50%', bgcolor:c.status!==undefined? (c.status?'success.main':'error.main'):'gray', mr:1}}></Box>
+                                            </ListItemButton>
+                                        )}</List>
+                                })()
                             }
-                            </List>
                         </Stack>
                     </Stack>
                 }

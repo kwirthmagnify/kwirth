@@ -5,15 +5,7 @@ import { NewsSetup, NewsIcon } from './NewsSetup'
 import { NewsTabContent } from './NewsTabContent'
 import { IChannel, IChannelObject } from '@kwirthmagnify/kwirth-common-front'
 
-interface INewsMessageResponse {
-    msgtype: 'newsmessageresponse'
-    channel: 'news'
-    type: EInstanceMessageType
-    action: EInstanceMessageAction
-    flow: EInstanceMessageFlow
-    instance: string
-    item?: any
-}
+import { INewsMessageResponse } from '../common/NewsTypes'
 
 export class NewsChannel implements IChannel {
     private setupVisible = false

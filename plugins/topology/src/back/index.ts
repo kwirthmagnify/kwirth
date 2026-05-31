@@ -11,9 +11,8 @@ import {
     IInstanceMessage,
     ISignalMessage,
 } from '@kwirthmagnify/kwirth-common'
+import { ETopologyNodeKind, ETopologyNodeStatus } from '../common/TopologyTypes'
 
-type TNodeKind   = 'Ingress' | 'Service' | 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'ReplicaSet' | 'Job' | 'CronJob' | 'Pod' | 'PersistentVolumeClaim'
-type TNodeStatus = 'Running' | 'Pending' | 'Failed' | 'Succeeded' | 'Unknown' | 'Terminating' | 'Bound' | 'Released' | 'Lost'
 type TTopoAction = 'ADDED' | 'MODIFIED' | 'DELETED'
 
 interface ITopologyWsMessage {
@@ -23,11 +22,11 @@ interface ITopologyWsMessage {
     instance: string
     type:     EInstanceMessageType
     topoAction?:    TTopoAction
-    kind:           TNodeKind
+    kind:           ETopologyNodeKind
     uid:            string
     name:           string
     namespace:      string
-    status:         TNodeStatus
+    status:         ETopologyNodeStatus
     labels:         Record<string, string>
     annotations?:   Record<string, string>
     replicas?:      number
@@ -74,31 +73,31 @@ interface IFocusContext {
     included: Set<string>
 }
 
-function podStatus(p: any): TNodeStatus {
-    if (p.metadata?.deletionTimestamp) return 'Terminating'
+function podStatus(p: any): ETopologyNodeStatus {
+    if (p.metadata?.deletionTimestamp) return ETopologyNodeStatus.TERMINATING
     switch (p.status?.phase) {
-        case 'Running':   return 'Running'
-        case 'Pending':   return 'Pending'
-        case 'Succeeded': return 'Succeeded'
-        case 'Failed':    return 'Failed'
-        default:          return 'Unknown'
+        case 'Running':   return ETopologyNodeStatus.RUNNING
+        case 'Pending':   return ETopologyNodeStatus.PENDING
+        case 'Succeeded': return ETopologyNodeStatus.SUCCEEDED
+        case 'Failed':    return ETopologyNodeStatus.FAILED
+        default:          return ETopologyNodeStatus.UNKNOWN
     }
 }
 
-function controllerStatus(ready?: number, desired?: number): TNodeStatus {
-    if (desired === undefined || desired === 0) return 'Unknown'
-    if ((ready ?? 0) >= desired) return 'Running'
-    if ((ready ?? 0) > 0)       return 'Pending'
-    return 'Failed'
+function controllerStatus(ready?: number, desired?: number): ETopologyNodeStatus {
+    if (desired === undefined || desired === 0) return ETopologyNodeStatus.UNKNOWN
+    if ((ready ?? 0) >= desired) return ETopologyNodeStatus.RUNNING
+    if ((ready ?? 0) > 0)       return ETopologyNodeStatus.PENDING
+    return ETopologyNodeStatus.FAILED
 }
 
-function pvcStatus(p: any): TNodeStatus {
+function pvcStatus(p: any): ETopologyNodeStatus {
     switch (p.status?.phase) {
-        case 'Bound':    return 'Bound'
-        case 'Pending':  return 'Pending'
-        case 'Released': return 'Released'
-        case 'Lost':     return 'Lost'
-        default:         return 'Unknown'
+        case 'Bound':    return ETopologyNodeStatus.BOUND
+        case 'Pending':  return ETopologyNodeStatus.PENDING
+        case 'Released': return ETopologyNodeStatus.RELEASED
+        case 'Lost':     return ETopologyNodeStatus.LOST
+        default:         return ETopologyNodeStatus.UNKNOWN
     }
 }
 
@@ -603,7 +602,7 @@ export class TopologyChannel {
             }
         }
         return {
-            kind: 'Pod', uid: p.metadata?.uid ?? '', name: p.metadata?.name ?? '',
+            kind: ETopologyNodeKind.POD, uid: p.metadata?.uid ?? '', name: p.metadata?.name ?? '',
             namespace: ns, status: podStatus(p),
             labels: p.metadata?.labels ?? {},
             image: p.spec?.containers?.[0]?.image,
@@ -615,8 +614,8 @@ export class TopologyChannel {
 
     private mapService(s: any): Partial<ITopologyWsMessage> {
         return {
-            kind: 'Service', uid: s.metadata?.uid ?? '', name: s.metadata?.name ?? '',
-            namespace: s.metadata?.namespace ?? '', status: 'Running',
+            kind: ETopologyNodeKind.SERVICE, uid: s.metadata?.uid ?? '', name: s.metadata?.name ?? '',
+            namespace: s.metadata?.namespace ?? '', status: ETopologyNodeStatus.RUNNING,
             labels: s.metadata?.labels ?? {},
             ports: s.spec?.ports?.map((p: any) => p.port) ?? [],
         }
@@ -626,9 +625,9 @@ export class TopologyChannel {
         const ready   = d.status?.readyReplicas   ?? 0
         const desired = d.spec?.replicas ?? 0
         const avail   = d.status?.availableReplicas ?? 0
-        const status: TNodeStatus = desired === 0 ? 'Unknown' : (ready === desired && avail === desired) ? 'Running' : ready > 0 ? 'Pending' : 'Failed'
+        const status: ETopologyNodeStatus = desired === 0 ? ETopologyNodeStatus.UNKNOWN : (ready === desired && avail === desired) ? ETopologyNodeStatus.RUNNING : ready > 0 ? ETopologyNodeStatus.PENDING : ETopologyNodeStatus.FAILED
         return {
-            kind: 'Deployment', uid: d.metadata?.uid ?? '', name: d.metadata?.name ?? '',
+            kind: ETopologyNodeKind.DEPLOYMENT, uid: d.metadata?.uid ?? '', name: d.metadata?.name ?? '',
             namespace: d.metadata?.namespace ?? '', status, labels: d.metadata?.labels ?? {},
             replicas: desired, readyReplicas: ready,
         }
@@ -636,7 +635,7 @@ export class TopologyChannel {
 
     private mapStatefulSet(s: any): Partial<ITopologyWsMessage> {
         return {
-            kind: 'StatefulSet', uid: s.metadata?.uid ?? '', name: s.metadata?.name ?? '',
+            kind: ETopologyNodeKind.STATEFULSET, uid: s.metadata?.uid ?? '', name: s.metadata?.name ?? '',
             namespace: s.metadata?.namespace ?? '',
             status: controllerStatus(s.status?.readyReplicas, s.spec?.replicas),
             labels: s.metadata?.labels ?? {},
@@ -646,7 +645,7 @@ export class TopologyChannel {
 
     private mapDaemonSet(d: any): Partial<ITopologyWsMessage> {
         return {
-            kind: 'DaemonSet', uid: d.metadata?.uid ?? '', name: d.metadata?.name ?? '',
+            kind: ETopologyNodeKind.DAEMONSET, uid: d.metadata?.uid ?? '', name: d.metadata?.name ?? '',
             namespace: d.metadata?.namespace ?? '',
             status: controllerStatus(d.status?.numberReady, d.status?.desiredNumberScheduled),
             labels: d.metadata?.labels ?? {},
@@ -656,7 +655,7 @@ export class TopologyChannel {
 
     private mapReplicaSet(r: any): Partial<ITopologyWsMessage> {
         return {
-            kind: 'ReplicaSet', uid: r.metadata?.uid ?? '', name: r.metadata?.name ?? '',
+            kind: ETopologyNodeKind.REPLICASET, uid: r.metadata?.uid ?? '', name: r.metadata?.name ?? '',
             namespace: r.metadata?.namespace ?? '',
             status: controllerStatus(r.status?.readyReplicas, r.spec?.replicas),
             labels: r.metadata?.labels ?? {},
@@ -666,9 +665,9 @@ export class TopologyChannel {
     }
 
     private mapJob(j: any): Partial<ITopologyWsMessage> {
-        const status: TNodeStatus = (j.status?.succeeded ?? 0) > 0 ? 'Succeeded' : (j.status?.active ?? 0) > 0 ? 'Running' : 'Unknown'
+        const status: ETopologyNodeStatus = (j.status?.succeeded ?? 0) > 0 ? ETopologyNodeStatus.SUCCEEDED : (j.status?.active ?? 0) > 0 ? ETopologyNodeStatus.RUNNING : ETopologyNodeStatus.UNKNOWN
         return {
-            kind: 'Job', uid: j.metadata?.uid ?? '', name: j.metadata?.name ?? '',
+            kind: ETopologyNodeKind.JOB, uid: j.metadata?.uid ?? '', name: j.metadata?.name ?? '',
             namespace: j.metadata?.namespace ?? '', status, labels: j.metadata?.labels ?? {},
             ownerUids: j.metadata?.ownerReferences?.map((ref: any) => ref.uid) ?? [],
         }
@@ -676,17 +675,17 @@ export class TopologyChannel {
 
     private mapCronJob(c: any): Partial<ITopologyWsMessage> {
         return {
-            kind: 'CronJob', uid: c.metadata?.uid ?? '', name: c.metadata?.name ?? '',
+            kind: ETopologyNodeKind.CRONJOB, uid: c.metadata?.uid ?? '', name: c.metadata?.name ?? '',
             namespace: c.metadata?.namespace ?? '',
-            status: (c.status?.active?.length ?? 0) > 0 ? 'Running' : 'Unknown',
+            status: (c.status?.active?.length ?? 0) > 0 ? ETopologyNodeStatus.RUNNING : ETopologyNodeStatus.UNKNOWN,
             labels: c.metadata?.labels ?? {},
         }
     }
 
     private mapIngress(i: any): Partial<ITopologyWsMessage> {
         return {
-            kind: 'Ingress', uid: i.metadata?.uid ?? '', name: i.metadata?.name ?? '',
-            namespace: i.metadata?.namespace ?? '', status: 'Running',
+            kind: ETopologyNodeKind.INGRESS, uid: i.metadata?.uid ?? '', name: i.metadata?.name ?? '',
+            namespace: i.metadata?.namespace ?? '', status: ETopologyNodeStatus.RUNNING,
             labels: i.metadata?.labels ?? {},
             host: i.spec?.rules?.[0]?.host,
         }
@@ -694,7 +693,7 @@ export class TopologyChannel {
 
     private mapPvc(p: any): Partial<ITopologyWsMessage> {
         return {
-            kind: 'PersistentVolumeClaim', uid: p.metadata?.uid ?? '', name: p.metadata?.name ?? '',
+            kind: ETopologyNodeKind.PERSISTENTVOLUMECLAIM, uid: p.metadata?.uid ?? '', name: p.metadata?.name ?? '',
             namespace: p.metadata?.namespace ?? '', status: pvcStatus(p),
             labels: p.metadata?.labels ?? {},
             storageClass: p.spec?.storageClassName,

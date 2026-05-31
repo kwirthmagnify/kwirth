@@ -2,7 +2,7 @@ import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMess
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { Request, Response } from 'express'
-import { ILogInstanceConfig, ILogMessage } from './LogTypes'
+import { ILogInstanceConfig, ILogMessage } from '../common/LogTypes'
 
 interface IAsset {
     podNamespace: string

@@ -1,6 +1,6 @@
 import { EInstanceMessageType, EInstanceMessageFlow } from "@kwirthmagnify/kwirth-common"
 import { IInstance } from "./index"
-import { EOpsCommand, IOpsMessage, IOpsMessageResponse } from "./OpsTypes"
+import { EOpsCommand, IOpsMessage, IOpsMessageResponse } from "../common/OpsTypes"
 
 export async function restartPod(clusterInfo: any, podNamespace: string, podName: string): Promise<string> {
     try {

@@ -1,11 +1,4 @@
-export interface INewsItem {
-    title: string
-    link: string
-    description: string
-    pubDate: string
-    source: string
-    category: string
-}
+export { INewsItem } from '../common/NewsTypes'
 
 export interface INewsData {
     items: INewsItem[]

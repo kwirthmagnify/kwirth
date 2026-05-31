@@ -29,6 +29,7 @@ if (fs.existsSync(pluginDir)) {
     process.exit(1)
 }
 
+fs.mkdirSync(path.join(pluginDir, 'src', 'common'), { recursive: true })
 fs.mkdirSync(path.join(pluginDir, 'src', 'back'), { recursive: true })
 fs.mkdirSync(path.join(pluginDir, 'src', 'front'), { recursive: true })
 
@@ -38,11 +39,11 @@ const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
     "id": "${id}",
     "name": "${name}",
+    "displayName": "${name}",
     "publisher": "${publisher}",
     "version": "1.0.0",
     "description": "${description}",
-    "icon": "${icon}",
-    ${websiteLine}
+    "icon": "${icon}",${websiteLine}
     "type": "module",
     "scripts": {
         "build": "node build.mjs",
@@ -66,35 +67,6 @@ write('package.json', `{
 `)
 
 // ─── build.mjs ─────────────────────────────────────────────────────────────
-
-const buildAndWatch = (isWatch) => `import esbuild from 'esbuild'
-import fs from 'fs'
-import path from 'path'
-
-const kwirthGlobalsPlugin = {
-    name: 'kwirth-globals',
-    setup(build) {
-        const globals = {
-            'react': 'window.__kwirth__.React',
-            '@mui/material': 'window.__kwirth__.MUI.material',
-            '@mui/icons-material': 'window.__kwirth__.MUI.icons',
-            '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
-        }
-        for (const pkg of Object.keys(globals)) {
-            build.onResolve({ filter: new RegExp(\`^\${pkg.replace(/[.*+?^\$\{\}()|[\\\\]\\\\\\\\]/g, '\\\\\\\\$&')}$\`) }, () => ({
-                path: pkg,
-                namespace: 'kwirth-globals',
-            }))
-        }
-        build.onLoad({ filter: /.*/, namespace: 'kwirth-globals' }, (args) => ({
-            contents: \`module.exports = \${globals[args.path]}\`,
-            loader: 'js',
-        }))
-    },
-}
-
-fs.mkdirSync('dist', { recursive: true })
-`
 
 write('build.mjs', `import esbuild from 'esbuild'
 import fs from 'fs'
@@ -152,9 +124,10 @@ await esbuild.build({
 console.log('Built dist/back.js')
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
+const npmName = (meta.publisher ? meta.publisher + '/' : '') + 'kwirth-plugin-' + meta.id
 const distMeta = {
     id: meta.id,
-    name: "${publisher?publisher+'/':''}kwirth-plugin-${id}",
+    name: npmName,
     version: meta.version,
     description: meta.description,
     icon: meta.icon,
@@ -164,7 +137,7 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, nul
 console.log('Wrote dist/package.json')
 
 console.log("Done. Run 'npm publish' on your 'dist' folder in order to publish your package to npmjs.")
-console.log(\`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/\${meta.publisher}/kwirth-plugin-\${meta.id}/-/kwirth-plugin-\${meta.id}-\${meta.version}.tgz\`)
+console.log(\`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/\${npmName}/-/\${meta.id.replace('@', '').replace('/', '-')}-\${meta.version}.tgz\`)
 `)
 
 // ─── watch.mjs ─────────────────────────────────────────────────────────────
@@ -198,8 +171,9 @@ const kwirthGlobalsPlugin = {
 fs.mkdirSync('dist', { recursive: true })
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
+const npmName = (meta.publisher ? meta.publisher + '/' : '') + 'kwirth-plugin-' + meta.id
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
-    id: meta.id, name: meta.name, version: meta.version,
+    id: meta.id, name: npmName, version: meta.version,
     description: meta.description, icon: meta.icon,
     ...(meta.website ? { website: meta.website } : {})
 }, null, 2))
@@ -237,25 +211,60 @@ console.log('[watch] kwirth backend hot-reloads back.js automatically.')
 console.log('[watch] kwirth frontend polls for front.js changes every 2s.')
 `)
 
+// ─── src/common/<Name>Types.ts ─────────────────────────────────────────────
+
+write(`src/common/${className}Types.ts`, `import { IInstanceMessage } from '@kwirthmagnify/kwirth-common'
+
+export interface I${className}InstanceConfig {
+}
+
+export interface I${className}Message extends IInstanceMessage {
+    msgtype: '${id}message'
+}
+
+export interface I${className}MessageResponse extends IInstanceMessage {
+    msgtype: '${id}messageresponse'
+    text: string
+}
+`)
+
 // ─── src/back/index.ts ─────────────────────────────────────────────────────
 
 write('src/back/index.ts', `import {
-    IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize,
+    IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize,
     EClusterType, BackChannelData, EInstanceMessageType,
-    EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel
+    EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel,
+    IBackChannelObject, IBackChannelRequirements
 } from '@kwirthmagnify/kwirth-common'
 import { Request, Response } from 'express'
+import { I${className}InstanceConfig, I${className}MessageResponse } from '../common/${className}Types'
+
+interface IAsset {
+    podNamespace: string
+    podName: string
+    containerName: string
+}
 
 interface IInstance {
     instanceId: string
     accessKey: AccessKey
+    config: I${className}InstanceConfig
+    paused: boolean
+    assets: IAsset[]
 }
 
 export class ${className}Channel {
     readonly channelId = '${id}'
-    readonly requirements = { storage: false, providers: [] }
+    readonly requirements: IBackChannelRequirements = { storage: false, providers: [] }
 
-    private webSockets: { ws: WebSocket; instances: IInstance[] }[] = []
+    clusterInfo: any
+    backChannelObject: IBackChannelObject
+    private webSockets: { ws: WebSocket; lastRefresh: number; instances: IInstance[] }[] = []
+
+    constructor(clusterInfo: any, backChannelObject: IBackChannelObject) {
+        this.clusterInfo = clusterInfo
+        this.backChannelObject = backChannelObject
+    }
 
     getChannelData = (): BackChannelData => ({
         id: '${id}',
@@ -278,7 +287,7 @@ export class ${className}Channel {
     endpointRequest = async (_endpoint: string, _req: Request, _res: Response): Promise<void> => {}
     websocketRequest = async (_ws: WebSocket): Promise<void> => {}
 
-    processCommand = async (webSocket: WebSocket, instanceMessage: IInstanceConfig): Promise<boolean> => {
+    processCommand = async (webSocket: WebSocket, instanceMessage: IInstanceMessage): Promise<boolean> => {
         if (!this.getInstance(webSocket, instanceMessage.instance)) {
             this.sendSignal(webSocket, EInstanceMessageAction.NONE, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, 'Instance not found')
             return false
@@ -289,19 +298,26 @@ export class ${className}Channel {
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
-            this.webSockets.push({ ws: webSocket, instances: [] })
+            this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] })
             socket = this.webSockets[this.webSockets.length - 1]
         }
-        if (!socket.instances.find(i => i.instanceId === instanceConfig.instance))
-            socket.instances.push({ instanceId: instanceConfig.instance, accessKey: accessKeyDeserialize(instanceConfig.accessKey) })
-
+        let instance = socket.instances.find(i => i.instanceId === instanceConfig.instance)
+        if (!instance) {
+            instance = { instanceId: instanceConfig.instance, accessKey: accessKeyDeserialize(instanceConfig.accessKey), config: instanceConfig.data as I${className}InstanceConfig, paused: false, assets: [] }
+            socket.instances.push(instance)
+        }
+        instance.assets.push({ podNamespace, podName, containerName })
         this.sendData(webSocket, instanceConfig.instance, \`Hello from ${name}! Monitoring \${podNamespace}/\${podName}/\${containerName}\`)
         return true
     }
 
     deleteObject = async (_ws: WebSocket, _cfg: IInstanceConfig, _ns: string, _pod: string, _ctr: string): Promise<boolean> => true
 
-    pauseContinueInstance = (_ws: WebSocket, _cfg: IInstanceConfig, _action: EInstanceMessageAction): void => {}
+    pauseContinueInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig, action: EInstanceMessageAction): void => {
+        const instance = this.getInstance(webSocket, instanceConfig.instance)
+        if (instance) instance.paused = action === EInstanceMessageAction.PAUSE
+    }
+
     modifyInstance = (_ws: WebSocket, _cfg: IInstanceConfig): void => {}
 
     stopInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig): void => {
@@ -326,8 +342,11 @@ export class ${className}Channel {
         this.webSockets = this.webSockets.filter(s => s.ws !== webSocket)
     }
 
-    refreshConnection = (webSocket: WebSocket): boolean =>
-        Boolean(this.webSockets.find(s => s.ws === webSocket))
+    refreshConnection = (webSocket: WebSocket): boolean => {
+        const socket = this.webSockets.find(s => s.ws === webSocket)
+        if (socket) { socket.lastRefresh = Date.now(); return true }
+        return false
+    }
 
     updateConnection = (newWebSocket: WebSocket, instanceId: string): boolean => {
         for (const entry of this.webSockets) {
@@ -340,14 +359,16 @@ export class ${className}Channel {
     }
 
     private sendData = (ws: WebSocket, instanceId: string, text: string): void => {
-        ws.send(JSON.stringify({
+        const msg: I${className}MessageResponse = {
             channel: '${id}',
             action: EInstanceMessageAction.NONE,
             flow: EInstanceMessageFlow.UNSOLICITED,
             type: EInstanceMessageType.DATA,
             instance: instanceId,
+            msgtype: '${id}messageresponse',
             text
-        }))
+        }
+        ws.send(JSON.stringify(msg))
     }
 
     private sendSignal = (ws: WebSocket, action: EInstanceMessageAction, flow: EInstanceMessageFlow, level: ESignalMessageLevel, instanceId: string, text: string): void => {
@@ -377,14 +398,17 @@ window.__kwirth_plugins__['${id}'] = ${className}Channel
 // ─── src/front/<Name>Channel.tsx ───────────────────────────────────────────
 
 write(`src/front/${className}Channel.tsx`, `import { FC } from 'react'
-import { IChannel, IChannelRequirements, IChannelObject, IContentProps, EChannelRefreshAction, IChannelMessageAction } from '@kwirthmagnify/kwirth-common-front'
+import { IChannel, IChannelRequirements, IChannelObject, IContentProps, ISetupProps, EChannelRefreshAction, IChannelMessageAction } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceConfigScope } from '@kwirthmagnify/kwirth-common'
-import { ${icon} } from '@mui/icons-material'
+import { ${className}Setup, ${className}Icon } from './${className}Setup'
 import { ${className}TabContent } from './${className}TabContent'
+import { ${className}Config, ${className}InstanceConfig } from './${className}Config'
+import { I${className}Data, ${className}Data } from './${className}Data'
+import { I${className}MessageResponse } from '../common/${className}Types'
 
 export class ${className}Channel implements IChannel {
     private setupVisible = false
-    SetupDialog: FC<any> = () => null
+    SetupDialog: FC<ISetupProps> = ${className}Setup
     TabContent: FC<IContentProps> = ${className}TabContent
     channelId = '${id}'
 
@@ -397,7 +421,7 @@ export class ${className}Channel implements IChannel {
         metrics: false,
         notifier: false,
         notifications: false,
-        setup: false,
+        setup: true,
         settings: false,
         palette: false,
         userSettings: false,
@@ -405,23 +429,26 @@ export class ${className}Channel implements IChannel {
     }
 
     getScope = () => EInstanceConfigScope.NONE
-    getChannelIcon = (): JSX.Element => <${icon} fontSize='small' />
+    getChannelIcon = (): JSX.Element => ${className}Icon
     getSetupVisibility = (): boolean => this.setupVisible
     setSetupVisibility = (v: boolean): void => { this.setupVisible = v }
 
     processChannelMessage = (channelObject: IChannelObject, wsEvent: MessageEvent): IChannelMessageAction => {
-        const msg = JSON.parse(wsEvent.data)
-        if (msg.text) (channelObject.data as string[]).push(msg.text)
+        const msg = JSON.parse(wsEvent.data) as I${className}MessageResponse
+        const data = channelObject.data as I${className}Data
+        if (msg.text) data.messages.push(msg.text)
         return { action: EChannelRefreshAction.REFRESH }
     }
 
     initChannel = async (channelObject: IChannelObject): Promise<boolean> => {
-        channelObject.data = [] as string[]
+        channelObject.data = new ${className}Data()
+        channelObject.instanceConfig = new ${className}InstanceConfig()
+        channelObject.config = new ${className}Config()
         return false
     }
 
     startChannel = (channelObject: IChannelObject): boolean => {
-        channelObject.data = [] as string[]
+        (channelObject.data as I${className}Data).messages = []
         return true
     }
 
@@ -433,14 +460,84 @@ export class ${className}Channel implements IChannel {
 }
 `)
 
+// ─── src/front/<Name>Config.ts ─────────────────────────────────────────────
+
+write(`src/front/${className}Config.ts`, `export { I${className}InstanceConfig } from '../common/${className}Types'
+
+export interface I${className}Config {
+}
+
+export class ${className}Config implements I${className}Config {
+}
+
+export class ${className}InstanceConfig {
+}
+`)
+
+// ─── src/front/<Name>Data.ts ───────────────────────────────────────────────
+
+write(`src/front/${className}Data.ts`, `export interface I${className}Data {
+    messages: string[]
+    paused: boolean
+    started: boolean
+}
+
+export class ${className}Data implements I${className}Data {
+    messages: string[] = []
+    paused = false
+    started = false
+}
+`)
+
+// ─── src/front/<Name>Setup.tsx ─────────────────────────────────────────────
+
+write(`src/front/${className}Setup.tsx`, `import React from 'react'
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material'
+import { ${icon} } from '@mui/icons-material'
+import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
+import { ${className}Config, ${className}InstanceConfig } from './${className}Config'
+
+const ${className}Icon = <${icon} />
+
+const ${className}Setup: React.FC<ISetupProps> = (props: ISetupProps) => {
+    const instanceConfig: ${className}InstanceConfig = props.setupConfig?.channelInstanceConfig || new ${className}InstanceConfig()
+    const config: ${className}Config = props.setupConfig?.channelConfig || new ${className}Config()
+
+    const ok = () => {
+        props.onChannelSetupClosed(props.channel, { channelId: props.channel.channelId, channelConfig: config, channelInstanceConfig: instanceConfig }, true, false)
+    }
+
+    const cancel = () => {
+        props.onChannelSetupClosed(props.channel, { channelId: props.channel.channelId, channelConfig: undefined, channelInstanceConfig: undefined }, false, false)
+    }
+
+    return (
+        <Dialog open={true}>
+            <DialogTitle>${name} settings</DialogTitle>
+            <DialogContent>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={cancel}>Cancel</Button>
+                <Button variant='contained' onClick={ok}>OK</Button>
+            </DialogActions>
+        </Dialog>
+    )
+}
+
+export { ${className}Setup, ${className}Icon }
+`)
+
 // ─── src/front/<Name>TabContent.tsx ────────────────────────────────────────
 
-write(`src/front/${className}TabContent.tsx`, `import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+write(`src/front/${className}TabContent.tsx`, `import React from 'react'
+import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { Box, List, ListItem, ListItemText, Typography } from '@mui/material'
 import { ${icon} } from '@mui/icons-material'
+import { I${className}Data } from './${className}Data'
 
 export const ${className}TabContent: React.FC<IContentProps> = ({ channelObject }) => {
-    const messages = (channelObject?.data as string[]) ?? []
+    const data = channelObject?.data as I${className}Data
+    const messages = data?.messages ?? []
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 2, gap: 1 }}>
@@ -473,7 +570,7 @@ Next steps:
   npm install
   npm run build        # one-shot build
   npm run watch        # dev mode (hot-reload)
-  cd dist              
+  cd dist
   npm publish          # publish to npmjs
 `)
 

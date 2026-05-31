@@ -17,7 +17,21 @@ import { ContentDetails, IDetailsData } from './components/ContentDetails'
 import { ContentEdit, IContentEditData } from './components/ContentEdit'
 import { MenuContainers } from './components/MenuContainers'
 import { buildPath } from './MagnifyChannel'
-const InputBox: React.FC<{ title?: any; default?: any; message?: any; width: string; onClose: () => void; onResult?: (result: any) => void }> = (props) => {
+import { templates } from './components/Templates'
+// @ts-ignore
+import '@jfvilas/react-file-manager/dist/style.css'
+// @ts-ignore
+import './custom-fm-magnify.css'
+import { ArtifactSearch, IArtifactSearchData } from './components/ArtifactSearch'
+import { rfmSetup, setLeftItem, setPropertyFunction } from './components/RFMSetup'
+import { createChannelInstance } from '../../tools/ChannelTools'
+import { MenuKubeWorks } from './components/MenuKubeWorks'
+import { useTheme } from '@mui/material'
+import { MenuKwirthWorks } from './components/MenuKwirthWorks'
+import { ICustomAction } from './components/UserPreferences'
+import { MenuNotification } from '../../components/MenuNotification'
+import { generateMinimalFromCRD } from './Tools'
+const InputBox: React.FC<{ title?: any; default?: any; message?: any; password?: boolean; width: string; onClose: () => void; onResult?: (result: any) => void }> = (props) => {
     const inputRef = useRef<HTMLInputElement>(null)
     if (!props.title) return null
     return (
@@ -38,20 +52,6 @@ const InputBox: React.FC<{ title?: any; default?: any; message?: any; width: str
         </Dialog>
     )
 }
-import { templates } from './components/Templates'
-// @ts-ignore
-import '@jfvilas/react-file-manager/dist/style.css'
-// @ts-ignore
-import './custom-fm-magnify.css'
-import { ArtifactSearch, IArtifactSearchData } from './components/ArtifactSearch'
-import { rfmSetup, setLeftItem, setPropertyFunction } from './components/RFMSetup'
-import { createChannelInstance } from '../../tools/ChannelTools'
-import { MenuKubeWorks } from './components/MenuKubeWorks'
-import {useTheme } from '@mui/material';
-import { MenuKwirthWorks } from './components/MenuKwirthWorks'
-import { ICustomAction } from './components/UserPreferences'
-import { MenuNotification } from '../../components/MenuNotification'
-import { generateMinimalFromCRD } from './Tools'
 const yamlParser = require('js-yaml')
 
 const ICON_WINDOW : Record<string, JSX.Element> = {
@@ -119,7 +119,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const [ , setTick] = useState<number>(0)
 
-    const BUILTIN_CHANNELS = new Set(['echo', 'alert', 'metrics', 'magnify'])
+    const BUILTIN_CHANNELS = new Set(['echo', 'metrics', 'magnify'])
 
     // RFM categories
     const onCategoryFilter = (categoryKey:string, f:IFileObject) : boolean => {

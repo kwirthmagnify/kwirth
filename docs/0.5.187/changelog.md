@@ -11,7 +11,14 @@ Minor but powerful features:
   - `pinocchio` channel is triggering wehn business data or Kubernetes artifacts are received.
   - New `metrics` provider (in use by `pinocchio`, we will transition 'metrics' channel to new metrics provider in the near future)
   - New `topology` channel, for (incredibly) seeing and managing your cluster in 3D.
-  
+  - **Censor channel**: New channel for real-time LLM-based log analysis. Censor inspects log streams, detects sensitive patterns via configurable regex rules, and forwards findings through the sender system. Supports multiple LLM providers and interactive terminal sessions.
+  - **Censor daemon**: The Censor analysis engine also runs as a headless daemon, so log auditing continues permanently without requiring an active user session or WebSocket connection.
+  - **Plugin system**: Channels are now fully decoupled from Kwirth core. Plugins bundle a backend and a frontend component into a self-contained package that can be installed, updated, or removed at runtime without restarting Kwirth. All previous built-in channels (Log, Ops, Fileman, Echo, News, Trivy, Pinocchio) are now delivered as plugins.
+  - **Provider system**: Data sources are now modelled as providers. A provider ingests data from any source (Kubernetes events, metrics, business streams, Kafka topics, OpenTelemetry…) and makes it available to any channel or plugin that subscribes to it.
+  - **Sender system**: Outbound notification adapters are now first-class citizens. Nine ready-to-use senders are included: console, file, SMTP email, Resend email, Microsoft Teams, composite (fan-out), timed, tee, and regex-routed. Senders let channels and daemons push alerts and messages to external destinations using a unified configuration model.
+  - **Daemon system**: Headless background workers can now run continuously inside Kwirth without requiring an active user session or WebSocket connection. Daemons are ideal for permanent log analysis, event watching, or continuous data forwarding.
+  - **kwirth-common-ai**: New shared package that abstracts LLM provider integrations (OpenRouter, Gemini, Groq, OpenAI, Mistral…). Used by Pinocchio and Censor to offer a unified model/provider configuration across AI-powered features.
+
 ## 0.5.40
 Minor but powerful features:
 

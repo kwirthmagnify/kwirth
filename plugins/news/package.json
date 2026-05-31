@@ -2,7 +2,7 @@
     "id": "news",
     "displayName": "News",
     "publisher": "@kwirthmagnify",
-    "version": "0.1.3",
+    "version": "0.2.0",
     "description": "News channel plugin for Kwirth - displays Kubernetes and AI news feeds",
     "icon": "Newspaper",
     "type": "module",

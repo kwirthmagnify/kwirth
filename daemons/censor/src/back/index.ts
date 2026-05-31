@@ -122,6 +122,15 @@ export class CensorDaemon implements IDaemon {
         const stored: ILlmProvider[] = (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)) ?? []
         this.providers = stored
         await loadModels(this.providers, this.backDaemonObject)
+
+        const configs: ICensorInstanceConfig[] = (await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []
+        const activeSessions = configs.filter(c => c.active)
+        if (activeSessions.length === 0) {
+            console.log('[censor] No persistent sessions configured.')
+        } else {
+            console.log(`[censor] Persistent sessions to start (${activeSessions.length}):`)
+            activeSessions.forEach(c => console.log(`  - ${c.name} v${c.version} (llm: ${c.llmId})`))
+        }
     }
 
     containsInstance(instanceId: string): boolean {

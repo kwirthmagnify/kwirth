@@ -1,6 +1,7 @@
 /* Kwirth Dark Theme for Docsify — matches homepage style */
 
 :root {
+  --theme-color: #f5820a;
   --bg:      #060a12;
   --bg2:     #0d1420;
   --bg3:     #111827;
@@ -530,3 +531,10 @@ option {
   border-color: var(--border) !important;
   border-radius: 8px !important;
 }
+
+/* ── Sidebar collapse arrow alignment ────────────────────────── */
+
+.sidebar-nav ul:not(.app-sub-sidebar) > li:not(.file)::before {
+  top: 14px;
+}
+

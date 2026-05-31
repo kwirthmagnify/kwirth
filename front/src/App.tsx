@@ -32,7 +32,6 @@ import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanc
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
-import { AlertChannel } from './channels/alert/AlertChannel'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 import { getMetricsNames, ENotifyLevel, readClusterInfo } from './tools/Global'
@@ -290,23 +289,37 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     useEffect(() => {
         const ids = Array.from(frontChannels.keys())
         if (ids.length === 0) return
-        const interval = setInterval(async () => {
+        let intervalId: ReturnType<typeof setInterval> | undefined
+
+        const initAndPoll = async () => {
+            const devIds: string[] = []
             for (const id of ids) {
                 try {
                     const res = await fetch(`${backendUrl}/plugins/${id}/version`, { headers: { 'X-Kwirth-App': 'true' } })
                     if (!res.ok) continue
                     const { dev, version } = await res.json()
-                    if (!dev) continue
-                    const prev = pluginVersionsRef.current.get(id)
-                    if (prev === undefined) { pluginVersionsRef.current.set(id, version); continue }
-                    if (prev !== version) {
-                        pluginVersionsRef.current.set(id, version)
-                        loadPluginFront(id)
-                    }
+                    if (dev) { devIds.push(id); pluginVersionsRef.current.set(id, version) }
                 } catch {}
             }
-        }, 2000)
-        return () => clearInterval(interval)
+            if (devIds.length === 0) return
+            intervalId = setInterval(async () => {
+                for (const id of devIds) {
+                    try {
+                        const res = await fetch(`${backendUrl}/plugins/${id}/version`, { headers: { 'X-Kwirth-App': 'true' } })
+                        if (!res.ok) continue
+                        const { version } = await res.json()
+                        const prev = pluginVersionsRef.current.get(id)
+                        if (prev !== undefined && prev !== version) {
+                            pluginVersionsRef.current.set(id, version)
+                            loadPluginFront(id)
+                        }
+                    } catch {}
+                }
+            }, 2000)
+        }
+
+        initAndPoll()
+        return () => { if (intervalId) clearInterval(intervalId) }
     }, [frontChannels])
 
     useEffect(() => {
@@ -318,7 +331,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     useEffect( () => {
         // only first time
-        frontChannels.set('alert', AlertChannel)
         frontChannels.set('metrics', MetricsChannel)
         frontChannels.set('magnify', MagnifyChannel)
     },[])

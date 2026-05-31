@@ -21,7 +21,8 @@ import { ManageClusterApi } from './api/ManageClusterApi'
 import { AuthorizationManagement } from './tools/AuthorizationManagement'
 
 import * as https from 'https'
-import express, { NextFunction, Request, Response} from 'express'
+import express from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import cookieParser from 'cookie-parser'
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware'
 import { ClusterInfo } from './model/ClusterInfo'
@@ -40,7 +41,6 @@ import * as _kwirthCommonBack from '@kwirthmagnify/kwirth-common-back'
 import * as _kwirthCommonAi from '@kwirthmagnify/kwirth-common-ai'
 import * as _kwirthCommonAiBack from '@kwirthmagnify/kwirth-common-ai/back'
 import { IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
-import { AlertChannel } from './channels/alert/AlertChannel'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 // NewsChannel, PinocchioChannel and FilemanChannel removed — now loaded as plugins
@@ -121,7 +121,6 @@ const envExitLog = process.env.EXITLOG !== undefined ? process.env.EXITLOG === '
 const envConfigMapPath = process.env.CONFIGMAPPATH !== undefined ? process.env.CONFIGMAPPATH : '.'
 const envSecretPath = process.env.SECRETPATH !== undefined ? process.env.SECRETPATH : '.'
 const envChannelMetricsEnabled = (process.env.CHANNEL_METRICS || 'true').toLowerCase() === 'true'
-const envChannelAlertEnabled = (process.env.CHANNEL_ALERT || 'true').toLowerCase() === 'true'
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 
 const runningInstances:IRunningInstance[] = []
@@ -138,7 +137,6 @@ registeredProviders.set('business', BusinessProvider)
 registeredProviders.set('metrics', MetricsProvider)
 
 const registeredChannels = new Map<string, TChannelConstructor>()
-registeredChannels.set('alert', AlertChannel)
 registeredChannels.set('metrics', MetricsChannel)
 registeredChannels.set('magnify', MagnifyChannel)
 // 'echo', 'news', 'topology' and 'pinocchio' channels loaded dynamically by PluginManager
@@ -1381,7 +1379,6 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
         // Channel management
         let requiredChannels = []
-        if (envChannelAlertEnabled) requiredChannels.push('alert')
         if (envChannelMetricsEnabled) requiredChannels.push('metrics')
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
         // plugin channels: load installed plugins and add their ids to requiredChannels
@@ -2176,7 +2173,7 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////// START ///////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-setLogConfig(envAnsiLog)  //+++ test
+setLogConfig(envAnsiLog)
 logInfo(ELogComponent.CORE, `Kwirth version is ${VERSION}`)
 logInfo(ELogComponent.CORE, `Kwirth started at ${new Date().toISOString()}`)
 logInfo(ELogComponent.CORE, 'Kwirth running environment:')

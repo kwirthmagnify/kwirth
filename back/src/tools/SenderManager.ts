@@ -39,6 +39,7 @@ export class SenderManager implements ISenderAccess {
     private configStore = new Map<string, Map<string, ISenderConfig>>()
     private installedIds: string[] = []
     private installedMetas = new Map<string, ISenderMeta>()
+    private cachedIndex: ISenderMeta[] = []
 
     constructor(configMaps: IConfigMaps) {
         this.configMaps = configMaps
@@ -46,8 +47,9 @@ export class SenderManager implements ISenderAccess {
 
     async init(): Promise<void> {
         const index = (await this.configMaps.read('kwirth-senders-index', [])) as ISenderMeta[]
-        this.installedIds = (index || []).map(s => s.id)
-        for (const meta of (index || [])) this.installedMetas.set(meta.id, meta)
+        this.cachedIndex = index || []
+        this.installedIds = this.cachedIndex.map(s => s.id)
+        for (const meta of this.cachedIndex) this.installedMetas.set(meta.id, meta)
     }
 
     getInstalledIds(): string[] {
@@ -209,7 +211,7 @@ export class SenderManager implements ISenderAccess {
     // ── Persistent install/uninstall ────────────────────────────────────────────
 
     async loadAll(): Promise<void> {
-        const index = (await this.configMaps.read('kwirth-senders-index', [])) as ISenderMeta[] || []
+        const index = this.cachedIndex
         for (const meta of index) {
             try {
                 let backJs: string | undefined
@@ -409,10 +411,11 @@ export class SenderManager implements ISenderAccess {
             logError(ELogComponent.CORE, `Sender '${senderId}' not found — cannot add config '${config.name}'`)
             return false
         }
+        const alreadyExists = this.configStore.has(senderId) && this.configStore.get(senderId)!.has(config.name)
         sender.addConfig(config)
         if (!this.configStore.has(senderId)) this.configStore.set(senderId, new Map())
         this.configStore.get(senderId)!.set(config.name, { ...config })
-        logInfo(ELogComponent.CORE, `Sender '${senderId}' config '${config.name}' registered`)
+        if (!alreadyExists) logInfo(ELogComponent.CORE, `Sender '${senderId}' config '${config.name}' registered`)
         return true
     }
 

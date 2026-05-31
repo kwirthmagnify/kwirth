@@ -11,9 +11,6 @@ const kwirthGlobalsPlugin = {
             '@mui/icons-material': 'window.__kwirth__.MUI.icons',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
-            '@mui/x-date-pickers': 'window.__kwirth__.xDatePickers',
-            '@mui/x-date-pickers/AdapterMoment': 'window.__kwirth__.adapterMoment',
-            'moment': 'window.__kwirth__.moment',
             '@codemirror/view': 'window.__kwirth__.codeMirrorView',
             '@codemirror/state': 'window.__kwirth__.codeMirrorState',
             '@codemirror/commands': 'window.__kwirth__.codeMirrorCommands',
@@ -32,7 +29,7 @@ const kwirthGlobalsPlugin = {
             }))
         }
         build.onLoad({ filter: /.*/, namespace: 'kwirth-globals' }, (args) => ({
-            contents: `const _m = ${globals[args.path]}; module.exports = (typeof _m === 'function' && !_m.__esModule) ? Object.assign({default:_m,__esModule:true},_m) : _m;`,
+            contents: `const _m = ${globals[args.path]}; const _d = (_m && _m.__esModule) ? _m.default : _m; module.exports = Object.assign({}, (typeof _m === 'object' && _m !== null) ? _m : {}, {default: _d, __esModule: true});`,
             loader: 'js',
         }))
     },

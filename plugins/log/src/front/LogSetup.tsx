@@ -3,9 +3,6 @@ import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Fo
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { Subject } from '@mui/icons-material'
 import { ILogConfig, LogInstanceConfig, LogConfig } from './LogConfig'
-import { DateTimePicker, LocalizationProvider, renderTimeViewClock } from '@mui/x-date-pickers'
-import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment'
-import moment from 'moment'
 import { ELogSortOrder, ILogInstanceConfig } from './LogTypes'
 
 const LogIcon = <Subject />
@@ -54,9 +51,6 @@ const LogSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
         }, false, false)
     }
 
-    const TextFieldForwardRef = React.forwardRef(function MyCustomTextField(props: any, ref: any) {
-        return <TextField {...props} ref={ref} variant='standard' sx={{ ml: '60px', '& .MuiInputBase-root': { border: 'none' }, '& .MuiInputLabel-root': { color: fromStart ? 'light-gray' : 'black' } }} />
-    })
 
     return (
         <Dialog open={true}>
@@ -96,17 +90,16 @@ const LogSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                                 <Switch checked={fromStart && !fromNowOn} onChange={(e) => { setFromStart(e.target.checked); if (e.target.checked) setFromNowOn(false) }} disabled={fromNowOn} />
                                 <Typography>Get messages from container start time</Typography>
                             </Stack>
-                            <LocalizationProvider dateAdapter={AdapterMoment}>
-                                <DateTimePicker
-                                    enableAccessibleFieldDOMStructure={false}
-                                    defaultValue={moment(Date.now() - 30 * 60 * 1000)}
-                                    viewRenderers={{ hours: renderTimeViewClock, minutes: renderTimeViewClock, seconds: renderTimeViewClock }}
-                                    slots={{ textField: TextFieldForwardRef }}
-                                    inputRef={startTimeRef}
-                                    disabled={fromStart || fromNowOn}
-                                    label="Start time"
-                                />
-                            </LocalizationProvider>
+                            <TextField
+                                type='datetime-local'
+                                inputRef={startTimeRef}
+                                disabled={fromStart || fromNowOn}
+                                label='Start time'
+                                variant='standard'
+                                defaultValue={new Date(Date.now() - 30 * 60 * 1000).toISOString().slice(0, 16)}
+                                sx={{ ml: '60px' }}
+                                slotProps={{ inputLabel: { shrink: true } }}
+                            />
                         </Stack>
                         <Stack direction='row' alignItems='baseline'>
                             <Switch checked={previous} onChange={(e: ChangeEvent<HTMLInputElement>) => setPrevious(e.target.checked)} />

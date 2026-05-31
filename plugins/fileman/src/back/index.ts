@@ -7,46 +7,7 @@ import path from 'path'
 import fileUpload from 'express-fileupload'
 import os from 'os'
 const ParseListing = require('@jfvilas/parse-listing')
-
-export interface IFilemanConfig {
-    interval: number
-}
-
-export enum EFilemanCommand {
-    HOME = 'home',
-    DIR = 'dir',
-    CREATE = 'create',
-    RENAME = 'rename',
-    DELETE = 'delete',
-    MOVE = 'move',
-    COPY = 'copy',
-    UPLOAD = 'upload',
-    DOWNLOAD = 'download'
-}
-
-export interface IFilemanMessage extends IInstanceMessage {
-    msgtype: 'filemanmessage'
-    id: string
-    accessKey: string
-    instance: string
-    namespace: string
-    group: string
-    pod: string
-    container: string
-    command: EFilemanCommand
-    params?: string[]
-}
-
-export interface IFilemanMessageResponse extends IInstanceMessage {
-    msgtype: 'filemanmessageresponse'
-    id: string
-    command: EFilemanCommand
-    namespace: string
-    group: string
-    pod: string
-    container: string
-    data?: any
-}
+import { EFilemanCommand, IFilemanMessage, IFilemanMessageResponse } from '../common/FilemanTypes'
 
 export interface IAsset {
     podNamespace: string
@@ -57,7 +18,6 @@ export interface IAsset {
 export interface IInstance {
     instanceId: string
     accessKey: AccessKey
-    configData: IFilemanConfig
     paused: boolean
     assets: IAsset[]
 }
@@ -283,7 +243,7 @@ class FilemanChannel {
         let instances = socket.instances
         let instance = instances.find(i => i.instanceId === instanceConfig.instance)
         if (!instance) {
-            instance = { accessKey: accessKeyDeserialize(instanceConfig.accessKey), instanceId: instanceConfig.instance, configData: instanceConfig.data, paused: false, assets: [] }
+            instance = { accessKey: accessKeyDeserialize(instanceConfig.accessKey), instanceId: instanceConfig.instance, paused: false, assets: [] }
             instances.push(instance)
         }
         instance.assets.push({ podNamespace, podName, containerName })

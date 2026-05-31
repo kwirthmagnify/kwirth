@@ -1,4 +1,4 @@
-![logo](./_media/favicon.ico)
+![logo](./_media/kwirth-text-60-transparent.png)
 
 #
 - Manage your Kubernetes clusters from one only central point.

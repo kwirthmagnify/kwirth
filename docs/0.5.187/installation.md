@@ -25,13 +25,8 @@ Installation can be tailored by changing some Kwirth installation options:
 
 | Option             | Description | Type | Value  |Default value |
 | -                  | -           | -    |-       |-             |
-| channelAlert       | Enables/Disables Alert channel | string | true/false  | true |
-| channelEcho        | Enables/Disables Echo channel | string | true/false  | true  |
-| channelFileman     | Enables/Disables Fileman channel | string | true/false  | true  |
-| channelLog         | Enables/Disables Log channel | string | true/false  | true  |
 | channelMetrics     | Enables/Disables Metrics channel | string | true/false  | true  |
-| channelOps         | Enables/Disables Ops channel | string | true/false  | true  |
-| channelTrivy       | Enables/Disables Trivy channel | string | true/false  | true  |
+| channelMagnify     | Enables/Disables Magnify channel | string | true/false  | true  |
 | rootpath           | It's the path where Kwirth will be served | string | any URL Path | /kwirth  |
 | masterkey          | It's the key used to sign the access keys sent to clients | string | any string | Kwirth4Ever  |
 | image              | A full image reference | string | A valid reference | kwirthmagnify/kwirth:latest |
@@ -43,21 +38,18 @@ Installation can be tailored by changing some Kwirth installation options:
 | nginx.secret       | Name of the secret holding the CRT and the KEY | string | - | - |
 | ingress.hostname   | Name of the host in ithe Ingress | string | - | - |
 
+?> Log, Ops, Trivy, Fileman, Echo and other observability capabilities are now loaded as **plugins**. Use the plugin management UI or `kwirth-dev.json` to install them — no Helm option is needed.
+
 
 A sample 'values.yaml' file could be:
 
 ```yaml
 kwirth:
   config:
-    channelAlert: "true"
-    channelEcho: "false"
-    channelFileman: "true"
-    channelLog: "true"
     channelMetrics: "true"
-    channelOps: "true"
-    channelTrivy: "false"
+    channelMagnify: "true"
     rootpath: /kwirth
-  image: kwirthmagnify/kwirth:0.4.34
+  image: kwirthmagnify/kwirth:0.5.187
 ```
 
 That could be installed like this:

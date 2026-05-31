@@ -3,7 +3,7 @@
     "name": "Trivy",
     "displayName": "Trivy",
     "publisher": "@kwirthmagnify",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "website": "https://kwirthmagnify.dev",
     "description": "Trivy security scanning channel plugin for Kwirth",
     "icon": "VerifiedUser",

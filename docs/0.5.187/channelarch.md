@@ -15,8 +15,7 @@ According to this structure, the different features that users expect to use wit
 
 Or, for example, since Kwirth 0.3.160 you can receive cluster metrics via a real-time metrics-stream. You can receive information about CPU usage for containers, pods, groups or namespaces. Metrics is another different **channel**. In fact, you can start your Kwirth instance deciding what channels to enable or disable and what other external channels you want to add to your Kwirth instance.
 
-We have plans to integrate channels into **'plugins'**, exactly the way [Backstage plugins](https://backstage.io/plugins) work.
-
+Starting with Kwirth 0.5.187, channels have been fully integrated into the **plugin system**, exactly the way [Backstage plugins](https://backstage.io/plugins) work. Each channel is now a self-contained plugin that can be installed, updated, or removed at runtime without restarting Kwirth.
 
 ## What are channels?
 A **channel** is the implementation of a specific feature. For example you can create a channel for receiving info on ConfigMap in such a way that any change to ConfigMaps can be streamed in real-time for somebody to be informed of such changes. Or you can build a channel for exporting log streams in real-time (the original idea behind Kwirth).
@@ -48,19 +47,25 @@ What follows is a zoomed view of Kwirth core.
 ![kwirthcore](./_media/kwirth-kwirth-components.png)
 
 ## Existing channels
-Channel subsystem started in Kwirth 0.3.160, and these are the channels you will find integrated inside Kwirth core in current version:
+Channel subsystem started in Kwirth 0.3.160. As of 0.5.187, all channels are delivered as **plugins** — two of them (Metrics and Magnify) remain bundled inside Kwirth core, while the rest are independent plugin packages that can be installed on demand.
 
-  - **Log**. You can open log streams for receiving container/pod/group/namespace aggregated log streams in real time.
-  - **Metrics**. You can receive metrics information related to container/pod/group/namespace aggregated objects.
-  - **Alert**. Client can configure alerts for filtering aggregated log streams at origin.
-  - **Echo**. This is a reference channel for channel implementers, it is not useful for real kubernetes operations.
-  - **Trivy**. This is a very interesting channel for knowing your vulnerabilities exposure based on Trivy. Trivy is fully integrated into Kwirth through this channel.
-  - **Ops**. This is a channel you cna use for performing common operations on your cluster, like launching a shell to a pod or restarting a pod. But Ops channels includes some interesting features like restarting a namespace, or keeping shell terminals connected for a lifetime.
-  - **Fileman**. *Fileman is an unprecedented* channel that allows users to *work with container filesystems exactly the same way they would work with its PC filesystem*. Forget about `kubectl exec mypod -- /bin/sh -c ls`, "kubectl cp", JUST navigate on your browser with this powerful visual file explorer!!
-  - **Magnify**. This is a *factotum* channel. Magnify consolidates all existing channels in Kwirth into *one only web experience* for managing all Kubernetes aspects and objects, exactly the same way you would do with K9s, Headlamp or Lens. This means, by adding Magnify, Kwirth is no longer just an observability tool, **Kwirth is now a Kubernetes Management tool**.
-  - **Pinocchio**. This is a ultra-modern channel for adding AI capabilities to Kwirth. PInocchio is connected to your favorite LLM via an agnostic API, so you can use it to perform some **AI-requiring activities**: validate artifacts, check security, correct wrong config, approve/deny object creation... All of this is performed by sending info to LLM and getting JSON-ized responses. In addition, you can **add external business data** that you can sent to the LLM in order to provide more information for taking actions. **IMPORTANT: as it happens with any other channel inside Kwirth, you will send data and take decisions in real-time**.
-  - **Topology**. An interactive 3D visualization tool that renders all your Kubernetes resources (Deployments, StatefulSets, Pods, Services, Ingresses, PVCs...) as a navigable graph. Relationships between objects — ownership chains, service bindings, ingress routing — are shown as animated edges. You can also perform management operations (scale, restart, delete) directly from the topology view.
-  - **News** *(test channel)*. A demonstration plugin that polls external RSS feeds (Kubernetes blog, AI news) and streams new items to the UI in real time. Useful as a reference for building plugins that consume external data sources rather than Kubernetes data.
+### Core channels (always available)
+
+  - **Metrics**. Receive real-time metrics for containers, pods, groups, or namespaces — CPU, memory, network, disk — as a continuous stream or on-demand snapshots.
+  - **Magnify**. The *factotum* channel. Magnify consolidates all installed channels into *one unified web experience* for managing every aspect of your Kubernetes cluster, the same way you would with K9s, Headlamp, or Lens. By adding Magnify, Kwirth becomes a full **Kubernetes Management tool**, not just an observability platform.
+
+### Plugin channels (installable)
+
+  - **Log**. Real-time aggregated log streams for containers, pods, groups, or namespaces. Supports previous logs, timestamp filtering, and per-pod buffering.
+  - **Alert**. Configure regex-based or metrics-based alert rules that fire in real time when log content or metric thresholds match. Findings are forwarded through the sender system.
+  - **Censor**. LLM-powered log analysis channel. Censor inspects log streams, detects sensitive or anomalous patterns via configurable regex rules and AI inference, and forwards findings through the sender system. Supports multiple LLM providers and interactive terminal sessions.
+  - **Ops**. Perform common cluster operations directly from the UI: launch an interactive shell into any pod, restart pods, deployments, or entire namespaces, and keep terminal sessions alive across reconnections.
+  - **Fileman**. *Unprecedented* channel that lets users browse, upload, download, rename, copy, move, and delete files inside any container filesystem — from the browser — exactly as they would with a local file manager.
+  - **Trivy**. Integrates Trivy vulnerability scanning directly into Kwirth. Inspect vulnerability reports, configuration audits, SBOM, and exposed secrets for any workload without leaving the UI.
+  - **Pinocchio**. AI-powered channel connected to your LLM of choice via an agnostic API (OpenRouter, Gemini, Groq, OpenAI, Mistral…). Validates Kubernetes artifacts, checks security posture, suggests fixes, and can act on business data streams in real time.
+  - **Topology**. Interactive 3D visualization of all Kubernetes resources (Deployments, StatefulSets, Pods, Services, Ingresses, PVCs…) as a navigable graph. Ownership chains, service bindings, and ingress routing are shown as animated edges. Scale, restart, or delete objects directly from the topology view.
+  - **Echo** *(reference channel)*. Minimal reference implementation for channel and plugin developers. Not intended for production use.
+  - **News** *(reference channel)*. Polls external RSS feeds and streams new items to the UI in real time. Useful as a reference for plugins that consume external data sources rather than Kubernetes data.
 
 It is important to note that **Kwirth always includes a basic front React application**, but you can integrate Kwirth with your own clients by using Kwirth API.
 

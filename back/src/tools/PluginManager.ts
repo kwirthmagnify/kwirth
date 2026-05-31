@@ -31,6 +31,7 @@ interface IDevPlugin {
 export class PluginManager {
     private configMaps: IConfigMaps
     private installedIds: string[] = []
+    private cachedIndex: IPluginMeta[] = []
     private devPlugins = new Map<string, IDevPlugin>()
     private devWatchers = new Map<string, fs.FSWatcher>()
     onDevPluginReloaded?: (id: string, ChannelClass: TChannelConstructor) => void
@@ -41,7 +42,8 @@ export class PluginManager {
 
     async init(): Promise<void> {
         const index = await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]
-        this.installedIds = (index || []).map(p => p.id)
+        this.cachedIndex = index || []
+        this.installedIds = this.cachedIndex.map(p => p.id)
     }
 
     getInstalledIds(): string[] {
@@ -282,7 +284,7 @@ export class PluginManager {
     }
 
     async loadAll(registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
-        const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
+        const index = this.cachedIndex
         for (const meta of index) {
             try {
                 let backJs: string | undefined

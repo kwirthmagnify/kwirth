@@ -3,7 +3,7 @@ import { WebSocket as NonNativeWebSocket } from 'ws'
 import { PassThrough, Readable, Writable } from 'stream'
 import { execCommandDescribe } from './GetCommand'
 import { execCommandRestart } from './RestartCommand'
-import { EOpsCommand, IOpsMessage, IOpsMessageResponse } from './OpsTypes'
+import { EOpsCommand, IOpsMessage, IOpsMessageResponse } from '../common/OpsTypes'
 
 const checkResource = (resource: ResourceIdentifier, namespace: string, pod: string, container: string): boolean => {
     const parts = (resource.resources || '').split(':')

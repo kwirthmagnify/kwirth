@@ -94,7 +94,20 @@
       "PowerShell($f = \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\dist\\\\back.js\"; Write-Host \"trivy back.js: $\\([math]::Round\\(\\(Get-Item $f\\).Length/1024,1\\)\\) KB\")",
       "PowerShell($f = \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\fileman\\\\dist\\\\front.js\"; Write-Host \"fileman front.js: $\\([math]::Round\\(\\(Get-Item $f\\).Length/1024,1\\)\\) KB\")",
       "Bash(cd /c/github/jfvilas/react-file-manager/frontend && find . -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\\\\\) | head -20)",
-      "Read(//c/c/github/jfvilas/react-file-manager/**)"
+      "Read(//c/c/github/jfvilas/react-file-manager/**)",
+      "PowerShell(Remove-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\tools\\\\FrontTools.tsx\" -Confirm:$false)",
+      "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\" -Recurse -Directory -Filter \"ops\")",
+      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\src\\\\channels\\\\alert\" -Confirm:$false)",
+      "PowerShell(Remove-Item -Recurse -Force \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\alert\" -Confirm:$false)",
+      "Bash(rtk tree *)",
+      "PowerShell(Get-ChildItem -Path 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\topology' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { if\\($_.PSIsContainer\\) { \"$\\($_.FullName\\) [DIR]\" } else { \"$\\($_.FullName\\)\" } } | Sort-Object)",
+      "Bash(find /mnt/c/github/aisdkvercel/kwirth/plugins/fileman -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) | head -50)",
+      "Read(//mnt/c/github/aisdkvercel/kwirth/plugins/**)",
+      "PowerShell($f = \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\log\\\\dist\\\\front.js\"; Write-Host \"log front.js: $\\([math]::Round\\(\\(Get-Item $f\\).Length/1024,1\\)\\) KB\")",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\fileman\\\\src\" -Recurse -File | Where-Object { $_.Extension -match '\\\\.\\(ts|tsx\\)$' } | Select-Object FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio\" -Directory)",
+      "PowerShell($dir = \"$env:USERPROFILE\\\\.kwirth\\\\configmaps\"; if \\(Test-Path $dir\\) { Get-ChildItem $dir | Select-Object Name, Length } else { \"Directorio no existe\" })",
+      "PowerShell(Get-Content \"$env:USERPROFILE\\\\.kwirth\\\\configmaps\\\\kwirth-plugins-index\" | ConvertFrom-Json | ConvertTo-Json -Depth 10)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
