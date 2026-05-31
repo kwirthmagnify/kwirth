@@ -13,7 +13,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@jfvilas/react-file-manager": "^1.5.2",
-    "@kwirthmagnify/kwirth-common": "^0.5.0",
+    "@kwirthmagnify/kwirth-common": "^0.5.11",
     "@kwirthmagnify/kwirth-common-front": "^0.5.0",
     "@mui/icons-material": "^7.1.2",
     "@mui/material": "^7.1.2",

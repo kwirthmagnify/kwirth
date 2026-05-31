@@ -110,7 +110,8 @@
       "PowerShell(Get-Content \"$env:USERPROFILE\\\\.kwirth\\\\configmaps\\\\kwirth-plugins-index\" | ConvertFrom-Json | ConvertTo-Json -Depth 10)",
       "Bash(del \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\electron\\\\electron-build-w.cmd\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\electron\\\\electron-build-l.cmd\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\tauri-build-e.cmd\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\tauri-build-t.cmd\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\tauri-build-w.cmd\" \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\tauri-build-l.cmd\")",
       "Bash(dir \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\*.cmd\" /b)",
-      "Read(//c/github/aisdkvercel/kwirth/tauri/**)"
+      "Read(//c/github/aisdkvercel/kwirth/tauri/**)",
+      "PowerShell(\\(Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\manifest.json\" -Raw\\) -replace '\"version\": \"0.2.1\"', '\"version\": \"0.2.2\"' -replace 'kwirth-plugin-\\(\\\\w+\\)-0\\\\.2\\\\.1\\\\.tgz', 'kwirth-plugin-$1-0.2.2.tgz' -replace '-0\\\\.2\\\\.1\\\\.tgz\"', '-0.2.2.tgz\"' | Set-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\manifest.json\" -Encoding UTF8)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

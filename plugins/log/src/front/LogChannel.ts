@@ -16,7 +16,7 @@ export class LogChannel implements IChannel {
     requirements: IChannelRequirements = {
         accessString: false, clusterUrl: false, clusterInfo: false, exit: false,
         frontChannels: false, metrics: false, notifier: true, notifications: true,
-        setup: true, settings: false, palette: false, userSettings: false, webSocket: false,
+        setup: true, settings: false, palette: false, userSettings: false, webSocket: false, backChannels: false,
     }
 
     getScope() { return EInstanceConfigScope.VIEW }

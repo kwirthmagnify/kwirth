@@ -41,7 +41,8 @@ export class FilemanChannel implements IChannel {
         settings: false,
         palette: false,
         userSettings: false,
-        webSocket: true
+        webSocket: true,
+        backChannels: false,
     }
 
     getScope() { return 'fileman$read' }

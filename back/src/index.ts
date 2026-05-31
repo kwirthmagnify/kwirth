@@ -1108,7 +1108,7 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
     }
 }
 
-const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
+const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promise<boolean> => {
     try {
         const riRouter = express.Router()
 
@@ -1163,6 +1163,35 @@ const setUpRoutes = async (ri:IRunningInstance) : Promise<boolean> => {
                         channelInstance.startChannel()
                         if (!activeRI.kwirthData.channels.some(c => c.id === id))
                             activeRI.kwirthData.channels.push(channelInstance.getChannelData())
+                        const channelData = channelInstance.getChannelData()
+                        for (const endpoint of channelData.endpoints) {
+                            const router = express.Router()
+                            router.route('*')
+                                .all(async (req: Request, res: Response, next) => {
+                                    if (endpoint.requiresAccessKey) {
+                                        if (!(await AuthorizationManagement.validKey(req, res, activeRI.apiKeyApi!))) return
+                                    }
+                                    next()
+                                })
+                                .get(async (req: Request, res: Response) => {
+                                    if (endpoint.methods.includes('GET')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res)
+                                    else res.status(405).send()
+                                })
+                                .post(async (req: Request, res: Response) => {
+                                    if (endpoint.methods.includes('POST')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res)
+                                    else res.status(405).send()
+                                })
+                                .put(async (req: Request, res: Response) => {
+                                    if (endpoint.methods.includes('PUT')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res)
+                                    else res.status(405).send()
+                                })
+                                .delete(async (req: Request, res: Response) => {
+                                    if (endpoint.methods.includes('DELETE')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res)
+                                    else res.status(405).send()
+                                })
+                            expressApp.use(`${envRootPath}/${activeRI.id}/channel/${channelData.id}/${endpoint.name}`, router)
+                            logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP endpoint registered: ${channelData.id}/${endpoint.name}`)
+                        }
                         logInfo(ELogComponent.CORE, `Plugin channel '${id}' instantiated and started`)
                     }
                 } catch (err) {
@@ -1347,7 +1376,7 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
             logInfo(ELogComponent.CORE, 'File list at project root when starting instance: ' + currentFiles.join(', '))
         })
 
-        if (! (await setUpRoutes(ri))) {
+        if (! (await setUpRoutes(ri, expressApp))) {
             logError(ELogComponent.CORE, 'Could not set up HTTP routes. Exiting')
             process.exit(1)
         }

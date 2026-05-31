@@ -653,6 +653,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (newTab.channel.requirements.accessString) newTab.channelObject.accessString = cluster?.accessString
         if (newTab.channel.requirements.metrics) newTab.channelObject.metricsList = cluster.metricsList
         if (newTab.channel.requirements.frontChannels) newTab.channelObject.frontChannels = frontChannels
+        if (newTab.channel.requirements.backChannels) newTab.channelObject.backChannels = backChannels
         if (newTab.channel.requirements.notifier) newTab.channelObject.notify = notify
         if (newTab.channel.requirements.notifications) newTab.channelObject.notifications = notifications.current
         if (newTab.channel.requirements.palette) newTab.channelObject.setPalette = (palette:string) => setMode(palette as 'light'|'dark')

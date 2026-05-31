@@ -26,6 +26,7 @@ export class EchoChannel implements IChannel {
         palette: false,
         userSettings: false,
         webSocket: false,
+        backChannels: false,
     }
 
     getScope() { return EInstanceConfigScope.NONE }

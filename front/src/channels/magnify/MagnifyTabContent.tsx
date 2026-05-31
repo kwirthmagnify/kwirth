@@ -119,7 +119,6 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     const [ , setTick] = useState<number>(0)
 
-    const BUILTIN_CHANNELS = new Set(['echo', 'metrics', 'magnify'])
 
     // RFM categories
     const onCategoryFilter = (categoryKey:string, f:IFileObject) : boolean => {
@@ -681,15 +680,20 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     // Specific actions for some objects
     // *********************************************************
 
-    // Sync plugin items into classClusterOverview left bar on every render
+
+    // Sync cluster-type plugins into classClusterOverview left bar on every render
     {
         const STATIC_CLUSTER_ITEMS = new Set(['search'])
         const spcClusterOverview = spaces.get('classClusterOverview')!
-        const currentPluginIds = Array.from(props.channelObject.frontChannels?.keys() ?? []).filter(id => !BUILTIN_CHANNELS.has(id))
+        const clusterPluginIds = Array.from(props.channelObject.frontChannels?.keys() ?? []).filter(id => {
+            if (id === 'magnify') return false
+            const backChannel = props.channelObject.backChannels?.find(c => c.id === id)
+            return backChannel?.cluster === true
+        })
         spcClusterOverview.leftItems = spcClusterOverview.leftItems!.filter(item =>
-            !item.name || STATIC_CLUSTER_ITEMS.has(item.name) || currentPluginIds.includes(item.name)
+            !item.name || STATIC_CLUSTER_ITEMS.has(item.name) || clusterPluginIds.includes(item.name)
         )
-        for (const pluginId of currentPluginIds) {
+        for (const pluginId of clusterPluginIds) {
             if (!spcClusterOverview.leftItems!.some(item => item.name === pluginId)) {
                 const ChannelClass = props.channelObject.frontChannels!.get(pluginId)!
                 const ch = createChannelInstance(ChannelClass)
