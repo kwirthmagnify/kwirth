@@ -49,8 +49,8 @@
     },
     {
         "id": "pinocchio",
-        "version": "0.2.3",
-        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.3.tgz",
+        "version": "0.2.4",
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.4.tgz",
         "name": "Pinocchio",
         "description": "Pinocchio plugin for Kwirth - AI-powered Kubernetes artifact validation and business data analysis",
         "icon": "AutoFixHigh"
@@ -80,6 +80,7 @@
         "icon": "Newspaper"
     }
 ]
+
 
 
 

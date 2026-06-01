@@ -3,6 +3,7 @@
     "censor": "../daemons/censor/dist"
   },
   "channels": {
+    "pinocchio": "../plugins/pinocchio/dist"
   },
   "providers": {
     "tick": "../providers/tick/dist",
