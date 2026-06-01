@@ -6,6 +6,7 @@
   },
   "providers": {
     "tick": "../providers/tick/dist",
+    "validating": "../providers/validating/dist",
     "kafka": "../providers/kafka/dist",
     "otel": "../providers/otel/dist"
   },

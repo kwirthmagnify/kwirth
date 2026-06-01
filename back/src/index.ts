@@ -59,7 +59,6 @@ import * as crypto from 'crypto'
 
 import { createProviderInstance, TProviderConstructor } from './providers/IProvider'
 import { EventsProvider } from './providers/events/EventsProvider'
-import { ValidatingProvider } from './providers/validating/ValidatingProvider'
 import { BusinessProvider } from './providers/business/BusinessProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
 
@@ -130,7 +129,6 @@ let daemonManager: DaemonManager | undefined
 
 const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
-registeredProviders.set('validating', ValidatingProvider)
 registeredProviders.set('business', BusinessProvider)
 registeredProviders.set('metrics', MetricsProvider)
 
