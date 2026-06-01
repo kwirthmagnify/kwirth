@@ -103,17 +103,23 @@ const KIND_ACTIONS: Partial<Record<ETopologyNodeKind, ICtxAction[]>> = {
         { icon: <Delete fontSize='small'/>,    label: 'Delete pod',      action: 'delete-pod', divider: true },
     ],
     [ETopologyNodeKind.DEPLOYMENT]: [
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: 'logs' },
         { icon: <PlayArrow fontSize='small'/>, label: 'Scale up (+1)',   action: 'scale-up' },
         { icon: <Stop fontSize='small'/>,      label: 'Scale to zero',   action: 'scale-zero' },
         { icon: <Refresh fontSize='small'/>,   label: 'Restart rollout', action: 'restart', divider: true },
     ],
     [ETopologyNodeKind.STATEFULSET]: [
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: 'logs' },
         { icon: <PlayArrow fontSize='small'/>, label: 'Scale up (+1)',   action: 'scale-up' },
         { icon: <Stop fontSize='small'/>,      label: 'Scale to zero',   action: 'scale-zero' },
         { icon: <Refresh fontSize='small'/>,   label: 'Restart rollout', action: 'restart', divider: true },
     ],
     [ETopologyNodeKind.DAEMONSET]: [
-        { icon: <Refresh fontSize='small'/>, label: 'Restart rollout', action: 'restart', divider: true },
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: 'logs' },
+        { icon: <Refresh fontSize='small'/>,   label: 'Restart rollout', action: 'restart', divider: true },
+    ],
+    [ETopologyNodeKind.REPLICASET]: [
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: 'logs', divider: true },
     ],
     [ETopologyNodeKind.SERVICE]: [
         { icon: <Hub fontSize='small'/>, label: 'Show endpoints', action: 'endpoints', divider: true },
@@ -1007,26 +1013,47 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 break
             }
             case 'logs': {
-                const podNode = node.kind === ETopologyNodeKind.CONTAINER
-                    ? Array.from(topologyData.nodes.values()).find(n => node.ownerUids?.includes(n.uid) && n.kind === ETopologyNodeKind.POD)
-                    : node
-                if (podNode) {
-                    const containerName = node.kind === ETopologyNodeKind.CONTAINER ? node.name : ''
+                const GROUP_KINDS = new Set([ETopologyNodeKind.DEPLOYMENT, ETopologyNodeKind.STATEFULSET, ETopologyNodeKind.DAEMONSET, ETopologyNodeKind.REPLICASET])
+                if (GROUP_KINDS.has(node.kind)) {
+                    const kindPrefix = node.kind.toLowerCase()
                     const openExternal = (channelObject as any).openExternal as Function | undefined
                     if (openExternal) {
-                        const fileObj = { data: { origin: { metadata: { name: podNode.name, namespace: podNode.namespace }, kind: 'Pod' } } }
-                        openExternal('log', [fileObj], containerName ? EInstanceConfigView.CONTAINER : EInstanceConfigView.POD, undefined, containerName || undefined)
+                        const fileObj = { data: { origin: { metadata: { name: `${kindPrefix}+${node.name}`, namespace: node.namespace }, kind: node.kind } } }
+                        openExternal('log', [fileObj], EInstanceConfigView.GROUP, undefined, undefined)
                     } else {
                         channelObject.createTab?.({
                             clusterName: channelObject.clusterName,
-                            namespaces: [podNode.namespace],
-                            controllers: [],
-                            pods: [podNode.name],
-                            containers: containerName ? [containerName] : [],
+                            namespaces: [node.namespace],
+                            controllers: [`${kindPrefix}+${node.name}`],
+                            pods: [],
+                            containers: [],
                             channelId: 'log',
-                            view: EInstanceConfigView.POD,
-                            name: containerName || podNode.name,
+                            view: EInstanceConfigView.GROUP,
+                            name: node.name,
                         }, true, undefined)
+                    }
+                } else {
+                    const podNode = node.kind === ETopologyNodeKind.CONTAINER
+                        ? Array.from(topologyData.nodes.values()).find(n => node.ownerUids?.includes(n.uid) && n.kind === ETopologyNodeKind.POD)
+                        : node
+                    if (podNode) {
+                        const containerName = node.kind === ETopologyNodeKind.CONTAINER ? node.name : ''
+                        const openExternal = (channelObject as any).openExternal as Function | undefined
+                        if (openExternal) {
+                            const fileObj = { data: { origin: { metadata: { name: podNode.name, namespace: podNode.namespace }, kind: 'Pod' } } }
+                            openExternal('log', [fileObj], containerName ? EInstanceConfigView.CONTAINER : EInstanceConfigView.POD, undefined, containerName || undefined)
+                        } else {
+                            channelObject.createTab?.({
+                                clusterName: channelObject.clusterName,
+                                namespaces: [podNode.namespace],
+                                controllers: [],
+                                pods: [podNode.name],
+                                containers: containerName ? [containerName] : [],
+                                channelId: 'log',
+                                view: EInstanceConfigView.POD,
+                                name: containerName || podNode.name,
+                            }, true, undefined)
+                        }
                     }
                 }
                 break
