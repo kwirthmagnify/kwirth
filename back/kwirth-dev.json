@@ -3,7 +3,6 @@
     "censor": "../daemons/censor/dist"
   },
   "channels": {
-    "topology":"../plugins/topology/dist"
   },
   "providers": {
     "kafka": "../providers/kafka/dist",

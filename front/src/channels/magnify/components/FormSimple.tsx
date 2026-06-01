@@ -13,6 +13,7 @@ const FormSimple: React.FC<IFormSimpleProps> = (props: IFormSimpleProps) => {
     // Usamos estado en lugar de ref para que la UI reaccione automáticamente a los cambios
     const [formData, setFormData] = useState<any>(null)
     const [asyncResults, setAsyncResults] = useState<{ [key: string]: any }>({})
+    const [filterTexts, setFilterTexts] = useState<{ [key: string]: string }>({})
 
     // Sincronizar el estado interno cuando el modelo de las props cambie o se cargue
     useEffect(() => {
@@ -65,7 +66,7 @@ const FormSimple: React.FC<IFormSimpleProps> = (props: IFormSimpleProps) => {
             anchorEl={props.anchorParent} 
             onClose={props.onClose}
         >
-            <Stack direction={'column'} width={'320px'} p={2} spacing={1.5}>
+            <Stack direction={'column'} width={'460px'} p={2} spacing={1.5}>
                 {Object.keys(formData).map((key, index) => {
                     const value = formData[key]
 
@@ -125,23 +126,37 @@ const FormSimple: React.FC<IFormSimpleProps> = (props: IFormSimpleProps) => {
                                     {asyncResults[key] !== undefined ? asyncResults[key] : '...'}
                                 </Typography>
                             )}
-                        {/* Array con available+value -> checklist */}
+                        {/* Array con available+value -> checklist con filtro */}
                         {value && typeof value === 'object' && Array.isArray(value.available) && Array.isArray(value.value) && (
-                            <List dense disablePadding sx={{ maxHeight: 200, overflowY: 'auto', width: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 1, mt: 0.5 }}>
-                                {value.available.map((item: string, i: number) => (
-                                    <ListItem key={i} disablePadding sx={{ px: 1 }}>
-                                        <FormControlLabel
-                                            control={<Checkbox size='small' checked={value.value.includes(item)} onChange={(e) => {
-                                                const next = e.target.checked
-                                                    ? [...value.value, item]
-                                                    : value.value.filter((v: string) => v !== item)
-                                                handleObjectValueChange(key, 'value', next)
-                                            }}/>}
-                                            label={<Typography variant='caption'>{item}</Typography>}
-                                        />
-                                    </ListItem>
-                                ))}
-                            </List>
+                            <Stack spacing={0.5} sx={{ width: '100%', mt: 0.5 }}>
+                                {value.available.length > 8 && (
+                                    <TextField
+                                        size='small'
+                                        variant='outlined'
+                                        placeholder='Filter...'
+                                        value={filterTexts[key] ?? ''}
+                                        onChange={e => setFilterTexts(prev => ({ ...prev, [key]: e.target.value }))}
+                                        slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }}
+                                    />
+                                )}
+                                <List dense disablePadding sx={{ maxHeight: 200, overflowY: 'auto', width: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                                    {value.available
+                                        .filter((item: string) => !filterTexts[key] || item.toLowerCase().includes(filterTexts[key].toLowerCase()))
+                                        .map((item: string, i: number) => (
+                                        <ListItem key={i} disablePadding sx={{ px: 1 }}>
+                                            <FormControlLabel
+                                                control={<Checkbox size='small' checked={value.value.includes(item)} onChange={(e) => {
+                                                    const next = e.target.checked
+                                                        ? [...value.value, item]
+                                                        : value.value.filter((v: string) => v !== item)
+                                                    handleObjectValueChange(key, 'value', next)
+                                                }}/>}
+                                                label={<Typography variant='caption'>{item}</Typography>}
+                                            />
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </Stack>
                         )}
                         </Stack>
                     )
@@ -192,7 +207,7 @@ export { FormSimple }
 
 //     return (
 //         <Menu open={Boolean(props.anchorParent)} anchorEl={props.anchorParent} onClose={props.onClose}>
-//             <Stack direction={'column'} width={'320px'} p={2} spacing={1.5}>
+//             <Stack direction={'column'} width={'460px'} p={2} spacing={1.5}>
 //                 {(data.current ? Object.keys(data.current) : []).map((key, index) => {
 //                     const value = data.current[key]
 

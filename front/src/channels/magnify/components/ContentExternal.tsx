@@ -167,6 +167,12 @@ const containerRef = useRef<HTMLDivElement>(null)
                     }
                     break
                 }
+                case 'news':
+                    contentExternalData.formConfig = {
+                        maxItems: 50,
+                        feeds: { available: ['kubernetes', 'ai'], value: ['kubernetes', 'ai'] }
+                    }
+                    break
                 default: {
                     const ch = contentExternalData.content?.externalChannel
                     if (ch?.prepareExternalChannel) {
@@ -657,6 +663,13 @@ const containerRef = useRef<HTMLDivElement>(null)
                         setMsgBox(MsgBoxOk('Remove', 'Removing started, close this dialog and wait for Trivy to completely disappear from your cluster', setMsgBox))
                     } else { setMsgBox(MsgBoxOk('Trivy remove', 'Running instance is not yet available, please try again in a few seconds', setMsgBox)) }
                 }
+                break
+            }
+            case 'news': {
+                const ch = contentExternalData.content?.externalChannel
+                ch?.onExternalConfigApply?.(contentExternalData.content!.externalChannelObject!, values)
+                stop()
+                play()
                 break
             }
             case 'pinocchio':

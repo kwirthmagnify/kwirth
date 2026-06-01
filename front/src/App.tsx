@@ -11,6 +11,7 @@ import { Cluster, IClusterInfo } from './model/Cluster'
 import { RenameTab } from './components/RenameTab'
 import { SaveWorkspace } from './components/workspace/SaveWorkspace'
 import { SelectWorkspace }  from './components/workspace/SelectWorkspace'
+import { WorkspacePickerDialog } from './components/workspace/WorkspacePickerDialog'
 import { ManageApiSecurity } from './components/security/ManageApiSecurity'
 import { Login } from './components/Login'
 import { ManageClusters } from './components/ManageClusters'
@@ -207,6 +208,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showManageClusters, setShowManageClusters]=useState<boolean>(false)
     const [showSaveWorkspace, setShowSaveWorkspace]=useState<boolean>(false)
     const [showSelectWorkspace, setShowSelectWorkspace]=useState<boolean>(false)
+    const [workspacePickerMode, setWorkspacePickerMode] = useState<'export'|'import'|null>(null)
+    const [workspacePickerNames, setWorkspacePickerNames] = useState<string[]>([])
+    const [pendingImportData, setPendingImportData] = useState<Record<string,any>>({})
+    const [pendingExportData, setPendingExportData] = useState<Record<string,any>>({})
     const [showApiSecurity, setShowApiSecurity]=useState<boolean>(false)
     const [showUserSecurity, setShowUserSecurity]=useState<boolean>(false)
     const [showSettingsUser, setShowSettingsUser]=useState<boolean>(false)
@@ -1444,20 +1449,19 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageSenders:
                 setShowSenderDialog(true)
                 break
-            case MenuDrawerOption.ExportWorkspaces:
-                let workspacesToExport:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
-                if (workspacesToExport.length===0) {
-                    showNoWorkspaces()
+            case MenuDrawerOption.ExportWorkspaces: {
+                const allNames:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
+                if (allNames.length===0) { showNoWorkspaces(); break }
+                const allContent:Record<string,any> = {}
+                for (const name of allNames) {
+                    const ws = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces/${name}`, addGetAuthorization(accessString))).json()
+                    allContent[name] = JSON.parse(ws)
                 }
-                else {
-                    let content:any={}
-                    for (let workspaceName of workspacesToExport) {
-                        let readWorkspace = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces/${workspaceName}`, addGetAuthorization(accessString))).json()
-                        content[workspaceName]=JSON.parse(readWorkspace)
-                    }
-                    handleDownload(JSON.stringify(content),`${user?.id}-export-${new Date().toLocaleDateString()+'-'+new Date().toLocaleTimeString()}.kwirth.json`)
-                }
+                setPendingExportData(allContent)
+                setWorkspacePickerNames(allNames)
+                setWorkspacePickerMode('export')
                 break
+            }
             case MenuDrawerOption.ImportWorkspaces:
                 // nothing to do, the menuitem launches the handleUpload
                 break
@@ -1497,19 +1501,30 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const handleUpload = (event:any) => {
-        setMenuDrawerOpen(false)        
+        setMenuDrawerOpen(false)
         const file = event.target.files[0]
         if (file) {
             const reader = new FileReader()
-            reader.onload = (event:any) => {
-                let allWorkspaces=JSON.parse(event.target.result)
-                for (let workspaceName of Object.keys(allWorkspaces)) {
-                    let payload=JSON.stringify(allWorkspaces[workspaceName])
-                    fetch (`${backendUrl}/store/${user?.id}/workspaces/${workspaceName}`, addPostAuthorization(accessString, payload))
-                }
+            reader.onload = (e:any) => {
+                const allWorkspaces = JSON.parse(e.target.result) as Record<string,any>
+                setPendingImportData(allWorkspaces)
+                setWorkspacePickerNames(Object.keys(allWorkspaces))
+                setWorkspacePickerMode('import')
             }
             reader.readAsText(file)
         }
+    }
+
+    const onWorkspacePickerConfirm = (selected: string[]) => {
+        if (workspacePickerMode === 'export') {
+            const content: Record<string,any> = {}
+            for (const name of selected) content[name] = pendingExportData[name]
+            handleDownload(JSON.stringify(content), `${user?.id}-export-${new Date().toLocaleDateString()+'-'+new Date().toLocaleTimeString()}.kwirth.json`)
+        } else if (workspacePickerMode === 'import') {
+            for (const name of selected)
+                fetch(`${backendUrl}/store/${user?.id}/workspaces/${name}`, addPostAuthorization(accessString, JSON.stringify(pendingImportData[name])))
+        }
+        setWorkspacePickerMode(null)
     }
 
     const onSettingsUserClosed = (ok:boolean) => {
@@ -1847,6 +1862,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showRenameTab && <RenameTab onClose={onRenameTabClosed} tabs={tabs.current} oldname={selectedTab.current?.name}/> }
                 { showSaveWorkspace && <SaveWorkspace onClose={onSaveWorkspaceClosed} name={currentWorkspaceName} description={currentWorkspaceDescription} values={workspaces} /> }
                 { showSelectWorkspace && <SelectWorkspace onSelect={onSelectWorkspaceClosed} values={workspaces} action={selectWorkspaceAction}/> }
+                { workspacePickerMode && <WorkspacePickerDialog title={workspacePickerMode === 'export' ? 'Select workspaces to export' : 'Select workspaces to import'} workspaceNames={workspacePickerNames} onConfirm={onWorkspacePickerConfirm} onCancel={() => setWorkspacePickerMode(null)} /> }
                 { showManageClusters && <ManageClusters onClose={onManageClustersClosed} clusters={clusters} notify={notify}/> }
                 { showApiSecurity && <ManageApiSecurity onClose={() => setShowApiSecurity(false)} /> }
                 { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} /> }

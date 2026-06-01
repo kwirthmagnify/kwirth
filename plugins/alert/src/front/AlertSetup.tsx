@@ -82,23 +82,21 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     </>
 
     return (
-        <Dialog open maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '65vw', maxWidth: '65vw', height: '75vh', maxHeight: '75vh' } }}>
+        <Dialog open maxWidth='md' fullWidth>
             <DialogTitle>Create alert</DialogTitle>
-            <DialogContent>
-                <Stack direction='column' spacing={2} sx={{ m: 1 }}>
-                    <TextField value={maxAlerts} onChange={(e: ChangeEvent<HTMLInputElement>) => setMaxAlerts(+e.target.value)} variant='standard' label='Max alerts' type='number' sx={{ width: '120px' }} />
-
-                    <Typography variant='subtitle2' sx={{ fontWeight: 'bold' }}>Log pattern alerts</Typography>
-                    <Stack direction='row' spacing={1}>
+            <DialogContent sx={{ overflowX: 'hidden' }}>
+                <Stack direction='column' spacing={1} sx={{ m: 1 }}>
+                    <Typography variant='subtitle2' sx={{ fontWeight: 'bold', mt: 1, mb: -1 }}>Log pattern alerts</Typography>
+                    <Stack direction='row' spacing={1} sx={{ width: '100%' }}>
                         {[
                             { label: 'Info', val: info, set: setInfo, regex: regexInfo, setRegex: setRegexInfo },
                             { label: 'Warning', val: warning, set: setWarning, regex: regexWarning, setRegex: setRegexWarning },
                             { label: 'Error', val: error, set: setError, regex: regexError, setRegex: setRegexError },
                         ].map(({ label, val, set, regex, setRegex }) => (
-                            <Stack key={label} direction='column'>
+                            <Stack key={label} direction='column' sx={{ flex: 1, minWidth: 0 }}>
                                 <TextToolTip name={label} help={regexHelp} />
                                 <Stack direction='row' alignItems='baseline'>
-                                    <TextField value={val} onChange={(e: ChangeEvent<HTMLInputElement>) => set(e.target.value)} variant='standard' />
+                                    <TextField value={val} onChange={(e: ChangeEvent<HTMLInputElement>) => set(e.target.value)} variant='standard' sx={{ flex: 1, minWidth: 0 }} />
                                     <Button onClick={() => { if (val) { setRegex([...regex, val]); set('') } }} size='small'>Add</Button>
                                 </Stack>
                                 <Stack mt={1}>{regex.map((r, i) => <Box key={i}><Chip label={r} variant='outlined' onDelete={() => setRegex(regex.filter(x => x !== r))} size='small' /></Box>)}</Stack>
@@ -106,9 +104,9 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                         ))}
                     </Stack>
 
-                    <Typography variant='subtitle2' sx={{ fontWeight: 'bold' }}>Metric alerts (Kubernetes only)</Typography>
-                    <Stack direction='row' spacing={1} alignItems='flex-end' flexWrap='wrap'>
-                        <Autocomplete options={metricOptions} value={newMetric} onChange={(_, v) => setNewMetric(v)} renderInput={(p) => <TextField {...p} variant='standard' label='Metric' />} sx={{ width: '320px' }} size='small' noOptionsText='No metrics available' />
+                    <Typography variant='subtitle2' sx={{ fontWeight: 'bold', mt: 1, mb: -0.5 }}>Metric alerts (Kubernetes only)</Typography>
+                    <Stack direction='row' spacing={1} alignItems='flex-end' flexWrap='wrap' sx={{ width: '100%' }}>
+                        <Autocomplete options={metricOptions} value={newMetric} onChange={(_, v) => setNewMetric(v)} renderInput={(p) => <TextField {...p} variant='standard' label='Metric' />} sx={{ flex: 1, minWidth: '200px' }} size='small' noOptionsText='No metrics available' />
                         <FormControl variant='standard' sx={{ width: '70px' }}>
                             <InputLabel>Operator</InputLabel>
                             <Select value={newOperator} onChange={(e: SelectChangeEvent) => setNewOperator(e.target.value as TAlertMetricOperator)}>
@@ -136,21 +134,37 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                         <Button onClick={() => { if (!newMetric || isNaN(+newThreshold)) return; setMetricRules([...metricRules, { metric: newMetric, operator: newOperator, value: +newThreshold, severity: newRuleSeverity, mode: newRuleMode, cooldown: +newRuleCooldown }]); setNewMetric(null); setNewThreshold('0') }} disabled={!newMetric} size='small'>Add</Button>
                     </Stack>
                     <Stack direction='row' flexWrap='wrap' gap={1}>
-                        {metricRules.map((rule, i) => <Chip key={i} label={`${rule.metric} ${rule.operator} ${rule.value} [${rule.severity}] ${rule.mode === 'cooldown' ? `${rule.cooldown}s` : rule.mode === 'continuous' ? 'cont' : 'edge'}`} variant='outlined' size='small' onDelete={() => setMetricRules(metricRules.filter((_, j) => j !== i))} />)}
+                        {metricRules.map((rule, i) => <Chip key={i} label={`${rule.metric} ${rule.operator} ${rule.value} [${rule.severity}] ${rule.mode === 'cooldown' ? `${rule.cooldown}s` : rule.mode === 'continuous' ? 'cont' : 'edge'}`} variant='outlined' size='small'
+                            onClick={() => {
+                                setNewMetric(rule.metric)
+                                setNewOperator(rule.operator)
+                                setNewThreshold(String(rule.value))
+                                setNewRuleSeverity(rule.severity)
+                                setNewRuleMode(rule.mode)
+                                setNewRuleCooldown(String(rule.cooldown ?? 60))
+                                setMetricRules(metricRules.filter((_, j) => j !== i))
+                            }}
+                            onDelete={() => setMetricRules(metricRules.filter((_, j) => j !== i))} />)}
                     </Stack>
 
-                    <Typography variant='subtitle2' sx={{ fontWeight: 'bold' }}>Sender</Typography>
-                    <Select value={selectedSender} onChange={(e: SelectChangeEvent) => setSelectedSender(e.target.value)} displayEmpty size='small' variant='standard'>
-                        <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
-                        {senderEntries.map(e => (
-                            <MenuItem key={`${e.senderId}::${e.configName}`} value={`${e.senderId}::${e.configName}`}>
-                                <Stack direction='row' spacing={1} alignItems='center'>
-                                    <Chip label={e.senderId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
-                                    <Typography variant='body2'>{e.configName}</Typography>
-                                </Stack>
-                            </MenuItem>
-                        ))}
-                    </Select>
+                    <Typography variant='subtitle2' sx={{ fontWeight: 'bold', mt: 4, mb: -0.5 }}>General</Typography>
+                    <Stack direction='row' spacing={2} alignItems='flex-end' sx={{ width: '100%' }}>
+                        <TextField value={maxAlerts} onChange={(e: ChangeEvent<HTMLInputElement>) => setMaxAlerts(+e.target.value)} variant='standard' label='Max alerts' type='number' sx={{ width: '100px', flexShrink: 0 }} />
+                        <Stack direction='column' sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant='caption' color='text.secondary'>Sender</Typography>
+                            <Select value={selectedSender} onChange={(e: SelectChangeEvent) => setSelectedSender(e.target.value)} displayEmpty size='small' variant='standard' sx={{ width: '100%' }}>
+                                <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
+                                {senderEntries.map(e => (
+                                    <MenuItem key={`${e.senderId}::${e.configName}`} value={`${e.senderId}::${e.configName}`}>
+                                        <Stack direction='row' spacing={1} alignItems='center'>
+                                            <Chip label={e.senderId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
+                                            <Typography variant='body2'>{e.configName}</Typography>
+                                        </Stack>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </Stack>
+                    </Stack>
                 </Stack>
             </DialogContent>
             <DialogActions>

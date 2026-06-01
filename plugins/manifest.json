@@ -9,8 +9,8 @@
     },
     {
         "id": "alert",
-        "version": "0.2.3",
-        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.3.tgz",
+        "version": "0.2.4",
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.4.tgz",
         "name": "Alert",
         "description": "Alert plugin for Kwirth - Build an alert system based on log messages and cluster metrics",
         "icon": "Warning"
@@ -80,6 +80,7 @@
         "icon": "Newspaper"
     }
 ]
+
 
 
 

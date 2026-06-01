@@ -116,7 +116,11 @@
       "Read(//c/github/aisdkvercel/kwirth/plugins/**)",
       "Bash(python3 -c \"import sys,json; p=json.load\\(sys.stdin\\); print\\('main:', p.get\\('main'\\)\\); print\\('module:', p.get\\('module'\\)\\); print\\('exports keys:', list\\(p.get\\('exports', {}\\).keys\\(\\)\\)[:5] if isinstance\\(p.get\\('exports'\\), dict\\) else p.get\\('exports'\\)\\)\")",
       "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\node_modules\\\\@uiw\\\\react-codemirror\\\\esm\\\\index.d.ts\" -Pattern \"^export \\(default|declare|const|function|class|type|interface\\)\" | Select-Object -First 20 | ForEach-Object { $_.Line })",
-      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\magnify\\\\MagnifyChannel.ts\" -Pattern \"name|file|pod|upper\" -CaseSensitive:$false)"
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\channels\\\\magnify\\\\MagnifyChannel.ts\" -Pattern \"name|file|pod|upper\" -CaseSensitive:$false)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\alert\\\\src\\\\front\\\\AlertTabContent.tsx\" -Pattern \"Chip|chip|metric|edit|delete\" -CaseSensitive:$false)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\alert\\\\src\\\\front\\\\AlertSetup.tsx\" -Pattern \"Chip|chip|metric|edit|delete\" -CaseSensitive:$false)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\App.tsx\" -Pattern \"export|import|Export|Import\" | Where-Object { $_.Line -match \"[Ee]xport|[Ii]mport\" -and $_.Line -notmatch \"^import \" } | Select-Object LineNumber, Line | Select-Object -First 20)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\App.tsx\" -Pattern \"showSaveWorkspace|showSelectWorkspace|SaveWorkspace|SelectWorkspace\" | Where-Object { $_.Line -match \"<\" } | Select-Object LineNumber, Line | Select-Object -First 5)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

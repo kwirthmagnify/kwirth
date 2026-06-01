@@ -95,4 +95,10 @@ export class NewsChannel implements IChannel {
 
     socketDisconnected(_channelObject: IChannelObject): boolean { return false }
     socketReconnect(_channelObject: IChannelObject): boolean { return false }
+
+    onExternalConfigApply(channelObject: IChannelObject, values: any): boolean {
+        if (channelObject.config) channelObject.config.maxItems = values.maxItems
+        if (channelObject.instanceConfig) channelObject.instanceConfig.selectedFeeds = values.feeds?.value ?? []
+        return true
+    }
 }
