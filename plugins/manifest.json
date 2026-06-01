@@ -57,8 +57,8 @@
     },
     {
         "id": "topology",
-        "version": "0.2.3",
-        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.3.tgz",
+        "version": "0.2.4",
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.4.tgz",
         "name": "Topology",
         "description": "Displays Kubernetes artifacts topology in 3D, you can also interact with objects",
         "icon": "AccountTree"
@@ -80,6 +80,7 @@
         "icon": "Newspaper"
     }
 ]
+
 
 
 
