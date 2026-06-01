@@ -121,7 +121,15 @@
       "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\alert\\\\src\\\\front\\\\AlertSetup.tsx\" -Pattern \"Chip|chip|metric|edit|delete\" -CaseSensitive:$false)",
       "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\App.tsx\" -Pattern \"export|import|Export|Import\" | Where-Object { $_.Line -match \"[Ee]xport|[Ii]mport\" -and $_.Line -notmatch \"^import \" } | Select-Object LineNumber, Line | Select-Object -First 20)",
       "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src\\\\App.tsx\" -Pattern \"showSaveWorkspace|showSelectWorkspace|SaveWorkspace|SelectWorkspace\" | Where-Object { $_.Line -match \"<\" } | Select-Object LineNumber, Line | Select-Object -First 5)",
-      "Bash(grep -E \"\\\\.ts$\")"
+      "Bash(grep -E \"\\\\.ts$\")",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\front\\\\CensorTabContent.tsx\" -Pattern \"regex|Regex|Delete|delete|papelera|pattern|Pattern\" -CaseSensitive:$false)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\back\\\\index.ts\" -Pattern \"test|regex|filter|match|pattern\" -CaseSensitive:$false)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\src\\\\back\\\\index.ts\" -Pattern \"test|regex|filter|match|pattern\" -CaseSensitive:$false)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\back\\\\index.ts\" -Pattern \"regex\" -CaseSensitive:$false)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\src\\\\back\\\\index.ts\" -Pattern \"regexget|statsget|sendCommand\" -CaseSensitive:$false)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\back\\\\index.ts\" -Pattern \"STATSGET|statsget|stats\" -CaseSensitive:$false)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\front\\\\CensorTabContent.tsx\" -Pattern \"statsget|STATSGET|stats\" -CaseSensitive:$false)",
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\front\\\\CensorChannel.ts\" -Pattern \"stats|processedCount|status|regex\" -CaseSensitive:$false)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

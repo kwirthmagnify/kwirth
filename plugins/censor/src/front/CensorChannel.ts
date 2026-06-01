@@ -108,7 +108,7 @@ export class CensorChannel implements IChannel {
                 }
                 else if (msg.kind === 'regex' && msg.pattern !== undefined) {
                     if (!data.regexes.some((r: ICensorRegex) => r.pattern === msg.pattern)) {
-                        data.regexes.push({ pattern: msg.pattern, example: msg.example ?? '', explanation: msg.explanation ?? '' })
+                        data.regexes.push({ pattern: msg.pattern, example: msg.example ?? '', explanation: msg.explanation ?? '', matches: 1 })
                     }
                 }
                 else if (msg.kind === 'stats') {
@@ -117,6 +117,12 @@ export class CensorChannel implements IChannel {
                     if (msg.tokensIn !== undefined) data.tokensIn = msg.tokensIn
                     if (msg.tokensOut !== undefined) data.tokensOut = msg.tokensOut
                     if (msg.pendingCount !== undefined) data.pendingCount = msg.pendingCount
+                    if (Array.isArray((msg as any).regexMatches)) {
+                        for (const rm of (msg as any).regexMatches as { pattern: string; matches: number }[]) {
+                            const rx = data.regexes.find((r: ICensorRegex) => r.pattern === rm.pattern)
+                            if (rx) rx.matches = rm.matches
+                        }
+                    }
                 }
                 else if (msg.kind === 'config') {
                     if (msg.llms !== undefined) data.llms = msg.llms

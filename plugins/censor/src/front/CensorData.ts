@@ -19,6 +19,7 @@ export interface ICensorRegex {
     pattern: string
     example: string
     explanation: string
+    matches: number
 }
 
 export interface ICensorWarning {

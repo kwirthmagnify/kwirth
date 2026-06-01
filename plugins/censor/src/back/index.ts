@@ -271,7 +271,7 @@ export class CensorChannel {
                 // Push LLMs and providers into daemon's own storage so it can work autonomously
                 const llmsForDaemon: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
                 await dm.sendCommand(id, 'configset', { ...instance.cfg, _llms: llmsForDaemon })
-                await dm.sendCommand(id, 'providersset', this.providers)
+                if (this.providers.length > 0) await dm.sendCommand(id, 'providersset', this.providers)
                 // Sync analyzing state before seeding pods so addObject restores it correctly from storage
                 if (!instance.analyzing) await dm.sendCommand(id, 'analyzestop', null)
                 // Seed daemon with pods the channel already has open
@@ -308,7 +308,7 @@ export class CensorChannel {
 
                 // Gather all session state before notifying frontend (avoids timing issues with separate messages)
                 type IStats = { processedCount: number, llmCount: number, tokensIn: number, tokensOut: number, analyzing: boolean }
-                type IRegexEntry = { pattern: string, example: string, explanation: string }
+                type IRegexEntry = { pattern: string, example: string, explanation: string, matches: number }
                 let stats: IStats | null = null
                 let regexes: IRegexEntry[] = []
                 try {

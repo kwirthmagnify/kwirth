@@ -74,6 +74,7 @@ interface IAccumRegex {
     compiled: RegExp
     example: string
     explanation: string
+    matches: number
 }
 
 interface IDaemonInstance {
@@ -272,7 +273,10 @@ export class CensorDaemon implements IDaemon {
                 if (inst.analyzing) {
                     inst.processedCount++
                     const clean = cleanANSI(llmText)
-                    const filtered = inst.regexes.some(r => { try { return r.compiled.test(clean) } catch { return false } })
+                    let filtered = false
+                    for (const r of inst.regexes) {
+                        try { if (r.compiled.test(clean)) { r.matches++; filtered = true } } catch {}
+                    }
                     if (!filtered) {
                         inst.lineBuffer.push(clean)
                         const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
@@ -287,7 +291,7 @@ export class CensorDaemon implements IDaemon {
                             }
                         }
                     }
-                    this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length })
+                    this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
                 }
             }
         }
@@ -347,7 +351,7 @@ export class CensorDaemon implements IDaemon {
             case ECensorDaemonCommand.PROVIDERSSET: {
                 const newProviders = data as ILlmProvider[]
                 this.providers = newProviders
-                await this.backDaemonObject.writeStorageCommon!(STORAGE_KEY_PROVIDERS, true, newProviders)
+                if (newProviders.length > 0) await this.backDaemonObject.writeStorageCommon!(STORAGE_KEY_PROVIDERS, true, newProviders)
                 await loadModels(this.providers, this.backDaemonObject)
                 return { providers: this.providers }
             }
@@ -388,7 +392,7 @@ export class CensorDaemon implements IDaemon {
                 return { analyzing: inst?.analyzing ?? false }
             case ECensorDaemonCommand.REGEXGET:
                 if (!inst) return null
-                return { regexes: inst.regexes.map(r => ({ pattern: r.pattern, example: r.example, explanation: r.explanation })) }
+                return { regexes: inst.regexes.map(r => ({ pattern: r.pattern, example: r.example, explanation: r.explanation, matches: r.matches })) }
         }
         return null
     }
@@ -433,10 +437,10 @@ export class CensorDaemon implements IDaemon {
             inst.processedCount++
             this.broadcast(inst, 'received', { text: line, namespace: asset.namespace, pod: asset.pod, container: asset.container })
             const clean = cleanANSI(line)
-            const filtered = inst.regexes.some(r => {
-                try { return r.compiled.test(clean) }
-                catch { return false }
-            })
+            let filtered = false
+            for (const r of inst.regexes) {
+                try { if (r.compiled.test(clean)) { r.matches++; filtered = true } } catch {}
+            }
             if (!filtered) {
                 inst.lineBuffer.push(clean)
             }
@@ -447,7 +451,7 @@ export class CensorDaemon implements IDaemon {
                 this.callLlm(inst, batch)
             }
         }
-        this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length })
+        this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
     }
 
     private async callLlm(inst: IDaemonInstance, lines: string[]): Promise<void> {
@@ -492,7 +496,7 @@ export class CensorDaemon implements IDaemon {
             const schema = zodFromExample(example)
 
             inst.llmCount++
-            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length })
+            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
             for (const line of lines) this.broadcast(inst, 'llminput', { text: line })
 
             const { output, usage } = await generateText({
@@ -504,7 +508,7 @@ export class CensorDaemon implements IDaemon {
 
             inst.tokensIn += usage.inputTokens ?? 0
             inst.tokensOut += usage.outputTokens ?? 0
-            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length })
+            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
             this.broadcast(inst, 'llmoutput', { text: JSON.stringify(output, null, 2) })
 
             const patterns: string[] = ((output as any).info ?? []).filter((x: any) => x.type === 'discard').map((x: any) => x.regex)
@@ -556,7 +560,7 @@ export class CensorDaemon implements IDaemon {
                     const compiled = new RegExp(pattern)
                     const matchExample = lines.find(l => { try { return compiled.test(l) } catch { return false } }) ?? ''
                     const explanation = patternExplanations.get(pattern) ?? ''
-                    inst.regexes.push({ pattern, compiled, example: matchExample, explanation })
+                    inst.regexes.push({ pattern, compiled, example: matchExample, explanation, matches: 1 })
                     this.broadcast(inst, 'regex', { pattern, example: matchExample, explanation })
                 }
                 catch {
@@ -586,3 +590,4 @@ export class CensorDaemon implements IDaemon {
 }
 
 export default CensorDaemon
+

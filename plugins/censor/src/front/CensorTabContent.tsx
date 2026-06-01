@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItem, ListItemButton, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
-import { Add as AddIcon, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon, MoreVert as MoreVertIcon } from '@mui/icons-material'
+import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
 import { cleanANSI, IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
@@ -42,6 +42,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [tagFilterAnd, setTagFilterAnd] = useState(false)
     const [businessAutoScroll, setBusinessAutoScroll] = useState(true)
     const [regexAutoScroll, setRegexAutoScroll] = useState(true)
+    const [regexSort, setRegexSort] = useState<'asc' | 'desc' | 'none'>('none')
     const [receivedAutoScroll, setReceivedAutoScroll] = useState(true)
     const [llmInputAutoScroll, setLlmInputAutoScroll] = useState(true)
     const [llmOutputAutoScroll, setLlmOutputAutoScroll] = useState(true)
@@ -319,6 +320,16 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                 </Tabs>
                 {(tab === 1 || tab === 2 || tab === 3 || tab === 4 || tab === 5 || tab === 7) && (
                     <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
+                        {tab === 1 && (
+                            <Stack direction='row' alignItems='center' spacing={0.25}
+                                onClick={() => setRegexSort(s => s === 'none' ? 'desc' : s === 'desc' ? 'asc' : 'none')}
+                                sx={{ cursor: 'pointer', userSelect: 'none', borderRadius: 1, px: 0.5, '&:hover': { bgcolor: 'action.hover' } }}>
+                                {regexSort === 'none' ? <SwapVert fontSize='small' sx={{ color: 'text.disabled' }} /> : regexSort === 'desc' ? <ArrowDownward fontSize='small' color='primary' /> : <ArrowUpward fontSize='small' color='primary' />}
+                                <Typography variant='caption' color={regexSort === 'none' ? 'text.disabled' : 'primary'} sx={{ fontWeight: 500, fontSize: '9px' }}>
+                                    {regexSort === 'none' ? 'NO ORDER' : regexSort === 'desc' ? 'DESC' : 'ASC'}
+                                </Typography>
+                            </Stack>
+                        )}
                         <Box sx={{ flex: 1 }} />
                         <FormControlLabel
                             control={<Switch size='small'
@@ -379,16 +390,27 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 No filters yet. Waiting for first {batchSize} lines...
                             </Typography>
                             : <List dense disablePadding>
-                                {data.regexes.map((regex, i) => (
+                                {[...data.regexes].sort((a, b) => regexSort === 'desc' ? (b.matches ?? 0) - (a.matches ?? 0) : regexSort === 'asc' ? (a.matches ?? 0) - (b.matches ?? 0) : 0).map((regex, i) => (
                                     <Tooltip key={i} title={regex.explanation || '(no explanation)'} placement='bottom-start' arrow>
                                         <ListItem disableGutters sx={{ px: 0.5 }}>
                                             <IconButton size='small' sx={{ mr: 0.5 }} onClick={() => {
-                                                data.regexes.splice(i, 1)
+                                                const idx = data.regexes.findIndex(r => r.pattern === regex.pattern)
+                                                if (idx >= 0) data.regexes.splice(idx, 1)
                                                 forceUpdate(n => n + 1)
                                                 sendCommand(ECensorCommand.REGEXDELETE, regex.pattern)
                                             }}>
                                                 <DeleteOutlineIcon sx={{ fontSize: 14 }} />
                                             </IconButton>
+                                            {(() => {
+                                                const totalMatches = data.regexes.reduce((s, r) => s + (r.matches ?? 0), 0)
+                                                const pct = totalMatches > 0 ? Math.round(((regex.matches ?? 0) / totalMatches) * 100) : 0
+                                                return (<>
+                                                    <Chip label={regex.matches ?? 1} size='small' variant='outlined'
+                                                        sx={{ height: 16, fontSize: '9px', minWidth: 28, mr: 0.5, '& .MuiChip-label': { px: 0.5 } }} />
+                                                    <Chip label={`${pct}%`} size='small' variant='outlined' color='primary'
+                                                        sx={{ height: 16, fontSize: '9px', minWidth: 36, mr: 0.5, '& .MuiChip-label': { px: 0.5 } }} />
+                                                </>)
+                                            })()}
                                             <ListItemText primary={regex.pattern}
                                                 primaryTypographyProps={{ variant: 'caption', fontFamily: 'monospace', fontSize: '10px', sx: { wordBreak: 'break-all' } }} />
                                         </ListItem>
