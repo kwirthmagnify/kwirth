@@ -42,6 +42,7 @@ export interface IContentExternalData {
     frontChannels: Map<string, TChannelConstructor>
     onNotify: (channel:string|undefined, level: ENotifyLevel, msg: string) => void
     onRefresh: () => void
+    onOpenExternal?: (channelId: string, files: any[], view: EInstanceConfigView, data: any, container: string | undefined) => void
     content?: IContentExternalObject
     channelObject: IChannelObject
 }
@@ -308,6 +309,7 @@ const containerRef = useRef<HTMLDivElement>(null)
         newContent.ws.onerror = (event) => () => { console.log('WebSocket error:'+event, new Date().toISOString()) }
         newContent.ws.onclose = (event:CloseEvent) => { console.log('WebSocket disconnect:'+event.reason, new Date().toISOString()) }
         if (newChannel.requirements.webSocket) newContent.externalChannelObject!.webSocket = newContent.ws
+        if (contentExternalData.onOpenExternal) (newContent.externalChannelObject as any).openExternal = contentExternalData.onOpenExternal
         return newContent
     }
 

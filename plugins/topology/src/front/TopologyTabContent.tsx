@@ -982,23 +982,27 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                     : node
                 if (podNode) {
                     const containerName = node.kind === ETopologyNodeKind.CONTAINER ? node.name : ''
-                    channelObject.createTab?.({
-                        clusterName: channelObject.clusterName,
-                        namespaces: [podNode.namespace],
-                        controllers: [],
-                        pods: [podNode.name],
-                        containers: containerName ? [containerName] : [],
-                        channelId: 'ops',
-                        view: EInstanceConfigView.POD,
-                        name: containerName || podNode.name,
-                    }, true, {
-                        config: {
-                            accessKey: 0,
-                            launchShell: true,
-                            shell: { namespace: podNode.namespace, pod: podNode.name, container: containerName },
-                        },
-                        instanceConfig: { sessionKeepAlive: true },
-                    })
+                    const openExternal = (channelObject as any).openExternal as Function | undefined
+                    if (openExternal) {
+                        const fileObj = { data: { origin: { metadata: { name: podNode.name, namespace: podNode.namespace }, kind: 'Pod' } } }
+                        openExternal('ops', [fileObj], EInstanceConfigView.CONTAINER,
+                            { launchShell: true, shell: { namespace: podNode.namespace, pod: podNode.name, container: containerName } },
+                            containerName || podNode.name)
+                    } else {
+                        channelObject.createTab?.({
+                            clusterName: channelObject.clusterName,
+                            namespaces: [podNode.namespace],
+                            controllers: [],
+                            pods: [podNode.name],
+                            containers: containerName ? [containerName] : [],
+                            channelId: 'ops',
+                            view: EInstanceConfigView.POD,
+                            name: containerName || podNode.name,
+                        }, true, {
+                            config: { accessKey: 0, launchShell: true, shell: { namespace: podNode.namespace, pod: podNode.name, container: containerName } },
+                            instanceConfig: { sessionKeepAlive: true },
+                        })
+                    }
                 }
                 break
             }
@@ -1008,16 +1012,22 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                     : node
                 if (podNode) {
                     const containerName = node.kind === ETopologyNodeKind.CONTAINER ? node.name : ''
-                    channelObject.createTab?.({
-                        clusterName: channelObject.clusterName,
-                        namespaces: [podNode.namespace],
-                        controllers: [],
-                        pods: [podNode.name],
-                        containers: containerName ? [containerName] : [],
-                        channelId: 'log',
-                        view: EInstanceConfigView.POD,
-                        name: containerName || podNode.name,
-                    }, true, undefined)
+                    const openExternal = (channelObject as any).openExternal as Function | undefined
+                    if (openExternal) {
+                        const fileObj = { data: { origin: { metadata: { name: podNode.name, namespace: podNode.namespace }, kind: 'Pod' } } }
+                        openExternal('log', [fileObj], containerName ? EInstanceConfigView.CONTAINER : EInstanceConfigView.POD, undefined, containerName || undefined)
+                    } else {
+                        channelObject.createTab?.({
+                            clusterName: channelObject.clusterName,
+                            namespaces: [podNode.namespace],
+                            controllers: [],
+                            pods: [podNode.name],
+                            containers: containerName ? [containerName] : [],
+                            channelId: 'log',
+                            view: EInstanceConfigView.POD,
+                            name: containerName || podNode.name,
+                        }, true, undefined)
+                    }
                 }
                 break
             }

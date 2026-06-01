@@ -618,6 +618,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 frontChannels: props.channelObject.frontChannels!,
                 onNotify: onComponentNotify,
                 onRefresh: onContentExternalRefresh,
+                onOpenExternal: launchObjectExternal,
                 formConfig: undefined,
                 options: channel === 'ops' || channel==='pinocchio'?
                     { autostart:true, pauseable:false, stoppable:false, configurable:false, data }
