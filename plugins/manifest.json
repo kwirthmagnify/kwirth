@@ -33,8 +33,8 @@
     },
     {
         "id": "fileman",
-        "version": "0.2.3",
-        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.3.tgz",
+        "version": "0.2.4",
+        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.4.tgz",
         "name": "Fileman",
         "description": "Fileman Kwirth plugin for in-container file management live",
         "icon": "FolderCopyTwoTone"
@@ -80,5 +80,6 @@
         "icon": "Newspaper"
     }
 ]
+
 
 

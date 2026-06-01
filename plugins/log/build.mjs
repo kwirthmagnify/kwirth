@@ -37,7 +37,7 @@ const kwirthGlobalsPlugin = {
             build.onResolve({ filter: new RegExp(`^${pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }, () => ({ path: pkg, namespace: 'kwirth-globals' }))
         }
         build.onLoad({ filter: /.*/, namespace: 'kwirth-globals' }, (args) => ({
-            contents: `const _m = ${globals[args.path]}; const _d = (_m != null && 'default' in Object(_m)) ? _m.default : _m; module.exports = Object.assign({}, (typeof _m === 'object' && _m !== null) ? _m : {}, {default: _d, __esModule: true});`,
+            contents: `const _m = ${globals[args.path]}; let _d = (_m != null && 'default' in Object(_m)) ? _m.default : _m; if (typeof _d !== 'function' && _d != null && typeof _d.default !== 'undefined') _d = _d.default; module.exports = Object.assign({}, (typeof _m === 'object' && _m !== null) ? _m : {}, {default: _d, __esModule: true});`,
             loader: 'js',
         }))
     },
