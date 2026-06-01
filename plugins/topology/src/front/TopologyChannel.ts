@@ -43,8 +43,9 @@ interface ITopologyWsMessage {
     edges?:       Array<{ targetUid: string; label?: string }>
     ownerUids?:   string[]
     containers?:  string[]
-    text?:  string
-    level?: string
+    text?:        string
+    level?:       string
+    responseData?: any
 }
 
 // ── Layer Z positions ─────────────────────────────────────────────────────────
@@ -322,6 +323,19 @@ export class TopologyChannel implements IChannel {
         switch (msg.type) {
             case EInstanceMessageType.DATA: {
                 const topoAction = msg.topoAction ?? 'ADDED'
+
+                if (topoAction === 'ENDPOINTS_RESULT' || topoAction === 'INGRESS_RULES_RESULT') {
+                    console.log('[topology] received', topoAction, msg.name, (msg as any).responseData)
+                    data.infoResult = {
+                        kind:      topoAction === 'ENDPOINTS_RESULT' ? 'endpoints' : 'ingress-rules',
+                        name:      msg.name,
+                        namespace: msg.namespace,
+                        data:      msg.responseData,
+                    }
+                    data.lastUpdated = Date.now()
+                    action = EChannelRefreshAction.REFRESH
+                    break
+                }
 
                 if (!this.isVisible(msg.kind, cfg)) break
                 if (cfg.showOnlyRunning && msg.status !== ETopologyNodeStatus.RUNNING && topoAction !== 'DELETED') break

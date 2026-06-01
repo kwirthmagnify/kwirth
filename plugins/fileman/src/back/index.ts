@@ -234,7 +234,6 @@ class FilemanChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        console.log(`[fileman] Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName}`)
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
             let len = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] })

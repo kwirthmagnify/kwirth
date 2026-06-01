@@ -44,12 +44,20 @@ export interface ICanvasState {
     pathModeUid?:     string
 }
 
+export interface ITopologyInfoResult {
+    kind:      'endpoints' | 'ingress-rules'
+    name:      string
+    namespace: string
+    data:      any
+}
+
 export interface ITopologyData {
     nodes:        Map<string, ITopologyNode>
     loading:      boolean
     error:        string | undefined
     lastUpdated:  number
     canvasState?: ICanvasState
+    infoResult?:  ITopologyInfoResult | null
 }
 
 export class TopologyData implements ITopologyData {
@@ -57,4 +65,5 @@ export class TopologyData implements ITopologyData {
     loading     = false
     error       = undefined
     lastUpdated = 0
+    infoResult  = null
 }

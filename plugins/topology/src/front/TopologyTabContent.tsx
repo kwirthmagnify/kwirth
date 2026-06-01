@@ -11,7 +11,7 @@ import {
 } from '@mui/icons-material'
 import {
     ETopologyNodeKind, ETopologyNodeStatus,
-    ICanvasState, ITopologyData, ITopologyNode,
+    ICanvasState, ITopologyData, ITopologyInfoResult, ITopologyNode,
 } from './TopologyData'
 import { ITopologyConfig } from './TopologyConfig'
 import {
@@ -183,6 +183,64 @@ const NodeInfoPanel: React.FC<{ node: ITopologyNode }> = ({ node }) => (
                         {Object.entries(node.labels).slice(0, 4).map(([k, v]) => `${k}=${v}`).join('  ')}
                     </Typography>
                 </>
+            )}
+        </Stack>
+    </Paper>
+)
+
+// ── Info result panel (endpoints / ingress rules) ─────────────────────────────
+
+const InfoResultPanel: React.FC<{ result: ITopologyInfoResult; onClose: () => void }> = ({ result, onClose }) => (
+    <Paper elevation={0} sx={{
+        p: 1.5, width: 300, maxHeight: 320, overflow: 'auto',
+        bgcolor: 'rgba(10,12,20,0.92)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 2,
+    }}>
+        <Stack spacing={0.5}>
+            <Stack direction='row' alignItems='center' justifyContent='space-between'>
+                <Typography variant='body2' fontWeight={500} sx={{ color: '#fff' }}>
+                    {result.kind === 'endpoints' ? 'Endpoints' : 'Ingress Rules'} — {result.name}
+                </Typography>
+                <IconButton size='small' onClick={onClose} sx={{ color: 'rgba(255,255,255,0.4)', p: 0 }}>
+                    <Clear fontSize='small' />
+                </IconButton>
+            </Stack>
+            <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.4)' }}>{result.namespace}</Typography>
+            <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: 0.5 }} />
+
+            {result.kind === 'endpoints' && (result.data as any[]).map((subset: any, si: number) => (
+                <Stack key={si} spacing={0.3}>
+                    {(subset.addresses ?? []).map((a: any, ai: number) => (
+                        <Stack key={ai} direction='row' justifyContent='space-between' alignItems='center'>
+                            <Typography variant='caption' sx={{ color: '#7af', fontFamily: 'monospace' }}>{a.ip}</Typography>
+                            <Stack direction='row' spacing={0.5}>
+                                {(subset.ports ?? []).map((p: any, pi: number) => (
+                                    <Chip key={pi} size='small' label={`${p.port}${p.name ? '/' + p.name : ''}`}
+                                        sx={{ height: 16, fontSize: 10, bgcolor: 'rgba(100,180,255,0.15)', color: '#9cf' }} />
+                                ))}
+                            </Stack>
+                        </Stack>
+                    ))}
+                    {si < result.data.length - 1 && <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />}
+                </Stack>
+            ))}
+
+            {result.kind === 'ingress-rules' && (result.data as any[]).map((rule: any, ri: number) => (
+                <Stack key={ri} spacing={0.3}>
+                    <Typography variant='caption' fontWeight={500} sx={{ color: '#fc9' }}>{rule.host}</Typography>
+                    {(rule.paths ?? []).map((p: any, pi: number) => (
+                        <Stack key={pi} direction='row' alignItems='center' spacing={1} sx={{ pl: 1 }}>
+                            <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', minWidth: 80 }}>
+                                {p.path}
+                            </Typography>
+                            <Typography variant='caption' sx={{ color: '#9cf' }}>{p.service}:{p.port}</Typography>
+                        </Stack>
+                    ))}
+                    {ri < result.data.length - 1 && <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', my: 0.3 }} />}
+                </Stack>
+            ))}
+
+            {result.data?.length === 0 && (
+                <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.3)' }}>No data available</Typography>
             )}
         </Stack>
     </Paper>
@@ -467,6 +525,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
 
     const [selectedNode,       setSelectedNode]       = useState<ITopologyNode | undefined>()
     const [contextMenu,        setContextMenu]        = useState<{ x: number; y: number; node: ITopologyNode } | undefined>()
+    const [, forceUpdate]                             = useState(0)
     const [hiddenKinds,        setHiddenKinds]        = useState<Set<ETopologyNodeKind>>(
         () => new Set((channelObject.data as ITopologyData).canvasState?.hiddenKinds ?? [])
     )
@@ -477,7 +536,6 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
     const [searchFocused,      setSearchFocused]      = useState(false)
     const [pathModeNode,       setPathModeNode]       = useState<ITopologyNode | undefined>()
     const [pathNodes,          setPathNodes]          = useState<ITopologyNode[]>([])
-    const [, forceUpdate] = useState(0)
 
     const topologyData: ITopologyData   = channelObject.data
     const topologyCfg:  ITopologyConfig = channelObject.config
@@ -899,11 +957,12 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         const sendCmd = (topoAction: string, extra: Record<string, string | number | boolean> = {}) => {
             if (!ws) return
             ws.send(JSON.stringify({
-                channel:  'topology',
-                instance: channelObject.instanceId,
-                type:     EInstanceMessageType.DATA,
-                action:   EInstanceMessageAction.COMMAND,
-                flow:     EInstanceMessageFlow.REQUEST,
+                channel:   'topology',
+                instance:  channelObject.instanceId,
+                accessKey: channelObject.accessString,
+                type:      EInstanceMessageType.DATA,
+                action:    EInstanceMessageAction.COMMAND,
+                flow:      EInstanceMessageFlow.REQUEST,
                 topoAction,
                 kind:      node.kind,
                 name:      node.name,
@@ -962,11 +1021,13 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 }
                 break
             }
-            case 'scale-up':  sendCmd('SCALE', { replicas: (node.replicas ?? 0) + 1 }); break
-            case 'scale-zero':sendCmd('SCALE', { replicas: 0 }); break
-            case 'restart':   sendCmd('RESTART'); break
-            case 'delete-pod':sendCmd('DELETE_POD'); break
-            default:          channelObject.notify?.('topology', ENotifyLevel.INFO, `${action} on ${node.name}`)
+            case 'scale-up':      sendCmd('SCALE', { replicas: (node.replicas ?? 0) + 1 }); break
+            case 'scale-zero':    sendCmd('SCALE', { replicas: 0 }); break
+            case 'restart':       sendCmd('RESTART'); break
+            case 'delete-pod':    sendCmd('DELETE_POD'); break
+            case 'endpoints':     console.log('[topology] sending GET_ENDPOINTS', node.name, node.namespace); sendCmd('GET_ENDPOINTS'); break
+            case 'ingress-rules': console.log('[topology] sending GET_INGRESS_RULES', node.name, node.namespace); sendCmd('GET_INGRESS_RULES'); break
+            default:              channelObject.notify?.('topology', ENotifyLevel.INFO, `${action} on ${node.name}`)
         }
     }, [channelObject, applyPathMode])
 
@@ -1197,6 +1258,12 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
             {selectedNode && (
                 <Box sx={{ position: 'absolute', top: pathModeNode ? 54 : 12, left: 12, transition: 'top 0.15s ease' }}>
                     <NodeInfoPanel node={selectedNode} />
+                </Box>
+            )}
+
+            {topologyData.infoResult && (
+                <Box sx={{ position: 'absolute', top: pathModeNode ? 54 : 12, right: 12, transition: 'top 0.15s ease' }}>
+                    <InfoResultPanel result={topologyData.infoResult} onClose={() => { topologyData.infoResult = null; forceUpdate(v => v + 1) }} />
                 </Box>
             )}
 

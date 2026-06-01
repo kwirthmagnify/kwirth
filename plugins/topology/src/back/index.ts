@@ -13,7 +13,7 @@ import {
 } from '@kwirthmagnify/kwirth-common'
 import { ETopologyNodeKind, ETopologyNodeStatus } from '../common/TopologyTypes'
 
-type TTopoAction = 'ADDED' | 'MODIFIED' | 'DELETED'
+type TTopoAction = 'ADDED' | 'MODIFIED' | 'DELETED' | 'ENDPOINTS_RESULT' | 'INGRESS_RULES_RESULT'
 
 interface ITopologyWsMessage {
     action:   EInstanceMessageAction
@@ -40,6 +40,7 @@ interface ITopologyWsMessage {
     edges?:         Array<{ targetUid: string; label?: string }>
     ownerUids?:     string[]
     containers?:    string[]
+    responseData?:  any
 }
 
 interface ITopologyInstance {
@@ -198,6 +199,30 @@ export class TopologyChannel {
                     await this.clusterInfo.coreApi.deleteNamespacedPod({ name: m.name, namespace: m.namespace })
                     this.sendSignal(ws, msg, ESignalMessageLevel.INFO, `Pod ${m.name} deleted`)
                     return true
+                case 'GET_ENDPOINTS': {
+                    this.backChannelObject.logInfo?.(`[topology] GET_ENDPOINTS ${m.namespace}/${m.name}`)
+                    const eps = await this.clusterInfo.coreApi.readNamespacedEndpoints({ name: m.name, namespace: m.namespace })
+                    const subsets = (eps.subsets ?? []).map((s: any) => ({
+                        addresses: (s.addresses ?? []).map((a: any) => ({ ip: a.ip, node: a.nodeName, pod: a.targetRef?.name })),
+                        ports: (s.ports ?? []).map((p: any) => ({ name: p.name, port: p.port, protocol: p.protocol })),
+                    }))
+                    this.sendDataResponse(ws, msg, 'ENDPOINTS_RESULT', m.kind, m.uid, m.name, m.namespace, subsets)
+                    return true
+                }
+                case 'GET_INGRESS_RULES': {
+                    const ing = await this.clusterInfo.networkApi.readNamespacedIngress({ name: m.name, namespace: m.namespace })
+                    const rules = (ing.spec?.rules ?? []).map((r: any) => ({
+                        host: r.host ?? '*',
+                        paths: (r.http?.paths ?? []).map((p: any) => ({
+                            path: p.path ?? '/',
+                            pathType: p.pathType,
+                            service: p.backend?.service?.name,
+                            port: p.backend?.service?.port?.number,
+                        })),
+                    }))
+                    this.sendDataResponse(ws, msg, 'INGRESS_RULES_RESULT', m.kind, m.uid, m.name, m.namespace, rules)
+                    return true
+                }
                 default:
                     return false
             }
@@ -749,6 +774,17 @@ export class TopologyChannel {
         }
         try { ws.send(JSON.stringify(resp)) }
         catch (err) { this.backChannelObject.logWarning?.(`[topology] sendInstanceConfig error: ${err}`) }
+    }
+
+    private sendDataResponse(ws: WebSocket, msg: IInstanceMessage, topoAction: TTopoAction, kind: string, uid: string, name: string, namespace: string, responseData: any): void {
+        const resp = {
+            action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.RESPONSE,
+            channel: 'topology', instance: msg.instance, type: EInstanceMessageType.DATA,
+            topoAction, kind, uid, name, namespace,
+            status: 'Unknown', labels: {}, responseData,
+        }
+        try { ws.send(JSON.stringify(resp)) }
+        catch (err) { this.backChannelObject.logWarning?.(`[topology] sendDataResponse error: ${err}`) }
     }
 
     private sendSignal(ws: WebSocket, msg: IInstanceMessage, level: ESignalMessageLevel, text: string): void {

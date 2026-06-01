@@ -396,6 +396,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (c) onChangeCluster(c.name)
     }, [clusters])
 
+    useEffect(() => {
+        tabs.current.forEach(tab => {
+            if (tab.channel.requirements.backChannels) tab.channelObject.backChannels = backChannels
+        })
+    }, [backChannels])
+
     const toggleColorMode = () => {
         setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'))
     }
