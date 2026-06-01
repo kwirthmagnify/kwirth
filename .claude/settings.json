@@ -112,7 +112,8 @@
       "Bash(dir \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tauri\\\\*.cmd\" /b)",
       "Read(//c/github/aisdkvercel/kwirth/tauri/**)",
       "PowerShell(\\(Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\manifest.json\" -Raw\\) -replace '\"version\": \"0.2.1\"', '\"version\": \"0.2.2\"' -replace 'kwirth-plugin-\\(\\\\w+\\)-0\\\\.2\\\\.1\\\\.tgz', 'kwirth-plugin-$1-0.2.2.tgz' -replace '-0\\\\.2\\\\.1\\\\.tgz\"', '-0.2.2.tgz\"' | Set-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\manifest.json\" -Encoding UTF8)",
-      "Read(//c/github/**)"
+      "Read(//c/github/**)",
+      "Read(//c/github/aisdkvercel/kwirth/plugins/**)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

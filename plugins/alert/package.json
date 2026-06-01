@@ -3,7 +3,7 @@
   "name": "Alert",
   "displayName": "Alert",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "website": "https://kwirthmagnify.dev",
   "description": "Alert channel plugin for Kwirth — regex and metric-based alerting",
   "icon": "Warning",

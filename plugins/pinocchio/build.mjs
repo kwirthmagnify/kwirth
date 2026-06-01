@@ -29,7 +29,7 @@ const kwirthGlobalsPlugin = {
             }))
         }
         build.onLoad({ filter: /.*/, namespace: 'kwirth-globals' }, (args) => ({
-            contents: `const _m = ${globals[args.path]}; const _d = (_m && _m.__esModule) ? _m.default : _m; module.exports = Object.assign({}, (typeof _m === 'object' && _m !== null) ? _m : {}, {default: _d, __esModule: true});`,
+            contents: `const _m = ${globals[args.path]}; const _d = (_m != null && 'default' in Object(_m)) ? _m.default : _m; module.exports = Object.assign({}, (typeof _m === 'object' && _m !== null) ? _m : {}, {default: _d, __esModule: true});`,
             loader: 'js',
         }))
     },
