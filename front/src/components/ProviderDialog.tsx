@@ -170,7 +170,8 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         let hash = 0
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
         const hue = (Math.abs(hash) % 360 + 180) % 360
-        return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, 0.12) 0%, hsla(${hue}, 55%, 42%, 0.26) 100%)`
+        const dots = `radial-gradient(circle, hsla(${hue}, 60%, 70%, 0.18) 1px, transparent 1px)`
+        return `${dots} 0 0 / 10px 10px, linear-gradient(315deg, hsla(${hue}, 75%, 58%, 0.12) 0%, hsla(${hue}, 55%, 42%, 0.26) 100%)`
     }
 
     return (

@@ -326,7 +326,8 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         let hash = 0
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
         const hue = (Math.abs(hash) % 360 + 60) % 360
-        return `linear-gradient(315deg, hsla(${hue}, 70%, 55%, 0.10) 0%, hsla(${hue}, 50%, 40%, 0.22) 100%)`
+        const stripes = `repeating-linear-gradient(45deg, hsla(${hue}, 70%, 75%, 0.25) 0px, hsla(${hue}, 70%, 75%, 0.25) 1px, transparent 1px, transparent 9px)`
+        return `${stripes}, linear-gradient(315deg, hsla(${hue}, 70%, 55%, 0.10) 0%, hsla(${hue}, 50%, 40%, 0.22) 100%)`
     }
 
     const resolveSource = (installedFrom?: string) => {

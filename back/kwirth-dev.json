@@ -5,6 +5,7 @@
   "channels": {
   },
   "providers": {
+    "tick": "../providers/tick/dist",
     "kafka": "../providers/kafka/dist",
     "otel": "../providers/otel/dist"
   },
