@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItem, ListItemButton, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
-import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
+import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon, DeleteSweep, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
 import { cleanANSI, IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
@@ -321,16 +321,27 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                 {(tab === 1 || tab === 2 || tab === 3 || tab === 4 || tab === 5 || tab === 7) && (
                     <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
                         {tab === 1 && (
-                            <Stack direction='row' alignItems='center' spacing={0.25}
-                                onClick={() => setRegexSort(s => s === 'none' ? 'desc' : s === 'desc' ? 'asc' : 'none')}
-                                sx={{ cursor: 'pointer', userSelect: 'none', borderRadius: 1, px: 0.5, '&:hover': { bgcolor: 'action.hover' } }}>
-                                {regexSort === 'none' ? <SwapVert fontSize='small' sx={{ color: 'text.disabled' }} /> : regexSort === 'desc' ? <ArrowDownward fontSize='small' color='primary' /> : <ArrowUpward fontSize='small' color='primary' />}
-                                <Typography variant='caption' color={regexSort === 'none' ? 'text.disabled' : 'primary'} sx={{ fontWeight: 500, fontSize: '9px' }}>
-                                    {regexSort === 'none' ? 'NO ORDER' : regexSort === 'desc' ? 'DESC' : 'ASC'}
-                                </Typography>
-                            </Stack>
+                            <Tooltip title={regexSort === 'none' ? 'Sort by matches: no order' : regexSort === 'desc' ? 'Sort by matches: descending' : 'Sort by matches: ascending'}>
+                                <IconButton size='small' onClick={() => setRegexSort(s => s === 'none' ? 'desc' : s === 'desc' ? 'asc' : 'none')}>
+                                    {regexSort === 'none' ? <SwapVert fontSize='small' sx={{ color: 'text.disabled' }} /> : regexSort === 'desc' ? <ArrowDownward fontSize='small' color='primary' /> : <ArrowUpward fontSize='small' color='primary' />}
+                                </IconButton>
+                            </Tooltip>
                         )}
                         <Box sx={{ flex: 1 }} />
+                        {tab !== 1 && (
+                            <Tooltip title='Clear'>
+                                <IconButton size='small' onClick={() => {
+                                    if (tab === 2) { data.receivedLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === 3) { data.businessLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === 4) { data.llmInputLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === 5) { data.llmOutputLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === 6) { data.llmWarningLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === 7) { data.llmErrorLines = []; forceUpdate(n => n + 1) }
+                                }}>
+                                    <DeleteSweep fontSize='small' />
+                                </IconButton>
+                            </Tooltip>
+                        )}
                         <FormControlLabel
                             control={<Switch size='small'
                                 checked={tab === 1 ? regexAutoScroll : tab === 2 ? receivedAutoScroll : tab === 3 ? businessAutoScroll : tab === 4 ? llmInputAutoScroll : tab === 5 ? llmOutputAutoScroll : llmErrorAutoScroll}
@@ -340,7 +351,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     </Box>
                 )}
                 {tab === 6 && (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, px: 0.5, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
                         {data.allTags.map(tag => (
                             <Chip key={tag} label={tag} size='small'
                                 color={activeTagFilters.includes(tag) ? 'primary' : 'default'}
@@ -357,6 +368,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 sx={{ ml: 0.5, mr: 0 }} />
                         )}
                         <Box sx={{ flex: 1 }} />
+                        <Tooltip title='Clear'>
+                            <IconButton size='small' onClick={() => { data.llmWarningLines = []; forceUpdate(n => n + 1) }}>
+                                <DeleteSweep fontSize='small' />
+                            </IconButton>
+                        </Tooltip>
                         <FormControlLabel
                             control={<Switch size='small' checked={warningAutoScroll} onChange={e => setWarningAutoScroll(e.target.checked)} />}
                             label={<Typography variant='caption'>Autoscroll</Typography>}

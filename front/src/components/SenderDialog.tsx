@@ -58,6 +58,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     const [installed, setInstalled] = useState<IInstalledSender[]>([])
     const [available, setAvailable] = useState<ISenderManifestEntry[]>([])
     const [loadingManifest, setLoadingManifest] = useState(false)
+    const [filterText, setFilterText] = useState('')
     const [installingId, setInstallingId] = useState<string | undefined>()
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
     const [installingCustom, setInstallingCustom] = useState(false)
@@ -493,7 +494,8 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                     </Stack>
 
                     <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
-                        <Typography variant='subtitle2' flex={1}>Available senders</Typography>
+                        <Typography variant='subtitle2'>Available senders</Typography>
+                        <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
                         <Tooltip title='Refresh catalog'>
                             <span>
                                 <IconButton size='small' onClick={fetchManifest} disabled={loadingManifest}>
@@ -509,7 +511,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
                     {available.length > 0 &&
                         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
-                            {available.map(entry => (
+                            {available.filter(e => !filterText || e.id.includes(filterText.toLowerCase()) || e.name?.toLowerCase().includes(filterText.toLowerCase()) || e.displayName?.toLowerCase().includes(filterText.toLowerCase())).map(entry => (
                                 <Box key={entry.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: senderGradient(entry.name) }}>
                                     <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                         <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Send fontSize='small' /></Box>

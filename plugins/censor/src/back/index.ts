@@ -136,13 +136,10 @@ export class CensorChannel {
             if (obj.kind !== 'Pod' || type !== 'DELETED') return
             const podName = obj.metadata.name
             const namespace = obj.metadata.namespace
-            for (const socket of this.connections) {
-                for (const instance of socket.instances) {
-                    const before = instance.assets.length
+            // daemon handles pod deletion via its own events provider subscription — no channel action needed
+            for (const socket of this.connections)
+                for (const instance of socket.instances)
                     instance.assets = instance.assets.filter(a => !(a.pod === podName && a.namespace === namespace))
-                    if (instance.assets.length !== before) this.sendAssets(socket.webSocket, instance)
-                }
-            }
             return
         }
 
@@ -376,6 +373,10 @@ export class CensorChannel {
     }
 
     private forwardDaemonEvent(webSocket: WebSocket, instance: IInstance, event: IDaemonEvent): void {
+        if (event.type === 'assets' && Array.isArray((event.data as any).assets)) {
+            // Keep instance.assets in sync with daemon so containsAsset() stays accurate
+            instance.assets = (event.data as any).assets as IAsset[]
+        }
         if (event.type === 'llmwarning') {
             const sid = instance.cfg.senderId
             const scn = instance.cfg.senderConfigName
@@ -423,7 +424,7 @@ export class CensorChannel {
                 instanceId: instanceConfig.instance,
                 accessKey: accessKeyDeserialize(instanceConfig.accessKey),
                 instanceConfig,
-                cfg: { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}' },
+                cfg: { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}', temperature: 0.2, active: false },
                 assets: [],
                 paused: false,
                 analyzing: false
@@ -435,7 +436,7 @@ export class CensorChannel {
                 const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
                 savedCfg = configs.find(c => c.active) ?? savedCfg
             }
-            const defaultCfg: ICensorInstanceConfig = { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}' }
+            const defaultCfg: ICensorInstanceConfig = { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}', temperature: 0.2, active: false }
             const cfg: ICensorInstanceConfig = (instanceConfig.data as ICensorInstanceConfig)?.llmId ? (instanceConfig.data as ICensorInstanceConfig) : (savedCfg ?? defaultCfg)
             const llms: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
             const llm = cfg.llmId ? llms.find(l => l.id === cfg.llmId) : undefined
@@ -460,12 +461,11 @@ export class CensorChannel {
         }
 
         instance.assets.push({ namespace: ns, pod, container })
+        this.sendAssets(webSocket, instance)   // immediate feedback before daemon stream starts
 
         if (instance.sessionId && dm) {
             await dm.directAddObject(instance.sessionId, ns, pod, container).catch(() => {})
         }
-
-        this.sendAssets(webSocket, instance)
         return true
     }
 
@@ -539,7 +539,11 @@ export class CensorChannel {
         const instance = this.getInstance(webSocket, instanceConfig.instance)
         if (instance) {
             instance.assets = instance.assets.filter(a => !(a.namespace === ns && a.pod === pod && (container === '' || a.container === container)))
-            this.sendAssets(webSocket, instance)
+            const dm = this.backChannelObject.daemonManager
+            if (instance.sessionId && dm) {
+                await dm.directDeleteObject(instance.sessionId, ns, pod, container).catch(() => {})
+            }
+            // daemon broadcasts 'assets' after deleteObject
         }
         return true
     }

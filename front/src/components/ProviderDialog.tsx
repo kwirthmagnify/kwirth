@@ -38,6 +38,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
     const [installingId, setInstallingId] = useState<string | undefined>()
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
     const [error, setError] = useState<string | undefined>()
+    const [filterText, setFilterText] = useState('')
     const [customUrl, setCustomUrl] = useState('')
     const [installingCustom, setInstallingCustom] = useState(false)
     const [installingFile, setInstallingFile] = useState(false)
@@ -259,7 +260,8 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                     </Stack>
 
                     <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
-                        <Typography variant='subtitle2' flex={1}>Available providers</Typography>
+                        <Typography variant='subtitle2'>Available providers</Typography>
+                        <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
                         <Tooltip title='Refresh catalog'>
                             <span>
                                 <IconButton size='small' onClick={fetchManifest} disabled={loadingManifest}>
@@ -274,7 +276,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                     }
 
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
-                        {available.map(provider => (
+                        {available.filter(p => !filterText || p.id.includes(filterText.toLowerCase()) || p.name?.toLowerCase().includes(filterText.toLowerCase())).map(provider => (
                             <Box key={provider.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: providerGradient(provider.name) }}>
                                 <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                     <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Checklist /></Box>

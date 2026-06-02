@@ -152,6 +152,14 @@ export class DaemonManager implements IDaemonManager {
         }
     }
 
+    async directDeleteObject(instanceId: string, podNamespace: string, podName: string, containerName: string): Promise<void> {
+        const running = this.runningInstances.get(instanceId)
+        if (!running) return
+        if (running.daemon.containsAsset(instanceId, podNamespace, podName, containerName)) {
+            await running.daemon.deleteObject(running.instanceConfig, podNamespace, podName, containerName)
+        }
+    }
+
     async routeDeleteObject(podNamespace: string, podName: string, containerName: string): Promise<void> {
         for (const { daemon, instanceConfig } of this.runningInstances.values()) {
             if (daemon.containsAsset(instanceConfig.id, podNamespace, podName, containerName)) {

@@ -139,11 +139,13 @@ async function applyAllResources(yamlContent:string, clusterInfo:ClusterInfo): P
 }
 
 async function deleteAllResources(yamlContent: string, clusterInfo:ClusterInfo) : Promise<void> {
+    console.log(`[deleteAllResources] called, yamlContent length=${yamlContent?.length}`)
     try {
         const resources:any[] = []
         yaml.loadAll(yamlContent, (doc: any) => {
-            resources.push(doc)
+            if (doc) resources.push(doc)
         })
+        console.log(`[deleteAllResources] parsed ${resources.length} resources: ${resources.map(r => r?.kind + '/' + r?.metadata?.name).join(', ')}`)
 
         async function deleteResource(resource: any) {
             const kind = resource.kind
@@ -235,9 +237,13 @@ async function deleteAllResources(yamlContent: string, clusterInfo:ClusterInfo) 
             try {
                 await deleteResource(resource)
             }
-            catch (err) {
-                console.log('Error removing resource:', err)
-                break
+            catch (err: any) {
+                const status = err?.statusCode ?? err?.response?.statusCode
+                if (status === 404) {
+                    console.log(`Resource ${resource.kind}/${resource.metadata?.name} not found — skipping`)
+                } else {
+                    console.log(`Error removing resource ${resource.kind}/${resource.metadata?.name}:`, err?.message ?? err)
+                }
             }
         }
     }

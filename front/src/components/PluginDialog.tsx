@@ -48,6 +48,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     const [installingCustom, setInstallingCustom] = useState(false)
     const [installingFile, setInstallingFile] = useState(false)
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
+    const [filterText, setFilterText] = useState('')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const compareVersions = (a: string, b: string) => {
@@ -322,7 +323,8 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                     </Stack>
 
                     <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
-                        <Typography variant='subtitle2' flex={1}>Available plugins</Typography>
+                        <Typography variant='subtitle2'>Available plugins</Typography>
+                        <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
                         <Tooltip title='Refresh catalog'>
                             <span>
                                 <IconButton size='small' onClick={fetchManifest} disabled={loadingManifest}>
@@ -337,7 +339,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                     }
 
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
-                        {Object.keys(groupedAvailable).map(id => {
+                        {Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase())).map(id => {
                             const group = groupedAvailable[id]
                             const plugin = getSelectedEntry(id)
                             const versions = group.map(p => p.version)

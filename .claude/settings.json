@@ -129,7 +129,8 @@
       "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\src\\\\back\\\\index.ts\" -Pattern \"regexget|statsget|sendCommand\" -CaseSensitive:$false)",
       "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\back\\\\index.ts\" -Pattern \"STATSGET|statsget|stats\" -CaseSensitive:$false)",
       "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\front\\\\CensorTabContent.tsx\" -Pattern \"statsget|STATSGET|stats\" -CaseSensitive:$false)",
-      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\front\\\\CensorChannel.ts\" -Pattern \"stats|processedCount|status|regex\" -CaseSensitive:$false)"
+      "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\front\\\\CensorChannel.ts\" -Pattern \"stats|processedCount|status|regex\" -CaseSensitive:$false)",
+      "PowerShell(\\(Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\package.json\" -Raw | ConvertFrom-Json\\).version)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

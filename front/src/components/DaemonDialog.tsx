@@ -39,6 +39,7 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
     const [installingId, setInstallingId] = useState<string | undefined>()
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
     const [error, setError] = useState<string | undefined>()
+    const [filterText, setFilterText] = useState('')
     const [customUrl, setCustomUrl] = useState('')
     const [installingCustom, setInstallingCustom] = useState(false)
     const [installingFile, setInstallingFile] = useState(false)
@@ -206,7 +207,8 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                     </Stack>
 
                     <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
-                        <Typography variant='subtitle2' flex={1}>Available daemons</Typography>
+                        <Typography variant='subtitle2'>Available daemons</Typography>
+                        <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
                         <Tooltip title='Refresh catalog'><span><IconButton size='small' onClick={fetchManifest} disabled={loadingManifest}>{loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' />}</IconButton></span></Tooltip>
                     </Stack>
 
@@ -215,7 +217,7 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                     }
 
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
-                        {available.map(daemon => (
+                        {available.filter(d => !filterText || d.id.includes(filterText.toLowerCase()) || d.name?.toLowerCase().includes(filterText.toLowerCase()) || d.displayName?.toLowerCase().includes(filterText.toLowerCase())).map(daemon => (
                             <Box key={daemon.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: daemonGradient(daemon.name) }}>
                                 <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                     <Box sx={{ color: 'text.secondary', mt: 0.25 }}><SmartToy /></Box>
