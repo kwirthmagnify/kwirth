@@ -15,14 +15,8 @@
         "description": "Alert plugin for Kwirth - Build an alert system based on log messages and cluster metrics",
         "icon": "Warning"
     },
-    {
-        "id": "censor",
-        "version": "0.2.4",
-        "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.4.tgz",
-        "name": "Censor",
-        "description": "Censor plugin for Kwirth - LLM-powered real-time log analysis and sensitive pattern detection",
-        "icon": "ManageSearch"
-    },
+    { "id": "censor", "version": "0.2.4", "name": "Censor", "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.4.tgz", "description": "Censor plugin for Kwirth - LLM-powered real-time log analysis and sensitive pattern detection", "icon": "ManageSearch" },
+    { "id": "censor", "version": "0.2.3", "name": "Censor", "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.3.tgz", "description": "Censor plugin for Kwirth - LLM-powered real-time log analysis and sensitive pattern detection", "icon": "ManageSearch" },
     {
         "id": "ops",
         "version": "0.2.3",
