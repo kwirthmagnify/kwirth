@@ -23,6 +23,7 @@ import '@jfvilas/react-file-manager/dist/style.css'
 // @ts-ignore
 import './custom-fm-magnify.css'
 import { ArtifactSearch, IArtifactSearchData } from './components/ArtifactSearch'
+import { LogSearchPanel, ILogSearchData } from './components/LogSearchPanel'
 import { rfmSetup, setLeftItem, setPropertyFunction } from './components/RFMSetup'
 import { createChannelInstance } from '../../tools/ChannelTools'
 import { MenuKubeWorks } from './components/MenuKubeWorks'
@@ -57,6 +58,7 @@ const yamlParser = require('js-yaml')
 const ICON_WINDOW : Record<string, JSX.Element> = {
     ContentDetails: <List />,
     ArtifactSearch: <Search />,
+    LogSearchPanel: <Search />,
     ContentEdit: <Edit />,
     ContentBrowse: <EditOff />,
 }
@@ -677,6 +679,36 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         addWindow(win)
     }
 
+    const launchLogSearch = (namespaces?: string[], pods?: string[], scopeLabel?: string) => {
+        magnifyData.logSearchResults = []
+        magnifyData.logSearchDone = true
+        const win: IContentWindow = {
+            id: 'logsearch-' + uuid(),
+            class: 'LogSearchPanel',
+            visible: true, atTop: false, atFront: true,
+            title: 'Log Search',
+            isMaximized: false,
+            x: 120, y: 60, width: 700, height: 500,
+            data: {
+                namespaces, pods,
+                scopeLabel: scopeLabel ?? 'Cluster',
+                onOpenLog: (namespace: string, pod: string, container: string) => {
+                    const fileObj = { name: pod, isDirectory: false, path: `/workload/Pod/${namespace}/${pod}`, data: { origin: { metadata: { name: pod, namespace }, kind: 'Pod' } } } as any
+                    launchObjectExternal('log', [fileObj], EInstanceConfigView.CONTAINER, undefined, container)
+                },
+                clusterName: props.channelObject.clusterName,
+                accessString: props.channelObject.accessString!,
+                instanceId: props.channelObject.instanceId,
+            } satisfies ILogSearchData,
+            selectedFiles: [],
+            onWindowChange: onWindowChange,
+            onTop: onWindowTop,
+            onMinimize: onWindowMinimize,
+            onClose: onWindowClose,
+        }
+        addWindow(win)
+    }
+
     // *********************************************************
     // Specific actions for some objects
     // *********************************************************
@@ -684,7 +716,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     // Sync cluster-type plugins into classClusterOverview left bar on every render
     {
-        const STATIC_CLUSTER_ITEMS = new Set(['search'])
+        const STATIC_CLUSTER_ITEMS = new Set(['search', 'logsearch'])
         const spcClusterOverview = spaces.get('classClusterOverview')!
         const clusterPluginIds = Array.from(props.channelObject.frontChannels?.keys() ?? []).filter(id => {
             if (id === 'magnify') return false
@@ -725,6 +757,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         () => true,
         () => magnifyData.userPreferences?.customActions && magnifyData.userPreferences.customActions.filter(ca => ca.type==='kwirth').length>0 )
     setLeftItem(spcClassOverview, 'kubeworks', (p:string[], currentTarget:Element) => setMenuKubeWorksAnchorParent(currentTarget) )
+    setLeftItem(spaces.get('classClusterOverview')!, 'logsearch', () => launchLogSearch(undefined, undefined, 'Cluster'))
 
     // cluster actions
     const setClusterActions = () => {
@@ -749,6 +782,11 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             let f = magnifyData.files.filter(f => p.includes(f.path))
             launchObjectExternal('topology', f, EInstanceConfigView.NAMESPACE, undefined, undefined)
         }, () => props.channelObject.frontChannels?.has('topology') ?? false)
+        setLeftItem(spcNamespace, 'logsearch', (p:string[]) => {
+            let f = magnifyData.files.filter(f => p.includes(f.path))
+            const ns = f[0]?.data?.origin?.metadata?.name
+            if (ns) launchLogSearch([ns], undefined, `Namespace: ${ns}`)
+        })
 
         // Namespace
         let spcClassNamespace = spaces.get('classNamespace')!
@@ -811,6 +849,11 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }, () => props.channelObject.frontChannels?.has('topology') ?? false)
 
         setLeftItem(spcPod,'evict', launchPodEvict)
+        setLeftItem(spcPod,'logsearch', (p:string[]) => {
+            const f = magnifyData.files.filter(x => p.includes(x.path))
+            const pods = f.map(x => `${x.data?.origin?.metadata?.namespace}/${x.data?.origin?.metadata?.name}`)
+            launchLogSearch(undefined, pods, `Pods (${pods.length})`)
+        })
     }
 
     const launchPodEvict = (p:string[]) => {
@@ -1300,6 +1343,8 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     return  <ContentDetails key={w.id} onFocus={() => bringWindowToFront(w.id)} {...w} />
                 case 'ArtifactSearch':
                     return  <ArtifactSearch key={w.id} onFocus={() => bringWindowToFront(w.id)} {...w} />
+                case 'LogSearchPanel':
+                    return  <LogSearchPanel key={w.id} onFocus={() => bringWindowToFront(w.id)} {...w} channelObject={props.channelObject} magnifyData={magnifyData} />
                 case 'ContentBrowse':
                 case 'ContentEdit':
                     return  <ContentEdit key={w.id} onFocus={() => bringWindowToFront(w.id)} {...w} />

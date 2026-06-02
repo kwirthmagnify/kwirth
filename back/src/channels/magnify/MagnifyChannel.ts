@@ -30,6 +30,7 @@ export enum EMagnifyCommand {
     NODE = 'Node',
     IMAGE = 'Image',
     CONTROLLER = 'Controller',
+    LOGSEARCH = 'logsearch',
 }
 
 export interface IMagnifyMessage extends IInstanceMessage {
@@ -569,6 +570,61 @@ class MagnifyChannel implements IChannel {
                             return
                     }
                     this.sendDataMessage(webSocket, instance, '1', EMagnifyCommand.NODE, `CronJob successfully ${magnifyMessage.params![0]}`)
+                    return
+                }
+
+                case EMagnifyCommand.LOGSEARCH: {
+                    const { query, namespaces, pods, tailLines, caseSensitive, useRegex } = JSON.parse(magnifyMessage.params![0]) as {
+                        query: string, namespaces?: string[], pods?: string[], tailLines?: number, caseSensitive?: boolean, useRegex?: boolean
+                    }
+                    const lines = tailLines ?? 5000
+                    const cs = caseSensitive ?? false
+                    const rx = useRegex ?? false
+                    const tester = (line: string) => {
+                        try {
+                            if (rx) return new RegExp(query, cs ? '' : 'i').test(line)
+                            return cs ? line.includes(query) : line.toLowerCase().includes(query.toLowerCase())
+                        } catch { return false }
+                    }
+
+                    // Build container list
+                    type TContainer = { namespace: string, pod: string, container: string }
+                    const containers: TContainer[] = []
+                    if (pods && pods.length > 0) {
+                        for (const podRef of pods) {
+                            const [ns, podName] = podRef.split('/')
+                            try {
+                                const pod = await this.clusterInfo.coreApi.readNamespacedPod({ name: podName, namespace: ns })
+                                for (const c of pod.spec?.containers ?? []) containers.push({ namespace: ns, pod: podName, container: c.name })
+                            } catch {}
+                        }
+                    } else {
+                        const nsList = namespaces && namespaces.length > 0 ? namespaces : (await this.clusterInfo.coreApi.listNamespace()).items.map((n: any) => n.metadata.name as string)
+                        for (const ns of nsList) {
+                            try {
+                                const podList = await this.clusterInfo.coreApi.listNamespacedPod({ namespace: ns })
+                                for (const pod of podList.items) {
+                                    const podName = pod.metadata?.name!
+                                    for (const c of pod.spec?.containers ?? []) containers.push({ namespace: ns, pod: podName, container: c.name })
+                                }
+                            } catch {}
+                        }
+                    }
+
+                    // Search in batches of 5
+                    const BATCH = 5
+                    for (let i = 0; i < containers.length; i += BATCH) {
+                        await Promise.all(containers.slice(i, i + BATCH).map(async ({ namespace, pod, container }) => {
+                            try {
+                                const log = await this.clusterInfo.coreApi.readNamespacedPodLog({ name: pod, namespace, container, tailLines: lines })
+                                const matched = (typeof log === 'string' ? log : String(log)).split('\n').filter(l => l && tester(l))
+                                if (matched.length > 0) {
+                                    this.sendDataMessage(webSocket, instance, magnifyMessage.id, EMagnifyCommand.LOGSEARCH, JSON.stringify({ type: 'result', namespace, pod, container, lines: matched }))
+                                }
+                            } catch {}
+                        }))
+                    }
+                    this.sendDataMessage(webSocket, instance, magnifyMessage.id, EMagnifyCommand.LOGSEARCH, JSON.stringify({ type: 'done' }))
                     return
                 }
 

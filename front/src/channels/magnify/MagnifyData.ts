@@ -22,6 +22,9 @@ export interface IMagnifyData {
     metricsCluster: any[]
     metricsPodDetail: any[]
 
+    logSearchResults: ILogSearchResult[]
+    logSearchDone: boolean
+
     refreshUsage?: () => void
     // updateNamespaces?: (action:string, namespace:string) => void
     // updateNodes?: (action:string, node:string) => void
@@ -44,6 +47,8 @@ export class MagnifyData implements IMagnifyData {
     pendingWebSocketRequests = new Map<string, (value: any) => void>()
     metricsCluster = []
     metricsPodDetail = []
+    logSearchResults = []
+    logSearchDone = true
     updateNamespaces = undefined
     userPreferences = new MagnifyUserPreferences()
 }
@@ -67,6 +72,14 @@ export enum EMagnifyCommand {
     NODE = 'Node',
     IMAGE = 'Image',
     CONTROLLER = 'Controller',
+    LOGSEARCH = 'logsearch',
+}
+
+export interface ILogSearchResult {
+    namespace: string
+    pod: string
+    container: string
+    lines: string[]
 }
 
 export interface IMagnifyMessage extends IInstanceMessage {

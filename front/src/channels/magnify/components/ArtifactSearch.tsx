@@ -1,4 +1,4 @@
-import { Checkbox, DialogContent, DialogTitle, FormControlLabel, IconButton, Stack, TextField, Typography } from '@mui/material'
+import { Checkbox, DialogContent, DialogTitle, FormControlLabel, Stack, TextField, Typography } from '@mui/material'
 import { IFileObject } from '@jfvilas/react-file-manager'
 import { ChangeEvent, useRef, useState } from 'react'
 import { Search } from '@mui/icons-material'
@@ -114,12 +114,10 @@ const ArtifactSearch: React.FC<IArtifactSearchProps> = (props:IArtifactSearchPro
 
     return (
         <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
-            <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
-                <Stack direction={'row'} alignItems={'center'}>                    
-                    <Typography sx={{flexGrow:1}} variant='body2'></Typography>
-                    <Typography variant='body2'><Search />&nbsp;{artifactSearchData.scope===':cluster:'?'All cluster':'Namespace: '+artifactSearchData.scope}</Typography>
-                    <Typography sx={{flexGrow:1}} variant='body2'></Typography>
-
+            <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move', py: 1 }} id='draggable-dialog-title'>
+                <Stack direction='row' alignItems='center'>
+                    <Search fontSize='small' sx={{ color: 'text.secondary', mr: 1 }} />
+                    <Typography variant='body2' fontWeight={500} flex={1}>Search — {artifactSearchData.scope===':cluster:'?'All cluster':'Namespace: '+artifactSearchData.scope}</Typography>
                     <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
                 </Stack>
             </DialogTitle>

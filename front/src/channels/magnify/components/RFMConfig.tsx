@@ -1,5 +1,5 @@
 import { IFileObject, ISpace, ISpaceMenuItem } from '@jfvilas/react-file-manager'
-import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@mui/icons-material'
+import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, ManageSearch, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@mui/icons-material'
 import { Cluster, Config, Customize, Kubernetes, Network, Pod, Security, Settings, Storage } from '../icons/Icons'
 
 const spaces = new Map<string, ISpace>()
@@ -442,13 +442,19 @@ const menu:IFileObject[] = [
 ]
 
 // Cluster
-spaces.set('classClusterOverview', 
+spaces.set('classClusterOverview',
     {
         leftItems: [
             {
                 name:'search',
                 icon: <Search fontSize='small'/>,
                 text: 'Search',
+                permission: true
+            },
+            {
+                name: 'logsearch',
+                icon: <ManageSearch fontSize='small'/>,
+                text: 'Log search',
                 permission: true
             },
         ]
@@ -1705,6 +1711,13 @@ spaces.set('Namespace',
                 permission: true
             },
             {
+                name: 'logsearch',
+                icon: <ManageSearch fontSize='small'/>,
+                text: 'Log search',
+                multi: true,
+                permission: true
+            },
+            {
                 name: 'edit',
                 icon: <Edit fontSize='small'/>,
                 text: 'Edit',
@@ -2117,6 +2130,13 @@ spaces.set('Pod',
                 name: 'evict',
                 icon: <DeleteSweep fontSize='small'/>,
                 text: 'Evict',
+                multi: true,
+                permission: true
+            },
+            {
+                name: 'logsearch',
+                icon: <ManageSearch fontSize='small'/>,
+                text: 'Log search',
                 multi: true,
                 permission: true
             }
@@ -3911,6 +3931,12 @@ spaces.set('classOverview', {
                 name: 'kubeworks',
                 icon: <HomeRepairService fontSize='small'/>,
                 text: 'Kube works',
+                permission: true,
+            },
+            {
+                name: 'logsearch',
+                icon: <ManageSearch fontSize='small'/>,
+                text: 'Log search',
                 permission: true,
             }
         ]

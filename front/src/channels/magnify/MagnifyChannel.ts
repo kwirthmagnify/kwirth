@@ -214,6 +214,15 @@ class MagnifyChannel implements IChannel {
                                     action: EChannelRefreshAction.REFRESH
                                 }
                             }
+                            case EMagnifyCommand.LOGSEARCH: {
+                                const payload = JSON.parse(response.data)
+                                if (payload.type === 'result') {
+                                    magnifyData.logSearchResults = [...magnifyData.logSearchResults, { namespace: payload.namespace, pod: payload.pod, container: payload.container, lines: payload.lines }]
+                                } else if (payload.type === 'done') {
+                                    magnifyData.logSearchDone = true
+                                }
+                                return { action: EChannelRefreshAction.REFRESH }
+                            }
                         }
                     }
                 }
