@@ -243,23 +243,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         props.channelObject.webSocket?.send(JSON.stringify(msg))
     }
 
-    const pinocchioImportExportClose = (providers?: IConfigProvider[], config?: IPinocchioConfig) => {
-        if (providers) {
-            pinocchioData.providers = providers
-            let msg:IPinocchioMessage = {
-                channel: 'pinocchio',
-                msgtype: 'pinocchiomessage',
-                id: '1',
-                accessKey: props.channelObject.accessString!,
-                instance: props.channelObject.instanceId,
-                command: EPinocchioCommand.PROVIDERSSET,
-                action: EInstanceMessageAction.COMMAND,
-                flow: EInstanceMessageFlow.REQUEST,
-                type: EInstanceMessageType.DATA,
-                data: providers
-            }
-            props.channelObject.webSocket?.send(JSON.stringify(msg))
-        }
+    const pinocchioImportExportClose = (config?: IPinocchioConfig) => {
         if (config) {
             pinocchioData.config = config
             let msg:IPinocchioMessage = {
@@ -324,7 +308,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         { showConfigLlm && <AiConfigLlm llms={pinocchioData.config.llms} providers={pinocchioData.providers} onClose={aiConfigLlmClose} />}
         { showConfigProvider && <AiConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
         { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} onStateChange={pinocchioPlaygroundStateChange} />}
-        { showImportExport && <PinocchioImportExport providers={pinocchioData.providers} config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
+        { showImportExport && <PinocchioImportExport config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} providers={pinocchioData.providers} pinocchioConfig={pinocchioData.config} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
         { reportContent !== null && (
             <Dialog open={true} onClose={() => setReportContent(null)} PaperProps={{ sx: { width: '60vw', maxWidth: '900px', maxHeight: '70vh' } }}>

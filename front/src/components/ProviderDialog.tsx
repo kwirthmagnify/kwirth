@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { CheckCircle, Checklist, Delete, Download, FolderOpen, Link, OpenInNew, Refresh } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
@@ -9,6 +9,7 @@ const PROVIDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/
 interface IProviderManifestEntry {
     id: string
     name: string
+    displayName?: string
     version: string
     description: string
     website?: string
@@ -39,6 +40,12 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
     const [error, setError] = useState<string | undefined>()
     const [filterText, setFilterText] = useState('')
+    const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
+
+    const compareVersions = (a: string, b: string) => { const pa = a.split('.').map(Number); const pb = b.split('.').map(Number); for (let i = 0; i < Math.max(pa.length, pb.length); i++) { const d = (pb[i]??0)-(pa[i]??0); if (d!==0) return d } return 0 }
+    const groupedAvailable: Record<string, IProviderManifestEntry[]> = available.reduce((acc, p) => { if (!acc[p.id]) acc[p.id]=[]; acc[p.id].push(p); return acc }, {} as Record<string, IProviderManifestEntry[]>)
+    Object.values(groupedAvailable).forEach(g => g.sort((a,b) => compareVersions(a.version, b.version)))
+    const getSelectedProvider = (id: string): IProviderManifestEntry => { const g=groupedAvailable[id]; const v=selectedVersions[id]??g[0].version; return g.find(p=>p.version===v)??g[0] }
     const [customUrl, setCustomUrl] = useState('')
     const [installingCustom, setInstallingCustom] = useState(false)
     const [installingFile, setInstallingFile] = useState(false)
@@ -276,38 +283,40 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                     }
 
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
-                        {available.filter(p => !filterText || p.id.includes(filterText.toLowerCase()) || p.name?.toLowerCase().includes(filterText.toLowerCase())).map(provider => (
-                            <Box key={provider.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: providerGradient(provider.name) }}>
+                        {Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase())).map(id => {
+                            const group = groupedAvailable[id]
+                            const provider = getSelectedProvider(id)
+                            const versions = group.map(p => p.version)
+                            return (
+                            <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: providerGradient(provider.name) }}>
                                 <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                     <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Checklist /></Box>
                                     <Box flex={1} minWidth={0}>
                                         <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                                            <Typography variant='body2' fontWeight='bold'>{provider.name}</Typography>
-                                            <Chip label={`v${provider.version}`} size='small' />
-                                            {isDevInstalled(provider.id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
-                                            {isInstalled(provider.id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
+                                            <Typography variant='body2' fontWeight='bold'>{provider.displayName || provider.name}</Typography>
+                                            {versions.length > 1
+                                                ? <Select size='small' value={provider.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                    {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                                                  </Select>
+                                                : <Chip label={`v${provider.version}`} size='small' />
+                                            }
+                                            {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                            {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                         </Stack>
                                         <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{provider.description}</Typography>
                                     </Box>
-                                    {provider.website &&
-                                        <Tooltip title='Open provider website'>
-                                            <IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(provider.website, '_blank', 'noopener')}>
-                                                <OpenInNew fontSize='small' />
-                                            </IconButton>
-                                        </Tooltip>
-                                    }
+                                    {provider.website && <Tooltip title='Open provider website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(provider.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
                                 </Stack>
                                 <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
-                                    <Tooltip title={isDevInstalled(provider.id) ? 'A dev version is already loaded' : isInstalled(provider.id) ? 'Already installed' : 'Install'}>
-                                        <span>
-                                            <IconButton size='small' color='primary' disabled={isDevInstalled(provider.id) || isInstalled(provider.id) || installingId === provider.id} onClick={() => installFromCatalog(provider)}>
-                                                {installingId === provider.id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
-                                            </IconButton>
-                                        </span>
+                                    <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : 'Install'}>
+                                        <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id} onClick={() => installFromCatalog(provider)}>
+                                            {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                        </IconButton></span>
                                     </Tooltip>
                                 </Stack>
                             </Box>
-                        ))}
+                            )
+                        })}
                     </Box>
 
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}

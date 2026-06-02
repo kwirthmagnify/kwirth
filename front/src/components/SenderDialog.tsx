@@ -59,6 +59,12 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     const [available, setAvailable] = useState<ISenderManifestEntry[]>([])
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [filterText, setFilterText] = useState('')
+    const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
+
+    const compareVersions = (a: string, b: string) => { const pa = a.split('.').map(Number); const pb = b.split('.').map(Number); for (let i = 0; i < Math.max(pa.length, pb.length); i++) { const d = (pb[i]??0)-(pa[i]??0); if (d!==0) return d } return 0 }
+    const groupedAvailable: Record<string, ISenderManifestEntry[]> = available.reduce((acc, p) => { if (!acc[p.id]) acc[p.id]=[]; acc[p.id].push(p); return acc }, {} as Record<string, ISenderManifestEntry[]>)
+    Object.values(groupedAvailable).forEach(g => g.sort((a,b) => compareVersions(a.version, b.version)))
+    const getSelectedSender = (id: string): ISenderManifestEntry => { const g=groupedAvailable[id]; const v=selectedVersions[id]??g[0].version; return g.find(p=>p.version===v)??g[0] }
     const [installingId, setInstallingId] = useState<string | undefined>()
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
     const [installingCustom, setInstallingCustom] = useState(false)
@@ -509,42 +515,41 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                         <Typography variant='body2' color='text.secondary'>No senders in catalog.</Typography>
                     }
 
-                    {available.length > 0 &&
+                    {Object.keys(groupedAvailable).length > 0 &&
                         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
-                            {available.filter(e => !filterText || e.id.includes(filterText.toLowerCase()) || e.name?.toLowerCase().includes(filterText.toLowerCase()) || e.displayName?.toLowerCase().includes(filterText.toLowerCase())).map(entry => (
-                                <Box key={entry.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: senderGradient(entry.name) }}>
+                            {Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(filterText.toLowerCase())).map(id => {
+                                const group = groupedAvailable[id]
+                                const entry = getSelectedSender(id)
+                                const versions = group.map(p => p.version)
+                                return (
+                                <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: senderGradient(entry.name) }}>
                                     <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                         <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Send fontSize='small' /></Box>
                                         <Box flex={1} minWidth={0}>
                                             <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
                                                 <Typography variant='body2' fontWeight='bold'>{entry.displayName}</Typography>
-                                                <Chip label={`v${entry.version}`} size='small' />
-                                                {isDevInstalled(entry.id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
-                                                {isInstalled(entry.id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
+                                                {versions.length > 1
+                                                    ? <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                        {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                                                      </Select>
+                                                    : <Chip label={`v${entry.version}`} size='small' />
+                                                }
+                                                {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                                {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                             </Stack>
                                             <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
                                         </Box>
-                                        {entry.website &&
-                                            <Tooltip title='Open website'>
-                                                <IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(entry.website, '_blank', 'noopener')}>
-                                                    <OpenInNew fontSize='small' />
-                                                </IconButton>
-                                            </Tooltip>
-                                        }
+                                        {entry.website && <Tooltip title='Open website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(entry.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
                                     </Stack>
                                     <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
-                                        <Tooltip title={isDevInstalled(entry.id) ? 'A dev version is active' : isInstalled(entry.id) ? 'Already installed' : 'Install'}>
-                                            <span>
-                                                <IconButton size='small' color='primary'
-                                                    disabled={isDevInstalled(entry.id) || isInstalled(entry.id) || installingId === entry.id}
-                                                    onClick={() => installFromCatalog(entry)}>
-                                                    {installingId === entry.id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
-                                                </IconButton>
-                                            </span>
+                                        <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : 'Install'}>
+                                            <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id} onClick={() => installFromCatalog(entry)}>
+                                                {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                            </IconButton></span>
                                         </Tooltip>
                                     </Stack>
                                 </Box>
-                            ))}
+                                )})}
                         </Box>
                     }
 

@@ -3,6 +3,7 @@
     "censor": "../daemons/censor/dist"
   },
   "channels": {
+    "censor": "../plugins/censor/dist"
   },
   "providers": {
     "tick": "../providers/tick/dist",

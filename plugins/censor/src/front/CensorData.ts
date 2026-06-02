@@ -29,6 +29,7 @@ export interface ICensorWarning {
 }
 
 export interface ICensorData {
+    uiState?: ICensorUiState
     receivedLines: ICensorLine[]
     businessLines: ICensorLine[]
     llmInputLines: string[]
@@ -55,6 +56,12 @@ export interface ICensorData {
     connectedSessionId: string | null
     connectedSessionDescription: string | null
     pendingSessionId: string | null | undefined
+}
+
+export interface ICensorUiState {
+    tab: number
+    regexSort: 'asc' | 'desc' | 'none'
+    autoScrolls: { regex: boolean, received: boolean, business: boolean, llmInput: boolean, llmOutput: boolean, warning: boolean, llmError: boolean }
 }
 
 export class CensorData implements ICensorData {

@@ -7,6 +7,12 @@ import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/f
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import { ICensorData } from './CensorData'
 import { ECensorCommand, ICensorInstanceConfig } from './CensorConfig'
+import { ICensorUiState } from './CensorData'
+
+const _defaultUi = (): ICensorUiState => ({
+    tab: 0, regexSort: 'none',
+    autoScrolls: { regex: true, received: true, business: true, llmInput: true, llmOutput: true, warning: true, llmError: true }
+})
 import { CensorImportExport } from './CensorImportExport'
 import { CensorSessionStart } from './CensorSessionStart'
 import { MsgBoxButtons, MsgBoxYesNo } from './utils'
@@ -16,7 +22,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const contentRef = useRef<HTMLDivElement>(null)
     const [contentTop, setContentTop] = useState(0)
     const [, forceUpdate] = useState(0)
-    const [tab, setTab] = useState(0)
+
+    // Restore UI state from channelObject.data so it survives tab switches
+    const _ui = data.uiState
+    const [tab, setTabState] = useState(_ui?.tab ?? 0)
+    const setTab = (v: number) => { setTabState(v); data.uiState = { ...(data.uiState ?? _defaultUi()), tab: v } }
     const [showConfig, setShowConfig] = useState(false)
     const [showSessionStart, setShowSessionStart] = useState(false)
     const [configName, setConfigName] = useState('')
@@ -40,14 +50,29 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [msgBox, setMsgBox] = useState(<></>)
     const [activeTagFilters, setActiveTagFilters] = useState<string[]>([])
     const [tagFilterAnd, setTagFilterAnd] = useState(false)
-    const [businessAutoScroll, setBusinessAutoScroll] = useState(true)
-    const [regexAutoScroll, setRegexAutoScroll] = useState(true)
-    const [regexSort, setRegexSort] = useState<'asc' | 'desc' | 'none'>('none')
-    const [receivedAutoScroll, setReceivedAutoScroll] = useState(true)
-    const [llmInputAutoScroll, setLlmInputAutoScroll] = useState(true)
-    const [llmOutputAutoScroll, setLlmOutputAutoScroll] = useState(true)
-    const [warningAutoScroll, setWarningAutoScroll] = useState(true)
-    const [llmErrorAutoScroll, setLlmErrorAutoScroll] = useState(true)
+    const [businessAutoScroll, setBusinessAutoScrollState] = useState(_ui?.autoScrolls?.business ?? true)
+    const [regexAutoScroll, setRegexAutoScrollState] = useState(_ui?.autoScrolls?.regex ?? true)
+    const [regexSort, setRegexSortState] = useState<'asc' | 'desc' | 'none'>(_ui?.regexSort ?? 'none')
+    const [receivedAutoScroll, setReceivedAutoScrollState] = useState(_ui?.autoScrolls?.received ?? true)
+    const [llmInputAutoScroll, setLlmInputAutoScrollState] = useState(_ui?.autoScrolls?.llmInput ?? true)
+    const [llmOutputAutoScroll, setLlmOutputAutoScrollState] = useState(_ui?.autoScrolls?.llmOutput ?? true)
+    const [warningAutoScroll, setWarningAutoScrollState] = useState(_ui?.autoScrolls?.warning ?? true)
+    const [llmErrorAutoScroll, setLlmErrorAutoScrollState] = useState(_ui?.autoScrolls?.llmError ?? true)
+
+    const _saveAs = (key: keyof ICensorUiState['autoScrolls'], val: boolean) => {
+        const cur = data.uiState ?? _defaultUi()
+        data.uiState = { ...cur, autoScrolls: { ...cur.autoScrolls, [key]: val } }
+    }
+    const setBusinessAutoScroll  = (v: boolean) => { setBusinessAutoScrollState(v);  _saveAs('business', v) }
+    const setRegexAutoScroll     = (v: boolean) => { setRegexAutoScrollState(v);     _saveAs('regex', v) }
+    const setReceivedAutoScroll  = (v: boolean) => { setReceivedAutoScrollState(v);  _saveAs('received', v) }
+    const setLlmInputAutoScroll  = (v: boolean) => { setLlmInputAutoScrollState(v);  _saveAs('llmInput', v) }
+    const setLlmOutputAutoScroll = (v: boolean) => { setLlmOutputAutoScrollState(v); _saveAs('llmOutput', v) }
+    const setWarningAutoScroll   = (v: boolean) => { setWarningAutoScrollState(v);   _saveAs('warning', v) }
+    const setLlmErrorAutoScroll  = (v: boolean) => { setLlmErrorAutoScrollState(v);  _saveAs('llmError', v) }
+    const setRegexSort = (fn: (s: 'asc'|'desc'|'none') => 'asc'|'desc'|'none') => {
+        setRegexSortState(prev => { const v = fn(prev); data.uiState = { ...(data.uiState ?? _defaultUi()), regexSort: v }; return v })
+    }
     const [selectedConfigIndex, setSelectedConfigIndex] = useState<number | null>(null)
     const [configActive, setConfigActive] = useState(false)
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
