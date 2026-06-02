@@ -1,10 +1,17 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import {
     Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
     FormControl, IconButton, InputAdornment, InputLabel, List, ListItemButton,
     MenuItem, Select, Stack, TextField, Typography
 } from '@mui/material'
-import { Visibility, VisibilityOff } from '@mui/icons-material'
+import { FileDownload, FileUpload, Visibility, VisibilityOff } from '@mui/icons-material'
+
+const downloadJson = (data: unknown, filename: string) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
+    URL.revokeObjectURL(url)
+}
 import { ILlm, ILlmProvider } from './index'
 
 // ── LlmSelector ─────────────────────────────────────────────────────────────
@@ -41,6 +48,7 @@ interface IAiConfigLlmProps {
 
 const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
     const [llms, setLlms] = useState<ILlm[]>(JSON.parse(JSON.stringify(props.llms)))
+    const importLlmRef = useRef<HTMLInputElement>(null)
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
     const [showPassword, setShowPassword] = useState(false)
     const [id, setId] = useState('')
@@ -153,6 +161,16 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                 </Box>
             </DialogContent>
             <DialogActions>
+                <input ref={importLlmRef} type='file' accept='.json' style={{ display: 'none' }} onChange={e => {
+                    const f = e.target.files?.[0]; if (!f) return
+                    const reader = new FileReader()
+                    reader.onload = ev => { try { setLlms(JSON.parse(ev.target!.result as string)) } catch {} }
+                    reader.readAsText(f)
+                    e.target.value = ''
+                }} />
+                <Button startIcon={<FileUpload fontSize='small' />} onClick={() => importLlmRef.current?.click()}>Import</Button>
+                <Button startIcon={<FileDownload fontSize='small' />} onClick={() => downloadJson(llms, 'kwirth-llms.json')}>Export</Button>
+                <Box flex={1} />
                 <Button onClick={() => props.onClose(llms)} variant='contained'>OK</Button>
                 <Button onClick={() => props.onClose(undefined)} color='inherit'>Cancel</Button>
             </DialogActions>
@@ -170,6 +188,7 @@ interface IAiConfigProviderProps {
 
 const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProviderProps) => {
     const [providers, setProviders] = useState<ILlmProvider[]>(JSON.parse(JSON.stringify(props.providers)))
+    const importProvRef = useRef<HTMLInputElement>(null)
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
     const [showPassword, setShowPassword] = useState(false)
     const [providerName, setProviderName] = useState('')
@@ -248,6 +267,16 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                 </Box>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>
+                <input ref={importProvRef} type='file' accept='.json' style={{ display: 'none' }} onChange={e => {
+                    const f = e.target.files?.[0]; if (!f) return
+                    const reader = new FileReader()
+                    reader.onload = ev => { try { setProviders(JSON.parse(ev.target!.result as string)) } catch {} }
+                    reader.readAsText(f)
+                    e.target.value = ''
+                }} />
+                <Button startIcon={<FileUpload fontSize='small' />} onClick={() => importProvRef.current?.click()}>Import</Button>
+                <Button startIcon={<FileDownload fontSize='small' />} onClick={() => downloadJson(providers.map(p => ({ name: p.name, key: p.key })), 'kwirth-providers.json')}>Export</Button>
+                <Box flex={1} />
                 <Button onClick={() => props.onClose(providers)} color='primary' variant='contained'>Save</Button>
                 <Button onClick={() => props.onClose(undefined)} color='inherit'>Cancel</Button>
             </DialogActions>
