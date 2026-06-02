@@ -18,6 +18,7 @@ enum MenuDrawerOption {
     ManagePlugins,
     ManageProviders,
     ManageSenders,
+    ManageDaemons,
     UpdateKwirth,
     About,
     Exit
@@ -58,6 +59,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManagePlugins)}><Extension />&nbsp;Manage plugins</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageProviders)}><Extension />&nbsp;Manage providers</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageSenders)}><Extension />&nbsp;Manage senders</MenuItem>
+                    <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageDaemons)}><Extension />&nbsp;Manage daemons</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.UpdateKwirth)}><BrowserUpdated />&nbsp;Update Kwirth</MenuItem>
                     <Divider/>
                 </div>

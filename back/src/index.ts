@@ -68,6 +68,7 @@ import { PluginApi } from './api/PluginApi'
 import { ProviderManager } from './tools/ProviderManager'
 import { ProviderApi } from './api/ProviderApi'
 import { SenderApi } from './api/SenderApi'
+import { DaemonApi } from './api/DaemonApi'
 import { SenderManager } from './tools/SenderManager'
 import { DaemonManager } from './tools/DaemonManager'
 const fs = require('fs')
@@ -1213,6 +1214,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let senderApi = new SenderApi(senderManager, apiKeyApi)
             riRouter.use(`/senders`, senderApi.router)
         }
+        if (daemonManager) {
+            let daemonApi = new DaemonApi(daemonManager, apiKeyApi)
+            riRouter.use(`/daemons`, daemonApi.router)
+        }
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
 
@@ -1554,6 +1559,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                 senders: senderManager
             }
             daemonManager = new DaemonManager(runningInstance.clusterInfo, runningInstance.configMaps, backDaemonObject)
+            await daemonManager.loadAll()
             await daemonManager.init()
         }
 

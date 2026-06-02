@@ -6,15 +6,22 @@ import { ELogComponent, logError, logInfo } from './Logging'
 import { TDaemonConstructor, createDaemonInstance } from '../daemons/IDaemon'
 import fs from 'fs'
 import path from 'path'
+import tar from 'tar'
+import os from 'os'
+import zlib from 'zlib'
 
 export interface IDaemonMeta {
     id: string
     name: string
+    displayName?: string
     version: string
     description: string
+    website?: string
     installedFrom?: string
     backStored?: boolean
 }
+
+const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
 interface IDevDaemon {
     distPath: string
@@ -283,5 +290,151 @@ export class DaemonManager implements IDaemonManager {
             if (!pod.startsWith(groupName)) return false
         }
         return true
+    }
+
+    // ── Install / Uninstall ─────────────────────────────────────────────────────
+
+    async listInstalled(): Promise<IDaemonMeta[]> {
+        const stored = (await this.configMaps.read('kwirth-daemons-index', [])) as IDaemonMeta[]
+        const devMetas = Array.from(this.devDaemons.entries()).map(([id, dev]) => {
+            try {
+                const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website }
+            } catch { return dev.meta }
+        })
+        return [...(stored ?? []), ...devMetas]
+    }
+
+    async install(tarGzUrl: string, installedFrom?: string): Promise<IDaemonMeta> {
+        const tmpTgz = path.join(os.tmpdir(), `kwirth-daemon-${Date.now()}.tgz`)
+        let tmpDir = path.join(os.tmpdir(), `kwirth-daemon-extract-${Date.now()}`)
+        fs.mkdirSync(tmpDir, { recursive: true })
+        const isLocalPath = !tarGzUrl.startsWith('http://') && !tarGzUrl.startsWith('https://')
+        try {
+            if (isLocalPath) fs.copyFileSync(tarGzUrl, tmpTgz)
+            else await this.downloadFile(tarGzUrl, tmpTgz)
+            await tar.x({ file: tmpTgz, cwd: tmpDir })
+
+            let metaPath = path.join(tmpDir, 'package.json')
+            let backPath = path.join(tmpDir, 'back.js')
+            if (!fs.existsSync(metaPath) || !fs.existsSync(backPath)) {
+                tmpDir = path.join(tmpDir, 'package')
+                metaPath = path.join(tmpDir, 'package.json')
+                backPath = path.join(tmpDir, 'back.js')
+                if (!fs.existsSync(metaPath) || !fs.existsSync(backPath))
+                    throw new Error('Invalid daemon bundle: missing package.json or back.js')
+            }
+
+            const meta: IDaemonMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+            meta.installedFrom = installedFrom ?? tarGzUrl
+            const backJs = fs.readFileSync(backPath, 'utf-8')
+            const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')
+            meta.backStored = backCompressed.length <= CONFIGMAP_SIZE_LIMIT
+
+            await this.configMaps.write(`kwirth-daemon-${meta.id}-meta`, meta)
+            if (meta.backStored) await this.configMaps.write(`kwirth-daemon-${meta.id}-back`, { code: backCompressed, compressed: true })
+
+            const index = ((await this.configMaps.read('kwirth-daemons-index', [])) as IDaemonMeta[]) ?? []
+            const existingIdx = index.findIndex(d => d.id === meta.id)
+            if (existingIdx >= 0) index[existingIdx] = meta; else index.push(meta)
+            await this.configMaps.write('kwirth-daemons-index', index)
+
+            await this.loadBackDaemon(meta.id, backJs)
+            logInfo(ELogComponent.CORE, `Daemon '${meta.id}' v${meta.version} installed`)
+            return meta
+        } finally {
+            fs.rmSync(tmpDir, { recursive: true, force: true })
+            if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz)
+        }
+    }
+
+    async installFromBuffer(buffer: Buffer): Promise<IDaemonMeta> {
+        const tmpTgz = path.join(os.tmpdir(), `kwirth-daemon-upload-${Date.now()}.tgz`)
+        fs.writeFileSync(tmpTgz, buffer)
+        try { return await this.install(tmpTgz, 'local') }
+        finally { if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz) }
+    }
+
+    async uninstall(id: string): Promise<void> {
+        if (this.devDaemons.has(id)) throw new Error(`Daemon '${id}' is a dev daemon and cannot be uninstalled`)
+        const daemon = this.daemonInstances.get(id)
+        if (daemon) {
+            for (const [instanceId, running] of this.runningInstances) {
+                if (running.instanceConfig.daemonId === id) {
+                    running.daemon.stopInstance(instanceId)
+                    this.runningInstances.delete(instanceId)
+                }
+            }
+            await this.persistInstances()
+        }
+        this.daemonInstances.delete(id)
+        this.registeredDaemons.delete(id)
+
+        const index = ((await this.configMaps.read('kwirth-daemons-index', [])) as IDaemonMeta[]) ?? []
+        await this.configMaps.write('kwirth-daemons-index', index.filter(d => d.id !== id))
+        await this.configMaps.write(`kwirth-daemon-${id}-meta`, null)
+        await this.configMaps.write(`kwirth-daemon-${id}-back`, null)
+        const cacheFile = path.join(os.tmpdir(), `kwirth-daemon-${id}-back.js`)
+        if (fs.existsSync(cacheFile)) fs.rmSync(cacheFile)
+        logInfo(ELogComponent.CORE, `Daemon '${id}' uninstalled`)
+    }
+
+    async loadAll(): Promise<void> {
+        const index = ((await this.configMaps.read('kwirth-daemons-index', [])) as IDaemonMeta[]) ?? []
+        for (const meta of index) {
+            try {
+                let backJs: string | undefined
+                if (meta.backStored === false) {
+                    logError(ELogComponent.CORE, `Daemon '${meta.id}' back.js not stored — cannot load`)
+                } else {
+                    const backData = await this.configMaps.read(`kwirth-daemon-${meta.id}-back`)
+                    if (backData?.code)
+                        backJs = backData.compressed ? zlib.gunzipSync(Buffer.from(backData.code, 'base64')).toString('utf-8') : backData.code
+                }
+                if (backJs) await this.loadBackDaemon(meta.id, backJs)
+                else logError(ELogComponent.CORE, `Daemon '${meta.id}' has no back.js — skipping`)
+            } catch (err) {
+                logError(ELogComponent.CORE, `Failed to load daemon '${meta.id}': ${err}`)
+            }
+        }
+    }
+
+    private async loadBackDaemon(id: string, backJs: string): Promise<void> {
+        const tmpPath = path.join(os.tmpdir(), `kwirth-daemon-${id}-back.js`)
+        fs.writeFileSync(tmpPath, backJs)
+        try {
+            if (require.cache[require.resolve(tmpPath)]) delete require.cache[require.resolve(tmpPath)]
+            const mod = require(tmpPath)
+            const DaemonClass: TDaemonConstructor = mod.default ?? Object.values(mod).find(v => typeof v === 'function') as TDaemonConstructor
+            if (DaemonClass) {
+                this.registeredDaemons.set(id, DaemonClass)
+                const instance = createDaemonInstance(DaemonClass, this.clusterInfo, this.backDaemonObject)
+                if (instance) {
+                    this.daemonInstances.set(id, instance)
+                    await instance.startDaemon()
+                    logInfo(ELogComponent.CORE, `Daemon '${id}' backend registered and started`)
+                }
+            } else {
+                logError(ELogComponent.CORE, `Daemon '${id}' back.js exports no daemon class`)
+            }
+        } catch (err) {
+            logError(ELogComponent.CORE, `Error loading daemon '${id}' backend: ${err}`)
+        }
+    }
+
+    private downloadFile(url: string, destPath: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const proto = url.startsWith('https://') ? require('https') : require('http')
+            const file = fs.createWriteStream(destPath)
+            proto.get(url, (res: any) => {
+                if (res.statusCode === 301 || res.statusCode === 302) {
+                    file.close()
+                    this.downloadFile(res.headers.location, destPath).then(resolve).catch(reject)
+                    return
+                }
+                res.pipe(file)
+                file.on('finish', () => file.close(() => resolve()))
+            }).on('error', (err: Error) => { fs.unlink(destPath, () => {}); reject(err) })
+        })
     }
 }
