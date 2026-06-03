@@ -6,19 +6,18 @@ import {
 } from '@mui/material'
 import { FileDownload, FileUpload, Visibility, VisibilityOff } from '@mui/icons-material'
 
-const downloadJson = (data: unknown, filename: string) => {
+const downloadJson = async (data: unknown, filename: string) => {
     const json = JSON.stringify(data, null, 2)
-    if ((window as any).__TAURI__) {
-        // Tauri: use dialog + fs plugin if available, else fallback to data URI
-        const tauri = (window as any).__TAURI__
-        if (tauri?.dialog?.save && tauri?.fs?.writeTextFile) {
-            tauri.dialog.save({ defaultPath: filename, filters: [{ name: 'JSON', extensions: ['json'] }] })
-                .then((path: string | null) => { if (path) tauri.fs.writeTextFile(path, json) })
-            return
-        }
+    const tauri = (window as any).__TAURI__
+    if (tauri?.dialog?.save && tauri?.fs?.writeTextFile) {
+        const path = await tauri.dialog.save({ defaultPath: filename, filters: [{ name: 'JSON', extensions: ['json'] }] })
+        if (path) await tauri.fs.writeTextFile(path, json)
+        return
     }
-    const uri = 'data:application/json;charset=utf-8,' + encodeURIComponent(json)
-    const a = document.createElement('a'); a.href = uri; a.download = filename; a.click()
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
+    URL.revokeObjectURL(url)
 }
 import { ILlm, ILlmProvider } from './index'
 

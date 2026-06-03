@@ -3,7 +3,7 @@
   "name": "Pinocchio",
   "displayName": "Pinocchio",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "website": "https://kwirthmagnify.dev",
   "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
   "icon": "AutoFixHigh",
@@ -13,7 +13,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-ai": "^0.5.11",
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.12",
     "@kwirthmagnify/kwirth-common-front": "^0.5.2",
     "lodash": "^4.17.21",
     "nunjucks": "^3.2.4"

@@ -103,6 +103,8 @@ async fn store_set(app: AppHandle, key: String, value: serde_json::Value) -> boo
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .manage(BackendChild(Mutex::new(None)))
         .setup(|app| {
             let exe_dir = std::env::current_exe()

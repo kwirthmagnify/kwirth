@@ -4,6 +4,9 @@
   "description": "Kwirth Magnify default capability",
   "windows": ["main", "splash"],
   "permissions": [
-    "core:default"
+    "core:default",
+    "dialog:allow-save",
+    "fs:allow-write-text-file",
+    "fs:allow-app-write-recursive"
   ]
 }
