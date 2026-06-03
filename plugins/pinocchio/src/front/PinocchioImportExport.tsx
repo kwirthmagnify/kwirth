@@ -61,10 +61,16 @@ const PinocchioImportExport: React.FC<IProps> = (props) => {
 
     const handleDownload = () => {
         const data: IExportFile = { version: '1', triggers: props.config.triggers.filter(t => exportTriggers.has(t.id)) }
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a'); a.href = url; a.download = `pinocchio-triggers-${new Date().toISOString().slice(0, 10)}.json`; a.click()
-        URL.revokeObjectURL(url)
+        const json = JSON.stringify(data, null, 2)
+        const filename = `pinocchio-triggers-${new Date().toISOString().slice(0, 10)}.json`
+        const tauri = (window as any).__TAURI__
+        if (tauri?.dialog?.save && tauri?.fs?.writeTextFile) {
+            tauri.dialog.save({ defaultPath: filename, filters: [{ name: 'JSON', extensions: ['json'] }] })
+                .then((path: string | null) => { if (path) tauri.fs.writeTextFile(path, json) })
+            return
+        }
+        const uri = 'data:application/json;charset=utf-8,' + encodeURIComponent(json)
+        const a = document.createElement('a'); a.href = uri; a.download = filename; a.click()
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -6,7 +6,7 @@
 		"url": "https://github.com/jfvilas"
 	},
 	"main": "main.js",
-	"version": "0.5.135",
+	"version": "0.5.136",
 	"description": "Kwirth Magnify Desktop",
 	"homepage": "https://kwirthmagnify.dev",
 	"scripts": {
@@ -20,7 +20,7 @@
 	},
 	"build": {
 		"appId": "com.github.kwirth",
-		"productName": "kwirth-magnify-0.5.135-e",
+		"productName": "kwirth-magnify-0.5.136-e",
 		"files": [
 			"./main.js",
 			"./preload.js",
