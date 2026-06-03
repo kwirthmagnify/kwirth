@@ -317,6 +317,21 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             })() }
                         </Stack>
                     )}
+                    <Stack direction='column' alignItems='center' spacing={0} sx={{ width: 64 }}>
+                        <Switch
+                            size='small'
+                            checked={(data.instanceConfig?.mode ?? 'inference') === 'audit'}
+                            disabled={data.analyzing}
+                            onChange={(e) => {
+                                const newMode = e.target.checked ? 'audit' : 'inference'
+                                data.instanceConfig.mode = newMode
+                                sendCommand(ECensorCommand.CONFIGSET, { ...data.instanceConfig, mode: newMode })
+                            }}
+                        />
+                        <Typography variant='caption' sx={{ fontSize: '0.6rem', lineHeight: 1 }}>
+                            {data.instanceConfig?.mode ?? 'inference'}
+                        </Typography>
+                    </Stack>
                     <Button onClick={() => sendCommand(data.analyzing ? ECensorCommand.ANALYZESTOP : ECensorCommand.ANALYZESTART)}
                         color={data.analyzing ? 'error' : 'success'} variant='outlined' size='small'>
                         {data.analyzing ? 'Stop' : 'Start'}

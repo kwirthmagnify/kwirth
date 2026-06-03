@@ -7,6 +7,12 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } fro
 
 const PLUGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/plugins/manifest.json'
 
+interface IRequirement {
+    type: 'plugin' | 'daemon' | 'sender' | 'provider'
+    id: string
+    minVersion: string
+}
+
 interface IPluginManifestEntry {
     id: string
     name: string
@@ -16,6 +22,7 @@ interface IPluginManifestEntry {
     icon?: string
     website?: string
     url: string
+    requires?: IRequirement[]
 }
 
 interface IInstalledPlugin {
@@ -49,6 +56,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     const [installingFile, setInstallingFile] = useState(false)
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [filterText, setFilterText] = useState('')
+    const [crossInstalled, setCrossInstalled] = useState<Record<string, { id: string, version: string }[]>>({})
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const compareVersions = (a: string, b: string) => {
@@ -97,12 +105,28 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: IPluginManifestEntry[] = await res.json()
             setAvailable(data)
+            const neededTypes = new Set(data.flatMap(e => e.requires ?? []).map(r => r.type).filter(t => t !== 'plugin'))
+            if (neededTypes.size > 0) {
+                const endpoints: Record<string, string> = { daemon: `${backendUrl}/daemons`, sender: `${backendUrl}/senders`, provider: `${backendUrl}/providers` }
+                const results: Record<string, { id: string, version: string }[]> = {}
+                await Promise.all([...neededTypes].map(async t => {
+                    try { const r = await fetch(endpoints[t], addGetAuthorization(accessString)); if (r.ok) results[t] = await r.json() } catch {}
+                }))
+                setCrossInstalled(results)
+            }
         } catch (err) {
             setError(`Failed to fetch plugin catalog: ${err}`)
         } finally {
             setLoadingManifest(false)
         }
     }
+
+    const isRequirementMet = (req: IRequirement): boolean => {
+        const list = req.type === 'plugin' ? installed : (crossInstalled[req.type] ?? [])
+        const found = list.find(x => x.id === req.id)
+        return !!found && compareVersions(found.version, req.minVersion) <= 0
+    }
+    const allRequirementsMet = (requires?: IRequirement[]) => !requires?.length || requires.every(isRequirementMet)
 
     const install = async (plugin: IPluginManifestEntry) => {
         setError(undefined)
@@ -200,7 +224,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         if (installedFrom.includes('github.com/kwirthmagnify'))
             return <Chip icon={<Extension />} label='Kwirth' size='small' variant='outlined' color='primary' />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' /></Tooltip>
+        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
     }
 
     const resolveIcon = (iconName?: string): React.ReactElement => {
@@ -215,7 +239,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, 0.12) 0%, hsla(${hue}, 55%, 42%, 0.26) 100%)`
     }
 
-    const PluginCard = ({ icon, name, displayName, version, versions, onVersionChange, description, badge, source, website, action }: { icon?: string; name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode }) => (
+    const PluginCard = ({ icon, name, displayName, version, versions, onVersionChange, description, badge, source, website, action, requires }: { icon?: string; name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; requires?: IRequirement[] }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 120, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: pluginGradient(name) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}>{resolveIcon(icon)}</Box>
@@ -232,6 +256,12 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                         {badge}
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
+                    {requires && requires.length > 0 && (
+                        <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
+                            <Typography variant='caption' color='text.disabled'>Requires:</Typography>
+                            {requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.type[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                        </Stack>
+                    )}
                 </Box>
                 {website &&
                     <Tooltip title='Open plugin website'>
@@ -242,7 +272,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                 }
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                <Box>{source}</Box>
+                <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
         </Box>
@@ -355,15 +385,19 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                     description={plugin.description}
                                     website={plugin.website}
                                     badge={isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
-                                    action={
-                                        <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
-                                            <span>
-                                                <IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id} onClick={() => install(plugin)}>
-                                                    {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
-                                                </IconButton>
-                                            </span>
-                                        </Tooltip>
-                                    }
+                                    requires={plugin.requires}
+                                    action={(() => {
+                                        const unmet = (plugin.requires ?? []).filter(r => !isRequirementMet(r))
+                                        return (
+                                            <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                                <span>
+                                                    <IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => install(plugin)}>
+                                                        {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                        )
+                                    })()}
                                 />
                             )
                         })}

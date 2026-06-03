@@ -21,6 +21,12 @@ interface ISenderFieldDef {
     labels?: string[]
 }
 
+interface IRequirement {
+    type: 'plugin' | 'daemon' | 'sender' | 'provider'
+    id: string
+    minVersion: string
+}
+
 interface ISenderManifestEntry {
     id: string
     name: string
@@ -29,6 +35,7 @@ interface ISenderManifestEntry {
     description: string
     website?: string
     url: string
+    requires?: IRequirement[]
 }
 
 interface IInstalledSender {
@@ -60,6 +67,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [filterText, setFilterText] = useState('')
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
+    const [crossInstalled, setCrossInstalled] = useState<Record<string, { id: string, version: string }[]>>({})
 
     const compareVersions = (a: string, b: string) => { const pa = a.split('.').map(Number); const pb = b.split('.').map(Number); for (let i = 0; i < Math.max(pa.length, pb.length); i++) { const d = (pb[i]??0)-(pa[i]??0); if (d!==0) return d } return 0 }
     const groupedAvailable: Record<string, ISenderManifestEntry[]> = available.reduce((acc, p) => { if (!acc[p.id]) acc[p.id]=[]; acc[p.id].push(p); return acc }, {} as Record<string, ISenderManifestEntry[]>)
@@ -125,13 +133,30 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         try {
             const res = await fetch(SENDERS_MANIFEST_URL)
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
-            setAvailable(await res.json())
+            const data: ISenderManifestEntry[] = await res.json()
+            setAvailable(data)
+            const neededTypes = new Set(data.flatMap(e => e.requires ?? []).map(r => r.type).filter(t => t !== 'sender'))
+            if (neededTypes.size > 0) {
+                const endpoints: Record<string, string> = { plugin: `${backendUrl}/plugins`, daemon: `${backendUrl}/daemons`, provider: `${backendUrl}/providers` }
+                const results: Record<string, { id: string, version: string }[]> = {}
+                await Promise.all([...neededTypes].map(async t => {
+                    try { const r = await fetch(endpoints[t], addGetAuthorization(accessString)); if (r.ok) results[t] = await r.json() } catch {}
+                }))
+                setCrossInstalled(results)
+            }
         } catch {
             setAvailable([])
         } finally {
             setLoadingManifest(false)
         }
     }
+
+    const isRequirementMet = (req: IRequirement): boolean => {
+        const list = req.type === 'sender' ? installed : (crossInstalled[req.type] ?? [])
+        const found = list.find(x => x.id === req.id)
+        return !!found && compareVersions(found.version, req.minVersion) <= 0
+    }
+    const allRequirementsMet = (requires?: IRequirement[]) => !requires?.length || requires.every(isRequirementMet)
 
     const expandSender = async (id: string) => {
         if (expandedId === id) { setExpandedId(undefined); return }
@@ -342,7 +367,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
         if (installedFrom === 'dev') return <Chip icon={<Send />} label='dev' size='small' variant='outlined' color='warning' />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' /></Tooltip>
+        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
     }
 
     // ─── Config form fields ────────────────────────────────────────────────────
@@ -433,7 +458,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                 }
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                <Box>{resolveSource(sender.installedFrom)}</Box>
+                <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(sender.installedFrom)}</Box>
                 <Stack direction='row' spacing={0.5}>
                     <Tooltip title='Configure'>
                         <IconButton size='small' color='primary' onClick={() => expandSender(sender.id)}>
@@ -538,15 +563,23 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                                                 {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                             </Stack>
                                             <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
+                                            {entry.requires && entry.requires.length > 0 && (
+                                                <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
+                                                    <Typography variant='caption' color='text.disabled'>Requires:</Typography>
+                                                    {entry.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.type[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                                                </Stack>
+                                            )}
                                         </Box>
                                         {entry.website && <Tooltip title='Open website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(entry.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
                                     </Stack>
                                     <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
-                                        <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : 'Install'}>
-                                            <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id} onClick={() => installFromCatalog(entry)}>
-                                                {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
-                                            </IconButton></span>
-                                        </Tooltip>
+                                        {(() => { const unmet = (entry.requires ?? []).filter(r => !isRequirementMet(r)); return (
+                                            <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                                <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(entry)}>
+                                                    {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                                </IconButton></span>
+                                            </Tooltip>
+                                        )})()}
                                     </Stack>
                                 </Box>
                                 )})}

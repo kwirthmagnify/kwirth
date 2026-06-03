@@ -6,6 +6,12 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } fro
 
 const PROVIDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json'
 
+interface IRequirement {
+    type: 'plugin' | 'daemon' | 'sender' | 'provider'
+    id: string
+    minVersion: string
+}
+
 interface IProviderManifestEntry {
     id: string
     name: string
@@ -14,6 +20,7 @@ interface IProviderManifestEntry {
     description: string
     website?: string
     url: string
+    requires?: IRequirement[]
 }
 
 interface IInstalledProvider {
@@ -41,6 +48,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
     const [error, setError] = useState<string | undefined>()
     const [filterText, setFilterText] = useState('')
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
+    const [crossInstalled, setCrossInstalled] = useState<Record<string, { id: string, version: string }[]>>({})
 
     const compareVersions = (a: string, b: string) => { const pa = a.split('.').map(Number); const pb = b.split('.').map(Number); for (let i = 0; i < Math.max(pa.length, pb.length); i++) { const d = (pb[i]??0)-(pa[i]??0); if (d!==0) return d } return 0 }
     const groupedAvailable: Record<string, IProviderManifestEntry[]> = available.reduce((acc, p) => { if (!acc[p.id]) acc[p.id]=[]; acc[p.id].push(p); return acc }, {} as Record<string, IProviderManifestEntry[]>)
@@ -74,12 +82,28 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: IProviderManifestEntry[] = await res.json()
             setAvailable(data)
+            const neededTypes = new Set(data.flatMap(e => e.requires ?? []).map(r => r.type).filter(t => t !== 'provider'))
+            if (neededTypes.size > 0) {
+                const endpoints: Record<string, string> = { plugin: `${backendUrl}/plugins`, daemon: `${backendUrl}/daemons`, sender: `${backendUrl}/senders` }
+                const results: Record<string, { id: string, version: string }[]> = {}
+                await Promise.all([...neededTypes].map(async t => {
+                    try { const r = await fetch(endpoints[t], addGetAuthorization(accessString)); if (r.ok) results[t] = await r.json() } catch {}
+                }))
+                setCrossInstalled(results)
+            }
         } catch (err) {
             setError(`Failed to fetch provider catalog: ${err}`)
         } finally {
             setLoadingManifest(false)
         }
     }
+
+    const isRequirementMet = (req: IRequirement): boolean => {
+        const list = req.type === 'provider' ? installed : (crossInstalled[req.type] ?? [])
+        const found = list.find(x => x.id === req.id)
+        return !!found && compareVersions(found.version, req.minVersion) <= 0
+    }
+    const allRequirementsMet = (requires?: IRequirement[]) => !requires?.length || requires.every(isRequirementMet)
 
     const installFromCatalog = async (provider: IProviderManifestEntry) => {
         setError(undefined)
@@ -211,7 +235,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                         }
                                     </Stack>
                                     <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                                        <Box>{resolveSource(provider.installedFrom)}</Box>
+                                        <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(provider.installedFrom)}</Box>
                                         <Tooltip title={provider.installedFrom === 'dev' ? 'Dev providers cannot be uninstalled' : 'Uninstall'}>
                                             <span>
                                                 <IconButton size='small' color='error' disabled={provider.installedFrom === 'dev' || uninstallingId === provider.id} onClick={() => uninstall(provider)}>
@@ -304,15 +328,23 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                             {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                         </Stack>
                                         <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{provider.description}</Typography>
+                                        {provider.requires && provider.requires.length > 0 && (
+                                            <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
+                                                <Typography variant='caption' color='text.disabled'>Requires:</Typography>
+                                                {provider.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.type[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                                            </Stack>
+                                        )}
                                     </Box>
                                     {provider.website && <Tooltip title='Open provider website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(provider.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
                                 </Stack>
                                 <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
-                                    <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : 'Install'}>
-                                        <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id} onClick={() => installFromCatalog(provider)}>
-                                            {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
-                                        </IconButton></span>
-                                    </Tooltip>
+                                    {(() => { const unmet = (provider.requires ?? []).filter(r => !isRequirementMet(r)); return (
+                                        <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                            <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(provider)}>
+                                                {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                            </IconButton></span>
+                                        </Tooltip>
+                                    )})()}
                                 </Stack>
                             </Box>
                             )

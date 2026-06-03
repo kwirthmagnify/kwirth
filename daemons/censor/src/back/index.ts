@@ -34,6 +34,8 @@ export interface ICensorInstanceConfig {
     // for alerting
     senderId?: string
     senderConfigName?: string
+
+    mode?: 'inference' | 'audit'
 }
 
 const extractText = (data: unknown, path: string): string | undefined => {
@@ -561,7 +563,9 @@ export class CensorDaemon implements IDaemon {
                     const matchExample = lines.find(l => { try { return compiled.test(l) } catch { return false } }) ?? ''
                     const explanation = patternExplanations.get(pattern) ?? ''
                     inst.regexes.push({ pattern, compiled, example: matchExample, explanation, matches: 1 })
-                    this.broadcast(inst, 'regex', { pattern, example: matchExample, explanation })
+                    if ((inst.cfg.mode ?? 'inference') === 'inference') {
+                        this.broadcast(inst, 'regex', { pattern, example: matchExample, explanation })
+                    }
                 }
                 catch {
                     this.backDaemonObject.logWarning?.(`[censor-daemon] invalid regex from LLM: '${pattern}'`)

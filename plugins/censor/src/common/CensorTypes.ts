@@ -41,4 +41,5 @@ export interface ICensorInstanceConfig {
     businessPath?: string
     senderId?: string
     senderConfigName?: string
+    mode?: 'inference' | 'audit'
 }

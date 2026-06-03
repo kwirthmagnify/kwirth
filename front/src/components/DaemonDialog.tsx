@@ -6,6 +6,12 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } fro
 
 const DAEMONS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/daemons/manifest.json'
 
+interface IRequirement {
+    type: 'plugin' | 'daemon' | 'sender' | 'provider'
+    id: string
+    minVersion: string
+}
+
 interface IDaemonManifestEntry {
     id: string
     name: string
@@ -14,6 +20,7 @@ interface IDaemonManifestEntry {
     description: string
     website?: string
     url: string
+    requires?: IRequirement[]
 }
 
 interface IInstalledDaemon {
@@ -41,6 +48,7 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
     const [error, setError] = useState<string | undefined>()
     const [filterText, setFilterText] = useState('')
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
+    const [crossInstalled, setCrossInstalled] = useState<Record<string, { id: string, version: string }[]>>({})
 
     const compareVersions = (a: string, b: string) => { const pa = a.split('.').map(Number); const pb = b.split('.').map(Number); for (let i = 0; i < Math.max(pa.length, pb.length); i++) { const d = (pb[i]??0)-(pa[i]??0); if (d!==0) return d } return 0 }
     const groupedAvailable: Record<string, IDaemonManifestEntry[]> = available.reduce((acc, p) => { if (!acc[p.id]) acc[p.id]=[]; acc[p.id].push(p); return acc }, {} as Record<string, IDaemonManifestEntry[]>)
@@ -71,13 +79,30 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
         try {
             const res = await fetch(DAEMONS_MANIFEST_URL)
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
-            setAvailable(await res.json())
+            const data: IDaemonManifestEntry[] = await res.json()
+            setAvailable(data)
+            const neededTypes = new Set(data.flatMap(e => e.requires ?? []).map(r => r.type).filter(t => t !== 'daemon'))
+            if (neededTypes.size > 0) {
+                const endpoints: Record<string, string> = { plugin: `${backendUrl}/plugins`, sender: `${backendUrl}/senders`, provider: `${backendUrl}/providers` }
+                const results: Record<string, { id: string, version: string }[]> = {}
+                await Promise.all([...neededTypes].map(async t => {
+                    try { const r = await fetch(endpoints[t], addGetAuthorization(accessString)); if (r.ok) results[t] = await r.json() } catch {}
+                }))
+                setCrossInstalled(results)
+            }
         } catch {
             setAvailable([])
         } finally {
             setLoadingManifest(false)
         }
     }
+
+    const isRequirementMet = (req: IRequirement): boolean => {
+        const list = req.type === 'daemon' ? installed : (crossInstalled[req.type] ?? [])
+        const found = list.find(x => x.id === req.id)
+        return !!found && compareVersions(found.version, req.minVersion) <= 0
+    }
+    const allRequirementsMet = (requires?: IRequirement[]) => !requires?.length || requires.every(isRequirementMet)
 
     const installFromCatalog = async (daemon: IDaemonManifestEntry) => {
         setError(undefined)
@@ -185,7 +210,7 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                                         {daemon.website && <Tooltip title='Open daemon website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(daemon.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
                                     </Stack>
                                     <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                                        <Box>{resolveSource(daemon.installedFrom)}</Box>
+                                        <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(daemon.installedFrom)}</Box>
                                         <Tooltip title={daemon.installedFrom === 'dev' ? 'Dev daemons cannot be uninstalled' : 'Uninstall'}>
                                             <span>
                                                 <IconButton size='small' color='error' disabled={daemon.installedFrom === 'dev' || uninstallingId === daemon.id} onClick={() => uninstall(daemon)}>
@@ -244,15 +269,23 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                                             {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                         </Stack>
                                         <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{daemon.description}</Typography>
+                                        {daemon.requires && daemon.requires.length > 0 && (
+                                            <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
+                                                <Typography variant='caption' color='text.disabled'>Requires:</Typography>
+                                                {daemon.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.type[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                                            </Stack>
+                                        )}
                                     </Box>
                                     {daemon.website && <Tooltip title='Open daemon website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(daemon.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
                                 </Stack>
                                 <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
-                                    <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : 'Install'}>
-                                        <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id} onClick={() => installFromCatalog(daemon)}>
-                                            {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
-                                        </IconButton></span>
-                                    </Tooltip>
+                                    {(() => { const unmet = (daemon.requires ?? []).filter(r => !isRequirementMet(r)); return (
+                                        <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                            <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(daemon)}>
+                                                {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                            </IconButton></span>
+                                        </Tooltip>
+                                    )})()}
                                 </Stack>
                             </Box>
                             )
