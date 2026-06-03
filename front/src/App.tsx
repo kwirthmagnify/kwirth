@@ -379,6 +379,41 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             .then((plugins: { id: string }[]) => plugins.forEach(p => loadPluginFront(p.id)))
             .catch(err => console.log(`[plugins] failed to load installed plugins: ${err}`))
 
+        // check for extension updates
+        ;(async () => {
+            const MANIFESTS: Record<string, string> = {
+                plugin:   'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/plugins/manifest.json',
+                daemon:   'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/daemons/manifest.json',
+                sender:   'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/senders/manifest.json',
+                provider: 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json',
+            }
+            const ENDPOINTS: Record<string, string> = {
+                plugin:   `${backendUrl}/plugins`,
+                daemon:   `${backendUrl}/daemons`,
+                sender:   `${backendUrl}/senders`,
+                provider: `${backendUrl}/providers`,
+            }
+            try {
+                const types = Object.keys(MANIFESTS)
+                const [manifests, installeds] = await Promise.all([
+                    Promise.all(types.map(t => fetch(MANIFESTS[t]).then(r => r.ok ? r.json() : []).catch(() => []))),
+                    Promise.all(types.map(t => fetch(ENDPOINTS[t], addGetAuthorization(accessString)).then(r => r.ok ? r.json() : []).catch(() => [])))
+                ])
+                const updates: string[] = []
+                types.forEach((type, i) => {
+                    const manifest: { id: string, version: string }[] = manifests[i]
+                    const installed: { id: string, version: string, installedFrom?: string }[] = installeds[i]
+                    for (const inst of installed) {
+                        if (inst.installedFrom === 'dev') continue
+                        const latest = manifest.filter(m => m.id === inst.id).map(m => m.version).sort((a, b) => versionGreaterThan(a, b) ? -1 : 1)[0]
+                        if (latest && versionGreaterThan(latest, inst.version)) updates.push(`${type} ${inst.id} ${inst.version}→${latest}`)
+                    }
+                })
+                if (updates.length > 0) notify(undefined, ENotifyLevel.WARNING, `Updates available: ${updates.join(', ')}`)
+            } catch {}
+        })()
+
+
         // load user tabs
         let lastTabs = localStorage.getItem('lastTabs')
         if (lastTabs)

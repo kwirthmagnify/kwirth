@@ -4,6 +4,7 @@ import * as MuiIcons from '@mui/icons-material'
 import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
+import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 
 const PLUGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/plugins/manifest.json'
 
@@ -59,22 +60,12 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     const [crossInstalled, setCrossInstalled] = useState<Record<string, { id: string, version: string }[]>>({})
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const compareVersions = (a: string, b: string) => {
-        const pa = a.split('.').map(Number)
-        const pb = b.split('.').map(Number)
-        for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-            const diff = (pb[i] ?? 0) - (pa[i] ?? 0)
-            if (diff !== 0) return diff
-        }
-        return 0
-    }
-
     const groupedAvailable: Record<string, IPluginManifestEntry[]> = available.reduce((acc, p) => {
         if (!acc[p.id]) acc[p.id] = []
         acc[p.id].push(p)
         return acc
     }, {} as Record<string, IPluginManifestEntry[]>)
-    Object.values(groupedAvailable).forEach(group => group.sort((a, b) => compareVersions(a.version, b.version)))
+    Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
 
     const getSelectedEntry = (id: string): IPluginManifestEntry => {
         const group = groupedAvailable[id]
@@ -124,7 +115,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     const isRequirementMet = (req: IRequirement): boolean => {
         const list = req.type === 'plugin' ? installed : (crossInstalled[req.type] ?? [])
         const found = list.find(x => x.id === req.id)
-        return !!found && compareVersions(found.version, req.minVersion) <= 0
+        return !!found && (found.version === req.minVersion || versionGreaterThan(found.version, req.minVersion))
     }
     const allRequirementsMet = (requires?: IRequirement[]) => !requires?.length || requires.every(isRequirementMet)
 

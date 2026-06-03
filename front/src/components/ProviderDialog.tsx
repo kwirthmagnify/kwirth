@@ -3,6 +3,7 @@ import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogConte
 import { CheckCircle, Checklist, Delete, Download, FolderOpen, Link, OpenInNew, Refresh } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
+import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 
 const PROVIDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json'
 
@@ -50,9 +51,8 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [crossInstalled, setCrossInstalled] = useState<Record<string, { id: string, version: string }[]>>({})
 
-    const compareVersions = (a: string, b: string) => { const pa = a.split('.').map(Number); const pb = b.split('.').map(Number); for (let i = 0; i < Math.max(pa.length, pb.length); i++) { const d = (pb[i]??0)-(pa[i]??0); if (d!==0) return d } return 0 }
     const groupedAvailable: Record<string, IProviderManifestEntry[]> = available.reduce((acc, p) => { if (!acc[p.id]) acc[p.id]=[]; acc[p.id].push(p); return acc }, {} as Record<string, IProviderManifestEntry[]>)
-    Object.values(groupedAvailable).forEach(g => g.sort((a,b) => compareVersions(a.version, b.version)))
+    Object.values(groupedAvailable).forEach(g => g.sort((a,b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
     const getSelectedProvider = (id: string): IProviderManifestEntry => { const g=groupedAvailable[id]; const v=selectedVersions[id]??g[0].version; return g.find(p=>p.version===v)??g[0] }
     const [customUrl, setCustomUrl] = useState('')
     const [installingCustom, setInstallingCustom] = useState(false)
@@ -101,7 +101,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
     const isRequirementMet = (req: IRequirement): boolean => {
         const list = req.type === 'provider' ? installed : (crossInstalled[req.type] ?? [])
         const found = list.find(x => x.id === req.id)
-        return !!found && compareVersions(found.version, req.minVersion) <= 0
+        return !!found && (found.version === req.minVersion || versionGreaterThan(found.version, req.minVersion))
     }
     const allRequirementsMet = (requires?: IRequirement[]) => !requires?.length || requires.every(isRequirementMet)
 
