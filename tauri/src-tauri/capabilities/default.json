@@ -3,8 +3,16 @@
   "identifier": "default",
   "description": "Kwirth Magnify default capability",
   "windows": ["main", "splash"],
+  "remote": {
+    "urls": ["http://localhost:*"]
+  },
   "permissions": [
     "core:default",
-    "dialog:allow-save"
+    "dialog:allow-save",
+    "allow-open-devtools",
+    "allow-kube-api-available",
+    "allow-store-get",
+    "allow-store-set",
+    "allow-save-file-dialog"
   ]
 }

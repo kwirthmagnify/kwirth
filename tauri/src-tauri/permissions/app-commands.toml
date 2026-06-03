@@ -1,0 +1,34 @@
+[[permission]]
+identifier = "allow-open-devtools"
+description = "Allows the open_devtools command."
+[permission.commands]
+allow = ["open_devtools"]
+deny = []
+
+[[permission]]
+identifier = "allow-kube-api-available"
+description = "Allows the kube_api_available command."
+[permission.commands]
+allow = ["kube_api_available"]
+deny = []
+
+[[permission]]
+identifier = "allow-store-get"
+description = "Allows the store_get command."
+[permission.commands]
+allow = ["store_get"]
+deny = []
+
+[[permission]]
+identifier = "allow-store-set"
+description = "Allows the store_set command."
+[permission.commands]
+allow = ["store_set"]
+deny = []
+
+[[permission]]
+identifier = "allow-save-file-dialog"
+description = "Allows the save_file_dialog command."
+[permission.commands]
+allow = ["save_file_dialog"]
+deny = []

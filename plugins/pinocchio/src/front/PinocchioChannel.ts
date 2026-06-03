@@ -141,6 +141,7 @@ export class PinocchioChannel implements IChannel {
 
     startChannel(channelObject:IChannelObject): boolean {
         let pinocchioObject:IPinocchioData = channelObject.data
+        pinocchioObject.content = []
         pinocchioObject.content.push({ timestamp: Date.now(), text: 'Local start pinocchio channel' })
         pinocchioObject.paused = false
         pinocchioObject.started = true
