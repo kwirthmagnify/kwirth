@@ -256,7 +256,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                     <Typography variant='subtitle2'>Installed plugins</Typography>
                     {installed.length === 0
                         ? <Typography variant='body2' color='text.secondary'>No plugins installed.</Typography>
-                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                             {installed.map(plugin => (
                                 <PluginCard
                                     key={plugin.id}
@@ -338,7 +338,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                         <Typography variant='body2' color='text.secondary'>No plugins available.</Typography>
                     }
 
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                         {Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase())).map(id => {
                             const group = groupedAvailable[id]
                             const plugin = getSelectedEntry(id)

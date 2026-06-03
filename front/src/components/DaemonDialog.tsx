@@ -170,13 +170,13 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                     <Typography variant='subtitle2'>Installed daemons</Typography>
                     {installed.length === 0
                         ? <Typography variant='body2' color='text.secondary'>No daemons installed.</Typography>
-                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
+                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
                             {installed.map(daemon => (
                                 <Box key={daemon.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: daemonGradient(daemon.name) }}>
                                     <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                         <Box sx={{ color: 'text.secondary', mt: 0.25 }}><SmartToy /></Box>
                                         <Box flex={1} minWidth={0}>
-                                            <Stack direction='row' alignItems='center' spacing={0.5}>
+                                            <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
                                                 <Typography variant='body2' fontWeight='bold'>{daemon.displayName || daemon.name || daemon.id}</Typography>
                                                 <Typography variant='caption' color='text.secondary'>v{daemon.version}</Typography>
                                             </Stack>
@@ -222,7 +222,7 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                         <Typography variant='body2' color='text.secondary'>No daemons available in catalog.</Typography>
                     }
 
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
                         {Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(filterText.toLowerCase())).map(id => {
                             const group = groupedAvailable[id]
                             const daemon = getSelectedDaemon(id)

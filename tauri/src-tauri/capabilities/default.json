@@ -5,8 +5,6 @@
   "windows": ["main", "splash"],
   "permissions": [
     "core:default",
-    "dialog:allow-save",
-    "fs:allow-write-text-file",
-    "fs:allow-app-write-recursive"
+    "dialog:allow-save"
   ]
 }

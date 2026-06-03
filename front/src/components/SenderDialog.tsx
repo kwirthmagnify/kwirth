@@ -467,7 +467,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                     <Typography variant='subtitle2'>Installed senders</Typography>
                     {installed.length === 0
                         ? <Typography variant='body2' color='text.secondary'>No senders installed.</Typography>
-                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                             {installed.map(s => <SenderCard key={s.id} sender={s} />)}
                           </Box>
                     }
@@ -516,7 +516,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                     }
 
                     {Object.keys(groupedAvailable).length > 0 &&
-                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                             {Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(filterText.toLowerCase())).map(id => {
                                 const group = groupedAvailable[id]
                                 const entry = getSelectedSender(id)

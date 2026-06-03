@@ -1,6 +1,7 @@
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_shell::{process::{CommandChild, CommandEvent}, ShellExt};
 
 fn find_free_port(start: u16) -> u16 {
@@ -99,12 +100,30 @@ async fn store_set(app: AppHandle, key: String, value: serde_json::Value) -> boo
     .is_ok()
 }
 
+#[tauri::command]
+async fn save_file_dialog(app: AppHandle, filename: String, content: String) -> Result<bool, String> {
+    use tokio::sync::oneshot;
+    let (tx, rx) = oneshot::channel();
+    app.dialog()
+        .file()
+        .set_file_name(&filename)
+        .add_filter("JSON", &["json"])
+        .save_file(move |path| { let _ = tx.send(path); });
+    match rx.await.map_err(|e| e.to_string())? {
+        Some(file_path) => {
+            let path = file_path.into_path().map_err(|_| "URL paths not supported".to_string())?;
+            std::fs::write(&path, content.as_bytes()).map_err(|e| e.to_string())?;
+            Ok(true)
+        }
+        None => Ok(false),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init())
         .manage(BackendChild(Mutex::new(None)))
         .setup(|app| {
             let exe_dir = std::env::current_exe()
@@ -215,7 +234,8 @@ pub fn run() {
             open_devtools,
             kube_api_available,
             store_get,
-            store_set
+            store_set,
+            save_file_dialog
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

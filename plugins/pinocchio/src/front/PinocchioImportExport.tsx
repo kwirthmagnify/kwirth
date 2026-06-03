@@ -1,7 +1,10 @@
 import React, { useRef, useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
 import { IConfigTrigger, IPinocchioConfig } from './PinocchioConfig'
-import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
+import { useKeyboard as _useKeyboard } from '@kwirthmagnify/kwirth-common-front'
+
+// Guard: older Tauri host builds may not export useKeyboard yet
+const useKeyboard: typeof _useKeyboard = typeof _useKeyboard === 'function' ? _useKeyboard : () => {}
 
 interface IProps {
     config: IPinocchioConfig
@@ -64,9 +67,8 @@ const PinocchioImportExport: React.FC<IProps> = (props) => {
         const json = JSON.stringify(data, null, 2)
         const filename = `pinocchio-triggers-${new Date().toISOString().slice(0, 10)}.json`
         const tauri = (window as any).__TAURI__
-        if (tauri?.dialog?.save && tauri?.fs?.writeTextFile) {
-            const path = await tauri.dialog.save({ defaultPath: filename, filters: [{ name: 'JSON', extensions: ['json'] }] })
-            if (path) await tauri.fs.writeTextFile(path, json)
+        if (tauri?.core?.invoke) {
+            await tauri.core.invoke('save_file_dialog', { filename, content: json })
             return
         }
         const blob = new Blob([json], { type: 'application/json' })

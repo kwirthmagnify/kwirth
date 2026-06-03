@@ -9,9 +9,8 @@ import { FileDownload, FileUpload, Visibility, VisibilityOff } from '@mui/icons-
 const downloadJson = async (data: unknown, filename: string) => {
     const json = JSON.stringify(data, null, 2)
     const tauri = (window as any).__TAURI__
-    if (tauri?.dialog?.save && tauri?.fs?.writeTextFile) {
-        const path = await tauri.dialog.save({ defaultPath: filename, filters: [{ name: 'JSON', extensions: ['json'] }] })
-        if (path) await tauri.fs.writeTextFile(path, json)
+    if (tauri?.core?.invoke) {
+        await tauri.core.invoke('save_file_dialog', { filename, content: json })
         return
     }
     const blob = new Blob([json], { type: 'application/json' })
