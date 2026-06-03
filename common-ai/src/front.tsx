@@ -123,7 +123,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                 <InputLabel>Provider</InputLabel>
                                 <Select value={provider} onChange={e => { setProvider(e.target.value); setModel('') }} variant='standard' fullWidth>
                                     {props.providers.map(p => (
-                                        <MenuItem key={p.name} value={p.name} disabled={p.models.length === 0}>{p.name}</MenuItem>
+                                        <MenuItem key={p.name} value={p.name} disabled={!p.models?.length}>{p.name}</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>

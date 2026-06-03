@@ -223,9 +223,13 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
         setShowPlayground(false)
         if (!newTrigger) return
+        const existing = pinocchioData.config.triggers.findIndex(t => t.id === newTrigger.id)
+        const triggers = existing >= 0
+            ? pinocchioData.config.triggers.map((t, i) => i === existing ? newTrigger : t)
+            : [...pinocchioData.config.triggers, newTrigger]
         const updatedConfig: IPinocchioConfig = {
             ...pinocchioData.config,
-            triggers: [...pinocchioData.config.triggers, newTrigger]
+            triggers
         }
         pinocchioData.config = updatedConfig
         let msg: IPinocchioMessage = {

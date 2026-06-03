@@ -3933,12 +3933,6 @@ spaces.set('classOverview', {
                 text: 'Kube works',
                 permission: true,
             },
-            {
-                name: 'logsearch',
-                icon: <ManageSearch fontSize='small'/>,
-                text: 'Log search',
-                permission: true,
-            }
         ]
     }
 )

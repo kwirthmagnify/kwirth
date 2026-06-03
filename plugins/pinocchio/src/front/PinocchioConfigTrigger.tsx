@@ -192,6 +192,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
             versions: versions.map((v, i) => ({ ...v, enabled: enabling ? i === vIndex : i === vIndex ? false : v.enabled }))
         }
         setConfig({ ...config, triggers: newTriggers })
+        if (vIndex === selectedVersionIndex) setEnabled(enabling)
     }
 
     const onChangeTools = (event: SelectChangeEvent<typeof tools>) => {

@@ -1,6 +1,7 @@
 import { tool, z } from "@kwirthmagnify/kwirth-common-ai/back"
 import { exec } from "child_process"
 import { promisify } from "util"
+import * as tls from "tls"
 
 const execAsync = promisify(exec)
 
@@ -554,7 +555,48 @@ export const createTools = (context: IToolContext) => {
                 context.trace('father_of', { data })
                 return 'Julio'
             }
-        })
+        }),
+
+        get_certificate_info: tool({
+            description: 'Connects to a hostname via HTTPS and returns the TLS certificate details: subject, issuer, validity dates, SANs, fingerprint and whether it is currently valid.',
+            inputSchema: z.object({
+                hostname: z.string().describe('DNS name or IP to connect to (e.g. "api.example.com")'),
+                port: z.number().optional().describe('Port to connect to (default: 443)')
+            }),
+            execute: async ({ hostname, port }) => {
+                context.trace('get_certificate_info', { hostname, port })
+                const targetPort = port ?? 443
+                return new Promise((resolve) => {
+                    const socket = tls.connect({ host: hostname, port: targetPort, servername: hostname, rejectUnauthorized: false }, () => {
+                        try {
+                            const cert = socket.getPeerCertificate(false)
+                            socket.end()
+                            if (!cert || !Object.keys(cert).length) return resolve({ error: 'No certificate returned' })
+                            const now = Date.now()
+                            const validFrom = new Date(cert.valid_from)
+                            const validTo = new Date(cert.valid_to)
+                            resolve({
+                                subject: cert.subject,
+                                issuer: cert.issuer,
+                                validFrom: cert.valid_from,
+                                validTo: cert.valid_to,
+                                daysUntilExpiry: Math.floor((validTo.getTime() - now) / 86400000),
+                                isCurrentlyValid: now >= validFrom.getTime() && now <= validTo.getTime(),
+                                subjectAltNames: cert.subjectaltname ?? null,
+                                fingerprint: cert.fingerprint,
+                                serialNumber: cert.serialNumber,
+                                protocol: socket.getProtocol()
+                            })
+                        } catch (err: any) {
+                            socket.end()
+                            resolve({ error: err.message ?? String(err) })
+                        }
+                    })
+                    socket.setTimeout(5000, () => { socket.destroy(); resolve({ error: 'Connection timed out' }) })
+                    socket.on('error', (err) => resolve({ error: err.message }))
+                })
+            }
+        }),
 
     } as const
 }
@@ -584,4 +626,5 @@ export const toolInfoList: { name: string, description: string }[] = [
     { name: 'remove_replica',            description: 'Scales down a deployment by removing one replica. Minimum of 1 replica is enforced.' },
     { name: 'times_two',                 description: 'Multiplies a number by two.' },
     { name: 'father_of',                 description: 'Returns the name of the father of a person.' },
+    { name: 'get_certificate_info',      description: 'Connects to a hostname via HTTPS and returns TLS certificate details: subject, issuer, validity dates, SANs, fingerprint and whether it is currently valid.' },
 ]

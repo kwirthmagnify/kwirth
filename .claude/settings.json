@@ -132,7 +132,8 @@
       "PowerShell(Select-String -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\front\\\\CensorChannel.ts\" -Pattern \"stats|processedCount|status|regex\" -CaseSensitive:$false)",
       "PowerShell(\\(Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\package.json\" -Raw | ConvertFrom-Json\\).version)",
       "Bash(\"C:/nvm4w/nodejs/node.exe\" \"C:/Users/julio.fernandezvila/.claude/plugins/cache/context-mode/context-mode/1.0.161/cli.bundle.mjs\" upgrade --platform claude-code)",
-      "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\\" -Recurse -File | Select-Object FullName)"
+      "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\\" -Recurse -File | Select-Object FullName)",
+      "Bash(xargs grep -l \"kwirth-\")"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
