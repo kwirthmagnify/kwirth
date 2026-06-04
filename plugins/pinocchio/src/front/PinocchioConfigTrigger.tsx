@@ -65,6 +65,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
         setTriggerId(config.triggers[index].id)
         setTriggerType(config.triggers[index].trigger)
         setTriggerKind(config.triggers[index].kind ?? '')
+        setTriggerK8sEvent(config.triggers[index].k8sEvent ?? '')
         setSelectedVersionIndex(null)
         clearVersionEditor()
     }
@@ -90,6 +91,14 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
         setTriggerKind(newKind)
         const newTriggers = [...(config.triggers ?? [])]
         newTriggers[selectedTriggerIndex] = { ...newTriggers[selectedTriggerIndex], kind: newKind }
+        setConfig(c => ({ ...c, triggers: newTriggers }))
+    }
+
+    const onTriggerK8sEventChange = (newEvent: EK8sEvent | '') => {
+        if (selectedTriggerIndex === null) return
+        setTriggerK8sEvent(newEvent)
+        const newTriggers = [...(config.triggers ?? [])]
+        newTriggers[selectedTriggerIndex] = { ...newTriggers[selectedTriggerIndex], k8sEvent: newEvent || undefined }
         setConfig(c => ({ ...c, triggers: newTriggers }))
     }
 
@@ -264,26 +273,39 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
                 <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', padding: '8px 8px 8px 16px', minHeight: 0 }}>
                     <Stack spacing={1} sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Stack direction='row' spacing={1}>
-                            <TextField value={triggerId} onChange={e => onTriggerIdChange(e.target.value)} placeholder='Trigger id' label='Trigger ID' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
-                            <FormControl variant='standard' fullWidth disabled={selectedTriggerIndex === null}>
-                                <InputLabel>Trigger type</InputLabel>
-                                <Select value={triggerType} onChange={e => onTriggerTypeChange(e.target.value)} variant='standard'>
-                                    <MenuItem value='artifact'>artifact</MenuItem>
-                                    <MenuItem value='business'>business</MenuItem>
-                                </Select>
-                            </FormControl>
-                            {triggerType === 'artifact' && (
+                            <Box sx={{ flex: 1, display: 'flex', gap: 1 }}>
+                                <TextField value={triggerId} onChange={e => onTriggerIdChange(e.target.value)} placeholder='Trigger id' label='Trigger ID' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
                                 <FormControl variant='standard' fullWidth disabled={selectedTriggerIndex === null}>
-                                    <InputLabel>Kind</InputLabel>
-                                    <Select value={triggerKind} onChange={e => onTriggerKindChange(e.target.value)} variant='standard'>
-                                        {kindsAvailable.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
+                                    <InputLabel>Trigger type</InputLabel>
+                                    <Select value={triggerType} onChange={e => onTriggerTypeChange(e.target.value)} variant='standard'>
+                                        <MenuItem value='artifact'>artifact</MenuItem>
+                                        <MenuItem value='business'>business</MenuItem>
                                     </Select>
                                 </FormControl>
-                            )}
-                            {triggerType === 'business' && (
-                                <TextField value={spaces} onChange={e => setSpaces(e.target.value)} placeholder='space.type,...' label='Spaces' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
-                            )}
-                            <TextField value={versionId} onChange={e => setVersionId(e.target.value)} placeholder='Version id' label='Version ID' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
+                            </Box>
+                            <Box sx={{ flex: 1, display: 'flex', gap: 1 }}>
+                                {triggerType === 'artifact' && (
+                                    <FormControl variant='standard' fullWidth disabled={selectedTriggerIndex === null}>
+                                        <InputLabel>Kind</InputLabel>
+                                        <Select value={triggerKind} onChange={e => onTriggerKindChange(e.target.value)} variant='standard'>
+                                            {kindsAvailable.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
+                                        </Select>
+                                    </FormControl>
+                                )}
+                                {triggerType === 'artifact' && (
+                                    <FormControl variant='standard' fullWidth disabled={selectedTriggerIndex === null}>
+                                        <InputLabel>K8s Event</InputLabel>
+                                        <Select value={triggerK8sEvent} onChange={e => onTriggerK8sEventChange(e.target.value as EK8sEvent | '')} variant='standard'>
+                                            <MenuItem value=''><em>Any</em></MenuItem>
+                                            {k8sEventsAvailable.map(ev => <MenuItem key={ev} value={ev}>{ev}</MenuItem>)}
+                                        </Select>
+                                    </FormControl>
+                                )}
+                                {triggerType === 'business' && (
+                                    <TextField value={spaces} onChange={e => setSpaces(e.target.value)} placeholder='space.type,...' label='Spaces' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
+                                )}
+                                <TextField value={versionId} onChange={e => setVersionId(e.target.value)} placeholder='Version id' label='Version ID' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
+                            </Box>
                         </Stack>
                         <TextField value={description} onChange={e => setDescription(e.target.value)} placeholder='Short description' label='Description' variant='standard' fullWidth disabled={selectedTriggerIndex === null} />
                         <Stack direction={'row'} alignItems='flex-end' spacing={1}>

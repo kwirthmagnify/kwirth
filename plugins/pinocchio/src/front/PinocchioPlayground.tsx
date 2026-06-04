@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, Menu, MenuItem, Select, Stack, Tab, Tabs, TextareaAutosize, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
 import { ScienceOutlined, Upload, Bolt, FileDownload, FileUpload, CheckCircleOutline, HistoryOutlined, DeleteOutlined } from '@mui/icons-material'
-import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState, kindsAvailable } from './PinocchioConfig'
+import { EK8sEvent, EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState, k8sEventsAvailable, kindsAvailable } from './PinocchioConfig'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard as _useKeyboard } from '@kwirthmagnify/kwirth-common-front'
 import { ToolSelector as _ToolSelector } from '@kwirthmagnify/kwirth-common-ai/front'
@@ -37,6 +37,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
     const [eventData, setEventData] = useState(saved?.eventData ?? '')
     const [triggerType, setTriggerType] = useState<'business' | 'artifact'>(saved?.triggerType ?? 'business')
     const [artifactKind, setArtifactKind] = useState(saved?.artifactKind ?? '')
+    const [artifactK8sEvent, setArtifactK8sEvent] = useState<EK8sEvent | ''>(saved?.artifactK8sEvent ?? '')
     const [eventSpace, setEventSpace] = useState(saved?.eventSpace ?? 'launch')
     const [eventType, setEventType] = useState(saved?.eventType ?? 'immediate')
 
@@ -89,7 +90,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
         setArtifactHistory(newArtifactHistory)
         setBusinessHistory(newBusinessHistory)
         setSpaceTypeHistory(newSpaceTypeHistory)
-        props.onStateChange({ llm, steps, tools, autoTools, promptType, system, prompt, eventData, triggerType, artifactKind, eventSpace, eventType, systemHistory: newSystemHistory, promptHistory: newPromptHistory, artifactHistory: newArtifactHistory, businessHistory: newBusinessHistory, spaceTypeHistory: newSpaceTypeHistory })
+        props.onStateChange({ llm, steps, tools, autoTools, promptType, system, prompt, eventData, triggerType, artifactKind, artifactK8sEvent: artifactK8sEvent || undefined, eventSpace, eventType, systemHistory: newSystemHistory, promptHistory: newPromptHistory, artifactHistory: newArtifactHistory, businessHistory: newBusinessHistory, spaceTypeHistory: newSpaceTypeHistory })
         props.onClose(newTrigger)
     }
 
@@ -134,7 +135,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
         const t = props.pinocchioConfig.triggers.find(tr => tr.id === pendingImportTriggerId)
         if (t) {
             if (t.trigger === 'artifact' || t.trigger === 'business') setTriggerType(t.trigger)
-            if (t.trigger === 'artifact') setArtifactKind(t.kind ?? '')
+            if (t.trigger === 'artifact') { setArtifactKind(t.kind ?? ''); setArtifactK8sEvent(t.k8sEvent ?? '') }
             const v = t.versions.find(v => v.id === pendingImportVersionId) ?? t.versions[0]
             if (v) {
                 setLlm(v.llm)
@@ -172,6 +173,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 if (cfg.promptType !== undefined) setPromptType(cfg.promptType)
                 if (cfg.triggerType !== undefined) setTriggerType(cfg.triggerType)
                 if (cfg.artifactKind !== undefined) setArtifactKind(cfg.artifactKind)
+                if (cfg.artifactK8sEvent !== undefined) setArtifactK8sEvent(cfg.artifactK8sEvent)
                 if (cfg.eventSpace !== undefined) setEventSpace(cfg.eventSpace)
                 if (cfg.eventType !== undefined) setEventType(cfg.eventType)
                 if (cfg.eventData !== undefined) setEventData(cfg.eventData)
@@ -183,7 +185,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
     }
 
     const downloadConfig = async () => {
-        const config = { llm, steps, tools, autoTools, system, prompt, promptType, triggerType, artifactKind, eventSpace, eventType, eventData, action: 'inform', spaces: [] }
+        const config = { llm, steps, tools, autoTools, system, prompt, promptType, triggerType, artifactKind, artifactK8sEvent: artifactK8sEvent || undefined, eventSpace, eventType, eventData, action: 'inform', spaces: [] }
         const json = JSON.stringify(config, null, 2)
         const filename = `pinocchio-playground-${new Date().toISOString().slice(0, 10)}.json`
         const tauri = (window as any).__TAURI__
@@ -336,18 +338,27 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                                 <ToggleButton value='business'>Business</ToggleButton>
                                 <ToggleButton value='artifact'>Artifact</ToggleButton>
                             </ToggleButtonGroup>
-                            <Box sx={{ width: 310, flexShrink: 0, display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                            <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-end', gap: 1 }}>
                                 {triggerType === 'artifact' ? (
-                                    <FormControl variant='standard' fullWidth>
-                                        <InputLabel shrink>Artifact Kind</InputLabel>
-                                        <Select value={artifactKind} onChange={e => setArtifactKind(e.target.value)}>
-                                            {kindsAvailable.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
-                                        </Select>
-                                    </FormControl>
+                                    <>
+                                        <FormControl variant='standard' fullWidth>
+                                            <InputLabel shrink>Artifact Kind</InputLabel>
+                                            <Select value={artifactKind} onChange={e => setArtifactKind(e.target.value)}>
+                                                {kindsAvailable.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
+                                            </Select>
+                                        </FormControl>
+                                        <FormControl variant='standard' fullWidth>
+                                            <InputLabel shrink>K8s Event</InputLabel>
+                                            <Select value={artifactK8sEvent} onChange={e => setArtifactK8sEvent(e.target.value as EK8sEvent | '')}>
+                                                <MenuItem value=''><em>Any</em></MenuItem>
+                                                {k8sEventsAvailable.map(ev => <MenuItem key={ev} value={ev}>{ev}</MenuItem>)}
+                                            </Select>
+                                        </FormControl>
+                                    </>
                                 ) : (
                                     <>
-                                        <TextField label='Space' variant='standard' size='small' value={eventSpace} onChange={e => setEventSpace(e.target.value)} sx={{ width: 120 }} />
-                                        <TextField label='Type' variant='standard' size='small' value={eventType} onChange={e => setEventType(e.target.value)} sx={{ width: 120 }} />
+                                        <TextField label='Space' variant='standard' size='small' value={eventSpace} onChange={e => setEventSpace(e.target.value)} sx={{ flex: 1 }} />
+                                        <TextField label='Type' variant='standard' size='small' value={eventType} onChange={e => setEventType(e.target.value)} sx={{ flex: 1 }} />
                                         <IconButton size='small' onClick={e => openHistory(e, 'spacetype')} disabled={spaceTypeHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
                                     </>
                                 )}

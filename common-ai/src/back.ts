@@ -238,6 +238,21 @@ export const tools = {
         }
     }),
 
+    get_service_yaml: tool({
+        description: 'Returns the full Kubernetes Service manifest (equivalent to kubectl get service -o yaml) for a given namespace and service name.',
+        inputSchema: z.object({
+            namespace: z.string().describe('Namespace where the service lives'),
+            name: z.string().describe('Name of the service')
+        }),
+        execute: async ({ namespace, name }) => {
+            ctx().trace('get_service_yaml', { namespace, name })
+            try {
+                const svc = await ctx().clusterInfo.coreApi.readNamespacedService({ name, namespace })
+                return svc
+            } catch (err: any) { return { error: err.message ?? String(err) } }
+        }
+    }),
+
     // ── CURRENT USAGE ────────────────────────────────────────────────────────
 
     get_cluster_usage: tool({
@@ -469,6 +484,7 @@ export const toolInfoList: IToolInfo[] = [
     { name: 'get_cluster_data',          description: 'Returns general cluster info: name, flavour (AKS/EKS/GKE/k3s/k3d), total vCPUs, total memory, node count and readiness status.' },
     { name: 'get_workload_data',         description: 'Returns all workloads in the cluster: deployments, statefulsets, daemonsets, pods and services. Optionally filter by namespace.' },
     { name: 'get_space_data',            description: 'Returns all resources in a specific Kubernetes namespace: pods (with restart count), deployments, services, configmap names.' },
+    { name: 'get_service_yaml',          description: 'Returns the full Kubernetes Service manifest (equivalent to kubectl get service -o yaml) for a given namespace and service name.' },
     { name: 'get_cluster_usage',         description: 'Returns current overall cluster resource usage: CPU%, memory%, network Mbps, total vCPUs and total memory GB.' },
     { name: 'get_node_usage',            description: 'Returns current CPU and memory usage for one node or all nodes from the latest metrics reading.' },
     { name: 'get_deployment_usage',      description: 'Returns current aggregated CPU and memory usage for all pods belonging to a specific deployment.' },
