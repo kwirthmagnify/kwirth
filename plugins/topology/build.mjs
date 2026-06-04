@@ -80,7 +80,7 @@ await esbuild.build({
     jsxFactory: 'React.createElement',
     jsxFragment: 'React.Fragment',
     target: 'es2020',
-    minify: false,
+    minify: true,
 })
 console.log('Built dist/front.js')
 

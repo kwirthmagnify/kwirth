@@ -135,7 +135,10 @@
       "Bash(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\src\\\\\" -Recurse -File | Select-Object FullName)",
       "Bash(xargs grep -l \"kwirth-\")",
       "Bash(python3 -c \"import sys,json; p=json.load\\(sys.stdin\\); print\\('exports:', json.dumps\\(p.get\\('exports'\\), indent=2\\)\\); print\\('typesVersions:', json.dumps\\(p.get\\('typesVersions'\\), indent=2\\)\\)\")",
-      "PowerShell(Get-ChildItem -Path c:\\\\github\\\\aisdkvercel\\\\kwirth -Recurse -Filter tsconfig.json | Where-Object { $_.FullName -notmatch 'node_modules' } | ForEach-Object { $content = Get-Content $_.FullName -Raw; if \\($content -match 'module'\\) { Write-Host \"=== $\\($_.FullName\\) ===\"; $content | Select-String -Pattern '\"module|moduleResolution' } })"
+      "PowerShell(Get-ChildItem -Path c:\\\\github\\\\aisdkvercel\\\\kwirth -Recurse -Filter tsconfig.json | Where-Object { $_.FullName -notmatch 'node_modules' } | ForEach-Object { $content = Get-Content $_.FullName -Raw; if \\($content -match 'module'\\) { Write-Host \"=== $\\($_.FullName\\) ===\"; $content | Select-String -Pattern '\"module|moduleResolution' } })",
+      "PowerShell(\\(Get-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio\\\\dist\\\\back.js\"\\).Length / 1KB)",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\topology && npm run build 2>&1 | Select-String \"Built|error\"; $size = \\(Get-Item \"dist/front.js\"\\).Length / 1KB; Write-Host \"front.js: $\\([math]::Round\\($size, 1\\)\\) KB\")",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio && npm run build 2>&1 | Select-String \"Built|error\"; $size = \\(Get-Item \"dist/back.js\"\\).Length / 1MB; Write-Host \"back.js: $\\([math]::Round\\($size, 2\\)\\) MB\")"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

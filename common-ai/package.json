@@ -1,6 +1,6 @@
 {
   "name": "@kwirthmagnify/kwirth-common-ai",
-  "version": "0.5.14",
+  "version": "0.5.16",
   "description": "Shared AI/LLM types and utilities for Kwirth AI plugins",
   "scripts": {
     "build": "del .\\dist\\* /s /q 2>nul & tsc"
