@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, Switch, TextField, Typography } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon, ContentCopy as CloneIcon } from '@mui/icons-material'
-import { IConfigTrigger, IConfigTriggerVersion, IPinocchioConfig, kindsAvailable } from './PinocchioConfig'
+import { EK8sEvent, IConfigTrigger, IConfigTriggerVersion, IPinocchioConfig, k8sEventsAvailable, kindsAvailable } from './PinocchioConfig'
 import { objectClone, MsgBoxButtons, MsgBoxOkWarning, MsgBoxYesNo } from './utils'
 import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
 import { ToolSelector as _ToolSelector } from '@kwirthmagnify/kwirth-common-ai/front'
@@ -21,6 +21,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
     const [triggerId, setTriggerId] = useState('')
     const [triggerType, setTriggerType] = useState('artifact')
     const [triggerKind, setTriggerKind] = useState('')
+    const [triggerK8sEvent, setTriggerK8sEvent] = useState<EK8sEvent | ''>('')
 
     const [selectedVersionIndex, setSelectedVersionIndex] = useState<number | null>(null)
 
