@@ -2,7 +2,7 @@
     "id": "censor",
     "name": "Censor",
     "publisher": "@kwirthmagnify",
-    "version": "0.2.4",
+    "version": "0.2.5",
     "website": "https://kwirthmagnify.dev",
     "description": "Censor daemon for Kwirth - LLM-based log noise filtering (headless)",
     "type": "module",

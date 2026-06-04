@@ -54,10 +54,14 @@ export interface IConfigTriggerVersion {
     spaces: string[]
 }
 
+export type EK8sEvent = 'ADDED' | 'MODIFIED' | 'DELETED'
+export const k8sEventsAvailable: EK8sEvent[] = ['ADDED', 'MODIFIED', 'DELETED']
+
 export interface IConfigTrigger {
     id: string
     trigger: string
     kind?: string
+    k8sEvent?: EK8sEvent
     versions: IConfigTriggerVersion[]
 }
 
@@ -72,6 +76,7 @@ export interface IPlaygroundState {
     eventData: string
     triggerType: 'business' | 'artifact'
     artifactKind: string
+    artifactK8sEvent?: EK8sEvent
     eventSpace: string
     eventType: string
     systemHistory?: string[]
