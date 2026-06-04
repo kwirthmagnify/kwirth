@@ -93,28 +93,28 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
         setCustomActions([...customActions])
     }
 
-    return <Box width={'100%'} height={'100%'} display={'flex'} flexDirection={'column'} p={2} sx={{bgcolor: 'background.default', borderBottomRightRadius:'8px', overflowY: 'auto'}}> 
+    return <Box width='100%' height='100%' display='flex' flexDirection='column' p={2} sx={{ bgcolor: 'background.default', borderBottomRightRadius: '8px', overflowY: 'auto' }}>
         <Accordion defaultExpanded>
             <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography component='span'><b>Display</b></Typography>
             </AccordionSummary>
             <AccordionDetails>
-                <Stack direction={'column'} >
-                    <Stack direction={'row'} alignItems={'center'}>
-                        <Typography sx={{flexGrow:1}} variant='body2'>Palette mode</Typography>
-                        <Select value={palette} onChange={onChangePalette} variant='standard' sx={{width:'100px'}}>
+                <Stack direction='column' spacing={0.5}>
+                    <Stack direction='row' alignItems='center'>
+                        <Typography variant='body2' sx={{ flexGrow: 1 }}>Palette mode</Typography>
+                        <Select value={palette} onChange={onChangePalette} variant='standard' sx={{ width: 100 }}>
                             <MenuItem value='light'>Light</MenuItem>
                             <MenuItem value='dark'>Dark</MenuItem>
                         </Select>
                     </Stack>
-                    <Stack direction={'row'} alignItems={'center'}>
-                        <Typography sx={{flexGrow:1}} variant='body2'>About Kwirth</Typography>
-                        <Button onClick={() => setShowAbout(true)}>About</Button>
+                    <Stack direction='row' alignItems='center'>
+                        <Typography variant='body2' sx={{ flexGrow: 1 }}>About Kwirth</Typography>
+                        <Button size='small' onClick={() => setShowAbout(true)}>About</Button>
                     </Stack>
                 </Stack>
             </AccordionDetails>
             <AccordionActions>
-                <Button onClick={save} disabled={!displayChanged}>Save</Button>
+                <Button size='small' onClick={save} disabled={!displayChanged}>Save</Button>
             </AccordionActions>
         </Accordion>
 
@@ -123,38 +123,34 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
                 <Typography component='span'><b>Custom actions</b></Typography>
             </AccordionSummary>
             <AccordionDetails>
-                {
-                    customActions.map((ca,index) => {
-                        return (
-                            <Stack key={'action'+index} direction={'column'} gap={1} sx={{mb:2}}>
-                                <Stack direction={'row'} gap={1} alignItems={'center'}>
-                                    <Select value={ca.type} onChange={(event) => { ca.type = event.target.value; setCustomActions([...customActions])}} variant='standard' sx={{width:'100px'}}>
-                                        <MenuItem value='kwirth' disabled>Kwirth</MenuItem>
-                                        <MenuItem value='kube'>Kube</MenuItem>
-                                    </Select>
-                                    <TextField value={ca.name} onChange={(event) => { ca.name = event.target.value; setCustomActions([...customActions])}} variant='standard' placeholder='Name' sx={{minWidth:'15%'}}/>
-                                    <Select value={ca.onReady} onChange={(event) => { ca.onReady = event.target.value; setCustomActions([...customActions])}} variant='standard' sx={{minWidth:'10%'}}>
-                                        <MenuItem value='nothing'>Nothing</MenuItem>
-                                        <MenuItem value='shell'>Shell</MenuItem>
-                                        <MenuItem value='http' disabled>HTTP</MenuItem>
-                                        <MenuItem value='https' disabled>HTTPS</MenuItem>
-                                    </Select>
-                                    <FormControlLabel control={<Checkbox onChange={(event) => { ca.forward=event.target.checked; setCustomActions([...customActions])}} checked={ca.forward} disabled={'nothing shell'.includes(ca.onReady)}/>} label={'Forward'}/>
-                                    <TextField value={ca.url} onChange={(event) => { ca.url=event.target.value; setCustomActions([...customActions])}} disabled={'nothing shell'.includes(ca.onReady) || ca.forward} fullWidth variant='standard'>Url</TextField>
-                                    <Typography sx={{flexGrow:1}}/>
-                                    <Button onClick={() => removeCustomAction(index)}>Remove</Button>
-                                </Stack>
-                                <TextareaAutosize key={'yaml'+index} value={ca.podYaml} onChange={(event) => { ca.podYaml=event.target.value; setCustomActions([...customActions])}} style={{height: '100px'}} placeholder={podExplanation}></TextareaAutosize>
-                            </Stack>
-                        )
-                    })
-                }
-                <Stack direction={'row'} justifyContent={'end'}>
-                    <Button onClick={() => setCustomActions([...customActions, { type:'kube', name: '', podYaml: '', onReady: 'nothing'}])}>Add</Button>
+                {customActions.map((ca, index) => (
+                    <Stack key={'action' + index} direction='column' spacing={1} sx={{ mb: 2 }}>
+                        <Stack direction='row' spacing={1} alignItems='center'>
+                            <Select value={ca.type} onChange={(e) => { ca.type = e.target.value; setCustomActions([...customActions]) }} variant='standard' sx={{ width: 100 }}>
+                                <MenuItem value='kwirth' disabled>Kwirth</MenuItem>
+                                <MenuItem value='kube'>Kube</MenuItem>
+                            </Select>
+                            <TextField value={ca.name} onChange={(e) => { ca.name = e.target.value; setCustomActions([...customActions]) }} variant='standard' placeholder='Name' sx={{ minWidth: '15%' }} />
+                            <Select value={ca.onReady} onChange={(e) => { ca.onReady = e.target.value; setCustomActions([...customActions]) }} variant='standard' sx={{ minWidth: '10%' }}>
+                                <MenuItem value='nothing'>Nothing</MenuItem>
+                                <MenuItem value='shell'>Shell</MenuItem>
+                                <MenuItem value='http' disabled>HTTP</MenuItem>
+                                <MenuItem value='https' disabled>HTTPS</MenuItem>
+                            </Select>
+                            <FormControlLabel control={<Checkbox size='small' onChange={(e) => { ca.forward = e.target.checked; setCustomActions([...customActions]) }} checked={ca.forward} disabled={'nothing shell'.includes(ca.onReady)} />} label='Forward' />
+                            <TextField value={ca.url} onChange={(e) => { ca.url = e.target.value; setCustomActions([...customActions]) }} disabled={'nothing shell'.includes(ca.onReady) || ca.forward} fullWidth variant='standard' placeholder='URL' />
+                            <Box sx={{ flexGrow: 1 }} />
+                            <Button size='small' onClick={() => removeCustomAction(index)}>Remove</Button>
+                        </Stack>
+                        <TextareaAutosize key={'yaml' + index} value={ca.podYaml} onChange={(e) => { ca.podYaml = e.target.value; setCustomActions([...customActions]) }} style={{ height: 100, fontFamily: 'monospace', fontSize: 12, padding: 8, boxSizing: 'border-box', width: '100%' }} placeholder={podExplanation} />
+                    </Stack>
+                ))}
+                <Stack direction='row' justifyContent='flex-end'>
+                    <Button size='small' onClick={() => setCustomActions([...customActions, { type: 'kube', name: '', podYaml: '', onReady: 'nothing' }])}>Add</Button>
                 </Stack>
             </AccordionDetails>
             <AccordionActions>
-                <Button onClick={save}>Save</Button>
+                <Button size='small' onClick={save}>Save</Button>
             </AccordionActions>
         </Accordion>
 
@@ -163,10 +159,10 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
                 <Typography component='span'><b>External content</b></Typography>
             </AccordionSummary>
             <AccordionDetails>
-                <TextField value={logLines} onChange={(event) => {setLogLines(+event.target.value); setExternalChanged(true)}} variant='standard' label='Max messages' SelectProps={{native: true}} type='number' fullWidth />
+                <TextField value={logLines} onChange={(e) => { setLogLines(+e.target.value); setExternalChanged(true) }} variant='standard' label='Max messages' type='number' fullWidth />
             </AccordionDetails>
             <AccordionActions>
-                <Button onClick={save} disabled={!externalChanged}>Save</Button>
+                <Button size='small' onClick={save} disabled={!externalChanged}>Save</Button>
             </AccordionActions>
         </Accordion>
 
@@ -175,33 +171,28 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
                 <Typography component='span'><b>Data management</b></Typography>
             </AccordionSummary>
             <AccordionDetails>
-                <Stack direction={'row'}>
-                    <Stack direction={'column'} sx={{width:'59%'}}>
-                        <Typography fontWeight={700}>Storage</Typography>
-                        <FormControlLabel control={<Checkbox onChange={(event) => {setDataHelm(event.target.checked); setDataChanged(true)}} checked={dataHelm}/>} label={'Keep Helm data'}/>
-                        <FormControlLabel control={<Checkbox onChange={(event) => {setDataManagedFields(event.target.checked); setDataChanged(true)}} checked={dataManagedFields}/>} label={'Keep managed fields'}/>
+                <Stack direction='row' spacing={2}>
+                    <Stack direction='column' flex={1}>
+                        <Typography variant='body2' fontWeight='bold'>Storage</Typography>
+                        <FormControlLabel control={<Checkbox size='small' onChange={(e) => { setDataHelm(e.target.checked); setDataChanged(true) }} checked={dataHelm} />} label={<Typography variant='body2'>Keep Helm data</Typography>} />
+                        <FormControlLabel control={<Checkbox size='small' onChange={(e) => { setDataManagedFields(e.target.checked); setDataChanged(true) }} checked={dataManagedFields} />} label={<Typography variant='body2'>Keep managed fields</Typography>} />
                     </Stack>
-
-                    <Stack direction={'column'} sx={{width:'59%'}}>
-                        <Typography fontWeight={700}>Source</Typography>
-                        { allKinds.map(kind => {
-                            return (
-                                <FormControlLabel key={kind.name} control={<Checkbox onChange={() => changeKind('source', kind)} checked={sourceList.some(s => s.name===kind.name)}/>} label={kind.name}/>
-                            )
-                        })} 
+                    <Stack direction='column' flex={1}>
+                        <Typography variant='body2' fontWeight='bold'>Source</Typography>
+                        {allKinds.map(kind => (
+                            <FormControlLabel key={kind.name} control={<Checkbox size='small' onChange={() => changeKind('source', kind)} checked={sourceList.some(s => s.name === kind.name)} />} label={<Typography variant='body2'>{kind.name}</Typography>} />
+                        ))}
                     </Stack>
-                    <Stack direction={'column'} sx={{width:'100%'}}>
-                        <Typography fontWeight={700}>Sync</Typography>
-                        { allKinds.map(kind => {
-                            return (
-                                <FormControlLabel key={kind.name} control={<Checkbox onChange={() => changeKind('sync', kind)} checked={syncList.some(s => s.name===kind.name)}/>} label={kind.name}/>
-                            )
-                        })} 
+                    <Stack direction='column' flex={1}>
+                        <Typography variant='body2' fontWeight='bold'>Sync</Typography>
+                        {allKinds.map(kind => (
+                            <FormControlLabel key={kind.name} control={<Checkbox size='small' onChange={() => changeKind('sync', kind)} checked={syncList.some(s => s.name === kind.name)} />} label={<Typography variant='body2'>{kind.name}</Typography>} />
+                        ))}
                     </Stack>
                 </Stack>
             </AccordionDetails>
             <AccordionActions>
-                <Button onClick={save} disabled={!dataChanged}>Save</Button>
+                <Button size='small' onClick={save} disabled={!dataChanged}>Save</Button>
             </AccordionActions>
         </Accordion>
 
@@ -210,29 +201,29 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
                 <Typography component='span'><b>Debug</b></Typography>
             </AccordionSummary>
             <AccordionDetails>
-                <Stack direction={'column'} >
-                    <Stack direction={'row'} alignItems={'center'}>
-                        <Typography sx={{flexGrow:1}}>Show files collection on browser console ({props.files.length} objects, {(JSON.stringify(props.files).length/1024/1024).toFixed(2)}  MB approx.)</Typography>
-                        <TextField inputRef={filterRef} label='Text filter...' variant='standard'></TextField>
-                        <Button onClick={reload}>Reload</Button>
-                        <Button onClick={showFiles}>Show files</Button>
+                <Stack direction='column' spacing={0.5}>
+                    <Stack direction='row' alignItems='center' spacing={1}>
+                        <Typography variant='body2' sx={{ flexGrow: 1 }}>Files collection ({props.files.length} objects, {(JSON.stringify(props.files).length / 1024 / 1024).toFixed(2)} MB)</Typography>
+                        <TextField inputRef={filterRef} label='Filter' variant='standard' size='small' />
+                        <Button size='small' onClick={reload}>Reload</Button>
+                        <Button size='small' onClick={showFiles}>Show</Button>
                     </Stack>
-                    <Stack direction={'row'} alignItems={'center'}>
-                        <Typography sx={{flexGrow:1}}>Metrics names</Typography>
-                        <Button onClick={() => console.log(props.channelObject.metricsList?.keys())}>Show metrics</Button>
+                    <Stack direction='row' alignItems='center'>
+                        <Typography variant='body2' sx={{ flexGrow: 1 }}>Metrics names</Typography>
+                        <Button size='small' onClick={() => console.log(props.channelObject.metricsList?.keys())}>Show</Button>
                     </Stack>
-                    <Stack direction={'row'} alignItems={'center'}>
-                        <Typography sx={{flexGrow:1}}>Objects</Typography>
-                        <Button onClick={() => console.log(props.channelObject)}>Show object</Button>
+                    <Stack direction='row' alignItems='center'>
+                        <Typography variant='body2' sx={{ flexGrow: 1 }}>Channel object</Typography>
+                        <Button size='small' onClick={() => console.log(props.channelObject)}>Show</Button>
                     </Stack>
-                    <Stack direction={'row'} alignItems={'center'}>
-                        <Typography sx={{flexGrow:1}}>Message tracing (send to console received messages)</Typography>
-                        <Checkbox checked={tracing} onChange={() => { setTracing(!tracing); setDebugChanged(true)}}/>
+                    <Stack direction='row' alignItems='center'>
+                        <Typography variant='body2' sx={{ flexGrow: 1 }}>Message tracing (log received messages to console)</Typography>
+                        <Checkbox size='small' checked={tracing} onChange={() => { setTracing(!tracing); setDebugChanged(true) }} />
                     </Stack>
                 </Stack>
             </AccordionDetails>
             <AccordionActions>
-                <Button onClick={save} disabled={!debugChanged}>Save</Button>
+                <Button size='small' onClick={save} disabled={!debugChanged}>Save</Button>
             </AccordionActions>
         </Accordion>
 
@@ -251,7 +242,7 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
                         <Box key={type} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column', gap: 1 }}>
                             <Typography variant='body2' fontWeight='bold'>{label}</Typography>
                             <Typography variant='caption' color='text.secondary' sx={{ flexGrow: 1 }}>{desc}</Typography>
-                            <Button size='small' variant='outlined' onClick={() => props.channelObject.openManager?.(type)}>Manage</Button>
+                            <Button size='small' onClick={() => props.channelObject.openManager?.(type)}>Manage</Button>
                         </Box>
                     ))}
                 </Stack>

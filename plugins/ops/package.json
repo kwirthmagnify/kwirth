@@ -3,7 +3,7 @@
   "name": "Ops",
   "displayName": "Ops",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "website": "https://kwirthmagnify.dev",
   "description": "Ops channel plugin for Kwirth",
   "icon": "Terminal",
@@ -23,6 +23,7 @@
   "devDependencies": {
     "@mui/icons-material": "7.1.2",
     "@mui/material": "7.1.2",
+    "@types/express": "^5.0.6",
     "@types/node": "^20.12.13",
     "@types/react": "^18.3.0",
     "esbuild": "^0.27.2",

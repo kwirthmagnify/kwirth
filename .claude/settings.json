@@ -138,7 +138,10 @@
       "PowerShell(Get-ChildItem -Path c:\\\\github\\\\aisdkvercel\\\\kwirth -Recurse -Filter tsconfig.json | Where-Object { $_.FullName -notmatch 'node_modules' } | ForEach-Object { $content = Get-Content $_.FullName -Raw; if \\($content -match 'module'\\) { Write-Host \"=== $\\($_.FullName\\) ===\"; $content | Select-String -Pattern '\"module|moduleResolution' } })",
       "PowerShell(\\(Get-Item \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio\\\\dist\\\\back.js\"\\).Length / 1KB)",
       "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\topology && npm run build 2>&1 | Select-String \"Built|error\"; $size = \\(Get-Item \"dist/front.js\"\\).Length / 1KB; Write-Host \"front.js: $\\([math]::Round\\($size, 1\\)\\) KB\")",
-      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio && npm run build 2>&1 | Select-String \"Built|error\"; $size = \\(Get-Item \"dist/back.js\"\\).Length / 1MB; Write-Host \"back.js: $\\([math]::Round\\($size, 2\\)\\) MB\")"
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio && npm run build 2>&1 | Select-String \"Built|error\"; $size = \\(Get-Item \"dist/back.js\"\\).Length / 1MB; Write-Host \"back.js: $\\([math]::Round\\($size, 2\\)\\) MB\")",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor && npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"src/back\" })",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\alert && npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"error TS\" } | Select-Object -First 20)",
+      "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins -Directory | ForEach-Object { $has = Test-Path \"$\\($_.FullName\\)\\\\tsconfig.json\"; Write-Host \"$\\($_.Name\\): $\\(if\\($has\\){'✓'}else{'✗'}\\)\" })"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

@@ -2026,22 +2026,33 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                 localProcessClientMessage(webSocket, event.data, ri)
             }
 
-            webSocket.onclose = () => {
-                // we do not remove connections for the client to reconnect
-                logInfo(ELogComponent.CORE, 'Client disconnected')
-                let ri = instances.find(r => r.active)
+            const cleanupNonReconnectable = (reason: string) => {
+                const ri = instances.find(r => r.active)
                 if (!ri) {
-                    logWarning(ELogComponent.CORE, 'No running Instance found on WS close')
+                    logWarning(ELogComponent.CORE, `No running instance found on WS ${reason}`)
                     return
                 }
-                for (let channel of ri.channels.values()) {
+                for (const channel of ri.channels.values()) {
                     if (channel.containsConnection(webSocket)) {
-                        logWarning(ELogComponent.CORE, `Connection from IP ${ip} to channel ${channel.getChannelData().id} has been interrupted.`)
+                        logWarning(ELogComponent.CORE, `Connection from IP ${ip} to channel ${channel.getChannelData().id} ${reason}.`)
+                        if (!channel.getChannelData().reconnectable) {
+                            channel.removeConnection(webSocket)
+                        }
                     }
                 }
+            }
+
+            webSocket.onclose = () => {
+                logInfo(ELogComponent.CORE, 'Client disconnected')
+                cleanupNonReconnectable('closed')
                 if (runningEnv.isDesktop) {
                     // +++ if session is desktop, we remove everything and stop everything
                 }
+            }
+
+            webSocket.onerror = (err) => {
+                logError(ELogComponent.CORE, `WebSocket error from IP ${ip}: ${err}`)
+                cleanupNonReconnectable('errored')
             }
         })
 

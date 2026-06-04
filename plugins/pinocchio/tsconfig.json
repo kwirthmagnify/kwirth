@@ -8,7 +8,7 @@
         "jsxFragmentFactory": "React.Fragment",
         "strict": true,
         "lib": ["ES2020", "DOM"],
-        "types": ["node"],
+        "types": ["node", "express"],
         "skipLibCheck": true,
         "esModuleInterop": true
     },

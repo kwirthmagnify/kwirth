@@ -333,7 +333,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         </Typography>
                     </Stack>
                     <Button onClick={() => sendCommand(data.analyzing ? ECensorCommand.ANALYZESTOP : ECensorCommand.ANALYZESTART)}
-                        color={data.analyzing ? 'error' : 'success'} variant='outlined' size='small'>
+                        color={data.analyzing ? 'error' : 'success'} variant='outlined' size='small'
+                        disabled={!data.analyzing && !data.instanceConfig?.llmId}>
                         {data.analyzing ? 'Stop' : 'Start'}
                     </Button>
                     <IconButton size='small' onClick={(e) => setMenuAnchor(e.currentTarget)}>
@@ -358,7 +359,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     <Tab label={`Issues (${data.llmWarningLines.length})`} />
                     <Tab label={`LLM Errors (${data.llmErrorLines.length})`} />
                 </Tabs>
-                {(tab === 1 || tab === 2 || tab === 3 || tab === 4 || tab === 5 || tab === 7) && (
+                {(tab === 1 || tab === 2 || tab === 3 || tab === 4 || tab === 5 || tab === 6 || tab === 7) && (
                     <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
                         {tab === 1 && (
                             <Tooltip title={regexSort === 'none' ? 'Sort by matches: no order' : regexSort === 'desc' ? 'Sort by matches: descending' : 'Sort by matches: ascending'}>

@@ -2,7 +2,7 @@
     "id": "kafka",
     "name": "@kwirthmagnify/kwirth-provider-kafka",
     "publisher": "@kwirthmagnify",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "displayName": "Kafka Provider",
     "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces",
     "type": "module",

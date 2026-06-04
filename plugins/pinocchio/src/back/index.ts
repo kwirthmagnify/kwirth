@@ -40,6 +40,7 @@ interface IModelInvocation {
     system: string
     prompt: string
     tools: any
+    toolContext: IToolContext
 }
 
 export class PinocchioChannel {

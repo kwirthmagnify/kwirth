@@ -24,6 +24,7 @@ interface ICensorMessage {
     timestamp?: string
     analyzing?: boolean
     text?: string
+    lines?: { text: string, namespace: string, pod: string, container: string }[]
     namespace?: string
     pod?: string
     container?: string
@@ -213,6 +214,7 @@ export class CensorChannel {
                     const dm = this.backChannelObject.daemonManager
                     if (dm) dm.sendCommand(instance.sessionId, 'analyzestart', null)
                 }
+                webSocket.send(JSON.stringify({ msgtype: 'censormessage', channel: 'censor', action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED, type: EInstanceMessageType.DATA, instance: instance.instanceId, kind: 'analyzing', analyzing: true } as ICensorMessage))
                 return true
             case ECensorCommand.ANALYZESTOP:
                 instance.analyzing = false
@@ -220,6 +222,7 @@ export class CensorChannel {
                     const dm = this.backChannelObject.daemonManager
                     if (dm) dm.sendCommand(instance.sessionId, 'analyzestop', null)
                 }
+                webSocket.send(JSON.stringify({ msgtype: 'censormessage', channel: 'censor', action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED, type: EInstanceMessageType.DATA, instance: instance.instanceId, kind: 'analyzing', analyzing: false } as ICensorMessage))
                 return true
             case ECensorCommand.REGEXDELETE: {
                 const pattern = msg.data as string
@@ -472,17 +475,17 @@ export class CensorChannel {
     private autoStartDaemon = async (webSocket: WebSocket, instance: IInstance, dm: IDaemonManager) => {
         const id = randomUUID()
         const ic = instance.instanceConfig
+        const llms: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
         const daemonCfg: IDaemonInstanceConfig = {
             id, daemonId: 'censor', description: 'auto-' + new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15),
             view: ic.view, namespace: ic.namespace,
             ...(ic.group ? { group: ic.group } : {}),
             ...(ic.pod ? { pod: ic.pod } : {}),
             ...(ic.container ? { container: ic.container } : {}),
-            data: { ...instance.cfg, ephemeral: true }, started: true,
+            data: { ...instance.cfg, _llms: llms, ephemeral: true }, started: true,
             createdAt: new Date().toISOString()
         }
         await dm.createInstance('censor', daemonCfg)
-        const llms: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
         await dm.sendCommand(id, 'configset', { ...instance.cfg, _llms: llms })
         await dm.sendCommand(id, 'providersset', this.providers)
         if (!instance.analyzing) await dm.sendCommand(id, 'analyzestop', null)

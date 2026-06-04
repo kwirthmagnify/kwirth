@@ -19,6 +19,7 @@ interface ICensorMessage {
     assets?: ICensorAsset[]
     analyzing?: boolean
     text?: string
+    lines?: { text: string, namespace: string, pod: string, container: string }[]
     namespace?: string
     pod?: string
     container?: string
@@ -78,8 +79,12 @@ export class CensorChannel implements IChannel {
         switch (msg.type) {
             case EInstanceMessageType.DATA:
                 if (msg.instance && !channelObject.instanceId) channelObject.instanceId = msg.instance
-                if (msg.kind === 'received' && msg.text !== undefined) {
-                    data.receivedLines.push({ text: msg.text, namespace: msg.namespace ?? '', pod: msg.pod ?? '', container: msg.container ?? '' })
+                if (msg.kind === 'received') {
+                    if (msg.lines) {
+                        data.receivedLines.push(...msg.lines)
+                    } else if (msg.text !== undefined) {
+                        data.receivedLines.push({ text: msg.text, namespace: msg.namespace ?? '', pod: msg.pod ?? '', container: msg.container ?? '' })
+                    }
                     if (data.receivedLines.length > MAX_DISPLAY_LINES) data.receivedLines.splice(0, data.receivedLines.length - MAX_DISPLAY_LINES)
                 }
                 else if (msg.kind === 'business' && msg.text !== undefined) {

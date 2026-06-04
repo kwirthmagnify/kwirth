@@ -1,3 +1,4 @@
+import type { ICensorInstanceConfig } from '../common/CensorTypes'
 export { ECensorCommand, ICensorSession, ICensorInstanceConfig } from '../common/CensorTypes'
 
 export interface ICensorConfig {
@@ -25,4 +26,5 @@ export class CensorInstanceConfig implements ICensorInstanceConfig {
     businessPath = ''
     senderId = ''
     senderConfigName = ''
+    mode: 'inference' | 'audit' = 'inference'
 }

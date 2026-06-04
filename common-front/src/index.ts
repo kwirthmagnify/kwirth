@@ -61,6 +61,7 @@ export interface IChannelObject {
     exit?: () => void
     stopChannel?: () => void
     openManager?: (type: 'plugins' | 'providers' | 'senders' | 'daemons') => void
+    metricsList?: Map<string, unknown>
 }
 
 export interface ISetupProps {

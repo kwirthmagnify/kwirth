@@ -122,11 +122,11 @@ export class CensorDaemon implements IDaemon {
     }
 
     async startDaemon(): Promise<void> {
-        const stored: ILlmProvider[] = (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)) ?? []
+        const stored: ILlmProvider[] = ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)) ?? []) as ILlmProvider[]
         this.providers = stored
         await loadModels(this.providers, this.backDaemonObject)
 
-        const configs: ICensorInstanceConfig[] = (await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []
+        const configs: ICensorInstanceConfig[] = ((await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []) as ICensorInstanceConfig[]
         const activeSessions = configs.filter(c => c.active)
         if (activeSessions.length === 0) {
             console.log('[censor] No persistent sessions configured.')
@@ -161,6 +161,7 @@ export class CensorDaemon implements IDaemon {
                 lineBuffer: [],
                 regexes: [],
                 llmBusy: false,
+                llmErrorCooldownUntil: 0,
                 subscribers: new Set()
             }
             this.instances.set(instanceConfig.id, inst)
@@ -168,7 +169,7 @@ export class CensorDaemon implements IDaemon {
             const savedCfg: ICensorInstanceConfig = inst.cfg
             const dataCfg = instanceConfig.data as ICensorInstanceConfig | undefined
             const cfg = dataCfg?.llmId ? dataCfg : savedCfg
-            const llms: ILlm[] = (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
+            const llms: ILlm[] = ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []) as ILlm[]
             const llm = cfg.llmId ? llms.find(l => l.id === cfg.llmId) : undefined
 
             inst.cfg = cfg
@@ -305,8 +306,8 @@ export class CensorDaemon implements IDaemon {
         switch (command) {
             case ECensorDaemonCommand.CONFIGGET: {
                 if (!inst) return null
-                const llms: ILlm[] = (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
-                const configs: ICensorInstanceConfig[] = (await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []
+                const llms: ILlm[] = ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []) as ILlm[]
+                const configs: ICensorInstanceConfig[] = ((await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []) as ICensorInstanceConfig[]
                 return { instanceConfig: inst.cfg, configs, llms, providers: this.providers }
             }
             case ECensorDaemonCommand.CONFIGSET: {
@@ -325,13 +326,13 @@ export class CensorDaemon implements IDaemon {
                 }
                 target.cfg = cfg as ICensorInstanceConfig
                 if (_llms) await this.backDaemonObject.writeStorageCommon!(STORAGE_KEY_LLMS, false, _llms)
-                const llmList: ILlm[] = _llms ?? (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
+                const llmList: ILlm[] = (_llms ?? ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? [])) as ILlm[]
                 target.llm = llmList.find((l: ILlm) => l.id === target!.cfg.llmId)
                 return { instanceConfig: target.cfg }
             }
             case ECensorDaemonCommand.CONFIGSAVE: {
                 const cfgToSave = data as ICensorInstanceConfig
-                let configs: ICensorInstanceConfig[] = (await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []
+                let configs: ICensorInstanceConfig[] = ((await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []) as ICensorInstanceConfig[]
                 if (cfgToSave.active) configs = configs.map(c => ({ ...c, active: false }))
                 const idx = configs.findIndex(c => c.name === cfgToSave.name && c.version === cfgToSave.version)
                 if (idx >= 0) configs[idx] = cfgToSave
@@ -341,7 +342,7 @@ export class CensorDaemon implements IDaemon {
             }
             case ECensorDaemonCommand.CONFIGDELETE: {
                 const { name, version } = data as { name: string, version: string }
-                const configs: ICensorInstanceConfig[] = (await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []
+                const configs: ICensorInstanceConfig[] = ((await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []) as ICensorInstanceConfig[]
                 const filtered = configs.filter(c => !(c.name === name && c.version === version))
                 await this.backDaemonObject.writeStorage!('censor-configs', false, filtered)
                 return { configs: filtered }
@@ -435,9 +436,10 @@ export class CensorDaemon implements IDaemon {
     private processChunk(inst: IDaemonInstance, asset: IAsset, chunk: string): void {
         if (!inst.analyzing) return
         const lines = chunk.split('\n').filter(l => l.trim() !== '')
+        const receivedBatch: { text: string, namespace: string, pod: string, container: string }[] = []
         for (const line of lines) {
             inst.processedCount++
-            this.broadcast(inst, 'received', { text: line, namespace: asset.namespace, pod: asset.pod, container: asset.container })
+            receivedBatch.push({ text: line, namespace: asset.namespace, pod: asset.pod, container: asset.container })
             const clean = cleanANSI(line)
             let filtered = false
             for (const r of inst.regexes) {
@@ -446,12 +448,14 @@ export class CensorDaemon implements IDaemon {
             if (!filtered) {
                 inst.lineBuffer.push(clean)
             }
-
             const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
             if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
                 const batch = inst.lineBuffer.splice(0, batchSize)
                 this.callLlm(inst, batch)
             }
+        }
+        if (receivedBatch.length > 0) {
+            this.broadcast(inst, 'received', { lines: receivedBatch })
         }
         this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
     }
@@ -465,7 +469,7 @@ export class CensorDaemon implements IDaemon {
                 return
             }
             if (this.providers.length === 0) {
-                const stored: ILlmProvider[] = (await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)) ?? []
+                const stored: ILlmProvider[] = ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)) ?? []) as ILlmProvider[]
                 if (stored.length > 0) {
                     this.providers = stored
                     await loadModels(this.providers, this.backDaemonObject)

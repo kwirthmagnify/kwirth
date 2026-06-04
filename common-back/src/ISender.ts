@@ -2,7 +2,7 @@ import { ISenderMessage, ISenderConfig, ISenderAccess } from '@kwirthmagnify/kwi
 
 export { ISenderMessage, ISenderConfig, ISenderAccess }
 
-export type SenderFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select'
+export type SenderFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json'
 
 export interface ISenderFieldDef {
     name: string

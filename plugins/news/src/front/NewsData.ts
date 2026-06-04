@@ -1,3 +1,4 @@
+import type { INewsItem } from '../common/NewsTypes'
 export { INewsItem } from '../common/NewsTypes'
 
 export interface INewsData {
