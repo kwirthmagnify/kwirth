@@ -60,6 +60,7 @@ export interface IChannelObject {
     notify?: (channelId: string | undefined, level: ENotifyLevel, message: string) => void
     exit?: () => void
     stopChannel?: () => void
+    openManager?: (type: 'plugins' | 'providers' | 'senders' | 'daemons') => void
 }
 
 export interface ISetupProps {

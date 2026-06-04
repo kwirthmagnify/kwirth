@@ -47,6 +47,7 @@ class MagnifyChannel implements IChannel {
         userSettings: true,
         webSocket: true,
         backChannels: true,
+        openManager: true,
     }
     
     getScope() { return 'magnify$read'}

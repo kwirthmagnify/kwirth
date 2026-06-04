@@ -37,6 +37,7 @@ interface IChannelRequirements {
     palette: boolean
     exit: boolean
     backChannels: boolean
+    openManager?: boolean
 }
 
 export { ENotifyLevel, EChannelRefreshAction }

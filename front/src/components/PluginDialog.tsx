@@ -210,6 +210,8 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
 
     const resolveSource = (installedFrom?: string): React.ReactElement | null => {
         if (!installedFrom) return null
+        if (installedFrom === 'dev')
+            return <Chip label='dev' size='small' variant='outlined' color='warning' />
         if (installedFrom === 'local')
             return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
         if (installedFrom.includes('github.com/kwirthmagnify'))

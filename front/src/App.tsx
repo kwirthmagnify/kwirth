@@ -711,6 +711,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (newTab.channel.requirements.notifier) newTab.channelObject.notify = notify
         if (newTab.channel.requirements.notifications) newTab.channelObject.notifications = notifications.current
         if (newTab.channel.requirements.palette) newTab.channelObject.setPalette = (palette:string) => setMode(palette as 'light'|'dark')
+        if (newTab.channel.requirements.openManager) newTab.channelObject.openManager = (type) => {
+            if (type === 'plugins') setShowPluginDialog(true)
+            else if (type === 'providers') setShowProviderDialog(true)
+            else if (type === 'senders') setShowSenderDialog(true)
+            else if (type === 'daemons') setShowDaemonDialog(true)
+        }
         if (newTab.channel.requirements.exit) newTab.channelObject.exit = () => {
             setBackendUrl(props.backendUrl)
             setLogged(false)

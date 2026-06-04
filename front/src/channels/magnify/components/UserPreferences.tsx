@@ -236,6 +236,28 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
             </AccordionActions>
         </Accordion>
 
+        <Accordion>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography component='span'><b>Extensions</b></Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+                <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
+                    {([
+                        { type: 'plugins',   label: 'Plugins',   desc: 'Install, update and remove channel plugins that extend Kwirth with new visualization and analysis capabilities.' },
+                        { type: 'providers', label: 'Providers', desc: 'Configure data source providers that feed events and metrics into your channels from external systems.' },
+                        { type: 'senders',   label: 'Senders',   desc: 'Manage notification senders to forward alerts and reports to Slack, Teams, email and other destinations.' },
+                        { type: 'daemons',   label: 'Daemons',   desc: 'Install and manage background daemons that run headless analysis and monitoring tasks on your cluster.' },
+                    ] as const).map(({ type, label, desc }) => (
+                        <Box key={type} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <Typography variant='body2' fontWeight='bold'>{label}</Typography>
+                            <Typography variant='caption' color='text.secondary' sx={{ flexGrow: 1 }}>{desc}</Typography>
+                            <Button size='small' variant='outlined' onClick={() => props.channelObject.openManager?.(type)}>Manage</Button>
+                        </Box>
+                    ))}
+                </Stack>
+            </AccordionDetails>
+        </Accordion>
+
         { showAbout && <About onClose={() => setShowAbout(false)}/>}
     </Box>
 }

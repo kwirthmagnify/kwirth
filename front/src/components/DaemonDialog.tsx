@@ -174,7 +174,7 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
     const resolveSource = (installedFrom?: string): React.ReactElement | null => {
         if (!installedFrom) return null
         if (installedFrom === 'local') return <Typography variant='caption' color='text.secondary'>Local file</Typography>
-        if (installedFrom === 'dev') return <Typography variant='caption' color='warning.main'>dev</Typography>
+        if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
         return <Tooltip title={installedFrom}><Typography variant='caption' color='text.secondary'><Link fontSize='inherit' sx={{ verticalAlign: 'middle', mr: 0.3 }} />{short}</Typography></Tooltip>
     }

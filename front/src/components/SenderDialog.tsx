@@ -365,7 +365,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     const resolveSource = (installedFrom?: string) => {
         if (!installedFrom) return null
         if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
-        if (installedFrom === 'dev') return <Chip icon={<Send />} label='dev' size='small' variant='outlined' color='warning' />
+        if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
         return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
     }
