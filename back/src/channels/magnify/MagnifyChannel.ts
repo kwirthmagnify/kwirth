@@ -31,6 +31,7 @@ export enum EMagnifyCommand {
     IMAGE = 'Image',
     CONTROLLER = 'Controller',
     LOGSEARCH = 'logsearch',
+    LOGSEARCH_STOP = 'logsearchstop',
 }
 
 export interface IMagnifyMessage extends IInstanceMessage {
@@ -78,6 +79,7 @@ class MagnifyChannel implements IChannel {
     }
     clusterInfo : ClusterInfo
     backChannelObject: IBackChannelObject
+    cancelledSearches: Set<string> = new Set()
     webSockets: {
         ws:WebSocket,
         lastRefresh: number,
@@ -613,18 +615,28 @@ class MagnifyChannel implements IChannel {
 
                     // Search in batches of 5
                     const BATCH = 5
+                    const searchId = magnifyMessage.id
                     for (let i = 0; i < containers.length; i += BATCH) {
+                        if (this.cancelledSearches.has(searchId)) break
                         await Promise.all(containers.slice(i, i + BATCH).map(async ({ namespace, pod, container }) => {
+                            if (this.cancelledSearches.has(searchId)) return
                             try {
                                 const log = await this.clusterInfo.coreApi.readNamespacedPodLog({ name: pod, namespace, container, tailLines: lines })
                                 const matched = (typeof log === 'string' ? log : String(log)).split('\n').filter(l => l && tester(l))
                                 if (matched.length > 0) {
-                                    this.sendDataMessage(webSocket, instance, magnifyMessage.id, EMagnifyCommand.LOGSEARCH, JSON.stringify({ type: 'result', namespace, pod, container, lines: matched }))
+                                    this.sendDataMessage(webSocket, instance, searchId, EMagnifyCommand.LOGSEARCH, JSON.stringify({ type: 'result', namespace, pod, container, lines: matched }))
                                 }
                             } catch {}
                         }))
                     }
-                    this.sendDataMessage(webSocket, instance, magnifyMessage.id, EMagnifyCommand.LOGSEARCH, JSON.stringify({ type: 'done' }))
+                    this.cancelledSearches.delete(searchId)
+                    this.sendDataMessage(webSocket, instance, searchId, EMagnifyCommand.LOGSEARCH, JSON.stringify({ type: 'done' }))
+                    return
+                }
+
+                case EMagnifyCommand.LOGSEARCH_STOP: {
+                    const { searchId } = JSON.parse(magnifyMessage.params![0]) as { searchId: string }
+                    this.cancelledSearches.add(searchId)
                     return
                 }
 

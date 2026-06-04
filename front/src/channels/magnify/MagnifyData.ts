@@ -73,6 +73,7 @@ export enum EMagnifyCommand {
     IMAGE = 'Image',
     CONTROLLER = 'Controller',
     LOGSEARCH = 'logsearch',
+    LOGSEARCH_STOP = 'logsearchstop',
 }
 
 export interface ILogSearchResult {

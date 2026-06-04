@@ -67,6 +67,7 @@ interface IInstance {
     sessionId?: string
     sessionUnsub?: () => void
     ephemeral?: boolean
+    _configReady?: Promise<void>
     _startupPromise?: Promise<void>
 }
 
@@ -258,18 +259,17 @@ export class CensorChannel {
                 const { description } = msg.data as { description: string }
                 const id = randomUUID()
                 const ic = instance.instanceConfig
+                const llmsForDaemon: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
                 const daemonInstanceConfig: IDaemonInstanceConfig = {
                     id, daemonId: 'censor', description,
                     view: ic.view, namespace: ic.namespace,
                     ...(ic.group ? { group: ic.group } : {}),
                     ...(ic.pod ? { pod: ic.pod } : {}),
                     ...(ic.container ? { container: ic.container } : {}),
-                    data: instance.cfg, started: true,
+                    data: { ...instance.cfg, _llms: llmsForDaemon }, started: true,
                     createdAt: new Date().toISOString()
                 }
                 await dm.createInstance('censor', daemonInstanceConfig)
-                // Push LLMs and providers into daemon's own storage so it can work autonomously
-                const llmsForDaemon: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
                 await dm.sendCommand(id, 'configset', { ...instance.cfg, _llms: llmsForDaemon })
                 if (this.providers.length > 0) await dm.sendCommand(id, 'providersset', this.providers)
                 // Sync analyzing state before seeding pods so addObject restores it correctly from storage
@@ -434,29 +434,34 @@ export class CensorChannel {
             })
             instance = socket.instances[len - 1]
 
-            let savedCfg: ICensorInstanceConfig | null = null
-            {
-                const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
-                savedCfg = configs.find(c => c.active) ?? savedCfg
-            }
-            const defaultCfg: ICensorInstanceConfig = { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}', temperature: 0.2, active: false }
-            const cfg: ICensorInstanceConfig = (instanceConfig.data as ICensorInstanceConfig)?.llmId ? (instanceConfig.data as ICensorInstanceConfig) : (savedCfg ?? defaultCfg)
-            const llms: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
-            const llm = cfg.llmId ? llms.find(l => l.id === cfg.llmId) : undefined
-            if (cfg.llmId && !llm) {
-                this.backChannelObject.logWarning?.(`[censor] LLM '${cfg.llmId}' not found in shared storage`)
-            }
-            instance.cfg = cfg
-            instance.llm = llm
-            await this.executeConfigGet(webSocket, instance)
-            this.rebuildBusinessSubscription()
+            instance._configReady = (async () => {
+                let savedCfg: ICensorInstanceConfig | null = null
+                {
+                    const rawConfigs = await this.backChannelObject.readStorage!('censor-configs', false)
+                    const configs: ICensorInstanceConfig[] = (typeof rawConfigs === 'string' ? JSON.parse(rawConfigs) : rawConfigs) ?? []
+                    savedCfg = configs.find(c => c.active) ?? savedCfg
+                }
+                const defaultCfg: ICensorInstanceConfig = { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":[""]}', temperature: 0.2, active: false }
+                const cfg: ICensorInstanceConfig = (instanceConfig.data as ICensorInstanceConfig)?.llmId ? (instanceConfig.data as ICensorInstanceConfig) : (savedCfg ?? defaultCfg)
+                const llms: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
+                const llm = cfg.llmId ? llms.find(l => l.id === cfg.llmId) : undefined
+                if (cfg.llmId && !llm) {
+                    this.backChannelObject.logWarning?.(`[censor] LLM '${cfg.llmId}' not found in shared storage`)
+                }
+                instance!.cfg = cfg
+                instance!.llm = llm
+                await this.executeConfigGet(webSocket, instance!)
+                this.rebuildBusinessSubscription()
+            })()
         }
+
+        if (instance._configReady) await instance._configReady
 
         if (instance.assets.some(a => a.namespace === ns && a.pod === pod && a.container === container)) return true
 
         const dm = this.backChannelObject.daemonManager
         if (!instance.sessionId && dm) {
-            if (!instance._startupPromise) {
+if (!instance._startupPromise) {
                 instance._startupPromise = this.autoStartDaemon(webSocket, instance, dm)
                     .finally(() => { instance!._startupPromise = undefined })
             }

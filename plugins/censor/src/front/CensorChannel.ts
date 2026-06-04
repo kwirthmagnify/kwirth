@@ -7,7 +7,7 @@ import { CensorConfig, ECensorCommand, ICensorConfig, ICensorInstanceConfig, ICe
 import { CensorData, ICensorAsset, ICensorData, ICensorRegex } from './CensorData'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 
-const MAX_DISPLAY_LINES = 5000
+const MAX_DISPLAY_LINES = 1000
 
 interface ICensorMessage {
     msgtype: string
@@ -119,6 +119,8 @@ export class CensorChannel implements IChannel {
                 else if (msg.kind === 'stats') {
                     if (msg.processedCount !== undefined) data.processedCount = msg.processedCount
                     if (msg.llmCount !== undefined) data.llmCount = msg.llmCount
+                    if ((msg as any).llmLinesCount !== undefined) data.llmLinesCount = (msg as any).llmLinesCount
+                    if ((msg as any).totalBytesProcessed !== undefined) data.totalBytesProcessed = (msg as any).totalBytesProcessed
                     if (msg.tokensIn !== undefined) data.tokensIn = msg.tokensIn
                     if (msg.tokensOut !== undefined) data.tokensOut = msg.tokensOut
                     if (msg.pendingCount !== undefined) data.pendingCount = msg.pendingCount

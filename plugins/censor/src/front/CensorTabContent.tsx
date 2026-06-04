@@ -27,6 +27,33 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const _ui = data.uiState
     const [tab, setTabState] = useState(_ui?.tab ?? 0)
     const setTab = (v: number) => { setTabState(v); data.uiState = { ...(data.uiState ?? _defaultUi()), tab: v } }
+    const perfSamplesRef = useRef<{ ts: number, count: number, tokensIn: number, tokensOut: number }[]>([])
+    const [msgsPerSec, setMsgsPerSec] = useState(0)
+    const [msgsPerMin, setMsgsPerMin] = useState(0)
+    const [tokensInPerSec, setTokensInPerSec] = useState(0)
+    const [tokensInPerMin, setTokensInPerMin] = useState(0)
+    const [tokensOutPerSec, setTokensOutPerSec] = useState(0)
+    const [tokensOutPerMin, setTokensOutPerMin] = useState(0)
+    useEffect(() => {
+        const now = Date.now()
+        const samples = perfSamplesRef.current
+        samples.push({ ts: now, count: data.processedCount, tokensIn: data.tokensIn, tokensOut: data.tokensOut })
+        if (samples.length > 120) samples.splice(0, samples.length - 120)
+        const calcRate = (windowMs: number, scaleToMin: boolean, field: 'count' | 'tokensIn' | 'tokensOut') => {
+            const w = samples.filter(s => now - s.ts < windowMs)
+            if (w.length < 2) return 0
+            const dt = (w[w.length - 1].ts - w[0].ts) / 1000
+            if (dt === 0) return 0
+            const rate = (w[w.length - 1][field] - w[0][field]) / dt
+            return Math.round(scaleToMin ? rate * 60 : rate)
+        }
+        setMsgsPerSec(calcRate(10000, false, 'count'))
+        setMsgsPerMin(calcRate(60000, true, 'count'))
+        setTokensInPerSec(calcRate(10000, false, 'tokensIn'))
+        setTokensInPerMin(calcRate(60000, true, 'tokensIn'))
+        setTokensOutPerSec(calcRate(10000, false, 'tokensOut'))
+        setTokensOutPerMin(calcRate(60000, true, 'tokensOut'))
+    }, [data.processedCount, data.tokensIn, data.tokensOut])
     const [showConfig, setShowConfig] = useState(false)
     const [showSessionStart, setShowSessionStart] = useState(false)
     const [configName, setConfigName] = useState('')
@@ -278,27 +305,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                 <Stack direction='row' alignItems='center' spacing={1}>
                     <Typography><b>Processed:</b> {data.processedCount}</Typography>
                     <Typography><b>Pending:</b> {data.pendingCount}</Typography>
-                    <Typography><b>LLM calls:</b> {data.llmCount}</Typography>
-                    <Typography><b>Tokens:</b> {(data.tokensIn ?? 0).toLocaleString()} in / {(data.tokensOut ?? 0).toLocaleString()} out</Typography>
-                    { (() => {
-                        const batchSize = data.instanceConfig.batchSize || 50
-                        const llmLines = (data.llmCount ?? 0) * batchSize
-                        const avgTkPerLine = llmLines > 0 ? (data.tokensIn ?? 0) / llmLines : 0
-                        const filteredLines = data.processedCount - data.pendingCount - llmLines
-                        const savedTk = filteredLines > 0 && avgTkPerLine > 0 ? Math.round(filteredLines * avgTkPerLine) : 0
-                        const pct = savedTk > 0 ? Math.round(savedTk / (data.tokensIn + savedTk) * 100) : 0
-                        const selectedLlm = data.llms.find(l => l.id === data.instanceConfig.llmId)
-                        const icpm = selectedLlm?.inputCostPerMillion ?? 0
-                        const ocpm = selectedLlm?.outputCostPerMillion ?? 0
-                        const spent = (icpm > 0 || ocpm > 0) ? (data.tokensIn / 1_000_000 * icpm + data.tokensOut / 1_000_000 * ocpm) : 0
-                        const savedCost = icpm > 0 && savedTk > 0 ? (savedTk / 1_000_000 * icpm) : 0
-                        return <>
-                            { savedTk > 0 && <Typography color='success.main'><b>Saved ~{savedTk.toLocaleString()} tk ({pct}%)</b></Typography> }
-                            { savedCost > 0 && <Typography color='success.main'><b>~{savedCost.toFixed(4)}€ saved</b></Typography> }
-                            { spent > 0 && <Typography color='warning.main'><b>{spent.toFixed(4)}€ spent</b></Typography> }
-                            <Typography flex={1} />
-                        </>
-                    })() }
+                    <Typography flex={1} />
                     {data.connectedSessionId &&
                         <Chip label={data.connectedSessionDescription ?? 'Session'} size='small' color='success' sx={{ maxWidth: 160 }} />
                     }
@@ -358,8 +365,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     <Tab label={`LLM Responses (${data.llmOutputLines.length})`} />
                     <Tab label={`Issues (${data.llmWarningLines.length})`} />
                     <Tab label={`LLM Errors (${data.llmErrorLines.length})`} />
+                    <Tab label='Performance' />
                 </Tabs>
-                {(tab === 1 || tab === 2 || tab === 3 || tab === 4 || tab === 5 || tab === 6 || tab === 7) && (
+                {(tab === 1 || tab === 2 || tab === 3 || tab === 4 || tab === 5 || tab === 7) && (
                     <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
                         {tab === 1 && (
                             <Tooltip title={regexSort === 'none' ? 'Sort by matches: no order' : regexSort === 'desc' ? 'Sort by matches: descending' : 'Sort by matches: ascending'}>
@@ -549,6 +557,130 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             <Typography variant='caption' color='error.main' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{e.text}</Typography>
                         </Box>
                     ))}
+
+                    {tab === 8 && (() => {
+                        const selectedLlm = data.llms.find(l => l.id === data.instanceConfig?.llmId)
+                        const icpm = selectedLlm?.inputCostPerMillion ?? 0
+                        const ocpm = selectedLlm?.outputCostPerMillion ?? 0
+                        const spent = (icpm > 0 || ocpm > 0) ? (data.tokensIn / 1_000_000 * icpm + data.tokensOut / 1_000_000 * ocpm) : 0
+                        const avgTkPerLine = data.llmLinesCount > 0 ? data.tokensIn / data.llmLinesCount : 0
+                        const filtered = Math.max(0, data.processedCount - data.llmLinesCount - data.pendingCount)
+                        const savedTk = filtered > 0 && avgTkPerLine > 0 ? Math.round(filtered * avgTkPerLine) : 0
+                        const savedCost = icpm > 0 && savedTk > 0 ? savedTk / 1_000_000 * icpm : 0
+                        const total = spent + savedCost
+                        const fmt = (n: number) => n > 0 ? `${n.toFixed(4)} €` : '—'
+                        const col = (label: string, val: string | number) => (
+                            <Stack direction='row' justifyContent='space-between'>
+                                <Typography variant='body2' color='text.secondary'>{label}</Typography>
+                                <Typography variant='body2' fontWeight='bold'>{typeof val === 'number' ? val.toLocaleString() : val}</Typography>
+                            </Stack>
+                        )
+                        return (
+                        <Stack direction='row' spacing={2} sx={{ p: 1.5, flexWrap: 'wrap' }} useFlexGap>
+                            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 190, flex: 1 }}>
+                                <Typography variant='subtitle2' fontWeight='bold' gutterBottom>Log</Typography>
+                                <Stack spacing={0.5}>
+                                    {col('Processed', data.processedCount)}
+                                    {col('Sent to LLM', data.llmLinesCount)}
+                                    {col('Filtered (regex)', filtered)}
+                                    {col('Pending', data.pendingCount)}
+                                </Stack>
+                            </Box>
+                            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 190, flex: 1 }}>
+                                <Typography variant='subtitle2' fontWeight='bold' gutterBottom>LLM</Typography>
+                                <Stack spacing={0.5}>
+                                    {col('Calls', data.llmCount)}
+                                    {col('Responses', data.llmCount)}
+                                    {col('Avg lines/call', data.llmCount > 0 ? Math.round(data.llmLinesCount / data.llmCount) : '—')}
+                                    {col('Tokens in', data.tokensIn)}
+                                    {col('Tokens out', data.tokensOut)}
+                                    {savedTk > 0 && col('Est. tokens saved', `~${savedTk.toLocaleString()} (${Math.round(savedTk / (data.tokensIn + savedTk) * 100)}%)`)}
+                                </Stack>
+                            </Box>
+                            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 260, flex: 1 }}>
+                                <Typography variant='subtitle2' fontWeight='bold' gutterBottom>Performance</Typography>
+                                <Stack direction='row' spacing={1} sx={{ mb: 0.5 }}>
+                                    <Box sx={{ flex: 1 }} />
+                                    <Typography variant='caption' color='text.disabled' sx={{ width: 48, textAlign: 'right' }}>/sec</Typography>
+                                    <Typography variant='caption' color='text.disabled' sx={{ width: 56, textAlign: 'right' }}>/min</Typography>
+                                    <Typography variant='caption' color='text.disabled' sx={{ width: 64, textAlign: 'right' }}>/hour</Typography>
+                                </Stack>
+                                {[
+                                    { label: 'Messages', sec: msgsPerSec, min: msgsPerMin, hour: msgsPerMin * 60 },
+                                    { label: 'Tokens in', sec: tokensInPerSec, min: tokensInPerMin, hour: tokensInPerMin * 60 },
+                                    { label: 'Tokens out', sec: tokensOutPerSec, min: tokensOutPerMin, hour: tokensOutPerMin * 60 },
+                                ].map(({ label, sec, min, hour }) => (
+                                    <Stack key={label} direction='row' spacing={1} alignItems='center'>
+                                        <Typography variant='body2' color='text.secondary' sx={{ flex: 1 }}>{label}</Typography>
+                                        <Typography variant='body2' fontWeight='bold' sx={{ width: 48, textAlign: 'right' }}>{sec.toLocaleString()}</Typography>
+                                        <Typography variant='body2' fontWeight='bold' sx={{ width: 56, textAlign: 'right' }}>{min.toLocaleString()}</Typography>
+                                        <Typography variant='body2' fontWeight='bold' sx={{ width: 64, textAlign: 'right' }}>{hour.toLocaleString()}</Typography>
+                                    </Stack>
+                                ))}
+                                <Stack spacing={0.5} sx={{ mt: 1.5, pt: 1, borderTop: 1, borderColor: 'divider' }}>
+                                    {col('Batch size', data.instanceConfig?.batchSize ?? 50)}
+                                    {col('Avg tokens/batch', data.llmCount > 0 ? Math.round(data.tokensIn / data.llmCount) : '—')}
+                                </Stack>
+                            </Box>
+                            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 190, flex: 1 }}>
+                                <Typography variant='subtitle2' fontWeight='bold' gutterBottom>DataDog</Typography>
+                                {(() => {
+                                    const INGEST_PER_GB = 0.10
+                                    const IDX = { '3d': 1.27, '15d': 1.70, '30d': 2.50 }
+                                    const totalBytes = data.totalBytesProcessed
+                                    const avgBytes = data.processedCount > 0 && totalBytes > 0 ? totalBytes / data.processedCount : 0
+                                    const filteredBytes = avgBytes > 0 ? filtered * avgBytes : 0
+                                    const remainBytes = totalBytes - filteredBytes
+                                    const fmtSz = (b: number) => b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`
+                                    const fmtIng = (b: number) => `$${(b / (1024 ** 3) * INGEST_PER_GB).toFixed(4)}`
+                                    const fmtIdx = (n: number, rate: number) => `$${(n / 1_000_000 * rate).toFixed(4)}`
+                                    const pct = totalBytes > 0 ? Math.round(filteredBytes / totalBytes * 100) : 0
+                                    return (
+                                        <Stack spacing={0.5}>
+                                            {col('Avg line size', avgBytes > 0 ? `${Math.round(avgBytes)} B` : '—')}
+                                            <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5, fontWeight: 'bold' }}>Ingestion ($0.10/GB)</Typography>
+                                            {col('All logs', `${fmtSz(totalBytes)}  ${fmtIng(totalBytes)}`)}
+                                            {col('Regex filtered', `${fmtSz(filteredBytes)}  ${fmtIng(filteredBytes)}`)}
+                                            {col('Remaining', `${fmtSz(remainBytes)}  ${fmtIng(remainBytes)}`)}
+                                            {pct > 0 && col('Ingestion saved', `${pct}%`)}
+                                            <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5, fontWeight: 'bold' }}>Indexing (per M events)</Typography>
+                                            <Stack direction='row' spacing={0}>
+                                                <Box sx={{ flex: 1 }} />
+                                                {Object.keys(IDX).map(k => <Typography key={k} variant='caption' color='text.disabled' sx={{ width: 56, textAlign: 'right' }}>{k}</Typography>)}
+                                            </Stack>
+                                            {[
+                                                { label: 'All events', n: data.processedCount },
+                                                { label: 'Regex filtered', n: filtered },
+                                                { label: 'Remaining', n: data.processedCount - filtered },
+                                            ].map(({ label, n }) => (
+                                                <Stack key={label} direction='row' alignItems='center'>
+                                                    <Typography variant='body2' color='text.secondary' sx={{ flex: 1 }}>{label}</Typography>
+                                                    {Object.values(IDX).map((rate, i) => (
+                                                        <Typography key={i} variant='body2' fontWeight='bold' sx={{ width: 56, textAlign: 'right' }}>{fmtIdx(n, rate)}</Typography>
+                                                    ))}
+                                                </Stack>
+                                            ))}
+                                        </Stack>
+                                    )
+                                })()}
+                            </Box>
+                            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 190, flex: 1 }}>
+                                <Typography variant='subtitle2' fontWeight='bold' gutterBottom>Cost</Typography>
+                                <Stack spacing={0.5}>
+                                    {col('Total (w/o filtering)', fmt(total))}
+                                    {col('Spent', fmt(spent))}
+                                    {col('Saved', fmt(savedCost))}
+                                    {savedCost > 0 && col('Savings %', `${Math.round(savedCost / total * 100)}%`)}
+                                </Stack>
+                                {!selectedLlm?.inputCostPerMillion && (
+                                    <Typography variant='caption' color='text.disabled' sx={{ mt: 1, display: 'block' }}>
+                                        Set cost/M tokens in LLM config to see costs
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Stack>
+                        )
+                    })()}
 
                 </Box>
             </CardContent>

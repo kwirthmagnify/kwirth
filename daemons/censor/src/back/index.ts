@@ -84,8 +84,11 @@ interface IDaemonInstance {
     cfg: ICensorInstanceConfig
     assets: IAsset[]
     analyzing: boolean
+    _initReady?: Promise<void>
     processedCount: number
     llmCount: number
+    llmLinesCount: number
+    totalBytesProcessed: number
     tokensIn: number
     tokensOut: number
     lineBuffer: string[]
@@ -156,6 +159,8 @@ export class CensorDaemon implements IDaemon {
                 analyzing: false,
                 processedCount: 0,
                 llmCount: 0,
+                llmLinesCount: 0,
+                totalBytesProcessed: 0,
                 tokensIn: 0,
                 tokensOut: 0,
                 lineBuffer: [],
@@ -167,9 +172,10 @@ export class CensorDaemon implements IDaemon {
             this.instances.set(instanceConfig.id, inst)
 
             const savedCfg: ICensorInstanceConfig = inst.cfg
-            const dataCfg = instanceConfig.data as ICensorInstanceConfig | undefined
+            const dataCfg = instanceConfig.data as (ICensorInstanceConfig & { _llms?: ILlm[] }) | undefined
             const cfg = dataCfg?.llmId ? dataCfg : savedCfg
-            const llms: ILlm[] = ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []) as ILlm[]
+            const storedLlms: ILlm[] = ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []) as ILlm[]
+            const llms: ILlm[] = storedLlms.length > 0 ? storedLlms : (dataCfg?._llms ?? [])
             const llm = cfg.llmId ? llms.find(l => l.id === cfg.llmId) : undefined
 
             inst.cfg = cfg
@@ -177,7 +183,6 @@ export class CensorDaemon implements IDaemon {
             inst.analyzing = true
             inst.ephemeral = !!(instanceConfig.data as any)?.ephemeral
 
-            // Wire any subscribers that registered before this instance was created in memory
             const pending = this.pendingSubscribers.get(instanceConfig.id)
             if (pending) {
                 for (const cb of pending) inst.subscribers.add(cb)
@@ -294,7 +299,7 @@ export class CensorDaemon implements IDaemon {
                             }
                         }
                     }
-                    this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
+                    this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, llmLinesCount: inst.llmLinesCount, totalBytesProcessed: inst.totalBytesProcessed, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
                 }
             }
         }
@@ -318,7 +323,7 @@ export class CensorDaemon implements IDaemon {
                     target = {
                         instanceId,
                         cfg: cfg as ICensorInstanceConfig,
-                        assets: [], analyzing: true, processedCount: 0, llmCount: 0,
+                        assets: [], analyzing: true, processedCount: 0, llmCount: 0, llmLinesCount: 0, totalBytesProcessed: 0,
                         tokensIn: 0, tokensOut: 0,
                         lineBuffer: [], regexes: [], llmBusy: false, llmErrorCooldownUntil: 0, subscribers: new Set()
                     }
@@ -439,6 +444,7 @@ export class CensorDaemon implements IDaemon {
         const receivedBatch: { text: string, namespace: string, pod: string, container: string }[] = []
         for (const line of lines) {
             inst.processedCount++
+            inst.totalBytesProcessed += Buffer.byteLength(line, 'utf8')
             receivedBatch.push({ text: line, namespace: asset.namespace, pod: asset.pod, container: asset.container })
             const clean = cleanANSI(line)
             let filtered = false
@@ -457,15 +463,19 @@ export class CensorDaemon implements IDaemon {
         if (receivedBatch.length > 0) {
             this.broadcast(inst, 'received', { lines: receivedBatch })
         }
-        this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
+        this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, llmLinesCount: inst.llmLinesCount, totalBytesProcessed: inst.totalBytesProcessed, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
     }
 
     private async callLlm(inst: IDaemonInstance, lines: string[]): Promise<void> {
         inst.llmBusy = true
         let success = false
         try {
+            if (!inst.llm && inst.cfg.llmId) {
+                const storedLlms: ILlm[] = ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []) as ILlm[]
+                inst.llm = storedLlms.find(l => l.id === inst.cfg.llmId)
+            }
             if (!inst.llm) {
-                this.backDaemonObject.logWarning?.(`[censor-daemon] no LLM configured for instance ${inst.instanceId}`)
+                this.backDaemonObject.logWarning?.(`[censor-daemon] no LLM configured for instance ${inst.instanceId} llmId='${inst.cfg.llmId}' cfg.name='${inst.cfg.name}'`)
                 return
             }
             if (this.providers.length === 0) {
@@ -502,7 +512,8 @@ export class CensorDaemon implements IDaemon {
             const schema = zodFromExample(example)
 
             inst.llmCount++
-            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
+            inst.llmLinesCount += lines.length
+            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, llmLinesCount: inst.llmLinesCount, totalBytesProcessed: inst.totalBytesProcessed, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
             for (const line of lines) this.broadcast(inst, 'llminput', { text: line })
 
             const { output, usage } = await generateText({
@@ -514,7 +525,7 @@ export class CensorDaemon implements IDaemon {
 
             inst.tokensIn += usage.inputTokens ?? 0
             inst.tokensOut += usage.outputTokens ?? 0
-            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
+            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, llmLinesCount: inst.llmLinesCount, totalBytesProcessed: inst.totalBytesProcessed, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
             this.broadcast(inst, 'llmoutput', { text: JSON.stringify(output, null, 2) })
 
             const patterns: string[] = ((output as any).info ?? []).filter((x: any) => x.type === 'discard').map((x: any) => x.regex)

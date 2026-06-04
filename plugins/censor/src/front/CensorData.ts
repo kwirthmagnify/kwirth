@@ -41,6 +41,8 @@ export interface ICensorData {
     assets: ICensorAsset[]
     processedCount: number
     llmCount: number
+    llmLinesCount: number
+    totalBytesProcessed: number
     pendingCount: number
     tokensIn: number
     tokensOut: number
@@ -76,6 +78,8 @@ export class CensorData implements ICensorData {
     assets: ICensorAsset[] = []
     processedCount = 0
     llmCount = 0
+    llmLinesCount = 0
+    totalBytesProcessed = 0
     pendingCount = 0
     tokensIn = 0
     tokensOut = 0
