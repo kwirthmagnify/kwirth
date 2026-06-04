@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react'
 import {
     Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
-    FormControl, IconButton, InputAdornment, InputLabel, List, ListItemButton,
-    MenuItem, Select, Stack, TextField, Typography
+    FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, List, ListItemButton,
+    MenuItem, Select, Stack, Switch, TextField, Typography
 } from '@mui/material'
 import { FileDownload, FileUpload, Visibility, VisibilityOff } from '@mui/icons-material'
 
@@ -290,4 +290,45 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     )
 }
 
-export { LlmSelector, AiConfigLlm, AiConfigProvider }
+// ── ToolSelector ─────────────────────────────────────────────────────────────
+
+interface IToolSelectorProps {
+    tools: { name: string, description: string }[]
+    selected: string[]
+    autoTools: boolean
+    disabled?: boolean
+    onChange: (selected: string[], autoTools: boolean) => void
+}
+
+const ToolSelector: React.FC<IToolSelectorProps> = ({ tools, selected, autoTools, disabled, onChange }) => (
+    <Stack direction='row' alignItems='flex-end' spacing={1} sx={{ width: '100%' }}>
+        <FormControlLabel
+            control={<Switch size='small' checked={autoTools} onChange={e => onChange(selected, e.target.checked)} disabled={disabled} />}
+            label={<Typography variant='caption'>Auto</Typography>}
+            sx={{ ml: 1, mr: 0, flexShrink: 0 }}
+        />
+        <FormControl variant='standard' fullWidth>
+            <InputLabel>Tools</InputLabel>
+            <Select
+                multiple
+                value={selected}
+                onChange={e => onChange(e.target.value as string[], autoTools)}
+                renderValue={sel => autoTools ? `all (${tools.length})` : (sel as string[]).join(', ')}
+                variant='standard'
+                disabled={disabled || autoTools}
+            >
+                {tools.map(t => (
+                    <MenuItem key={t.name} value={t.name}>
+                        <Checkbox size='small' checked={selected.includes(t.name)} />
+                        <Stack direction='column'>
+                            <Typography variant='body2'>{t.name}</Typography>
+                            {t.description && <Typography variant='caption' color='text.secondary' sx={{ fontSize: '0.65rem' }}>{t.description}</Typography>}
+                        </Stack>
+                    </MenuItem>
+                ))}
+            </Select>
+        </FormControl>
+    </Stack>
+)
+
+export { LlmSelector, AiConfigLlm, AiConfigProvider, ToolSelector }

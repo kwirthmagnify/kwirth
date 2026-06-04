@@ -12,9 +12,21 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./back": { "types": "./dist/back.d.ts", "default": "./dist/back.js" },
-    "./front": { "types": "./dist/front.d.ts", "default": "./dist/front.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./back": {
+      "types": "./dist/back.d.ts",
+      "require": "./dist/back.js",
+      "default": "./dist/back.js"
+    },
+    "./front": {
+      "types": "./dist/front.d.ts",
+      "require": "./dist/front.js",
+      "default": "./dist/front.js"
+    }
   },
   "typesVersions": {
     "*": {
@@ -44,8 +56,8 @@
     "@kwirthmagnify/kwirth-common": "^0.5.1",
     "@mui/icons-material": "7.1.2",
     "@mui/material": "7.1.2",
+    "@types/node": "^25.9.1",
     "@types/react": "^18.3.0",
-    "react": "^18.3.0",
     "typescript": "^5.4.0"
   }
 }

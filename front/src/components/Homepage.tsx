@@ -8,6 +8,7 @@ import { Cluster } from '../model/Cluster'
 import { GaugeComponent } from 'react-gauge-component'
 import { addGetAuthorization } from '../tools/AuthorizationManagement'
 import { getIconFromKind } from '../tools/Constants-React'
+import { clusterColor } from '../tools/clusterColor'
 import { Area, AreaChart } from 'recharts'
 import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 
@@ -96,7 +97,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
     const toFavTabs = (tab:ITabSummary) => {
         if (!props.favTabs.some(t => t.name === tab.name && t.channel === tab.channel)) {
             props.favTabs.push(tab)
-            let i = props.lastTabs.findIndex(t => t.name !== tab.name || t.channel !== tab.channel)
+            let i = props.lastTabs.findIndex(t => t.name === tab.name && t.channel === tab.channel)
             props.lastTabs.splice(i,1)
             props.onUpdateTabs([...props.lastTabs], [...props.favTabs])
         }
@@ -167,11 +168,11 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
 
                             return <Stack key={listType+tab.name+tab.channel} direction={'row'} alignItems={'center'} flex={1}>
                                 <Tooltip title={channelAvailable ? tab.channel : `Channel '${tab.channel}' is not available — plugin may not be installed`}>
-                                    <span style={{ display: 'inline-flex' }}>{channelIcon}</span>
+                                    <span style={{ display: 'inline-flex', lineHeight: 0 }}>{channelIcon}</span>
                                 </Tooltip>
                                 <Typography>&nbsp;</Typography>
                                 <Tooltip title={`View: ${tab.channelObject.view}`}>
-                                    <span style={{ display: 'inline-flex' }}>  
+                                    <span style={{ display: 'inline-flex', lineHeight: 0 }}>
                                         {viewIcon}
                                     </span>
                                 </Tooltip>
@@ -179,6 +180,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 <Tooltip title={disabled? `Cannot access cluster '${tab.channelObject.clusterName}'`: `'${tab.name}' on cluster '${tab.channelObject.clusterName}'`}>
                                     <Typography>{name}</Typography>
                                 </Tooltip>
+                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: clusterColor(tab.channelObject.clusterName).dot, flexShrink: 0, mx: 0.5 }} />
                                 <Typography flexGrow={1}/>
                                 <Tooltip title={`Open this configuration on a new tab`}>
                                     <span>

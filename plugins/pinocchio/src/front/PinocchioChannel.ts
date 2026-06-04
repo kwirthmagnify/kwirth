@@ -26,7 +26,6 @@ export class PinocchioChannel implements IChannel {
         palette: false,
         userSettings: false,
         webSocket: true,
-        backChannels: false,
     }
 
     getScope() { return EInstanceConfigScope.NONE}

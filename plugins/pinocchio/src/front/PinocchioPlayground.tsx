@@ -1,9 +1,12 @@
 import React, { useRef, useState } from 'react'
-import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, InputLabel, Menu, MenuItem, Select, SelectChangeEvent, Stack, Switch, Tab, Tabs, TextareaAutosize, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
-import { ScienceOutlined, Upload, Bolt, FileDownload, CheckCircleOutline, HistoryOutlined, DeleteOutlined } from '@mui/icons-material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, Menu, MenuItem, Select, Stack, Tab, Tabs, TextareaAutosize, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
+import { ScienceOutlined, Upload, Bolt, FileDownload, FileUpload, CheckCircleOutline, HistoryOutlined, DeleteOutlined } from '@mui/icons-material'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState, kindsAvailable } from './PinocchioConfig'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
+import { useKeyboard as _useKeyboard } from '@kwirthmagnify/kwirth-common-front'
+import { ToolSelector as _ToolSelector } from '@kwirthmagnify/kwirth-common-ai/front'
+const useKeyboard: typeof _useKeyboard = typeof _useKeyboard === 'function' ? _useKeyboard : () => {}
+const ToolSelector: typeof _ToolSelector = typeof _ToolSelector === 'function' ? _ToolSelector : (() => null) as any
 
 interface IProps {
     pinocchioConfig: IPinocchioConfig
@@ -19,6 +22,7 @@ interface IProps {
 
 const PinocchioPlayground: React.FC<IProps> = (props) => {
     const initialLengthRef = useRef(props.content.length)
+    const uploadRef = useRef<HTMLInputElement>(null)
     const saved = props.pinocchioConfig.playground
 
     const [tab, setTab] = useState(0)
@@ -27,7 +31,6 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
     const [steps, setSteps] = useState(saved?.steps ?? 5)
     const [tools, setTools] = useState<string[]>(saved?.tools ?? [])
     const [autoTools, setAutoTools] = useState(saved?.autoTools ?? false)
-    const [toolFilter, setToolFilter] = useState('')
     const [promptType, setPromptType] = useState<'jinja' | 'artifact'>(saved?.promptType ?? 'jinja')
     const [system, setSystem] = useState(saved?.system ?? '')
     const [prompt, setPrompt] = useState(saved?.prompt ?? '')
@@ -141,6 +144,11 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 setSystem(v.system)
                 setPrompt(v.prompt)
                 setPromptType(v.promptType as 'jinja' | 'artifact')
+                if (t.trigger === 'business' && v.spaces?.length > 0) {
+                    const [space, type] = v.spaces[0].split('.')
+                    if (space) setEventSpace(space)
+                    if (type) setEventType(type)
+                }
                 markDirty()
             }
             setImportedFromTriggerId(pendingImportTriggerId)
@@ -148,6 +156,45 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
         setShowImportDialog(false)
         setPendingImportTriggerId('')
         setPendingImportVersionId('')
+    }
+
+    const uploadConfig = (file: File) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            try {
+                const cfg = JSON.parse(e.target?.result as string)
+                if (cfg.llm !== undefined) setLlm(cfg.llm)
+                if (cfg.steps !== undefined) setSteps(cfg.steps)
+                if (cfg.tools !== undefined) setTools(cfg.tools)
+                if (cfg.autoTools !== undefined) setAutoTools(cfg.autoTools)
+                if (cfg.system !== undefined) setSystem(cfg.system)
+                if (cfg.prompt !== undefined) setPrompt(cfg.prompt)
+                if (cfg.promptType !== undefined) setPromptType(cfg.promptType)
+                if (cfg.triggerType !== undefined) setTriggerType(cfg.triggerType)
+                if (cfg.artifactKind !== undefined) setArtifactKind(cfg.artifactKind)
+                if (cfg.eventSpace !== undefined) setEventSpace(cfg.eventSpace)
+                if (cfg.eventType !== undefined) setEventType(cfg.eventType)
+                if (cfg.eventData !== undefined) setEventData(cfg.eventData)
+                markDirty()
+            } catch {}
+        }
+        reader.readAsText(file)
+        if (uploadRef.current) uploadRef.current.value = ''
+    }
+
+    const downloadConfig = async () => {
+        const config = { llm, steps, tools, autoTools, system, prompt, promptType, triggerType, artifactKind, eventSpace, eventType, eventData, action: 'inform', spaces: [] }
+        const json = JSON.stringify(config, null, 2)
+        const filename = `pinocchio-playground-${new Date().toISOString().slice(0, 10)}.json`
+        const tauri = (window as any).__TAURI__
+        if (tauri?.core?.invoke) {
+            await tauri.core.invoke('save_file_dialog', { filename, content: json })
+            return
+        }
+        const blob = new Blob([json], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
+        URL.revokeObjectURL(url)
     }
 
     const openExportDialog = () => {
@@ -245,11 +292,6 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
         }
     }
 
-    const onChangeTools = (e: SelectChangeEvent<string[]>) => {
-        setTools(e.target.value as string[])
-        markDirty()
-    }
-
     const renderItem = (item: IAnalysis | IMessage, index: number) => {
         if ('findings' in item) return null
         const msg = item as IMessage
@@ -310,7 +352,6 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                                     </>
                                 )}
                             </Box>
-                            <Button size='small' startIcon={<Upload />} onClick={() => setShowImportDialog(true)}>Import from trigger</Button>
                         </Stack>
                         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                             <Stack direction='row' alignItems='center' spacing={0.5}>
@@ -339,31 +380,14 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                                     <MenuItem value='artifact'>artifact</MenuItem>
                                 </Select>
                             </FormControl>
-                            <FormControlLabel
-                                control={<Switch size='small' checked={autoTools} onChange={e => { setAutoTools(e.target.checked); markDirty() }} />}
-                                label={<Typography variant='caption'>Auto</Typography>}
-                                sx={{ mr: 0, flexShrink: 0 }}
-                            />
-                            <FormControl variant='standard' disabled={autoTools} sx={{ flex: 1 }}>
-                                <InputLabel>Tools</InputLabel>
-                                <Select multiple value={tools} onChange={onChangeTools} renderValue={sel => autoTools ? `all (${props.toolsAvailable.length})` : (sel as string[]).join(', ')}>
-                                    <MenuItem disableRipple onClickCapture={e => e.stopPropagation()} sx={{ p: 0.5 }}>
-                                        <TextField size='small' placeholder='Filter…' value={toolFilter} onChange={e => setToolFilter(e.target.value)} onKeyDown={e => e.stopPropagation()} fullWidth variant='outlined' />
-                                    </MenuItem>
-                                    {props.toolsAvailable
-                                        .filter(t => !toolFilter || t.name.includes(toolFilter) || t.description.toLowerCase().includes(toolFilter.toLowerCase()))
-                                        .map(tool => (
-                                            <MenuItem key={tool.name} value={tool.name}>
-                                                <Checkbox size='small' checked={tools.includes(tool.name)} />
-                                                <Box>
-                                                    <Typography variant='body2'>{tool.name}</Typography>
-                                                    <Typography variant='caption' color='text.secondary'>{tool.description}</Typography>
-                                                </Box>
-                                            </MenuItem>
-                                        ))
-                                    }
-                                </Select>
-                            </FormControl>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <ToolSelector
+                                    tools={props.toolsAvailable}
+                                    selected={tools}
+                                    autoTools={autoTools}
+                                    onChange={(sel, auto) => { setTools(sel); setAutoTools(auto); markDirty() }}
+                                />
+                            </Box>
                         </Stack>
                         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '8px' }}>
                             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -382,7 +406,6 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                             </Box>
                         </Box>
                         <Stack direction='row' spacing={1} sx={{ flex: '0 0 auto', pt: 1 }}>
-                            <Button size='small' startIcon={<FileDownload />} onClick={openExportDialog}>Export</Button>
                             <Box sx={{ flex: 1 }} />
                             <Tooltip title='Upload LLM, steps, tools and system to backend'>
                                 <span>
@@ -446,7 +469,14 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
 
             </DialogContent>
 
-            <DialogActions>
+            <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <input ref={uploadRef} type='file' accept='.json' style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadConfig(f) }} />
+                    <Button size='small' startIcon={<Upload />} onClick={() => setShowImportDialog(true)}>Import</Button>
+                    <Button size='small' startIcon={<FileDownload />} onClick={openExportDialog}>Export</Button>
+                    <Button size='small' startIcon={<FileUpload />} onClick={() => uploadRef.current?.click()}>Upload</Button>
+                    <Button size='small' startIcon={<FileDownload />} onClick={downloadConfig}>Download</Button>
+                </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button variant='contained' onClick={() => saveAndClose()}>Save</Button>
                     <Button onClick={() => props.onClose()}>Cancel</Button>

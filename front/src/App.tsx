@@ -39,6 +39,7 @@ import { getMetricsNames, ENotifyLevel, readClusterInfo } from './tools/Global'
 import { Homepage } from './components/Homepage'
 import { DEFAULTLASTTABS, IColors, TABSELECTEDCOLORS, TABUNSELECTEDCOLORS } from './tools/Constants'
 import { createChannelInstance } from './tools/ChannelTools'
+import { clusterColor } from './tools/clusterColor'
 import { MenuNotification, INotification } from './components/MenuNotification'
 import { ContextSelector } from './components/ContextSelector'
 import { v4 as uuid } from 'uuid'
@@ -85,12 +86,17 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             },
 
             MuiDialog: {
+                defaultProps: {
+                    TransitionProps: {
+                        onExit: () => { (document.activeElement as HTMLElement)?.blur() }
+                    }
+                },
                 styleOverrides: {
                     root: ({ theme }) => ({
                         border: '1px',
                         borderColor: '#333',
                         borderStyle: 'solid',
-                    }),        
+                    }),
                     paper: ({ theme }) => ({
                         backgroundImage: 'none !important',
                         backgroundColor: theme.palette.mode === 'dark' ? '#121212' : '#fff',
@@ -1858,8 +1864,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                     }}
                                 >
                                     {   tabs.current.map((tab:ITabObject, index) => {
-                                            return <Tab component='span' ref={(el) => tab.headerEl === el} key={index} label={formatTabName(tab)} value={index} 
-                                                style={{ borderLeft: `6px solid ${getTabColor(tab)}`, borderTop: '1px solid #888888', borderRight: '1px solid #888888', boxSizing: 'border-box'}}
+                                            return <Tab component='span' ref={(el) => tab.headerEl === el} key={index} label={formatTabName(tab)} value={index}
+                                                style={{ borderLeft: `6px solid ${getTabColor(tab)}`, borderTop: '1px solid #888888', borderRight: '1px solid #888888', boxSizing: 'border-box', backgroundColor: clusterColor(tab.channelObject?.clusterName ?? '', mode).tabBg }}
                                                 icon={
                                                     tab === selectedTab.current ? 
                                                         <IconButton onClick={(event) => setAnchorMenuTab(event.currentTarget)}>
@@ -1871,7 +1877,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                                 iconPosition='end'
                                                 sx={{
                                                     borderRadius: '10px 10px 0 0',
-                                                    backgroundColor:'#ebebeb',
                                                     '& .MuiTouchRipple-root': {
                                                         borderTopLeftRadius: '8px',
                                                         borderTopRightRadius: '8px',

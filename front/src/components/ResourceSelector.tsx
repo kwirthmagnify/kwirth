@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Button, Checkbox, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Stack, SxProps, Typography } from '@mui/material'
+import { Box, Button, Checkbox, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Stack, SxProps, Typography } from '@mui/material'
+import { clusterColor } from '../tools/clusterColor'
 import { Cluster } from '../model/Cluster'
 import { MsgBoxOkError } from '../tools/MsgBox'
 
@@ -328,8 +329,10 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 <Select value={cluster?.name} onChange={onChangeCluster}>
                 { props.clusters?.map( (cluster) => {
                     return <MenuItem key={cluster.name} value={cluster.name} disabled={!cluster.enabled}>
-                        <Stack direction={'row'} alignItems={'baseline'}>
-                            {getIcon(cluster, 20)} &nbsp; {cluster.name}
+                        <Stack direction='row' alignItems='center' spacing={1}>
+                            <span style={{ lineHeight: 0 }}>{getIcon(cluster, 20)}</span>
+                            <span>{cluster.name}</span>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: clusterColor(cluster.name).dot, flexShrink: 0 }} />
                         </Stack>
                     </MenuItem>
                 })}

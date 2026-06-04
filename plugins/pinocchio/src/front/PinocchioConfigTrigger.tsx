@@ -1,14 +1,16 @@
 import React, { useState } from 'react'
-import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, Switch, TextField, Typography } from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, Switch, TextField, Typography } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon, ContentCopy as CloneIcon } from '@mui/icons-material'
 import { IConfigTrigger, IConfigTriggerVersion, IPinocchioConfig, kindsAvailable } from './PinocchioConfig'
 import { objectClone, MsgBoxButtons, MsgBoxOkWarning, MsgBoxYesNo } from './utils'
 import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
+import { ToolSelector as _ToolSelector } from '@kwirthmagnify/kwirth-common-ai/front'
+const ToolSelector = typeof _ToolSelector === 'function' ? _ToolSelector : () => null
 
 interface IPinocchioLlmConfigProps {
     onClose: (pc: IPinocchioConfig | undefined) => void
     pinocchioConfig: IPinocchioConfig
-    toolsAvailable: string[]
+    toolsAvailable: { name: string, description: string }[]
 }
 
 const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchioLlmConfigProps) => {
@@ -297,22 +299,15 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
                                 </Select>
                             </FormControl>
                             <TextField value={steps} onChange={e => setSteps(+e.target.value)} variant='standard' type='number' sx={{ width: 60 }} label='Steps' disabled={selectedTriggerIndex === null} />
-                            <FormControlLabel
-                                control={<Switch size='small' checked={autoTools} onChange={e => setAutoTools(e.target.checked)} disabled={selectedTriggerIndex === null} />}
-                                label={<Typography variant='caption'>Auto</Typography>}
-                                sx={{ ml: 1, mr: 0, flexShrink: 0 }}
-                            />
-                            <FormControl variant='standard' sx={{ flex: 1 }}>
-                                <InputLabel>Tools</InputLabel>
-                                <Select onChange={onChangeTools} multiple value={tools} renderValue={sel => autoTools ? `all (${props.toolsAvailable.length})` : (sel as string[]).join(', ')} variant='standard' disabled={selectedTriggerIndex === null || autoTools}>
-                                    {props.toolsAvailable.map(tool => (
-                                        <MenuItem key={tool} value={tool}>
-                                            <Checkbox size='small' checked={tools.includes(tool)} />
-                                            <Typography>{tool}</Typography>
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <ToolSelector
+                                    tools={props.toolsAvailable}
+                                    selected={tools}
+                                    autoTools={autoTools}
+                                    disabled={selectedTriggerIndex === null}
+                                    onChange={(sel, auto) => { setTools(sel); setAutoTools(auto) }}
+                                />
+                            </Box>
                         </Stack>
 
                         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '8px' }}>

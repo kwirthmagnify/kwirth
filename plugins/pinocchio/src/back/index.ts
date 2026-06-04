@@ -1,12 +1,9 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject } from '@kwirthmagnify/kwirth-common'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS } from '@kwirthmagnify/kwirth-common-ai'
-import { buildModel, loadModels } from '@kwirthmagnify/kwirth-common-ai/back'
+import { buildModel, loadModels, IToolContext, tools as kwirthTools, toolInfoList, runWithToolContext } from '@kwirthmagnify/kwirth-common-ai/back'
 import { Request, Response } from 'express'
 import { generateText, Output, stepCountIs, z } from '@kwirthmagnify/kwirth-common-ai/back'
-
-// tools
-import { getToolByName, IToolContext, toolInfoList } from './Tools'
 
 const _ = require('lodash')
 const nunjucks = require('nunjucks')
@@ -65,6 +62,7 @@ export class PinocchioChannel {
         triggers: [],
         llms: []
     }
+    private startChannelReady: Promise<void> | null = null
     playgroundTrigger: IConfigTriggerVersion | undefined = undefined
     startTime: number
 
@@ -74,7 +72,11 @@ export class PinocchioChannel {
         this.startTime = Date.now()
     }
 
-    startChannel = async () =>  {
+    startChannel = () => {
+        this.startChannelReady = this._startChannelImpl()
+    }
+
+    _startChannelImpl = async () =>  {
         this.clusterInfo.addSubscriber('metrics', this, {})
         this.clusterInfo.addSubscriber('business', this, {
             spaces: [
@@ -90,7 +92,13 @@ export class PinocchioChannel {
         })
         let provs = await this.backChannelObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)
         if (provs) this.providers = provs
-        let config = await this.backChannelObject.readStorage!('pinocchio-config', false) as IPinocchioConfig
+        let rawConfig = await this.backChannelObject.readStorage!('pinocchio-config', false)
+        let config: IPinocchioConfig | null = null
+        if (typeof rawConfig === 'string') {
+            try { config = JSON.parse(rawConfig) } catch {}
+        } else if (rawConfig) {
+            config = rawConfig as IPinocchioConfig
+        }
         if (config) this.pinocchioConfig = config
         try {
             const sharedLlms = await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)
@@ -168,17 +176,15 @@ export class PinocchioChannel {
         let temperature = llm.temperature
         if (temperature<0) temperature=0
         if (temperature>1) temperature=1
-        let context:IToolContext = {
+        const toolContext: IToolContext = {
             origin: 'Pinocchio',
             nodes: await this.clusterInfo.getNodes(),
             clusterInfo: this.clusterInfo,
             clusterMetrics: this.clusterMetrics,
             trace: (toolName, args) => this.backChannelObject.logTrace?.(`[pinocchio] tool ${toolName} ${JSON.stringify(args)}`)
         }
-        let tools: any = {}
-        for (let toolName of version.tools) {
-            tools[toolName] = getToolByName(toolName, context)
-        }
+        const toolNames = version.autoTools ? toolInfoList.map(t => t.name) : (version.tools ?? [])
+        const tools = Object.fromEntries(toolNames.filter(n => n in kwirthTools).map(n => [n, (kwirthTools as any)[n]]))
 
         let providerOptions: Record<string, unknown> = {}
         let errorPath = ''
@@ -205,6 +211,7 @@ export class PinocchioChannel {
             errorPath,
             temperature,
             tools,
+            toolContext,
             prompt,
             system
         }
@@ -229,11 +236,11 @@ export class PinocchioChannel {
                 for (let t of this.pinocchioConfig.triggers.filter(t => t.trigger === 'business')) {
                   for (let version of t.versions.filter(v => v.enabled)) {
                     try {
-                        let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools} = await this.buildModelInvocation(t, version, businessEvent) || {}
+                        let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools, toolContext} = await this.buildModelInvocation(t, version, businessEvent) || {}
                         if (!model) return
 
                         this.broadcastMessage(`Received business event ${JSON.stringify(businessEvent.last.event)}`)
-                        const { output, usage, steps } = await generateText({
+                        const { output, usage, steps } = await runWithToolContext(toolContext!, () => generateText({
                             model,
                             temperature,
                             stopWhen: stepCountIs(15),
@@ -246,7 +253,7 @@ export class PinocchioChannel {
                             }),
                             system: "Use the tools provided to find information, and once you have the data, format your final response strictly as a JSON object according to the schema.",
                             prompt: prompt||'Hi AI, how are you?',
-                        })
+                        }))
                         this.broadcastMessage(JSON.stringify(output.response))
                     }
                     catch (err:any) {
@@ -278,11 +285,11 @@ export class PinocchioChannel {
                                 }
                             }
 
-                            let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools} = await this.buildModelInvocation(t, version, eventsEvent) || {}
+                            let {llmModelId, llmProviderId, model, temperature, providerOptions, errorPath, system, prompt, tools, toolContext} = await this.buildModelInvocation(t, version, eventsEvent) || {}
                             if (!model) return
 
                             try {
-                                const { output, usage } = await generateText({
+                                const { output, usage } = await runWithToolContext(toolContext!, () => generateText({
                                     model,
                                     temperature,
                                     tools,
@@ -301,7 +308,7 @@ export class PinocchioChannel {
                                     }),
                                     system: system||'You are a very polite AI system',
                                     prompt: prompt||'Hi AI, how are you?',
-                                })
+                                }))
 
                                 let analysis:IAnalysis = {
                                     text: `${eventsEvent.type} ${eventsEvent.obj.kind} '${eventsEvent.obj.metadata.name}' in namespace '${eventsEvent.obj.metadata.namespace}' [LLM:${llmProviderId}/${llmModelId}, IN:${usage.inputTokens}, OUT:${usage.outputTokens}]`,
@@ -456,7 +463,7 @@ export class PinocchioChannel {
         try {
             const invocation = await this.buildModelInvocation(dummyTrigger, version, fakeEvent)
             if (!invocation) return
-            const { model, temperature, providerOptions, tools, prompt: effectivePrompt } = invocation
+            const { model, temperature, providerOptions, tools, toolContext, prompt: effectivePrompt } = invocation
 
             this.broadcastPlaygroundMessage(`[Playground] type: ${triggerType}`)
             this.broadcastPlaygroundMessage(`[Playground] llm: ${version.llm}`)
@@ -479,7 +486,7 @@ export class PinocchioChannel {
                 activeTools = Object.fromEntries(selectedNames.map(n => [n, tools[n]]))
             }
 
-            const { text: phase1Text, usage: usage1, steps } = await generateText({
+            const { text: phase1Text, usage: usage1, steps } = await runWithToolContext(toolContext!, () => generateText({
                 model,
                 temperature,
                 stopWhen: stepCountIs(version.steps || 5),
@@ -487,7 +494,7 @@ export class PinocchioChannel {
                 providerOptions,
                 system: version.system || 'You are a helpful assistant.',
                 prompt: effectivePrompt
-            })
+            }))
 
             const toolLines: string[] = []
             for (const step of steps) {
@@ -641,6 +648,7 @@ export class PinocchioChannel {
     // *************************************************************************************
 
     executeConfigGet = async () => {
+        if (this.startChannelReady) await this.startChannelReady
         try {
             const sharedLlms = await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)
             if (sharedLlms?.length) this.pinocchioConfig.llms = sharedLlms
