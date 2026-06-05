@@ -35,6 +35,7 @@ These are key features of Magnify channel:
   - Launch a Trivy channel for analyzing your workload. With Magnify you can also deploy Trivy Operator to your cluster if you have not deployed it previously.
   - Launch Fileman for working visually with the filesystems of your living images.
   - Launch shell sessions against your living containers (part of the Ops channel).
+  - **LogSearch** — full text search across pod logs directly from the Magnify channel (see [LogSearch](#logsearch) below).
   - In addition to these basic and not-so-basic features you can:
     - Work with nodes and review images.
     - Get information for specific resources like CSI objects (driver, node, etc.) and volume attachments.
@@ -60,6 +61,43 @@ Every time you select an item or a set of items you'll see the action toolbar on
 Magnify is a **windowed tool**, so every time you perform an action a window may show up, and you can manage it (inside your browser or your KwirthMagnify desktop tool) as a regular window: minimize, full-screen, move, resize, pin...
 
 ![magnifywindowed](../_media/ch-images/magnify-windowed.png)
+
+## LogSearch
+
+LogSearch is a Magnify sub-feature that lets you search for text patterns across the logs of any pod or container visible in the current Magnify session, without having to open individual log streams.
+
+### How it works
+
+Open the LogSearch panel from the Magnify toolbar. Enter a search term (plain text or regex), choose the target scope (namespace, group, pod, or individual container), set the number of lines to retrieve per container, and press **Search**. Magnify fans out the query to all matching containers in the backend, collects results, and displays them in a unified result list grouped by container.
+
+### Configuration options
+
+| Option | Default | Notes |
+|---|---|---|
+| Search term | — | Plain text or JavaScript regex |
+| Lines per container | **100** | Maximum **500** per container |
+| Scope | all containers in view | Can be narrowed to namespace / group / pod / container |
+
+?> Keeping the default at 100 lines makes searches fast even across large clusters. Raise it when you need deeper history, but bear in mind the 500-line cap exists to keep memory and latency under control.
+
+### Stopping a search
+
+A **Stop** button (red stop icon) is shown in the LogSearch panel toolbar whenever a search is in progress. Clicking it cancels the search immediately on both the frontend and the backend — no further log lines will be retrieved from any container.
+
+Technical detail: each search is assigned a unique UUID at the moment it starts. The Stop command sends that UUID to the backend, which marks it as cancelled and skips any pending work for that specific search. This design supports **concurrent searches**: if you open multiple LogSearch panels, each one has an independent UUID and can be stopped without affecting the others.
+
+If you close the LogSearch panel while a search is still running, the search is automatically stopped — the panel sends the stop command as part of its cleanup so no orphan work is left running in the backend.
+
+## User preferences and extension managers
+
+The Magnify channel has a **User Preferences** panel (accessible from the gear icon in the Magnify toolbar) where you can adjust display and behaviour settings for the channel. In addition to those settings, the panel provides shortcut buttons to open the extension manager dialogs:
+
+  - **Plugins** — install, update, or remove Kwirth plugins
+  - **Providers** — configure available data providers
+  - **Senders** — manage outbound notification adapters
+  - **Daemons** — manage background headless workers
+
+This means you can manage extensions without leaving the Magnify channel or navigating to the global Kwirth settings menu.
 
 ### Specifics for Kwirth Magnify (Desktop versions)
 Kwirth Desktop is an Electron application whose login page is specifically designed for local work (the same you would do with Lens, K9s, or Headlamp). Therefore, Kwirth Desktop does not connect to a specific Kubernetes cluster by default; instead, it shows the user all the contexts available in their local `kubeconfig` file. Cluster status and availability will be refreshed automatically, as shown in the following image:

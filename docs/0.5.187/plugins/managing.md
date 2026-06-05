@@ -16,11 +16,27 @@ Plugins are stored as Kubernetes ConfigMaps and loaded dynamically at startup an
 
 ### Plugin Manager UI
 
-The easiest way to manage plugins is through the built-in Plugin Manager, accessible from the Kwirth settings menu.
+The easiest way to manage plugins is through the built-in Plugin Manager, accessible from the Kwirth settings menu (or from the **User Preferences** panel inside the Magnify channel).
 
 ![plugininstall](../_media/plugin-install.png ':class=imageclass80')
 
-The dialog shows the curated plugin registry (fetched from the Kwirth manifest) with the available plugins, their version, and description. To install a plugin, click **Install** — Kwirth downloads the package, stores it in Kubernetes ConfigMaps, and activates it immediately. No restart required.
+The dialog shows the curated plugin registry (fetched from the Kwirth manifest) with the available plugins, their versions, and descriptions. To install a plugin, click **Install** — Kwirth downloads the package, stores it in Kubernetes ConfigMaps, and activates it immediately. No restart required.
+
+#### Choosing a specific version
+
+When a plugin has more than one published version in the catalog, a version dropdown appears on its card. Select the version you want before clicking **Install**. This is useful for pinning a known-good version or rolling back after an update.
+
+#### Dependency requirements
+
+Plugins can declare dependencies on other components. If a plugin requires a specific daemon, sender, provider, or another plugin (at a minimum version), the Plugin Manager displays those requirements as chips under the plugin description:
+
+```
+Requires: censor (daemon) ≥0.1.5   kwirth-common-ai (provider) ≥0.5.18
+```
+
+The **Install** button is automatically disabled when any requirement is not satisfied. Hovering over the disabled button shows a tooltip listing the missing or outdated components. Install the required components first and then return to install this plugin.
+
+The requirement check compares installed versions using Kwirth's standard version comparison (`versionGreaterThan`), so patch and minor updates satisfy a minimum-version requirement as expected.
 
 ### Installing from a URL
 

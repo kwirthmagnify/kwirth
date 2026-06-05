@@ -141,7 +141,8 @@
       "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\pinocchio && npm run build 2>&1 | Select-String \"Built|error\"; $size = \\(Get-Item \"dist/back.js\"\\).Length / 1MB; Write-Host \"back.js: $\\([math]::Round\\($size, 2\\)\\) MB\")",
       "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor && npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"src/back\" })",
       "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\alert && npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"error TS\" } | Select-Object -First 20)",
-      "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins -Directory | ForEach-Object { $has = Test-Path \"$\\($_.FullName\\)\\\\tsconfig.json\"; Write-Host \"$\\($_.Name\\): $\\(if\\($has\\){'✓'}else{'✗'}\\)\" })"
+      "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins -Directory | ForEach-Object { $has = Test-Path \"$\\($_.FullName\\)\\\\tsconfig.json\"; Write-Host \"$\\($_.Name\\): $\\(if\\($has\\){'✓'}else{'✗'}\\)\" })",
+      "Bash(rtk du *)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

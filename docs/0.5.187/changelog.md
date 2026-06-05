@@ -19,6 +19,31 @@ Minor but powerful features:
   - **Daemon system**: Headless background workers can now run continuously inside Kwirth without requiring an active user session or WebSocket connection. Daemons are ideal for permanent log analysis, event watching, or continuous data forwarding.
   - **kwirth-common-ai**: New shared package that abstracts LLM provider integrations (OpenRouter, Gemini, Groq, OpenAI, Mistral…). Used by Pinocchio and Censor to offer a unified model/provider configuration across AI-powered features.
 
+### Incremental improvements
+
+  - **Magnify — LogSearch: Stop button and better defaults**: The LogSearch panel now defaults to **100 lines** (previously 500) and enforces a hard **500-line maximum**, making searches faster and more responsive. A red **Stop Search** button is available whenever a search is running and cancels it immediately. Cancellation uses a per-search UUID so multiple concurrent searches from the same client can each be stopped independently without interfering with each other. If the LogSearch panel is closed while a search is still running, the search is automatically cancelled on both the frontend and the backend.
+
+  - **Magnify — Open extension managers from the channel**: The Magnify channel's user preferences panel now includes quick-access buttons to open the Plugin, Provider, Sender, and Daemon manager dialogs directly from within the channel, without having to navigate to the global Kwirth settings menu.
+
+  - **Censor — Inference and Audit modes**: The Censor plugin and daemon now support two distinct operating modes selectable at configuration time:
+    - `inference` mode (original behaviour): the LLM continuously discovers noise patterns from the incoming log stream and accumulates regex rules to filter them out automatically.
+    - `audit` mode: instead of learning noise patterns, the LLM performs a deeper analysis of each batch looking for anomalies, suspicious entries, and policy violations. Findings are surfaced as actionable alerts rather than filter rules.
+    The selected mode is stored as part of the session configuration and is forwarded to the Censor daemon when running headlessly.
+
+  - **Plugin manager — Dependency requirements with version validation**: Plugins can now declare a `requires` list in their manifest. Each requirement specifies the type (`plugin`, `provider`, `sender`, or `daemon`), the component id, and the minimum acceptable version. The Plugin Manager dialog reads these requirements at catalog load time, queries the currently installed components for each required type, and renders a chip per requirement on the plugin card showing what is needed and the minimum version. The **Install** button is automatically disabled if any requirement is unmet; a tooltip explains exactly which component is missing or outdated. This ensures users can never end up with a broken plugin due to a missing dependency.
+
+  - **Plugin manager — Version selection**: The plugin catalog now groups all published versions of each plugin and shows a version dropdown on each card when more than one version is available, letting you choose exactly which version to install instead of always getting the latest.
+
+  - **Kwirth version update notification**: Kwirth now checks whether a newer server build is available and shows a non-intrusive notification in the UI, so administrators always know when an upgrade is ready.
+
+  - **Pinocchio — Kubernetes event type filter on artifact triggers**: Artifact triggers can now declare which Kubernetes event type should activate them: `ADDED`, `MODIFIED`, or `DELETED`. Leaving the field blank (or selecting "Any") makes the trigger fire on all three event types. Previously the backend only processed `ADDED` events — `MODIFIED` and `DELETED` were silently discarded. This change makes Pinocchio useful for detecting object mutations and deletions in addition to initial deployments. The event type is configurable both in the Trigger configuration screen and in the Playground's test area. The `creationTimestamp` recency bypass is still applied, but only for `ADDED` events where it makes semantic sense.
+
+  - **Pinocchio — AI tools promoted to `kwirth-common-ai`**: The full set of Kubernetes interrogation tools used by Pinocchio's LLM agent has been extracted from Pinocchio's own backend and moved into the shared `@kwirthmagnify/kwirth-common-ai` package. Any AI-powered plugin or daemon can now import and use these tools without duplicating code or taking a dependency on Pinocchio.
+
+  - **New LLM tool: `get_service_yaml`**: A new tool has been added to the `kwirth-common-ai` tool set. Given a namespace and a service name it returns the full Kubernetes Service manifest, equivalent to running `kubectl get service <name> -n <namespace> -o yaml`. It is immediately available to all LLM agents (Pinocchio, Censor…) without any additional configuration.
+
+  - **Type safety: `MetricDefinition` promoted to `kwirth-common-front`**: The `MetricDefinition` class (fields: `metric`, `type`, `help`, `eval`) has been moved from the Metrics channel internals into `@kwirthmagnify/kwirth-common-front`. The `metricsList` field in `IChannelObject` is now typed `Map<string, MetricDefinition>` instead of `Map<string, unknown>`, eliminating a production TypeScript build error and providing full type safety to any channel that works with metric definitions.
+
 ## 0.5.40
 Minor but powerful features:
 
