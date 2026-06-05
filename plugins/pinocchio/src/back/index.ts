@@ -273,12 +273,11 @@ export class PinocchioChannel {
                 break
             case 'events':
                 let eventsEvent = event as IEventsProviderEvent
-                if (eventsEvent.type==='ADDED') {
-                    try {
-                        for (let t of this.pinocchioConfig.triggers.filter(t => t.trigger === 'artifact' && t.kind === eventsEvent.obj.kind)) {
-                          for (let version of t.versions.filter(v => v.enabled)) {
-                            this.backChannelObject.logInfo?.(`[pinocchio] added ${eventsEvent.obj.kind} ${eventsEvent.obj.metadata?.name}`)
-                            if (eventsEvent.obj?.metadata?.creationTimestamp) {
+                try {
+                    for (let t of this.pinocchioConfig.triggers.filter(t => t.trigger === 'artifact' && t.kind === eventsEvent.obj.kind && (!t.k8sEvent || t.k8sEvent === eventsEvent.type))) {
+                      for (let version of t.versions.filter(v => v.enabled)) {
+                        this.backChannelObject.logInfo?.(`[pinocchio] ${eventsEvent.type} ${eventsEvent.obj.kind} ${eventsEvent.obj.metadata?.name}`)
+                        if (eventsEvent.type === 'ADDED' && eventsEvent.obj?.metadata?.creationTimestamp) {
                                 let creationTs = Date.parse(eventsEvent.obj?.metadata?.creationTimestamp)
                                 if (creationTs<this.startTime) {
                                     this.backChannelObject.logWarning?.(`[pinocchio] bypass object analysis, creation timestamp is previous for object ${eventsEvent.obj?.metadata?.name} and kind ${t.kind} for LLM ${version.llm}`)
@@ -348,7 +347,6 @@ export class PinocchioChannel {
                     catch (err) {
                         this.backChannelObject.logError?.(`[pinocchio] error in processProviderEvent: ${err}`)
                     }
-                }
                 break
             default:
                 this.backChannelObject.logWarning?.(`[pinocchio] ignored provider event from '${providerId}'`)

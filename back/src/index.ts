@@ -1941,7 +1941,7 @@ const configureForward = (localClusterInfo:ClusterInfo, expressApp:Application) 
                 return
             }
             let dest = req.cookies['x-kwirth-forward']
-            logInfo(ELogComponent.CORE, `[PROXY] dynamic routing to `+dest)
+            logInfo(ELogComponent.CORE, `[PROXY] dynamic routing to '${dest}' requesting '${req.url}'`)
             return dynamicProxy(req, res, next)
         }
         if (req.url.startsWith(`${envRootPath}/port-forward/pod`)) {

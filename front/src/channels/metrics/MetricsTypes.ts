@@ -34,12 +34,7 @@ export interface IMetricsMessageResponse extends IInstanceMessage {
     assets: IMetricsAssets[]
 }
 
-export class MetricDefinition {
-    public metric: string = ''
-    public type: string = ''
-    public help: string = ''
-    public eval: string = ''
-}
+export { MetricDefinition } from '@kwirthmagnify/kwirth-common-front'
 
 export interface AssetMetrics {
     assetName: string

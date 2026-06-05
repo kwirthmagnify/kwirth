@@ -61,7 +61,14 @@ export interface IChannelObject {
     exit?: () => void
     stopChannel?: () => void
     openManager?: (type: 'plugins' | 'providers' | 'senders' | 'daemons') => void
-    metricsList?: Map<string, unknown>
+    metricsList?: Map<string, MetricDefinition>
+}
+
+export class MetricDefinition {
+    public metric: string = ''
+    public type: string = ''
+    public help: string = ''
+    public eval: string = ''
 }
 
 export interface ISetupProps {

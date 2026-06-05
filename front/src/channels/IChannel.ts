@@ -9,11 +9,9 @@ import {
 import { IResourceSelected } from '../components/ResourceSelector'
 import { IClusterInfo } from '../model/Cluster'
 import { INotification } from '../components/MenuNotification'
-import { MetricDefinition } from './metrics/MetricsTypes'
 import { BackChannelData } from '@kwirthmagnify/kwirth-common'
 
 interface IChannelObject extends IChannelObjectBase {
-    metricsList?: Map<string, MetricDefinition>
     notifications?: INotification[]
     clusterInfo?: IClusterInfo
     createTab?: (resource: IResourceSelected, start: boolean, settings: any) => void
