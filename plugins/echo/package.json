@@ -2,7 +2,7 @@
   "id": "echo",
   "displayName": "Echo",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
   "icon": "Science",
   "type": "module",

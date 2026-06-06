@@ -1,8 +1,58 @@
 [
-  { "id": "censor", "name": "@kwirthmagnify/kwirth-daemon-censor", "displayName": "Censor", "version": "0.2.6", "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless", "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.6.tgz" },
-  { "id": "censor", "name": "@kwirthmagnify/kwirth-daemon-censor", "displayName": "Censor", "version": "0.2.5", "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless", "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.5.tgz" },
-  { "id": "censor", "name": "@kwirthmagnify/kwirth-daemon-censor", "displayName": "Censor", "version": "0.2.4", "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless", "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.4.tgz" },
-  { "id": "censor", "name": "@kwirthmagnify/kwirth-daemon-censor", "displayName": "Censor", "version": "0.2.3", "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless", "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.3.tgz" },
-  { "id": "censor", "name": "@kwirthmagnify/kwirth-daemon-censor", "displayName": "Censor", "version": "0.2.2", "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless", "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.2.tgz" },
-  { "id": "censor", "name": "@kwirthmagnify/kwirth-daemon-censor", "displayName": "Censor", "version": "0.2.1", "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless", "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.1.tgz" }
+  {
+    "id": "censor",
+    "name": "@kwirthmagnify/kwirth-daemon-censor",
+    "displayName": "Censor",
+    "version": "0.2.7",
+    "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.7.tgz"
+  },
+  {
+    "id": "censor",
+    "name": "@kwirthmagnify/kwirth-daemon-censor",
+    "displayName": "Censor",
+    "version": "0.2.6",
+    "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.6.tgz"
+  },
+  {
+    "id": "censor",
+    "name": "@kwirthmagnify/kwirth-daemon-censor",
+    "displayName": "Censor",
+    "version": "0.2.5",
+    "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.5.tgz"
+  },
+  {
+    "id": "censor",
+    "name": "@kwirthmagnify/kwirth-daemon-censor",
+    "displayName": "Censor",
+    "version": "0.2.4",
+    "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.4.tgz"
+  },
+  {
+    "id": "censor",
+    "name": "@kwirthmagnify/kwirth-daemon-censor",
+    "displayName": "Censor",
+    "version": "0.2.3",
+    "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.3.tgz"
+  },
+  {
+    "id": "censor",
+    "name": "@kwirthmagnify/kwirth-daemon-censor",
+    "displayName": "Censor",
+    "version": "0.2.2",
+    "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.2.tgz"
+  },
+  {
+    "id": "censor",
+    "name": "@kwirthmagnify/kwirth-daemon-censor",
+    "displayName": "Censor",
+    "version": "0.2.1",
+    "description": "Censor daemon for Kwirth - LLM-powered background log noise filtering running headless",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-daemon-censor/-/kwirth-daemon-censor-0.2.1.tgz"
+  }
 ]

@@ -149,7 +149,10 @@
       "Bash(node -e ' *)",
       "Bash(node -e *)",
       "PowerShell(foreach \\($sender in @\\('tee','teams','regex'\\)\\) { $f = \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\$sender\\\\watch.mjs\"; Write-Host \"=== $sender ===\"; Select-String \"front|frontCtx\" $f | Select-Object -ExpandProperty Line })",
-      "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders -Directory | ForEach-Object { $pkg = \"$\\($_.FullName\\)\\\\package.json\"; if \\(Test-Path $pkg\\) { $j = Get-Content $pkg | ConvertFrom-Json; \"$\\($_.Name\\): watch=[$\\($j.scripts.watch\\)]  build=[$\\($j.scripts.build\\)]\" } })"
+      "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders -Directory | ForEach-Object { $pkg = \"$\\($_.FullName\\)\\\\package.json\"; if \\(Test-Path $pkg\\) { $j = Get-Content $pkg | ConvertFrom-Json; \"$\\($_.Name\\): watch=[$\\($j.scripts.watch\\)]  build=[$\\($j.scripts.build\\)]\" } })",
+      "PowerShell(npm whoami 2>&1)",
+      "PowerShell(Get-Content \"$env:USERPROFILE\\\\.npmrc\" -ErrorAction SilentlyContinue; Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\.npmrc\" -ErrorAction SilentlyContinue)",
+      "PowerShell(npm view @kwirthmagnify/kwirth-plugin-log version 2>&1)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

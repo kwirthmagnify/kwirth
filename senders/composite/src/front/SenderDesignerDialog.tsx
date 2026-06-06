@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import {
     Box, Button, CircularProgress, Dialog, DialogActions, DialogContent,
-    DialogTitle, Divider, IconButton, List, ListItem, ListItemButton,
-    ListItemText, Stack, TextField, Tooltip, Typography
+    DialogTitle, Divider, FormControlLabel, IconButton, List, ListItem, ListItemButton,
+    ListItemText, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
 import { AccessTime, Add, CallSplit, Delete, FilterAlt, Send } from '@mui/icons-material'
 import { IAvailableSender, ICompositeNode, IPipelineConfig } from './types'
@@ -54,6 +54,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [dirty, setDirty] = useState(false)
+    const [editMode, setEditMode] = useState(false)
     const [newName, setNewName] = useState('')
     const [error, setError] = useState<string | undefined>()
 
@@ -104,6 +105,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
         setFlow(pipelines[name]?.flow)
         setSelectedPath(undefined)
         setDirty(false)
+        setEditMode(false)
         setError(undefined)
     }
 
@@ -261,21 +263,29 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                     <Stack direction='row' spacing={1} alignItems='center'>
                                         <TextField
                                             size='small' label='Pipeline name' fullWidth
+                                            disabled={!editMode}
                                             value={editingName}
                                             onChange={e => setEditingName(e.target.value)}
                                             onBlur={applyRename}
                                             onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } if (e.key === 'Escape') { setEditingName(selectedName); e.currentTarget.blur() } }}
                                         />
                                         {error && <Typography variant='caption' color='error' sx={{ whiteSpace: 'nowrap' }}>{error}</Typography>}
-                                        <Button
-                                            variant='contained' size='small'
-                                            disabled={!dirty || !flow || saving}
-                                            onClick={savePipeline}
-                                            startIcon={saving ? <CircularProgress size={14} /> : undefined}
-                                            sx={{ whiteSpace: 'nowrap' }}
-                                        >
-                                            {saving ? 'Saving…' : 'Save'}
-                                        </Button>
+                                        <FormControlLabel
+                                            control={<Switch size='small' checked={editMode} onChange={e => setEditMode(e.target.checked)} />}
+                                            label={<Typography variant='caption'>{editMode ? 'Edit' : 'View'}</Typography>}
+                                            sx={{ whiteSpace: 'nowrap', m: 0 }}
+                                        />
+                                        {editMode && (
+                                            <Button
+                                                variant='contained' size='small'
+                                                disabled={!dirty || !flow || saving}
+                                                onClick={savePipeline}
+                                                startIcon={saving ? <CircularProgress size={14} /> : undefined}
+                                                sx={{ whiteSpace: 'nowrap' }}
+                                            >
+                                                {saving ? 'Saving…' : 'Save'}
+                                            </Button>
+                                        )}
                                     </Stack>
                                 </Box>
                             )}
@@ -312,6 +322,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                         selectedPath={selectedPath}
                                         availableSenders={availableSenders}
                                         configDescriptions={configDescriptions}
+                                        readonly={!editMode}
                                         onFlowChange={handleFlowChange}
                                         onSelectPath={setSelectedPath}
                                     />

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import * as MuiIcons from '../tools/KwirthIcons'
-import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh } from '@mui/icons-material'
+import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
@@ -57,7 +57,9 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     const [installingFile, setInstallingFile] = useState(false)
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [filterText, setFilterText] = useState('')
+    const [installedFilter, setInstalledFilter] = useState('')
     const [crossInstalled, setCrossInstalled] = useState<Record<string, { id: string, version: string }[]>>({})
+    const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const groupedAvailable: Record<string, IPluginManifestEntry[]> = available.reduce((acc, p) => {
@@ -241,10 +243,10 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                         <Typography variant='body2' fontWeight='bold' component='span'>{displayName||name}</Typography>
                         {versions && versions.length > 1
                             ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
-                                sx={{ height: 24, fontSize: '0.75rem', '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                 {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                               </Select>
-                            : <Chip label={`v${version}`} size='small' />
+                            : <Chip label={`v${version}`} size='small' sx={{ minWidth: 72 }} />
                         }
                         {badge}
                     </Stack>
@@ -271,26 +273,67 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         </Box>
     )
 
+    const ViewToggle = () => (
+        <Stack direction='row' spacing={0}>
+            <Tooltip title='Card view'>
+                <IconButton size='small' color={viewMode === 'card' ? 'primary' : 'default'} onClick={() => setViewMode('card')}>
+                    <ViewModule fontSize='small' />
+                </IconButton>
+            </Tooltip>
+            <Tooltip title='List view'>
+                <IconButton size='small' color={viewMode === 'list' ? 'primary' : 'default'} onClick={() => setViewMode('list')}>
+                    <ViewList fontSize='small' />
+                </IconButton>
+            </Tooltip>
+        </Stack>
+    )
+
+    const filteredIds = Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase()))
+
     return (
-        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw' } }}>
+        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
             <DialogTitle>Manage plugins</DialogTitle>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
-                    <Typography variant='subtitle2'>Installed plugins</Typography>
+
+                    <Stack direction='row' alignItems='center' spacing={1}>
+                        <Typography variant='subtitle2'>Installed plugins</Typography>
+                        <TextField size='small' placeholder='Filter…' value={installedFilter} onChange={e => setInstalledFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                        <ViewToggle />
+                    </Stack>
                     {installed.length === 0
                         ? <Typography variant='body2' color='text.secondary'>No plugins installed.</Typography>
-                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
-                            {installed.map(plugin => (
-                                <PluginCard
-                                    key={plugin.id}
-                                    icon={plugin.icon}
-                                    name={plugin.name}
-                                    displayName={plugin.displayName}
-                                    version={plugin.version}
-                                    description={plugin.description}
-                                    website={plugin.website}
-                                    source={resolveSource(plugin.installedFrom)}
-                                    action={
+                        : viewMode === 'card'
+                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
+                                {installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name).toLowerCase().includes(installedFilter.toLowerCase())).map(plugin => (
+                                    <PluginCard
+                                        key={plugin.id}
+                                        icon={plugin.icon}
+                                        name={plugin.name}
+                                        displayName={plugin.displayName}
+                                        version={plugin.version}
+                                        description={plugin.description}
+                                        website={plugin.website}
+                                        source={resolveSource(plugin.installedFrom)}
+                                        action={
+                                            <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : 'Uninstall'}>
+                                                <span>
+                                                    <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
+                                                        {uninstallingId === plugin.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                        }
+                                    />
+                                ))}
+                              </Box>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+                                {installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name).toLowerCase().includes(installedFilter.toLowerCase())).map(plugin => (
+                                    <Box key={plugin.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
+                                        <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}>{resolveIcon(plugin.icon)}</Box>
+                                        <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plugin.displayName || plugin.name}</Typography>
+                                        <Box sx={{ flexShrink: 0 }}>{resolveSource(plugin.installedFrom)}</Box>
+                                        <Chip label={`v${plugin.version}`} size='small' sx={{ minWidth: 72 }} />
                                         <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : 'Uninstall'}>
                                             <span>
                                                 <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
@@ -298,22 +341,14 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                                 </IconButton>
                                             </span>
                                         </Tooltip>
-                                    }
-                                />
-                            ))}
-                          </Box>
+                                    </Box>
+                                ))}
+                              </Box>
                     }
 
                     <Typography variant='subtitle2' sx={{ pt: 1 }}>Install plugin</Typography>
                     <Stack direction='row' spacing={1} alignItems='center'>
-                        <TextField
-                            size='small'
-                            fullWidth
-                            placeholder='https://...'
-                            value={customUrl}
-                            onChange={e => setCustomUrl(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') installFromUrl() }}
-                        />
+                        <TextField size='small' fullWidth placeholder='https://...' value={customUrl} onChange={e => setCustomUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') installFromUrl() }} />
                         <Tooltip title='Install from URL'>
                             <span>
                                 <IconButton size='small' color='primary' disabled={installingCustom || !customUrl.trim()} onClick={installFromUrl}>
@@ -322,23 +357,10 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                             </span>
                         </Tooltip>
                         <Divider orientation='vertical' flexItem />
-                        <input
-                            ref={fileInputRef}
-                            type='file'
-                            accept='.tgz,application/gzip'
-                            style={{ display: 'none' }}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) installFromFile(f) }}
-                        />
+                        <input ref={fileInputRef} type='file' accept='.tgz,application/gzip' style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) installFromFile(f) }} />
                         <Tooltip title='Install from local file'>
                             <span>
-                                <Button
-                                    variant='outlined'
-                                    size='small'
-                                    startIcon={installingFile ? <CircularProgress size={14} /> : <FolderOpen fontSize='small' />}
-                                    disabled={installingFile}
-                                    onClick={() => fileInputRef.current?.click()}
-                                    sx={{ whiteSpace: 'nowrap' }}
-                                >
+                                <Button variant='outlined' size='small' startIcon={installingFile ? <CircularProgress size={14} /> : <FolderOpen fontSize='small' />} disabled={installingFile} onClick={() => fileInputRef.current?.click()} sx={{ whiteSpace: 'nowrap' }}>
                                     {installingFile ? 'Installing…' : 'Browse…'}
                                 </Button>
                             </span>
@@ -361,27 +383,60 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                         <Typography variant='body2' color='text.secondary'>No plugins available.</Typography>
                     }
 
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
-                        {Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase())).map(id => {
-                            const group = groupedAvailable[id]
-                            const plugin = getSelectedEntry(id)
-                            const versions = group.map(p => p.version)
-                            return (
-                                <PluginCard
-                                    key={id}
-                                    icon={plugin.icon}
-                                    name={plugin.name}
-                                    displayName={plugin.displayName}
-                                    version={plugin.version}
-                                    versions={versions}
-                                    onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [id]: v }))}
-                                    description={plugin.description}
-                                    website={plugin.website}
-                                    badge={isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
-                                    requires={plugin.requires}
-                                    action={(() => {
-                                        const unmet = (plugin.requires ?? []).filter(r => !isRequirementMet(r))
-                                        return (
+                    {filteredIds.length > 0 && (
+                        viewMode === 'card'
+                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
+                                {filteredIds.map(id => {
+                                    const group = groupedAvailable[id]
+                                    const plugin = getSelectedEntry(id)
+                                    const versions = group.map(p => p.version)
+                                    return (
+                                        <PluginCard
+                                            key={id}
+                                            icon={plugin.icon}
+                                            name={plugin.name}
+                                            displayName={plugin.displayName}
+                                            version={plugin.version}
+                                            versions={versions}
+                                            onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [id]: v }))}
+                                            description={plugin.description}
+                                            website={plugin.website}
+                                            badge={isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
+                                            requires={plugin.requires}
+                                            action={(() => {
+                                                const unmet = (plugin.requires ?? []).filter(r => !isRequirementMet(r))
+                                                return (
+                                                    <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                                        <span>
+                                                            <IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => install(plugin)}>
+                                                                {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                                            </IconButton>
+                                                        </span>
+                                                    </Tooltip>
+                                                )
+                                            })()}
+                                        />
+                                    )
+                                })}
+                              </Box>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+                                {filteredIds.map(id => {
+                                    const group = groupedAvailable[id]
+                                    const plugin = getSelectedEntry(id)
+                                    const versions = group.map(p => p.version)
+                                    const unmet = (plugin.requires ?? []).filter(r => !isRequirementMet(r))
+                                    return (
+                                        <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
+                                            <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}>{resolveIcon(plugin.icon)}</Box>
+                                            <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plugin.displayName || plugin.name}</Typography>
+                                            {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                            {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
+                                            {versions.length > 1
+                                                ? <Select size='small' value={plugin.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                    {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                                                  </Select>
+                                                : <Chip label={`v${plugin.version}`} size='small' sx={{ minWidth: 72 }} />
+                                            }
                                             <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                 <span>
                                                     <IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => install(plugin)}>
@@ -389,12 +444,11 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                                     </IconButton>
                                                 </span>
                                             </Tooltip>
-                                        )
-                                    })()}
-                                />
-                            )
-                        })}
-                    </Box>
+                                        </Box>
+                                    )
+                                })}
+                              </Box>
+                    )}
 
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}
                 </Stack>

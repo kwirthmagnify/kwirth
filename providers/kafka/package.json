@@ -1,22 +1,22 @@
 {
-    "id": "kafka",
-    "name": "@kwirthmagnify/kwirth-provider-kafka",
-    "publisher": "@kwirthmagnify",
-    "version": "0.1.1",
-    "displayName": "Kafka Provider",
-    "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces",
-    "type": "module",
-    "scripts": {
-        "build": "node build.mjs",
-        "watch": "node watch.mjs"
-    },
-    "dependencies": {
-        "@kwirthmagnify/kwirth-common-back": "^0.5.2",
-        "kafkajs": "^2.2.4"
-    },
-    "devDependencies": {
-        "@types/node": "^20.12.13",
-        "esbuild": "^0.27.2",
-        "typescript": "^5.4.0"
-    }
+  "id": "kafka",
+  "name": "@kwirthmagnify/kwirth-provider-kafka",
+  "publisher": "@kwirthmagnify",
+  "version": "0.1.2",
+  "displayName": "Kafka Provider",
+  "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node watch.mjs"
+  },
+  "dependencies": {
+    "@kwirthmagnify/kwirth-common-back": "^0.5.2",
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.13",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.4.0"
+  }
 }

@@ -104,7 +104,7 @@ const RuleRow: React.FC<{
     const selectedDays = rule.days ?? allDays
 
     return (
-        <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 1, py: 0.75, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Stack direction='row' spacing={1} alignItems='center' sx={{ flex: 1 }}>
                 <TextField size='small' label='From' type='time' sx={{ width: 110 }}
                     value={rule.from} onChange={e => onChange({ ...rule, from: e.target.value })}
@@ -112,12 +112,12 @@ const RuleRow: React.FC<{
                 <TextField size='small' label='To' type='time' sx={{ width: 110 }}
                     value={rule.to} onChange={e => onChange({ ...rule, to: e.target.value })}
                     InputLabelProps={{ shrink: true }} />
-                <FormControl size='small' sx={{ minWidth: 90 }}>
+                <FormControl size='small' sx={{ minWidth: 110, flexShrink: 0 }}>
                     <InputLabel>Action</InputLabel>
                     <Select label='Action' value={rule.action}
                         onChange={e => onChange({ ...rule, action: e.target.value as 'send' | 'drop' })}>
-                        <MenuItem value='send'>send</MenuItem>
-                        <MenuItem value='drop'>drop</MenuItem>
+                        <MenuItem value='drop'><Chip label='drop' size='small' color='error' sx={{ fontSize: 10, height: 18 }} /></MenuItem>
+                        <MenuItem value='send'><Chip label='send' size='small' color='success' sx={{ fontSize: 10, height: 18 }} /></MenuItem>
                     </Select>
                 </FormControl>
                 <FormControl size='small' sx={{ flex: 1, minWidth: 160 }}>

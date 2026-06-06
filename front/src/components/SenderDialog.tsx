@@ -4,7 +4,7 @@ import {
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
-import { Add, CheckCircle, ContentCopy, Delete, Download, Edit, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings } from '@mui/icons-material'
+import { Add, CheckCircle, ContentCopy, Delete, Download, Edit, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
@@ -92,6 +92,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     const [originalEditingName, setOriginalEditingName] = useState<string | undefined>()
     const [formValues, setFormValues] = useState<ConfigValues>({})
     const [saving, setSaving] = useState(false)
+    const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
 
     // Dynamic sender front loading
     const [frontLoaded, setFrontLoaded] = useState<Record<string, boolean>>({})
@@ -451,7 +452,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
                         <Typography variant='body2' fontWeight='bold'>{sender.displayName || sender.id}</Typography>
-                        <Chip label={`v${sender.version}`} size='small' />
+                        <Chip label={`v${sender.version}`} size='small' sx={{ minWidth: 72 }} />
                         {sender.configNames.length > 0 && <Chip label={`${sender.configNames.length} config${sender.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' />}
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{sender.description}</Typography>
@@ -491,7 +492,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
     return (
         <>
-        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw' } }}>
+        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
             <DialogTitle>Manage senders</DialogTitle>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
@@ -500,12 +501,45 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                         <Typography variant='subtitle2'>Installed senders</Typography>
                         <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)}
                             sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                        <Tooltip title='Card view'>
+                            <IconButton size='small' color={viewMode === 'card' ? 'primary' : 'default'} onClick={() => setViewMode('card')}>
+                                <ViewModule fontSize='small' />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title='List view'>
+                            <IconButton size='small' color={viewMode === 'list' ? 'primary' : 'default'} onClick={() => setViewMode('list')}>
+                                <ViewList fontSize='small' />
+                            </IconButton>
+                        </Tooltip>
                     </Stack>
                     {installed.length === 0
                         ? <Typography variant='body2' color='text.secondary'>No senders installed.</Typography>
-                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
-                            {installed.filter(s => !filterText || s.id.includes(filterText.toLowerCase()) || (s.displayName ?? '').toLowerCase().includes(filterText.toLowerCase())).map(s => <SenderCard key={s.id} sender={s} />)}
-                          </Box>
+                        : viewMode === 'card'
+                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
+                                {installed.filter(s => !filterText || s.id.includes(filterText.toLowerCase()) || (s.displayName ?? '').toLowerCase().includes(filterText.toLowerCase())).map(s => <SenderCard key={s.id} sender={s} />)}
+                              </Box>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+                                {installed.filter(s => !filterText || s.id.includes(filterText.toLowerCase()) || (s.displayName ?? '').toLowerCase().includes(filterText.toLowerCase())).map(s => (
+                                    <Box key={s.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
+                                        <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Send fontSize='small' /></Box>
+                                        <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.displayName || s.id}</Typography>
+                                        {s.configNames.length > 0 && <Chip label={`${s.configNames.length} cfg`} size='small' color='primary' variant='outlined' />}
+                                        <Tooltip title='Configure'>
+                                            <IconButton size='small' color='primary' onClick={() => expandSender(s.id)}>
+                                                <Settings fontSize='small' />
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Chip label={`v${s.version}`} size='small' sx={{ minWidth: 72 }} />
+                                        <Tooltip title={s.installedFrom === 'dev' ? 'Dev senders cannot be uninstalled' : 'Uninstall'}>
+                                            <span>
+                                                <IconButton size='small' color='error' disabled={s.installedFrom === 'dev' || uninstallingId === s.id} onClick={() => uninstall(s)}>
+                                                    {uninstallingId === s.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    </Box>
+                                ))}
+                              </Box>
                     }
 
                     <Typography variant='subtitle2' sx={{ pt: 1 }}>Install sender</Typography>
@@ -551,51 +585,77 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                         <Typography variant='body2' color='text.secondary'>No senders in catalog.</Typography>
                     }
 
-                    {Object.keys(groupedAvailable).length > 0 &&
-                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
-                            {Object.keys(groupedAvailable).filter(id => !availableFilter || id.includes(availableFilter.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(availableFilter.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(availableFilter.toLowerCase())).map(id => {
-                                const group = groupedAvailable[id]
-                                const entry = getSelectedSender(id)
-                                const versions = group.map(p => p.version)
-                                return (
-                                <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: senderGradient(entry.name) }}>
-                                    <Stack direction='row' alignItems='flex-start' spacing={1.5}>
-                                        <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Send fontSize='small' /></Box>
-                                        <Box flex={1} minWidth={0}>
-                                            <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                                                <Typography variant='body2' fontWeight='bold'>{entry.displayName}</Typography>
-                                                {versions.length > 1
-                                                    ? <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', '& .MuiSelect-select': { py: 0, px: 1 } }}>
-                                                        {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
-                                                      </Select>
-                                                    : <Chip label={`v${entry.version}`} size='small' />
-                                                }
-                                                {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
-                                                {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
-                                            </Stack>
-                                            <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
-                                            {entry.requires && entry.requires.length > 0 && (
-                                                <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                                                    <Typography variant='caption' color='text.disabled'>Requires:</Typography>
-                                                    {entry.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.type[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                    {Object.keys(groupedAvailable).length > 0 && (() => {
+                        const filteredIds = Object.keys(groupedAvailable).filter(id => !availableFilter || id.includes(availableFilter.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(availableFilter.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(availableFilter.toLowerCase()))
+                        return viewMode === 'card'
+                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
+                                {filteredIds.map(id => {
+                                    const group = groupedAvailable[id]; const entry = getSelectedSender(id); const versions = group.map(p => p.version)
+                                    return (
+                                    <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: senderGradient(entry.name) }}>
+                                        <Stack direction='row' alignItems='flex-start' spacing={1.5}>
+                                            <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Send fontSize='small' /></Box>
+                                            <Box flex={1} minWidth={0}>
+                                                <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
+                                                    <Typography variant='body2' fontWeight='bold'>{entry.displayName}</Typography>
+                                                    {versions.length > 1
+                                                        ? <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                            {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                                                          </Select>
+                                                        : <Chip label={`v${entry.version}`} size='small' sx={{ minWidth: 72 }} />
+                                                    }
+                                                    {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                                 </Stack>
-                                            )}
-                                        </Box>
-                                        {entry.website && <Tooltip title='Open website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(entry.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
-                                    </Stack>
-                                    <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
-                                        {(() => { const unmet = (entry.requires ?? []).filter(r => !isRequirementMet(r)); return (
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
+                                                {entry.requires && entry.requires.length > 0 && (
+                                                    <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
+                                                        <Typography variant='caption' color='text.disabled'>Requires:</Typography>
+                                                        {entry.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.type[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                                                    </Stack>
+                                                )}
+                                            </Box>
+                                            {entry.website && <Tooltip title='Open website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(entry.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
+                                        </Stack>
+                                        <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
+                                            {(() => { const unmet = (entry.requires ?? []).filter(r => !isRequirementMet(r)); return (
+                                                <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                                    <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(entry)}>
+                                                        {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                                    </IconButton></span>
+                                                </Tooltip>
+                                            )})()}
+                                        </Stack>
+                                    </Box>
+                                    )
+                                })}
+                              </Box>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+                                {filteredIds.map(id => {
+                                    const group = groupedAvailable[id]; const entry = getSelectedSender(id); const versions = group.map(p => p.version)
+                                    const unmet = (entry.requires ?? []).filter(r => !isRequirementMet(r))
+                                    return (
+                                        <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
+                                            <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Send fontSize='small' /></Box>
+                                            <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.displayName}</Typography>
+                                            {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                            {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
+                                            {versions.length > 1
+                                                ? <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                    {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                                                  </Select>
+                                                : <Chip label={`v${entry.version}`} size='small' sx={{ minWidth: 72 }} />
+                                            }
                                             <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                 <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(entry)}>
                                                     {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
                                                 </IconButton></span>
                                             </Tooltip>
-                                        )})()}
-                                    </Stack>
-                                </Box>
-                                )})}
-                        </Box>
-                    }
+                                        </Box>
+                                    )
+                                })}
+                              </Box>
+                    })()}
 
                     {error && <Typography variant='caption' color={error.startsWith('Imported') ? 'success.main' : 'error'}>{error}</Typography>}
                 </Stack>
@@ -669,10 +729,11 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                                 </Typography>
                                 <Box sx={{ flex: 1, overflowY: 'auto', pt: 1 }}>
                                     <Stack direction='column' spacing={1.5}>
+                                        {schema.filter(f => f.name === 'name').map(f => renderField(f, !!editingName))}
                                         <TextField size='small' label='Description' fullWidth multiline maxRows={2}
                                             value={formValues['description'] ?? ''}
                                             onChange={e => setFormValues(prev => ({ ...prev, description: e.target.value || undefined }))} />
-                                        {schema.map(f => renderField(f, !!editingName))}
+                                        {schema.filter(f => f.name !== 'name').map(f => renderField(f, !!editingName))}
                                     </Stack>
                                 </Box>
                                 <Stack direction='row' justifyContent='flex-end' alignItems='center' spacing={1}>

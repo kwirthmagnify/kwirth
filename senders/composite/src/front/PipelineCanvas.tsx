@@ -10,6 +10,7 @@ interface IPipelineCanvasProps {
     selectedPath: string | undefined
     availableSenders: IAvailableSender[]
     configDescriptions: Map<string, string>
+    readonly?: boolean
     onFlowChange: (flow: ICompositeNode) => void
     onSelectPath: (path: string) => void
 }
@@ -113,13 +114,14 @@ interface ITreeNodeProps {
     isRoot: boolean
     availableSenders: IAvailableSender[]
     configDescriptions: Map<string, string>
+    readonly?: boolean
     onFlowChange: (flow: ICompositeNode) => void
     onSelectPath: (path: string) => void
     flow: ICompositeNode
 }
 
 const TreeNode: React.FC<ITreeNodeProps> = ({
-    node, path, selectedPath, isRoot, flow, availableSenders, configDescriptions, onFlowChange, onSelectPath
+    node, path, selectedPath, isRoot, flow, availableSenders, configDescriptions, readonly, onFlowChange, onSelectPath
 }) => {
     const entries = getTreeEntries(node, path)
     const allPaths = getAllNodePaths(flow, '')
@@ -169,8 +171,8 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
                     onClick={() => onSelectPath(path)}
                     onKeyDown={handleKeyDown}
                 />
-                <AddChildButtons node={node} availableSenders={availableSenders} onAdd={handleAdd} />
-                {!isRoot && (
+                {!readonly && <AddChildButtons node={node} availableSenders={availableSenders} onAdd={handleAdd} />}
+                {!readonly && !isRoot && (
                     <Tooltip title='Delete node'>
                         <IconButton size='small' color='error' onClick={() => onFlowChange(deleteNodeAtPath(flow, path))}>
                             <Delete fontSize='small' />
@@ -197,6 +199,7 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
                                 flow={flow}
                                 availableSenders={availableSenders}
                                 configDescriptions={configDescriptions}
+                                readonly={readonly}
                                 onFlowChange={onFlowChange}
                                 onSelectPath={onSelectPath}
                             />
@@ -211,7 +214,7 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
 // ─── Canvas ───────────────────────────────────────────────────────────────────
 
 const PipelineCanvas: React.FC<IPipelineCanvasProps> = ({
-    flow, selectedPath, availableSenders, configDescriptions, onFlowChange, onSelectPath
+    flow, selectedPath, availableSenders, configDescriptions, readonly, onFlowChange, onSelectPath
 }) => {
     return (
         <Box sx={{ p: 2, overflow: 'auto', height: '100%' }}>
@@ -223,6 +226,7 @@ const PipelineCanvas: React.FC<IPipelineCanvasProps> = ({
                 flow={flow}
                 availableSenders={availableSenders}
                 configDescriptions={configDescriptions}
+                readonly={readonly}
                 onFlowChange={onFlowChange}
                 onSelectPath={onSelectPath}
             />

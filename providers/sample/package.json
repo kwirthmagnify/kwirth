@@ -1,21 +1,21 @@
 {
-    "id": "sample",
-    "name": "@kwirthmagnify/kwirth-provider-sample",
-    "publisher": "@kwirthmagnify",
-    "version": "0.1.2",
-    "displayName": "Sample Provider",
-    "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event",
-    "type": "module",
-    "scripts": {
-        "build": "node build.mjs",
-        "watch": "node watch.mjs"
-    },
-    "dependencies": {
-        "@kwirthmagnify/kwirth-common-back": "^0.5.2"
-    },
-    "devDependencies": {
-        "@types/node": "^20.12.13",
-        "esbuild": "^0.27.2",
-        "typescript": "^5.4.0"
-    }
+  "id": "sample",
+  "name": "@kwirthmagnify/kwirth-provider-sample",
+  "publisher": "@kwirthmagnify",
+  "version": "0.1.3",
+  "displayName": "Sample Provider",
+  "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node watch.mjs"
+  },
+  "dependencies": {
+    "@kwirthmagnify/kwirth-common-back": "^0.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.13",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.4.0"
+  }
 }

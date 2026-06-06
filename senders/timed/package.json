@@ -1,25 +1,25 @@
 {
-    "id": "timed",
-    "name": "@kwirthmagnify/kwirth-sender-timed",
-    "publisher": "@kwirthmagnify",
-    "version": "0.1.2",
-    "displayName": "Timed Sender",
-    "description": "Timed sender for Kwirth — routes or drops messages based on time-of-day windows and day-of-week rules",
-    "type": "module",
-    "scripts": {
-        "build": "node build.mjs",
-        "watch": "node watch.mjs"
-    },
-    "dependencies": {
-        "@kwirthmagnify/kwirth-common-back": "^0.5.10"
-    },
-    "devDependencies": {
-        "@mui/icons-material": "^7.1.2",
-        "@mui/material": "^7.1.2",
-        "@types/node": "^20.12.13",
-        "@types/react": "^19.2.16",
-        "@types/react-dom": "^19.2.3",
-        "esbuild": "^0.27.2",
-        "typescript": "^5.4.0"
-    }
+  "id": "timed",
+  "name": "@kwirthmagnify/kwirth-sender-timed",
+  "publisher": "@kwirthmagnify",
+  "version": "0.1.3",
+  "displayName": "Timed Sender",
+  "description": "Timed sender for Kwirth — routes or drops messages based on time-of-day windows and day-of-week rules",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node watch.mjs"
+  },
+  "dependencies": {
+    "@kwirthmagnify/kwirth-common-back": "^0.5.10"
+  },
+  "devDependencies": {
+    "@mui/icons-material": "^7.1.2",
+    "@mui/material": "^7.1.2",
+    "@types/node": "^20.12.13",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.2.3",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.4.0"
+  }
 }

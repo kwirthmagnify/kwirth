@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Link, OpenInNew, Refresh, SmartToy } from '@mui/icons-material'
+import { CheckCircle, Delete, Download, FolderOpen, Link, OpenInNew, Refresh, SmartToy, ViewList, ViewModule } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
@@ -48,8 +48,10 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
     const [error, setError] = useState<string | undefined>()
     const [filterText, setFilterText] = useState('')
+    const [installedFilter, setInstalledFilter] = useState('')
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [crossInstalled, setCrossInstalled] = useState<Record<string, { id: string, version: string }[]>>({})
+    const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
 
     const groupedAvailable: Record<string, IDaemonManifestEntry[]> = available.reduce((acc, p) => { if (!acc[p.id]) acc[p.id]=[]; acc[p.id].push(p); return acc }, {} as Record<string, IDaemonManifestEntry[]>)
     Object.values(groupedAvailable).forEach(g => g.sort((a,b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
@@ -187,30 +189,71 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
         return `${crosses}, linear-gradient(315deg, hsla(${hue}, 70%, 55%, 0.10) 0%, hsla(${hue}, 50%, 40%, 0.22) 100%)`
     }
 
+    const ViewToggle = () => (
+        <Stack direction='row' spacing={0}>
+            <Tooltip title='Card view'>
+                <IconButton size='small' color={viewMode === 'card' ? 'primary' : 'default'} onClick={() => setViewMode('card')}>
+                    <ViewModule fontSize='small' />
+                </IconButton>
+            </Tooltip>
+            <Tooltip title='List view'>
+                <IconButton size='small' color={viewMode === 'list' ? 'primary' : 'default'} onClick={() => setViewMode('list')}>
+                    <ViewList fontSize='small' />
+                </IconButton>
+            </Tooltip>
+        </Stack>
+    )
+
+    const filteredIds = Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(filterText.toLowerCase()))
+
     return (
-        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '60vw', maxWidth: '60vw' } }}>
+        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '60vw', maxWidth: '60vw', height: '78vh' } }}>
             <DialogTitle>Manage daemons</DialogTitle>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
-                    <Typography variant='subtitle2'>Installed daemons</Typography>
+
+                    <Stack direction='row' alignItems='center' spacing={1}>
+                        <Typography variant='subtitle2'>Installed daemons</Typography>
+                        <TextField size='small' placeholder='Filter…' value={installedFilter} onChange={e => setInstalledFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                        <ViewToggle />
+                    </Stack>
                     {installed.length === 0
                         ? <Typography variant='body2' color='text.secondary'>No daemons installed.</Typography>
-                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
-                            {installed.map(daemon => (
-                                <Box key={daemon.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: daemonGradient(daemon.name) }}>
-                                    <Stack direction='row' alignItems='flex-start' spacing={1.5}>
-                                        <Box sx={{ color: 'text.secondary', mt: 0.25 }}><SmartToy /></Box>
-                                        <Box flex={1} minWidth={0}>
-                                            <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                                                <Typography variant='body2' fontWeight='bold'>{daemon.displayName || daemon.name || daemon.id}</Typography>
-                                                <Typography variant='caption' color='text.secondary'>v{daemon.version}</Typography>
-                                            </Stack>
-                                            <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{daemon.description}</Typography>
-                                        </Box>
-                                        {daemon.website && <Tooltip title='Open daemon website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(daemon.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
-                                    </Stack>
-                                    <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                                        <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(daemon.installedFrom)}</Box>
+                        : viewMode === 'card'
+                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+                                {installed.filter(d => !installedFilter || d.id.includes(installedFilter.toLowerCase()) || (d.displayName || d.name || '').toLowerCase().includes(installedFilter.toLowerCase())).map(daemon => (
+                                    <Box key={daemon.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: daemonGradient(daemon.name) }}>
+                                        <Stack direction='row' alignItems='flex-start' spacing={1.5}>
+                                            <Box sx={{ color: 'text.secondary', mt: 0.25 }}><SmartToy /></Box>
+                                            <Box flex={1} minWidth={0}>
+                                                <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
+                                                    <Typography variant='body2' fontWeight='bold'>{daemon.displayName || daemon.name || daemon.id}</Typography>
+                                                    <Typography variant='caption' color='text.secondary'>v{daemon.version}</Typography>
+                                                </Stack>
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{daemon.description}</Typography>
+                                            </Box>
+                                            {daemon.website && <Tooltip title='Open daemon website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(daemon.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
+                                        </Stack>
+                                        <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
+                                            <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(daemon.installedFrom)}</Box>
+                                            <Tooltip title={daemon.installedFrom === 'dev' ? 'Dev daemons cannot be uninstalled' : 'Uninstall'}>
+                                                <span>
+                                                    <IconButton size='small' color='error' disabled={daemon.installedFrom === 'dev' || uninstallingId === daemon.id} onClick={() => uninstall(daemon)}>
+                                                        {uninstallingId === daemon.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                        </Stack>
+                                    </Box>
+                                ))}
+                              </Box>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+                                {installed.filter(d => !installedFilter || d.id.includes(installedFilter.toLowerCase()) || (d.displayName || d.name || '').toLowerCase().includes(installedFilter.toLowerCase())).map(daemon => (
+                                    <Box key={daemon.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
+                                        <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><SmartToy fontSize='small' /></Box>
+                                        <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{daemon.displayName || daemon.name || daemon.id}</Typography>
+                                        <Box sx={{ flexShrink: 0 }}>{resolveSource(daemon.installedFrom)}</Box>
+                                        <Chip label={`v${daemon.version}`} size='small' sx={{ minWidth: 72 }} />
                                         <Tooltip title={daemon.installedFrom === 'dev' ? 'Dev daemons cannot be uninstalled' : 'Uninstall'}>
                                             <span>
                                                 <IconButton size='small' color='error' disabled={daemon.installedFrom === 'dev' || uninstallingId === daemon.id} onClick={() => uninstall(daemon)}>
@@ -218,10 +261,9 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                                                 </IconButton>
                                             </span>
                                         </Tooltip>
-                                    </Stack>
-                                </Box>
-                            ))}
-                          </Box>
+                                    </Box>
+                                ))}
+                              </Box>
                     }
 
                     <Typography variant='subtitle2' sx={{ pt: 1 }}>Install daemon</Typography>
@@ -247,50 +289,80 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                         <Typography variant='body2' color='text.secondary'>No daemons available in catalog.</Typography>
                     }
 
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
-                        {Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(filterText.toLowerCase())).map(id => {
-                            const group = groupedAvailable[id]
-                            const daemon = getSelectedDaemon(id)
-                            const versions = group.map(p => p.version)
-                            return (
-                            <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: daemonGradient(daemon.name) }}>
-                                <Stack direction='row' alignItems='flex-start' spacing={1.5}>
-                                    <Box sx={{ color: 'text.secondary', mt: 0.25 }}><SmartToy /></Box>
-                                    <Box flex={1} minWidth={0}>
-                                        <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                                            <Typography variant='body2' fontWeight='bold'>{daemon.displayName || daemon.name}</Typography>
-                                            {versions.length > 1
-                                                ? <Select size='small' value={daemon.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', '& .MuiSelect-select': { py: 0, px: 1 } }}>
-                                                    {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
-                                                  </Select>
-                                                : <Chip label={`v${daemon.version}`} size='small' />
-                                            }
+                    {filteredIds.length > 0 && (
+                        viewMode === 'card'
+                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+                                {filteredIds.map(id => {
+                                    const group = groupedAvailable[id]
+                                    const daemon = getSelectedDaemon(id)
+                                    const versions = group.map(p => p.version)
+                                    return (
+                                    <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: daemonGradient(daemon.name) }}>
+                                        <Stack direction='row' alignItems='flex-start' spacing={1.5}>
+                                            <Box sx={{ color: 'text.secondary', mt: 0.25 }}><SmartToy /></Box>
+                                            <Box flex={1} minWidth={0}>
+                                                <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
+                                                    <Typography variant='body2' fontWeight='bold'>{daemon.displayName || daemon.name}</Typography>
+                                                    {versions.length > 1
+                                                        ? <Select size='small' value={daemon.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                            {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                                                          </Select>
+                                                        : <Chip label={`v${daemon.version}`} size='small' sx={{ minWidth: 72 }} />
+                                                    }
+                                                    {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
+                                                </Stack>
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{daemon.description}</Typography>
+                                                {daemon.requires && daemon.requires.length > 0 && (
+                                                    <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
+                                                        <Typography variant='caption' color='text.disabled'>Requires:</Typography>
+                                                        {daemon.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.type[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                                                    </Stack>
+                                                )}
+                                            </Box>
+                                            {daemon.website && <Tooltip title='Open daemon website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(daemon.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
+                                        </Stack>
+                                        <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
+                                            {(() => { const unmet = (daemon.requires ?? []).filter(r => !isRequirementMet(r)); return (
+                                                <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                                    <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(daemon)}>
+                                                        {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                                    </IconButton></span>
+                                                </Tooltip>
+                                            )})()}
+                                        </Stack>
+                                    </Box>
+                                    )
+                                })}
+                              </Box>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+                                {filteredIds.map(id => {
+                                    const group = groupedAvailable[id]
+                                    const daemon = getSelectedDaemon(id)
+                                    const versions = group.map(p => p.version)
+                                    const unmet = (daemon.requires ?? []).filter(r => !isRequirementMet(r))
+                                    return (
+                                        <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
+                                            <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><SmartToy fontSize='small' /></Box>
+                                            <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{daemon.displayName || daemon.name}</Typography>
                                             {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
                                             {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
-                                        </Stack>
-                                        <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{daemon.description}</Typography>
-                                        {daemon.requires && daemon.requires.length > 0 && (
-                                            <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                                                <Typography variant='caption' color='text.disabled'>Requires:</Typography>
-                                                {daemon.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.type[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
-                                            </Stack>
-                                        )}
-                                    </Box>
-                                    {daemon.website && <Tooltip title='Open daemon website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(daemon.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
-                                </Stack>
-                                <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
-                                    {(() => { const unmet = (daemon.requires ?? []).filter(r => !isRequirementMet(r)); return (
-                                        <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
-                                            <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(daemon)}>
-                                                {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
-                                            </IconButton></span>
-                                        </Tooltip>
-                                    )})()}
-                                </Stack>
-                            </Box>
-                            )
-                        })}
-                    </Box>
+                                            {versions.length > 1
+                                                ? <Select size='small' value={daemon.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                    {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                                                  </Select>
+                                                : <Chip label={`v${daemon.version}`} size='small' sx={{ minWidth: 72 }} />
+                                            }
+                                            <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                                <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(daemon)}>
+                                                    {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                                </IconButton></span>
+                                            </Tooltip>
+                                        </Box>
+                                    )
+                                })}
+                              </Box>
+                    )}
 
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}
                 </Stack>
