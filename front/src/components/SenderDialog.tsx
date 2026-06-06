@@ -6,7 +6,7 @@ import {
 } from '@mui/material'
 import { Add, CheckCircle, ContentCopy, Delete, Download, Edit, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
+import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 
 const SENDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/senders/manifest.json'
@@ -20,6 +20,7 @@ interface ISenderFieldDef {
     required?: boolean
     options?: string[]
     labels?: string[]
+    common?: boolean
 }
 
 interface IRequirement {
@@ -91,7 +92,9 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     const [editingName, setEditingName] = useState<string | undefined>()
     const [originalEditingName, setOriginalEditingName] = useState<string | undefined>()
     const [formValues, setFormValues] = useState<ConfigValues>({})
+    const [baseFormValues, setBaseFormValues] = useState<ConfigValues>({})
     const [saving, setSaving] = useState(false)
+    const [savingBase, setSavingBase] = useState(false)
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
 
     // Dynamic sender front loading
@@ -172,7 +175,12 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                 fetch(`${backendUrl}/senders/${id}/schema`, addGetAuthorization(accessString)),
             ])
             if (!configsRes.ok) throw new Error(`HTTP ${configsRes.status}`)
-            setConfigs(await configsRes.json())
+            const storedData = await configsRes.json()
+            const { configs: loadedConfigs, ...commonFields } = storedData
+            setConfigs(Array.isArray(loadedConfigs) ? loadedConfigs : [])
+            const initBase: ConfigValues = {}
+            for (const [k, v] of Object.entries(commonFields)) initBase[k] = v
+            setBaseFormValues(initBase)
             if (schemaRes.ok) setSchema(await schemaRes.json())
         } catch (err) {
             setError(`Failed to load configs: ${err}`)
@@ -296,7 +304,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
     const buildPayload = (_senderId: string, values: ConfigValues): ConfigValues => {
         const payload: ConfigValues = {}
-        for (const f of schema) {
+        for (const f of schema.filter(f => !f.common)) {
             const v = values[f.name]
             if (v === undefined || v === '') continue
             if (f.type === 'number') payload[f.name] = Number(v)
@@ -306,11 +314,48 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         return payload
     }
 
+    const buildBasePayload = (): ConfigValues => {
+        const payload: ConfigValues = {}
+        for (const f of schema.filter(f => f.common)) {
+            const v = baseFormValues[f.name]
+            if (v === undefined || v === '') continue
+            if (f.type === 'number') payload[f.name] = Number(v)
+            else if (f.type === 'boolean') payload[f.name] = Boolean(v)
+            else payload[f.name] = v
+        }
+        return payload
+    }
+
     const isFormValid = (_senderId: string): boolean => {
-        return schema.filter(f => f.required).every(f => {
+        return schema.filter(f => f.required && !f.common).every(f => {
             const v = formValues[f.name]
             return v !== undefined && v !== '' && v !== false
         })
+    }
+
+    const isBaseFormValid = (): boolean => {
+        return schema.filter(f => f.required && f.common).every(f => {
+            const v = baseFormValues[f.name]
+            return v !== undefined && v !== '' && v !== false
+        })
+    }
+
+    const saveBase = async () => {
+        if (!expandedId) return
+        setSavingBase(true)
+        setError(undefined)
+        try {
+            const common = buildBasePayload()
+            const storedConfig = { ...common, configs }
+            const res = await fetch(`${backendUrl}/senders/${expandedId}/configs`, addPutAuthorization(accessString, JSON.stringify(storedConfig)))
+            if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
+            await reloadConfigs(expandedId)
+            await loadInstalled()
+        } catch (err) {
+            setError(`Save failed: ${err}`)
+        } finally {
+            setSavingBase(false)
+        }
     }
 
     const triggerDownload = (data: unknown, filename: string) => {
@@ -382,14 +427,13 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
     // ─── Config form fields ────────────────────────────────────────────────────
 
-    const renderField = (f: ISenderFieldDef, isEditing = false) => {
-        const value = formValues[f.name] ?? (f.type === 'boolean' ? false : '')
-        const disabled = false
+    const renderField = (f: ISenderFieldDef, values: ConfigValues, onChange: (name: string, val: unknown) => void, isEditing = false) => {
+        const value = values[f.name] ?? (f.type === 'boolean' ? false : '')
 
         if (f.type === 'boolean') return (
             <Box key={f.name} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Typography variant='body2'>{f.label}</Typography>
-                <Switch size='small' checked={!!value} onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.checked }))} />
+                <Switch size='small' checked={!!value} onChange={e => onChange(f.name, e.target.checked)} />
             </Box>
         )
 
@@ -397,7 +441,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             <FormControl key={f.name} size='small' fullWidth>
                 <InputLabel>{f.label}{f.required ? ' *' : ''}</InputLabel>
                 <Select label={`${f.label}${f.required ? ' *' : ''}`} value={value || ''} displayEmpty
-                    onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))}>
+                    onChange={e => onChange(f.name, e.target.value)}>
                     <MenuItem value=''><em>—</em></MenuItem>
                     {f.options.map((o, i) => <MenuItem key={o} value={o}>{f.labels?.[i] ?? o}</MenuItem>)}
                 </Select>
@@ -409,9 +453,9 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                 <InputLabel>{f.label}{f.required ? ' *' : ''}</InputLabel>
                 <Select label={`${f.label}${f.required ? ' *' : ''}`} value={value || ''} displayEmpty
                     onChange={e => {
-                        const senderIdField = f.name
-                        const configField = senderIdField.replace(/SenderId$/, 'ConfigName')
-                        setFormValues(prev => ({ ...prev, [senderIdField]: e.target.value, [configField]: '' }))
+                        const configField = f.name.replace(/SenderId$/, 'ConfigName')
+                        onChange(f.name, e.target.value)
+                        onChange(configField, '')
                     }}>
                     <MenuItem value=''><em>—</em></MenuItem>
                     {installed.map(s => <MenuItem key={s.id} value={s.id}>{s.displayName || s.id}</MenuItem>)}
@@ -420,13 +464,13 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         )
 
         if (f.name.endsWith('ConfigName')) {
-            const linkedSenderId = formValues[f.name.replace(/ConfigName$/, 'SenderId')] as string | undefined
+            const linkedSenderId = values[f.name.replace(/ConfigName$/, 'SenderId')] as string | undefined
             const configNames = installed.find(s => s.id === linkedSenderId)?.configNames ?? []
             return (
                 <FormControl key={f.name} size='small' fullWidth disabled={!linkedSenderId}>
                     <InputLabel>{f.label}{f.required ? ' *' : ''}</InputLabel>
                     <Select label={`${f.label}${f.required ? ' *' : ''}`} value={value || ''} displayEmpty
-                        onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))}>
+                        onChange={e => onChange(f.name, e.target.value)}>
                         <MenuItem value=''><em>—</em></MenuItem>
                         {configNames.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
                     </Select>
@@ -435,11 +479,11 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         }
 
         return (
-            <TextField key={f.name} size='small' fullWidth disabled={disabled}
+            <TextField key={f.name} size='small' fullWidth
                 label={`${f.label}${f.required ? ' *' : ''}`}
                 type={f.type === 'number' ? 'number' : f.type === 'password' ? 'password' : 'text'}
                 value={value}
-                onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))} />
+                onChange={e => onChange(f.name, e.target.value)} />
         )
     }
 
@@ -720,8 +764,26 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
                     <Divider orientation='vertical' flexItem />
 
-                    {/* Right — form */}
+                    {/* Right — base config + per-config form */}
                     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0, overflow: 'hidden' }}>
+
+                        {/* Base config section (only if schema has common fields) */}
+                        {schema.some(f => f.common) && (
+                            <>
+                                <Typography variant='caption' color='text.secondary' fontWeight='bold'>Base configuration</Typography>
+                                <Stack direction='column' spacing={1.5}>
+                                    {schema.filter(f => f.common).map(f => renderField(f, baseFormValues, (name, val) => setBaseFormValues(prev => ({ ...prev, [name]: val }))))}
+                                </Stack>
+                                <Stack direction='row' justifyContent='flex-end'>
+                                    <Button size='small' variant='outlined' disabled={savingBase || !isBaseFormValid()} onClick={saveBase}>
+                                        {savingBase ? <CircularProgress size={14} /> : 'Save base config'}
+                                    </Button>
+                                </Stack>
+                                <Divider />
+                            </>
+                        )}
+
+                        {/* Per-config form */}
                         {showAddForm
                             ? <>
                                 <Typography variant='caption' color='text.secondary' fontWeight='bold'>
@@ -729,11 +791,11 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                                 </Typography>
                                 <Box sx={{ flex: 1, overflowY: 'auto', pt: 1 }}>
                                     <Stack direction='column' spacing={1.5}>
-                                        {schema.filter(f => f.name === 'name').map(f => renderField(f, !!editingName))}
+                                        {schema.filter(f => f.name === 'name').map(f => renderField(f, formValues, (name, val) => setFormValues(prev => ({ ...prev, [name]: val })), !!editingName))}
                                         <TextField size='small' label='Description' fullWidth multiline maxRows={2}
                                             value={formValues['description'] ?? ''}
                                             onChange={e => setFormValues(prev => ({ ...prev, description: e.target.value || undefined }))} />
-                                        {schema.filter(f => f.name !== 'name').map(f => renderField(f, !!editingName))}
+                                        {schema.filter(f => f.name !== 'name' && !f.common).map(f => renderField(f, formValues, (name, val) => setFormValues(prev => ({ ...prev, [name]: val })), !!editingName))}
                                     </Stack>
                                 </Box>
                                 <Stack direction='row' justifyContent='flex-end' alignItems='center' spacing={1}>

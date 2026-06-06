@@ -2,7 +2,7 @@ import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
 
 export enum EOpsCommand {
     DESCRIBE = 'describe',
-    EXECUTE = 'execute',
+    //EXECUTE = 'execute',
     RESTART = 'restart',
     RESTARTPOD = 'restartpod',
     RESTARTNS = 'restartns'

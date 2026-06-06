@@ -1,6 +1,6 @@
 {
   "name": "@kwirthmagnify/kwirth-common-back",
-  "version": "0.5.10",
+  "version": "0.5.11",
   "description": "Backend interfaces for building Kwirth provider and channel plugins",
   "scripts": {
     "build": "tsc"
@@ -24,8 +24,8 @@
   "author": "Julio Fernandez",
   "license": "ISC",
   "dependencies": {
-    "@kwirthmagnify/kwirth-common": "^0.5.4",
     "@kubernetes/client-node": "^1.4.0",
+    "@kwirthmagnify/kwirth-common": "^0.5.14",
     "express": "^4.18.0",
     "js-yaml": "^4.1.0"
   },

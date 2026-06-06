@@ -11,6 +11,11 @@ export interface ISenderConfig {
     [key: string]: unknown
 }
 
+export interface ISenderStoredConfig {
+    configs: ISenderConfig[]
+    [key: string]: unknown
+}
+
 export interface ISenderAccess {
     send(senderId: string, configName: string, message: ISenderMessage): Promise<void>
     addConfig(senderId: string, config: ISenderConfig): boolean

@@ -35,9 +35,9 @@ export class TeamsSender implements ISender {
 
     getConfigSchema(): ISenderFieldDef[] {
         return [
-            { name: 'name',       label: 'Name',          type: 'text',     required: true },
-            { name: 'webhookUrl', label: 'Webhook URL',   type: 'text',     required: true },
-            { name: 'title',      label: 'Default title', type: 'text',     required: false },
+            { name: 'name',       label: 'Name',          type: 'text', required: true },
+            { name: 'webhookUrl', label: 'Webhook URL',   type: 'text', required: true,  common: true },
+            { name: 'title',      label: 'Default title', type: 'text', required: false },
         ]
     }
 

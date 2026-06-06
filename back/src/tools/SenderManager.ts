@@ -1,4 +1,4 @@
-import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage, TSenderConstructor } from '@kwirthmagnify/kwirth-common-back'
+import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage, ISenderStoredConfig, TSenderConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import tar from 'tar'
@@ -37,6 +37,7 @@ export class SenderManager implements ISenderAccess {
     private devSenders = new Map<string, IDevSender>()
     private devWatchers = new Map<string, fs.FSWatcher>()
     private configStore = new Map<string, Map<string, ISenderConfig>>()
+    private commonFieldStore = new Map<string, Record<string, unknown>>()
     private installedIds: string[] = []
     private installedMetas = new Map<string, ISenderMeta>()
     private cachedIndex: ISenderMeta[] = []
@@ -142,8 +143,20 @@ export class SenderManager implements ISenderAccess {
     }
 
     async loadPersistedConfigs(): Promise<void> {
-        const data = (await this.configMaps.read('kwirth-sender-configs', {})) as Record<string, ISenderConfig[]>
-        for (const [senderId, configs] of Object.entries(data ?? {})) {
+        const data = (await this.configMaps.read('kwirth-sender-configs', {})) as Record<string, unknown>
+        for (const [senderId, value] of Object.entries(data ?? {})) {
+            let configs: ISenderConfig[]
+            let common: Record<string, unknown> = {}
+            if (Array.isArray(value)) {
+                configs = value as ISenderConfig[]
+            } else if (value && typeof value === 'object' && Array.isArray((value as ISenderStoredConfig).configs)) {
+                const { configs: storedConfigs, ...commonFields } = value as ISenderStoredConfig
+                configs = storedConfigs as ISenderConfig[]
+                common = commonFields as Record<string, unknown>
+            } else {
+                continue
+            }
+            this.commonFieldStore.set(senderId, common)
             for (const config of configs) {
                 this.addConfigInternal(senderId, config)
             }
@@ -411,8 +424,10 @@ export class SenderManager implements ISenderAccess {
             logError(ELogComponent.CORE, `Sender '${senderId}' not found — cannot add config '${config.name}'`)
             return false
         }
+        const base = this.commonFieldStore.get(senderId) ?? {}
+        const merged = { ...base, ...config } as ISenderConfig
         const alreadyExists = this.configStore.has(senderId) && this.configStore.get(senderId)!.has(config.name)
-        sender.addConfig(config)
+        sender.addConfig(merged)
         if (!this.configStore.has(senderId)) this.configStore.set(senderId, new Map())
         this.configStore.get(senderId)!.set(config.name, { ...config })
         if (!alreadyExists) logInfo(ELogComponent.CORE, `Sender '${senderId}' config '${config.name}' registered`)
@@ -420,9 +435,10 @@ export class SenderManager implements ISenderAccess {
     }
 
     private persistConfigs(): void {
-        const data: Record<string, ISenderConfig[]> = {}
+        const data: Record<string, ISenderStoredConfig> = {}
         for (const [id, configs] of this.configStore) {
-            data[id] = Array.from(configs.values())
+            const common = this.commonFieldStore.get(id) ?? {}
+            data[id] = { ...common, configs: Array.from(configs.values()) }
         }
         this.configMaps.write('kwirth-sender-configs', data).catch((err: unknown) =>
             logError(ELogComponent.CORE, `Failed to persist sender configs: ${err}`)
@@ -440,6 +456,28 @@ export class SenderManager implements ISenderAccess {
         if (!sender) return false
         sender.removeConfig(configName)
         this.configStore.get(senderId)?.delete(configName)
+        this.persistConfigs()
+        return true
+    }
+
+    getSenderStoredConfig(senderId: string): ISenderStoredConfig {
+        const common = this.commonFieldStore.get(senderId) ?? {}
+        const configs = Array.from(this.configStore.get(senderId)?.values() ?? [])
+        return { ...common, configs }
+    }
+
+    setSenderStoredConfig(senderId: string, data: ISenderStoredConfig): boolean {
+        const { configs, ...common } = data
+        this.commonFieldStore.set(senderId, common as Record<string, unknown>)
+        const sender = this.getSender(senderId)
+        if (!sender) return false
+        for (const name of Array.from(this.configStore.get(senderId)?.keys() ?? [])) {
+            sender.removeConfig(name)
+        }
+        this.configStore.delete(senderId)
+        for (const config of (configs as ISenderConfig[])) {
+            this.addConfigInternal(senderId, config)
+        }
         this.persistConfigs()
         return true
     }

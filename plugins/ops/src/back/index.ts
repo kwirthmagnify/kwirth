@@ -206,17 +206,17 @@ class OpsChannel {
         ws.send(JSON.stringify({ action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED, channel: InstanceMessageChannelEnum.OPS, instance: instanceId, type: EInstanceMessageType.DATA, text } as IInstanceConfigResponse))
     }
 
-    private async executeLinuxCommand(webSocket: WebSocket, instance: IInstance, podNamespace: string, podName: string, containerName: string, id: string, command: string) {
+    private async executeLinuxCommand(webSocket: WebSocket, instance: IInstance, podNamespace: string, podName: string, containerName: string, id: string, commandLine: string, channelCommand: EOpsCommand) {
         let stdout = new Writable({})
         let stderr = new Writable({})
         let stdin = new Readable({ read() { } })
         let shellSocket = await this.clusterInfo.execApi.exec(podNamespace, podName, containerName, ['/bin/sh', '-i'], stdout, stderr, stdin, true, (_st: any) => { })
         shellSocket.onmessage = (event: any) => {
             let text = event.data.toString('utf8').substring(1)
-            webSocket.send(JSON.stringify({ action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED, channel: InstanceMessageChannelEnum.OPS, instance: instance.instanceId, type: EInstanceMessageType.DATA, id, command: EOpsCommand.EXECUTE, namespace: podNamespace, group: '', pod: podName, container: containerName, data: text, msgtype: 'opsmessageresponse' } as IOpsMessageResponse))
+            webSocket.send(JSON.stringify({ action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED, channel: InstanceMessageChannelEnum.OPS, instance: instance.instanceId, type: EInstanceMessageType.DATA, id, command: channelCommand, namespace: podNamespace, group: '', pod: podName, container: containerName, data: text, msgtype: 'opsmessageresponse' } as IOpsMessageResponse))
         }
         shellSocket.onclose = () => { this.sendDataMessage(webSocket, instance.instanceId, 'Connection to container has been interrupted') }
-        stdin?.push(command + '\n')
+        stdin?.push(commandLine + '\n')
     }
 
     private checkAssetScope = (instance: IInstance, asset: IAsset, scope: string) => {
@@ -266,7 +266,7 @@ class OpsChannel {
                 if (!asset) { execResponse.data = 'Asset not found'; return execResponse }
                 if (!this.checkAssetScope(instance, asset, 'ops$restart')) { execResponse.data = 'Insufficient scope to RESTART CONTAINER'; return execResponse }
                 try {
-                    await this.executeLinuxCommand(webSocket, instance, asset.podNamespace, asset.podName, asset.containerName, opsMessage.id, '/usr/sbin/killall5')
+                    await this.executeLinuxCommand(webSocket, instance, asset.podNamespace, asset.podName, asset.containerName, opsMessage.id, '/usr/sbin/killall5', EOpsCommand.RESTART)
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, `Container ${asset.podNamespace}/${asset.podName}/${asset.containerName} restarted`)
                 } catch (err) {
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, `Error restarting: ${err}`)

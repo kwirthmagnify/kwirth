@@ -1,6 +1,6 @@
-import { ISenderMessage, ISenderConfig, ISenderAccess } from '@kwirthmagnify/kwirth-common'
+import { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig } from '@kwirthmagnify/kwirth-common'
 
-export { ISenderMessage, ISenderConfig, ISenderAccess }
+export { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig }
 
 export type SenderFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json'
 
@@ -10,6 +10,7 @@ export interface ISenderFieldDef {
     type?: SenderFieldType
     required?: boolean
     options?: string[]
+    common?: boolean
 }
 
 export interface ISender {

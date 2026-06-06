@@ -1,6 +1,6 @@
 import { Router, Request, Response, raw } from 'express'
 import { SenderManager } from '../tools/SenderManager'
-import { ISenderConfig } from '@kwirthmagnify/kwirth-common-back'
+import { ISenderConfig, ISenderStoredConfig } from '@kwirthmagnify/kwirth-common-back'
 import { ELogComponent, logError, logInfo } from '../tools/Logging'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
@@ -122,7 +122,21 @@ export class SenderApi {
 
         this.router.get('/:id/configs', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
-            res.json(this.senderManager.getConfigs(req.params.id))
+            res.json(this.senderManager.getSenderStoredConfig(req.params.id))
+        })
+
+        this.router.put('/:id/configs', async (req: Request, res: Response) => {
+            if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            try {
+                const data = req.body as ISenderStoredConfig
+                if (!data || !Array.isArray(data.configs)) return void res.status(400).json({ error: 'configs array required' })
+                const ok = this.senderManager.setSenderStoredConfig(req.params.id, data)
+                if (!ok) return void res.status(404).json({ error: `Sender '${req.params.id}' not registered` })
+                logInfo(ELogComponent.CORE, `Sender '${req.params.id}' stored config updated via API`)
+                res.json({ ok: true })
+            } catch (err) {
+                res.status(500).json({ error: String(err) })
+            }
         })
 
         this.router.post('/:id/configs', async (req: Request, res: Response) => {

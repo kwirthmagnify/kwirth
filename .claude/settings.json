@@ -152,7 +152,9 @@
       "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders -Directory | ForEach-Object { $pkg = \"$\\($_.FullName\\)\\\\package.json\"; if \\(Test-Path $pkg\\) { $j = Get-Content $pkg | ConvertFrom-Json; \"$\\($_.Name\\): watch=[$\\($j.scripts.watch\\)]  build=[$\\($j.scripts.build\\)]\" } })",
       "PowerShell(npm whoami 2>&1)",
       "PowerShell(Get-Content \"$env:USERPROFILE\\\\.npmrc\" -ErrorAction SilentlyContinue; Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\.npmrc\" -ErrorAction SilentlyContinue)",
-      "PowerShell(npm view @kwirthmagnify/kwirth-plugin-log version 2>&1)"
+      "PowerShell(npm view @kwirthmagnify/kwirth-plugin-log version 2>&1)",
+      "Bash(find \"c:\\\\\\\\github\\\\\\\\aisdkvercel\\\\\\\\kwirth\\\\\\\\front\\\\\\\\src\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\))",
+      "Bash(find \"c:\\\\\\\\github\\\\\\\\aisdkvercel\\\\\\\\kwirth\\\\\\\\front\\\\\\\\src\" -type f -name \"*Sender*\")"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
