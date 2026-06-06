@@ -16,12 +16,22 @@ const _defaultUi = (): ICensorUiState => ({
 import { CensorImportExport } from './CensorImportExport'
 import { CensorSessionStart } from './CensorSessionStart'
 import { MsgBoxButtons, MsgBoxYesNo } from './utils'
+import { GaugeComponent } from 'react-gauge-component'
+
+const REFRESH_INTERVAL_MS = 250
 
 const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const data: ICensorData = props.channelObject.data
     const contentRef = useRef<HTMLDivElement>(null)
     const [contentTop, setContentTop] = useState(0)
     const [, forceUpdate] = useState(0)
+    useEffect(() => {
+        const id = setInterval(() => forceUpdate(v => v + 1), REFRESH_INTERVAL_MS)
+        return () => clearInterval(id)
+    }, [])
+    const peakProcessedRef = useRef(10)
+    const peakTkInRef = useRef(100)
+    const peakTkOutRef = useRef(100)
 
     // Restore UI state from channelObject.data so it survives tab switches
     const _ui = data.uiState
@@ -355,7 +365,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                 </Stack>
             } />
             <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
-                <Tabs value={tab} onChange={(_, v) => setTab(v)} variant='scrollable' scrollButtons='auto'
+                <Tabs value={tab} onChange={(_, v) => setTab(v)} variant='fullWidth'
                     sx={{ borderBottom: 1, borderColor: 'divider', px: 1, minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
                     <Tab label={`Objects (${data.assets.length})`} />
                     <Tab label={`Regex (${data.regexes.length})`} />
@@ -384,7 +394,6 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     else if (tab === 3) { data.businessLines = []; forceUpdate(n => n + 1) }
                                     else if (tab === 4) { data.llmInputLines = []; forceUpdate(n => n + 1) }
                                     else if (tab === 5) { data.llmOutputLines = []; forceUpdate(n => n + 1) }
-                                    else if (tab === 6) { data.llmWarningLines = []; forceUpdate(n => n + 1) }
                                     else if (tab === 7) { data.llmErrorLines = []; forceUpdate(n => n + 1) }
                                 }}>
                                     <DeleteSweep fontSize='small' />
@@ -555,6 +564,18 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         <Box key={i} sx={{ display: 'flex', flexDirection: 'column', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}>
                             <Typography variant='caption' color='text.disabled' sx={{ fontFamily: 'monospace', fontSize: '10px' }}>{e.timestamp}</Typography>
                             <Typography variant='caption' color='error.main' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{e.text}</Typography>
+                            {e.lines && e.lines.length > 0 && (
+                                <Box sx={{ mt: 0.5, pl: 1, borderLeft: 2, borderColor: 'error.light' }}>
+                                    <Typography variant='caption' color='text.disabled' sx={{ fontSize: '9px', fontWeight: 'bold', display: 'block', mb: 0.25 }}>
+                                        INPUT ({e.lines.length} lines)
+                                    </Typography>
+                                    {e.lines.map((l, j) => (
+                                        <Typography key={j} variant='caption' sx={{ fontFamily: 'monospace', fontSize: '10px', display: 'block', wordBreak: 'break-all', color: 'text.secondary' }}>
+                                            {l}
+                                        </Typography>
+                                    ))}
+                                </Box>
+                            )}
                         </Box>
                     ))}
 
@@ -584,6 +605,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     {col('Sent to LLM', data.llmLinesCount)}
                                     {col('Filtered (regex)', filtered)}
                                     {col('Pending', data.pendingCount)}
+                                    {col('Avg line size', data.processedCount > 0 && data.totalBytesProcessed > 0 ? `${Math.round(data.totalBytesProcessed / data.processedCount)} B` : '—')}
                                 </Stack>
                             </Box>
                             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 190, flex: 1 }}>
@@ -596,9 +618,40 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     {col('Tokens out', data.tokensOut)}
                                     {savedTk > 0 && col('Est. tokens saved', `~${savedTk.toLocaleString()} (${Math.round(savedTk / (data.tokensIn + savedTk) * 100)}%)`)}
                                 </Stack>
+                                <Stack spacing={0.5} sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: 'divider' }}>
+                                    {col('Batch size', data.instanceConfig?.batchSize ?? 50)}
+                                    {col('Avg tokens/batch', data.llmCount > 0 ? Math.round(data.tokensIn / data.llmCount) : '—')}
+                                </Stack>
                             </Box>
                             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 260, flex: 1 }}>
                                 <Typography variant='subtitle2' fontWeight='bold' gutterBottom>Performance</Typography>
+                                {(() => {
+                                    if (msgsPerSec > peakProcessedRef.current) peakProcessedRef.current = msgsPerSec
+                                    if (tokensInPerSec > peakTkInRef.current) peakTkInRef.current = tokensInPerSec
+                                    if (tokensOutPerSec > peakTkOutRef.current) peakTkOutRef.current = tokensOutPerSec
+                                    const gaugeArc = (peak: number) => ({
+                                        subArcs: [
+                                            { limit: peak * 0.5, color: '#5BE12C', showTick: false },
+                                            { limit: peak * 0.8, color: '#F5CD19', showTick: false },
+                                            { limit: peak * 1.1, color: '#EA4228', showTick: false },
+                                        ]
+                                    })
+                                    const gaugeLabels = { valueLabel: { style: { fontSize: '22px', fill: 'currentColor', textShadow: 'none' } }, tickLabels: { type: 'inner' as const, defaultTickValueConfig: { formatTextValue: () => '' } } }
+                                    return (
+                                        <Stack direction='row' spacing={0} sx={{ mb: 1 }}>
+                                            {[
+                                                { label: 'Lines/sec', value: msgsPerSec, peak: peakProcessedRef.current },
+                                                { label: 'Tok in/sec', value: tokensInPerSec, peak: peakTkInRef.current },
+                                                { label: 'Tok out/sec', value: tokensOutPerSec, peak: peakTkOutRef.current },
+                                            ].map(({ label, value, peak }) => (
+                                                <Box key={label} sx={{ flex: 1, minWidth: 0 }}>
+                                                    <GaugeComponent type='semicircle' value={value} minValue={0} maxValue={peak * 1.1} arc={gaugeArc(peak)} labels={gaugeLabels} pointer={{ type: 'needle', elastic: true }} />
+                                                    <Typography variant='caption' color='text.secondary' align='center' display='block' sx={{ mt: -1 }}>{label}</Typography>
+                                                </Box>
+                                            ))}
+                                        </Stack>
+                                    )
+                                })()}
                                 <Stack direction='row' spacing={1} sx={{ mb: 0.5 }}>
                                     <Box sx={{ flex: 1 }} />
                                     <Typography variant='caption' color='text.disabled' sx={{ width: 48, textAlign: 'right' }}>/sec</Typography>
@@ -606,7 +659,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     <Typography variant='caption' color='text.disabled' sx={{ width: 64, textAlign: 'right' }}>/hour</Typography>
                                 </Stack>
                                 {[
-                                    { label: 'Messages', sec: msgsPerSec, min: msgsPerMin, hour: msgsPerMin * 60 },
+                                    { label: 'Processed', sec: msgsPerSec, min: msgsPerMin, hour: msgsPerMin * 60 },
                                     { label: 'Tokens in', sec: tokensInPerSec, min: tokensInPerMin, hour: tokensInPerMin * 60 },
                                     { label: 'Tokens out', sec: tokensOutPerSec, min: tokensOutPerMin, hour: tokensOutPerMin * 60 },
                                 ].map(({ label, sec, min, hour }) => (
@@ -617,10 +670,6 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                         <Typography variant='body2' fontWeight='bold' sx={{ width: 64, textAlign: 'right' }}>{hour.toLocaleString()}</Typography>
                                     </Stack>
                                 ))}
-                                <Stack spacing={0.5} sx={{ mt: 1.5, pt: 1, borderTop: 1, borderColor: 'divider' }}>
-                                    {col('Batch size', data.instanceConfig?.batchSize ?? 50)}
-                                    {col('Avg tokens/batch', data.llmCount > 0 ? Math.round(data.tokensIn / data.llmCount) : '—')}
-                                </Stack>
                             </Box>
                             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 190, flex: 1 }}>
                                 <Typography variant='subtitle2' fontWeight='bold' gutterBottom>DataDog</Typography>
@@ -637,8 +686,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     const pct = totalBytes > 0 ? Math.round(filteredBytes / totalBytes * 100) : 0
                                     return (
                                         <Stack spacing={0.5}>
-                                            {col('Avg line size', avgBytes > 0 ? `${Math.round(avgBytes)} B` : '—')}
-                                            <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5, fontWeight: 'bold' }}>Ingestion ($0.10/GB)</Typography>
+                                            <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 'bold' }}>Ingestion ($0.10/GB)</Typography>
                                             {col('All logs', `${fmtSz(totalBytes)}  ${fmtIng(totalBytes)}`)}
                                             {col('Regex filtered', `${fmtSz(filteredBytes)}  ${fmtIng(filteredBytes)}`)}
                                             {col('Remaining', `${fmtSz(remainBytes)}  ${fmtIng(remainBytes)}`)}

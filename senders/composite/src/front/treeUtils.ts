@@ -1,4 +1,4 @@
-import { ICompositeNode, ICompositeTeeNode, ICompositeRegexNode, ICompositeRegexRule, IRuleLeaf, ITreeEntry } from './types'
+import { ICompositeNode, ICompositeTeeNode, ICompositeTimedNode, ICompositeRegexNode, ITreeEntry } from './types'
 
 // ─── Path helpers ──────────────────────────────────────────────────────────────
 
@@ -16,34 +16,6 @@ function _getAt(node: unknown, parts: string[]): unknown {
         ? (node as unknown[])[idx]
         : (node as Record<string, unknown>)[key]
     return _getAt(next, rest)
-}
-
-export function updateNodeAtPath(root: ICompositeNode, path: string, value: ICompositeNode | undefined): ICompositeNode {
-    if (!path) return value ?? root
-    const clone = deepClone(root)
-    _setAt(clone as unknown, path.split('.'), value)
-    return clone
-}
-
-function _setAt(node: unknown, parts: string[], value: unknown): void {
-    if (node === null || typeof node !== 'object') return
-    const [key, ...rest] = parts
-    if (rest.length === 0) {
-        const idx = Number(key)
-        if (!isNaN(idx)) {
-            (node as unknown[])[idx] = value
-        } else if (value === undefined) {
-            delete (node as Record<string, unknown>)[key]
-        } else {
-            (node as Record<string, unknown>)[key] = value
-        }
-        return
-    }
-    const idx = Number(key)
-    const next = !isNaN(idx)
-        ? (node as unknown[])[idx]
-        : (node as Record<string, unknown>)[key]
-    _setAt(next, rest, value)
 }
 
 export function deleteNodeAtPath(root: ICompositeNode, path: string): ICompositeNode {
@@ -79,44 +51,19 @@ export function addTeeTarget(root: ICompositeNode, path: string, newNode: ICompo
     return clone
 }
 
-export function addRegexRule(root: ICompositeNode, path: string, rule: ICompositeRegexRule): ICompositeNode {
+export function setNextNode(root: ICompositeNode, path: string, next: ICompositeNode): ICompositeNode {
     const clone = deepClone(root)
-    const regex = (path ? nodeAtPath(clone, path) : clone) as ICompositeRegexNode
-    regex.rules.push(rule)
-    return clone
-}
-
-export function updateRegexRule(root: ICompositeNode, nodePath: string, ruleIndex: number, rule: ICompositeRegexRule): ICompositeNode {
-    const clone = deepClone(root)
-    const regex = (nodePath ? nodeAtPath(clone, nodePath) : clone) as ICompositeRegexNode
-    regex.rules[ruleIndex] = rule
-    return clone
-}
-
-export function deleteRegexRule(root: ICompositeNode, nodePath: string, ruleIndex: number): ICompositeNode {
-    const clone = deepClone(root)
-    const regex = (nodePath ? nodeAtPath(clone, nodePath) : clone) as ICompositeRegexNode
-    regex.rules.splice(ruleIndex, 1)
-    return clone
-}
-
-export function setRegexDefault(root: ICompositeNode, nodePath: string, action: 'send' | 'drop', target?: ICompositeNode): ICompositeNode {
-    const clone = deepClone(root)
-    const regex = (nodePath ? nodeAtPath(clone, nodePath) : clone) as ICompositeRegexNode
-    regex.defaultAction = action
-    if (action === 'send' && target) {
-        regex.defaultTarget = target
-    } else {
-        delete regex.defaultTarget
-    }
+    const node = (path ? nodeAtPath(clone, path) : clone) as ICompositeTimedNode | ICompositeRegexNode
+    node.next = next
     return clone
 }
 
 // ─── Default node factory ─────────────────────────────────────────────────────
 
-export function createNode(type: 'tee' | 'regex' | 'ref'): ICompositeNode {
-    if (type === 'tee') return { type: 'tee', targets: [] }
-    if (type === 'regex') return { type: 'regex', rules: [], defaultAction: 'drop' }
+export function createNode(type: 'tee' | 'ref' | 'timed' | 'regex'): ICompositeNode {
+    if (type === 'tee')   return { type: 'tee', targets: [] }
+    if (type === 'timed') return { type: 'timed', configName: '' }
+    if (type === 'regex') return { type: 'regex', configName: '' }
     return { type: 'ref', senderId: '', configName: '' }
 }
 
@@ -131,24 +78,13 @@ export function getTreeEntries(node: ICompositeNode, basePath: string): ITreeEnt
             label: '',
         }))
     }
-    if (node.type === 'regex') {
-        const entries: ITreeEntry[] = []
-        node.rules.forEach((rule, i) => {
-            const rulePath = basePath ? `${basePath}.rules.${i}` : `rules.${i}`
-            entries.push({ kind: 'rule', rule, path: rulePath } satisfies IRuleLeaf)
-        })
-        const defAction = node.defaultAction ?? 'drop'
-        if (defAction === 'drop' || !node.defaultTarget) {
-            entries.push({ kind: 'drop', label: `default → ${defAction}` })
-        } else {
-            entries.push({
-                kind: 'node',
-                node: node.defaultTarget,
-                path: basePath ? `${basePath}.defaultTarget` : 'defaultTarget',
-                label: 'default →',
-            })
-        }
-        return entries
+    if ((node.type === 'timed' || node.type === 'regex') && node.next) {
+        return [{
+            kind: 'node' as const,
+            node: node.next,
+            path: basePath ? `${basePath}.next` : 'next',
+            label: '→',
+        }]
     }
     return []
 }
@@ -158,14 +94,7 @@ export function getTreeEntries(node: ICompositeNode, basePath: string): ITreeEnt
 export function getAllNodePaths(node: ICompositeNode, basePath: string): string[] {
     const result = [basePath]
     for (const entry of getTreeEntries(node, basePath)) {
-        if (entry.kind === 'rule') {
-            result.push(entry.path)
-            if (entry.rule.action === 'send' && entry.rule.target) {
-                result.push(...getAllNodePaths(entry.rule.target, `${entry.path}.target`))
-            }
-        } else if (entry.kind === 'node') {
-            result.push(...getAllNodePaths(entry.node, entry.path))
-        }
+        result.push(...getAllNodePaths(entry.node, entry.path))
     }
     return result
 }
@@ -175,35 +104,10 @@ export function getAllNodePaths(node: ICompositeNode, basePath: string): string[
 export function getParentPath(path: string): string {
     if (!path) return ''
     const parts = path.split('.')
-    const last = parts[parts.length - 1]
-    if (last === 'target' || last === 'defaultTarget') return parts.slice(0, -1).join('.')
-    return parts.slice(0, -2).join('.')
-}
-
-// ─── Rule path helpers ────────────────────────────────────────────────────────
-
-export function isRulePath(path: string): boolean {
-    if (!path) return false
-    const parts = path.split('.')
-    return parts.length >= 2 && parts[parts.length - 2] === 'rules' && !isNaN(Number(parts[parts.length - 1]))
-}
-
-export function ruleAtPath(root: ICompositeNode, path: string): ICompositeRegexRule | undefined {
-    if (!isRulePath(path)) return undefined
-    const parts = path.split('.')
-    const ruleIndex = Number(parts[parts.length - 1])
-    const regexNodePath = parts.slice(0, -2).join('.')
-    const regexNode = regexNodePath ? nodeAtPath(root, regexNodePath) : root
-    if (!regexNode || regexNode.type !== 'regex') return undefined
-    return regexNode.rules[ruleIndex]
-}
-
-export function getRuleIndex(rulePath: string): number {
-    return Number(rulePath.split('.').at(-1))
-}
-
-export function getRegexNodePathFromRulePath(rulePath: string): string {
-    return rulePath.split('.').slice(0, -2).join('.')
+    const lastPart = parts[parts.length - 1]
+    // named property (e.g. 'next'): go up 1 level; array index (e.g. '0'): go up 2 levels (field + index)
+    const toRemove = isNaN(Number(lastPart)) ? 1 : 2
+    return parts.slice(0, -toRemove).join('.')
 }
 
 // ─── Util ─────────────────────────────────────────────────────────────────────

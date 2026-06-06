@@ -34,21 +34,17 @@ const TIMEZONES = [
 // ─── Config ────────────────────────────────────────────────────────────────────
 
 export interface ITimedSenderRule {
-    from: string                    // "HH:mm" 24h — start of window (inclusive)
-    to: string                      // "HH:mm" 24h — end of window (exclusive); if < from, spans midnight
-    days?: number[]                 // 0=Sun..6=Sat — all days if omitted
+    from: string
+    to: string
+    days?: number[]
     action: 'send' | 'drop'
-    senderId?: string               // required when action === 'send'
-    configName?: string             // required when action === 'send'
 }
 
 export interface ITimedSenderConfig extends ISenderConfig {
     name: string
     rules: ITimedSenderRule[]
     defaultAction?: 'send' | 'drop'
-    defaultSenderId?: string
-    defaultConfigName?: string
-    timezone?: string               // IANA timezone, e.g. "Europe/Madrid" — server local if omitted
+    timezone?: string
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -87,7 +83,6 @@ function matchesWindow(rule: ITimedSenderRule, minutes: number, day: number): bo
 export class TimedSender implements ISender {
     readonly id = 'timed'
     private configs = new Map<string, ITimedSenderConfig>()
-    private senderAccess: ISenderAccess | undefined
 
     addConfig(config: ISenderConfig): void {
         const tc = config as ITimedSenderConfig
@@ -107,46 +102,22 @@ export class TimedSender implements ISender {
         return Array.from(this.configs.keys())
     }
 
-    async send(configName: string, message: ISenderMessage): Promise<void> {
-        const config = this.configs.get(configName)
-        if (!config) throw new Error(`TimedSender: config '${configName}' not found`)
-        if (!this.senderAccess) throw new Error(`TimedSender: senderAccess not initialized`)
-
-        const { minutes, day } = currentContext(config.timezone)
-
-        for (const rule of config.rules) {
-            if (!matchesWindow(rule, minutes, day)) continue
-            if (rule.action === 'send' && rule.senderId && rule.configName) {
-                await this.senderAccess.send(rule.senderId, rule.configName, message)
-            }
-            // action === 'drop' → discard
-            return
-        }
-
-        const defAction = config.defaultAction ?? 'drop'
-        if (defAction === 'send' && config.defaultSenderId && config.defaultConfigName) {
-            await this.senderAccess.send(config.defaultSenderId, config.defaultConfigName, message)
-        }
+    async send(_configName: string, _message: ISenderMessage): Promise<void> {
+        // timed sender is a filter used inside composite pipelines; standalone send is a no-op
     }
 
     getConfigSchema(): ISenderFieldDef[] {
         return [
-            { name: 'name',              label: 'Name',               required: true },
-            { name: 'timezone', label: 'Timezone', type: 'select', options: TIMEZONES, labels: TIMEZONES.map(tz => { const off = tzOffset(tz); return off ? `${tz} (${off})` : tz }) } as unknown as ISenderFieldDef,
-            { name: 'rules',             label: 'Rules (JSON)',        type: 'json' },
-            { name: 'defaultAction',     label: 'Default action',     type: 'select', options: ['drop', 'send'] },
-            { name: 'defaultSenderId',   label: 'Default sender ID' },
-            { name: 'defaultConfigName', label: 'Default config name' },
+            { name: 'name',          label: 'Name',           required: true },
+            { name: 'timezone',      label: 'Timezone',       type: 'select', options: TIMEZONES, labels: TIMEZONES.map(tz => { const off = tzOffset(tz); return off ? `${tz} (${off})` : tz }) } as unknown as ISenderFieldDef,
+            { name: 'rules',         label: 'Rules (JSON)',   type: 'json' },
+            { name: 'defaultAction', label: 'Default action', type: 'select', options: ['drop', 'send'] },
         ]
     }
 
-    async startSender(senders: ISenderAccess): Promise<void> {
-        this.senderAccess = senders
-    }
+    async startSender(_senders: ISenderAccess): Promise<void> {}
 
-    async stopSender(): Promise<void> {
-        this.senderAccess = undefined
-    }
+    async stopSender(): Promise<void> {}
 }
 
 export default TimedSender

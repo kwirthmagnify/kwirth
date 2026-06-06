@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import {
-    Box, Button, Chip, CircularProgress, Collapse, Dialog, DialogActions, DialogContent,
-    DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch,
-    TextField, Tooltip, Typography
+    Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
+    DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem,
+    Select, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
-import { Add, CheckCircle, Delete, Download, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings } from '@mui/icons-material'
+import { Add, CheckCircle, ContentCopy, Delete, Download, Edit, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
@@ -67,6 +67,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     const [available, setAvailable] = useState<ISenderManifestEntry[]>([])
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [filterText, setFilterText] = useState('')
+    const [availableFilter, setAvailableFilter] = useState('')
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [crossInstalled, setCrossInstalled] = useState<Record<string, { id: string, version: string }[]>>({})
 
@@ -87,6 +88,8 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     const [loadingConfigs, setLoadingConfigs] = useState(false)
     const [deletingName, setDeletingName] = useState<string | undefined>()
     const [showAddForm, setShowAddForm] = useState(false)
+    const [editingName, setEditingName] = useState<string | undefined>()
+    const [originalEditingName, setOriginalEditingName] = useState<string | undefined>()
     const [formValues, setFormValues] = useState<ConfigValues>({})
     const [saving, setSaving] = useState(false)
 
@@ -158,17 +161,9 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     }
     const allRequirementsMet = (requires?: IRequirement[]) => !requires?.length || requires.every(isRequirementMet)
 
-    const expandSender = async (id: string) => {
-        if (expandedId === id) { setExpandedId(undefined); return }
-        setExpandedId(id)
-        setShowAddForm(false)
-        setFormValues({})
-
-        // Senders with a custom front handle their own config UI
+    const reloadConfigs = async (id: string) => {
         const sender = installed.find(s => s.id === id)
         if (sender?.hasFront) return
-
-        setSchema([])
         setLoadingConfigs(true)
         try {
             const [configsRes, schemaRes] = await Promise.all([
@@ -183,6 +178,16 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         } finally {
             setLoadingConfigs(false)
         }
+    }
+
+    const expandSender = async (id: string) => {
+        if (expandedId === id) { setExpandedId(undefined); return }
+        setExpandedId(id)
+        setShowAddForm(false)
+        setFormValues({})
+        setError(undefined)
+        setSchema([])
+        await reloadConfigs(id)
     }
 
     const installFromCatalog = async (entry: ISenderManifestEntry) => {
@@ -271,11 +276,15 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         setError(undefined)
         try {
             const payload = buildPayload(expandedId, formValues)
+            const newName = payload.name as string
             const res = await fetch(`${backendUrl}/senders/${expandedId}/configs`, addPostAuthorization(accessString, JSON.stringify(payload)))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
-            setShowAddForm(false)
-            setFormValues({})
-            await expandSender(expandedId)
+            if (originalEditingName && originalEditingName !== newName) {
+                await fetch(`${backendUrl}/senders/${expandedId}/configs/${encodeURIComponent(originalEditingName)}`, addDeleteAuthorization(accessString))
+            }
+            setEditingName(newName)
+            setOriginalEditingName(newName)
+            await reloadConfigs(expandedId)
             await loadInstalled()
         } catch (err) {
             setError(`Save failed: ${err}`)
@@ -345,8 +354,8 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             const { count } = await res.json()
             await loadInstalled()
-            await expandSender(id)
-            setError(`Imported ${count} config(s) into ${id}`)
+            await reloadConfigs(id)
+            setError(`Imported ${count} config(s)`)
         } catch (err) { setError(`Import failed: ${err}`) }
         finally { if (senderFileInputRef.current) senderFileInputRef.current.value = '' }
     }
@@ -372,66 +381,64 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
     // ─── Config form fields ────────────────────────────────────────────────────
 
-    const renderField = (f: ISenderFieldDef) => {
+    const renderField = (f: ISenderFieldDef, isEditing = false) => {
         const value = formValues[f.name] ?? (f.type === 'boolean' ? false : '')
+        const disabled = false
 
         if (f.type === 'boolean') return (
-            <FormControlLabel key={f.name}
-                control={<Switch size='small' checked={!!value} onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.checked }))} />}
-                label={<Typography variant='body2'>{f.label}</Typography>} />
-        )
-
-        if (f.type === 'select' && f.options) return (
-            <Box key={f.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant='body2' sx={{ minWidth: 90 }}>{f.label}{f.required ? ' *' : ''}</Typography>
-                <Select size='small' value={value || ''} displayEmpty
-                    onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))}
-                    sx={{ minWidth: 130 }}>
-                    <MenuItem value=''><em>—</em></MenuItem>
-                    {f.options.map((o, i) => <MenuItem key={o} value={o}>{f.labels?.[i] ?? o}</MenuItem>)}
-                </Select>
+            <Box key={f.name} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant='body2'>{f.label}</Typography>
+                <Switch size='small' checked={!!value} onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.checked }))} />
             </Box>
         )
 
+        if (f.type === 'select' && f.options) return (
+            <FormControl key={f.name} size='small' fullWidth>
+                <InputLabel>{f.label}{f.required ? ' *' : ''}</InputLabel>
+                <Select label={`${f.label}${f.required ? ' *' : ''}`} value={value || ''} displayEmpty
+                    onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))}>
+                    <MenuItem value=''><em>—</em></MenuItem>
+                    {f.options.map((o, i) => <MenuItem key={o} value={o}>{f.labels?.[i] ?? o}</MenuItem>)}
+                </Select>
+            </FormControl>
+        )
+
         if (f.name.endsWith('SenderId')) return (
-            <Box key={f.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant='body2' sx={{ minWidth: 90 }}>{f.label}{f.required ? ' *' : ''}</Typography>
-                <Select size='small' value={value || ''} displayEmpty
+            <FormControl key={f.name} size='small' fullWidth>
+                <InputLabel>{f.label}{f.required ? ' *' : ''}</InputLabel>
+                <Select label={`${f.label}${f.required ? ' *' : ''}`} value={value || ''} displayEmpty
                     onChange={e => {
                         const senderIdField = f.name
                         const configField = senderIdField.replace(/SenderId$/, 'ConfigName')
                         setFormValues(prev => ({ ...prev, [senderIdField]: e.target.value, [configField]: '' }))
-                    }}
-                    sx={{ minWidth: 160 }}>
+                    }}>
                     <MenuItem value=''><em>—</em></MenuItem>
                     {installed.map(s => <MenuItem key={s.id} value={s.id}>{s.displayName || s.id}</MenuItem>)}
                 </Select>
-            </Box>
+            </FormControl>
         )
 
         if (f.name.endsWith('ConfigName')) {
             const linkedSenderId = formValues[f.name.replace(/ConfigName$/, 'SenderId')] as string | undefined
             const configNames = installed.find(s => s.id === linkedSenderId)?.configNames ?? []
             return (
-                <Box key={f.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant='body2' sx={{ minWidth: 90 }}>{f.label}{f.required ? ' *' : ''}</Typography>
-                    <Select size='small' value={value || ''} displayEmpty disabled={!linkedSenderId}
-                        onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))}
-                        sx={{ minWidth: 160 }}>
+                <FormControl key={f.name} size='small' fullWidth disabled={!linkedSenderId}>
+                    <InputLabel>{f.label}{f.required ? ' *' : ''}</InputLabel>
+                    <Select label={`${f.label}${f.required ? ' *' : ''}`} value={value || ''} displayEmpty
+                        onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))}>
                         <MenuItem value=''><em>—</em></MenuItem>
                         {configNames.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
                     </Select>
-                </Box>
+                </FormControl>
             )
         }
 
         return (
-            <TextField key={f.name} size='small'
+            <TextField key={f.name} size='small' fullWidth disabled={disabled}
                 label={`${f.label}${f.required ? ' *' : ''}`}
                 type={f.type === 'number' ? 'number' : f.type === 'password' ? 'password' : 'text'}
                 value={value}
-                onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))}
-                sx={{ flex: 1, minWidth: 150 }} />
+                onChange={e => setFormValues(prev => ({ ...prev, [f.name]: e.target.value }))} />
         )
     }
 
@@ -489,11 +496,15 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
-                    <Typography variant='subtitle2'>Installed senders</Typography>
+                    <Stack direction='row' alignItems='center' spacing={1}>
+                        <Typography variant='subtitle2'>Installed senders</Typography>
+                        <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)}
+                            sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                    </Stack>
                     {installed.length === 0
                         ? <Typography variant='body2' color='text.secondary'>No senders installed.</Typography>
                         : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
-                            {installed.map(s => <SenderCard key={s.id} sender={s} />)}
+                            {installed.filter(s => !filterText || s.id.includes(filterText.toLowerCase()) || (s.displayName ?? '').toLowerCase().includes(filterText.toLowerCase())).map(s => <SenderCard key={s.id} sender={s} />)}
                           </Box>
                     }
 
@@ -526,7 +537,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
                     <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
                         <Typography variant='subtitle2'>Available senders</Typography>
-                        <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                        <TextField size='small' placeholder='Filter…' value={availableFilter} onChange={e => setAvailableFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
                         <Tooltip title='Refresh catalog'>
                             <span>
                                 <IconButton size='small' onClick={fetchManifest} disabled={loadingManifest}>
@@ -542,7 +553,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
                     {Object.keys(groupedAvailable).length > 0 &&
                         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
-                            {Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(filterText.toLowerCase())).map(id => {
+                            {Object.keys(groupedAvailable).filter(id => !availableFilter || id.includes(availableFilter.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(availableFilter.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(availableFilter.toLowerCase())).map(id => {
                                 const group = groupedAvailable[id]
                                 const entry = getSelectedSender(id)
                                 const versions = group.map(p => p.version)
@@ -613,61 +624,70 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
         {/* Generic config dialog for senders without a custom front */}
         {expandedId && !expandedSender?.hasFront && (
-            <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '560px' } }}>
+            <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '860px', height: '600px' } }}>
                 <DialogTitle>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
-                <DialogContent>
-                    <Stack spacing={1.5} sx={{ mt: 1 }}>
-                        {loadingConfigs
-                            ? <CircularProgress size={20} />
-                            : <>
-                                {configs.length === 0
-                                    ? <Typography variant='body2' color='text.secondary'>No configs yet.</Typography>
-                                    : configs.map(cfg => {
-                                        const preview = schema
-                                            .filter(f => f.type !== 'password' && f.type !== 'boolean' && cfg[f.name] !== undefined && cfg[f.name] !== '')
-                                            .slice(0, 4).map(f => `${f.label}: ${cfg[f.name]}`).join(' · ')
-                                        return (
-                                            <Box key={cfg.name} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.5, py: 0.75, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                                                <Box>
-                                                    <Typography variant='body2' fontWeight='bold'>{cfg.name}</Typography>
-                                                    <Typography variant='caption' color='text.secondary'>{preview}</Typography>
-                                                </Box>
-                                                <Tooltip title='Delete config'>
-                                                    <span>
-                                                        <IconButton size='small' color='error' disabled={deletingName === cfg.name} onClick={() => deleteConfig(cfg.name)}>
-                                                            {deletingName === cfg.name ? <CircularProgress size={14} /> : <Delete fontSize='small' />}
-                                                        </IconButton>
-                                                    </span>
-                                                </Tooltip>
+                <DialogContent sx={{ display: 'flex', gap: 2, p: '16px !important', overflow: 'hidden', height: '100%' }}>
+
+                    {/* Left — config list */}
+                    <Box sx={{ width: 190, display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+                        <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
+                        <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
+                            {loadingConfigs
+                                ? <Box sx={{ p: 1 }}><CircularProgress size={16} /></Box>
+                                : configs.length === 0
+                                    ? <Typography variant='caption' color='text.disabled' sx={{ p: 1, display: 'block' }}>No configs yet.</Typography>
+                                    : configs.map(cfg => (
+                                        <Box key={cfg.name} sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5, borderBottom: 1, borderColor: 'divider', borderLeft: editingName === cfg.name ? 3 : 0, borderLeftColor: 'primary.main', bgcolor: editingName === cfg.name ? 'action.selected' : 'transparent' }}>
+                                            <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => { setEditingName(cfg.name); setOriginalEditingName(cfg.name); setFormValues({ ...cfg }); setShowAddForm(true) }}>
+                                                <Typography variant='body2' fontWeight='bold' noWrap>{cfg.name}</Typography>
                                             </Box>
-                                        )
-                                    })
-                                }
-
-                                <Divider />
-
-                                <Button size='small' startIcon={<Add />} onClick={() => { setShowAddForm(v => !v); setFormValues({}) }}>
-                                    Add config
-                                </Button>
-
-                                <Collapse in={showAddForm}>
-                                    <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
-                                            {schema.map(f => renderField(f))}
+                                            <Tooltip title='Delete'>
+                                                <span>
+                                                    <IconButton size='small' color='error' disabled={deletingName === cfg.name} onClick={() => deleteConfig(cfg.name)}>
+                                                        {deletingName === cfg.name ? <CircularProgress size={12} /> : <Delete sx={{ fontSize: 14 }} />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
                                         </Box>
-                                        <Stack direction='row' justifyContent='flex-end' spacing={1} sx={{ mt: 2 }}>
-                                            <Button size='small' onClick={() => setShowAddForm(false)}>Cancel</Button>
-                                            <Button size='small' variant='contained' disabled={saving || !isFormValid(expandedId)} onClick={saveConfig}>
-                                                {saving ? <CircularProgress size={14} /> : 'Save'}
-                                            </Button>
-                                        </Stack>
-                                    </Box>
-                                </Collapse>
+                                    ))
+                            }
+                        </Box>
+                        <Stack direction='row' spacing={0.5}>
+                            <Button size='small' startIcon={<Add />} onClick={() => { setShowAddForm(true); setEditingName(undefined); setOriginalEditingName(undefined); setFormValues({}) }} sx={{ flex: 1 }}>New</Button>
+                            <Button size='small' startIcon={<ContentCopy />} disabled={!editingName} onClick={() => { setOriginalEditingName(undefined); setEditingName(undefined); setFormValues(prev => ({ ...prev, name: `${prev.name ?? ''} (copy)` })); setShowAddForm(true) }} sx={{ flex: 1 }}>Clone</Button>
+                        </Stack>
+                    </Box>
 
-                                {error && <Typography variant='caption' color='error'>{error}</Typography>}
+                    <Divider orientation='vertical' flexItem />
+
+                    {/* Right — form */}
+                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0, overflow: 'hidden' }}>
+                        {showAddForm
+                            ? <>
+                                <Typography variant='caption' color='text.secondary' fontWeight='bold'>
+                                    {editingName ? `Editing: ${editingName}` : 'New config'}
+                                </Typography>
+                                <Box sx={{ flex: 1, overflowY: 'auto', pt: 1 }}>
+                                    <Stack direction='column' spacing={1.5}>
+                                        <TextField size='small' label='Description' fullWidth multiline maxRows={2}
+                                            value={formValues['description'] ?? ''}
+                                            onChange={e => setFormValues(prev => ({ ...prev, description: e.target.value || undefined }))} />
+                                        {schema.map(f => renderField(f, !!editingName))}
+                                    </Stack>
+                                </Box>
+                                <Stack direction='row' justifyContent='flex-end' alignItems='center' spacing={1}>
+                                    {error && <Typography variant='caption' color='error' sx={{ flex: 1 }}>{error}</Typography>}
+                                    <Button size='small' onClick={() => { setShowAddForm(false); setEditingName(undefined); setFormValues({}) }}>Cancel</Button>
+                                    <Button size='small' variant='contained' disabled={saving || !isFormValid(expandedId)} onClick={saveConfig}>
+                                        {saving ? <CircularProgress size={14} /> : editingName ? 'Update' : 'Add'}
+                                    </Button>
+                                </Stack>
                             </>
+                            : <Box sx={{ m: 'auto', color: 'text.disabled' }}>
+                                <Typography variant='body2'>Select a config to edit or click New.</Typography>
+                            </Box>
                         }
-                    </Stack>
+                    </Box>
                 </DialogContent>
                 <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
                     <Stack direction='row' spacing={1}>

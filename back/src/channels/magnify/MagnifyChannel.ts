@@ -146,7 +146,7 @@ class MagnifyChannel implements IChannel {
     }
 
     getChannelScopeLevel = (scope: string): number => {
-        return ['', 'magnify$read', 'cluster'].indexOf(scope)
+        return ['', 'cluster'].indexOf(scope)
     }
 
     startChannel = async () =>  {

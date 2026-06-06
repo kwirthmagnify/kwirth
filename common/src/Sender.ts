@@ -15,4 +15,5 @@ export interface ISenderAccess {
     send(senderId: string, configName: string, message: ISenderMessage): Promise<void>
     addConfig(senderId: string, config: ISenderConfig): boolean
     listSenders(): Array<{ id: string; configNames: string[] }>
+    getConfig(senderId: string, configName: string): ISenderConfig | undefined
 }

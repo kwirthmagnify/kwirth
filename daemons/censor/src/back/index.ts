@@ -591,7 +591,7 @@ export class CensorDaemon implements IDaemon {
         }
         catch (err) {
             this.backDaemonObject.logError?.(`[censor-daemon] LLM call error: ${err}`)
-            this.broadcast(inst, 'llmerror', { text: String(err), timestamp: new Date().toISOString() })
+            this.broadcast(inst, 'llmerror', { text: String(err), timestamp: new Date().toISOString(), inputLines: lines })
             inst.lineBuffer.unshift(...lines)
             inst.llmErrorCooldownUntil = Date.now() + 5_000
         }

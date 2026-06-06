@@ -1,5 +1,9 @@
 import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
 
+interface ISenderAccessFull extends ISenderAccess {
+    getConfig(senderId: string, configName: string): ISenderConfig | undefined
+}
+
 // ─── Flow tree node types ───────────────────────────────────────────────────────
 
 /** Fan-out: sends the message to all targets in parallel */
@@ -8,20 +12,18 @@ export interface ICompositeTeeNode {
     targets: ICompositeNode[]
 }
 
-/** Conditional routing: evaluates rules in order, first match wins */
-export interface ICompositeRegexRule {
-    regex: string
-    flags?: string                                       // default: 'i'
-    field?: 'subject' | 'body' | 'level' | 'to'         // default: 'subject'
-    action: 'send' | 'drop'
-    target?: ICompositeNode                              // required when action === 'send'
-}
-
+/** Regex filter: evaluates a named regex config; if action=send → forward to next */
 export interface ICompositeRegexNode {
     type: 'regex'
-    rules: ICompositeRegexRule[]
-    defaultAction?: 'send' | 'drop'                     // default: 'drop'
-    defaultTarget?: ICompositeNode
+    configName: string
+    next?: ICompositeNode
+}
+
+/** Timed filter: evaluates a named timed config; if action=send → forward to next */
+export interface ICompositeTimedNode {
+    type: 'timed'
+    configName: string
+    next?: ICompositeNode
 }
 
 /** Leaf: delegates to an already-registered sender config */
@@ -31,7 +33,7 @@ export interface ICompositeRefNode {
     configName: string
 }
 
-export type ICompositeNode = ICompositeTeeNode | ICompositeRegexNode | ICompositeRefNode
+export type ICompositeNode = ICompositeTeeNode | ICompositeRegexNode | ICompositeTimedNode | ICompositeRefNode
 
 // ─── Sender config ─────────────────────────────────────────────────────────────
 
@@ -40,12 +42,39 @@ export interface ICompositeSenderConfig extends ISenderConfig {
     flow: ICompositeNode
 }
 
+// ─── Inline rule shapes (read from stored configs) ─────────────────────────────
+
+interface IStoredRegexRule {
+    regex: string
+    flags?: string
+    field?: 'subject' | 'body' | 'level' | 'to'
+    action: 'send' | 'drop'
+}
+
+interface IStoredRegexConfig {
+    rules: IStoredRegexRule[]
+    defaultAction?: 'send' | 'drop'
+}
+
+interface IStoredTimedRule {
+    from: string
+    to: string
+    days?: number[]
+    action: 'send' | 'drop'
+}
+
+interface IStoredTimedConfig {
+    rules: IStoredTimedRule[]
+    defaultAction?: 'send' | 'drop'
+    timezone?: string
+}
+
 // ─── Sender ────────────────────────────────────────────────────────────────────
 
 export class CompositeSender implements ISender {
     readonly id = 'composite'
     private configs = new Map<string, ICompositeSenderConfig>()
-    private senderAccess: ISenderAccess | undefined
+    private senderAccess: ISenderAccessFull | undefined
 
     addConfig(config: ISenderConfig): void {
         this.configs.set(config.name, config as ICompositeSenderConfig)
@@ -79,6 +108,9 @@ export class CompositeSender implements ISender {
             case 'regex':
                 await this.evalRegex(node, message)
                 break
+            case 'timed':
+                await this.evalTimed(node, message)
+                break
             case 'ref':
                 await this.senderAccess!.send(node.senderId, node.configName, message)
                 break
@@ -90,34 +122,66 @@ export class CompositeSender implements ISender {
     }
 
     private async evalRegex(node: ICompositeRegexNode, message: ISenderMessage): Promise<void> {
-        for (const rule of node.rules) {
-            const flags = rule.flags ?? 'i'
-            const re = new RegExp(rule.regex, flags)
-            const value = this.fieldValue(rule.field ?? 'subject', message)
+        const raw = this.senderAccess!.getConfig('regex', node.configName) as IStoredRegexConfig | undefined
+        if (!raw) return
 
+        for (const rule of raw.rules ?? []) {
+            const re = new RegExp(rule.regex, rule.flags ?? 'i')
+            const value = this.fieldValue(rule.field ?? 'subject', message)
             if (re.test(value)) {
-                if (rule.action === 'send' && rule.target) {
-                    await this.evalNode(rule.target, message)
-                }
-                // action === 'drop' → discard silently
+                if (rule.action === 'send' && node.next) await this.evalNode(node.next, message)
                 return
             }
         }
 
-        // no rule matched → apply default
-        const defAction = node.defaultAction ?? 'drop'
-        if (defAction === 'send' && node.defaultTarget) {
-            await this.evalNode(node.defaultTarget, message)
-        }
+        const defAction = raw.defaultAction ?? 'drop'
+        if (defAction === 'send' && node.next) await this.evalNode(node.next, message)
     }
 
-    private fieldValue(field: ICompositeRegexRule['field'], message: ISenderMessage): string {
+    private async evalTimed(node: ICompositeTimedNode, message: ISenderMessage): Promise<void> {
+        const raw = this.senderAccess!.getConfig('timed', node.configName) as IStoredTimedConfig | undefined
+        if (!raw) return
+
+        const { minutes, day } = this.currentContext(raw.timezone)
+
+        for (const rule of raw.rules ?? []) {
+            if (!this.matchesWindow(rule, minutes, day)) continue
+            if (rule.action === 'send' && node.next) await this.evalNode(node.next, message)
+            return
+        }
+
+        const defAction = raw.defaultAction ?? 'drop'
+        if (defAction === 'send' && node.next) await this.evalNode(node.next, message)
+    }
+
+    private fieldValue(field: IStoredRegexRule['field'], message: ISenderMessage): string {
         switch (field) {
             case 'body':  return message.body ?? ''
             case 'level': return message.level ?? ''
             case 'to':    return Array.isArray(message.to) ? message.to.join(' ') : (message.to ?? '')
             default:      return message.subject ?? ''
         }
+    }
+
+    private currentContext(timezone?: string): { minutes: number; day: number } {
+        const now = timezone
+            ? new Date(new Date().toLocaleString('en-US', { timeZone: timezone }))
+            : new Date()
+        return { minutes: now.getHours() * 60 + now.getMinutes(), day: now.getDay() }
+    }
+
+    private matchesWindow(rule: IStoredTimedRule, minutes: number, day: number): boolean {
+        if (rule.days && rule.days.length > 0 && !rule.days.includes(day)) return false
+        const from = this.parseMinutes(rule.from)
+        const to   = this.parseMinutes(rule.to)
+        return from <= to
+            ? minutes >= from && minutes < to
+            : minutes >= from || minutes < to
+    }
+
+    private parseMinutes(hhmm: string): number {
+        const [h, m] = hhmm.split(':').map(Number)
+        return (h ?? 0) * 60 + (m ?? 0)
     }
 
     getConfigSchema(): ISenderFieldDef[] {
@@ -128,7 +192,7 @@ export class CompositeSender implements ISender {
     }
 
     async startSender(senders: ISenderAccess): Promise<void> {
-        this.senderAccess = senders
+        this.senderAccess = senders as ISenderAccessFull
     }
 
     async stopSender(): Promise<void> {

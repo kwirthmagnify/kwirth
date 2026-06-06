@@ -6,9 +6,8 @@ import { execCommandRestart } from './RestartCommand'
 import { EOpsCommand, IOpsMessage, IOpsMessageResponse } from '../common/OpsTypes'
 
 const checkResource = (resource: ResourceIdentifier, namespace: string, pod: string, container: string): boolean => {
-    const parts = (resource.resources || '').split(':')
     const match = (pattern: string, value: string) => !pattern || pattern === '*' || pattern === value
-    return match(parts[0] || '*', namespace) && match(parts[1] || '*', pod) && match(parts[2] || '*', container)
+    return match(resource.namespaces || '*', namespace) && match(resource.pods || '*', pod) && match(resource.containers || '*', container)
 }
 
 export interface IAsset {

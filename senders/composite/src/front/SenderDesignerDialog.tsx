@@ -4,11 +4,11 @@ import {
     DialogTitle, Divider, IconButton, List, ListItem, ListItemButton,
     ListItemText, Stack, TextField, Tooltip, Typography
 } from '@mui/material'
-import { Add, CallSplit, Delete, FilterAlt, Send } from '@mui/icons-material'
+import { AccessTime, Add, CallSplit, Delete, FilterAlt, Send } from '@mui/icons-material'
 import { IAvailableSender, ICompositeNode, IPipelineConfig } from './types'
-import { createNode, isRulePath, nodeAtPath, ruleAtPath } from './treeUtils'
+import { createNode, nodeAtPath } from './treeUtils'
 import PipelineCanvas from './PipelineCanvas'
-import NodeEditor, { RuleEditor } from './NodeEditor'
+import NodeEditor from './NodeEditor'
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
@@ -35,10 +35,11 @@ interface ISenderDesignerDialogProps {
     accessString: string
 }
 
-const ROOT_TYPES: Array<{ type: 'tee' | 'regex' | 'ref'; icon: React.ReactElement; label: string; desc: string }> = [
-    { type: 'regex', icon: <FilterAlt />, label: 'Regex',  desc: 'Route messages based on regex rules' },
-    { type: 'tee',   icon: <CallSplit />, label: 'Tee',    desc: 'Fan-out to multiple senders in parallel' },
-    { type: 'ref',   icon: <Send />,     label: 'Ref',     desc: 'Delegate directly to a registered sender' },
+const ROOT_TYPES: Array<{ type: 'tee' | 'ref' | 'timed' | 'regex'; icon: React.ReactElement; label: string; desc: string }> = [
+    { type: 'tee',   icon: <CallSplit />,  label: 'Tee',          desc: 'Fan-out to multiple senders in parallel' },
+    { type: 'ref',   icon: <Send />,       label: 'Sender ref',   desc: 'Delegate directly to a registered sender' },
+    { type: 'timed', icon: <AccessTime />, label: 'Timed filter', desc: 'Route by time of day / day of week' },
+    { type: 'regex', icon: <FilterAlt />,  label: 'Regex filter', desc: 'Route by pattern matching on fields' },
 ]
 
 const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, backendUrl, accessString }) => {
@@ -47,8 +48,9 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
     const [originalSavedName, setOriginalSavedName] = useState<string | undefined>()
     const [editingName, setEditingName] = useState('')
     const [flow, setFlow] = useState<ICompositeNode | undefined>()
-    const [selectedPath, setSelectedPath] = useState<string>('')
+    const [selectedPath, setSelectedPath] = useState<string | undefined>(undefined)
     const [availableSenders, setAvailableSenders] = useState<IAvailableSender[]>([])
+    const [configDescriptions, setConfigDescriptions] = useState<Map<string, string>>(new Map())
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [dirty, setDirty] = useState(false)
@@ -73,6 +75,18 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
         if (!res.ok) return
         const data = await res.json() as IAvailableSender[]
         setAvailableSenders(data)
+        const map = new Map<string, string>()
+        await Promise.all(data.map(async sender => {
+            try {
+                const r = await fetch(`${backendUrl}/senders/${sender.id}/configs`, authGet(accessString))
+                if (!r.ok) return
+                const configs = await r.json() as Array<{ name: string; description?: string }>
+                for (const cfg of configs) {
+                    if (cfg.description) map.set(`${sender.id}/${cfg.name}`, cfg.description)
+                }
+            } catch {}
+        }))
+        setConfigDescriptions(map)
     }
 
     useEffect(() => {
@@ -88,7 +102,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
         setOriginalSavedName(name)
         setEditingName(name)
         setFlow(pipelines[name]?.flow)
-        setSelectedPath('')
+        setSelectedPath(undefined)
         setDirty(false)
         setError(undefined)
     }
@@ -103,7 +117,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
         setOriginalSavedName(undefined)
         setEditingName(name)
         setFlow(undefined)
-        setSelectedPath('')
+        setSelectedPath(undefined)
         setDirty(true)
         setNewName('')
         setError(undefined)
@@ -158,17 +172,17 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
         setFlow(newFlow)
         setDirty(true)
         setSelectedPath(prev => {
-            try { return nodeAtPath(newFlow, prev) ? prev : '' } catch { return '' }
+            if (prev === undefined) return undefined
+            try { return nodeAtPath(newFlow, prev) ? prev : undefined } catch { return undefined }
         })
     }, [])
 
-    const setRootNode = (type: 'tee' | 'regex' | 'ref') => {
+    const setRootNode = (type: 'tee' | 'ref' | 'timed' | 'regex') => {
         handleFlowChange(createNode(type))
     }
 
-    const selectedNode = flow && selectedPath !== undefined && !isRulePath(selectedPath) ? nodeAtPath(flow, selectedPath) : undefined
-    const selectedRule = flow && isRulePath(selectedPath) ? ruleAtPath(flow, selectedPath) : undefined
-    const showEditor = !!selectedNode || !!selectedRule
+    const selectedNode = flow && selectedPath !== undefined ? nodeAtPath(flow, selectedPath) : undefined
+    const showEditor = selectedPath !== undefined && !!selectedNode
 
     return (
         <Dialog
@@ -231,8 +245,8 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                         >
                                             <ListItemText
                                                 primary={selectedName === name ? editingName || name : name}
-                                                secondary={dirty && selectedName === name ? 'unsaved' : undefined}
-                                                secondaryTypographyProps={{ color: 'warning.main' }}
+                                                secondary='unsaved'
+                                                secondaryTypographyProps={{ sx: { color: dirty && selectedName === name ? 'warning.main' : 'transparent', lineHeight: 1.2 } }}
                                             />
                                         </ListItemButton>
                                     </ListItem>
@@ -244,13 +258,25 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                         <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                             {selectedName && (
                                 <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
-                                    <TextField
-                                        size='small' label='Pipeline name' fullWidth
-                                        value={editingName}
-                                        onChange={e => setEditingName(e.target.value)}
-                                        onBlur={applyRename}
-                                        onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } if (e.key === 'Escape') { setEditingName(selectedName); e.currentTarget.blur() } }}
-                                    />
+                                    <Stack direction='row' spacing={1} alignItems='center'>
+                                        <TextField
+                                            size='small' label='Pipeline name' fullWidth
+                                            value={editingName}
+                                            onChange={e => setEditingName(e.target.value)}
+                                            onBlur={applyRename}
+                                            onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } if (e.key === 'Escape') { setEditingName(selectedName); e.currentTarget.blur() } }}
+                                        />
+                                        {error && <Typography variant='caption' color='error' sx={{ whiteSpace: 'nowrap' }}>{error}</Typography>}
+                                        <Button
+                                            variant='contained' size='small'
+                                            disabled={!dirty || !flow || saving}
+                                            onClick={savePipeline}
+                                            startIcon={saving ? <CircularProgress size={14} /> : undefined}
+                                            sx={{ whiteSpace: 'nowrap' }}
+                                        >
+                                            {saving ? 'Saving…' : 'Save'}
+                                        </Button>
+                                    </Stack>
                                 </Box>
                             )}
                             <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -285,6 +311,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                         flow={flow}
                                         selectedPath={selectedPath}
                                         availableSenders={availableSenders}
+                                        configDescriptions={configDescriptions}
                                         onFlowChange={handleFlowChange}
                                         onSelectPath={setSelectedPath}
                                     />
@@ -292,30 +319,20 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                             </Box>
                         </Box>
 
-                        {/* ── Right: node / rule editor ── */}
-                        {showEditor && flow && (
+                        {/* ── Right: node editor ── */}
+                        {showEditor && flow && selectedNode && (
                             <Box sx={{ width: 300, borderLeft: '1px solid', borderColor: 'divider', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                                 <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <Typography variant='subtitle2'>{selectedRule ? 'Configure rule' : 'Configure node'}</Typography>
-                                    <IconButton size='small' onClick={() => setSelectedPath('')}>✕</IconButton>
+                                    <Typography variant='subtitle2'>Configure node</Typography>
+                                    <IconButton size='small' onClick={() => setSelectedPath(undefined)}>✕</IconButton>
                                 </Box>
-                                {selectedNode && (
-                                    <NodeEditor
-                                        node={selectedNode}
-                                        path={selectedPath}
-                                        flow={flow}
-                                        availableSenders={availableSenders}
-                                        onFlowChange={handleFlowChange}
-                                    />
-                                )}
-                                {selectedRule && (
-                                    <RuleEditor
-                                        rule={selectedRule}
-                                        path={selectedPath}
-                                        flow={flow}
-                                        onFlowChange={handleFlowChange}
-                                    />
-                                )}
+                                <NodeEditor
+                                    node={selectedNode}
+                                    path={selectedPath!}
+                                    flow={flow}
+                                    availableSenders={availableSenders}
+                                    onFlowChange={handleFlowChange}
+                                />
                             </Box>
                         )}
                     </>
@@ -323,21 +340,8 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
             </DialogContent>
 
             <Divider />
-            <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
-                <Box>
-                    {error && <Typography variant='caption' color='error'>{error}</Typography>}
-                </Box>
-                <Stack direction='row' spacing={1}>
-                    <Button
-                        variant='contained'
-                        disabled={!dirty || !flow || saving}
-                        onClick={savePipeline}
-                        startIcon={saving ? <CircularProgress size={14} /> : undefined}
-                    >
-                        {saving ? 'Saving…' : 'Save'}
-                    </Button>
-                    <Button onClick={onClose}>Close</Button>
-                </Stack>
+            <DialogActions sx={{ px: 2 }}>
+                <Button onClick={onClose}>Close</Button>
             </DialogActions>
         </Dialog>
     )

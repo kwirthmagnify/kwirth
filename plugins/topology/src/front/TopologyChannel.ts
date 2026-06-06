@@ -24,7 +24,7 @@ interface ITopologyWsMessage {
     action?:     EInstanceMessageAction
     flow?:       EInstanceMessageFlow
     instance?:   string
-    topoAction?: 'ADDED' | 'MODIFIED' | 'DELETED'
+    topoAction?: 'ADDED' | 'MODIFIED' | 'DELETED' | 'ENDPOINTS_RESULT' | 'INGRESS_RULES_RESULT'
     kind:        ETopologyNodeKind
     uid:         string
     name:        string

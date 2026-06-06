@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import {
-    Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent,
-    DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel,
+    Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
+    DialogTitle, Divider, FormControl, IconButton, InputLabel,
     MenuItem, Select, Stack, TextField, Tooltip, Typography
 } from '@mui/material'
+import { ContentCopy } from '@mui/icons-material'
 import { Add, Delete } from '@mui/icons-material'
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
@@ -30,23 +31,14 @@ interface ITimedRule {
     to: string
     days?: number[]
     action: 'send' | 'drop'
-    senderId?: string
-    configName?: string
 }
 
 interface ITimedConfig {
     name: string
+    description?: string
     timezone?: string
     rules: ITimedRule[]
     defaultAction?: 'send' | 'drop'
-    defaultSenderId?: string
-    defaultConfigName?: string
-}
-
-interface IInstalledSender {
-    id: string
-    displayName?: string
-    configNames: string[]
 }
 
 interface ITimedConfigDialogProps {
@@ -105,88 +97,55 @@ function emptyConfig(): ITimedConfig {
 
 const RuleRow: React.FC<{
     rule: ITimedRule
-    senders: IInstalledSender[]
     onChange: (rule: ITimedRule) => void
     onDelete: () => void
-}> = ({ rule, senders, onChange, onDelete }) => {
-    const linkedSender = senders.find(s => s.id === rule.senderId)
-    const configNames = linkedSender?.configNames ?? []
-
-    const toggleDay = (day: number) => {
-        const days = rule.days ?? []
-        const next = days.includes(day) ? days.filter(d => d !== day) : [...days, day].sort()
-        onChange({ ...rule, days: next.length === 0 ? undefined : next })
-    }
+}> = ({ rule, onChange, onDelete }) => {
+    const allDays = [0, 1, 2, 3, 4, 5, 6]
+    const selectedDays = rule.days ?? allDays
 
     return (
-        <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5, mb: 1 }}>
-            <Stack direction='row' spacing={1} alignItems='center' flexWrap='wrap' useFlexGap>
-                <TextField
-                    size='small' label='From' type='time' sx={{ width: 110 }}
-                    value={rule.from}
-                    onChange={e => onChange({ ...rule, from: e.target.value })}
-                    InputLabelProps={{ shrink: true }}
-                />
-                <TextField
-                    size='small' label='To' type='time' sx={{ width: 110 }}
-                    value={rule.to}
-                    onChange={e => onChange({ ...rule, to: e.target.value })}
-                    InputLabelProps={{ shrink: true }}
-                />
+        <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Stack direction='row' spacing={1} alignItems='center' sx={{ flex: 1 }}>
+                <TextField size='small' label='From' type='time' sx={{ width: 110 }}
+                    value={rule.from} onChange={e => onChange({ ...rule, from: e.target.value })}
+                    InputLabelProps={{ shrink: true }} />
+                <TextField size='small' label='To' type='time' sx={{ width: 110 }}
+                    value={rule.to} onChange={e => onChange({ ...rule, to: e.target.value })}
+                    InputLabelProps={{ shrink: true }} />
                 <FormControl size='small' sx={{ minWidth: 90 }}>
                     <InputLabel>Action</InputLabel>
                     <Select label='Action' value={rule.action}
-                        onChange={e => {
-                            const action = e.target.value as 'send' | 'drop'
-                            onChange({ ...rule, action, senderId: action === 'drop' ? undefined : rule.senderId, configName: action === 'drop' ? undefined : rule.configName })
-                        }}>
+                        onChange={e => onChange({ ...rule, action: e.target.value as 'send' | 'drop' })}>
                         <MenuItem value='send'>send</MenuItem>
                         <MenuItem value='drop'>drop</MenuItem>
                     </Select>
                 </FormControl>
-                {rule.action === 'send' && (<>
-                    <FormControl size='small' sx={{ minWidth: 130 }}>
-                        <InputLabel>Sender</InputLabel>
-                        <Select label='Sender' value={rule.senderId ?? ''}
-                            onChange={e => onChange({ ...rule, senderId: e.target.value || undefined, configName: undefined })}>
-                            <MenuItem value=''><em>—</em></MenuItem>
-                            {senders.map(s => <MenuItem key={s.id} value={s.id}>{s.displayName ?? s.id}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                    <FormControl size='small' sx={{ minWidth: 130 }} disabled={!rule.senderId || configNames.length === 0}>
-                        <InputLabel>Config</InputLabel>
-                        <Select label='Config' value={rule.configName ?? ''}
-                            onChange={e => onChange({ ...rule, configName: e.target.value || undefined })}>
-                            <MenuItem value=''><em>—</em></MenuItem>
-                            {configNames.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </>)}
-                <IconButton size='small' color='error' onClick={onDelete}><Delete fontSize='small' /></IconButton>
+                <FormControl size='small' sx={{ flex: 1, minWidth: 160 }}>
+                    <InputLabel>Days</InputLabel>
+                    <Select
+                        multiple label='Days'
+                        value={selectedDays}
+                        onChange={e => {
+                            const val = e.target.value as number[]
+                            onChange({ ...rule, days: val.length === 0 || val.length === 7 ? undefined : [...val].sort((a, b) => a - b) })
+                        }}
+                        renderValue={sel => {
+                            const days = sel as number[]
+                            return days.length === 7 ? 'All days' : days.map(d => DAY_LABELS[d]).join(', ')
+                        }}
+                    >
+                        {DAY_LABELS.map((label, i) => (
+                            <MenuItem key={i} value={i} sx={{ py: 0.25 }}>
+                                <Checkbox checked={selectedDays.includes(i)} size='small' sx={{ p: 0.25 }} />
+                                <Typography variant='body2'>{label}</Typography>
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
             </Stack>
-            <Stack direction='row' spacing={0} sx={{ mt: 1 }}>
-                {DAY_LABELS.map((label, i) => (
-                    <FormControlLabel
-                        key={i}
-                        control={
-                            <Checkbox
-                                size='small'
-                                checked={!rule.days || rule.days.includes(i)}
-                                onChange={() => toggleDay(i)}
-                                sx={{ p: 0.25 }}
-                            />
-                        }
-                        label={<Typography variant='caption'>{label}</Typography>}
-                        sx={{ mr: 0.5 }}
-                    />
-                ))}
-                {rule.days && rule.days.length > 0 && (
-                    <Button size='small' sx={{ fontSize: 10, p: 0.25, minWidth: 0 }}
-                        onClick={() => onChange({ ...rule, days: undefined })}>
-                        all
-                    </Button>
-                )}
-            </Stack>
+            <IconButton size='small' color='error' onClick={onDelete} sx={{ alignSelf: 'center', flexShrink: 0 }}>
+                <Delete fontSize='small' />
+            </IconButton>
         </Box>
     )
 }
@@ -195,12 +154,8 @@ const RuleRow: React.FC<{
 
 const ConfigForm: React.FC<{
     config: ITimedConfig
-    senders: IInstalledSender[]
     onChange: (config: ITimedConfig) => void
-}> = ({ config, senders, onChange }) => {
-    const defSender = senders.find(s => s.id === config.defaultSenderId)
-    const defConfigNames = defSender?.configNames ?? []
-
+}> = ({ config, onChange }) => {
     const updateRule = (i: number, rule: ITimedRule) => {
         const rules = [...config.rules]
         rules[i] = rule
@@ -217,13 +172,13 @@ const ConfigForm: React.FC<{
 
     return (
         <Stack spacing={2}>
-            <Stack direction='row' spacing={1.5} flexWrap='wrap' useFlexGap>
+            <Stack direction='row' spacing={1} alignItems='center'>
                 <TextField
                     size='small' label='Name *' value={config.name}
                     onChange={e => onChange({ ...config, name: e.target.value })}
-                    sx={{ flex: 1, minWidth: 180 }}
+                    sx={{ flex: 2 }}
                 />
-                <FormControl size='small' sx={{ minWidth: 240 }}>
+                <FormControl size='small' sx={{ flex: 2 }}>
                     <InputLabel>Timezone</InputLabel>
                     <Select label='Timezone' value={config.timezone ?? ''}
                         onChange={e => onChange({ ...config, timezone: e.target.value || undefined })}>
@@ -234,7 +189,19 @@ const ConfigForm: React.FC<{
                         })}
                     </Select>
                 </FormControl>
+                <FormControl size='small' sx={{ minWidth: 110, flexShrink: 0 }}>
+                    <InputLabel>Default</InputLabel>
+                    <Select label='Default' value={config.defaultAction ?? 'drop'}
+                        onChange={e => onChange({ ...config, defaultAction: e.target.value as 'send' | 'drop' })}>
+                        <MenuItem value='drop'><Chip label='drop' size='small' color='error' sx={{ fontSize: 10, height: 18 }} /></MenuItem>
+                        <MenuItem value='send'><Chip label='send' size='small' color='success' sx={{ fontSize: 10, height: 18 }} /></MenuItem>
+                    </Select>
+                </FormControl>
             </Stack>
+
+            <TextField size='small' label='Description' value={config.description ?? ''}
+                onChange={e => onChange({ ...config, description: e.target.value || undefined })}
+                fullWidth multiline maxRows={2} />
 
             <Divider><Typography variant='caption'>Rules (evaluated in order — first match wins)</Typography></Divider>
 
@@ -242,7 +209,7 @@ const ConfigForm: React.FC<{
                 <Typography variant='body2' color='text.secondary'>No rules yet. Add one below.</Typography>
             )}
             {config.rules.map((rule, i) => (
-                <RuleRow key={i} rule={rule} senders={senders}
+                <RuleRow key={i} rule={rule}
                     onChange={r => updateRule(i, r)}
                     onDelete={() => deleteRule(i)}
                 />
@@ -251,39 +218,6 @@ const ConfigForm: React.FC<{
                 Add rule
             </Button>
 
-            <Divider><Typography variant='caption'>Default (when no rule matches)</Typography></Divider>
-
-            <Stack direction='row' spacing={1.5} flexWrap='wrap' useFlexGap alignItems='center'>
-                <FormControl size='small' sx={{ minWidth: 110 }}>
-                    <InputLabel>Default action</InputLabel>
-                    <Select label='Default action' value={config.defaultAction ?? 'drop'}
-                        onChange={e => {
-                            const action = e.target.value as 'send' | 'drop'
-                            onChange({ ...config, defaultAction: action, defaultSenderId: action === 'drop' ? undefined : config.defaultSenderId, defaultConfigName: action === 'drop' ? undefined : config.defaultConfigName })
-                        }}>
-                        <MenuItem value='drop'>drop</MenuItem>
-                        <MenuItem value='send'>send</MenuItem>
-                    </Select>
-                </FormControl>
-                {config.defaultAction === 'send' && (<>
-                    <FormControl size='small' sx={{ minWidth: 160 }}>
-                        <InputLabel>Default sender</InputLabel>
-                        <Select label='Default sender' value={config.defaultSenderId ?? ''}
-                            onChange={e => onChange({ ...config, defaultSenderId: e.target.value || undefined, defaultConfigName: undefined })}>
-                            <MenuItem value=''><em>—</em></MenuItem>
-                            {senders.map(s => <MenuItem key={s.id} value={s.id}>{s.displayName ?? s.id}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                    <FormControl size='small' sx={{ minWidth: 160 }} disabled={!config.defaultSenderId || defConfigNames.length === 0}>
-                        <InputLabel>Default config</InputLabel>
-                        <Select label='Default config' value={config.defaultConfigName ?? ''}
-                            onChange={e => onChange({ ...config, defaultConfigName: e.target.value || undefined })}>
-                            <MenuItem value=''><em>—</em></MenuItem>
-                            {defConfigNames.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </>)}
-            </Stack>
         </Stack>
     )
 }
@@ -292,34 +226,41 @@ const ConfigForm: React.FC<{
 
 const TimedConfigDialog: React.FC<ITimedConfigDialogProps> = ({ onClose, backendUrl, accessString }) => {
     const [configs, setConfigs] = useState<ITimedConfig[]>([])
-    const [senders, setSenders] = useState<IInstalledSender[]>([])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [deletingName, setDeletingName] = useState<string | undefined>()
     const [showForm, setShowForm] = useState(false)
     const [formConfig, setFormConfig] = useState<ITimedConfig>(emptyConfig())
+    const [originalFormName, setOriginalFormName] = useState<string | undefined>()
     const [error, setError] = useState<string | undefined>()
 
     useEffect(() => {
-        Promise.all([
-            fetch(`${backendUrl}/senders/timed/configs`, authGet(accessString)).then(r => r.json()).then(setConfigs).catch(() => {}),
-            fetch(`${backendUrl}/senders`, authGet(accessString)).then(r => r.json()).then(setSenders).catch(() => {}),
-        ]).finally(() => setLoading(false))
+        fetch(`${backendUrl}/senders/timed/configs`, authGet(accessString))
+            .then(r => r.json()).then(setConfigs).catch(() => {})
+            .finally(() => setLoading(false))
     }, [])
 
     const saveConfig = async () => {
-        if (!formConfig.name.trim()) { setError('Name is required'); return }
+        const trimmed = formConfig.name.trim()
+        if (!trimmed) { setError('Name is required'); return }
         setSaving(true)
         setError(undefined)
         try {
-            const res = await fetch(`${backendUrl}/senders/timed/configs`, authPost(accessString, JSON.stringify(formConfig)))
+            const payload = { ...formConfig, name: trimmed }
+            const res = await fetch(`${backendUrl}/senders/timed/configs`, authPost(accessString, JSON.stringify(payload)))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
+            if (originalFormName && originalFormName !== trimmed) {
+                await fetch(`${backendUrl}/senders/timed/configs/${encodeURIComponent(originalFormName)}`, authDelete(accessString))
+            }
             setConfigs(prev => {
-                const idx = prev.findIndex(c => c.name === formConfig.name)
-                return idx >= 0 ? prev.map((c, i) => i === idx ? formConfig : c) : [...prev, formConfig]
+                const withoutOld = originalFormName && originalFormName !== trimmed
+                    ? prev.filter(c => c.name !== originalFormName)
+                    : prev
+                const idx = withoutOld.findIndex(c => c.name === trimmed)
+                return idx >= 0 ? withoutOld.map((c, i) => i === idx ? payload : c) : [...withoutOld, payload]
             })
-            setShowForm(false)
-            setFormConfig(emptyConfig())
+            setOriginalFormName(trimmed)
+            setFormConfig(payload)
         } catch (err) {
             setError(`Save failed: ${err}`)
         } finally {
@@ -342,12 +283,21 @@ const TimedConfigDialog: React.FC<ITimedConfigDialogProps> = ({ onClose, backend
 
     const startAdd = () => {
         setFormConfig(emptyConfig())
+        setOriginalFormName(undefined)
         setError(undefined)
         setShowForm(true)
     }
 
     const startEdit = (config: ITimedConfig) => {
         setFormConfig({ ...config })
+        setOriginalFormName(config.name)
+        setError(undefined)
+        setShowForm(true)
+    }
+
+    const startClone = (config: ITimedConfig) => {
+        setFormConfig({ ...config, name: `${config.name} (copy)` })
+        setOriginalFormName(undefined)
         setError(undefined)
         setShowForm(true)
     }
@@ -361,63 +311,66 @@ const TimedConfigDialog: React.FC<ITimedConfigDialogProps> = ({ onClose, backend
     }
 
     return (
-        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '760px' } }}>
+        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '900px', height: '640px' } }}>
             <DialogTitle>Configure: Timed Sender</DialogTitle>
-            <DialogContent>
-                {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
-                ) : (
-                    <Stack spacing={1.5} sx={{ mt: 1 }}>
-                        {configs.length === 0 && !showForm && (
-                            <Typography variant='body2' color='text.secondary'>No configs yet.</Typography>
-                        )}
-                        {configs.map(cfg => (
-                            <Box key={cfg.name} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.5, py: 0.75, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                                <Box>
-                                    <Typography variant='body2' fontWeight='bold'>{cfg.name}</Typography>
-                                    <Typography variant='caption' color='text.secondary'>{configSummary(cfg)}</Typography>
-                                </Box>
-                                <Stack direction='row' spacing={0.5}>
-                                    <Tooltip title='Edit'>
-                                        <IconButton size='small' onClick={() => startEdit(cfg)}>
-                                            <Add fontSize='small' sx={{ transform: 'rotate(45deg)' }} />
-                                        </IconButton>
-                                    </Tooltip>
-                                    <Tooltip title='Delete'>
-                                        <span>
-                                            <IconButton size='small' color='error' disabled={deletingName === cfg.name} onClick={() => deleteConfig(cfg.name)}>
-                                                {deletingName === cfg.name ? <CircularProgress size={14} /> : <Delete fontSize='small' />}
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                </Stack>
-                            </Box>
-                        ))}
+            <DialogContent sx={{ display: 'flex', gap: 2, p: '16px !important', overflow: 'hidden', height: '100%' }}>
 
-                        {!showForm && (
-                            <Button size='small' startIcon={<Add />} onClick={startAdd} sx={{ alignSelf: 'flex-start' }}>
-                                Add config
-                            </Button>
-                        )}
-
-                        {showForm && (
-                            <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                                <Typography variant='subtitle2' sx={{ mb: 2 }}>
-                                    {formConfig.name && configs.some(c => c.name === formConfig.name) ? `Edit: ${formConfig.name}` : 'New config'}
-                                </Typography>
-                                <ConfigForm config={formConfig} senders={senders} onChange={setFormConfig} />
-                                <Stack direction='row' justifyContent='flex-end' spacing={1} sx={{ mt: 2 }}>
-                                    <Button size='small' onClick={() => { setShowForm(false); setError(undefined) }}>Cancel</Button>
-                                    <Button size='small' variant='contained' disabled={saving || !formConfig.name.trim()} onClick={saveConfig}>
-                                        {saving ? <CircularProgress size={14} /> : 'Save'}
-                                    </Button>
-                                </Stack>
-                            </Box>
-                        )}
-
-                        {error && <Typography variant='caption' color='error'>{error}</Typography>}
+                {/* Left — config list */}
+                <Box sx={{ width: 190, display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
+                    <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
+                        {loading
+                            ? <Box sx={{ p: 1 }}><CircularProgress size={16} /></Box>
+                            : configs.length === 0
+                                ? <Typography variant='caption' color='text.disabled' sx={{ p: 1, display: 'block' }}>No configs yet.</Typography>
+                                : configs.map(cfg => (
+                                    <Box key={cfg.name} sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5, borderBottom: 1, borderColor: 'divider', borderLeft: formConfig.name === cfg.name && showForm ? 3 : 0, borderLeftColor: 'primary.main', bgcolor: formConfig.name === cfg.name && showForm ? 'action.selected' : 'transparent' }}>
+                                        <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => startEdit(cfg)}>
+                                            <Typography variant='body2' fontWeight='bold' noWrap>{cfg.name}</Typography>
+                                            <Typography variant='caption' color='text.secondary' noWrap display='block'>{configSummary(cfg)}</Typography>
+                                        </Box>
+                                        <Tooltip title='Delete'>
+                                            <span>
+                                                <IconButton size='small' color='error' disabled={deletingName === cfg.name} onClick={() => deleteConfig(cfg.name)}>
+                                                    {deletingName === cfg.name ? <CircularProgress size={12} /> : <Delete sx={{ fontSize: 14 }} />}
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    </Box>
+                                ))
+                        }
+                    </Box>
+                    <Stack direction='row' spacing={0.5}>
+                        <Button size='small' startIcon={<Add />} onClick={startAdd} sx={{ flex: 1 }}>New</Button>
+                        <Button size='small' startIcon={<ContentCopy />} onClick={() => { const c = configs.find(x => x.name === formConfig.name && showForm); if (c) startClone(c) }} disabled={!showForm || !originalFormName} sx={{ flex: 1 }}>Clone</Button>
                     </Stack>
-                )}
+                </Box>
+
+                <Divider orientation='vertical' flexItem />
+
+                {/* Right — editor */}
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0, overflow: 'hidden' }}>
+                    {showForm
+                        ? <>
+                            <Typography variant='caption' color='text.secondary' fontWeight='bold'>
+                                {originalFormName ? `Editing: ${originalFormName}` : 'New config'}
+                            </Typography>
+                            <Box sx={{ flex: 1, overflowY: 'auto', pt: 1 }}>
+                                <ConfigForm config={formConfig} onChange={setFormConfig} />
+                            </Box>
+                            <Stack direction='row' justifyContent='flex-end' alignItems='center' spacing={1}>
+                                {error && <Typography variant='caption' color='error' sx={{ flex: 1 }}>{error}</Typography>}
+                                <Button size='small' onClick={() => { setShowForm(false); setError(undefined) }}>Cancel</Button>
+                                <Button size='small' variant='contained' disabled={saving || !formConfig.name.trim()} onClick={saveConfig}>
+                                    {saving ? <CircularProgress size={14} /> : originalFormName ? 'Update' : 'Add'}
+                                </Button>
+                            </Stack>
+                        </>
+                        : <Box sx={{ m: 'auto', color: 'text.disabled' }}>
+                            <Typography variant='body2'>Select a config to edit or click New.</Typography>
+                        </Box>
+                    }
+                </Box>
             </DialogContent>
             <DialogActions sx={{ px: 2 }}>
                 <Button onClick={onClose}>Close</Button>

@@ -7,7 +7,7 @@
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node", "express"]
+    "types": ["node", "express", "ws"]
   },
   "include": ["src"]
 }

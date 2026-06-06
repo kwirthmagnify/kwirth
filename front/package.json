@@ -14,7 +14,7 @@
     "@codemirror/theme-one-dark": "^6.1.3",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@jfvilas/react-file-manager": "^1.5.2",
+    "@jfvilas/react-file-manager": "^1.5.5",
     "@kwirthmagnify/kwirth-common": "^0.5.13",
     "@kwirthmagnify/kwirth-common-ai": "^0.5.18",
     "@kwirthmagnify/kwirth-common-front": "^0.5.11",

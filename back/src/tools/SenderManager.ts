@@ -362,7 +362,7 @@ export class SenderManager implements ISenderAccess {
         })
         return [...stored, ...devMetas].map(meta => ({
             ...meta,
-            configNames: this.instances.get(meta.id)?.getConfigNames() ?? [],
+            configNames: Array.from(this.configStore.get(meta.id)?.values() ?? []).map(c => c.name),
             hasFront: this.hasFront(meta.id),
         }))
     }
@@ -466,6 +466,10 @@ export class SenderManager implements ISenderAccess {
             id,
             configNames: sender.getConfigNames(),
         }))
+    }
+
+    getConfig(senderId: string, configName: string): ISenderConfig | undefined {
+        return this.configStore.get(senderId)?.get(configName)
     }
 
     async send(senderId: string, configName: string, message: ISenderMessage): Promise<void> {

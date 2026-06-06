@@ -5,19 +5,16 @@ export interface ICompositeTeeNode {
     targets: ICompositeNode[]
 }
 
-export interface ICompositeRegexRule {
-    regex: string
-    flags?: string
-    field?: 'subject' | 'body' | 'level' | 'to'
-    action: 'send' | 'drop'
-    target?: ICompositeNode
+export interface ICompositeTimedNode {
+    type: 'timed'
+    configName: string
+    next?: ICompositeNode
 }
 
 export interface ICompositeRegexNode {
     type: 'regex'
-    rules: ICompositeRegexRule[]
-    defaultAction?: 'send' | 'drop'
-    defaultTarget?: ICompositeNode
+    configName: string
+    next?: ICompositeNode
 }
 
 export interface ICompositeRefNode {
@@ -26,7 +23,7 @@ export interface ICompositeRefNode {
     configName: string
 }
 
-export type ICompositeNode = ICompositeTeeNode | ICompositeRegexNode | ICompositeRefNode
+export type ICompositeNode = ICompositeTeeNode | ICompositeTimedNode | ICompositeRegexNode | ICompositeRefNode
 
 export interface IPipelineConfig {
     name: string
@@ -48,15 +45,4 @@ export interface ITreeChild {
     label: string
 }
 
-export interface IDropLeaf {
-    kind: 'drop'
-    label: string
-}
-
-export interface IRuleLeaf {
-    kind: 'rule'
-    rule: ICompositeRegexRule
-    path: string
-}
-
-export type ITreeEntry = ITreeChild | IDropLeaf | IRuleLeaf
+export type ITreeEntry = ITreeChild

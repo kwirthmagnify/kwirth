@@ -1,4 +1,5 @@
-export { ETopologyNodeKind, ETopologyNodeStatus } from '../common/TopologyTypes'
+import { ETopologyNodeKind, ETopologyNodeStatus } from '../common/TopologyTypes'
+export { ETopologyNodeKind, ETopologyNodeStatus }
 
 export interface ITopologyEdge {
     targetUid: string

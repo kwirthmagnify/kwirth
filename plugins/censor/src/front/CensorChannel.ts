@@ -41,6 +41,7 @@ interface ICensorMessage {
     sessionId?: string
     sessionDescription?: string
     regexes?: ICensorRegex[]
+    inputLines?: string[]
     timestamp?: string
 }
 
@@ -108,7 +109,7 @@ export class CensorChannel implements IChannel {
                     }
                 }
                 else if (msg.kind === 'llmerror' && msg.text !== undefined) {
-                    data.llmErrorLines.push({ text: msg.text, timestamp: msg.timestamp ?? new Date().toISOString() })
+                    data.llmErrorLines.push({ text: msg.text, timestamp: msg.timestamp ?? new Date().toISOString(), lines: msg.inputLines })
                     if (data.llmErrorLines.length > MAX_DISPLAY_LINES) data.llmErrorLines.splice(0, data.llmErrorLines.length - MAX_DISPLAY_LINES)
                 }
                 else if (msg.kind === 'regex' && msg.pattern !== undefined) {
@@ -209,7 +210,7 @@ export class CensorChannel implements IChannel {
                     data.analyzing = false
                     ;(channelObject.config as ICensorConfig).selectedSessionId = null
                 }
-                return { action: EChannelRefreshAction.REFRESH }
+                return { action: EChannelRefreshAction.NONE }
 
             case EInstanceMessageType.SIGNAL:
                 const signalMessage = JSON.parse(wsEvent.data) as ISignalMessage

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import * as MUIMaterial from '@mui/material'
-import * as MUIIcons from '@mui/icons-material'
+import * as MUIIcons from './tools/KwirthIcons'
 import * as kwirthCommon from '@kwirthmagnify/kwirth-common'
 import * as kwirthCommonFront from '@kwirthmagnify/kwirth-common-front'
 import * as kwirthCommonAiFront from '@kwirthmagnify/kwirth-common-ai/front'

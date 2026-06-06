@@ -1285,9 +1285,6 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             case 'evict':
                 launchPodEvict([path])
                 break
-            // case 'forward':
-            //     //+++launchPodForward([path], container)
-            //     break
             case 'cordon':
                 launchNodeCordon([path])
                 break

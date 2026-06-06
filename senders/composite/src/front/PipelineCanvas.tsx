@@ -1,49 +1,105 @@
-import React from 'react'
-import { Box, IconButton, Stack, Tooltip, Typography } from '@mui/material'
-import { Add, Block, CallSplit, Delete, FilterAlt, Send } from '@mui/icons-material'
-import { IAvailableSender, ICompositeNode, ICompositeRegexRule } from './types'
-import {
-    addTeeTarget, addRegexRule, createNode, deleteNodeAtPath,
-    getAllNodePaths, getParentPath, getTreeEntries, isRulePath
-} from './treeUtils'
-import NodeCard, { RuleCard } from './NodeCard'
+import React, { useState } from 'react'
+import { Box, IconButton, MenuItem, Select, Stack, Tooltip, Typography } from '@mui/material'
+import { Add, Delete } from '@mui/icons-material'
+import { IAvailableSender, ICompositeNode } from './types'
+import { addTeeTarget, createNode, deleteNodeAtPath, getAllNodePaths, getParentPath, getTreeEntries, setNextNode } from './treeUtils'
+import NodeCard from './NodeCard'
 
 interface IPipelineCanvasProps {
     flow: ICompositeNode
-    selectedPath: string
+    selectedPath: string | undefined
     availableSenders: IAvailableSender[]
+    configDescriptions: Map<string, string>
     onFlowChange: (flow: ICompositeNode) => void
     onSelectPath: (path: string) => void
 }
 
+// ─── Ref senders (exclude filter/routing types) ───────────────────────────────
+
+const FILTER_TYPES = new Set(['timed', 'regex', 'composite', 'tee'])
+
+function refSenders(available: IAvailableSender[]): IAvailableSender[] {
+    return available.filter(s => !FILTER_TYPES.has(s.id))
+}
+
 // ─── Add child button group ───────────────────────────────────────────────────
 
+type ChildKind = 'sender' | 'tee' | 'timed' | 'regex'
+
 const AddChildButtons: React.FC<{
-    nodeType: string
-    onAdd: (type: 'tee' | 'regex' | 'ref' | 'drop-rule') => void
-}> = ({ nodeType, onAdd }) => {
-    if (nodeType === 'ref') return null
+    node: ICompositeNode
+    availableSenders: IAvailableSender[]
+    onAdd: (newNode: ICompositeNode) => void
+}> = ({ node, availableSenders, onAdd }) => {
+    const senders = refSenders(availableSenders)
+    const [pickedSender, setPickedSender] = useState(senders[0]?.id ?? '')
+    const [childKind, setChildKind] = useState<ChildKind>('sender')
+    const [pickedConfig, setPickedConfig] = useState('')
+
+    // tee: add a target; timed/regex: set next — both use the same picker
+    const canAdd = node.type === 'tee' || ((node.type === 'timed' || node.type === 'regex') && !node.next)
+    if (!canAdd) return null
+
+    const timedConfigs = availableSenders.find(s => s.id === 'timed')?.configNames ?? []
+    const regexConfigs = availableSenders.find(s => s.id === 'regex')?.configNames ?? []
+    const senderConfigs = availableSenders.find(s => s.id === pickedSender)?.configNames ?? []
+    const configsForKind = childKind === 'timed' ? timedConfigs : childKind === 'regex' ? regexConfigs : childKind === 'sender' ? senderConfigs : []
+
+    const handleCreate = () => {
+        if (childKind === 'sender') {
+            onAdd({ type: 'ref', senderId: pickedSender, configName: pickedConfig })
+        } else if (childKind === 'tee') {
+            onAdd(createNode('tee'))
+        } else if (childKind === 'timed') {
+            onAdd({ type: 'timed', configName: pickedConfig })
+        } else {
+            onAdd({ type: 'regex', configName: pickedConfig })
+        }
+    }
+
+    const addDisabled =
+        (childKind === 'sender' && (!pickedSender || (senderConfigs.length > 0 && !pickedConfig))) ||
+        (childKind === 'timed' && timedConfigs.length > 0 && !pickedConfig) ||
+        (childKind === 'regex' && regexConfigs.length > 0 && !pickedConfig)
+
+    const selectSx = { height: 28, fontSize: '0.75rem', minWidth: 110, '& .MuiSelect-select': { py: 0, px: 1 } }
+    const tooltipTitle = node.type === 'tee' ? 'Add target' : 'Set next'
+
     return (
-        <Stack direction='row' spacing={0.5}>
-            {nodeType === 'tee' && (<>
-                <Tooltip title='Add tee target'>
-                    <IconButton size='small' onClick={() => onAdd('tee')}><CallSplit fontSize='small' /></IconButton>
-                </Tooltip>
-                <Tooltip title='Add regex target'>
-                    <IconButton size='small' onClick={() => onAdd('regex')}><FilterAlt fontSize='small' /></IconButton>
-                </Tooltip>
-                <Tooltip title='Add ref target'>
-                    <IconButton size='small' color='success' onClick={() => onAdd('ref')}><Send fontSize='small' /></IconButton>
-                </Tooltip>
-            </>)}
-            {nodeType === 'regex' && (<>
-                <Tooltip title='Add send rule'>
-                    <IconButton size='small' color='success' onClick={() => onAdd('ref')}><Add fontSize='small' /></IconButton>
-                </Tooltip>
-                <Tooltip title='Add drop rule'>
-                    <IconButton size='small' color='error' onClick={() => onAdd('drop-rule')}><Block fontSize='small' /></IconButton>
-                </Tooltip>
-            </>)}
+        <Stack direction='row' spacing={0.5} alignItems='center'>
+            <Select size='small' value={childKind}
+                onChange={e => { setChildKind(e.target.value as ChildKind); setPickedConfig('') }}
+                sx={{ ...selectSx, minWidth: 100 }}
+            >
+                <MenuItem value='sender' sx={{ fontSize: '0.75rem' }}>Sender</MenuItem>
+                <MenuItem value='tee' sx={{ fontSize: '0.75rem' }}>Tee</MenuItem>
+                <MenuItem value='timed' sx={{ fontSize: '0.75rem' }}>Timed filter</MenuItem>
+                <MenuItem value='regex' sx={{ fontSize: '0.75rem' }}>Regex filter</MenuItem>
+            </Select>
+            {childKind === 'sender' && (
+                <Select size='small' value={pickedSender}
+                    onChange={e => { setPickedSender(e.target.value); setPickedConfig('') }}
+                    displayEmpty sx={selectSx}>
+                    {senders.map(s => (
+                        <MenuItem key={s.id} value={s.id} sx={{ fontSize: '0.75rem' }}>{s.displayName ?? s.id}</MenuItem>
+                    ))}
+                </Select>
+            )}
+            {configsForKind.length > 0 && (
+                <Select size='small' value={pickedConfig} onChange={e => setPickedConfig(e.target.value)} displayEmpty sx={selectSx}>
+                    <MenuItem value='' sx={{ fontSize: '0.75rem' }}><em>— config —</em></MenuItem>
+                    {configsForKind.map(c => (
+                        <MenuItem key={c} value={c} sx={{ fontSize: '0.75rem' }}>{c}</MenuItem>
+                    ))}
+                </Select>
+            )}
+            <Tooltip title={tooltipTitle}>
+                <span>
+                    <IconButton size='small' color='success' disabled={addDisabled} onClick={handleCreate}>
+                        <Add fontSize='small' />
+                    </IconButton>
+                </span>
+            </Tooltip>
         </Stack>
     )
 }
@@ -53,16 +109,17 @@ const AddChildButtons: React.FC<{
 interface ITreeNodeProps {
     node: ICompositeNode
     path: string
-    selectedPath: string
+    selectedPath: string | undefined
     isRoot: boolean
     availableSenders: IAvailableSender[]
+    configDescriptions: Map<string, string>
     onFlowChange: (flow: ICompositeNode) => void
     onSelectPath: (path: string) => void
     flow: ICompositeNode
 }
 
 const TreeNode: React.FC<ITreeNodeProps> = ({
-    node, path, selectedPath, isRoot, flow, availableSenders, onFlowChange, onSelectPath
+    node, path, selectedPath, isRoot, flow, availableSenders, configDescriptions, onFlowChange, onSelectPath
 }) => {
     const entries = getTreeEntries(node, path)
     const allPaths = getAllNodePaths(flow, '')
@@ -71,11 +128,7 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
         e.stopPropagation()
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectPath(path) }
         if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (!isRoot) {
-                e.preventDefault()
-                const parentPath = getParentPath(path)
-                onFlowChange(deleteNodeAtPath(flow, isRulePath(parentPath) ? parentPath : path))
-            }
+            if (!isRoot) { e.preventDefault(); onFlowChange(deleteNodeAtPath(flow, path)) }
         }
         if (e.key === 'ArrowLeft') { e.preventDefault(); onSelectPath(getParentPath(path)) }
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -85,43 +138,25 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
             if (next !== undefined) onSelectPath(next)
         }
         if (e.key === 'ArrowRight') {
-            const firstChild = entries.find(e => e.kind === 'node')
-            if (firstChild?.kind === 'node') { e.preventDefault(); onSelectPath(firstChild.path) }
+            const firstChild = entries[0]
+            if (firstChild) { e.preventDefault(); onSelectPath(firstChild.path) }
         }
-        if (e.key === 't') { e.preventDefault(); onFlowChange(addTeeTarget(flow, path, createNode('tee'))) }
-        if (e.key === 'r') { e.preventDefault(); onFlowChange(addTeeTarget(flow, path, createNode('regex'))) }
-        if (e.key === 'f') { e.preventDefault(); onFlowChange(addTeeTarget(flow, path, createNode('ref'))) }
     }
 
-    const handleAdd = (type: 'tee' | 'regex' | 'ref' | 'drop-rule') => {
+    const handleAdd = (newNode: ICompositeNode) => {
         if (node.type === 'tee') {
-            onFlowChange(addTeeTarget(flow, path, createNode(type as 'tee' | 'regex' | 'ref')))
-        } else if (node.type === 'regex') {
-            if (type === 'drop-rule') {
-                const rule: ICompositeRegexRule = { regex: '.*', flags: 'i', field: 'subject', action: 'drop' }
-                onFlowChange(addRegexRule(flow, path, rule))
-            } else {
-                const rule: ICompositeRegexRule = { regex: '.*', flags: 'i', field: 'subject', action: 'send', target: createNode('ref') }
-                onFlowChange(addRegexRule(flow, path, rule))
-            }
+            onFlowChange(addTeeTarget(flow, path, newNode))
+        } else if (node.type === 'timed' || node.type === 'regex') {
+            onFlowChange(setNextNode(flow, path, newNode))
         }
     }
 
-    const makeRuleKeyHandler = (rulePath: string, rule: ICompositeRegexRule) => (e: React.KeyboardEvent) => {
-        e.stopPropagation()
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectPath(rulePath) }
-        if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); onFlowChange(deleteNodeAtPath(flow, rulePath)) }
-        if (e.key === 'ArrowLeft') { e.preventDefault(); onSelectPath(getParentPath(rulePath)) }
-        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            e.preventDefault()
-            const idx = allPaths.indexOf(rulePath)
-            const next = e.key === 'ArrowUp' ? allPaths[idx - 1] : allPaths[idx + 1]
-            if (next !== undefined) onSelectPath(next)
-        }
-        if (e.key === 'ArrowRight' && rule.action === 'send' && rule.target) {
-            e.preventDefault(); onSelectPath(`${rulePath}.target`)
-        }
-    }
+    const nodeDescription = (() => {
+        if (node.type === 'ref') return configDescriptions.get(`${node.senderId}/${node.configName}`)
+        if (node.type === 'timed') return configDescriptions.get(`timed/${node.configName}`)
+        if (node.type === 'regex') return configDescriptions.get(`regex/${node.configName}`)
+        return undefined
+    })()
 
     return (
         <Box>
@@ -130,16 +165,14 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
                 <NodeCard
                     node={node}
                     selected={selectedPath === path}
+                    description={nodeDescription}
                     onClick={() => onSelectPath(path)}
                     onKeyDown={handleKeyDown}
                 />
-                <AddChildButtons nodeType={node.type} onAdd={handleAdd} />
+                <AddChildButtons node={node} availableSenders={availableSenders} onAdd={handleAdd} />
                 {!isRoot && (
-                    <Tooltip title={isRulePath(getParentPath(path)) ? 'Delete rule' : 'Delete node'}>
-                        <IconButton size='small' color='error' onClick={() => {
-                            const parentPath = getParentPath(path)
-                            onFlowChange(deleteNodeAtPath(flow, isRulePath(parentPath) ? parentPath : path))
-                        }}>
+                    <Tooltip title='Delete node'>
+                        <IconButton size='small' color='error' onClick={() => onFlowChange(deleteNodeAtPath(flow, path))}>
                             <Delete fontSize='small' />
                         </IconButton>
                     </Tooltip>
@@ -151,62 +184,22 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
                 <Box sx={{ ml: 3, pl: 2, borderLeft: '2px solid', borderColor: 'divider', mb: 0.5 }}>
                     {entries.map((entry, i) => (
                         <Box key={i} sx={{ my: 0.5 }}>
-                            {entry.kind === 'drop' && (
-                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ ml: 0.5 }}>
-                                    <Block fontSize='small' color='disabled' />
-                                    <Typography variant='caption' color='text.disabled'>{entry.label}</Typography>
-                                </Stack>
+                            {entry.label && (
+                                <Typography variant='caption' color='text.secondary' sx={{ ml: 0.5, fontStyle: 'italic' }}>
+                                    {entry.label}
+                                </Typography>
                             )}
-                            {entry.kind === 'rule' && (
-                                <Box>
-                                    <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 0.5 }}>
-                                        <RuleCard
-                                            rule={entry.rule}
-                                            selected={selectedPath === entry.path}
-                                            onClick={() => onSelectPath(entry.path)}
-                                            onKeyDown={makeRuleKeyHandler(entry.path, entry.rule)}
-                                        />
-                                        <Tooltip title='Delete rule'>
-                                            <IconButton size='small' color='error' onClick={() => onFlowChange(deleteNodeAtPath(flow, entry.path))}>
-                                                <Delete fontSize='small' />
-                                            </IconButton>
-                                        </Tooltip>
-                                    </Stack>
-                                    {entry.rule.action === 'send' && entry.rule.target && (
-                                        <Box sx={{ ml: 3, pl: 2, borderLeft: '2px solid', borderColor: 'divider', mb: 0.5 }}>
-                                            <TreeNode
-                                                node={entry.rule.target}
-                                                path={`${entry.path}.target`}
-                                                selectedPath={selectedPath}
-                                                isRoot={false}
-                                                flow={flow}
-                                                availableSenders={availableSenders}
-                                                onFlowChange={onFlowChange}
-                                                onSelectPath={onSelectPath}
-                                            />
-                                        </Box>
-                                    )}
-                                </Box>
-                            )}
-                            {entry.kind === 'node' && (
-                                <Box>
-                                    {entry.label && (
-                                        <Typography variant='caption' color='text.secondary' sx={{ ml: 0.5, fontStyle: 'italic' }}>
-                                            {entry.label}
-                                        </Typography>
-                                    )}
-                                    <TreeNode
-                                        node={entry.node}
-                                        path={entry.path}
-                                        selectedPath={selectedPath}
-                                        isRoot={false}
-                                        flow={flow}
-                                        availableSenders={availableSenders}
-                                        onFlowChange={onFlowChange}
-                                        onSelectPath={onSelectPath}
-                                    />
-                                </Box>
-                            )}
+                            <TreeNode
+                                node={entry.node}
+                                path={entry.path}
+                                selectedPath={selectedPath}
+                                isRoot={false}
+                                flow={flow}
+                                availableSenders={availableSenders}
+                                configDescriptions={configDescriptions}
+                                onFlowChange={onFlowChange}
+                                onSelectPath={onSelectPath}
+                            />
                         </Box>
                     ))}
                 </Box>
@@ -218,7 +211,7 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
 // ─── Canvas ───────────────────────────────────────────────────────────────────
 
 const PipelineCanvas: React.FC<IPipelineCanvasProps> = ({
-    flow, selectedPath, availableSenders, onFlowChange, onSelectPath
+    flow, selectedPath, availableSenders, configDescriptions, onFlowChange, onSelectPath
 }) => {
     return (
         <Box sx={{ p: 2, overflow: 'auto', height: '100%' }}>
@@ -229,6 +222,7 @@ const PipelineCanvas: React.FC<IPipelineCanvasProps> = ({
                 isRoot={true}
                 flow={flow}
                 availableSenders={availableSenders}
+                configDescriptions={configDescriptions}
                 onFlowChange={onFlowChange}
                 onSelectPath={onSelectPath}
             />
