@@ -33,7 +33,7 @@ export class KubernetesSecrets implements ISecrets {
         }
     }
     
-    public read = async (name:string, defaultValue?:any): Promise<any> => {        
+    public read = async (name:string, defaultValue?:any): Promise<any> => {
         try {
             var ct = await this.coreApi?.readNamespacedSecret({ name, namespace:this.namespace })
             if (ct.data===undefined) ct.data={ data: defaultValue }
@@ -49,7 +49,45 @@ export class KubernetesSecrets implements ISecrets {
                 return undefined
             }
         }
+    }
 
-    }  
+    public writeKey = async (name: string, key: string, value: any): Promise<void> => {
+        let existing: Record<string, string> = {}
+        try {
+            const s = await this.coreApi.readNamespacedSecret({ name, namespace: this.namespace })
+            existing = s.data ?? {}
+        } catch (err: any) {
+            if (err.code !== 404) logError(ELogComponent.STORAGE, `Error reading secret for writeKey ${this.namespace}/${name}: ${err}`)
+        }
+        if (value === null) {
+            delete existing[key]
+        } else {
+            existing[key] = Buffer.from(JSON.stringify(value), 'utf8').toString('base64')
+        }
+        const secret = { metadata: { name, namespace: this.namespace }, data: existing }
+        try {
+            await this.coreApi.replaceNamespacedSecret({ name, namespace: this.namespace, body: secret })
+        } catch {
+            try {
+                await this.coreApi.createNamespacedSecret({ namespace: this.namespace, body: secret })
+            } catch (err: any) {
+                logError(ELogComponent.STORAGE, `Error writing key '${key}' in secret ${this.namespace}/${name}: ${err}`)
+            }
+        }
+    }
 
+    public readAllKeys = async (name: string): Promise<Record<string, any>> => {
+        try {
+            const s = await this.coreApi.readNamespacedSecret({ name, namespace: this.namespace })
+            const result: Record<string, any> = {}
+            for (const [k, v] of Object.entries(s.data ?? {})) {
+                try { result[k] = JSON.parse(Buffer.from(v, 'base64').toString('utf8')) } catch { result[k] = v }
+            }
+            return result
+        } catch (err: any) {
+            if (err.code === 404) return {}
+            logError(ELogComponent.STORAGE, `Error reading all keys from secret ${this.namespace}/${name}: ${err}`)
+            return {}
+        }
+    }
 }

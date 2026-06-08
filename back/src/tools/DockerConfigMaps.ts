@@ -41,4 +41,17 @@ export class DockerConfigMaps implements IConfigMaps {
             return defaultValue
         }
     }
+
+    public writeKey = async (name: string, key: string, value: any): Promise<void> => {
+        const file = this.path + name
+        let existing: Record<string, any> = {}
+        try { existing = JSON.parse(fs.readFileSync(file, 'utf-8')) } catch {}
+        if (value === null) delete existing[key]
+        else existing[key] = value
+        try { fs.writeFileSync(file, JSON.stringify(existing)) } catch (err: any) { console.log(`Error writing key '${key}' in docker configMap ${name}: ${err}`) }
+    }
+
+    public readAllKeys = async (name: string): Promise<Record<string, any>> => {
+        try { return JSON.parse(fs.readFileSync(this.path + name, 'utf-8')) } catch { return {} }
+    }
 }

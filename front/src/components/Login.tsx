@@ -109,8 +109,11 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
         if (result && result.status === 200) setChangingPassword(true)
     }
 
+    const okDisabled = (changingPassword && (newPassword1 !== newPassword2 || newPassword1 === '')) || user === '' || password === ''
+
     return (<>
-        <Dialog open={true} disableRestoreFocus={true} fullWidth maxWidth={'xs'}>
+        <Dialog open={true} disableRestoreFocus={true} fullWidth maxWidth={'xs'}
+            onKeyDown={e => { if (e.key === 'Enter' && !okDisabled) onClickOk() }}>
             <DialogTitle>Enter credentials</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column'}}>
@@ -129,7 +132,7 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
                 <Stack direction='row' flex={1} sx={{ml:2, mr:2}}>
                     <Button onClick={onClickChangePassword} sx={{display:changingPassword?'none':'block'}}>Change Password</Button>
                     <Typography sx={{ flexGrow:1}}></Typography>
-                    <Button onClick={onClickOk} disabled={((changingPassword && (newPassword1!==newPassword2 || newPassword1==='')) || user==='' || password==='')}>OK</Button>
+                    <Button onClick={onClickOk} disabled={okDisabled}>OK</Button>
                     {
                         changingPassword && <Button onClick={onClickCancel}>Cancel</Button>
                     }

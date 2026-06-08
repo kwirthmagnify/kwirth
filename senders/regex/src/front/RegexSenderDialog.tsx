@@ -64,7 +64,7 @@ const RegexSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString
     const loadConfigs = async () => {
         try {
             const res = await fetch(`${backendUrl}/senders/regex/configs`, authGet(accessString))
-            if (res.ok) setConfigs(await res.json())
+            if (res.ok) { const data = await res.json(); setConfigs(Array.isArray(data) ? data : (data.configs ?? [])) }
         } catch {}
     }
 

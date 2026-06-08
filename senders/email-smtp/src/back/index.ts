@@ -58,12 +58,12 @@ export class SmtpSender implements ISender {
     getConfigSchema(): ISenderFieldDef[] {
         return [
             { name: 'name', label: 'Name', required: true },
-            { name: 'host', label: 'Host', required: true },
-            { name: 'port', label: 'Port', type: 'number', required: true },
-            { name: 'encryption', label: 'Encryption', type: 'select', options: ['tls', 'starttls', 'plain'], required: true },
-            { name: 'user', label: 'User' },
-            { name: 'pass', label: 'Password', type: 'password' },
-            { name: 'from', label: 'From address', required: true },
+            { name: 'host', label: 'Host', required: true, common: true },
+            { name: 'port', label: 'Port', type: 'number', required: true, common: true },
+            { name: 'encryption', label: 'Encryption', type: 'select', options: ['tls', 'starttls', 'plain'], required: true, common: true },
+            { name: 'user', label: 'User', common: true },
+            { name: 'pass', label: 'Password', type: 'password', common: true },
+            { name: 'from', label: 'From address', required: true, common: true },
             { name: 'to', label: 'To address', required: true },
             { name: 'subject', label: 'Default subject' },
         ]

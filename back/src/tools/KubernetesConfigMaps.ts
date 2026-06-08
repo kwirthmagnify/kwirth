@@ -72,4 +72,44 @@ export class KubernetesConfigMaps implements IConfigMaps {
             }
         }
     }
+
+    public writeKey = async (name: string, key: string, value: any): Promise<void> => {
+        let existing: Record<string, string> = {}
+        try {
+            const cm = await this.coreApi.readNamespacedConfigMap({ name, namespace: this.namespace })
+            existing = cm.data ?? {}
+        } catch (err: any) {
+            if (err.code !== 404) logError(ELogComponent.CORE, `Error reading ConfigMap for writeKey ${this.namespace}/${name}: ${err}`)
+        }
+        if (value === null) {
+            delete existing[key]
+        } else {
+            existing[key] = JSON.stringify(value)
+        }
+        const configMap: V1ConfigMap = { metadata: { name, namespace: this.namespace }, data: existing }
+        try {
+            await this.coreApi.replaceNamespacedConfigMap({ name, namespace: this.namespace, body: configMap })
+        } catch {
+            try {
+                await this.coreApi.createNamespacedConfigMap({ namespace: this.namespace, body: configMap })
+            } catch (err: any) {
+                logError(ELogComponent.CORE, `Error writing key '${key}' in ConfigMap ${this.namespace}/${name}: ${err}`)
+            }
+        }
+    }
+
+    public readAllKeys = async (name: string): Promise<Record<string, any>> => {
+        try {
+            const cm = await this.coreApi.readNamespacedConfigMap({ name, namespace: this.namespace })
+            const result: Record<string, any> = {}
+            for (const [k, v] of Object.entries(cm.data ?? {})) {
+                try { result[k] = JSON.parse(v) } catch { result[k] = v }
+            }
+            return result
+        } catch (err: any) {
+            if (err.code === 404) return {}
+            logError(ELogComponent.CORE, `Error reading all keys from ConfigMap ${this.namespace}/${name}: ${err}`)
+            return {}
+        }
+    }
 }

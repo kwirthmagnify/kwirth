@@ -34,10 +34,8 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
 
     const allMetricsList = props.channelObject?.metricsList
     const [senderEntries, setSenderEntries] = useState<ISenderEntry[]>([])
-    const [selectedSender, setSelectedSender] = useState<string>(
-        alertInstanceConfig.senderId && alertInstanceConfig.senderConfigName
-            ? `${alertInstanceConfig.senderId}::${alertInstanceConfig.senderConfigName}` : ''
-    )
+    const [selectedSenderId, setSelectedSenderId] = useState<string>(alertInstanceConfig.senderId ?? '')
+    const [selectedConfigName, setSelectedConfigName] = useState<string>(alertInstanceConfig.senderConfigName ?? '')
     const [metricRules, setMetricRules] = useState<IAlertMetricRule[]>(alertInstanceConfig.metricRules ?? [])
     const [newMetric, setNewMetric] = useState<string | null>(null)
     const [newOperator, setNewOperator] = useState<TAlertMetricOperator>('>')
@@ -67,8 +65,8 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
         alertInstanceConfig.regexWarning = regexWarning
         alertInstanceConfig.regexError = regexError
         alertInstanceConfig.metricRules = metricRules
-        if (selectedSender) { const [sid, cn] = selectedSender.split('::'); alertInstanceConfig.senderId = sid; alertInstanceConfig.senderConfigName = cn }
-        else { alertInstanceConfig.senderId = ''; alertInstanceConfig.senderConfigName = '' }
+        alertInstanceConfig.senderId = selectedSenderId
+        alertInstanceConfig.senderConfigName = selectedConfigName
         props.onChannelSetupClosed(props.channel, { channelId: props.channel.channelId, channelConfig: alertConfig, channelInstanceConfig: alertInstanceConfig }, true, defaultRef.current?.checked || false)
     }
 
@@ -150,20 +148,24 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                     <Typography variant='subtitle2' sx={{ fontWeight: 'bold', mt: 4, mb: -0.5 }}>General</Typography>
                     <Stack direction='row' spacing={2} alignItems='flex-end' sx={{ width: '100%' }}>
                         <TextField value={maxAlerts} onChange={(e: ChangeEvent<HTMLInputElement>) => setMaxAlerts(+e.target.value)} variant='standard' label='Max alerts' type='number' sx={{ width: '100px', flexShrink: 0 }} />
-                        <Stack direction='column' sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography variant='caption' color='text.secondary'>Sender</Typography>
-                            <Select value={selectedSender} onChange={(e: SelectChangeEvent) => setSelectedSender(e.target.value)} displayEmpty size='small' variant='standard' sx={{ width: '100%' }}>
+                        <FormControl variant='standard' sx={{ flex: 1, minWidth: 0 }}>
+                            <InputLabel shrink>Sender</InputLabel>
+                            <Select value={selectedSenderId} onChange={(e: SelectChangeEvent) => { setSelectedSenderId(e.target.value); setSelectedConfigName('') }} displayEmpty>
                                 <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
-                                {senderEntries.map(e => (
-                                    <MenuItem key={`${e.senderId}::${e.configName}`} value={`${e.senderId}::${e.configName}`}>
-                                        <Stack direction='row' spacing={1} alignItems='center'>
-                                            <Chip label={e.senderId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
-                                            <Typography variant='body2'>{e.configName}</Typography>
-                                        </Stack>
-                                    </MenuItem>
+                                {Array.from(new Set(senderEntries.map(e => e.senderId))).map(sid => (
+                                    <MenuItem key={sid} value={sid}>{sid}</MenuItem>
                                 ))}
                             </Select>
-                        </Stack>
+                        </FormControl>
+                        <FormControl variant='standard' sx={{ flex: 1, minWidth: 0 }} disabled={!selectedSenderId}>
+                            <InputLabel shrink>Config</InputLabel>
+                            <Select value={selectedConfigName} onChange={(e: SelectChangeEvent) => setSelectedConfigName(e.target.value)} displayEmpty>
+                                <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
+                                {senderEntries.filter(e => e.senderId === selectedSenderId).map(e => (
+                                    <MenuItem key={e.configName} value={e.configName}>{e.configName}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                     </Stack>
                 </Stack>
             </DialogContent>

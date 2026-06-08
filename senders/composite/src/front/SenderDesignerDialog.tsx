@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
-    Box, Button, CircularProgress, Dialog, DialogActions, DialogContent,
+    Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent,
     DialogTitle, Divider, FormControlLabel, IconButton, List, ListItem, ListItemButton,
     ListItemText, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
-import { AccessTime, Add, CallSplit, Delete, FilterAlt, Send } from '@mui/icons-material'
+import { AccessTime, AccountTree, Add, Delete, FileDownload, FileUpload, FilterAlt, Send } from '@mui/icons-material'
 import { IAvailableSender, ICompositeNode, IPipelineConfig } from './types'
 import { createNode, nodeAtPath } from './treeUtils'
 import PipelineCanvas from './PipelineCanvas'
@@ -35,11 +35,11 @@ interface ISenderDesignerDialogProps {
     accessString: string
 }
 
-const ROOT_TYPES: Array<{ type: 'tee' | 'ref' | 'timed' | 'regex'; icon: React.ReactElement; label: string; desc: string }> = [
-    { type: 'tee',   icon: <CallSplit />,  label: 'Tee',          desc: 'Fan-out to multiple senders in parallel' },
-    { type: 'ref',   icon: <Send />,       label: 'Sender ref',   desc: 'Delegate directly to a registered sender' },
-    { type: 'timed', icon: <AccessTime />, label: 'Timed filter', desc: 'Route by time of day / day of week' },
-    { type: 'regex', icon: <FilterAlt />,  label: 'Regex filter', desc: 'Route by pattern matching on fields' },
+const ROOT_TYPES: Array<{ type: 'fanout' | 'ref' | 'timed' | 'regex'; icon: React.ReactElement; label: string; desc: string }> = [
+    { type: 'fanout', icon: <AccountTree />, label: 'Fanout',       desc: 'Fan-out to multiple senders in parallel' },
+    { type: 'ref',    icon: <Send />,        label: 'Sender ref',   desc: 'Delegate directly to a registered sender' },
+    { type: 'timed',  icon: <AccessTime />,  label: 'Timed filter', desc: 'Route by time of day / day of week' },
+    { type: 'regex',  icon: <FilterAlt />,   label: 'Regex filter', desc: 'Route by pattern matching on fields' },
 ]
 
 const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, backendUrl, accessString }) => {
@@ -56,7 +56,11 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
     const [dirty, setDirty] = useState(false)
     const [editMode, setEditMode] = useState(false)
     const [newName, setNewName] = useState('')
+    const [description, setDescription] = useState('')
     const [error, setError] = useState<string | undefined>()
+    const [exportDialogOpen, setExportDialogOpen] = useState(false)
+    const [exportSelected, setExportSelected] = useState<Set<string>>(new Set())
+    const importFileRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         Promise.all([loadPipelines(), loadSenders()]).finally(() => setLoading(false))
@@ -65,7 +69,8 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
     const loadPipelines = async () => {
         const res = await fetch(`${backendUrl}/senders/composite/configs`, authGet(accessString))
         if (!res.ok) return
-        const data = await res.json() as IPipelineConfig[]
+        const raw = await res.json()
+        const data = (Array.isArray(raw) ? raw : (raw.configs ?? [])) as IPipelineConfig[]
         const map: Record<string, IPipelineConfig> = {}
         for (const p of data) map[p.name] = p
         setPipelines(map)
@@ -102,6 +107,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
         setSelectedName(name)
         setOriginalSavedName(name)
         setEditingName(name)
+        setDescription(pipelines[name]?.description ?? '')
         setFlow(pipelines[name]?.flow)
         setSelectedPath(undefined)
         setDirty(false)
@@ -118,6 +124,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
         setSelectedName(name)
         setOriginalSavedName(undefined)
         setEditingName(name)
+        setDescription('')
         setFlow(undefined)
         setSelectedPath(undefined)
         setDirty(true)
@@ -157,7 +164,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
             if (originalSavedName && originalSavedName !== selectedName) {
                 await fetch(`${backendUrl}/senders/composite/configs/${encodeURIComponent(originalSavedName)}`, authDelete(accessString))
             }
-            const pipeline: IPipelineConfig = { name: selectedName, flow }
+            const pipeline: IPipelineConfig = { name: selectedName, ...(description.trim() && { description: description.trim() }), flow }
             const res = await fetch(`${backendUrl}/senders/composite/configs`, authPost(accessString, JSON.stringify(pipeline)))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             setPipelines(prev => ({ ...prev, [selectedName]: pipeline }))
@@ -179,14 +186,42 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
         })
     }, [])
 
-    const setRootNode = (type: 'tee' | 'ref' | 'timed' | 'regex') => {
+    const setRootNode = (type: 'fanout' | 'ref' | 'timed' | 'regex') => {
         handleFlowChange(createNode(type))
+    }
+
+    const triggerDownload = (data: unknown, filename: string) => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
+        URL.revokeObjectURL(url)
+    }
+
+    const handleExport = () => {
+        const selected = Object.values(pipelines).filter(p => exportSelected.has(p.name))
+        triggerDownload(selected, 'kwirth-pipelines.json')
+        setExportDialogOpen(false)
+    }
+
+    const handleImport = async (file: File) => {
+        try {
+            const raw = JSON.parse(await file.text())
+            const arr: IPipelineConfig[] = Array.isArray(raw) ? raw : (raw.pipelines ?? [])
+            for (const pipeline of arr) {
+                await fetch(`${backendUrl}/senders/composite/configs`, authPost(accessString, JSON.stringify(pipeline)))
+            }
+            await loadPipelines()
+        } catch (err) {
+            setError(`Import failed: ${err}`)
+        } finally {
+            if (importFileRef.current) importFileRef.current.value = ''
+        }
     }
 
     const selectedNode = flow && selectedPath !== undefined ? nodeAtPath(flow, selectedPath) : undefined
     const showEditor = selectedPath !== undefined && !!selectedNode
 
-    return (
+    return (<>
         <Dialog
             open={true}
             maxWidth={false}
@@ -247,8 +282,21 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                         >
                                             <ListItemText
                                                 primary={selectedName === name ? editingName || name : name}
-                                                secondary='unsaved'
-                                                secondaryTypographyProps={{ sx: { color: dirty && selectedName === name ? 'warning.main' : 'transparent', lineHeight: 1.2 } }}
+                                                secondary={
+                                                    dirty && selectedName === name
+                                                        ? 'unsaved'
+                                                        : (pipelines[name]?.description || undefined)
+                                                }
+                                                secondaryTypographyProps={{
+                                                    sx: {
+                                                        color: dirty && selectedName === name ? 'warning.main' : 'text.disabled',
+                                                        lineHeight: 1.2,
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        fontSize: 11,
+                                                    }
+                                                }}
                                             />
                                         </ListItemButton>
                                     </ListItem>
@@ -261,13 +309,22 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                             {selectedName && (
                                 <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
                                     <Stack direction='row' spacing={1} alignItems='center'>
+                                        <Box sx={{ width: '25%', flexShrink: 0 }}>
+                                            <TextField
+                                                size='small' label='Name' fullWidth
+                                                disabled={!editMode}
+                                                value={editingName}
+                                                onChange={e => setEditingName(e.target.value)}
+                                                onBlur={applyRename}
+                                                onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } if (e.key === 'Escape') { setEditingName(selectedName); e.currentTarget.blur() } }}
+                                            />
+                                        </Box>
                                         <TextField
-                                            size='small' label='Pipeline name' fullWidth
+                                            size='small' label='Description' sx={{ flex: 1 }}
                                             disabled={!editMode}
-                                            value={editingName}
-                                            onChange={e => setEditingName(e.target.value)}
-                                            onBlur={applyRename}
-                                            onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } if (e.key === 'Escape') { setEditingName(selectedName); e.currentTarget.blur() } }}
+                                            value={description}
+                                            onChange={e => { setDescription(e.target.value); setDirty(true) }}
+                                            placeholder={editMode ? 'Optional description' : ''}
                                         />
                                         {error && <Typography variant='caption' color='error' sx={{ whiteSpace: 'nowrap' }}>{error}</Typography>}
                                         <FormControlLabel
@@ -275,17 +332,15 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                             label={<Typography variant='caption'>{editMode ? 'Edit' : 'View'}</Typography>}
                                             sx={{ whiteSpace: 'nowrap', m: 0 }}
                                         />
-                                        {editMode && (
-                                            <Button
-                                                variant='contained' size='small'
-                                                disabled={!dirty || !flow || saving}
-                                                onClick={savePipeline}
-                                                startIcon={saving ? <CircularProgress size={14} /> : undefined}
-                                                sx={{ whiteSpace: 'nowrap' }}
-                                            >
-                                                {saving ? 'Saving…' : 'Save'}
-                                            </Button>
-                                        )}
+                                        <Button
+                                            variant='contained' size='small'
+                                            disabled={!editMode || !dirty || !flow || saving}
+                                            onClick={savePipeline}
+                                            startIcon={saving ? <CircularProgress size={14} /> : undefined}
+                                            sx={{ whiteSpace: 'nowrap' }}
+                                        >
+                                            {saving ? 'Saving…' : 'Save'}
+                                        </Button>
                                     </Stack>
                                 </Box>
                             )}
@@ -295,7 +350,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                         <Typography variant='body2'>Select or create a pipeline to start designing.</Typography>
                                     </Box>
                                 )}
-                                {selectedName && !flow && (
+                                {selectedName && !flow && editMode && (
                                     <Box sx={{ m: 'auto', textAlign: 'center' }}>
                                         <Typography variant='body2' sx={{ mb: 2 }}>Empty pipeline — choose a root node type:</Typography>
                                         <Stack direction='row' spacing={2} justifyContent='center'>
@@ -316,6 +371,11 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                         </Stack>
                                     </Box>
                                 )}
+                                {selectedName && !flow && !editMode && (
+                                    <Box sx={{ m: 'auto', color: 'text.disabled' }}>
+                                        <Typography variant='body2'>Empty pipeline — switch to Edit mode to start designing.</Typography>
+                                    </Box>
+                                )}
                                 {selectedName && flow && (
                                     <PipelineCanvas
                                         flow={flow}
@@ -324,6 +384,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                         configDescriptions={configDescriptions}
                                         readonly={!editMode}
                                         onFlowChange={handleFlowChange}
+                                        onClearFlow={() => { setFlow(undefined); setSelectedPath(undefined); setDirty(true) }}
                                         onSelectPath={setSelectedPath}
                                     />
                                 )}
@@ -331,7 +392,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                         </Box>
 
                         {/* ── Right: node editor ── */}
-                        {showEditor && flow && selectedNode && (
+                        {showEditor && flow && selectedNode && editMode && (
                             <Box sx={{ width: 300, borderLeft: '1px solid', borderColor: 'divider', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                                 <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <Typography variant='subtitle2'>Configure node</Typography>
@@ -351,11 +412,57 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
             </DialogContent>
 
             <Divider />
-            <DialogActions sx={{ px: 2 }}>
+            <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                <Stack direction='row' spacing={1}>
+                    <input ref={importFileRef} type='file' accept='.json' style={{ display: 'none' }}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f) }} />
+                    <Tooltip title='Export pipelines to JSON'>
+                        <span>
+                            <Button size='small' startIcon={<FileDownload />} disabled={Object.keys(pipelines).length === 0}
+                                onClick={() => { setExportSelected(new Set(Object.keys(pipelines))); setExportDialogOpen(true) }}>
+                                Export
+                            </Button>
+                        </span>
+                    </Tooltip>
+                    <Tooltip title='Import pipelines from JSON'>
+                        <Button size='small' startIcon={<FileUpload />} onClick={() => importFileRef.current?.click()}>Import</Button>
+                    </Tooltip>
+                </Stack>
                 <Button onClick={onClose}>Close</Button>
             </DialogActions>
         </Dialog>
-    )
+
+        {exportDialogOpen && (
+            <Dialog open maxWidth='xs' fullWidth>
+                <DialogTitle>Export pipelines</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={0.5} sx={{ pt: 0.5 }}>
+                        <FormControlLabel
+                            control={<Checkbox size='small'
+                                checked={exportSelected.size === Object.keys(pipelines).length && Object.keys(pipelines).length > 0}
+                                indeterminate={exportSelected.size > 0 && exportSelected.size < Object.keys(pipelines).length}
+                                onChange={e => setExportSelected(e.target.checked ? new Set(Object.keys(pipelines)) : new Set())} />}
+                            label={<Typography variant='body2' fontWeight='bold'>Select all</Typography>}
+                        />
+                        <Divider />
+                        {Object.keys(pipelines).map(name => (
+                            <FormControlLabel key={name}
+                                control={<Checkbox size='small' checked={exportSelected.has(name)}
+                                    onChange={e => setExportSelected(prev => { const n = new Set(prev); e.target.checked ? n.add(name) : n.delete(name); return n })} />}
+                                label={<Typography variant='body2'>{name}</Typography>}
+                            />
+                        ))}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setExportDialogOpen(false)}>Cancel</Button>
+                    <Button variant='contained' disabled={exportSelected.size === 0} onClick={handleExport}>
+                        Export ({exportSelected.size})
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        )}
+    </>)
 }
 
 export { SenderDesignerDialog }

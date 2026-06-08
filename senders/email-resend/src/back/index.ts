@@ -53,9 +53,9 @@ export class EmailSender implements ISender {
     getConfigSchema(): ISenderFieldDef[] {
         return [
             { name: 'name', label: 'Name', required: true },
-            { name: 'apiKey', label: 'API key', required: true, type: 'password' },
-            { name: 'from', label: 'From address' },
-            { name: 'to', label: 'To address', required: true },
+            { name: 'apiKey', label: 'API key', required: true, type: 'password', common: true },
+            { name: 'from', label: 'From address', common: true },
+            { name: 'to', label: 'To address', required: true, common: true },
             { name: 'subject', label: 'Default subject' },
         ]
     }

@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { CheckCircle, Delete, Download, FolderOpen, Link, OpenInNew, Refresh, SmartToy, ViewList, ViewModule } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
@@ -40,6 +40,7 @@ interface IDaemonDialogProps {
 
 const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
+    const theme = useTheme()
 
     const [available, setAvailable] = useState<IDaemonManifestEntry[]>([])
     const [installed, setInstalled] = useState<IInstalledDaemon[]>([])
@@ -185,8 +186,10 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
         let hash = 0
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
         const hue = (Math.abs(hash) % 360 + 270) % 360
-        const crosses = `repeating-linear-gradient(0deg, hsla(${hue}, 60%, 70%, 0.12) 0px, hsla(${hue}, 60%, 70%, 0.12) 1px, transparent 1px, transparent 10px), repeating-linear-gradient(90deg, hsla(${hue}, 60%, 70%, 0.12) 0px, hsla(${hue}, 60%, 70%, 0.12) 1px, transparent 1px, transparent 10px)`
-        return `${crosses}, linear-gradient(315deg, hsla(${hue}, 70%, 55%, 0.10) 0%, hsla(${hue}, 50%, 40%, 0.22) 100%)`
+        const dark = theme.palette.mode === 'dark'
+        const op = dark ? 0.04 : 0.12
+        const crosses = `repeating-linear-gradient(0deg, hsla(${hue}, 60%, 70%, ${op}) 0px, hsla(${hue}, 60%, 70%, ${op}) 1px, transparent 1px, transparent 10px), repeating-linear-gradient(90deg, hsla(${hue}, 60%, 70%, ${op}) 0px, hsla(${hue}, 60%, 70%, ${op}) 1px, transparent 1px, transparent 10px)`
+        return `${crosses}, linear-gradient(315deg, hsla(${hue}, 70%, 55%, ${dark ? 0.06 : 0.10}) 0%, hsla(${hue}, 50%, 40%, ${dark ? 0.12 : 0.22}) 100%)`
     }
 
     const ViewToggle = () => (
@@ -226,13 +229,13 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><SmartToy /></Box>
                                             <Box flex={1} minWidth={0}>
-                                                <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                                                    <Typography variant='body2' fontWeight='bold'>{daemon.displayName || daemon.name || daemon.id}</Typography>
-                                                    <Typography variant='caption' color='text.secondary'>v{daemon.version}</Typography>
+                                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
+                                                    <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{daemon.displayName || daemon.name || daemon.id}</Typography>
+                                                    <Chip label={`v${daemon.version}`} size='small' sx={{ minWidth: 72 }} />
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{daemon.description}</Typography>
                                             </Box>
-                                            {daemon.website && <Tooltip title='Open daemon website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(daemon.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
+                                            {daemon.website && <Tooltip title='Open daemon website'><IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(daemon.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(daemon.installedFrom)}</Box>
@@ -301,16 +304,16 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><SmartToy /></Box>
                                             <Box flex={1} minWidth={0}>
-                                                <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                                                    <Typography variant='body2' fontWeight='bold'>{daemon.displayName || daemon.name}</Typography>
+                                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
+                                                    <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{daemon.displayName || daemon.name}</Typography>
+                                                    {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                                     {versions.length > 1
                                                         ? <Select size='small' value={daemon.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                             {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                           </Select>
                                                         : <Chip label={`v${daemon.version}`} size='small' sx={{ minWidth: 72 }} />
                                                     }
-                                                    {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
-                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{daemon.description}</Typography>
                                                 {daemon.requires && daemon.requires.length > 0 && (
@@ -320,7 +323,7 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                                                     </Stack>
                                                 )}
                                             </Box>
-                                            {daemon.website && <Tooltip title='Open daemon website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(daemon.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
+                                            {daemon.website && <Tooltip title='Open daemon website'><IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(daemon.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
                                         </Stack>
                                         <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
                                             {(() => { const unmet = (daemon.requires ?? []).filter(r => !isRequirementMet(r)); return (

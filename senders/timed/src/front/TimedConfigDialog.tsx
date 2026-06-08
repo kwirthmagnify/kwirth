@@ -236,7 +236,7 @@ const TimedConfigDialog: React.FC<ITimedConfigDialogProps> = ({ onClose, backend
 
     useEffect(() => {
         fetch(`${backendUrl}/senders/timed/configs`, authGet(accessString))
-            .then(r => r.json()).then(setConfigs).catch(() => {})
+            .then(r => r.json()).then(data => setConfigs(Array.isArray(data) ? data : (data.configs ?? []))).catch(() => {})
             .finally(() => setLoading(false))
     }, [])
 

@@ -32,4 +32,18 @@ export class NodeConfigMaps implements IConfigMaps {
             return defaultValue
         }
     }
+
+    writeKey = async (name: string, key: string, value: any): Promise<void> => {
+        const file = path.join(this.dir, name)
+        let existing: Record<string, any> = {}
+        try { existing = JSON.parse(fs.readFileSync(file, 'utf-8')) } catch {}
+        if (value === null) delete existing[key]
+        else existing[key] = value
+        try { fs.writeFileSync(file, JSON.stringify(existing)) } catch (err: any) { console.log(`Error writing key '${key}' in configmap ${name}: ${err}`) }
+    }
+
+    readAllKeys = async (name: string): Promise<Record<string, any>> => {
+        const file = path.join(this.dir, name)
+        try { return JSON.parse(fs.readFileSync(file, 'utf-8')) } catch { return {} }
+    }
 }

@@ -1,8 +1,8 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import {
-    Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
+    Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem,
-    Select, Stack, Switch, TextField, Tooltip, Typography
+    Select, Stack, Switch, TextField, Tooltip, Typography, useTheme
 } from '@mui/material'
 import { Add, CheckCircle, ContentCopy, Delete, Download, Edit, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
@@ -63,6 +63,7 @@ interface ISenderDialogProps {
 
 const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
+    const theme = useTheme()
 
     const [installed, setInstalled] = useState<IInstalledSender[]>([])
     const [available, setAvailable] = useState<ISenderManifestEntry[]>([])
@@ -95,10 +96,20 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     const [baseFormValues, setBaseFormValues] = useState<ConfigValues>({})
     const [saving, setSaving] = useState(false)
     const [savingBase, setSavingBase] = useState(false)
+    const [baseConfigOpen, setBaseConfigOpen] = useState(false)
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
 
     // Dynamic sender front loading
     const [frontLoaded, setFrontLoaded] = useState<Record<string, boolean>>({})
+
+    const [configExportOpen, setConfigExportOpen] = useState(false)
+    const [configExportSelected, setConfigExportSelected] = useState<Set<string>>(new Set())
+    const [configExportIncludeBase, setConfigExportIncludeBase] = useState(true)
+
+    const [configImportOpen, setConfigImportOpen] = useState(false)
+    const [configImportData, setConfigImportData] = useState<{ configs: ConfigValues[]; base: ConfigValues }>({ configs: [], base: {} })
+    const [configImportSelected, setConfigImportSelected] = useState<Set<string>>(new Set())
+    const [configImportIncludeBase, setConfigImportIncludeBase] = useState(true)
 
     const fileInputRef = useRef<HTMLInputElement>(null)
     const senderFileInputRef = useRef<HTMLInputElement>(null)
@@ -120,6 +131,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         }
         const script = document.createElement('script')
         script.src = `${backendUrl}/senders/${expandedId}/front`
+        script.crossOrigin = 'anonymous'
         script.onload = () => setFrontLoaded(prev => ({ ...prev, [expandedId]: true }))
         script.onerror = () => setError(`Failed to load UI for sender "${expandedId}"`)
         document.head.appendChild(script)
@@ -311,6 +323,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             else if (f.type === 'boolean') payload[f.name] = Boolean(v)
             else payload[f.name] = v
         }
+        if (values['description'] !== undefined && values['description'] !== '') payload['description'] = values['description']
         return payload
     }
 
@@ -394,16 +407,48 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         } catch (err) { setError(`Export failed: ${err}`) }
     }
 
-    const importSender = async (id: string, file: File) => {
+    const openImportDialog = async (file: File) => {
         try {
-            const res = await fetch(`${backendUrl}/senders/${id}/import`, addPostAuthorization(accessString, await file.text()))
-            if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
-            const { count } = await res.json()
+            const raw = JSON.parse(await file.text())
+            const allConfigs: ConfigValues[] = Array.isArray(raw) ? raw : (raw.configs ?? [])
+            const baseKeys = !Array.isArray(raw) ? Object.keys(raw).filter(k => k !== 'configs' && k !== 'senderId') : []
+            const base = Object.fromEntries(baseKeys.map(k => [k, (raw as ConfigValues)[k]]))
+            setConfigImportData({ configs: allConfigs, base })
+            setConfigImportSelected(new Set(allConfigs.map((c: ConfigValues) => c.name)))
+            setConfigImportIncludeBase(baseKeys.length > 0)
+            setConfigImportOpen(true)
+        } catch (err) {
+            setError(`Cannot parse import file: ${err}`)
+        } finally {
+            if (configImportFileRef.current) configImportFileRef.current.value = ''
+        }
+    }
+
+    const confirmImport = async () => {
+        if (!expandedId) return
+        setConfigImportOpen(false)
+        try {
+            const selectedConfigs = configImportData.configs.filter(c => configImportSelected.has(c.name))
+            const hasBase = configImportIncludeBase && Object.keys(configImportData.base).length > 0
+            if (hasBase) {
+                const currentRes = await fetch(`${backendUrl}/senders/${expandedId}/configs`, addGetAuthorization(accessString))
+                if (currentRes.ok) {
+                    const current = await currentRes.json()
+                    const existingConfigs: ConfigValues[] = Array.isArray(current) ? current : (current.configs ?? [])
+                    const mergedConfigs = [
+                        ...existingConfigs.filter((e: ConfigValues) => !selectedConfigs.some(i => i.name === e.name)),
+                        ...selectedConfigs
+                    ]
+                    await fetch(`${backendUrl}/senders/${expandedId}/configs`, addPutAuthorization(accessString, JSON.stringify({ ...configImportData.base, configs: mergedConfigs })))
+                }
+            } else {
+                for (const cfg of selectedConfigs) {
+                    await fetch(`${backendUrl}/senders/${expandedId}/configs`, addPostAuthorization(accessString, JSON.stringify(cfg)))
+                }
+            }
+            await reloadConfigs(expandedId)
             await loadInstalled()
-            await reloadConfigs(id)
-            setError(`Imported ${count} config(s)`)
         } catch (err) { setError(`Import failed: ${err}`) }
-        finally { if (senderFileInputRef.current) senderFileInputRef.current.value = '' }
     }
 
     const isInstalled = (id: string) => installed.some(s => s.id === id && s.installedFrom !== 'dev')
@@ -413,8 +458,9 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         let hash = 0
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
         const hue = (Math.abs(hash) % 360 + 60) % 360
-        const stripes = `repeating-linear-gradient(45deg, hsla(${hue}, 70%, 75%, 0.25) 0px, hsla(${hue}, 70%, 75%, 0.25) 1px, transparent 1px, transparent 9px)`
-        return `${stripes}, linear-gradient(315deg, hsla(${hue}, 70%, 55%, 0.10) 0%, hsla(${hue}, 50%, 40%, 0.22) 100%)`
+        const dark = theme.palette.mode === 'dark'
+        const stripes = `repeating-linear-gradient(45deg, hsla(${hue}, 70%, 75%, ${dark ? 0.07 : 0.25}) 0px, hsla(${hue}, 70%, 75%, ${dark ? 0.07 : 0.25}) 1px, transparent 1px, transparent 9px)`
+        return `${stripes}, linear-gradient(315deg, hsla(${hue}, 70%, 55%, ${dark ? 0.06 : 0.10}) 0%, hsla(${hue}, 50%, 40%, ${dark ? 0.12 : 0.22}) 100%)`
     }
 
     const resolveSource = (installedFrom?: string) => {
@@ -482,6 +528,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             <TextField key={f.name} size='small' fullWidth
                 label={`${f.label}${f.required ? ' *' : ''}`}
                 type={f.type === 'number' ? 'number' : f.type === 'password' ? 'password' : 'text'}
+                autoComplete={f.type === 'password' ? 'new-password' : 'off'}
                 value={value}
                 onChange={e => onChange(f.name, e.target.value)} />
         )
@@ -494,16 +541,16 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Send fontSize='small' /></Box>
                 <Box flex={1} minWidth={0}>
-                    <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                        <Typography variant='body2' fontWeight='bold'>{sender.displayName || sender.id}</Typography>
-                        <Chip label={`v${sender.version}`} size='small' sx={{ minWidth: 72 }} />
+                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
+                        <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{sender.displayName || sender.id}</Typography>
                         {sender.configNames.length > 0 && <Chip label={`${sender.configNames.length} config${sender.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' />}
+                        <Chip label={`v${sender.version}`} size='small' sx={{ minWidth: 72 }} />
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{sender.description}</Typography>
                 </Box>
                 {sender.website &&
                     <Tooltip title='Open website'>
-                        <IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(sender.website, '_blank', 'noopener')}>
+                        <IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(sender.website, '_blank', 'noopener')}>
                             <OpenInNew fontSize='small' />
                         </IconButton>
                     </Tooltip>
@@ -640,16 +687,16 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Send fontSize='small' /></Box>
                                             <Box flex={1} minWidth={0}>
-                                                <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                                                    <Typography variant='body2' fontWeight='bold'>{entry.displayName}</Typography>
+                                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
+                                                    <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{entry.displayName}</Typography>
+                                                    {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                                     {versions.length > 1
                                                         ? <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                             {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                           </Select>
                                                         : <Chip label={`v${entry.version}`} size='small' sx={{ minWidth: 72 }} />
                                                     }
-                                                    {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
-                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
                                                 {entry.requires && entry.requires.length > 0 && (
@@ -659,7 +706,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                                                     </Stack>
                                                 )}
                                             </Box>
-                                            {entry.website && <Tooltip title='Open website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(entry.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
+                                            {entry.website && <Tooltip title='Open website'><IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(entry.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
                                         </Stack>
                                         <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
                                             {(() => { const unmet = (entry.requires ?? []).filter(r => !isRequirementMet(r)); return (
@@ -722,7 +769,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         {/* Custom sender front (composite, timed, etc.) */}
         {expandedId && expandedSender?.hasFront && (
             frontLoaded[expandedId] && CustomFront
-                ? <CustomFront onClose={() => setExpandedId(undefined)} backendUrl={backendUrl} accessString={accessString} />
+                ? <CustomFront onClose={() => { setExpandedId(undefined); loadInstalled() }} backendUrl={backendUrl} accessString={accessString} />
                 : null
         )}
 
@@ -734,7 +781,14 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
                     {/* Left — config list */}
                     <Box sx={{ width: 190, display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                        <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
+                        <Stack direction='row' alignItems='center' justifyContent='space-between'>
+                            <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
+                            {schema.some(f => f.common) && (
+                                <Tooltip title='Edit base configuration'>
+                                    <IconButton size='small' onClick={() => setBaseConfigOpen(true)}><Settings sx={{ fontSize: 16 }} /></IconButton>
+                                </Tooltip>
+                            )}
+                        </Stack>
                         <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
                             {loadingConfigs
                                 ? <Box sx={{ p: 1 }}><CircularProgress size={16} /></Box>
@@ -764,24 +818,8 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
                     <Divider orientation='vertical' flexItem />
 
-                    {/* Right — base config + per-config form */}
+                    {/* Right — per-config form */}
                     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0, overflow: 'hidden' }}>
-
-                        {/* Base config section (only if schema has common fields) */}
-                        {schema.some(f => f.common) && (
-                            <>
-                                <Typography variant='caption' color='text.secondary' fontWeight='bold'>Base configuration</Typography>
-                                <Stack direction='column' spacing={1.5}>
-                                    {schema.filter(f => f.common).map(f => renderField(f, baseFormValues, (name, val) => setBaseFormValues(prev => ({ ...prev, [name]: val }))))}
-                                </Stack>
-                                <Stack direction='row' justifyContent='flex-end'>
-                                    <Button size='small' variant='outlined' disabled={savingBase || !isBaseFormValid()} onClick={saveBase}>
-                                        {savingBase ? <CircularProgress size={14} /> : 'Save base config'}
-                                    </Button>
-                                </Stack>
-                                <Divider />
-                            </>
-                        )}
 
                         {/* Per-config form */}
                         {showAddForm
@@ -815,10 +853,13 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                 <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
                     <Stack direction='row' spacing={1}>
                         <input ref={configImportFileRef} type='file' accept='.json' style={{ display: 'none' }}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) importSender(expandedId, f) }} />
+                            onChange={e => { const f = e.target.files?.[0]; if (f) openImportDialog(f) }} />
                         <Tooltip title='Export configs to JSON'>
                             <span>
-                                <Button size='small' startIcon={<FileDownload />} disabled={configs.length === 0} onClick={() => exportSender(expandedId)}>Export</Button>
+                                <Button size='small' startIcon={<FileDownload />} disabled={configs.length === 0}
+                                    onClick={() => { setConfigExportSelected(new Set(configs.map(c => c.name))); setConfigExportOpen(true) }}>
+                                    Export
+                                </Button>
                             </span>
                         </Tooltip>
                         <Tooltip title='Import configs from JSON'>
@@ -826,6 +867,124 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                         </Tooltip>
                     </Stack>
                     <Button onClick={() => setExpandedId(undefined)}>Close</Button>
+                </DialogActions>
+            </Dialog>
+        )}
+
+        {/* Export config selection dialog */}
+        {configExportOpen && expandedId && (
+            <Dialog open maxWidth='xs' fullWidth>
+                <DialogTitle>Export configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={0.5} sx={{ pt: 0.5 }}>
+                        <FormControlLabel
+                            control={<Checkbox size='small'
+                                checked={configExportSelected.size === configs.length && configs.length > 0}
+                                indeterminate={configExportSelected.size > 0 && configExportSelected.size < configs.length}
+                                onChange={e => setConfigExportSelected(e.target.checked ? new Set(configs.map(c => c.name)) : new Set())} />}
+                            label={<Typography variant='body2' fontWeight='bold'>Select all</Typography>}
+                        />
+                        <Divider />
+                        {configs.map(cfg => (
+                            <FormControlLabel key={cfg.name}
+                                control={<Checkbox size='small' checked={configExportSelected.has(cfg.name)}
+                                    onChange={e => setConfigExportSelected(prev => { const n = new Set(prev); e.target.checked ? n.add(cfg.name) : n.delete(cfg.name); return n })} />}
+                                label={<Box><Typography variant='body2'>{cfg.name}</Typography>{cfg.description && <Typography variant='caption' color='text.secondary'>{cfg.description}</Typography>}</Box>}
+                            />
+                        ))}
+                        {Object.keys(baseFormValues).length > 0 && <>
+                            <Divider />
+                            <FormControlLabel
+                                control={<Checkbox size='small' checked={configExportIncludeBase}
+                                    onChange={e => setConfigExportIncludeBase(e.target.checked)} />}
+                                label={<Typography variant='body2' color='text.secondary'>Include base configuration</Typography>}
+                            />
+                        </>}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfigExportOpen(false)}>Cancel</Button>
+                    <Button variant='contained' disabled={configExportSelected.size === 0}
+                        onClick={() => {
+                            const selected = configs.filter(c => configExportSelected.has(c.name))
+                            const base = configExportIncludeBase && Object.keys(baseFormValues).length > 0 ? baseFormValues : {}
+                            triggerDownload({ senderId: expandedId, ...base, configs: selected }, `kwirth-sender-${expandedId}-configs.json`)
+                            setConfigExportOpen(false)
+                        }}>
+                        Export ({configExportSelected.size})
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        )}
+
+        {/* Import config selection dialog */}
+        {configImportOpen && expandedId && (
+            <Dialog open maxWidth='xs' fullWidth>
+                <DialogTitle>Import configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={0.5} sx={{ pt: 0.5 }}>
+                        {configImportData.configs.length === 0
+                            ? <Typography variant='body2' color='text.secondary'>No configs found in file.</Typography>
+                            : <>
+                                <FormControlLabel
+                                    control={<Checkbox size='small'
+                                        checked={configImportSelected.size === configImportData.configs.length && configImportData.configs.length > 0}
+                                        indeterminate={configImportSelected.size > 0 && configImportSelected.size < configImportData.configs.length}
+                                        onChange={e => setConfigImportSelected(e.target.checked ? new Set(configImportData.configs.map(c => c.name)) : new Set())} />}
+                                    label={<Typography variant='body2' fontWeight='bold'>Select all</Typography>}
+                                />
+                                <Divider />
+                                {configImportData.configs.map(cfg => (
+                                    <FormControlLabel key={cfg.name}
+                                        control={<Checkbox size='small' checked={configImportSelected.has(cfg.name)}
+                                            onChange={e => setConfigImportSelected(prev => { const n = new Set(prev); e.target.checked ? n.add(cfg.name) : n.delete(cfg.name); return n })} />}
+                                        label={<Box><Typography variant='body2'>{cfg.name}</Typography>{cfg.description && <Typography variant='caption' color='text.secondary'>{cfg.description}</Typography>}</Box>}
+                                    />
+                                ))}
+                            </>
+                        }
+                        <Divider />
+                        <FormControlLabel
+                            control={<Checkbox size='small'
+                                checked={configImportIncludeBase && Object.keys(configImportData.base).length > 0}
+                                disabled={Object.keys(configImportData.base).length === 0}
+                                onChange={e => setConfigImportIncludeBase(e.target.checked)} />}
+                            label={
+                                <Box>
+                                    <Typography variant='body2' color={Object.keys(configImportData.base).length === 0 ? 'text.disabled' : 'text.secondary'}>
+                                        Include base configuration
+                                    </Typography>
+                                    {Object.keys(configImportData.base).length === 0 &&
+                                        <Typography variant='caption' color='text.disabled'>Not present in file</Typography>
+                                    }
+                                </Box>
+                            }
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfigImportOpen(false)}>Cancel</Button>
+                    <Button variant='contained' disabled={configImportSelected.size === 0 && !configImportIncludeBase} onClick={confirmImport}>
+                        Import ({configImportSelected.size})
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        )}
+
+        {/* Base config sub-dialog */}
+        {baseConfigOpen && expandedId && (
+            <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px' } }} onClose={() => setBaseConfigOpen(false)}>
+                <DialogTitle>Base configuration — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
+                <DialogContent>
+                    <Stack direction='column' spacing={1.5} sx={{ pt: 1 }}>
+                        {schema.filter(f => f.common).map(f => renderField(f, baseFormValues, (name, val) => setBaseFormValues(prev => ({ ...prev, [name]: val }))))}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setBaseConfigOpen(false)}>Cancel</Button>
+                    <Button variant='contained' disabled={savingBase || !isBaseFormValid()} onClick={async () => { await saveBase(); setBaseConfigOpen(false) }}>
+                        {savingBase ? <CircularProgress size={14} /> : 'Save'}
+                    </Button>
                 </DialogActions>
             </Dialog>
         )}

@@ -7,8 +7,8 @@ interface ISenderAccessFull extends ISenderAccess {
 // ─── Flow tree node types ───────────────────────────────────────────────────────
 
 /** Fan-out: sends the message to all targets in parallel */
-export interface ICompositeTeeNode {
-    type: 'tee'
+export interface ICompositeFanoutNode {
+    type: 'fanout'
     targets: ICompositeNode[]
 }
 
@@ -33,7 +33,7 @@ export interface ICompositeRefNode {
     configName: string
 }
 
-export type ICompositeNode = ICompositeTeeNode | ICompositeRegexNode | ICompositeTimedNode | ICompositeRefNode
+export type ICompositeNode = ICompositeFanoutNode | ICompositeRegexNode | ICompositeTimedNode | ICompositeRefNode
 
 // ─── Sender config ─────────────────────────────────────────────────────────────
 
@@ -102,8 +102,8 @@ export class CompositeSender implements ISender {
 
     private async evalNode(node: ICompositeNode, message: ISenderMessage): Promise<void> {
         switch (node.type) {
-            case 'tee':
-                await this.evalTee(node, message)
+            case 'fanout':
+                await this.evalFanout(node, message)
                 break
             case 'regex':
                 await this.evalRegex(node, message)
@@ -117,7 +117,7 @@ export class CompositeSender implements ISender {
         }
     }
 
-    private async evalTee(node: ICompositeTeeNode, message: ISenderMessage): Promise<void> {
+    private async evalFanout(node: ICompositeFanoutNode, message: ISenderMessage): Promise<void> {
         await Promise.all(node.targets.map(target => this.evalNode(target, message)))
     }
 

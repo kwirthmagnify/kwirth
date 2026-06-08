@@ -6,9 +6,9 @@ import {
 import { Add } from '@mui/icons-material'
 import {
     IAvailableSender, ICompositeNode, ICompositeRefNode,
-    ICompositeTeeNode, ICompositeTimedNode, ICompositeRegexNode
+    ICompositeFanoutNode, ICompositeTimedNode, ICompositeRegexNode
 } from './types'
-import { addTeeTarget } from './treeUtils'
+import { addFanoutTarget } from './treeUtils'
 
 interface INodeEditorProps {
     node: ICompositeNode
@@ -18,7 +18,7 @@ interface INodeEditorProps {
     onFlowChange: (flow: ICompositeNode) => void
 }
 
-const FILTER_TYPES = new Set(['timed', 'regex', 'composite', 'tee'])
+const FILTER_TYPES = new Set(['timed', 'regex', 'composite', 'fanout'])
 
 // ─── Ref editor ───────────────────────────────────────────────────────────────
 
@@ -67,17 +67,43 @@ const RefEditor: React.FC<{
     )
 }
 
-// ─── Tee editor ───────────────────────────────────────────────────────────────
+// ─── Fanout editor ────────────────────────────────────────────────────────────
 
-const TeeEditor: React.FC<{
-    node: ICompositeTeeNode
+type FanoutChildKind = 'sender' | 'fanout' | 'timed' | 'regex'
+
+const FanoutEditor: React.FC<{
+    node: ICompositeFanoutNode
     path: string
     flow: ICompositeNode
     availableSenders: IAvailableSender[]
     onFlowChange: (flow: ICompositeNode) => void
 }> = ({ node, path, flow, availableSenders, onFlowChange }) => {
     const senders = availableSenders.filter(s => !FILTER_TYPES.has(s.id))
+    const [childKind, setChildKind] = useState<FanoutChildKind>('sender')
     const [pickedSender, setPickedSender] = useState(senders[0]?.id ?? '')
+    const [pickedConfig, setPickedConfig] = useState('')
+
+    const timedConfigs = availableSenders.find(s => s.id === 'timed')?.configNames ?? []
+    const regexConfigs = availableSenders.find(s => s.id === 'regex')?.configNames ?? []
+    const senderConfigs = availableSenders.find(s => s.id === pickedSender)?.configNames ?? []
+
+    const addDisabled =
+        (childKind === 'sender' && (!pickedSender || (senderConfigs.length > 0 && !pickedConfig))) ||
+        (childKind === 'timed' && timedConfigs.length > 0 && !pickedConfig) ||
+        (childKind === 'regex' && regexConfigs.length > 0 && !pickedConfig)
+
+    const handleAdd = () => {
+        let newNode: ICompositeNode
+        if (childKind === 'sender')      newNode = { type: 'ref', senderId: pickedSender, configName: pickedConfig }
+        else if (childKind === 'fanout') newNode = { type: 'fanout', targets: [] }
+        else if (childKind === 'timed')  newNode = { type: 'timed', configName: pickedConfig }
+        else                             newNode = { type: 'regex', configName: pickedConfig }
+        onFlowChange(addFanoutTarget(flow, path, newNode))
+        setPickedConfig('')
+    }
+
+    const selectSx = { height: 32, fontSize: '0.8rem', '& .MuiSelect-select': { py: 0, px: 1 } }
+    const configsForKind = childKind === 'timed' ? timedConfigs : childKind === 'regex' ? regexConfigs : childKind === 'sender' ? senderConfigs : []
 
     return (
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -85,17 +111,31 @@ const TeeEditor: React.FC<{
                 Fans the message to all targets in parallel. Click a child node to configure it.
             </Typography>
             <Typography variant='body2'>{node.targets.length} target(s)</Typography>
-            <Stack direction='row' spacing={1} alignItems='center'>
-                <Select size='small' value={pickedSender} onChange={e => setPickedSender(e.target.value)}
-                    displayEmpty sx={{ flex: 1, height: 32, fontSize: '0.8rem' }}>
-                    {senders.map(s => (
-                        <MenuItem key={s.id} value={s.id} sx={{ fontSize: '0.8rem' }}>{s.displayName ?? s.id}</MenuItem>
-                    ))}
+            <Stack direction='row' spacing={0.5} alignItems='center' flexWrap='wrap' useFlexGap>
+                <Select size='small' value={childKind}
+                    onChange={e => { setChildKind(e.target.value as FanoutChildKind); setPickedConfig('') }}
+                    sx={{ ...selectSx, minWidth: 110 }}>
+                    <MenuItem value='sender' sx={{ fontSize: '0.8rem' }}>Sender</MenuItem>
+                    <MenuItem value='fanout' sx={{ fontSize: '0.8rem' }}>Fanout</MenuItem>
+                    <MenuItem value='timed'  sx={{ fontSize: '0.8rem' }}>Timed filter</MenuItem>
+                    <MenuItem value='regex'  sx={{ fontSize: '0.8rem' }}>Regex filter</MenuItem>
                 </Select>
-                <Tooltip title='Add sender'>
+                {childKind === 'sender' && (
+                    <Select size='small' value={pickedSender}
+                        onChange={e => { setPickedSender(e.target.value); setPickedConfig('') }}
+                        displayEmpty sx={{ ...selectSx, flex: 1, minWidth: 100 }}>
+                        {senders.map(s => <MenuItem key={s.id} value={s.id} sx={{ fontSize: '0.8rem' }}>{s.displayName ?? s.id}</MenuItem>)}
+                    </Select>
+                )}
+                {configsForKind.length > 0 && (
+                    <Select size='small' value={pickedConfig} onChange={e => setPickedConfig(e.target.value)} displayEmpty sx={{ ...selectSx, flex: 1, minWidth: 100 }}>
+                        <MenuItem value='' sx={{ fontSize: '0.8rem' }}><em>— config —</em></MenuItem>
+                        {configsForKind.map(c => <MenuItem key={c} value={c} sx={{ fontSize: '0.8rem' }}>{c}</MenuItem>)}
+                    </Select>
+                )}
+                <Tooltip title='Add target'>
                     <span>
-                        <IconButton size='small' color='success' disabled={!pickedSender}
-                            onClick={() => onFlowChange(addTeeTarget(flow, path, { type: 'ref', senderId: pickedSender, configName: '' }))}>
+                        <IconButton size='small' color='success' disabled={addDisabled} onClick={handleAdd}>
                             <Add fontSize='small' />
                         </IconButton>
                     </span>
@@ -202,7 +242,7 @@ const RegexEditor: React.FC<{
 // ─── NodeEditor dispatcher ────────────────────────────────────────────────────
 
 const NodeEditor: React.FC<INodeEditorProps> = ({ node, path, flow, availableSenders, onFlowChange }) => {
-    const TYPE_LABEL: Record<string, string> = { tee: 'Tee', ref: 'Sender ref', timed: 'Timed filter', regex: 'Regex filter' }
+    const TYPE_LABEL: Record<string, string> = { fanout: 'Fanout', ref: 'Sender ref', timed: 'Timed filter', regex: 'Regex filter' }
 
     return (
         <Box sx={{ height: '100%', overflow: 'auto', p: 2 }}>
@@ -211,10 +251,10 @@ const NodeEditor: React.FC<INodeEditorProps> = ({ node, path, flow, availableSen
                 <Typography variant='subtitle2'>{TYPE_LABEL[node.type] ?? node.type}</Typography>
             </Stack>
             <Divider />
-            {node.type === 'ref'   && <RefEditor   node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
-            {node.type === 'tee'   && <TeeEditor   node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
-            {node.type === 'timed' && <TimedEditor node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
-            {node.type === 'regex' && <RegexEditor node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
+            {node.type === 'ref'    && <RefEditor    node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
+            {node.type === 'fanout' && <FanoutEditor node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
+            {node.type === 'timed'  && <TimedEditor  node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
+            {node.type === 'regex'  && <RegexEditor  node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
         </Box>
     )
 }

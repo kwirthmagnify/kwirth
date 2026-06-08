@@ -1,4 +1,4 @@
-import { ICompositeNode, ICompositeTeeNode, ICompositeTimedNode, ICompositeRegexNode, ITreeEntry } from './types'
+import { ICompositeNode, ICompositeFanoutNode, ICompositeTimedNode, ICompositeRegexNode, ITreeEntry } from './types'
 
 // ─── Path helpers ──────────────────────────────────────────────────────────────
 
@@ -44,10 +44,10 @@ export function deleteNodeAtPath(root: ICompositeNode, path: string): IComposite
 
 // ─── Mutation helpers ─────────────────────────────────────────────────────────
 
-export function addTeeTarget(root: ICompositeNode, path: string, newNode: ICompositeNode): ICompositeNode {
+export function addFanoutTarget(root: ICompositeNode, path: string, newNode: ICompositeNode): ICompositeNode {
     const clone = deepClone(root)
-    const tee = (path ? nodeAtPath(clone, path) : clone) as ICompositeTeeNode
-    tee.targets.push(newNode)
+    const fanout = (path ? nodeAtPath(clone, path) : clone) as ICompositeFanoutNode
+    fanout.targets.push(newNode)
     return clone
 }
 
@@ -60,17 +60,17 @@ export function setNextNode(root: ICompositeNode, path: string, next: IComposite
 
 // ─── Default node factory ─────────────────────────────────────────────────────
 
-export function createNode(type: 'tee' | 'ref' | 'timed' | 'regex'): ICompositeNode {
-    if (type === 'tee')   return { type: 'tee', targets: [] }
-    if (type === 'timed') return { type: 'timed', configName: '' }
-    if (type === 'regex') return { type: 'regex', configName: '' }
+export function createNode(type: 'fanout' | 'ref' | 'timed' | 'regex'): ICompositeNode {
+    if (type === 'fanout') return { type: 'fanout', targets: [] }
+    if (type === 'timed')  return { type: 'timed', configName: '' }
+    if (type === 'regex')  return { type: 'regex', configName: '' }
     return { type: 'ref', senderId: '', configName: '' }
 }
 
 // ─── Tree children for rendering ─────────────────────────────────────────────
 
 export function getTreeEntries(node: ICompositeNode, basePath: string): ITreeEntry[] {
-    if (node.type === 'tee') {
+    if (node.type === 'fanout') {
         return node.targets.map((target, i) => ({
             kind: 'node' as const,
             node: target,

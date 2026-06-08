@@ -1,7 +1,7 @@
 // ─── Composite flow node types ─────────────────────────────────────────────────
 
-export interface ICompositeTeeNode {
-    type: 'tee'
+export interface ICompositeFanoutNode {
+    type: 'fanout'
     targets: ICompositeNode[]
 }
 
@@ -23,10 +23,11 @@ export interface ICompositeRefNode {
     configName: string
 }
 
-export type ICompositeNode = ICompositeTeeNode | ICompositeTimedNode | ICompositeRegexNode | ICompositeRefNode
+export type ICompositeNode = ICompositeFanoutNode | ICompositeTimedNode | ICompositeRegexNode | ICompositeRefNode
 
 export interface IPipelineConfig {
     name: string
+    description?: string
     flow: ICompositeNode
 }
 

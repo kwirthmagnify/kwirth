@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import * as MuiIcons from '../tools/KwirthIcons'
 import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
@@ -45,6 +45,7 @@ interface IPluginDialogProps {
 
 const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
+    const theme = useTheme()
 
     const [available, setAvailable] = useState<IPluginManifestEntry[]>([])
     const [installed, setInstalled] = useState<IInstalledPlugin[]>([])
@@ -231,7 +232,8 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         let hash = 0
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
         const hue = Math.abs(hash) % 360
-        return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, 0.12) 0%, hsla(${hue}, 55%, 42%, 0.26) 100%)`
+        const dark = theme.palette.mode === 'dark'
+        return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.14 : 0.26}) 100%)`
     }
 
     const PluginCard = ({ icon, name, displayName, version, versions, onVersionChange, description, badge, source, website, action, requires }: { icon?: string; name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; requires?: IRequirement[] }) => (
@@ -239,8 +241,9 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}>{resolveIcon(icon)}</Box>
                 <Box flex={1} minWidth={0}>
-                    <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                        <Typography variant='body2' fontWeight='bold' component='span'>{displayName||name}</Typography>
+                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
+                        <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName||name}</Typography>
+                        {badge}
                         {versions && versions.length > 1
                             ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
                                 sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
@@ -248,7 +251,6 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                               </Select>
                             : <Chip label={`v${version}`} size='small' sx={{ minWidth: 72 }} />
                         }
-                        {badge}
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
                     {requires && requires.length > 0 && (
@@ -260,7 +262,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                 </Box>
                 {website &&
                     <Tooltip title='Open plugin website'>
-                        <IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(website, '_blank', 'noopener')}>
+                        <IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(website, '_blank', 'noopener')}>
                             <OpenInNew fontSize='small' />
                         </IconButton>
                     </Tooltip>

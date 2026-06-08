@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { CheckCircle, Checklist, Delete, Download, FolderOpen, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@mui/icons-material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
@@ -40,6 +40,7 @@ interface IProviderDialogProps {
 
 const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
+    const theme = useTheme()
 
     const [available, setAvailable] = useState<IProviderManifestEntry[]>([])
     const [installed, setInstalled] = useState<IInstalledProvider[]>([])
@@ -186,8 +187,9 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         let hash = 0
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
         const hue = (Math.abs(hash) % 360 + 180) % 360
-        const dots = `radial-gradient(circle, hsla(${hue}, 60%, 70%, 0.18) 1px, transparent 1px)`
-        return `${dots} 0 0 / 10px 10px, linear-gradient(315deg, hsla(${hue}, 75%, 58%, 0.12) 0%, hsla(${hue}, 55%, 42%, 0.26) 100%)`
+        const dark = theme.palette.mode === 'dark'
+        const dots = `radial-gradient(circle, hsla(${hue}, 60%, 70%, ${dark ? 0.06 : 0.18}) 1px, transparent 1px)`
+        return `${dots} 0 0 / 10px 10px, linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.14 : 0.26}) 100%)`
     }
 
     const ViewToggle = () => (
@@ -227,15 +229,15 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Checklist /></Box>
                                             <Box flex={1} minWidth={0}>
-                                                <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                                                    <Typography variant='body2' fontWeight='bold'>{provider.displayName || provider.name || provider.id}</Typography>
-                                                    <Typography variant='caption' color='text.secondary'>v{provider.version}</Typography>
+                                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
+                                                    <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{provider.displayName || provider.name || provider.id}</Typography>
+                                                    <Chip label={`v${provider.version}`} size='small' sx={{ minWidth: 72 }} />
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{provider.description}</Typography>
                                             </Box>
                                             {provider.website &&
                                                 <Tooltip title='Open provider website'>
-                                                    <IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(provider.website, '_blank', 'noopener')}>
+                                                    <IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(provider.website, '_blank', 'noopener')}>
                                                         <OpenInNew fontSize='small' />
                                                     </IconButton>
                                                 </Tooltip>
@@ -322,16 +324,16 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Checklist /></Box>
                                             <Box flex={1} minWidth={0}>
-                                                <Stack direction='row' alignItems='center' spacing={0.5} flexWrap='wrap' useFlexGap>
-                                                    <Typography variant='body2' fontWeight='bold'>{provider.displayName || provider.name}</Typography>
+                                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
+                                                    <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{provider.displayName || provider.name}</Typography>
+                                                    {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                                     {versions.length > 1
                                                         ? <Select size='small' value={provider.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                             {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                           </Select>
                                                         : <Chip label={`v${provider.version}`} size='small' sx={{ minWidth: 72 }} />
                                                     }
-                                                    {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
-                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{provider.description}</Typography>
                                                 {provider.requires && provider.requires.length > 0 && (
@@ -341,7 +343,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                                     </Stack>
                                                 )}
                                             </Box>
-                                            {provider.website && <Tooltip title='Open provider website'><IconButton size='small' sx={{ mt: -0.5, mr: -0.5 }} onClick={() => window.open(provider.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
+                                            {provider.website && <Tooltip title='Open provider website'><IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(provider.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
                                         </Stack>
                                         <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
                                             {(() => { const unmet = (provider.requires ?? []).filter(r => !isRequirementMet(r)); return (

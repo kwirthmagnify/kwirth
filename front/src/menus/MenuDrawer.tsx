@@ -44,12 +44,11 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.SaveWorkspace)}><SaveTwoTone/>&nbsp;Save workspace</MenuItem>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.SaveWorkspaceAs)}><SaveAsTwoTone/>&nbsp;Save workspace as...</MenuItem>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.DeleteWorkspace)}><DeleteTwoTone/>&nbsp;Delete workspace...</MenuItem>
+            <MenuItem onClick={() => optionSelected(MenuDrawerOption.ExportWorkspaces)}><ImportExport/>&nbsp;Export all workspaces</MenuItem>
+            <MenuItem component='label'><input type="file" hidden accept=".kwirth.json" onChange={(event) => props.uploadSelected(event)}/><ImportExport/>&nbsp;Import new workspaces from file</MenuItem>
             <Divider/>
-            <MenuItem onClick={() => optionSelected(MenuDrawerOption.ExportWorkspaces)}><ImportExport/>&nbsp;Export all workspaces (to downloadable file)</MenuItem>
-            <MenuItem component='label'><input type="file" hidden accept=".kwirth.json" onChange={(event) => props.uploadSelected(event)}/><ImportExport/>&nbsp;Import new workspaces from file (and merge overwriting)</MenuItem>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsUser)}><Settings/>&nbsp;User settings</MenuItem>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsCluster)} disabled={props.selectedClusterName===undefined}><Settings/>&nbsp;Cluster Settings</MenuItem>
-            <Divider/>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageCluster)}><Edit/>&nbsp;Manage cluster list</MenuItem>
             <Divider/>
             { props.hasClusterScope && 

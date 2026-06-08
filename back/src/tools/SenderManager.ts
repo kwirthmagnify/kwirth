@@ -143,8 +143,21 @@ export class SenderManager implements ISenderAccess {
     }
 
     async loadPersistedConfigs(): Promise<void> {
-        const data = (await this.configMaps.read('kwirth-sender-configs', {})) as Record<string, unknown>
-        for (const [senderId, value] of Object.entries(data ?? {})) {
+        let allKeys = await this.configMaps.readAllKeys('kwirth-sender-configs')
+
+        // Migration: K8s old format stored everything under a single 'data' key
+        if (allKeys['data'] && typeof allKeys['data'] === 'object' && !Array.isArray(allKeys['data']) && !(allKeys['data'] as ISenderStoredConfig).configs) {
+            const oldData = allKeys['data'] as Record<string, unknown>
+            for (const [senderId, value] of Object.entries(oldData)) {
+                await this.configMaps.writeKey('kwirth-sender-configs', senderId, value)
+            }
+            await this.configMaps.writeKey('kwirth-sender-configs', 'data', null)
+            delete allKeys['data']
+            Object.assign(allKeys, oldData)
+            logInfo(ELogComponent.CORE, 'Migrated sender configs from single-blob to per-sender keys')
+        }
+
+        for (const [senderId, value] of Object.entries(allKeys)) {
             let configs: ISenderConfig[]
             let common: Record<string, unknown> = {}
             if (Array.isArray(value)) {
@@ -353,6 +366,9 @@ export class SenderManager implements ISenderAccess {
         await this.configMaps.write(`kwirth-sender-${id}-meta`, null)
         await this.configMaps.write(`kwirth-sender-${id}-back`, null)
         await this.configMaps.write(`kwirth-sender-${id}-front`, null)
+        this.configStore.delete(id)
+        this.commonFieldStore.delete(id)
+        await this.configMaps.writeKey('kwirth-sender-configs', id, null)
         this.installedMetas.delete(id)
 
         for (const suffix of ['back.js', 'front.js']) {
@@ -434,20 +450,18 @@ export class SenderManager implements ISenderAccess {
         return true
     }
 
-    private persistConfigs(): void {
-        const data: Record<string, ISenderStoredConfig> = {}
-        for (const [id, configs] of this.configStore) {
-            const common = this.commonFieldStore.get(id) ?? {}
-            data[id] = { ...common, configs: Array.from(configs.values()) }
-        }
-        this.configMaps.write('kwirth-sender-configs', data).catch((err: unknown) =>
-            logError(ELogComponent.CORE, `Failed to persist sender configs: ${err}`)
+    private persistSenderConfig(senderId: string): void {
+        const configs = Array.from(this.configStore.get(senderId)?.values() ?? [])
+        const common = this.commonFieldStore.get(senderId) ?? {}
+        const data: ISenderStoredConfig = { ...common, configs }
+        this.configMaps.writeKey('kwirth-sender-configs', senderId, data).catch((err: unknown) =>
+            logError(ELogComponent.CORE, `Failed to persist sender '${senderId}' configs: ${err}`)
         )
     }
 
     addConfig(senderId: string, config: ISenderConfig): boolean {
         const ok = this.addConfigInternal(senderId, config)
-        if (ok) this.persistConfigs()
+        if (ok) this.persistSenderConfig(senderId)
         return ok
     }
 
@@ -456,7 +470,7 @@ export class SenderManager implements ISenderAccess {
         if (!sender) return false
         sender.removeConfig(configName)
         this.configStore.get(senderId)?.delete(configName)
-        this.persistConfigs()
+        this.persistSenderConfig(senderId)
         return true
     }
 
@@ -478,7 +492,7 @@ export class SenderManager implements ISenderAccess {
         for (const config of (configs as ISenderConfig[])) {
             this.addConfigInternal(senderId, config)
         }
-        this.persistConfigs()
+        this.persistSenderConfig(senderId)
         return true
     }
 
