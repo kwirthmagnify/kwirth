@@ -13,6 +13,7 @@ export class UserApi {
         let users:{ [username:string]:string }
         try {
             users = await secrets.read('kwirth-users')
+            console.log('users read')
         }
         catch (err) {
             try {
@@ -22,8 +23,8 @@ export class UserApi {
                 console.log(`*** Cannot read kwirth users secret on source ***`)
                 return undefined
             }
-            return users
         }
+        return users
     }
 
     constructor (secrets: ISecrets, apiKeyApi: ApiKeyApi) {

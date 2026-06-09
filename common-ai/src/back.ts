@@ -176,6 +176,24 @@ export const tools = {
 
     // ── CLUSTER CONFIG ───────────────────────────────────────────────────────
 
+    list_namespaces: tool({
+        description: 'Lists all namespaces in the cluster with their status and labels.',
+        inputSchema: z.object({}),
+        execute: async () => {
+            ctx().trace('list_namespaces', {})
+            try {
+                const resp = await ctx().clusterInfo.coreApi.listNamespace()
+                return {
+                    namespaces: resp.items.map((ns: any) => ({
+                        name: ns.metadata?.name,
+                        status: ns.status?.phase,
+                        labels: ns.metadata?.labels ?? {}
+                    }))
+                }
+            } catch (err: any) { return { error: err.message ?? String(err) } }
+        }
+    }),
+
     get_node_data: tool({
         description: 'Returns configuration info about all Kubernetes nodes (name, IP). Configuration only — not workload or usage data.',
         inputSchema: z.object({}),
@@ -196,17 +214,18 @@ export const tools = {
 
     get_workload_data: tool({
         description: 'Returns all workloads in the cluster: deployments, statefulsets, daemonsets, pods and services. Optionally filter by namespace.',
-        inputSchema: z.object({ namespace: z.string().optional().describe('Namespace to filter results (omit for all namespaces)') }),
+        inputSchema: z.object({ namespace: z.string().optional().describe('Namespace to filter results (omit or pass "*" for all namespaces)') }),
         execute: async ({ namespace }) => {
-            ctx().trace('get_workload_data', { namespace: namespace ?? '*' })
+            const ns = namespace && namespace !== '*' ? namespace : undefined
+            ctx().trace('get_workload_data', { namespace: ns ?? '*' })
             try {
                 const c = ctx().clusterInfo
                 const [d, s, ds, p, svc] = await Promise.all([
-                    namespace ? c.appsApi.listNamespacedDeployment({ namespace }) : c.appsApi.listDeploymentForAllNamespaces(),
-                    namespace ? c.appsApi.listNamespacedStatefulSet({ namespace }) : c.appsApi.listStatefulSetForAllNamespaces(),
-                    namespace ? c.appsApi.listNamespacedDaemonSet({ namespace }) : c.appsApi.listDaemonSetForAllNamespaces(),
-                    namespace ? c.coreApi.listNamespacedPod({ namespace }) : c.coreApi.listPodForAllNamespaces(),
-                    namespace ? c.coreApi.listNamespacedService({ namespace }) : c.coreApi.listServiceForAllNamespaces()
+                    ns ? c.appsApi.listNamespacedDeployment({ namespace: ns }) : c.appsApi.listDeploymentForAllNamespaces(),
+                    ns ? c.appsApi.listNamespacedStatefulSet({ namespace: ns }) : c.appsApi.listStatefulSetForAllNamespaces(),
+                    ns ? c.appsApi.listNamespacedDaemonSet({ namespace: ns }) : c.appsApi.listDaemonSetForAllNamespaces(),
+                    ns ? c.coreApi.listNamespacedPod({ namespace: ns }) : c.coreApi.listPodForAllNamespaces(),
+                    ns ? c.coreApi.listNamespacedService({ namespace: ns }) : c.coreApi.listServiceForAllNamespaces()
                 ])
                 return {
                     deployments: d.items.map((x: any) => ({ name: x.metadata?.name, namespace: x.metadata?.namespace, replicas: x.spec?.replicas, readyReplicas: x.status?.readyReplicas ?? 0, availableReplicas: x.status?.availableReplicas ?? 0 })),
@@ -249,6 +268,75 @@ export const tools = {
             try {
                 const svc = await ctx().clusterInfo.coreApi.readNamespacedService({ name, namespace })
                 return svc
+            } catch (err: any) { return { error: err.message ?? String(err) } }
+        }
+    }),
+
+    list_services: tool({
+        description: 'Lists all Services in the cluster with full details (type, clusterIP, ports, selector). Optionally filter by namespace.',
+        inputSchema: z.object({ namespace: z.string().optional().describe('Namespace to filter results (omit or pass "*" for all namespaces)') }),
+        execute: async ({ namespace }) => {
+            const ns = namespace && namespace !== '*' ? namespace : undefined
+            ctx().trace('list_services', { namespace: ns ?? '*' })
+            try {
+                const c = ctx().clusterInfo
+                const resp = ns
+                    ? await c.coreApi.listNamespacedService({ namespace: ns })
+                    : await c.coreApi.listServiceForAllNamespaces()
+                return {
+                    services: resp.items.map((x: any) => ({
+                        name: x.metadata?.name,
+                        namespace: x.metadata?.namespace,
+                        type: x.spec?.type,
+                        clusterIP: x.spec?.clusterIP,
+                        externalIPs: x.spec?.externalIPs ?? [],
+                        ports: x.spec?.ports?.map((p: any) => ({ name: p.name, port: p.port, targetPort: p.targetPort, protocol: p.protocol })) ?? [],
+                        selector: x.spec?.selector ?? {}
+                    }))
+                }
+            } catch (err: any) { return { error: err.message ?? String(err) } }
+        }
+    }),
+
+    list_ingresses: tool({
+        description: 'Lists all Ingresses in the cluster (hosts, paths, TLS, backend services). Optionally filter by namespace.',
+        inputSchema: z.object({ namespace: z.string().optional().describe('Namespace to filter results (omit or pass "*" for all namespaces)') }),
+        execute: async ({ namespace }) => {
+            const ns = namespace && namespace !== '*' ? namespace : undefined
+            ctx().trace('list_ingresses', { namespace: ns ?? '*' })
+            try {
+                const c = ctx().clusterInfo
+                const resp = ns
+                    ? await c.networkApi.listNamespacedIngress({ namespace: ns })
+                    : await c.networkApi.listIngressForAllNamespaces()
+                return {
+                    ingresses: resp.items.map((x: any) => ({
+                        name: x.metadata?.name,
+                        namespace: x.metadata?.namespace,
+                        ingressClass: x.spec?.ingressClassName,
+                        hosts: x.spec?.rules?.map((r: any) => r.host) ?? [],
+                        paths: x.spec?.rules?.flatMap((r: any) =>
+                            r.http?.paths?.map((p: any) => ({ host: r.host, path: p.path, pathType: p.pathType, service: p.backend?.service?.name, port: p.backend?.service?.port?.number })) ?? []
+                        ) ?? [],
+                        tls: x.spec?.tls?.map((t: any) => ({ secretName: t.secretName, hosts: t.hosts })) ?? [],
+                        loadBalancer: x.status?.loadBalancer?.ingress ?? []
+                    }))
+                }
+            } catch (err: any) { return { error: err.message ?? String(err) } }
+        }
+    }),
+
+    get_ingress_yaml: tool({
+        description: 'Returns the full Kubernetes Ingress manifest (equivalent to kubectl get ingress -o yaml) for a given namespace and ingress name.',
+        inputSchema: z.object({
+            namespace: z.string().describe('Namespace where the ingress lives'),
+            name: z.string().describe('Name of the ingress')
+        }),
+        execute: async ({ namespace, name }) => {
+            ctx().trace('get_ingress_yaml', { namespace, name })
+            try {
+                const ing = await ctx().clusterInfo.networkApi.readNamespacedIngress({ name, namespace })
+                return ing
             } catch (err: any) { return { error: err.message ?? String(err) } }
         }
     }),
@@ -480,11 +568,15 @@ export const tools = {
 } as const
 
 export const toolInfoList: IToolInfo[] = [
+    { name: 'list_namespaces',           description: 'Lists all namespaces in the cluster with their status and labels.' },
     { name: 'get_node_data',             description: 'Returns configuration info about all Kubernetes nodes (name, IP). Configuration only — not workload or usage data.' },
     { name: 'get_cluster_data',          description: 'Returns general cluster info: name, flavour (AKS/EKS/GKE/k3s/k3d), total vCPUs, total memory, node count and readiness status.' },
     { name: 'get_workload_data',         description: 'Returns all workloads in the cluster: deployments, statefulsets, daemonsets, pods and services. Optionally filter by namespace.' },
     { name: 'get_space_data',            description: 'Returns all resources in a specific Kubernetes namespace: pods (with restart count), deployments, services, configmap names.' },
     { name: 'get_service_yaml',          description: 'Returns the full Kubernetes Service manifest (equivalent to kubectl get service -o yaml) for a given namespace and service name.' },
+    { name: 'list_services',             description: 'Lists all Services in the cluster with full details (type, clusterIP, ports, selector). Optionally filter by namespace.' },
+    { name: 'list_ingresses',            description: 'Lists all Ingresses in the cluster (hosts, paths, TLS, backend services). Optionally filter by namespace.' },
+    { name: 'get_ingress_yaml',          description: 'Returns the full Kubernetes Ingress manifest (equivalent to kubectl get ingress -o yaml) for a given namespace and ingress name.' },
     { name: 'get_cluster_usage',         description: 'Returns current overall cluster resource usage: CPU%, memory%, network Mbps, total vCPUs and total memory GB.' },
     { name: 'get_node_usage',            description: 'Returns current CPU and memory usage for one node or all nodes from the latest metrics reading.' },
     { name: 'get_deployment_usage',      description: 'Returns current aggregated CPU and memory usage for all pods belonging to a specific deployment.' },

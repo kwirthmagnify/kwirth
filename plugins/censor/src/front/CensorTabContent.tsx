@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItem, ListItemButton, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon, DeleteSweep, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
-import { cleanANSI, IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
@@ -16,7 +16,8 @@ const _defaultUi = (): ICensorUiState => ({
 import { CensorImportExport } from './CensorImportExport'
 import { CensorSessionStart } from './CensorSessionStart'
 import { MsgBoxButtons, MsgBoxYesNo } from './utils'
-import { GaugeComponent } from 'react-gauge-component'
+
+const formatPerfValue = (v: number) => v >= 10000 ? `${(v / 1000).toFixed(0)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
 
 const REFRESH_INTERVAL_MS = 250
 
@@ -434,7 +435,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         <FormControlLabel
                             control={<Switch size='small' checked={warningAutoScroll} onChange={e => setWarningAutoScroll(e.target.checked)} />}
                             label={<Typography variant='caption'>Autoscroll</Typography>}
-                            sx={{ ml: 0.5, mr: 0 }} />
+                            sx={{ ml: 0, mr: 0 }} />
                     </Box>
                 )}
 
@@ -629,26 +630,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     if (msgsPerSec > peakProcessedRef.current) peakProcessedRef.current = msgsPerSec
                                     if (tokensInPerSec > peakTkInRef.current) peakTkInRef.current = tokensInPerSec
                                     if (tokensOutPerSec > peakTkOutRef.current) peakTkOutRef.current = tokensOutPerSec
-                                    const gaugeArc = (peak: number) => ({
-                                        subArcs: [
-                                            { limit: peak * 0.5, color: '#5BE12C', showTick: false },
-                                            { limit: peak * 0.8, color: '#F5CD19', showTick: false },
-                                            { limit: peak * 1.1, color: '#EA4228', showTick: false },
-                                        ]
-                                    })
-                                    const gaugeLabels = { valueLabel: { style: { fontSize: '22px', fill: 'currentColor', textShadow: 'none' } }, tickLabels: { type: 'inner' as const, defaultTickValueConfig: { formatTextValue: () => '' } } }
                                     return (
                                         <Stack direction='row' spacing={0} sx={{ mb: 1 }}>
-                                            {[
-                                                { label: 'Lines/sec', value: msgsPerSec, peak: peakProcessedRef.current },
-                                                { label: 'Tok in/sec', value: tokensInPerSec, peak: peakTkInRef.current },
-                                                { label: 'Tok out/sec', value: tokensOutPerSec, peak: peakTkOutRef.current },
-                                            ].map(({ label, value, peak }) => (
-                                                <Box key={label} sx={{ flex: 1, minWidth: 0 }}>
-                                                    <GaugeComponent type='semicircle' value={value} minValue={0} maxValue={peak * 1.1} arc={gaugeArc(peak)} labels={gaugeLabels} pointer={{ type: 'needle', elastic: true }} />
-                                                    <Typography variant='caption' color='text.secondary' align='center' display='block' sx={{ mt: -1 }}>{label}</Typography>
-                                                </Box>
-                                            ))}
+                                            <MiniGauge value={msgsPerSec} max={(peakProcessedRef.current * 1.1) || 10} label='Lines/sec' format={formatPerfValue} />
+                                            <MiniGauge value={tokensInPerSec} max={(peakTkInRef.current * 1.1) || 10} label='Tok in/sec' format={formatPerfValue} />
+                                            <MiniGauge value={tokensOutPerSec} max={(peakTkOutRef.current * 1.1) || 10} label='Tok out/sec' format={formatPerfValue} />
                                         </Stack>
                                     )
                                 })()}

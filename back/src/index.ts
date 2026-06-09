@@ -974,7 +974,10 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
             return
         }
 
-        logInfo(ELogComponent.CORE, `Received request: ${instanceMessage.flow}, ${instanceMessage.action}, ${instanceMessage.channel}`)
+        if (instanceMessage.action=== EInstanceMessageAction.COMMAND && (instanceMessage as any).command) 
+            logInfo(ELogComponent.CORE, `Received request: ${instanceMessage.channel}, ${instanceMessage.flow}, ${instanceMessage.action}: ${(instanceMessage as any). command}`)
+        else
+            logInfo(ELogComponent.CORE, `Received request: ${instanceMessage.channel}, ${instanceMessage.flow}, ${instanceMessage.action}`)
         if (instanceMessage.action === EInstanceMessageAction.RECONNECT) {
             logInfo(ELogComponent.CORE, 'Reconnect received')
             if (!ri.channels.get(instanceMessage.channel)?.getChannelData().reconnectable) {

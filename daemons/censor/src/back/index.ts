@@ -7,6 +7,7 @@ import * as stream from 'stream'
 import { generateText, Output } from 'ai'
 
 const BATCH_SIZE = 50
+const MAX_LINE_BUFFER = 25000
 
 const cleanANSI = (text: string): string => text.replace(/\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g, '')
 
@@ -286,8 +287,9 @@ export class CensorDaemon implements IDaemon {
                         try { if (r.compiled.test(clean)) { r.matches++; filtered = true } } catch {}
                     }
                     if (!filtered) {
-                        inst.lineBuffer.push(clean)
                         const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
+                        // unshift so business events jump to front; multiple consecutive arrivals end up in reverse order but land in the same batch
+                        if (inst.lineBuffer.length < MAX_LINE_BUFFER) inst.lineBuffer.unshift(clean)
                         this.backDaemonObject.logInfo?.(`[censor-daemon] business buffered: bufLen=${inst.lineBuffer.length} batchSize=${batchSize} llmBusy=${inst.llmBusy}`)
                         if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
                             const batch = inst.lineBuffer.splice(0, batchSize)
@@ -451,10 +453,10 @@ export class CensorDaemon implements IDaemon {
             for (const r of inst.regexes) {
                 try { if (r.compiled.test(clean)) { r.matches++; filtered = true } } catch {}
             }
-            if (!filtered) {
+            const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
+            if (!filtered && inst.lineBuffer.length < MAX_LINE_BUFFER) {
                 inst.lineBuffer.push(clean)
             }
-            const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
             if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
                 const batch = inst.lineBuffer.splice(0, batchSize)
                 this.callLlm(inst, batch)

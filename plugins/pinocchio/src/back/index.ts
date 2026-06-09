@@ -185,7 +185,14 @@ export class PinocchioChannel {
             trace: (toolName, args) => this.backChannelObject.logTrace?.(`[pinocchio] tool ${toolName} ${JSON.stringify(args)}`)
         }
         const toolNames = version.autoTools ? toolInfoList.map(t => t.name) : (version.tools ?? [])
-        const tools = Object.fromEntries(toolNames.filter(n => n in kwirthTools).map(n => [n, (kwirthTools as any)[n]]))
+        const tools = Object.fromEntries(toolNames.filter(n => n in kwirthTools).map(n => {
+            const t = (kwirthTools as any)[n]
+            return [n, { ...t, execute: async (args: any, opts: any) => {
+                const result = await t.execute(args, opts)
+                this.backChannelObject.logTrace?.(`[pinocchio] tool ${n} response: ${JSON.stringify(result)}`)
+                return result
+            }}]
+        }))
 
         let providerOptions: Record<string, unknown> = {}
         let errorPath = ''
@@ -244,7 +251,7 @@ export class PinocchioChannel {
                         const { output, usage, steps } = await runWithToolContext(toolContext!, () => generateText({
                             model,
                             temperature,
-                            stopWhen: stepCountIs(15),
+                            stopWhen: stepCountIs(version.steps || 15),
                             tools,
                             providerOptions,
                             output: Output.object({
@@ -274,6 +281,7 @@ export class PinocchioChannel {
             case 'events':
                 let eventsEvent = event as IEventsProviderEvent
                 try {
+                    this.backChannelObject.logInfo?.(`[pinocchio] k8s event: ${eventsEvent.type} ${eventsEvent.obj.kind}/${eventsEvent.obj.metadata?.name} — triggers: ${this.pinocchioConfig.triggers?.length ?? 0}`)
                     for (let t of this.pinocchioConfig.triggers.filter(t => t.trigger === 'artifact' && t.kind === eventsEvent.obj.kind && (!t.k8sEvent || t.k8sEvent === eventsEvent.type))) {
                       for (let version of t.versions.filter(v => v.enabled)) {
                         this.backChannelObject.logInfo?.(`[pinocchio] ${eventsEvent.type} ${eventsEvent.obj.kind} ${eventsEvent.obj.metadata?.name}`)
@@ -292,17 +300,45 @@ export class PinocchioChannel {
                                 const { output, usage } = await runWithToolContext(toolContext!, () => generateText({
                                     model,
                                     temperature,
+                                    stopWhen: stepCountIs(version.steps || 15),
                                     tools,
                                     providerOptions,
                                     output: Output.object({
                                         schema: z.object({
+                                            resource: z.object({
+                                                kind:z.string(),
+                                                name:z.string(),
+                                                namespace:z.string(),
+                                                images: z.array(z.string()),
+                                            }),
+                                            pss_current: z.enum(["privileged", "baseline", "restricted", "undefined"]),
+                                            pss_target: z.enum(["privileged", "baseline", "restricted", "undefined"]),
+                                            score_summary: z.object({
+                                                critical: z.number(),
+                                                high: z.number(),
+                                                medium: z.number(),
+                                                low: z.number()
+                                            }),
+                                            global_risk:  z.enum(['low', 'medium', 'high', 'critical']),
+                                            controls_passed: z.array(z.string()),
+                                            not_visible: z.array(z.string()),
+                                            next_steps: z.array(z.string()),
+                                            report: z.string().min(1),
                                             findings: z.array(
                                                 z.object({
-                                                    description: z.string().min(1),
+                                                    control_id: z.string(),
+                                                    control_name: z.string(),
+                                                    category: z.enum(["privileges" , "identity" , "network" , "filesystem" , "supply_chain" , "resources" , "secrets" , "general" , "platform"]),
                                                     level: z.enum(['low', 'medium', 'high', 'critical']),
+                                                    confidence: z.enum(['low', 'medium', 'high']),
+                                                    evidence: z.string(),
+                                                    impact: z.string(),
+                                                    remediation: z.string(),
+                                                    references: z.array(z.string()),
+                                                    risk_score: z.number(),
+                                                    description: z.string().min(1),
                                                 })
                                             ),
-                                            report: z.string().min(1),
                                             hardened_yaml: z.string().min(1)
                                         }),
                                     }),
@@ -310,9 +346,18 @@ export class PinocchioChannel {
                                     prompt: prompt||'Hi AI, how are you?',
                                 }))
 
+                                console.log(output)
                                 let analysis:IAnalysis = {
                                     text: `${eventsEvent.type} ${eventsEvent.obj.kind} '${eventsEvent.obj.metadata.name}' in namespace '${eventsEvent.obj.metadata.namespace}' [LLM:${llmProviderId}/${llmModelId}, IN:${usage.inputTokens}, OUT:${usage.outputTokens}]`,
                                     findings: output.findings,
+                                    resource: output.resource,
+                                    pss_current: output.pss_current,
+                                    pss_target: output.pss_target,
+                                    score_summary: output.score_summary,
+                                    global_risk: output.global_risk,
+                                    controls_passed: output.controls_passed,
+                                    not_visible: output.not_visible,
+                                    next_steps: output.next_steps,
                                     ...(output.report? {report: output.report}:{}),
                                     ...(output.hardened_yaml? {hardened_yaml: output.hardened_yaml}:{}),
                                     timestamp: Date.now(),
@@ -327,6 +372,7 @@ export class PinocchioChannel {
                             }
                             catch (err:any) {
                                 let message = `Pinocchio analysis ended in error while processing 'events' when analyzing '${eventsEvent.obj.metadata.name}' in namespace '${eventsEvent.obj.metadata.namespace}' [Kind:${eventsEvent.obj.kind}]`
+                                console.log(err)
                                 this.backChannelObject.logError?.(`${message}: ${err}`)
                                 try {
                                     let msg = _.get(err, errorPath)
@@ -488,7 +534,7 @@ export class PinocchioChannel {
             const { text: phase1Text, usage: usage1, steps } = await runWithToolContext(toolContext!, () => generateText({
                 model,
                 temperature,
-                stopWhen: stepCountIs(version.steps || 5),
+                stopWhen: stepCountIs(version.steps || 15),
                 tools: activeTools,
                 providerOptions,
                 system: version.system || 'You are a helpful assistant.',
@@ -648,6 +694,16 @@ export class PinocchioChannel {
 
     executeConfigGet = async () => {
         if (this.startChannelReady) await this.startChannelReady
+        try {
+            const rawConfig = await this.backChannelObject.readStorage!('pinocchio-config', false)
+            let config: IPinocchioConfig | null = null
+            if (typeof rawConfig === 'string') {
+                try { config = JSON.parse(rawConfig) } catch {}
+            } else if (rawConfig) {
+                config = rawConfig as IPinocchioConfig
+            }
+            if (config) this.pinocchioConfig = config
+        } catch (err) { this.backChannelObject.logWarning?.(`[pinocchio] error reading config from storage: ${err}`) }
         try {
             const sharedLlms = await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)
             if (sharedLlms?.length) this.pinocchioConfig.llms = sharedLlms

@@ -4,6 +4,7 @@
   },
   "channels": {
     "alert": "../plugins/alert/dist",
+    "topology": "../plugins/topology/dist",
     "censor": "../plugins/censor/dist",
     "pinocchio": "../plugins/pinocchio/dist"
   },

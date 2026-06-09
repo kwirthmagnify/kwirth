@@ -21,6 +21,7 @@ const kwirthGlobalsPlugin = {
             '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
             '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
             '@jfvilas/react-file-manager': 'window.__kwirth__.jfvilasReactFileManager',
+            'recharts': 'window.__kwirth__.recharts',
 
         }
         for (const pkg of Object.keys(globals)) {

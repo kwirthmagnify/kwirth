@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
-import { EPinocchioCommand, IAnalysis, IConfigTrigger, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
+import { EPinocchioCommand, IAnalysis, IConfigTrigger, IFinding, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
 import { PinocchioConfigTrigger } from './PinocchioConfigTrigger'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
@@ -33,6 +33,8 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const [showImportExport, setShowImportExport] = useState(false)
     const [anchorMenu, setAnchorMenu] = useState<Element | undefined>(undefined)
     const [reportContent, setReportContent] = useState<string | null>(null)
+    const [selectedFinding, setSelectedFinding] = useState<IFinding | null>(null)
+    const [selectedAnalysis, setSelectedAnalysis] = useState<IAnalysis | null>(null)
     const [, forceUpdate] = useState(0)
     const priorityOrder = {
         'critical': 0,
@@ -65,7 +67,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }, 50)
 
         return () => clearTimeout(timer);
-    }, [pinocchioData.content])
+    }, [pinocchioData.content.length])
 
     const color = (level:string) => {
         if (level==='low') return 'gray'
@@ -101,8 +103,8 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                                     let description = f.description
                                     if (description.includes(' **') && description.includes('** ')) description=description.replace(' **', ' <b><u>').replace('** ', '</u></b> ')
                                     return (
-                                        <Stack key={fIndex} direction={'row'} alignItems={'center'}>
-                                            <Box sx={{ width: '70px' }}>
+                                        <Stack key={fIndex} direction={'row'} alignItems={'center'} onClick={() => setSelectedFinding(f)} sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' }, borderRadius: 1 }}>
+                                            <Box sx={{ width: '70px', flexShrink: 0 }}>
                                                 <Typography variant='body2' sx={{ backgroundColor: color(f.level), display: 'inline-block', p: 0.5, borderRadius: '4px' }}>
                                                     {f.level}
                                                 </Typography>
@@ -111,6 +113,24 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                                         </Stack>
                                     );
                                 })}
+                            {(analysis.pss_current || analysis.score_summary || analysis.global_risk) && (
+                                <Stack direction='row' alignItems='center' gap={2} onClick={() => setSelectedAnalysis(analysis)} sx={{ mt: 0.5, ml: '70px', px: 1, py: 0.5, bgcolor: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '6px', opacity: 0.85, alignSelf: 'flex-start', cursor: 'pointer', '&:hover': { bgcolor: 'rgba(128,128,128,0.15)' } }}>
+                                    {analysis.pss_current && <Typography variant='body2'>PSS: <b>{analysis.pss_current}</b>{analysis.pss_target ? ` → ${analysis.pss_target}` : ''}</Typography>}
+                                    {analysis.score_summary && (
+                                        <Typography variant='body2'>
+                                            critical:<b>{analysis.score_summary.critical}</b>&nbsp;
+                                            high:<b>{analysis.score_summary.high}</b>&nbsp;
+                                            medium:<b>{analysis.score_summary.medium}</b>&nbsp;
+                                            low:<b>{analysis.score_summary.low}</b>
+                                        </Typography>
+                                    )}
+                                    {analysis.global_risk && (
+                                        <Typography variant='body2' sx={{ backgroundColor: color(analysis.global_risk), display: 'inline-block', px: 0.75, py: 0.25, borderRadius: '4px' }}>
+                                            {analysis.global_risk}
+                                        </Typography>
+                                    )}
+                                </Stack>
+                            )}
                         </React.Fragment>
                     );
                 }
@@ -294,10 +314,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     <Typography marginRight={'32px'} flex={1}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {pinocchioData.paused?'paused':pinocchioData.started?'started':'stopped'}</Typography>
                     <Button onClick={() => { pinocchioData.content = [{ timestamp: Date.now(), text: 'Findings cleared' } as IMessage]; forceUpdate(n => n + 1) }}>Clear</Button>
                     <Button onClick={() => { playgroundStartIndex.current = pinocchioData.content.length; setShowPlayground(true) }}>Playground</Button>
-                    <Button onClick={(event) => {
-                        props.channelObject.webSocket?.send(JSON.stringify({ channel: 'pinocchio', msgtype: 'pinocchiomessage', id: '1', accessKey: props.channelObject.accessString!, instance: props.channelObject.instanceId, command: EPinocchioCommand.CONFIGGET, action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.DATA }))
-                        setAnchorMenu(event.currentTarget)
-                    }}>Config</Button>
+                    <Button onClick={(event) => setAnchorMenu(event.currentTarget)}>Config</Button>
                 </Stack>}>
             </CardHeader>
                 <CardContent sx={{flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
@@ -314,6 +331,152 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} onStateChange={pinocchioPlaygroundStateChange} />}
         { showImportExport && <PinocchioImportExport config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} providers={pinocchioData.providers} pinocchioConfig={pinocchioData.config} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
+        { selectedAnalysis !== null && (
+            <Dialog open={true} onClose={() => setSelectedAnalysis(null)} PaperProps={{ sx: { width: '60vw', maxWidth: '860px', maxHeight: '80vh' } }}>
+                <DialogTitle>
+                    {selectedAnalysis.resource
+                        ? `${selectedAnalysis.resource.kind} / ${selectedAnalysis.resource.name}`
+                        : 'Analysis detail'}
+                </DialogTitle>
+                <DialogContent dividers sx={{ display: 'flex', flexDirection: 'row', gap: 3, alignItems: 'flex-start' }}>
+                    <Stack sx={{ flex: 1, gap: 1.5 }}>
+                        {selectedAnalysis.resource && <>
+                            <Box>
+                                <Typography variant='caption' sx={{ opacity: 0.6 }}>Kind</Typography>
+                                <Typography variant='body2'>{selectedAnalysis.resource.kind}</Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant='caption' sx={{ opacity: 0.6 }}>Name</Typography>
+                                <Typography variant='body2'>{selectedAnalysis.resource.name}</Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant='caption' sx={{ opacity: 0.6 }}>Namespace</Typography>
+                                <Typography variant='body2'>{selectedAnalysis.resource.namespace}</Typography>
+                            </Box>
+                            {selectedAnalysis.resource.images?.length ? (
+                                <Box>
+                                    <Typography variant='caption' sx={{ opacity: 0.6 }}>Images</Typography>
+                                    {selectedAnalysis.resource.images.map((img, i) => (
+                                        <Typography key={i} variant='body2' sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{img}</Typography>
+                                    ))}
+                                </Box>
+                            ) : null}
+                        </>}
+                        {selectedAnalysis.pss_current && (
+                            <Box>
+                                <Typography variant='caption' sx={{ opacity: 0.6 }}>PSS current</Typography>
+                                <Typography variant='body2'>{selectedAnalysis.pss_current}</Typography>
+                            </Box>
+                        )}
+                        {selectedAnalysis.pss_target && (
+                            <Box>
+                                <Typography variant='caption' sx={{ opacity: 0.6 }}>PSS target</Typography>
+                                <Typography variant='body2'>{selectedAnalysis.pss_target}</Typography>
+                            </Box>
+                        )}
+                        {selectedAnalysis.global_risk && (
+                            <Box>
+                                <Typography variant='caption' sx={{ opacity: 0.6, display: 'block' }}>Global risk</Typography>
+                                <Typography variant='body2' sx={{ backgroundColor: color(selectedAnalysis.global_risk), display: 'inline-block', px: 0.75, py: 0.25, borderRadius: '4px' }}>
+                                    {selectedAnalysis.global_risk}
+                                </Typography>
+                            </Box>
+                        )}
+                        {selectedAnalysis.score_summary && (
+                            <Box>
+                                <Typography variant='caption' sx={{ opacity: 0.6 }}>Score summary</Typography>
+                                {(['critical', 'high', 'medium', 'low'] as const).map(lvl => (
+                                    <Typography key={lvl} variant='body2'>
+                                        <Typography component='span' variant='body2' sx={{ backgroundColor: color(lvl), display: 'inline-block', px: 0.5, borderRadius: '4px', mr: 1, minWidth: '60px', textAlign: 'center' }}>{lvl}</Typography>
+                                        {selectedAnalysis.score_summary![lvl]}
+                                    </Typography>
+                                ))}
+                            </Box>
+                        )}
+                    </Stack>
+                    <Stack sx={{ flex: 1, gap: 1.5 }}>
+                        {selectedAnalysis.controls_passed?.length ? (
+                            <Box>
+                                <Typography variant='caption' sx={{ opacity: 0.6 }}>Controls passed</Typography>
+                                {selectedAnalysis.controls_passed.map((c, i) => (
+                                    <Typography key={i} variant='body2'>{c}</Typography>
+                                ))}
+                            </Box>
+                        ) : null}
+                        {selectedAnalysis.not_visible?.length ? (
+                            <Box>
+                                <Typography variant='caption' sx={{ opacity: 0.6 }}>Not visible</Typography>
+                                {selectedAnalysis.not_visible.map((s, i) => (
+                                    <Typography key={i} variant='body2'>{s}</Typography>
+                                ))}
+                            </Box>
+                        ) : null}
+                        {selectedAnalysis.next_steps?.length ? (
+                            <Box>
+                                <Typography variant='caption' sx={{ opacity: 0.6 }}>Next steps</Typography>
+                                {selectedAnalysis.next_steps.map((s, i) => (
+                                    <Typography key={i} variant='body2'>{i + 1}. {s}</Typography>
+                                ))}
+                            </Box>
+                        ) : null}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setSelectedAnalysis(null)}>Close</Button>
+                </DialogActions>
+            </Dialog>
+        )}
+        { selectedFinding !== null && (
+            <Dialog open={true} onClose={() => setSelectedFinding(null)} PaperProps={{ sx: { width: '60vw', maxWidth: '860px', maxHeight: '80vh' } }}>
+                <DialogTitle>
+                    <Stack direction='row' alignItems='center' gap={1}>
+                        <Typography variant='body2' sx={{ backgroundColor: color(selectedFinding.level), display: 'inline-block', p: 0.5, borderRadius: '4px', flexShrink: 0 }}>
+                            {selectedFinding.level}
+                        </Typography>
+                        <Typography variant='h6'>{selectedFinding.control_name}</Typography>
+                    </Stack>
+                </DialogTitle>
+                <DialogContent dividers sx={{ display: 'flex', flexDirection: 'row', gap: 3, alignItems: 'flex-start' }}>
+                    <Stack sx={{ flex: 1, gap: 1.5 }}>
+                        {[
+                            { label: 'Control ID',  value: selectedFinding.control_id },
+                            { label: 'Category',    value: selectedFinding.category },
+                            { label: 'Confidence',  value: selectedFinding.confidence },
+                            { label: 'Risk score',  value: selectedFinding.risk_score != null ? String(selectedFinding.risk_score) : undefined },
+                            { label: 'Description', value: selectedFinding.description },
+                            { label: 'Evidence',    value: selectedFinding.evidence },
+                            { label: 'Impact',      value: selectedFinding.impact },
+                        ].filter(({ value }) => value != null).map(({ label, value }) => (
+                            <Box key={label}>
+                                <Typography variant='caption' sx={{ opacity: 0.6 }}>{label}</Typography>
+                                <Typography variant='body2'>{value}</Typography>
+                            </Box>
+                        ))}
+                    </Stack>
+                    {(selectedFinding.remediation || selectedFinding.references?.length) && (
+                        <Stack sx={{ flex: 1, gap: 1.5 }}>
+                            {selectedFinding.remediation && (
+                                <Box>
+                                    <Typography variant='caption' sx={{ opacity: 0.6 }}>Remediation</Typography>
+                                    <Typography variant='body2'>{selectedFinding.remediation}</Typography>
+                                </Box>
+                            )}
+                            {selectedFinding.references?.length ? (
+                                <Box>
+                                    <Typography variant='caption' sx={{ opacity: 0.6 }}>References</Typography>
+                                    {selectedFinding.references.map((r, i) => (
+                                        <Typography key={i} variant='body2'>{r}</Typography>
+                                    ))}
+                                </Box>
+                            ) : null}
+                        </Stack>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setSelectedFinding(null)}>Close</Button>
+                </DialogActions>
+            </Dialog>
+        )}
         { reportContent !== null && (
             <Dialog open={true} onClose={() => setReportContent(null)} PaperProps={{ sx: { width: '60vw', maxWidth: '900px', maxHeight: '70vh' } }}>
                 <DialogTitle>Report</DialogTitle>

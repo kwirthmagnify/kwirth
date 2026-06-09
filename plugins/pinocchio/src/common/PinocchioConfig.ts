@@ -17,11 +17,30 @@ export enum EPinocchioCommand {
     PLAYGROUNDSET = 'playgroundset',
 }
 
+export interface IFinding {
+    description: string
+    level: 'low' | 'medium' | 'high' | 'critical'
+    control_id?: string
+    control_name?: string
+    category?: 'privileges' | 'identity' | 'network' | 'filesystem' | 'supply_chain' | 'resources' | 'secrets' | 'general' | 'platform'
+    confidence?: 'low' | 'medium' | 'high'
+    evidence?: string
+    impact?: string
+    remediation?: string
+    references?: string[]
+    risk_score?: number
+}
+
 export interface IAnalysis {
-    findings: {
-        description: string
-        level: 'low' | 'medium' | 'high' | 'critical'
-    }[]
+    findings: IFinding[]
+    resource?: { kind: string; name: string; namespace: string; images: string[] }
+    pss_current?: 'privileged' | 'baseline' | 'restricted' | 'undefined'
+    pss_target?: 'privileged' | 'baseline' | 'restricted' | 'undefined'
+    score_summary?: { critical: number; high: number; medium: number; low: number }
+    global_risk?: 'low' | 'medium' | 'high' | 'critical'
+    controls_passed?: string[]
+    not_visible?: string[]
+    next_steps?: string[]
     report?: string
     timestamp: number
     usage?: {

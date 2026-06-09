@@ -5,12 +5,12 @@ import { ITabSummary } from '../model/ITabObject'
 import { Delete, ExpandLess, ExpandMore, FactCheck, HelpOutline, OpenInBrowser, Star } from '@mui/icons-material'
 import { TChannelConstructor } from '../channels/IChannel'
 import { Cluster } from '../model/Cluster'
-import { GaugeComponent } from 'react-gauge-component'
 import { addGetAuthorization } from '../tools/AuthorizationManagement'
 import { getIconFromKind } from '../tools/Constants-React'
 import { clusterColor } from '../tools/clusterColor'
 import { Area, AreaChart } from 'recharts'
 import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
+import { MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 
 // svg optimizer: https://jakearchibald.github.io/svgomg/ (optmizes size and removes namespaces)
 // Open source icons: https://iconbuddy.com/
@@ -40,6 +40,7 @@ enum EListType {
     FAV='fav',
     LAST='last'
 }
+
 
 const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
     const [cpu, setCpu] = useState(0)
@@ -248,59 +249,6 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
         </>
     }
 
-    const drawRadial = (value:number, text:string) => {
-        return (
-            <Box width={'100%'} flex={'1'} flexDirection={'column'} alignContent={'center'}>
-                <GaugeComponent 
-                    type='radial'
-                    labels={{
-                        valueLabel:{ style: {fontSize: "30px", fill: "currentColor", textShadow: "none"} }
-                    }}
-                    arc={{
-                        subArcs: [
-                            { limit: 50, color: '#5BE12C', showTick: true },
-                            { limit: 80, color: '#F5CD19', showTick: true },
-                            { limit: 100, color: '#EA4228', showTick: true },
-                        ]
-                    }}
-                    value={value}
-                    pointer={{elastic: true}}
-                />
-                <Stack direction={'column'} alignItems={'center'}>
-                    <Typography>{text}</Typography>
-                </Stack>
-            </Box>
-        )
-    }
-
-    const drawSemicircle = (value:number, text:string, minValue:number, maxValue:number) => {
-        return (
-            <Box width={'100%'}>
-                <GaugeComponent 
-                    type='semicircle'
-                    arc={{
-                        colorArray: ['#5BE12C', '#F5CD19', '#EA4228'],
-                    }}                
-                    labels={{
-                        valueLabel:{
-                            style: {fontSize: "30px", fill: "currentColor", textShadow: "none" },
-                            formatTextValue: (v) => v
-                        },
-                        tickLabels: {
-                            type: 'inner',
-                            defaultTickValueConfig: { formatTextValue: (v) => '' }
-                        }
-                    }}
-                    pointer={{type: "arrow", elastic: true}}
-                    value={value}
-                />
-                <Stack direction={'column'} alignItems={'center'}>
-                    <Typography fontSize={12}>{text} Mbps</Typography>
-                </Stack>
-            </Box>
-        )
-    }
-
     const distributionIcon = (flavour:string|undefined) => {
         if (!flavour) return <></>
         
@@ -403,7 +351,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                 <Collapse in={cardExpanded} timeout="auto" unmountOnExit>
                     <CardContent>
                         <Stack direction={'row'} spacing={2} sx={{mt:'4px'}}>
-                            <Stack width={'30%'}> 
+                            <Stack width={'25%'}>
                                 <Typography fontSize={20}><b>Context</b></Typography>
                                 <Typography><b>Home cluster: </b>{homeCluster} [{clusterUrl}]</Typography>
                                 <Typography><b>Selected cluster: </b>{props.cluster?.clusterInfo?.name}</Typography>
@@ -411,16 +359,16 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 <Typography><b>Front channels: </b>{frontChannels}</Typography>
                             </Stack>
                             <Divider orientation='vertical' flexItem/>
-                            <Stack width={'20%'}>
+                            <Stack width={'25%'}>
                                 <Typography fontSize={20}><b>Kwirth Info</b></Typography>
                                 <Typography><b>Kwirth version: </b>{kwirthVersion}</Typography>
                                 <Typography><b>Namespace: </b>{kwrithNamespace}</Typography>
                                 <Typography><b>Deployment: </b>{kwrithDeployment || 'N/A'}</Typography>
                                 <Typography><b>Clusters: </b>{props.clusters.map (c => c.name).join(', ')}</Typography>
-                                <Typography><b>Type: </b>{props.cluster?.clusterInfo?.type}</Typography>
+                                <Typography><b>Cluster type: </b>{props.cluster?.clusterInfo?.type}</Typography>
                             </Stack>
                             <Divider orientation='vertical' flexItem/>
-                            <Stack width={'20%'}>
+                            <Stack width={'25%'}>
                                 <Typography fontSize={20}><b>Cluster Info</b></Typography>
                                 <Typography><b>Name: </b>{props.cluster?.clusterInfo?.name}</Typography>
                                 <Stack direction={'row'} alignItems={'center'}>
@@ -434,15 +382,11 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 <Typography><b>Total Memory: </b>{((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed(2)}GB</Typography>
                             </Stack>
                             <Divider orientation='vertical' flexItem/>
-                            <Stack width={'10%'} direction={'column'} alignItems={'center'}>
-                                {drawRadial(cpu,'CPU')}
-                            </Stack>
-                            <Stack width={'10%'} direction={'column'} alignItems={'center'}>
-                                {drawRadial(memory,'Memory')}
-                            </Stack>
-                            <Stack width={'10%'} direction={'column'} alignItems={'center'}>
-                                {drawSemicircle(txmbps,'Tx', 0, 10)}
-                                {drawSemicircle(rxmbps,'Rx', 0, 10)}
+                            <Stack width={'25%'} direction={'row'} alignItems={'center'}>
+                                <MiniGauge value={cpu} max={100} label='CPU' format={v => `${v.toFixed(1)}%`} />
+                                <MiniGauge value={memory} max={100} label='Mem' format={v => `${v.toFixed(1)}%`} />
+                                <MiniGauge value={txmbps} max={10} label='Tx Mbps' />
+                                <MiniGauge value={rxmbps} max={10} label='Rx Mbps' />
                             </Stack>
                         </Stack>
                     </CardContent>

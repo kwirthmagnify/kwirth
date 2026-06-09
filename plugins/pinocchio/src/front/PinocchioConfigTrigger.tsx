@@ -113,24 +113,46 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
         setNewTriggerId('')
     }
 
+    const uniqueId = (base: string, existing: string[]): string => {
+        let id = base + '-copy'
+        while (existing.includes(id)) id += '-copy'
+        return id
+    }
+
+    const onTriggerClone = (idx?: number) => {
+        const i = idx ?? selectedTriggerIndex
+        if (i === null || i === undefined) return
+        const source = config.triggers[i]
+        const id = uniqueId(source.id, config.triggers.map(t => t.id))
+        const cloned: IConfigTrigger = { ...objectClone(source), id }
+        const newTriggers = [...config.triggers, cloned]
+        setConfig(c => ({ ...c, triggers: newTriggers }))
+        setSelectedTriggerIndex(newTriggers.length - 1)
+        setSelectedVersionIndex(null)
+        clearVersionEditor()
+    }
+
     const onVersionClone = () => {
         if (selectedTriggerIndex === null || selectedVersionIndex === null) return
-        const source = config.triggers[selectedTriggerIndex].versions[selectedVersionIndex]
-        const cloned: IConfigTriggerVersion = { ...objectClone(source), id: source.id + '-copy', enabled: false }
+        const versions = config.triggers[selectedTriggerIndex].versions ?? []
+        const source = versions[selectedVersionIndex]
+        const id = uniqueId(source.id, versions.map(v => v.id))
+        const cloned: IConfigTriggerVersion = { ...objectClone(source), id, enabled: false }
         const newTriggers = [...config.triggers]
         newTriggers[selectedTriggerIndex] = {
             ...newTriggers[selectedTriggerIndex],
-            versions: [...(newTriggers[selectedTriggerIndex].versions ?? []), cloned]
+            versions: [...versions, cloned]
         }
         setConfig(c => ({ ...c, triggers: newTriggers }))
     }
 
-    const onTriggerDelete = () => {
-        if (selectedTriggerIndex === null) return
-        const t = config.triggers[selectedTriggerIndex]
+    const onTriggerDelete = (idx?: number) => {
+        const i = idx ?? selectedTriggerIndex
+        if (i === null || i === undefined) return
+        const t = config.triggers[i]
         setMsgBox(MsgBoxYesNo('Delete trigger', `Delete trigger "${t.id}"?`, setMsgBox, (a: MsgBoxButtons) => {
             if (a !== MsgBoxButtons.Yes) return
-            const newTriggers = (config.triggers ?? []).filter((_, i) => i !== selectedTriggerIndex)
+            const newTriggers = (config.triggers ?? []).filter((_, j) => j !== i)
             setConfig(c => ({ ...c, triggers: newTriggers }))
             setSelectedTriggerIndex(null)
             setSelectedVersionIndex(null)
@@ -212,16 +234,30 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
     }
 
     return (<>
-        <Dialog open={true} PaperProps={{ sx: { width: '85vw', maxWidth: '1300px', height: '78vh' } }}>
+        <Dialog open={true} PaperProps={{ sx: { width: '90vw', maxWidth: '1500px', height: '82vh' } }}>
             <DialogTitle>Trigger Config</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%', overflow: 'hidden', padding: '8px 16px' }}>
 
                 {/* ── Left panel ── */}
-                <Box sx={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pr: 1 }}>
+                <Box sx={{ flex: '0 0 260px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pr: 1 }}>
 
                     {/* Triggers */}
                     <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 'bold', px: 0.5, pt: 0.5 }}>Triggers</Typography>
-                    <Stack direction='row' spacing={0.5} alignItems='center' sx={{ px: 0.5, pb: 0.5 }}>
+                    <Box sx={{ flex: '0 0 auto', maxHeight: '40%', overflowY: 'auto', overflowX: 'hidden' }}>
+                        <List dense sx={{ py: 0 }}>
+                            {(config.triggers ?? []).map((t, index) => (
+                                <ListItemButton key={index} selected={selectedTriggerIndex === index} onClick={() => onTriggerSelect(index)} dense sx={{ pr: 0.5 }}>
+                                    <Stack direction='column' sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography variant='body2' sx={{ fontWeight: selectedTriggerIndex === index ? 'bold' : 'normal' }}>{t.id}</Typography>
+                                        <Typography color='textSecondary' fontSize={10}>{t.trigger}{t.kind ? ` · ${t.kind}` : ''}</Typography>
+                                    </Stack>
+                                    <IconButton size='small' onClick={e => { e.stopPropagation(); onTriggerClone(index) }} sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}><CloneIcon sx={{ fontSize: 14 }} /></IconButton>
+                                    <IconButton size='small' color='error' onClick={e => { e.stopPropagation(); onTriggerDelete(index) }} sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}><DeleteIcon sx={{ fontSize: 14 }} /></IconButton>
+                                </ListItemButton>
+                            ))}
+                        </List>
+                    </Box>
+                    <Stack direction='row' spacing={0.5} alignItems='center' sx={{ px: 0.5, pt: 0.5, pb: 0.5 }}>
                         <TextField
                             size='small'
                             value={newTriggerId}
@@ -233,20 +269,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
                             onKeyDown={e => { if (e.key === 'Enter') onTriggerAdd() }}
                         />
                         <IconButton size='small' onClick={onTriggerAdd}><AddIcon fontSize='small' /></IconButton>
-                        <IconButton size='small' onClick={onTriggerDelete} disabled={selectedTriggerIndex === null} color='error'><DeleteIcon fontSize='small' /></IconButton>
                     </Stack>
-                    <Box sx={{ flex: '0 0 auto', maxHeight: '40%', overflowY: 'auto', overflowX: 'hidden' }}>
-                        <List dense sx={{ py: 0 }}>
-                            {(config.triggers ?? []).map((t, index) => (
-                                <ListItemButton key={index} selected={selectedTriggerIndex === index} onClick={() => onTriggerSelect(index)} dense>
-                                    <Stack direction='column'>
-                                        <Typography variant='body2' sx={{ fontWeight: selectedTriggerIndex === index ? 'bold' : 'normal' }}>{t.id}</Typography>
-                                        <Typography color='textSecondary' fontSize={10}>{t.trigger}{t.kind ? ` · ${t.kind}` : ''}</Typography>
-                                    </Stack>
-                                </ListItemButton>
-                            ))}
-                        </List>
-                    </Box>
 
                     <Divider sx={{ my: 0.5 }} />
 
