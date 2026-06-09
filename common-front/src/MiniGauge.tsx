@@ -40,15 +40,17 @@ export interface IMiniGaugeProps {
 export const MiniGauge: React.FC<IMiniGaugeProps> = ({ value, max, label, format }) => {
     const display = format ? format(value) : value.toFixed(1)
     const pct = Math.min(value / (max || 1), 1)
-    const na = Math.PI * (1 - pct)
-    const nx = GCX + G_NEEDLE * Math.cos(na)
-    const ny = GCY - G_NEEDLE * Math.sin(na)
+    const rotateDeg = -(1 - pct) * 180
     return (
         <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
             <span style={{ ...labelStyle, marginBottom: 4 }}>{display}</span>
             <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: '100%', display: 'block' }}>
                 {ARC_PATHS.map((p, i) => <path key={i} d={p.d} fill={p.fill} />)}
-                <line x1={GCX} y1={GCY} x2={nx} y2={ny} stroke='currentColor' strokeWidth={2} strokeLinecap='round' />
+                <g transform={`translate(${GCX}, ${GCY})`}>
+                    <g style={{ transform: `rotate(${rotateDeg}deg)`, transformOrigin: '0px 0px', transition: 'transform 0.5s ease-out' }}>
+                        <line x1={0} y1={0} x2={G_NEEDLE} y2={0} stroke='currentColor' strokeWidth={2} strokeLinecap='round' />
+                    </g>
+                </g>
                 <circle cx={GCX} cy={GCY} r={3} fill='currentColor' />
             </svg>
             <span style={{ ...labelStyle, marginTop: 4 }}>{label}</span>
