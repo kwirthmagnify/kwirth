@@ -35,6 +35,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const [reportContent, setReportContent] = useState<string | null>(null)
     const [selectedFinding, setSelectedFinding] = useState<IFinding | null>(null)
     const [selectedAnalysis, setSelectedAnalysis] = useState<IAnalysis | null>(null)
+    const [showClearDialog, setShowClearDialog] = useState(false)
     const [, forceUpdate] = useState(0)
     const priorityOrder = {
         'critical': 0,
@@ -312,7 +313,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 <Stack direction={'row'} alignItems={'center'}>
                     <Typography marginRight={'32px'}><b>Events:</b> {pinocchioData.content.length}</Typography>
                     <Typography marginRight={'32px'} flex={1}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {pinocchioData.paused?'paused':pinocchioData.started?'started':'stopped'}</Typography>
-                    <Button onClick={() => { pinocchioData.content = [{ timestamp: Date.now(), text: 'Findings cleared' } as IMessage]; forceUpdate(n => n + 1) }}>Clear</Button>
+                    <Button onClick={() => setShowClearDialog(true)}>Clear</Button>
                     <Button onClick={() => { playgroundStartIndex.current = pinocchioData.content.length; setShowPlayground(true) }}>Playground</Button>
                     <Button onClick={(event) => setAnchorMenu(event.currentTarget)}>Config</Button>
                 </Stack>}>
@@ -331,6 +332,40 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} onStateChange={pinocchioPlaygroundStateChange} />}
         { showImportExport && <PinocchioImportExport config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} providers={pinocchioData.providers} pinocchioConfig={pinocchioData.config} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
+        { showClearDialog && (
+            <Dialog open={true} onClose={() => setShowClearDialog(false)} PaperProps={{ sx: { width: '420px', maxWidth: '420px' } }}>
+                <DialogTitle>Clear findings</DialogTitle>
+                <DialogContent>
+                    <Typography variant='body2' sx={{ mb: 1 }}><b>Clear my view</b> — removes what you see here. The back keeps its analyses and will send them again if you reconnect.</Typography>
+                    <Typography variant='body2'><b>Clear back</b> — deletes all analyses stored in the channel. Affects all connected fronts.</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => {
+                        pinocchioData.content = [{ timestamp: Date.now(), text: 'Findings cleared' } as IMessage]
+                        forceUpdate(n => n + 1)
+                        setShowClearDialog(false)
+                    }}>Clear my view</Button>
+                    <Button color='warning' onClick={() => {
+                        pinocchioData.content = [{ timestamp: Date.now(), text: 'Back analyses cleared' } as IMessage]
+                        forceUpdate(n => n + 1)
+                        const msg: IPinocchioMessage = {
+                            channel: 'pinocchio',
+                            msgtype: 'pinocchiomessage',
+                            id: '1',
+                            accessKey: props.channelObject.accessString!,
+                            instance: props.channelObject.instanceId,
+                            command: EPinocchioCommand.CLEARBACK,
+                            action: EInstanceMessageAction.COMMAND,
+                            flow: EInstanceMessageFlow.REQUEST,
+                            type: EInstanceMessageType.DATA,
+                        }
+                        props.channelObject.webSocket?.send(JSON.stringify(msg))
+                        setShowClearDialog(false)
+                    }}>Clear back</Button>
+                    <Button onClick={() => setShowClearDialog(false)}>Cancel</Button>
+                </DialogActions>
+            </Dialog>
+        )}
         { selectedAnalysis !== null && (
             <Dialog open={true} onClose={() => setSelectedAnalysis(null)} PaperProps={{ sx: { width: '60vw', maxWidth: '860px', maxHeight: '80vh' } }}>
                 <DialogTitle>

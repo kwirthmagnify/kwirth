@@ -476,6 +476,10 @@ export class PinocchioChannel {
                     this.playgroundTrigger = pinocchioMessage.data as IConfigTriggerVersion
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Playground config applied')
                     break
+                case EPinocchioCommand.CLEARBACK:
+                    this.analysis = []
+                    this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, 'Back analyses cleared')
+                    break
             }
             return true
         }

@@ -15,6 +15,7 @@ export enum EPinocchioCommand {
     PROVIDERSAVAILABLE = 'providersavailable',
     TOOLSAVAILABLE = 'toolsavailable',
     PLAYGROUNDSET = 'playgroundset',
+    CLEARBACK = 'clearback',
 }
 
 export interface IFinding {
