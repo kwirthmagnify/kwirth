@@ -43,7 +43,7 @@ export const MiniGauge: React.FC<IMiniGaugeProps> = ({ value, max, label, format
     const rotateDeg = -(1 - pct) * 180
     return (
         <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
-            <span style={{ ...labelStyle, marginBottom: 4 }}>{display}</span>
+            <span style={{ ...labelStyle, marginBottom: -14 }}>{display}</span>
             <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: '100%', display: 'block' }}>
                 {ARC_PATHS.map((p, i) => <path key={i} d={p.d} fill={p.fill} />)}
                 <g transform={`translate(${GCX}, ${GCY})`}>

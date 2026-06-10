@@ -1,100 +1,28 @@
-******************ERRORES
-al instalar fileman, no monota las rotas de httprequest (uload y dload)
-RFM
-
 TRIVY
-when re-scanning an asset, at scanning end the card is created but there is no content (if starting a new trivy tab content is there!!)
+cards/listitems seem to be not deleted even if pod ends
+create trivy provider (names: aqua), trivy channel will subscribe to aqua provider
+at provider: ingest data from outside and create CRD's with analysis results
 
-MAGNIFY FRONT
-💖💖💖 portforward con smart proxy
-running, just manage to detect rootpath in order to enable/disable forwarding
-portforward con electron
-strongtest node shell (running on k3s, review socket detection)
+PINOCCHIO
+alimentar desde provider de trivy
 
-MAGNIFY BACK
-
-ELECTRON
-revisar el cambio o salida de cluster: parar las cosas antes de entrar en el otro
-  en el backend, parar las cosas si se pierde la comunicacion con el front??
-cuando seleccionas un cluster no accesible entra a magnify, y no deberia
-
-KWIRTH FRONT-BACK
-gestionar el store de cmap y secrets de kwirth en los 3 envs: docker, electron y external (creo que electron ya va)
-revisar el store de users en kwirth docker y kwirth external
-PROBAR TODO ESTO CON UN CLUSTER VACIO
-
-==============================================================================
-*********V2*********
-KWIRTH
-add shortcuts on RFM (right item. for instacne: "pod" -> changefolder('/workload/pod',)), user-configurable
-en los last tabs deberiamos poder saber a que nos vamos a conectar antes de conectarnos (un tooltip o asin)
-añadir gestion centralizada de timeouts e intervasl en front y en back [codigo mas abajo]
+KWRTH
 fileman: mantener la conexion con el pod abierta para que la navegacion por el filesystem sea mas fluida
-en App.tsx/Homepage: no añadir a last ni fav un tab que se carga desde una accion de homepage
 
-
-MAGNIFY FRONT
-  kwirthworks, kubeworks
-  content external, poder hacer restart del content (por si se deconecta o lo que sea)
-  improve DetailsObject
-    always use rootObj, and just change the path, so trace-back can be used ofr detecting data changed origin
+MAGNIFY
+indicar el nombre del cluster en algun sitio
+💖💖💖 portforward with smart proxy running, just manage to detect rootpath in order to enable/disable forwarding
+strongtest node shell (running on k3s, review socket detection)
+  kwirthworks
+  kubeworks
   details
     cm/secret: textarea, > tamaño inicial fijo (no todo el contenido)
-    servaccnt: tokens ifpresent
     create keys in an existing CM or secret (from details dialog)
-
-MAGNIFY BACK
+add shortcuts on RFM (right item. for instacne: "pod" -> changefolder('/workload/pod',)), user-configurable
 
 RFM
   añadir ... en leftmenu cuando hay mas de xx opciones (xx configurable, con valor por defecto)
-  revisar ajuste de columnas en magnify (en RFM ya esta)
 
 
-
-==============================================================================
-
-
-global.activeTimers = new Map();
-
-// --- Interceptar INTERVALOS ---
-const originalSetInterval = global.setInterval;
-const originalClearInterval = global.clearInterval;
-
-global.setInterval = (handler, timeout, ...args) => {
-  const id = originalSetInterval(handler, timeout, ...args);
-  global.activeTimers.set(id, {
-    type: 'Interval',
-    createdAt: new Date().toLocaleTimeString(),
-    ms: timeout
-  });
-  return id;
-};
-
-global.clearInterval = (id) => {
-  global.activeTimers.delete(id);
-  originalClearInterval(id);
-};
-
-// --- Interceptar TIMEOUTS ---
-const originalSetTimeout = global.setTimeout;
-const originalClearTimeout = global.clearTimeout;
-
-global.setTimeout = (handler, timeout, ...args) => {
-  const id = originalSetTimeout((...innerArgs) => {
-    // Cuando el timeout se ejecuta, se borra solo de la lista
-    global.activeTimers.delete(id);
-    handler(...innerArgs);
-  }, timeout, ...args);
-
-  global.activeTimers.set(id, {
-    type: 'Timeout',
-    createdAt: new Date().toLocaleTimeString(),
-    ms: timeout
-  });
-  return id;
-};
-
-global.clearTimeout = (id) => {
-  global.activeTimers.delete(id);
-  originalClearTimeout(id);
-};
+ELECTRON
+en el backend, parar las cosas si se pierde la comunicacion con el front??

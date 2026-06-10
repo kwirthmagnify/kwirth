@@ -449,13 +449,16 @@ export class CensorDaemon implements IDaemon {
             inst.totalBytesProcessed += Buffer.byteLength(line, 'utf8')
             receivedBatch.push({ text: line, namespace: asset.namespace, pod: asset.pod, container: asset.container })
             const clean = cleanANSI(line)
+            const MAX_LINE_LENGTH = 200
+            if (clean.length > MAX_LINE_LENGTH) console.warn(`[censor-daemon] line too long (${clean.length} chars), truncated to ${MAX_LINE_LENGTH}`)
+            const truncated = clean.length > MAX_LINE_LENGTH ? clean.slice(0, MAX_LINE_LENGTH) : clean
             let filtered = false
             for (const r of inst.regexes) {
-                try { if (r.compiled.test(clean)) { r.matches++; filtered = true } } catch {}
+                try { if (r.compiled.test(truncated)) { r.matches++; filtered = true } } catch {}
             }
             const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
             if (!filtered && inst.lineBuffer.length < MAX_LINE_BUFFER) {
-                inst.lineBuffer.push(clean)
+                inst.lineBuffer.push(truncated)
             }
             if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
                 const batch = inst.lineBuffer.splice(0, batchSize)

@@ -48,6 +48,7 @@ export interface ICensorData {
     tokensOut: number
     paused: boolean
     started: boolean
+    startTime?: number
     analyzing: boolean
     llms: ILlm[]
     providers: ILlmProvider[]
@@ -85,6 +86,7 @@ export class CensorData implements ICensorData {
     tokensOut = 0
     paused = false
     started = false
+    startTime?: number
     analyzing = false
     llms: ILlm[] = []
     providers: ILlmProvider[] = []

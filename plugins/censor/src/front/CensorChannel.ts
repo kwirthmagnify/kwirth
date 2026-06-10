@@ -254,6 +254,7 @@ export class CensorChannel implements IChannel {
         data.tokensOut = 0
         data.paused = false
         data.started = true
+        data.startTime = Date.now()
         data.sessions = []
         data.connectedSessionId = null
         data.connectedSessionDescription = null
