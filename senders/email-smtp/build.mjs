@@ -26,3 +26,5 @@ const distMeta = {
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
+
+console.log("Done. Run 'npm publish' from your 'dist' folder to publish to npmjs.")
