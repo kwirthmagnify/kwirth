@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Box, Button, Card, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItem, ListItemButton, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Card, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItem, ListItemButton, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon, DeleteSweep, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
 import { cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
@@ -622,6 +622,13 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     {col('Filtered (regex)', filtered)}
                                     {col('Pending', data.pendingCount)}
                                     {col('Avg line size', data.processedCount > 0 && data.totalBytesProcessed > 0 ? `${Math.round(data.totalBytesProcessed / data.processedCount)} B` : '—')}
+                                    <Divider sx={{ my: 0.5 }} />
+                                    {col('Start', data.startTime ? new Date(data.startTime).toLocaleTimeString() : '—')}
+                                    {col('Elapsed', data.startTime ? (() => {
+                                        const s = Math.floor((Date.now() - data.startTime) / 1000)
+                                        const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
+                                        return h > 0 ? `${h}h ${m}m ${sec}s` : m > 0 ? `${m}m ${sec}s` : `${sec}s`
+                                    })() : '—')}
                                 </Stack>
                             </Box>
                             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 190, flex: 1 }}>

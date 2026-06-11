@@ -15,7 +15,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     action: EInstanceMessageAction
     instance: string
-    kind?: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
+    kind?: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'regexstats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
     assets?: ICensorAsset[]
     analyzing?: boolean
     text?: string
@@ -92,8 +92,10 @@ export class CensorChannel implements IChannel {
                     data.businessLines.push({ text: msg.text, namespace: msg.namespace ?? '', pod: msg.pod ?? '', container: msg.container ?? '', timestamp: msg.timestamp })
                     if (data.businessLines.length > MAX_DISPLAY_LINES) data.businessLines.splice(0, data.businessLines.length - MAX_DISPLAY_LINES)
                 }
-                else if (msg.kind === 'llminput' && msg.text !== undefined) {
-                    data.llmInputLines.push(msg.text)
+                else if (msg.kind === 'llminput') {
+                    // daemon now sends a batch { lines: string[] }; keep compat with old { text: string }
+                    const newLines: string[] = Array.isArray((msg as any).lines) ? (msg as any).lines : (msg.text !== undefined ? [msg.text] : [])
+                    data.llmInputLines.push(...newLines)
                     if (data.llmInputLines.length > MAX_DISPLAY_LINES) data.llmInputLines.splice(0, data.llmInputLines.length - MAX_DISPLAY_LINES)
                 }
                 else if (msg.kind === 'llmoutput' && msg.text !== undefined) {
@@ -125,6 +127,9 @@ export class CensorChannel implements IChannel {
                     if (msg.tokensIn !== undefined) data.tokensIn = msg.tokensIn
                     if (msg.tokensOut !== undefined) data.tokensOut = msg.tokensOut
                     if (msg.pendingCount !== undefined) data.pendingCount = msg.pendingCount
+                }
+                else if (msg.kind === 'regexstats') {
+                    // low-frequency event (once per 5s) carrying regex match counts
                     if (Array.isArray((msg as any).regexMatches)) {
                         for (const rm of (msg as any).regexMatches as { pattern: string; matches: number }[]) {
                             const rx = data.regexes.find((r: ICensorRegex) => r.pattern === rm.pattern)

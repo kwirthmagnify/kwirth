@@ -20,7 +20,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     type: EInstanceMessageType
     instance: string
-    kind: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
+    kind: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'regexstats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
     timestamp?: string
     analyzing?: boolean
     text?: string
@@ -392,6 +392,11 @@ export class CensorChannel {
                 })
             }
         }
+        const ws = webSocket as any
+        if (ws.readyState !== 1) return
+        // Backpressure: drop display-only events when WebSocket can't drain fast enough
+        const LOW_PRIORITY = new Set(['received', 'stats', 'regexstats', 'llminput', 'llmoutput', 'tags'])
+        if (LOW_PRIORITY.has(event.type) && ws.bufferedAmount > 256_000) return
         webSocket.send(JSON.stringify({
             msgtype: 'censormessage', channel: 'censor',
             action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED,

@@ -102,6 +102,10 @@ interface IDaemonInstance {
     cachedModel?: ReturnType<typeof buildModel>
     cachedProviderOptions?: Record<string, Record<string, unknown>>
     subscribers: Set<(event: unknown) => void>
+    lastStatsBroadcast: number
+    lastRegexStatsBroadcast: number
+    pendingReceivedLines: { text: string; namespace: string; pod: string; container: string }[]
+    receivedTimer?: NodeJS.Timeout
 }
 
 export class CensorDaemon implements IDaemon {
@@ -171,7 +175,10 @@ export class CensorDaemon implements IDaemon {
                 regexes: [],
                 llmBusy: false,
                 llmErrorCooldownUntil: 0,
-                subscribers: new Set()
+                subscribers: new Set(),
+                lastStatsBroadcast: 0,
+                lastRegexStatsBroadcast: 0,
+                pendingReceivedLines: []
             }
             this.instances.set(instanceConfig.id, inst)
 
@@ -235,6 +242,7 @@ export class CensorDaemon implements IDaemon {
     stopInstance(instanceId: string): void {
         const inst = this.instances.get(instanceId)
         if (!inst) return
+        if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
         for (const asset of inst.assets) {
             asset.passThroughStream.removeAllListeners()
             asset.passThroughStream.destroy()
@@ -310,7 +318,7 @@ export class CensorDaemon implements IDaemon {
                             }
                         }
                     }
-                    this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, llmLinesCount: inst.llmLinesCount, totalBytesProcessed: inst.totalBytesProcessed, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
+                    this.broadcastStats(inst)
                 }
             }
         }
@@ -336,7 +344,8 @@ export class CensorDaemon implements IDaemon {
                         cfg: cfg as ICensorInstanceConfig,
                         assets: [], analyzing: true, processedCount: 0, llmCount: 0, llmLinesCount: 0, totalBytesProcessed: 0,
                         tokensIn: 0, tokensOut: 0,
-                        lineBuffer: [], regexes: [], llmBusy: false, llmErrorCooldownUntil: 0, subscribers: new Set()
+                        lineBuffer: [], regexes: [], llmBusy: false, llmErrorCooldownUntil: 0, subscribers: new Set(),
+                        lastStatsBroadcast: 0, lastRegexStatsBroadcast: 0, pendingReceivedLines: []
                     }
                     this.instances.set(instanceId, target)
                 }
@@ -381,6 +390,8 @@ export class CensorDaemon implements IDaemon {
                 if (inst) {
                     inst.analyzing = true
                     inst.lineBuffer = []
+                    inst.pendingReceivedLines = []
+                    if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
                     this.broadcast(inst, 'analyzing', { analyzing: true })
                     this.persistState(inst)
                 }
@@ -389,6 +400,8 @@ export class CensorDaemon implements IDaemon {
                 if (inst) {
                     inst.analyzing = false
                     inst.lineBuffer = []
+                    inst.pendingReceivedLines = []
+                    if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
                     this.broadcast(inst, 'analyzing', { analyzing: false })
                     this.persistState(inst)
                 } else {
@@ -448,6 +461,39 @@ export class CensorDaemon implements IDaemon {
         for (const cb of inst.subscribers) cb(event)
     }
 
+    // Throttled stats broadcast: max 4/sec, regexMatches separated into a low-frequency regexstats event
+    private broadcastStats(inst: IDaemonInstance): void {
+        const now = Date.now()
+        if (now - inst.lastStatsBroadcast < 250) return
+        inst.lastStatsBroadcast = now
+        this.broadcast(inst, 'stats', {
+            processedCount: inst.processedCount,
+            llmCount: inst.llmCount,
+            llmLinesCount: inst.llmLinesCount,
+            totalBytesProcessed: inst.totalBytesProcessed,
+            tokensIn: inst.tokensIn,
+            tokensOut: inst.tokensOut,
+            pendingCount: inst.lineBuffer.length
+        })
+        // regex match counts at most once per 5 seconds (550 regexes × 80B × high-freq = 1.7 MB/s otherwise)
+        if (now - inst.lastRegexStatsBroadcast >= 5000) {
+            inst.lastRegexStatsBroadcast = now
+            this.broadcast(inst, 'regexstats', { regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
+        }
+    }
+
+    // Throttled received broadcast: accumulate lines for 200ms, then emit a single batch (max 200 lines)
+    private scheduleReceivedBroadcast(inst: IDaemonInstance): void {
+        if (inst.receivedTimer) return
+        inst.receivedTimer = setTimeout(() => {
+            inst.receivedTimer = undefined
+            if (inst.pendingReceivedLines.length === 0) return
+            const toSend = inst.pendingReceivedLines.splice(0, 200)
+            inst.pendingReceivedLines = []
+            this.broadcast(inst, 'received', { lines: toSend })
+        }, 200)
+    }
+
     private async persistState(_inst: IDaemonInstance): Promise<void> {
         // state is kept in memory only; lost on backend restart
     }
@@ -478,9 +524,12 @@ export class CensorDaemon implements IDaemon {
             }
         }
         if (receivedBatch.length > 0) {
-            this.broadcast(inst, 'received', { lines: receivedBatch })
+            // Cap pending buffer at 1000 lines (display is capped at MAX_DISPLAY_LINES=1000 in front anyway)
+            inst.pendingReceivedLines.push(...receivedBatch)
+            if (inst.pendingReceivedLines.length > 1000) inst.pendingReceivedLines.splice(0, inst.pendingReceivedLines.length - 1000)
+            this.scheduleReceivedBroadcast(inst)
         }
-        this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, llmLinesCount: inst.llmLinesCount, totalBytesProcessed: inst.totalBytesProcessed, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
+        this.broadcastStats(inst)
     }
 
     private async callLlm(inst: IDaemonInstance, lines: string[]): Promise<void> {
@@ -540,8 +589,9 @@ export class CensorDaemon implements IDaemon {
 
             inst.llmCount++
             inst.llmLinesCount += lines.length
-            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, llmLinesCount: inst.llmLinesCount, totalBytesProcessed: inst.totalBytesProcessed, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
-            for (const line of lines) this.broadcast(inst, 'llminput', { text: line })
+            inst.lastStatsBroadcast = 0  // force next broadcastStats to fire immediately
+            this.broadcastStats(inst)
+            this.broadcast(inst, 'llminput', { lines })
 
             const { output, usage } = await generateText({
                 model, system, prompt,
@@ -552,7 +602,8 @@ export class CensorDaemon implements IDaemon {
 
             inst.tokensIn += usage.inputTokens ?? 0
             inst.tokensOut += usage.outputTokens ?? 0
-            this.broadcast(inst, 'stats', { processedCount: inst.processedCount, llmCount: inst.llmCount, llmLinesCount: inst.llmLinesCount, totalBytesProcessed: inst.totalBytesProcessed, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, pendingCount: inst.lineBuffer.length, regexMatches: inst.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
+            inst.lastStatsBroadcast = 0  // force stats update after LLM response
+            this.broadcastStats(inst)
             this.broadcast(inst, 'llmoutput', { text: JSON.stringify(output, null, 2) })
 
             const patterns: string[] = ((output as any).info ?? []).filter((x: any) => x.type === 'discard').map((x: any) => x.regex)
