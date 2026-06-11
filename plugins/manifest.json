@@ -1,17 +1,17 @@
 [
   {
     "id": "log",
-    "version": "0.2.7",
+    "version": "0.2.8",
     "name": "Log",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.7.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.8.tgz",
     "description": "Log plugin for Kwirth - Aggregate an filter real-time Kubernetes logs",
     "icon": "Subject"
   },
   {
     "id": "alert",
-    "version": "0.2.8",
+    "version": "0.2.9",
     "name": "Alert",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.8.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.9.tgz",
     "description": "Alert plugin for Kwirth - Build an alert system based on log messages and cluster metrics",
     "icon": "Warning"
   },
@@ -33,11 +33,27 @@
   },
   {
     "id": "trivy",
+    "version": "0.2.9",
+    "name": "Trivy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.9.tgz",
+    "description": "Trivy plugin for Kwirth - Secret exposure, CVE's, audit and SBoM: all integrated in Kwirth",
+    "icon": "VerifiedUser"
+  },
+  {
+    "id": "trivy",
     "version": "0.2.8",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.8.tgz",
     "description": "Trivy plugin for Kwirth - Secret exposure, CVE's, audit and SBoM: all integrated in Kwirth",
     "icon": "VerifiedUser"
+  },
+  {
+    "id": "pinocchio",
+    "version": "0.2.20",
+    "name": "Pinocchio",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.20.tgz",
+    "description": "Pinocchio plugin for Kwirth - AI-powered Kubernetes artifact validation and business data analysis",
+    "icon": "AutoFixHigh"
   },
   {
     "id": "pinocchio",
@@ -122,6 +138,14 @@
         "minVersion": "0.2.6"
       }
     ]
+  },
+  {
+    "id": "topology",
+    "version": "0.2.9",
+    "name": "Topology",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.9.tgz",
+    "description": "Displays Kubernetes artifacts topology in 3D, you can also interact with objects",
+    "icon": "AccountTree"
   },
   {
     "id": "topology",
