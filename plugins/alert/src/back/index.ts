@@ -198,7 +198,11 @@ class AlertChannel {
         const instance = socket?.instances.find(i => i.instanceId === instanceConfig.instance)
         if (instance) {
             const toRemove = instance.assets.filter(a => a.podNamespace === podNamespace && a.podName === podName && (containerName === '' || a.containerName === containerName))
-            for (const asset of toRemove) { asset.passThroughStream?.destroy(); (asset.readableStream as stream.Readable | undefined)?.destroy() }
+            for (const asset of toRemove) {
+                for (const rule of instance.metricRules) instance.alertStates.delete(`${asset.podName}/${asset.containerName}/${rule.metric}`)
+                asset.passThroughStream?.destroy()
+                ;(asset.readableStream as stream.Readable | undefined)?.destroy()
+            }
             instance.assets = instance.assets.filter(a => !(a.podNamespace === podNamespace && a.podName === podName && (containerName === '' || a.containerName === containerName)))
         }
         return true

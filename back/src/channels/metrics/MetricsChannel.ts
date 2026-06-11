@@ -353,7 +353,7 @@ class MetricsChannel implements IChannel {
             if (instances) {
                 let instanceIndex = instances.findIndex(t => t.instanceId === instanceId)
                 if (instanceIndex>=0) {
-                    if (instances[instanceIndex].timeout) instances[instanceIndex].timeout.close()
+                    if (instances[instanceIndex].timeout) clearInterval(instances[instanceIndex].timeout)
                     instances.splice(instanceIndex,1)
                 }
                 else{
@@ -448,26 +448,22 @@ class MetricsChannel implements IChannel {
             }    
         }
         else {
-            // we extract all metrics in the metricsValue that have an impact in calculating requested metrics (for instance, several container metrics for calculating pod metric)
-            // we get some metric values ignoring the container (just ckecking namespace, pod and metricname)
-            let subset = Array.from(containerMetricsSet.keys()).filter (k => k.startsWith(asset.podNamespace + '/' + asset.podName+'/') && k.endsWith('/'+requestedMetricName))
-            if (subset.length===0) {
-                // if we cannot get metrics when extracting data from container metrics, we look for podMetrics
-                let podValue = podMetricsSet.get(asset.podNamespace + '/' + asset.podName+'/'+requestedMetricName)?.value
-                if (podValue)
-                    return  { value: podValue, timestamp: node.timestamp }
-                else {
-                    return  { value: 0, timestamp: node.timestamp }
+            // iterate directly without Array.from to avoid large temporary array allocations
+            const prefix = asset.podNamespace + '/' + asset.podName + '/'
+            const suffix = '/' + requestedMetricName
+            let accum = 0
+            let found = false
+            for (const [k, v] of containerMetricsSet) {
+                if (k.startsWith(prefix) && k.endsWith(suffix)) {
+                    accum += v.value
+                    found = true
                 }
             }
-            else {
-                let accum = 0
-                for (let submetric of subset) { 
-                    let v = containerMetricsSet.get(submetric)!.value
-                    accum +=v
-                }
-                return  { value: accum, timestamp: node.timestamp }
+            if (!found) {
+                const podValue = podMetricsSet.get(asset.podNamespace + '/' + asset.podName + '/' + requestedMetricName)?.value
+                return { value: podValue ?? 0, timestamp: node.timestamp }
             }
+            return { value: accum, timestamp: node.timestamp }
         }
     }
 

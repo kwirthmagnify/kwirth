@@ -293,6 +293,10 @@ export class TopologyChannel {
     }
     removeConnection(ws: WebSocket): void {
         this.webSockets = this.webSockets.filter(s => s.ws !== ws)
+        if (this.webSockets.length === 0) {
+            this.serviceCache.clear()
+            this.pvcCache.clear()
+        }
     }
     refreshConnection(ws: WebSocket): boolean {
         const entry = this.webSockets.find(s => s.ws === ws)

@@ -11,6 +11,7 @@ interface IAsset {
     passThroughStream?: PassThrough
     readableStream?: NodeJS.ReadableStream
     msg: ILogMessage
+    backpressureInterval?: NodeJS.Timeout
 }
 
 interface IInstance {
@@ -79,11 +80,13 @@ class LogChannel {
                 webSocket.send(JSON.stringify(asset.msg))
             } else {
                 asset.passThroughStream!.pause()
-                const interval = setInterval((w: WebSocket, a: IAsset) => {
+                if (asset.backpressureInterval) clearInterval(asset.backpressureInterval)
+                asset.backpressureInterval = setInterval((w: WebSocket, a: IAsset) => {
                     const state = (w as any).readyState
-                    if (state !== undefined && state !== 1) { clearInterval(interval); return }
+                    if (state !== undefined && state !== 1) { clearInterval(a.backpressureInterval); a.backpressureInterval = undefined; return }
                     if (w.bufferedAmount === 0) {
-                        clearInterval(interval)
+                        clearInterval(a.backpressureInterval)
+                        a.backpressureInterval = undefined
                         a.passThroughStream!.resume()
                         a.msg.text = text
                         w.send(JSON.stringify(a.msg))
@@ -226,6 +229,7 @@ class LogChannel {
             const matchesPod = (a: IAsset) => a.podNamespace === podNamespace && a.podName === podName
             const toRemove = instance.assets.filter(a => matchesPod(a) && (containerName === '' || a.containerName === containerName))
             for (const asset of toRemove) {
+                if (asset.backpressureInterval) clearInterval(asset.backpressureInterval)
                 asset.passThroughStream?.destroy()
                 ;(asset.readableStream as stream.Readable | undefined)?.destroy()
             }
@@ -273,6 +277,7 @@ class LogChannel {
             const pos = socket.instances.findIndex(t => t.instanceId === instanceId)
             if (pos >= 0) {
                 for (const asset of socket.instances[pos].assets) {
+                    if (asset.backpressureInterval) clearInterval(asset.backpressureInterval)
                     asset.passThroughStream?.destroy()
                     ;(asset.readableStream as stream.Readable | undefined)?.destroy()
                 }

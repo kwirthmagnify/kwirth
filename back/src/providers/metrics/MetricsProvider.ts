@@ -35,6 +35,7 @@ export class MetricsProvider implements IProvider {
     private loadingClusterMetrics: boolean = false
     private lastRead:IMetricsCluster|undefined
     private prevRead:IMetricsCluster|undefined
+    private nodeDataBuffer: Map<string, { slots: [IMetricsNode, IMetricsNode], activeSlot: 0|1 }> = new Map()
     // private vcpus = 0
     // private memory = 0
 
@@ -129,6 +130,25 @@ export class MetricsProvider implements IProvider {
     }
 
     stopMetricsInterval = () => clearInterval(this.metricsIntervalRef)
+
+    private getOrAllocNodeSlots = (nodeName: string): { current: IMetricsNode, prevNode: IMetricsNode | undefined } => {
+        if (!this.nodeDataBuffer.has(nodeName)) {
+            const makeEmpty = (): IMetricsNode => ({
+                name: nodeName,
+                timestamp: 0,
+                summary: undefined as any,
+                containerMetricValues: new Map(),
+                podMetricValues: new Map(),
+                machineMetricValues: new Map()
+            })
+            this.nodeDataBuffer.set(nodeName, { slots: [makeEmpty(), makeEmpty()], activeSlot: 0 })
+        }
+        const buf = this.nodeDataBuffer.get(nodeName)!
+        const current = buf.slots[buf.activeSlot]
+        const prev = buf.slots[buf.activeSlot ^ 1]
+        buf.activeSlot = (buf.activeSlot ^ 1) as 0|1
+        return { current, prevNode: prev.timestamp > 0 ? prev : undefined }
+    }
 
     public getMetricsList() {
         return Array.from(this.metricsList.keys()).map ( metricName => { return { metric:metricName, ...this.metricsList.get(metricName)} })
@@ -355,13 +375,17 @@ export class MetricsProvider implements IProvider {
     }
 
     // reads node metrics and loads 'metricValues' with parsed and formated data
-    async readNodeMetrics(srcNode:INodeInfo): Promise<IMetricsNode> {
+    async readNodeMetrics(srcNode:INodeInfo): Promise<{ node: IMetricsNode, prevNode: IMetricsNode | undefined }> {
         const regex = /(?:\s*([^=^{]*)=\"([^"]*)",*)/gm;
         let rawSampledNodeMetrics = await this.readCAdvisorMetrics(srcNode)
         let lines = rawSampledNodeMetrics.split('\n')
-        let newContainerMetricValues: Map<string, {value: number, timestamp:number}> = new Map()
-        let newPodMetricValues: Map<string, {value: number, timestamp:number}> = new Map()
-        let newMachineMetricValues: Map<string, {value: number, timestamp:number}> = new Map()
+        const { current, prevNode } = this.getOrAllocNodeSlots(srcNode.name)
+        current.containerMetricValues.clear()
+        current.podMetricValues.clear()
+        current.machineMetricValues.clear()
+        const newContainerMetricValues = current.containerMetricValues
+        const newPodMetricValues = current.podMetricValues
+        const newMachineMetricValues = current.machineMetricValues
 
         for (let line of lines) {
             if (line==='' || line.startsWith('#')) continue
@@ -528,15 +552,10 @@ export class MetricsProvider implements IProvider {
             if (!newSummary.network.txErrors) newSummary.network.txErrors = newSummary.network.interfaces.reduce( (tot,iface) => tot+iface.txErrors, 0 )
             if (!newSummary.network.rxErrors) newSummary.network.rxErrors = newSummary.network.interfaces.reduce( (tot,iface) => tot+iface.rxErrors, 0 )
         }
-        
-        return  {
-            name: srcNode.name,
-            timestamp:Date.now(),
-            summary: newSummary,
-            containerMetricValues: newContainerMetricValues,
-            podMetricValues: newPodMetricValues,
-            machineMetricValues: newMachineMetricValues
-        }
+        current.name = srcNode.name
+        current.timestamp = Date.now()
+        current.summary = newSummary
+        return { node: current, prevNode }
     }
 
     public readCAdvisorSummary = async (node:INodeInfo): Promise<any> => {
@@ -567,11 +586,12 @@ export class MetricsProvider implements IProvider {
             }
 
             // we read the metrics of the nodeset
-            let nodes:IMetricsNode[] = []
+            let nodeDataList: Array<{ node: IMetricsNode, prevNode: IMetricsNode | undefined }> = []
             for (let node of clusterInfo.nodes.values()) {
-                nodes.push(await this.readNodeMetrics(node))
+                nodeDataList.push(await this.readNodeMetrics(node))
             }
-            const clusterMetricValues = this.enrichWithSyntheticMetrics(nodes)
+            const nodes = nodeDataList.map(d => d.node)
+            const clusterMetricValues = this.enrichWithSyntheticMetrics(nodeDataList)
             let usage = this.getClusterUsage()
             this.loadingClusterMetrics = false
             return { metricsInterval: this.metricsInterval, cluster:usage, nodes, clusterMetricValues }
@@ -612,7 +632,7 @@ export class MetricsProvider implements IProvider {
             let vcpus = 0
             let memory = 0
             for (let node of nodes.values()) {
-                let metricsNode = await this.readNodeMetrics(node)
+                let { node: metricsNode } = await this.readNodeMetrics(node)
                 if (metricsNode.machineMetricValues.get('machine_cpu_cores')) vcpus += metricsNode.machineMetricValues.get('machine_cpu_cores')!.value
                 if (metricsNode.machineMetricValues.get('machine_memory_bytes')) memory += metricsNode.machineMetricValues.get('machine_memory_bytes')!.value
             }
@@ -631,16 +651,14 @@ export class MetricsProvider implements IProvider {
         }
     }
 
-    private enrichWithSyntheticMetrics(nodes: IMetricsNode[]): Map<string, {value: number, timestamp: number}> {
+    private enrichWithSyntheticMetrics(nodeData: Array<{ node: IMetricsNode, prevNode: IMetricsNode | undefined }>): Map<string, {value: number, timestamp: number}> {
         const totalMemory = this.clusterInfo.memory
         const totalVcpus = this.clusterInfo.vcpus
         const interval = this.metricsInterval
 
-        for (const node of nodes) {
-            const prevNode = this.prevRead?.nodes.find(n => n.name === node.name)
-
-            const containerEntries = Array.from(node.containerMetricValues.entries())
-            for (const [key, entry] of containerEntries) {
+        for (const { node, prevNode } of nodeData) {
+            const containerSynthetics: Array<[string, {value: number, timestamp: number}]> = []
+            for (const [key, entry] of node.containerMetricValues) {
                 const lastSlash = key.lastIndexOf('/')
                 const prefix = key.substring(0, lastSlash + 1)
                 const metricName = key.substring(lastSlash + 1)
@@ -648,33 +666,34 @@ export class MetricsProvider implements IProvider {
                 switch (metricName) {
                     case 'container_memory_working_set_bytes': {
                         const pct = totalMemory > 0 ? (entry.value / totalMemory) * 100 : 0
-                        node.containerMetricValues.set(`${prefix}kwirth_container_memory_percentage`, { value: pct, timestamp: entry.timestamp })
+                        containerSynthetics.push([`${prefix}kwirth_container_memory_percentage`, { value: pct, timestamp: entry.timestamp }])
                         break
                     }
                     case 'container_cpu_usage_seconds_total': {
                         const prevEntry = prevNode?.containerMetricValues.get(key)
                         const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
                         const pct = totalVcpus > 0 && interval > 0 ? (delta / interval) / totalVcpus * 100 : 0
-                        node.containerMetricValues.set(`${prefix}kwirth_container_cpu_percentage`, { value: pct, timestamp: entry.timestamp })
+                        containerSynthetics.push([`${prefix}kwirth_container_cpu_percentage`, { value: pct, timestamp: entry.timestamp }])
                         break
                     }
                     case 'container_fs_writes_bytes_total': {
                         const prevEntry = prevNode?.containerMetricValues.get(key)
                         const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
-                        node.containerMetricValues.set(`${prefix}kwirth_container_write_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp })
+                        containerSynthetics.push([`${prefix}kwirth_container_write_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp }])
                         break
                     }
                     case 'container_fs_reads_bytes_total': {
                         const prevEntry = prevNode?.containerMetricValues.get(key)
                         const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
-                        node.containerMetricValues.set(`${prefix}kwirth_container_read_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp })
+                        containerSynthetics.push([`${prefix}kwirth_container_read_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp }])
                         break
                     }
                 }
             }
+            for (const [k, v] of containerSynthetics) node.containerMetricValues.set(k, v)
 
-            const podEntries = Array.from(node.podMetricValues.entries())
-            for (const [key, entry] of podEntries) {
+            const podSynthetics: Array<[string, {value: number, timestamp: number}]> = []
+            for (const [key, entry] of node.podMetricValues) {
                 const lastSlash = key.lastIndexOf('/')
                 const prefix = key.substring(0, lastSlash + 1)
                 const metricName = key.substring(lastSlash + 1)
@@ -683,17 +702,18 @@ export class MetricsProvider implements IProvider {
                     case 'container_network_transmit_bytes_total': {
                         const prevEntry = prevNode?.podMetricValues.get(key)
                         const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
-                        node.podMetricValues.set(`${prefix}kwirth_container_transmit_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp })
+                        podSynthetics.push([`${prefix}kwirth_container_transmit_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp }])
                         break
                     }
                     case 'container_network_receive_bytes_total': {
                         const prevEntry = prevNode?.podMetricValues.get(key)
                         const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
-                        node.podMetricValues.set(`${prefix}kwirth_container_receive_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp })
+                        podSynthetics.push([`${prefix}kwirth_container_receive_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp }])
                         break
                     }
                 }
             }
+            for (const [k, v] of podSynthetics) node.podMetricValues.set(k, v)
         }
 
         // cluster-level synthetic metrics
@@ -702,7 +722,7 @@ export class MetricsProvider implements IProvider {
 
         // total pods: count distinct namespace/pod prefixes across all nodes
         const podKeys = new Set<string>()
-        for (const node of nodes) {
+        for (const { node } of nodeData) {
             for (const key of node.podMetricValues.keys()) {
                 const parts = key.split('/')
                 if (parts.length >= 2) podKeys.add(`${parts[0]}/${parts[1]}`)
@@ -715,7 +735,7 @@ export class MetricsProvider implements IProvider {
 
         // cluster memory and cpu from node summaries
         let memUsed = 0, memTotal = 0, cpuUsedNano = 0
-        for (const node of nodes) {
+        for (const { node } of nodeData) {
             if (node.summary?.memory) {
                 memUsed += node.summary.memory.usageBytes
                 memTotal += node.summary.memory.usageBytes + node.summary.memory.availableBytes

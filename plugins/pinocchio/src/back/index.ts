@@ -8,6 +8,8 @@ import { generateText, Output, stepCountIs, z } from '@kwirthmagnify/kwirth-comm
 const _ = require('lodash')
 const nunjucks = require('nunjucks')
 
+const MAX_ANALYSIS_HISTORY = 50
+
 // basic nunjucks config
 nunjucks.configure({ autoescape: true })
 
@@ -368,6 +370,7 @@ export class PinocchioChannel {
                                     pod: eventsEvent.obj
                                 }
                                 this.analysis.push(analysis)
+                                if (this.analysis.length > MAX_ANALYSIS_HISTORY) this.analysis.shift()
                                 this.broadcastAnalysis(analysis)
                             }
                             catch (err:any) {

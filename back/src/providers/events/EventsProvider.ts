@@ -61,6 +61,7 @@ export class EventsProvider implements IProvider {
 
         const watchLoop = async () => {
             if (entry.stopped) return
+            entry.watch = new Watch(this.clusterInfo.kubeConfig)
             try {
                 await entry.watch.watch(
                     resourcePath,
@@ -166,7 +167,6 @@ export class EventsProvider implements IProvider {
 
     startProvider = async () => {
         logInfo(ELogComponent.PROVIDER, 'Events reception started...')
-
         const coreResources = [
             '/api/v1/nodes',
             '/api/v1/namespaces',
@@ -182,7 +182,6 @@ export class EventsProvider implements IProvider {
             '/api/v1/resourcequotas',
             '/api/v1/limitranges'
         ]
-
         const apiResources = [
             '/apis/apps/v1/deployments',
             '/apis/apps/v1/daemonsets',
@@ -199,9 +198,8 @@ export class EventsProvider implements IProvider {
             '/apis/batch/v1/jobs',
             '/apis/batch/v1/cronjobs',
             '/apis/apiextensions.k8s.io/v1/customresourcedefinitions'
-        ];
-
-        [...coreResources, ...apiResources].forEach(path => this.startResourceWatcher(path, this.handleEvent));
+        ]
+        ;[...coreResources, ...apiResources].forEach(path => this.startResourceWatcher(path, this.handleEvent))
     }
 
     stopProvider = async () => {

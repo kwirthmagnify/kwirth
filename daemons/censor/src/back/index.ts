@@ -98,6 +98,9 @@ interface IDaemonInstance {
     llmErrorCooldownUntil: number
     ephemeral?: boolean
     llm?: ILlm
+    cachedSchema?: ReturnType<typeof zodFromExample>
+    cachedModel?: ReturnType<typeof buildModel>
+    cachedProviderOptions?: Record<string, Record<string, unknown>>
     subscribers: Set<(event: unknown) => void>
 }
 
@@ -220,7 +223,10 @@ export class CensorDaemon implements IDaemon {
         const inst = this.instances.get(instanceConfig.id)
         if (!inst) return true
         const toRemove = inst.assets.filter(a => a.namespace === podNamespace && a.pod === podName && (containerName === '' || a.container === containerName))
-        for (const asset of toRemove) asset.passThroughStream.destroy()
+        for (const asset of toRemove) {
+            asset.passThroughStream.removeAllListeners()
+            asset.passThroughStream.destroy()
+        }
         inst.assets = inst.assets.filter(a => !(a.namespace === podNamespace && a.pod === podName && (containerName === '' || a.container === containerName)))
         this.broadcast(inst, 'assets', { assets: inst.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
         return true
@@ -229,7 +235,10 @@ export class CensorDaemon implements IDaemon {
     stopInstance(instanceId: string): void {
         const inst = this.instances.get(instanceId)
         if (!inst) return
-        for (const asset of inst.assets) asset.passThroughStream.destroy()
+        for (const asset of inst.assets) {
+            asset.passThroughStream.removeAllListeners()
+            asset.passThroughStream.destroy()
+        }
         this.instances.delete(instanceId)
         this.pendingSubscribers.delete(instanceId)
     }
@@ -332,6 +341,9 @@ export class CensorDaemon implements IDaemon {
                     this.instances.set(instanceId, target)
                 }
                 target.cfg = cfg as ICensorInstanceConfig
+                target.cachedSchema = undefined
+                target.cachedModel = undefined
+                target.cachedProviderOptions = undefined
                 if (_llms) await this.backDaemonObject.writeStorageCommon!(STORAGE_KEY_LLMS, false, _llms)
                 const llmList: ILlm[] = (_llms ?? ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? [])) as ILlm[]
                 target.llm = llmList.find((l: ILlm) => l.id === target!.cfg.llmId)
@@ -490,7 +502,10 @@ export class CensorDaemon implements IDaemon {
                     await loadModels(this.providers, this.backDaemonObject)
                 }
             }
-            const model = buildModel(inst.llm, this.providers)
+            if (!inst.cachedModel) {
+                inst.cachedModel = buildModel(inst.llm, this.providers)
+            }
+            const model = inst.cachedModel
             if (!model) {
                 this.backDaemonObject.logWarning?.(`[censor-daemon] could not build model for LLM '${inst.llm.id}'`)
                 return
@@ -499,22 +514,29 @@ export class CensorDaemon implements IDaemon {
             const system = inst.cfg.system?.trim() || DEFAULT_SYSTEM
             const prompt = `${DEFAULT_USER_PROMPT(lines.length)}\n\n${lines.join('\n')}`
 
-            let providerOptions: Record<string, Record<string, unknown>> = {}
-            switch (inst.llm.provider) {
-                case 'google':   providerOptions = { google: { structuredOutputs: true } }; break
-                case 'groq':     providerOptions = { groq: { structuredOutputs: true } }; break
-                case 'mistral':  providerOptions = { mistral: { strictJsonSchema: true, structuredOutputs: true } }; break
-                default:         providerOptions = { openai: {} }
+            if (!inst.cachedProviderOptions) {
+                const opts: Record<string, Record<string, unknown>> = {}
+                switch (inst.llm.provider) {
+                    case 'google':   Object.assign(opts, { google: { structuredOutputs: true } }); break
+                    case 'groq':     Object.assign(opts, { groq: { structuredOutputs: true } }); break
+                    case 'mistral':  Object.assign(opts, { mistral: { strictJsonSchema: true, structuredOutputs: true } }); break
+                    default:         Object.assign(opts, { openai: {} })
+                }
+                inst.cachedProviderOptions = opts
             }
+            const providerOptions = inst.cachedProviderOptions
 
-            let example: Record<string, unknown>
-            try {
-                example = JSON.parse(inst.cfg.exampleJson?.trim() || '{"patterns":[""]}')
-            } catch (err) {
-                this.backDaemonObject.logWarning?.(`[censor-daemon] invalid exampleJson, using default. Error: ${err}`)
-                example = { patterns: [''] }
+            if (!inst.cachedSchema) {
+                let example: Record<string, unknown>
+                try {
+                    example = JSON.parse(inst.cfg.exampleJson?.trim() || '{"patterns":[""]}')
+                } catch (err) {
+                    this.backDaemonObject.logWarning?.(`[censor-daemon] invalid exampleJson, using default. Error: ${err}`)
+                    example = { patterns: [''] }
+                }
+                inst.cachedSchema = zodFromExample(example)
             }
-            const schema = zodFromExample(example)
+            const schema = inst.cachedSchema
 
             inst.llmCount++
             inst.llmLinesCount += lines.length

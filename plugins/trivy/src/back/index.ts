@@ -180,6 +180,12 @@ class TrivyChannel {
             const pos = socket.instances.findIndex(t => t.instanceId === instanceId)
             if (pos >= 0) socket.instances.splice(pos, 1)
         }
+        if (!this.webSockets.some(s => s.instances.length > 0)) {
+            for (const informer of this.informers.values()) {
+                try { informer.stop() } catch {}
+            }
+            this.informers.clear()
+        }
     }
 
     containsConnection = (webSocket: WebSocket): boolean => Boolean(this.webSockets.find(s => s.ws === webSocket))
