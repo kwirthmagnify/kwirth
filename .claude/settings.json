@@ -45,6 +45,9 @@
       "Bash(cmd /c \"dir c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\")",
       "Bash(cmd /c \"dir c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common\\\\dist\")",
       "PowerShell($src = \"C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common\\\\dist\"; $dst = \"C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\back\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common\\\\dist\"; if \\(Test-Path $dst\\) { Remove-Item $dst -Recurse -Force }; Copy-Item $src $dst -Recurse; Get-ChildItem $dst | Where-Object { $_.Name -match \"Daemon|index\" } | Select-Object Name)",
+      "Bash(* node build.mjs *)",
+      "Bash(* npm publish *)",
+      "Bash(* npm install *)",
       "Bash(npm config *)",
       "Bash(npm version *)",
       "Bash(npm view *)",
@@ -165,7 +168,14 @@
       "Bash(Get-ChildItem -Recurse c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\\\\src)",
       "Bash(npm unpublish *)",
       "Bash(findstr /N \"sessionconnected\\\\|sessiondisconnected\\\\|subscribe\\\\|method:\" 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\src\\\\back\\\\index.ts')",
-      "Bash(findstr /N \"method:\" 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\src\\\\back\\\\index.ts')"
+      "Bash(findstr /N \"method:\" 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\src\\\\back\\\\index.ts')",
+      "PowerShell(New-Item -ItemType Directory -Force c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\ratelimit\\\\src\\\\back)",
+      "PowerShell(New-Item -ItemType Directory -Force c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\ratelimit\\\\src\\\\front)",
+      "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-back\\\\package.json, c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\regex\\\\package.json, c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\timed\\\\package.json, c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\ratelimit\\\\package.json, c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\console\\\\package.json, c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\file\\\\package.json, c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\tee\\\\package.json, c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\\\\package.json, c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\email-resend\\\\package.json, c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\email-smtp\\\\package.json | ForEach-Object { $j = Get-Content $_.FullName | ConvertFrom-Json; \"$\\($j.name\\): $\\($j.version\\)\" })",
+      "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth -Recurse -Name \"package.json\" -Depth 3 | Where-Object { $_ -notmatch \"node_modules\" } | ForEach-Object { $j = Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\$_\" | ConvertFrom-Json; if \\($j.dependencies.'@kwirthmagnify/kwirth-common-back' -or $j.devDependencies.'@kwirthmagnify/kwirth-common-back'\\) { $_.Replace\\('\\\\package.json',''\\) + \": dep=\" + \\($j.dependencies.'@kwirthmagnify/kwirth-common-back' ?? $j.devDependencies.'@kwirthmagnify/kwirth-common-back'\\) } })",
+      "PowerShell(@\\(\"plugins/censor\", \"plugins/echo\", \"plugins/trivy\", \"daemons/censor\"\\) | ForEach-Object { $j = Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\$_\\\\package.json\" | ConvertFrom-Json; \"$_`: v=$\\($j.version\\) common-back=$\\($j.dependencies.'@kwirthmagnify/kwirth-common-back'\\)\" })",
+      "PowerShell(@\\(\"providers/kafka\", \"providers/otel\", \"providers/sample\", \"providers/tick\", \"providers/validating\"\\) | ForEach-Object { $j = Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\$_\\\\package.json\" | ConvertFrom-Json; \"$_`: v=$\\($j.version\\) common-back=$\\($j.dependencies.'@kwirthmagnify/kwirth-common-back'\\)\" })",
+      "PowerShell(@\\(\"plugins/echo\", \"plugins/trivy\", \"plugins/censor\", \"daemons/censor\"\\) | ForEach-Object { if \\(Test-Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\$_\\\\dist\\\\package.json\"\\) { $j = Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\$_\\\\dist\\\\package.json\" | ConvertFrom-Json; \"$_`: npm-name=$\\($j.name\\) dist-version=$\\($j.version\\)\" } else { \"$_`: no dist/package.json\" } })"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

@@ -6,7 +6,7 @@ import {
 import { Add } from '@mui/icons-material'
 import {
     IAvailableSender, ICompositeNode, ICompositeRefNode,
-    ICompositeFanoutNode, ICompositeTimedNode, ICompositeRegexNode
+    ICompositeFanoutNode, ICompositeFilterNode
 } from './types'
 import { addFanoutTarget } from './treeUtils'
 
@@ -18,8 +18,6 @@ interface INodeEditorProps {
     onFlowChange: (flow: ICompositeNode) => void
 }
 
-const FILTER_TYPES = new Set(['timed', 'regex', 'composite', 'fanout'])
-
 // ─── Ref editor ───────────────────────────────────────────────────────────────
 
 const RefEditor: React.FC<{
@@ -29,8 +27,8 @@ const RefEditor: React.FC<{
     availableSenders: IAvailableSender[]
     onFlowChange: (flow: ICompositeNode) => void
 }> = ({ node, path, flow, availableSenders, onFlowChange }) => {
-    const senders = availableSenders.filter(s => !FILTER_TYPES.has(s.id))
-    const sender = senders.find(s => s.id === node.senderId)
+    const outputSenders = availableSenders.filter(s => s.senderType !== 'filter')
+    const sender = outputSenders.find(s => s.id === node.senderId)
     const configNames = sender?.configNames ?? []
 
     const update = (patch: Partial<ICompositeRefNode>) => {
@@ -47,7 +45,7 @@ const RefEditor: React.FC<{
             <FormControl size='small' fullWidth>
                 <InputLabel>Sender</InputLabel>
                 <Select label='Sender' value={node.senderId} onChange={e => update({ senderId: e.target.value })}>
-                    {senders.map(s => (
+                    {outputSenders.map(s => (
                         <MenuItem key={s.id} value={s.id}>{s.displayName ?? s.id}</MenuItem>
                     ))}
                 </Select>
@@ -69,7 +67,7 @@ const RefEditor: React.FC<{
 
 // ─── Fanout editor ────────────────────────────────────────────────────────────
 
-type FanoutChildKind = 'sender' | 'fanout' | 'timed' | 'regex'
+type FanoutChildKind = 'sender' | 'fanout' | 'filter'
 
 const FanoutEditor: React.FC<{
     node: ICompositeFanoutNode
@@ -78,32 +76,31 @@ const FanoutEditor: React.FC<{
     availableSenders: IAvailableSender[]
     onFlowChange: (flow: ICompositeNode) => void
 }> = ({ node, path, flow, availableSenders, onFlowChange }) => {
-    const senders = availableSenders.filter(s => !FILTER_TYPES.has(s.id))
+    const outputSenders  = availableSenders.filter(s => s.senderType !== 'filter')
+    const filterSenders  = availableSenders.filter(s => s.senderType === 'filter')
     const [childKind, setChildKind] = useState<FanoutChildKind>('sender')
-    const [pickedSender, setPickedSender] = useState(senders[0]?.id ?? '')
+    const [pickedSender, setPickedSender] = useState(outputSenders[0]?.id ?? '')
+    const [pickedFilter, setPickedFilter] = useState(filterSenders[0]?.id ?? '')
     const [pickedConfig, setPickedConfig] = useState('')
 
-    const timedConfigs = availableSenders.find(s => s.id === 'timed')?.configNames ?? []
-    const regexConfigs = availableSenders.find(s => s.id === 'regex')?.configNames ?? []
     const senderConfigs = availableSenders.find(s => s.id === pickedSender)?.configNames ?? []
+    const filterConfigs = availableSenders.find(s => s.id === pickedFilter)?.configNames ?? []
+    const configsForKind = childKind === 'sender' ? senderConfigs : childKind === 'filter' ? filterConfigs : []
 
     const addDisabled =
         (childKind === 'sender' && (!pickedSender || (senderConfigs.length > 0 && !pickedConfig))) ||
-        (childKind === 'timed' && timedConfigs.length > 0 && !pickedConfig) ||
-        (childKind === 'regex' && regexConfigs.length > 0 && !pickedConfig)
+        (childKind === 'filter' && filterSenders.length > 0 && filterConfigs.length > 0 && !pickedConfig)
 
     const handleAdd = () => {
         let newNode: ICompositeNode
-        if (childKind === 'sender')      newNode = { type: 'ref', senderId: pickedSender, configName: pickedConfig }
+        if (childKind === 'sender')      newNode = { type: 'ref',    senderId: pickedSender, configName: pickedConfig }
         else if (childKind === 'fanout') newNode = { type: 'fanout', targets: [] }
-        else if (childKind === 'timed')  newNode = { type: 'timed', configName: pickedConfig }
-        else                             newNode = { type: 'regex', configName: pickedConfig }
+        else                             newNode = { type: 'filter', senderId: pickedFilter, configName: pickedConfig }
         onFlowChange(addFanoutTarget(flow, path, newNode))
         setPickedConfig('')
     }
 
     const selectSx = { height: 32, fontSize: '0.8rem', '& .MuiSelect-select': { py: 0, px: 1 } }
-    const configsForKind = childKind === 'timed' ? timedConfigs : childKind === 'regex' ? regexConfigs : childKind === 'sender' ? senderConfigs : []
 
     return (
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -117,14 +114,20 @@ const FanoutEditor: React.FC<{
                     sx={{ ...selectSx, minWidth: 110 }}>
                     <MenuItem value='sender' sx={{ fontSize: '0.8rem' }}>Sender</MenuItem>
                     <MenuItem value='fanout' sx={{ fontSize: '0.8rem' }}>Fanout</MenuItem>
-                    <MenuItem value='timed'  sx={{ fontSize: '0.8rem' }}>Timed filter</MenuItem>
-                    <MenuItem value='regex'  sx={{ fontSize: '0.8rem' }}>Regex filter</MenuItem>
+                    <MenuItem value='filter' sx={{ fontSize: '0.8rem' }}>Filter</MenuItem>
                 </Select>
                 {childKind === 'sender' && (
                     <Select size='small' value={pickedSender}
                         onChange={e => { setPickedSender(e.target.value); setPickedConfig('') }}
                         displayEmpty sx={{ ...selectSx, flex: 1, minWidth: 100 }}>
-                        {senders.map(s => <MenuItem key={s.id} value={s.id} sx={{ fontSize: '0.8rem' }}>{s.displayName ?? s.id}</MenuItem>)}
+                        {outputSenders.map(s => <MenuItem key={s.id} value={s.id} sx={{ fontSize: '0.8rem' }}>{s.displayName ?? s.id}</MenuItem>)}
+                    </Select>
+                )}
+                {childKind === 'filter' && filterSenders.length > 0 && (
+                    <Select size='small' value={pickedFilter}
+                        onChange={e => { setPickedFilter(e.target.value); setPickedConfig('') }}
+                        displayEmpty sx={{ ...selectSx, flex: 1, minWidth: 100 }}>
+                        {filterSenders.map(s => <MenuItem key={s.id} value={s.id} sx={{ fontSize: '0.8rem' }}>{s.displayName ?? s.id}</MenuItem>)}
                     </Select>
                 )}
                 {configsForKind.length > 0 && (
@@ -145,19 +148,22 @@ const FanoutEditor: React.FC<{
     )
 }
 
-// ─── Timed editor ─────────────────────────────────────────────────────────────
+// ─── Filter editor ────────────────────────────────────────────────────────────
 
-const TimedEditor: React.FC<{
-    node: ICompositeTimedNode
+const FilterEditor: React.FC<{
+    node: ICompositeFilterNode
     path: string
     flow: ICompositeNode
     availableSenders: IAvailableSender[]
     onFlowChange: (flow: ICompositeNode) => void
 }> = ({ node, path, flow, availableSenders, onFlowChange }) => {
-    const timedConfigs = availableSenders.find(s => s.id === 'timed')?.configNames ?? []
+    const registration = (window as any).__kwirth_senders__?.[node.senderId]
+    const nodeLabel     = registration?.nodeLabel ?? node.senderId
+    const nodeDesc      = registration?.nodeDescription ?? ''
+    const filterConfigs = availableSenders.find(s => s.id === node.senderId)?.configNames ?? []
 
     const update = (configName: string) => {
-        const updated: ICompositeTimedNode = { ...node, configName }
+        const updated: ICompositeFilterNode = { ...node, configName }
         const newFlow = path
             ? (() => { const c = JSON.parse(JSON.stringify(flow)) as ICompositeNode; _set(c, path, updated); return c })()
             : updated
@@ -166,67 +172,17 @@ const TimedEditor: React.FC<{
 
     return (
         <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography variant='caption' color='text.secondary'>
-                Filters by time of day / day of week. Matching messages are forwarded to the next node; others are dropped.
-            </Typography>
+            {nodeDesc && <Typography variant='caption' color='text.secondary'>{nodeDesc}</Typography>}
             <FormControl size='small' fullWidth>
-                <InputLabel>Timed config</InputLabel>
-                <Select label='Timed config' value={node.configName}
-                    onChange={e => update(e.target.value)}>
+                <InputLabel>{nodeLabel} config</InputLabel>
+                <Select label={`${nodeLabel} config`} value={node.configName} onChange={e => update(e.target.value)}>
                     <MenuItem value=''><em>— none —</em></MenuItem>
-                    {timedConfigs.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                    {filterConfigs.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
                 </Select>
             </FormControl>
-            {timedConfigs.length === 0 && (
+            {filterConfigs.length === 0 && (
                 <Typography variant='caption' color='warning.main'>
-                    No timed configs found. Add one via Manage Senders first.
-                </Typography>
-            )}
-            {node.next && (
-                <Typography variant='caption' color='text.secondary'>
-                    Next: <strong>{node.next.type === 'ref' ? node.next.senderId : node.next.type}</strong>
-                    {' '}(click in canvas to configure)
-                </Typography>
-            )}
-        </Stack>
-    )
-}
-
-// ─── Regex editor ─────────────────────────────────────────────────────────────
-
-const RegexEditor: React.FC<{
-    node: ICompositeRegexNode
-    path: string
-    flow: ICompositeNode
-    availableSenders: IAvailableSender[]
-    onFlowChange: (flow: ICompositeNode) => void
-}> = ({ node, path, flow, availableSenders, onFlowChange }) => {
-    const regexConfigs = availableSenders.find(s => s.id === 'regex')?.configNames ?? []
-
-    const update = (configName: string) => {
-        const updated: ICompositeRegexNode = { ...node, configName }
-        const newFlow = path
-            ? (() => { const c = JSON.parse(JSON.stringify(flow)) as ICompositeNode; _set(c, path, updated); return c })()
-            : updated
-        onFlowChange(newFlow)
-    }
-
-    return (
-        <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography variant='caption' color='text.secondary'>
-                Filters by regex pattern / field. Messages with a "send" action are forwarded to the next node; "drop" actions discard the message.
-            </Typography>
-            <FormControl size='small' fullWidth>
-                <InputLabel>Regex config</InputLabel>
-                <Select label='Regex config' value={node.configName}
-                    onChange={e => update(e.target.value)}>
-                    <MenuItem value=''><em>— none —</em></MenuItem>
-                    {regexConfigs.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                </Select>
-            </FormControl>
-            {regexConfigs.length === 0 && (
-                <Typography variant='caption' color='warning.main'>
-                    No regex configs found. Add one via Manage Senders first.
+                    No configs found. Add one via Manage Senders first.
                 </Typography>
             )}
             {node.next && (
@@ -242,19 +198,21 @@ const RegexEditor: React.FC<{
 // ─── NodeEditor dispatcher ────────────────────────────────────────────────────
 
 const NodeEditor: React.FC<INodeEditorProps> = ({ node, path, flow, availableSenders, onFlowChange }) => {
-    const TYPE_LABEL: Record<string, string> = { fanout: 'Fanout', ref: 'Sender ref', timed: 'Timed filter', regex: 'Regex filter' }
+    const filterLabel = node.type === 'filter'
+        ? ((window as any).__kwirth_senders__?.[node.senderId]?.nodeLabel ?? node.senderId)
+        : undefined
+    const TYPE_LABEL: Record<string, string> = { fanout: 'Fanout', ref: 'Sender ref', filter: filterLabel ?? 'Filter' }
 
     return (
         <Box sx={{ height: '100%', overflow: 'auto', p: 2 }}>
             <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 1 }}>
-                <Chip label={node.type} size='small' />
+                <Chip label={node.type === 'filter' ? node.senderId : node.type} size='small' />
                 <Typography variant='subtitle2'>{TYPE_LABEL[node.type] ?? node.type}</Typography>
             </Stack>
             <Divider />
             {node.type === 'ref'    && <RefEditor    node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
-            {node.type === 'fanout' && <FanoutEditor node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
-            {node.type === 'timed'  && <TimedEditor  node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
-            {node.type === 'regex'  && <RegexEditor  node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
+            {node.type === 'fanout' && <FanoutEditor  node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
+            {node.type === 'filter' && <FilterEditor  node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
         </Box>
     )
 }

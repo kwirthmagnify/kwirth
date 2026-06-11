@@ -1,6 +1,6 @@
 PINOCCHIO+CENSOR
 cuando estamos en desktop conge cnofig distinat de cuando estamos en kube.
-dsi destop encuentra config del cluster, debe dar al usuario la ocpine de conger ocnfig del cluster en lugar de config del nodo
+si destop encuentra config del cluster, debe dar al usuario la ocpine de conger ocnfig del cluster en lugar de config del nodo
   ¿por channel?
   ¿daemons?
   ¿TODO? preguntar al arrancar
@@ -15,8 +15,6 @@ alimentar desde provider de trivy
 
 CENSOR
 kube events (oom, evicted...)
-auto bacthSize  (initial, min => solo se reduce)
-como manejar mensajes largos (trim? ignore? alert?)
 añadir un provider de syslog
 añadir "immed" para un tipo de mensaje concreto
 prioridades a la hora de procesar mensajes. priorizar origins?

@@ -82,6 +82,7 @@ function matchesWindow(rule: ITimedSenderRule, minutes: number, day: number): bo
 
 export class TimedSender implements ISender {
     readonly id = 'timed'
+    readonly senderType = 'filter' as const
     private configs = new Map<string, ITimedSenderConfig>()
 
     addConfig(config: ISenderConfig): void {
@@ -102,8 +103,22 @@ export class TimedSender implements ISender {
         return Array.from(this.configs.keys())
     }
 
-    async send(_configName: string, _message: ISenderMessage): Promise<void> {
-        // timed sender is a filter used inside composite pipelines; standalone send is a no-op
+    getNodeMeta() {
+        return { label: 'Timed filter', icon: 'AccessTime', description: 'Routes or drops messages based on time-of-day windows and day-of-week rules.' }
+    }
+
+    async send(_configName: string, _message: ISenderMessage): Promise<void> {}
+
+    async evalFilter(configName: string, _message: ISenderMessage, forward: () => Promise<void>): Promise<void> {
+        const config = this.configs.get(configName)
+        if (!config) return
+        const { minutes, day } = currentContext(config.timezone)
+        for (const rule of config.rules ?? []) {
+            if (!matchesWindow(rule, minutes, day)) continue
+            if (rule.action === 'send') await forward()
+            return
+        }
+        if ((config.defaultAction ?? 'drop') === 'send') await forward()
     }
 
     getConfigSchema(): ISenderFieldDef[] {

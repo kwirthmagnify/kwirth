@@ -16,52 +16,42 @@ interface IPipelineCanvasProps {
     onSelectPath: (path: string) => void
 }
 
-// ─── Ref senders (exclude filter/routing types) ───────────────────────────────
-
-const FILTER_TYPES = new Set(['timed', 'regex', 'composite', 'fanout'])
-
-function refSenders(available: IAvailableSender[]): IAvailableSender[] {
-    return available.filter(s => !FILTER_TYPES.has(s.id))
-}
-
 // ─── Add child button group ───────────────────────────────────────────────────
 
-type ChildKind = 'sender' | 'fanout' | 'timed' | 'regex'
+type ChildKind = 'sender' | 'fanout' | 'filter'
 
 const AddChildButtons: React.FC<{
     node: ICompositeNode
     availableSenders: IAvailableSender[]
     onAdd: (newNode: ICompositeNode) => void
 }> = ({ node, availableSenders, onAdd }) => {
-    const senders = refSenders(availableSenders)
-    const [pickedSender, setPickedSender] = useState(senders[0]?.id ?? '')
+    const outputSenders = availableSenders.filter(s => s.senderType !== 'filter')
+    const filterSenders = availableSenders.filter(s => s.senderType === 'filter')
+    const [pickedSender, setPickedSender] = useState(outputSenders[0]?.id ?? '')
+    const [pickedFilter, setPickedFilter] = useState(filterSenders[0]?.id ?? '')
     const [childKind, setChildKind] = useState<ChildKind>('sender')
     const [pickedConfig, setPickedConfig] = useState('')
 
-    const canAdd = node.type === 'fanout' || ((node.type === 'timed' || node.type === 'regex') && !node.next)
+    const canAdd = node.type === 'fanout' || (node.type === 'filter' && !node.next)
     if (!canAdd) return null
 
-    const timedConfigs = availableSenders.find(s => s.id === 'timed')?.configNames ?? []
-    const regexConfigs = availableSenders.find(s => s.id === 'regex')?.configNames ?? []
     const senderConfigs = availableSenders.find(s => s.id === pickedSender)?.configNames ?? []
-    const configsForKind = childKind === 'timed' ? timedConfigs : childKind === 'regex' ? regexConfigs : childKind === 'sender' ? senderConfigs : []
+    const filterConfigs = availableSenders.find(s => s.id === pickedFilter)?.configNames ?? []
+    const configsForKind = childKind === 'sender' ? senderConfigs : childKind === 'filter' ? filterConfigs : []
 
     const handleCreate = () => {
         if (childKind === 'sender') {
             onAdd({ type: 'ref', senderId: pickedSender, configName: pickedConfig })
         } else if (childKind === 'fanout') {
             onAdd(createNode('fanout'))
-        } else if (childKind === 'timed') {
-            onAdd({ type: 'timed', configName: pickedConfig })
         } else {
-            onAdd({ type: 'regex', configName: pickedConfig })
+            onAdd({ type: 'filter', senderId: pickedFilter, configName: pickedConfig })
         }
     }
 
     const addDisabled =
         (childKind === 'sender' && (!pickedSender || (senderConfigs.length > 0 && !pickedConfig))) ||
-        (childKind === 'timed' && timedConfigs.length > 0 && !pickedConfig) ||
-        (childKind === 'regex' && regexConfigs.length > 0 && !pickedConfig)
+        (childKind === 'filter' && filterSenders.length > 0 && filterConfigs.length > 0 && !pickedConfig)
 
     const selectSx = { height: 28, fontSize: '0.75rem', minWidth: 110, '& .MuiSelect-select': { py: 0, px: 1 } }
     const tooltipTitle = node.type === 'fanout' ? 'Add target' : 'Set next'
@@ -74,14 +64,22 @@ const AddChildButtons: React.FC<{
             >
                 <MenuItem value='sender' sx={{ fontSize: '0.75rem' }}>Sender</MenuItem>
                 <MenuItem value='fanout' sx={{ fontSize: '0.75rem' }}>Fanout</MenuItem>
-                <MenuItem value='timed' sx={{ fontSize: '0.75rem' }}>Timed filter</MenuItem>
-                <MenuItem value='regex' sx={{ fontSize: '0.75rem' }}>Regex filter</MenuItem>
+                {filterSenders.length > 0 && <MenuItem value='filter' sx={{ fontSize: '0.75rem' }}>Filter</MenuItem>}
             </Select>
             {childKind === 'sender' && (
                 <Select size='small' value={pickedSender}
                     onChange={e => { setPickedSender(e.target.value); setPickedConfig('') }}
                     displayEmpty sx={selectSx}>
-                    {senders.map(s => (
+                    {outputSenders.map(s => (
+                        <MenuItem key={s.id} value={s.id} sx={{ fontSize: '0.75rem' }}>{s.displayName ?? s.id}</MenuItem>
+                    ))}
+                </Select>
+            )}
+            {childKind === 'filter' && filterSenders.length > 0 && (
+                <Select size='small' value={pickedFilter}
+                    onChange={e => { setPickedFilter(e.target.value); setPickedConfig('') }}
+                    displayEmpty sx={selectSx}>
+                    {filterSenders.map(s => (
                         <MenuItem key={s.id} value={s.id} sx={{ fontSize: '0.75rem' }}>{s.displayName ?? s.id}</MenuItem>
                     ))}
                 </Select>
@@ -151,15 +149,14 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
     const handleAdd = (newNode: ICompositeNode) => {
         if (node.type === 'fanout') {
             onFlowChange(addFanoutTarget(flow, path, newNode))
-        } else if (node.type === 'timed' || node.type === 'regex') {
+        } else if (node.type === 'filter') {
             onFlowChange(setNextNode(flow, path, newNode))
         }
     }
 
     const nodeDescription = (() => {
-        if (node.type === 'ref') return configDescriptions.get(`${node.senderId}/${node.configName}`)
-        if (node.type === 'timed') return configDescriptions.get(`timed/${node.configName}`)
-        if (node.type === 'regex') return configDescriptions.get(`regex/${node.configName}`)
+        if (node.type === 'ref')    return configDescriptions.get(`${node.senderId}/${node.configName}`)
+        if (node.type === 'filter') return configDescriptions.get(`${node.senderId}/${node.configName}`)
         return undefined
     })()
 

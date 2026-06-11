@@ -1,17 +1,17 @@
 {
-  "id": "tee",
-  "name": "@kwirthmagnify/kwirth-sender-tee",
+  "id": "ratelimit",
+  "name": "@kwirthmagnify/kwirth-sender-ratelimit",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.6",
-  "displayName": "Tee Sender",
-  "description": "Tee sender plugin for Kwirth — fans out an incoming message to multiple downstream senders simultaneously, acting as an intermediate pipeline node",
+  "version": "0.1.1",
+  "displayName": "Rate Limit Sender",
+  "description": "Rate limit filter sender for Kwirth — queues messages exceeding a configurable rate and delivers them in the next time window",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.11"
+    "@kwirthmagnify/kwirth-common-back": "^0.5.10"
   },
   "devDependencies": {
     "@mui/icons-material": "^7.1.2",

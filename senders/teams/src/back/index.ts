@@ -15,7 +15,9 @@ const LEVEL_COLOR: Record<string, string> = {
 
 export class TeamsSender implements ISender {
     readonly id = 'teams'
+    readonly senderType = 'output' as const
     private configs = new Map<string, ITeamsSenderConfig>()
+    getNodeMeta() { return { label: 'MS Teams', icon: 'Groups' } }
 
     addConfig(config: ISenderConfig): void {
         this.configs.set(config.name, config as ITeamsSenderConfig)

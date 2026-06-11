@@ -4,7 +4,7 @@ import {
     DialogTitle, Divider, FormControlLabel, IconButton, List, ListItem, ListItemButton,
     ListItemText, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
-import { AccessTime, AccountTree, Add, Delete, FileDownload, FileUpload, FilterAlt, Send } from '@mui/icons-material'
+import { AccountTree, Add, Delete, FileDownload, FileUpload, FilterAlt, Send } from '@mui/icons-material'
 import { IAvailableSender, ICompositeNode, IPipelineConfig } from './types'
 import { createNode, nodeAtPath } from './treeUtils'
 import PipelineCanvas from './PipelineCanvas'
@@ -35,11 +35,9 @@ interface ISenderDesignerDialogProps {
     accessString: string
 }
 
-const ROOT_TYPES: Array<{ type: 'fanout' | 'ref' | 'timed' | 'regex'; icon: React.ReactElement; label: string; desc: string }> = [
-    { type: 'fanout', icon: <AccountTree />, label: 'Fanout',       desc: 'Fan-out to multiple senders in parallel' },
-    { type: 'ref',    icon: <Send />,        label: 'Sender ref',   desc: 'Delegate directly to a registered sender' },
-    { type: 'timed',  icon: <AccessTime />,  label: 'Timed filter', desc: 'Route by time of day / day of week' },
-    { type: 'regex',  icon: <FilterAlt />,   label: 'Regex filter', desc: 'Route by pattern matching on fields' },
+const STATIC_ROOT_TYPES: Array<{ type: 'fanout' | 'ref'; icon: React.ReactElement; label: string; desc: string }> = [
+    { type: 'fanout', icon: <AccountTree />, label: 'Fanout',     desc: 'Fan-out to multiple senders in parallel' },
+    { type: 'ref',    icon: <Send />,        label: 'Sender ref', desc: 'Delegate directly to a registered sender' },
 ]
 
 const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, backendUrl, accessString }) => {
@@ -186,8 +184,10 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
         })
     }, [])
 
-    const setRootNode = (type: 'fanout' | 'ref' | 'timed' | 'regex') => {
-        handleFlowChange(createNode(type))
+    const filterSenders = availableSenders.filter(s => s.senderType === 'filter')
+
+    const setRootNode = (type: 'fanout' | 'ref' | 'filter', senderId = '') => {
+        handleFlowChange(createNode(type, senderId))
     }
 
     const triggerDownload = (data: unknown, filename: string) => {
@@ -353,8 +353,8 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                 {selectedName && !flow && editMode && (
                                     <Box sx={{ m: 'auto', textAlign: 'center' }}>
                                         <Typography variant='body2' sx={{ mb: 2 }}>Empty pipeline — choose a root node type:</Typography>
-                                        <Stack direction='row' spacing={2} justifyContent='center'>
-                                            {ROOT_TYPES.map(rt => (
+                                        <Stack direction='row' spacing={2} justifyContent='center' flexWrap='wrap' useFlexGap>
+                                            {STATIC_ROOT_TYPES.map(rt => (
                                                 <Button
                                                     key={rt.type}
                                                     variant='outlined'
@@ -365,6 +365,20 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                                                     <span>{rt.label}</span>
                                                     <Typography variant='caption' color='text.secondary' sx={{ textTransform: 'none', textAlign: 'center', fontSize: 10 }}>
                                                         {rt.desc}
+                                                    </Typography>
+                                                </Button>
+                                            ))}
+                                            {filterSenders.map(fs => (
+                                                <Button
+                                                    key={fs.id}
+                                                    variant='outlined'
+                                                    startIcon={<FilterAlt />}
+                                                    onClick={() => setRootNode('filter', fs.id)}
+                                                    sx={{ flexDirection: 'column', minHeight: 80, width: 130, gap: 0.5, whiteSpace: 'normal' }}
+                                                >
+                                                    <span>{fs.displayName ?? fs.id}</span>
+                                                    <Typography variant='caption' color='text.secondary' sx={{ textTransform: 'none', textAlign: 'center', fontSize: 10 }}>
+                                                        Filter sender
                                                     </Typography>
                                                 </Button>
                                             ))}

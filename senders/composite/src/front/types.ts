@@ -5,14 +5,9 @@ export interface ICompositeFanoutNode {
     targets: ICompositeNode[]
 }
 
-export interface ICompositeTimedNode {
-    type: 'timed'
-    configName: string
-    next?: ICompositeNode
-}
-
-export interface ICompositeRegexNode {
-    type: 'regex'
+export interface ICompositeFilterNode {
+    type: 'filter'
+    senderId: string
     configName: string
     next?: ICompositeNode
 }
@@ -23,7 +18,7 @@ export interface ICompositeRefNode {
     configName: string
 }
 
-export type ICompositeNode = ICompositeFanoutNode | ICompositeTimedNode | ICompositeRegexNode | ICompositeRefNode
+export type ICompositeNode = ICompositeFanoutNode | ICompositeFilterNode | ICompositeRefNode
 
 export interface IPipelineConfig {
     name: string
@@ -35,6 +30,7 @@ export interface IAvailableSender {
     id: string
     displayName?: string
     configNames: string[]
+    senderType?: 'filter' | 'output'
 }
 
 // ─── Tree child descriptors ────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Chip, Tooltip, Typography, useTheme } from '@mui/material'
-import { AccessTime, AccountTree, FilterAlt, Send } from '@mui/icons-material'
+import { AccountTree, FilterAlt, Send } from '@mui/icons-material'
 import { ICompositeNode } from './types'
 
 interface INodeCardProps {
@@ -12,33 +12,38 @@ interface INodeCardProps {
     onKeyDown?: (e: React.KeyboardEvent) => void
 }
 
-const TYPE_META_LIGHT: Record<string, { label: string; color: string; icon: React.ReactElement }> = {
+const STATIC_META_LIGHT: Record<string, { label: string; color: string; icon: React.ReactElement }> = {
     fanout: { label: 'fanout', color: '#e3f2fd', icon: <AccountTree fontSize='small' /> },
-    timed:  { label: 'timed',  color: '#fff8e1', icon: <AccessTime fontSize='small' /> },
-    regex:  { label: 'regex',  color: '#fce4ec', icon: <FilterAlt fontSize='small' /> },
+    filter: { label: 'filter', color: '#fce4ec', icon: <FilterAlt fontSize='small' /> },
     ref:    { label: 'ref',    color: '#e8f5e9', icon: <Send fontSize='small' /> },
 }
 
-const TYPE_META_DARK: Record<string, { label: string; color: string; icon: React.ReactElement }> = {
+const STATIC_META_DARK: Record<string, { label: string; color: string; icon: React.ReactElement }> = {
     fanout: { label: 'fanout', color: '#1565c0', icon: <AccountTree fontSize='small' /> },
-    timed:  { label: 'timed',  color: '#e65100', icon: <AccessTime fontSize='small' /> },
-    regex:  { label: 'regex',  color: '#880e4f', icon: <FilterAlt fontSize='small' /> },
+    filter: { label: 'filter', color: '#880e4f', icon: <FilterAlt fontSize='small' /> },
     ref:    { label: 'ref',    color: '#1b5e20', icon: <Send fontSize='small' /> },
 }
 
 const NodeCard: React.FC<INodeCardProps> = ({ node, selected, description, onClick, tabIndex, onKeyDown }) => {
     const theme = useTheme()
-    const TYPE_META = theme.palette.mode === 'dark' ? TYPE_META_DARK : TYPE_META_LIGHT
-    const meta = TYPE_META[node.type] ?? TYPE_META['ref']
+    const STATIC_META = theme.palette.mode === 'dark' ? STATIC_META_DARK : STATIC_META_LIGHT
+    const meta = STATIC_META[node.type] ?? STATIC_META['ref']
+
+    // For filter nodes, label comes from window registration if available
+    const filterLabel = node.type === 'filter'
+        ? ((window as any).__kwirth_senders__?.[node.senderId]?.nodeLabel ?? node.senderId)
+        : undefined
 
     const chipLabel = node.type === 'ref'
         ? (node.senderId || 'ref')
-        : meta.label
+        : node.type === 'filter'
+            ? (filterLabel || 'filter')
+            : meta.label
 
     let summary = ''
     if (node.type === 'fanout') {
         summary = `${node.targets.length} target(s)`
-    } else if (node.type === 'timed' || node.type === 'regex') {
+    } else if (node.type === 'filter') {
         summary = node.configName || '(no config)'
     } else if (node.type === 'ref') {
         summary = node.configName || (node.senderId ? '(no config)' : '(not configured)')

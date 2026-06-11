@@ -1,5 +1,43 @@
 [
   {
+    "id": "censor",
+    "version": "0.2.26",
+    "name": "Censor",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.26.tgz",
+    "description": "Censor plugin for Kwirth - LLM-powered real-time log analysis and sensitive pattern detection",
+    "icon": "ManageSearch",
+    "requires": [
+      {
+        "type": "daemon",
+        "id": "censor",
+        "minVersion": "0.2.6"
+      }
+    ]
+  },
+  {
+    "id": "echo",
+    "version": "0.2.8",
+    "name": "Echo",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.8.tgz",
+    "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
+    "icon": "Science",
+    "requires": [
+      {
+        "type": "provider",
+        "id": "otel",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "id": "trivy",
+    "version": "0.2.10",
+    "name": "Trivy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.10.tgz",
+    "description": "Trivy plugin for Kwirth - Secret exposure, CVE's, audit and SBoM: all integrated in Kwirth",
+    "icon": "VerifiedUser"
+  },
+  {
     "id": "log",
     "version": "0.2.8",
     "name": "Log",

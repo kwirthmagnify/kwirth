@@ -19,6 +19,7 @@ export interface IRegexSenderConfig extends ISenderConfig {
 
 export class RegexSender implements ISender {
     readonly id = 'regex'
+    readonly senderType = 'filter' as const
     private configs = new Map<string, IRegexSenderConfig>()
 
     addConfig(config: ISenderConfig): void {
@@ -39,8 +40,32 @@ export class RegexSender implements ISender {
         return Array.from(this.configs.keys())
     }
 
-    async send(_configName: string, _message: ISenderMessage): Promise<void> {
-        // regex sender is a filter used inside composite pipelines; standalone send is a no-op
+    getNodeMeta() {
+        return { label: 'Regex filter', icon: 'FilterAlt', description: 'Routes or drops messages based on regex rules evaluated against a message field.' }
+    }
+
+    async send(_configName: string, _message: ISenderMessage): Promise<void> {}
+
+    async evalFilter(configName: string, message: ISenderMessage, forward: () => Promise<void>): Promise<void> {
+        const config = this.configs.get(configName)
+        if (!config) return
+        for (const rule of config.rules ?? []) {
+            const re = new RegExp(rule.regex, rule.flags ?? 'i')
+            if (re.test(this.fieldValue(rule.field ?? 'subject', message))) {
+                if (rule.action === 'send') await forward()
+                return
+            }
+        }
+        if ((config.defaultAction ?? 'drop') === 'send') await forward()
+    }
+
+    private fieldValue(field: IRegexSenderRule['field'], message: ISenderMessage): string {
+        switch (field) {
+            case 'body':  return message.body ?? ''
+            case 'level': return message.level ?? ''
+            case 'to':    return Array.isArray(message.to) ? message.to.join(' ') : (message.to ?? '')
+            default:      return message.subject ?? ''
+        }
     }
 
     getConfigSchema(): ISenderFieldDef[] {

@@ -16,7 +16,9 @@ export interface IFileSenderConfig extends ISenderConfig {
 
 export class FileSender implements ISender {
     readonly id = 'file'
+    readonly senderType = 'output' as const
     private configs = new Map<string, IFileSenderConfig>()
+    getNodeMeta() { return { label: 'File', icon: 'Description' } }
     private lineCounts = new Map<string, number>()  // configName -> current line count
 
     addConfig(config: ISenderConfig): void {

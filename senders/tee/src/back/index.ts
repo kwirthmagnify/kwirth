@@ -16,7 +16,9 @@ export interface ITeeSenderConfig extends ISenderConfig {
 
 export class TeeSender implements ISender {
     readonly id = 'tee'
+    readonly senderType = 'output' as const
     private configs = new Map<string, ITeeSenderConfig>()
+    getNodeMeta() { return { label: 'Tee', icon: 'CallSplit' } }
     private senderAccess: ISenderAccess | undefined
 
     addConfig(config: ISenderConfig): void {

@@ -1,4 +1,4 @@
-import { ICompositeNode, ICompositeFanoutNode, ICompositeTimedNode, ICompositeRegexNode, ITreeEntry } from './types'
+import { ICompositeNode, ICompositeFanoutNode, ICompositeFilterNode, ITreeEntry } from './types'
 
 // ─── Path helpers ──────────────────────────────────────────────────────────────
 
@@ -53,17 +53,16 @@ export function addFanoutTarget(root: ICompositeNode, path: string, newNode: ICo
 
 export function setNextNode(root: ICompositeNode, path: string, next: ICompositeNode): ICompositeNode {
     const clone = deepClone(root)
-    const node = (path ? nodeAtPath(clone, path) : clone) as ICompositeTimedNode | ICompositeRegexNode
+    const node = (path ? nodeAtPath(clone, path) : clone) as ICompositeFilterNode
     node.next = next
     return clone
 }
 
 // ─── Default node factory ─────────────────────────────────────────────────────
 
-export function createNode(type: 'fanout' | 'ref' | 'timed' | 'regex'): ICompositeNode {
+export function createNode(type: 'fanout' | 'ref' | 'filter', senderId = ''): ICompositeNode {
     if (type === 'fanout') return { type: 'fanout', targets: [] }
-    if (type === 'timed')  return { type: 'timed', configName: '' }
-    if (type === 'regex')  return { type: 'regex', configName: '' }
+    if (type === 'filter') return { type: 'filter', senderId, configName: '' }
     return { type: 'ref', senderId: '', configName: '' }
 }
 
@@ -78,7 +77,7 @@ export function getTreeEntries(node: ICompositeNode, basePath: string): ITreeEnt
             label: '',
         }))
     }
-    if ((node.type === 'timed' || node.type === 'regex') && node.next) {
+    if (node.type === 'filter' && node.next) {
         return [{
             kind: 'node' as const,
             node: node.next,
@@ -105,7 +104,6 @@ export function getParentPath(path: string): string {
     if (!path) return ''
     const parts = path.split('.')
     const lastPart = parts[parts.length - 1]
-    // named property (e.g. 'next'): go up 1 level; array index (e.g. '0'): go up 2 levels (field + index)
     const toRemove = isNaN(Number(lastPart)) ? 1 : 2
     return parts.slice(0, -toRemove).join('.')
 }

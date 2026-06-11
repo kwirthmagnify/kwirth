@@ -579,7 +579,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     // ─── Render ───────────────────────────────────────────────────────────────
 
     const expandedSender = installed.find(s => s.id === expandedId)
-    const CustomFront = expandedSender?.hasFront ? window.__kwirth_senders__?.[expandedId!] : undefined
+    const CustomFront = expandedSender?.hasFront ? window.__kwirth_senders__?.[expandedId!]?.ConfigDialog : undefined
 
     return (
         <>

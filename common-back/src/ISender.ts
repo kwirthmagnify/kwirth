@@ -13,14 +13,23 @@ export interface ISenderFieldDef {
     common?: boolean
 }
 
+export interface ISenderNodeMeta {
+    label: string
+    icon?: string
+    description?: string
+}
+
 export interface ISender {
     readonly id: string
+    readonly senderType?: 'filter' | 'output'
     addConfig(config: ISenderConfig): void
     removeConfig(name: string): void
     hasConfig(name: string): boolean
     getConfigNames(): string[]
     getConfigSchema?(): ISenderFieldDef[]
+    getNodeMeta?(): ISenderNodeMeta
     send(configName: string, message: ISenderMessage): Promise<void>
+    evalFilter?(configName: string, message: ISenderMessage, forward: () => Promise<void>): Promise<void>
     startSender(senders: ISenderAccess): Promise<void>
     stopSender(): Promise<void>
 }

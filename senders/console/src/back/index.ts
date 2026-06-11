@@ -21,7 +21,9 @@ const RESET = '\x1b[0m'
 
 export class ConsoleSender implements ISender {
     readonly id = 'console'
+    readonly senderType = 'output' as const
     private configs = new Map<string, IConsoleSenderConfig>()
+    getNodeMeta() { return { label: 'Console', icon: 'Terminal' } }
 
     addConfig(config: ISenderConfig): void {
         this.configs.set(config.name, config as IConsoleSenderConfig)

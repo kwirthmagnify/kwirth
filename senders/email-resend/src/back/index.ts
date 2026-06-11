@@ -11,7 +11,9 @@ export interface IEmailSenderConfig extends ISenderConfig {
 
 export class EmailSender implements ISender {
     readonly id = 'email-resend'
+    readonly senderType = 'output' as const
     private configs = new Map<string, IEmailSenderConfig>()
+    getNodeMeta() { return { label: 'Email (Resend)', icon: 'Email' } }
     private clients = new Map<string, Resend>()
 
     addConfig(config: ISenderConfig): void {

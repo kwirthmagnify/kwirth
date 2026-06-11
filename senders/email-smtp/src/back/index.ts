@@ -19,7 +19,9 @@ export interface ISmtpSenderConfig extends ISenderConfig {
 
 export class SmtpSender implements ISender {
     readonly id = 'email-smtp'
+    readonly senderType = 'output' as const
     private configs = new Map<string, ISmtpSenderConfig>()
+    getNodeMeta() { return { label: 'Email (SMTP)', icon: 'Email' } }
     private transporters = new Map<string, Transporter>()
 
     addConfig(config: ISenderConfig): void {
