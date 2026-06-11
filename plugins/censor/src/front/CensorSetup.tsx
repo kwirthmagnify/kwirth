@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { FilterList, PlayArrow, Stop, Delete } from '@mui/icons-material'
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, List, ListItemButton, ListItemText, Tooltip, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, List, ListItemButton, ListItemText, TextField, Tooltip, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { CensorConfig, ICensorConfig } from './CensorConfig'
 
@@ -16,6 +16,8 @@ interface IDaemonInstance {
 const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     const initial: ICensorConfig = props.setupConfig?.channelConfig ?? new CensorConfig()
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(initial.selectedSessionId ?? null)
+    const [maxLlmInputLines, setMaxLlmInputLines] = useState(initial.maxLlmInputLines ?? 100)
+    const [maxLlmOutputLines, setMaxLlmOutputLines] = useState(initial.maxLlmOutputLines ?? 100)
     const [instances, setInstances] = useState<IDaemonInstance[]>([])
     const [loading, setLoading] = useState(false)
 
@@ -60,7 +62,7 @@ const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     }
 
     const handleStart = () => {
-        const config: ICensorConfig = { maxLines: initial.maxLines ?? 1000, selectedSessionId }
+        const config: ICensorConfig = { maxLines: initial.maxLines ?? 1000, selectedSessionId, maxLlmInputLines, maxLlmOutputLines }
         props.onChannelSetupClosed(props.channel, { channelId: 'censor', channelConfig: config, channelInstanceConfig: {} }, true, false)
     }
 
@@ -68,8 +70,10 @@ const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
         props.onChannelSetupClosed(props.channel, { channelId: 'censor', channelConfig: initial, channelInstanceConfig: {} }, false, false)
     }
 
+    const posInt = (val: string, fallback: number) => { const n = parseInt(val); return isNaN(n) || n < 1 ? fallback : n }
+
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: 480, height: 400 } }}>
+        <Dialog open={true} PaperProps={{ sx: { width: 480, height: 460 } }}>
             <DialogTitle>Censor — session</DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 1 }}>
                 <Typography variant='body2' color='text.secondary'>
@@ -106,6 +110,15 @@ const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                         </List>
                     </Box>
                 }
+                <Divider />
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <TextField size='small' label='LLM input lines' type='number' inputProps={{ min: 1 }} sx={{ flex: 1 }}
+                        value={maxLlmInputLines}
+                        onChange={e => setMaxLlmInputLines(posInt(e.target.value, 100))} />
+                    <TextField size='small' label='LLM output lines' type='number' inputProps={{ min: 1 }} sx={{ flex: 1 }}
+                        value={maxLlmOutputLines}
+                        onChange={e => setMaxLlmOutputLines(posInt(e.target.value, 100))} />
+                </Box>
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleCancel} color='inherit'>Cancel</Button>

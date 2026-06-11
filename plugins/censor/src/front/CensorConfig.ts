@@ -4,11 +4,15 @@ export { ECensorCommand, ICensorSession, ICensorInstanceConfig } from '../common
 export interface ICensorConfig {
     maxLines: number
     selectedSessionId?: string | null
+    maxLlmInputLines?: number
+    maxLlmOutputLines?: number
 }
 
 export class CensorConfig implements ICensorConfig {
     maxLines = 1000
     selectedSessionId: string | null | undefined = undefined
+    maxLlmInputLines = 100
+    maxLlmOutputLines = 100
 }
 
 export class CensorInstanceConfig implements ICensorInstanceConfig {
@@ -27,4 +31,5 @@ export class CensorInstanceConfig implements ICensorInstanceConfig {
     senderId = ''
     senderConfigName = ''
     mode: 'inference' | 'audit' = 'inference'
+    maxLineLength = 200
 }

@@ -8,6 +8,7 @@ import { CensorData, ICensorAsset, ICensorData, ICensorRegex } from './CensorDat
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 
 const MAX_DISPLAY_LINES = 1000
+const MAX_LLM_LINES = 100
 
 interface ICensorMessage {
     msgtype: string
@@ -95,12 +96,14 @@ export class CensorChannel implements IChannel {
                 else if (msg.kind === 'llminput') {
                     // daemon now sends a batch { lines: string[] }; keep compat with old { text: string }
                     const newLines: string[] = Array.isArray((msg as any).lines) ? (msg as any).lines : (msg.text !== undefined ? [msg.text] : [])
+                    const maxInput = config.maxLlmInputLines ?? MAX_LLM_LINES
                     data.llmInputLines.push(...newLines)
-                    if (data.llmInputLines.length > MAX_DISPLAY_LINES) data.llmInputLines.splice(0, data.llmInputLines.length - MAX_DISPLAY_LINES)
+                    if (data.llmInputLines.length > maxInput) data.llmInputLines.splice(0, data.llmInputLines.length - maxInput)
                 }
                 else if (msg.kind === 'llmoutput' && msg.text !== undefined) {
+                    const maxOutput = config.maxLlmOutputLines ?? MAX_LLM_LINES
                     data.llmOutputLines.push(msg.text)
-                    if (data.llmOutputLines.length > MAX_DISPLAY_LINES) data.llmOutputLines.splice(0, data.llmOutputLines.length - MAX_DISPLAY_LINES)
+                    if (data.llmOutputLines.length > maxOutput) data.llmOutputLines.splice(0, data.llmOutputLines.length - maxOutput)
                 }
                 else if (msg.kind === 'llmwarning' && msg.text !== undefined) {
                     const tags = msg.tags ?? []

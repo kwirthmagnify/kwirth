@@ -42,4 +42,5 @@ export interface ICensorInstanceConfig {
     senderId?: string
     senderConfigName?: string
     mode?: 'inference' | 'audit'
+    maxLineLength?: number
 }
