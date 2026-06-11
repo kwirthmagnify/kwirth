@@ -32,7 +32,7 @@ export interface ICensorData {
     uiState?: ICensorUiState
     receivedLines: ICensorLine[]
     businessLines: ICensorLine[]
-    llmInputLines: string[]
+    llmInputLines: string[][]
     llmOutputLines: string[]
     llmWarningLines: ICensorWarning[]
     llmErrorLines: { text: string, timestamp: string, lines?: string[] }[]
@@ -44,11 +44,14 @@ export interface ICensorData {
     llmLinesCount: number
     totalBytesProcessed: number
     pendingCount: number
+    subscriberCount: number
+    currentBatchSize?: number
     tokensIn: number
     tokensOut: number
     paused: boolean
     started: boolean
     startTime?: number
+    stopTime?: number
     analyzing: boolean
     llms: ILlm[]
     providers: ILlmProvider[]
@@ -70,7 +73,7 @@ export interface ICensorUiState {
 export class CensorData implements ICensorData {
     receivedLines: ICensorLine[] = []
     businessLines: ICensorLine[] = []
-    llmInputLines: string[] = []
+    llmInputLines: string[][] = []
     llmOutputLines: string[] = []
     llmWarningLines: ICensorWarning[] = []
     llmErrorLines: { text: string, timestamp: string, lines?: string[] }[] = []
@@ -82,6 +85,7 @@ export class CensorData implements ICensorData {
     llmLinesCount = 0
     totalBytesProcessed = 0
     pendingCount = 0
+    subscriberCount = 0
     tokensIn = 0
     tokensOut = 0
     paused = false

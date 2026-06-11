@@ -77,7 +77,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [configVersion, setConfigVersion] = useState('1')
     const [llmId, setLlmId] = useState('')
     const [system, setSystem] = useState('')
-    const [batchSize, setBatchSize] = useState(50)
+    const [batchSize, setBatchSize] = useState(10)
+    const [batchMode, setBatchMode] = useState<'fixed' | 'auto'>('fixed')
+    const [batchSizeMin, setBatchSizeMin] = useState(5)
+    const [maxLineLength, setMaxLineLength] = useState(200)
+    const [batchTimeout, setBatchTimeout] = useState(2)
     const [temperature, setTemperature] = useState(0.2)
     const [exampleJson, setExampleJson] = useState('{"patterns":["example regex"]}')
     const [exampleJsonError, setExampleJsonError] = useState('')
@@ -148,7 +152,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setConfigVersion(data.instanceConfig.version ?? '1')
         setLlmId(data.instanceConfig.llmId ?? '')
         setSystem(data.instanceConfig.system ?? '')
-        setBatchSize(data.instanceConfig.batchSize ?? 50)
+        setBatchSize(data.instanceConfig.batchSize ?? 10)
+        setBatchMode(data.instanceConfig.batchMode ?? 'fixed')
+        setBatchSizeMin(data.instanceConfig.batchSizeMin ?? 5)
+        setMaxLineLength(data.instanceConfig.maxLineLength ?? 200)
+        setBatchTimeout(data.instanceConfig.batchTimeout ?? 2)
         setTemperature(data.instanceConfig.temperature ?? 0.2)
         setExampleJson(data.instanceConfig.exampleJson ?? '{"patterns":["example regex"]}')
         setExampleJsonError('')
@@ -207,7 +215,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setShowConfig(true)
     }
 
-    const currentConfig = (): ICensorInstanceConfig => ({ name: configName, version: configVersion, llmId, system, batchSize, temperature, exampleJson, space, type, addTimestamp, businessPath, senderId, senderConfigName })
+    const currentConfig = (): ICensorInstanceConfig => ({ name: configName, version: configVersion, llmId, system, batchSize, batchMode, batchSizeMin, maxLineLength, batchTimeout, temperature, exampleJson, space, type, addTimestamp, businessPath, senderId, senderConfigName })
 
     const saveConfig = () => {
         const cfg = currentConfig()
@@ -221,7 +229,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setConfigVersion(cfg.version)
         setLlmId(cfg.llmId ?? '')
         setSystem(cfg.system ?? '')
-        setBatchSize(cfg.batchSize ?? 50)
+        setBatchSize(cfg.batchSize ?? 10)
+        setBatchMode(cfg.batchMode ?? 'fixed')
+        setBatchSizeMin(cfg.batchSizeMin ?? 5)
+        setMaxLineLength(cfg.maxLineLength ?? 200)
+        setBatchTimeout(cfg.batchTimeout ?? 2)
         setTemperature(cfg.temperature ?? 0.2)
         setExampleJson(cfg.exampleJson ?? '{"patterns":["example regex"]}')
         setExampleJsonError('')
@@ -359,8 +371,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             {data.instanceConfig?.mode ?? 'inference'}
                         </Typography>
                     </Stack>
-                    <Button onClick={() => sendCommand(data.analyzing ? ECensorCommand.ANALYZESTOP : ECensorCommand.ANALYZESTART)}
-                        color={data.analyzing ? 'error' : 'success'} variant='outlined' size='small'
+                    <Button onClick={() => {
+                        if (!data.analyzing) { data.startTime = Date.now(); data.stopTime = undefined }
+                        else data.stopTime = Date.now()
+                        sendCommand(data.analyzing ? ECensorCommand.ANALYZESTOP : ECensorCommand.ANALYZESTART)
+                    }} color={data.analyzing ? 'error' : 'success'} variant='outlined' size='small'
                         disabled={!data.analyzing && !data.instanceConfig?.llmId}>
                         {data.analyzing ? 'Stop' : 'Start'}
                     </Button>
@@ -538,11 +553,12 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>No syslog data yet.</Typography>
                     )}
 
-                    {/* Tab 5 — Lines sent to LLM */}
-                    {tab === 5 && data.llmInputLines.map((line, i) => (
-                        <Typography key={i} variant='caption' sx={{ fontFamily: 'monospace', display: 'block', px: 0.5, wordBreak: 'break-all', '&:hover': { bgcolor: 'action.hover' } }}>
-                            {line}
-                        </Typography>
+                    {/* Tab 5 — Lines sent to LLM (one block per call) */}
+                    {tab === 5 && data.llmInputLines.map((batch, i) => (
+                        <Box key={i} sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '11px' }}>
+                            <Typography variant='caption' sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>Call #{i + 1} — {batch.length} lines</Typography>
+                            {batch.map((line, j) => <Typography key={j} variant='caption' sx={{ fontFamily: 'monospace', display: 'block', wordBreak: 'break-all' }}>{line}</Typography>)}
+                        </Box>
                     ))}
 
                     {/* Tab 6 — LLM responses */}
@@ -621,11 +637,12 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     {col('Sent to LLM', data.llmLinesCount)}
                                     {col('Filtered (regex)', filtered)}
                                     {col('Pending', data.pendingCount)}
+                                    {col('Subscribers', data.subscriberCount)}
                                     {col('Avg line size', data.processedCount > 0 && data.totalBytesProcessed > 0 ? `${Math.round(data.totalBytesProcessed / data.processedCount)} B` : '—')}
                                     <Divider sx={{ my: 0.5 }} />
                                     {col('Start', data.startTime ? new Date(data.startTime).toLocaleTimeString() : '—')}
                                     {col('Elapsed', data.startTime ? (() => {
-                                        const s = Math.floor((Date.now() - data.startTime) / 1000)
+                                        const s = Math.floor(((data.stopTime ?? Date.now()) - data.startTime) / 1000)
                                         const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
                                         return h > 0 ? `${h}h ${m}m ${sec}s` : m > 0 ? `${m}m ${sec}s` : `${sec}s`
                                     })() : '—')}
@@ -642,7 +659,10 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     {savedTk > 0 && col('Est. tokens saved', `~${savedTk.toLocaleString()} (${Math.round(savedTk / (data.tokensIn + savedTk) * 100)}%)`)}
                                 </Stack>
                                 <Stack spacing={0.5} sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: 'divider' }}>
-                                    {col('Batch size', data.instanceConfig?.batchSize ?? 50)}
+                                    {col('Batch mode', data.instanceConfig?.batchMode ?? 'fixed')}
+                                    {col('Batch size', data.instanceConfig?.batchMode === 'auto'
+                                        ? `${data.currentBatchSize ?? data.instanceConfig?.batchSize ?? 10} / ${data.instanceConfig?.batchSize ?? 10} (min ${data.instanceConfig?.batchSizeMin ?? 5})`
+                                        : (data.instanceConfig?.batchSize ?? 10))}
                                     {col('Avg tokens/batch', data.llmCount > 0 ? Math.round(data.tokensIn / data.llmCount) : '—')}
                                 </Stack>
                             </Box>
@@ -653,7 +673,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     if (tokensInPerSec > peakTkInRef.current) peakTkInRef.current = tokensInPerSec
                                     if (tokensOutPerSec > peakTkOutRef.current) peakTkOutRef.current = tokensOutPerSec
                                     if (llmLinesPerSec > peakLlmLinesRef.current) peakLlmLinesRef.current = llmLinesPerSec
-                                    const elapsedSec = data.startTime ? Math.max(1, (Date.now() - data.startTime) / 1000) : null
+                                    const elapsedSec = data.startTime ? Math.max(1, ((data.stopTime ?? Date.now()) - data.startTime) / 1000) : null
                                     const avgProcessed = elapsedSec ? data.processedCount / elapsedSec : 0
                                     const avgLlmLines = elapsedSec ? data.llmLinesCount / elapsedSec : 0
                                     const avgTkIn = elapsedSec ? data.tokensIn / elapsedSec : 0
@@ -782,7 +802,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 ))}
                             </List>
                         </Box>
-                        <Stack direction='row' spacing={0.5} sx={{ px: 0.5, pt: 0.5 }}>
+                        <Stack direction='row' spacing={0.5} sx={{ px: 0.5, pt: 0.5, justifyContent: 'center' }}>
                             <Button size='small' startIcon={<AddIcon />} onClick={onConfigNew} sx={{ fontSize: 11 }}>New</Button>
                             <Button size='small' color='error' startIcon={<DeleteIcon />} onClick={onConfigDelete} disabled={selectedConfigIndex === null} sx={{ fontSize: 11 }}>Delete</Button>
                         </Stack>
@@ -796,21 +816,38 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 <TextField label='Version' size='small' value={configVersion} onChange={e => setConfigVersion(e.target.value)} sx={{ width: 100 }} />
                             </Stack>
                             <Stack direction='row' spacing={2} alignItems='center'>
-                                <FormControl size='small' sx={{ flex: 1 }}>
+                                <FormControl size='small' sx={{ flex: '0 0 40%', minWidth: 0 }}>
                                     <InputLabel>LLM</InputLabel>
-                                    <Select label='LLM' value={llmId} onChange={e => setLlmId(e.target.value)}>
+                                    <Select label='LLM' value={llmId} onChange={e => setLlmId(e.target.value)} renderValue={v => v as string}>
                                         {data.llms.length === 0 && <MenuItem value='' disabled>No LLMs configured</MenuItem>}
                                         {data.llms.map(llm => (
                                             <MenuItem key={llm.id} value={llm.id}>{llm.id} ({llm.provider}/{llm.model})</MenuItem>
                                         ))}
                                     </Select>
                                 </FormControl>
-                                <TextField label='Batch size' size='small' type='number' value={batchSize}
-                                    onChange={e => setBatchSize(Math.max(1, +e.target.value))}
-                                    sx={{ width: 110 }} inputProps={{ min: 1 }} />
                                 <TextField label='Temperature' size='small' type='number' value={temperature}
                                     onChange={e => setTemperature(Math.min(2, Math.max(0, +e.target.value)))}
-                                    sx={{ width: 110 }} inputProps={{ min: 0, max: 2, step: 0.1 }} />
+                                    sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 0, max: 2, step: 0.1 }} />
+                                <FormControl size='small' sx={{ flex: 1, minWidth: 0 }}>
+                                    <InputLabel>Batch</InputLabel>
+                                    <Select label='Batch' value={batchMode} onChange={e => setBatchMode(e.target.value as 'fixed' | 'auto')}>
+                                        <MenuItem value='fixed'>Fixed</MenuItem>
+                                        <MenuItem value='auto'>Auto</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <TextField label={batchMode === 'auto' ? 'Initial size' : 'Batch size'} size='small' type='number' value={batchSize}
+                                    onChange={e => setBatchSize(Math.max(1, +e.target.value))}
+                                    sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />
+                                <TextField label='Min size' size='small' type='number' value={batchSizeMin}
+                                    onChange={e => setBatchSizeMin(Math.max(1, +e.target.value))}
+                                    disabled={batchMode !== 'auto'}
+                                    sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />
+                                <TextField label='Max line' size='small' type='number' value={maxLineLength}
+                                    onChange={e => setMaxLineLength(Math.min(500, Math.max(10, +e.target.value)))}
+                                    sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 10, max: 500 }} />
+                                <TextField label='Timeout (s)' size='small' type='number' value={batchTimeout}
+                                    onChange={e => setBatchTimeout(Math.max(1, +e.target.value))}
+                                    sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />
                             </Stack>
                             <TextField label='System prompt (optional)' size='small' multiline value={system}
                                 onChange={e => setSystem(e.target.value)} fullWidth

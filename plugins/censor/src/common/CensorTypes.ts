@@ -32,6 +32,8 @@ export interface ICensorInstanceConfig {
     llmId: string
     system: string
     batchSize: number
+    batchMode?: 'fixed' | 'auto'
+    batchSizeMin?: number
     exampleJson: string
     temperature: number
     active?: boolean
@@ -43,4 +45,5 @@ export interface ICensorInstanceConfig {
     senderConfigName?: string
     mode?: 'inference' | 'audit'
     maxLineLength?: number
+    batchTimeout?: number
 }

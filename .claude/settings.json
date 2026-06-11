@@ -163,7 +163,9 @@
       "Bash(xargs grep -l \"alert\\\\|Alert\\\\|Notification\" -i)",
       "Bash(Get-ChildItem -Recurse c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\email-smtp\\\\src)",
       "Bash(Get-ChildItem -Recurse c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\\\\src)",
-      "Bash(npm unpublish *)"
+      "Bash(npm unpublish *)",
+      "Bash(findstr /N \"sessionconnected\\\\|sessiondisconnected\\\\|subscribe\\\\|method:\" 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\src\\\\back\\\\index.ts')",
+      "Bash(findstr /N \"method:\" 'c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\src\\\\back\\\\index.ts')"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
@@ -178,7 +180,8 @@
       "c:\\github\\jfvilas\\grafana\\plugin-log\\datasource",
       "c:\\github\\jfvilas\\grafana\\plugin-log\\panel",
       "c:\\github\\jfvilas\\grafana\\plugin-log\\k8s",
-      "c:\\github\\jfvilas\\grafana\\plugin-log"
+      "c:\\github\\jfvilas\\grafana\\plugin-log",
+      "C:\\Users\\julio.fernandezvila\\.claude"
     ]
   }
 }

@@ -20,7 +20,9 @@ export class CensorInstanceConfig implements ICensorInstanceConfig {
     version = '1'
     llmId = ''
     system = ''
-    batchSize = 50
+    batchSize = 10
+    batchMode: 'fixed' | 'auto' = 'fixed'
+    batchSizeMin = 5
     exampleJson = '{"patterns":["example regex"]}'
     temperature = 0.2
     active = false
@@ -32,4 +34,5 @@ export class CensorInstanceConfig implements ICensorInstanceConfig {
     senderConfigName = ''
     mode: 'inference' | 'audit' = 'inference'
     maxLineLength = 200
+    batchTimeout = 2
 }

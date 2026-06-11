@@ -33,6 +33,7 @@ interface ICensorMessage {
     tokensIn?: number
     tokensOut?: number
     pendingCount?: number
+    subscriberCount?: number
     instanceConfig?: ICensorInstanceConfig
     configs?: ICensorInstanceConfig[]
     llms?: ILlm[]
@@ -77,6 +78,7 @@ export class CensorChannel implements IChannel {
     processChannelMessage(channelObject: IChannelObject, wsEvent: MessageEvent): IChannelMessageAction {
         const msg: ICensorMessage = JSON.parse(wsEvent.data)
         const data: ICensorData = channelObject.data
+        const config: ICensorConfig = channelObject.config as ICensorConfig
 
         switch (msg.type) {
             case EInstanceMessageType.DATA:
@@ -94,10 +96,9 @@ export class CensorChannel implements IChannel {
                     if (data.businessLines.length > MAX_DISPLAY_LINES) data.businessLines.splice(0, data.businessLines.length - MAX_DISPLAY_LINES)
                 }
                 else if (msg.kind === 'llminput') {
-                    // daemon now sends a batch { lines: string[] }; keep compat with old { text: string }
                     const newLines: string[] = Array.isArray((msg as any).lines) ? (msg as any).lines : (msg.text !== undefined ? [msg.text] : [])
                     const maxInput = config.maxLlmInputLines ?? MAX_LLM_LINES
-                    data.llmInputLines.push(...newLines)
+                    if (newLines.length > 0) data.llmInputLines.push(newLines)
                     if (data.llmInputLines.length > maxInput) data.llmInputLines.splice(0, data.llmInputLines.length - maxInput)
                 }
                 else if (msg.kind === 'llmoutput' && msg.text !== undefined) {
@@ -130,6 +131,8 @@ export class CensorChannel implements IChannel {
                     if (msg.tokensIn !== undefined) data.tokensIn = msg.tokensIn
                     if (msg.tokensOut !== undefined) data.tokensOut = msg.tokensOut
                     if (msg.pendingCount !== undefined) data.pendingCount = msg.pendingCount
+                    if (msg.subscriberCount !== undefined) data.subscriberCount = msg.subscriberCount
+                    if ((msg as any).currentBatchSize !== undefined) data.currentBatchSize = (msg as any).currentBatchSize
                 }
                 else if (msg.kind === 'regexstats') {
                     // low-frequency event (once per 5s) carrying regex match counts
@@ -192,7 +195,7 @@ export class CensorChannel implements IChannel {
                         }
                     }
                     const connectedSession = data.sessions.find(s => s.id === msg.sessionId)
-                    data.startTime = connectedSession?.createdAt ? new Date(connectedSession.createdAt).getTime() : undefined
+                    data.startTime = connectedSession?.createdAt ? new Date(connectedSession.createdAt).getTime() : Date.now()
                     ;(channelObject.config as ICensorConfig).selectedSessionId = msg.sessionId
                 }
                 else if (msg.kind === 'sessionstopped') {

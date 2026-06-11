@@ -37,6 +37,10 @@ export interface ICensorInstanceConfig {
     senderConfigName?: string
 
     mode?: 'inference' | 'audit'
+    batchMode?: 'fixed' | 'auto'
+    batchSizeMin?: number
+    maxLineLength?: number
+    batchTimeout?: number
 }
 
 const extractText = (data: unknown, path: string): string | undefined => {
@@ -102,10 +106,12 @@ interface IDaemonInstance {
     cachedModel?: ReturnType<typeof buildModel>
     cachedProviderOptions?: Record<string, Record<string, unknown>>
     subscribers: Set<(event: unknown) => void>
+    currentBatchSize?: number
     lastStatsBroadcast: number
     lastRegexStatsBroadcast: number
     pendingReceivedLines: { text: string; namespace: string; pod: string; container: string }[]
     receivedTimer?: NodeJS.Timeout
+    flushTimer?: NodeJS.Timeout
 }
 
 export class CensorDaemon implements IDaemon {
@@ -243,6 +249,7 @@ export class CensorDaemon implements IDaemon {
         const inst = this.instances.get(instanceId)
         if (!inst) return
         if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
+                    if (inst.flushTimer) { clearTimeout(inst.flushTimer); inst.flushTimer = undefined }
         for (const asset of inst.assets) {
             asset.passThroughStream.removeAllListeners()
             asset.passThroughStream.destroy()
@@ -304,7 +311,7 @@ export class CensorDaemon implements IDaemon {
                         try { if (r.compiled.test(clean)) { r.matches++; filtered = true } } catch {}
                     }
                     if (!filtered) {
-                        const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
+                        const batchSize = this.effectiveBatchSize(inst)
                         // unshift so business events jump to front; multiple consecutive arrivals end up in reverse order but land in the same batch
                         if (inst.lineBuffer.length < MAX_LINE_BUFFER) inst.lineBuffer.unshift(clean)
                         this.backDaemonObject.logInfo?.(`[censor-daemon] business buffered: bufLen=${inst.lineBuffer.length} batchSize=${batchSize} llmBusy=${inst.llmBusy}`)
@@ -350,6 +357,7 @@ export class CensorDaemon implements IDaemon {
                     this.instances.set(instanceId, target)
                 }
                 target.cfg = cfg as ICensorInstanceConfig
+                target.currentBatchSize = undefined
                 target.cachedSchema = undefined
                 target.cachedModel = undefined
                 target.cachedProviderOptions = undefined
@@ -392,6 +400,7 @@ export class CensorDaemon implements IDaemon {
                     inst.lineBuffer = []
                     inst.pendingReceivedLines = []
                     if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
+                    if (inst.flushTimer) { clearTimeout(inst.flushTimer); inst.flushTimer = undefined }
                     this.broadcast(inst, 'analyzing', { analyzing: true })
                     this.persistState(inst)
                 }
@@ -402,6 +411,7 @@ export class CensorDaemon implements IDaemon {
                     inst.lineBuffer = []
                     inst.pendingReceivedLines = []
                     if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
+                    if (inst.flushTimer) { clearTimeout(inst.flushTimer); inst.flushTimer = undefined }
                     this.broadcast(inst, 'analyzing', { analyzing: false })
                     this.persistState(inst)
                 } else {
@@ -456,6 +466,12 @@ export class CensorDaemon implements IDaemon {
 
     // ── Internal ────────────────────────────────────────────────────────────────
 
+    private effectiveBatchSize(inst: IDaemonInstance): number {
+        const max = inst.cfg.batchSize ?? BATCH_SIZE
+        if (inst.cfg.batchMode !== 'auto') return max
+        return inst.currentBatchSize ?? max
+    }
+
     private broadcast(inst: IDaemonInstance, kind: string, data: Record<string, unknown>): void {
         const event: IDaemonEvent = { instanceId: inst.instanceId, type: kind, data }
         for (const cb of inst.subscribers) cb(event)
@@ -473,7 +489,9 @@ export class CensorDaemon implements IDaemon {
             totalBytesProcessed: inst.totalBytesProcessed,
             tokensIn: inst.tokensIn,
             tokensOut: inst.tokensOut,
-            pendingCount: inst.lineBuffer.length
+            pendingCount: inst.lineBuffer.length,
+            subscriberCount: inst.subscribers.size,
+            currentBatchSize: inst.cfg.batchMode === 'auto' ? (inst.currentBatchSize ?? inst.cfg.batchSize ?? BATCH_SIZE) : undefined
         })
         // regex match counts at most once per 5 seconds (550 regexes × 80B × high-freq = 1.7 MB/s otherwise)
         if (now - inst.lastRegexStatsBroadcast >= 5000) {
@@ -514,13 +532,22 @@ export class CensorDaemon implements IDaemon {
             for (const r of inst.regexes) {
                 try { if (r.compiled.test(truncated)) { r.matches++; filtered = true } } catch {}
             }
-            const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
+            const batchSize = this.effectiveBatchSize(inst)
             if (!filtered && inst.lineBuffer.length < MAX_LINE_BUFFER) {
                 inst.lineBuffer.push(truncated)
             }
             if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
+                if (inst.flushTimer) { clearTimeout(inst.flushTimer); inst.flushTimer = undefined }
                 const batch = inst.lineBuffer.splice(0, batchSize)
                 this.callLlm(inst, batch)
+            } else if (inst.lineBuffer.length > 0 && inst.lineBuffer.length < batchSize && !inst.llmBusy && !inst.flushTimer) {
+                inst.flushTimer = setTimeout(() => {
+                    inst.flushTimer = undefined
+                    if (inst.lineBuffer.length > 0 && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
+                        const batch = inst.lineBuffer.splice(0, inst.lineBuffer.length)
+                        this.callLlm(inst, batch)
+                    }
+                }, (inst.cfg.batchTimeout ?? 2) * 1000)
             }
         }
         if (receivedBatch.length > 0) {
@@ -675,8 +702,22 @@ export class CensorDaemon implements IDaemon {
         }
         finally {
             inst.llmBusy = false
+            console.log(`[censor-autobatch] success=${success} batchMode=${inst.cfg.batchMode} pending=${inst.lineBuffer.length} currentBatchSize=${inst.currentBatchSize} cfgBatchSize=${inst.cfg.batchSize}`)
+            if (success && inst.cfg.batchMode === 'auto') {
+                const maxSize = inst.cfg.batchSize ?? BATCH_SIZE
+                const minSize = inst.cfg.batchSizeMin ?? 1
+                const current = inst.currentBatchSize ?? maxSize
+                const pending = inst.lineBuffer.length
+                console.log(`[censor-autobatch] maxSize=${maxSize} minSize=${minSize} current=${current} pending=${pending} threshold=${current * 0.9}`)
+                if (pending >= current) {
+                    inst.currentBatchSize = Math.min(maxSize, current + Math.max(1, Math.round(current * 0.2)))
+                } else if (pending < current * 0.9) {
+                    inst.currentBatchSize = Math.max(minSize, current - Math.max(1, Math.round(current * 0.2)))
+                }
+                console.log(`[censor-autobatch] => newBatchSize=${inst.currentBatchSize}`)
+            }
             if (success) {
-                const batchSize = inst.cfg.batchSize ?? BATCH_SIZE
+                const batchSize = this.effectiveBatchSize(inst)
                 if (inst.lineBuffer.length >= batchSize) {
                     const batch = inst.lineBuffer.splice(0, batchSize)
                     this.callLlm(inst, batch)
