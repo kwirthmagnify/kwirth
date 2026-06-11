@@ -33,6 +33,6 @@ export class CensorInstanceConfig implements ICensorInstanceConfig {
     senderId = ''
     senderConfigName = ''
     mode: 'inference' | 'audit' = 'inference'
-    maxLineLength = 200
+    maxLineLength = 0
     batchTimeout = 2
 }

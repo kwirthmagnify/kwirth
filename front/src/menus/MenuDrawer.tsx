@@ -1,6 +1,6 @@
 import React from 'react';
 import { Divider, MenuItem, MenuList } from "@mui/material"
-import { BrowserUpdated, CreateNewFolderTwoTone, DeleteTwoTone, Edit, ExitToApp, Extension, FileOpenTwoTone, ImportExport, Info, Key, Person, SaveAsTwoTone, SaveTwoTone, Settings } from '@mui/icons-material';
+import { BrowserUpdated, CreateNewFolderTwoTone, DeleteTwoTone, Edit, ExitToApp, Extension, FileOpenTwoTone, ImportExport, Info, Key, Palette, Person, SaveAsTwoTone, SaveTwoTone, Settings } from '@mui/icons-material';
 
 enum MenuDrawerOption {
     NewWorkspace,
@@ -19,6 +19,7 @@ enum MenuDrawerOption {
     ManageProviders,
     ManageSenders,
     ManageDaemons,
+    ManageThemes,
     UpdateKwirth,
     About,
     Exit
@@ -59,6 +60,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageProviders)}><Extension />&nbsp;Manage providers</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageSenders)}><Extension />&nbsp;Manage senders</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageDaemons)}><Extension />&nbsp;Manage daemons</MenuItem>
+                    <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageThemes)}><Palette />&nbsp;Manage themes</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.UpdateKwirth)}><BrowserUpdated />&nbsp;Update Kwirth</MenuItem>
                     <Divider/>
                 </div>

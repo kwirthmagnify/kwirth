@@ -8,6 +8,7 @@ import { Add, CheckCircle, ContentCopy, Delete, Download, Edit, FileDownload, Fi
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { useKeyboard } from '../tools/useKeyboard'
 
 const SENDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/senders/manifest.json'
 
@@ -64,6 +65,7 @@ interface ISenderDialogProps {
 const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
+    useKeyboard(props.onClose)
 
     const [installed, setInstalled] = useState<IInstalledSender[]>([])
     const [available, setAvailable] = useState<ISenderManifestEntry[]>([])

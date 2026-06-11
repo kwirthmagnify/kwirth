@@ -1,0 +1,18 @@
+[
+  {
+    "id": "plexus",
+    "name": "@kwirthmagnify/kwirth-theme-plexus",
+    "displayName": "Plexus",
+    "version": "0.1.0",
+    "description": "Plexus corporate theme — deep navy background with coral accent and Lato typography.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-plexus/-/kwirth-theme-plexus-0.1.0.tgz"
+  },
+  {
+    "id": "post-punk",
+    "name": "@kwirthmagnify/kwirth-theme-post-punk",
+    "displayName": "Post Punk",
+    "version": "0.1.0",
+    "description": "Dark monochrome theme with acid-green accents and monospace typography, inspired by the post-punk aesthetic.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-post-punk/-/kwirth-theme-post-punk-0.1.0.tgz"
+  }
+]

@@ -80,7 +80,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [batchSize, setBatchSize] = useState(10)
     const [batchMode, setBatchMode] = useState<'fixed' | 'auto'>('fixed')
     const [batchSizeMin, setBatchSizeMin] = useState(5)
-    const [maxLineLength, setMaxLineLength] = useState(200)
+    const [maxLineLength, setMaxLineLength] = useState(0)
     const [batchTimeout, setBatchTimeout] = useState(2)
     const [temperature, setTemperature] = useState(0.2)
     const [exampleJson, setExampleJson] = useState('{"patterns":["example regex"]}')
@@ -155,7 +155,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setBatchSize(data.instanceConfig.batchSize ?? 10)
         setBatchMode(data.instanceConfig.batchMode ?? 'fixed')
         setBatchSizeMin(data.instanceConfig.batchSizeMin ?? 5)
-        setMaxLineLength(data.instanceConfig.maxLineLength ?? 200)
+        setMaxLineLength(data.instanceConfig.maxLineLength ?? 0)
         setBatchTimeout(data.instanceConfig.batchTimeout ?? 2)
         setTemperature(data.instanceConfig.temperature ?? 0.2)
         setExampleJson(data.instanceConfig.exampleJson ?? '{"patterns":["example regex"]}')
@@ -232,7 +232,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setBatchSize(cfg.batchSize ?? 10)
         setBatchMode(cfg.batchMode ?? 'fixed')
         setBatchSizeMin(cfg.batchSizeMin ?? 5)
-        setMaxLineLength(cfg.maxLineLength ?? 200)
+        setMaxLineLength(cfg.maxLineLength ?? 0)
         setBatchTimeout(cfg.batchTimeout ?? 2)
         setTemperature(cfg.temperature ?? 0.2)
         setExampleJson(cfg.exampleJson ?? '{"patterns":["example regex"]}')
@@ -842,9 +842,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     onChange={e => setBatchSizeMin(Math.max(1, +e.target.value))}
                                     disabled={batchMode !== 'auto'}
                                     sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />
-                                <TextField label='Max line' size='small' type='number' value={maxLineLength}
-                                    onChange={e => setMaxLineLength(Math.min(500, Math.max(10, +e.target.value)))}
-                                    sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 10, max: 500 }} />
+                                <TextField label='Max line (0=∞)' size='small' type='number' value={maxLineLength}
+                                    onChange={e => setMaxLineLength(Math.max(0, +e.target.value))}
+                                    sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 0 }} />
                                 <TextField label='Timeout (s)' size='small' type='number' value={batchTimeout}
                                     onChange={e => setBatchTimeout(Math.max(1, +e.target.value))}
                                     sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />

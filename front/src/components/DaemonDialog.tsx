@@ -4,6 +4,7 @@ import { CheckCircle, Delete, Download, FolderOpen, Link, OpenInNew, Refresh, Sm
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { useKeyboard } from '../tools/useKeyboard'
 
 const DAEMONS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/daemons/manifest.json'
 
@@ -41,6 +42,7 @@ interface IDaemonDialogProps {
 const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
+    useKeyboard(props.onClose)
 
     const [available, setAvailable] = useState<IDaemonManifestEntry[]>([])
     const [installed, setInstalled] = useState<IInstalledDaemon[]>([])

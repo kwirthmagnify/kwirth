@@ -71,6 +71,8 @@ import { SenderApi } from './api/SenderApi'
 import { DaemonApi } from './api/DaemonApi'
 import { SenderManager } from './tools/SenderManager'
 import { DaemonManager } from './tools/DaemonManager'
+import { ThemeManager } from './tools/ThemeManager'
+import { ThemeApi } from './api/ThemeApi'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -127,6 +129,7 @@ let pluginManager: PluginManager | undefined
 let providerManager: ProviderManager | undefined
 let senderManager: SenderManager | undefined
 let daemonManager: DaemonManager | undefined
+let themeManager: ThemeManager | undefined
 
 const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
@@ -1221,6 +1224,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let daemonApi = new DaemonApi(daemonManager, apiKeyApi)
             riRouter.use(`/daemons`, daemonApi.router)
         }
+        if (themeManager) {
+            let themeApi = new ThemeApi(themeManager, apiKeyApi)
+            riRouter.use(`/themes`, themeApi.router)
+        }
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
 
@@ -1564,6 +1571,12 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             daemonManager = new DaemonManager(runningInstance.clusterInfo, runningInstance.configMaps, backDaemonObject)
             await daemonManager.loadAll()
             await daemonManager.init()
+        }
+
+        if (!themeManager) {
+            themeManager = new ThemeManager(runningInstance.configMaps)
+            await themeManager.init()
+            themeManager.loadDevThemes()
         }
 
     let backChannelObject: IBackChannelObject = {

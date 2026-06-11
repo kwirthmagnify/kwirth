@@ -26,11 +26,13 @@ declare global {
         __kwirth__: { React: typeof React; MUI: { material: typeof MUIMaterial; icons: typeof MUIIcons }; kwirthCommon: typeof kwirthCommon; kwirthCommonFront: typeof kwirthCommonFront; kwirthCommonAiFront: typeof kwirthCommonAiFront; codeMirrorView: typeof codeMirrorView; codeMirrorState: typeof codeMirrorState; codeMirrorCommands: typeof codeMirrorCommands; codeMirrorSearch: typeof codeMirrorSearch; codeMirrorLanguage: typeof codeMirrorLanguage; codeMirrorLangYaml: typeof codeMirrorLangYaml; codeMirrorThemeOneDark: typeof codeMirrorThemeOneDark; uiwReactCodeMirror: typeof uiwReactCodeMirror; jfvilasReactFileManager: { FileManager: typeof _rfmFileManager }; recharts: typeof recharts }
         __kwirth_plugins__: Record<string, any>
         __kwirth_senders__: Record<string, { ConfigDialog?: React.ComponentType<any>; nodeLabel?: string; nodeDescription?: string; nodeIcon?: string }>
+        __kwirth_themes__: Record<string, { displayName: string; getThemeOptions: (mode: 'light' | 'dark') => any }>
     }
 }
 window.__kwirth__ = { React, MUI: { material: MUIMaterial, icons: MUIIcons }, kwirthCommon, kwirthCommonFront, kwirthCommonAiFront, codeMirrorView, codeMirrorState, codeMirrorCommands, codeMirrorSearch, codeMirrorLanguage, codeMirrorLangYaml, codeMirrorThemeOneDark, uiwReactCodeMirror, jfvilasReactFileManager: { FileManager: _rfmFileManager }, recharts }
 window.__kwirth_plugins__ = {}
 window.__kwirth_senders__ = {}
+window.__kwirth_themes__ = {}
 
 //const isDesktop = true
 const isDesktop = navigator.userAgent.toLowerCase().indexOf(' electron/') >= 0 || !!(globalThis as any).__TAURI__

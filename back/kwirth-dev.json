@@ -25,6 +25,10 @@
     "timed": "../senders/timed/dist",
     "teams": "../senders/teams/dist"
   },
+  "themes": {
+    "post-punk": "../themes/post-punk/dist",
+    "plexus": "../themes/plexus/dist"
+  },
   "senderConfigs": {
     "email-resend": [
       {

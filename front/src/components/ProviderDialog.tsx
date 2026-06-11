@@ -4,6 +4,7 @@ import { CheckCircle, Checklist, Delete, Download, FolderOpen, Link, OpenInNew, 
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { useKeyboard } from '../tools/useKeyboard'
 
 const PROVIDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json'
 
@@ -41,6 +42,7 @@ interface IProviderDialogProps {
 const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
+    useKeyboard(props.onClose)
 
     const [available, setAvailable] = useState<IProviderManifestEntry[]>([])
     const [installed, setInstalled] = useState<IInstalledProvider[]>([])

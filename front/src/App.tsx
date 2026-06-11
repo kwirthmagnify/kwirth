@@ -48,6 +48,7 @@ import { PluginDialog } from './components/PluginDialog'
 import { ProviderDialog } from './components/ProviderDialog'
 import { SenderDialog } from './components/SenderDialog'
 import { DaemonDialog } from './components/DaemonDialog'
+import { ThemeDialog } from './components/ThemeDialog'
 
 interface IAppProps {
     backendUrl:string
@@ -57,7 +58,10 @@ interface IAppProps {
 
 const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [mode, setMode] = useState<PaletteMode>('light')
-    const theme = useMemo( () => createTheme({
+    const [activeThemeName, setActiveThemeName] = useState<string | undefined>(undefined)
+    const theme = useMemo( () => (activeThemeName && window.__kwirth_themes__?.[activeThemeName])
+        ? createTheme(window.__kwirth_themes__[activeThemeName].getThemeOptions(mode))
+        : createTheme({
         cssVariables: true,
         palette: { mode },
         components: {
@@ -173,7 +177,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }),
             },
         },
-    }), [mode])
+    }), [mode, activeThemeName])
 
     const [frontChannels, setFrontChannels] = useState<Map<string, TChannelConstructor>>(new Map())
     const [user, setUser] = useState<IUser>()
@@ -227,6 +231,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showProviderDialog, setShowProviderDialog]=useState<boolean>(false)
     const [showDaemonDialog, setShowDaemonDialog]=useState<boolean>(false)
     const [showSenderDialog, setShowSenderDialog]=useState<boolean>(false)
+    const [showThemeDialog, setShowThemeDialog]=useState<boolean>(false)
     const [initialMessage, setInitialMessage]=useState<string>('')
 
     // last & favs
@@ -297,6 +302,22 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             return next
         })
         setPluginVersion(v => v + 1)
+    }
+
+    const loadThemeFront = (id: string) => {
+        const existing = document.getElementById(`kwirth-theme-${id}`)
+        if (existing) existing.remove()
+        const script = document.createElement('script')
+        script.id = `kwirth-theme-${id}`
+        script.src = `${backendUrl}/themes/${id}/front?t=${Date.now()}`
+        document.head.appendChild(script)
+    }
+
+    const unloadThemeFront = (id: string) => {
+        const script = document.getElementById(`kwirth-theme-${id}`)
+        if (script) script.remove()
+        if (window.__kwirth_themes__) delete window.__kwirth_themes__[id]
+        if (activeThemeName === id) setActiveThemeName(undefined)
     }
 
     useEffect(() => {
@@ -385,6 +406,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             .then((plugins: { id: string }[]) => plugins.forEach(p => loadPluginFront(p.id)))
             .catch(err => console.log(`[plugins] failed to load installed plugins: ${err}`))
 
+        // load front.js for already-installed themes
+        fetch(`${backendUrl}/themes`, addGetAuthorization(accessString))
+            .then(r => r.json())
+            .then((themes: { id: string }[]) => themes.forEach(t => loadThemeFront(t.id)))
+            .catch(err => console.log(`[themes] failed to load installed themes: ${err}`))
+
         // check for extension updates (dev only)
         if (process.env.NODE_ENV !== 'production') {
             (async () => {
@@ -393,12 +420,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     daemon:   'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/daemons/manifest.json',
                     sender:   'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/senders/manifest.json',
                     provider: 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json',
+                    theme:    'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/themes/manifest.json',
                 }
                 const ENDPOINTS: Record<string, string> = {
                     plugin:   `${backendUrl}/plugins`,
                     daemon:   `${backendUrl}/daemons`,
                     sender:   `${backendUrl}/senders`,
                     provider: `${backendUrl}/providers`,
+                    theme:    `${backendUrl}/themes`,
                 }
                 try {
                     const types = Object.keys(MANIFESTS)
@@ -1503,6 +1532,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageDaemons:
                 setShowDaemonDialog(true)
                 break
+            case MenuDrawerOption.ManageThemes:
+                setShowThemeDialog(true)
+                break
             case MenuDrawerOption.ExportWorkspaces: {
                 const allNames:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
                 if (allNames.length===0) { showNoWorkspaces(); break }
@@ -1816,9 +1848,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     <Toolbar>
                         <IconButton size='large' edge='start' color='inherit' sx={{ mr: 1 }} onClick={() => setMenuDrawerOpen(prev => !prev)}><Menu /></IconButton>
                         <Typography sx={{ ml:1,flexGrow: 1 }}>Kwirth - {clusters.find(c => c.name === selectedClusterName)?.clusterInfo?.name}</Typography>
-                        <Tooltip title={<div style={{textAlign:'center'}}>{currentWorkspaceName}<br/><br/>{currentWorkspaceDescription}</div>} sx={{ mr:2}} slotProps={{popper: {modifiers: [{name: 'offset', options: {offset: [0, -12]}}]}}}>
+                        {/* <Tooltip title={<div style={{textAlign:'center'}}>{currentWorkspaceName}<br/><br/>{currentWorkspaceDescription}</div>} sx={{ mr:2}} slotProps={{popper: {modifiers: [{name: 'offset', options: {offset: [0, -12]}}]}}}>
                             <Typography variant='h6' component='div' sx={{mr:2, cursor:'default'}}>{currentWorkspaceName}</Typography>
-                        </Tooltip>
+                        </Tooltip> */}
                         <Tooltip title={<>Notifications</>}>
                             {notifications.current.length>0? 
                                 <IconButton onClick={showNotifications}>
@@ -1923,6 +1955,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showProviderDialog && <ProviderDialog onClose={() => setShowProviderDialog(false)} /> }
                 { showSenderDialog && <SenderDialog onClose={() => setShowSenderDialog(false)} /> }
                 { showDaemonDialog && <DaemonDialog onClose={() => setShowDaemonDialog(false)} /> }
+                { showThemeDialog && <ThemeDialog onClose={() => setShowThemeDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }

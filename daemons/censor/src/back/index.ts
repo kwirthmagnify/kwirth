@@ -525,9 +525,8 @@ export class CensorDaemon implements IDaemon {
             inst.totalBytesProcessed += Buffer.byteLength(line, 'utf8')
             receivedBatch.push({ text: line, namespace: asset.namespace, pod: asset.pod, container: asset.container })
             const clean = cleanANSI(line)
-            const maxLen = inst.cfg.maxLineLength ?? 200
-            if (clean.length > maxLen) console.warn(`[censor-daemon] line too long (${clean.length} chars), truncated to ${maxLen}`)
-            const truncated = clean.length > maxLen ? clean.slice(0, maxLen) : clean
+            const maxLen = inst.cfg.maxLineLength ?? 0
+            const truncated = (maxLen > 0 && clean.length > maxLen) ? clean.slice(0, maxLen) : clean
             let filtered = false
             for (const r of inst.regexes) {
                 try { if (r.compiled.test(truncated)) { r.matches++; filtered = true } } catch {}
