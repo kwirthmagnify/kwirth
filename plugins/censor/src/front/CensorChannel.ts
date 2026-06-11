@@ -171,6 +171,8 @@ export class CensorChannel implements IChannel {
                     data.connectedSessionDescription = msg.sessionDescription ?? null
                     if (msg.sessions !== undefined) data.sessions = msg.sessions
                     if (msg.analyzing !== undefined) data.analyzing = msg.analyzing
+                    const startedSession = data.sessions.find(s => s.id === msg.sessionId)
+                    data.startTime = startedSession?.createdAt ? new Date(startedSession.createdAt).getTime() : Date.now()
                     ;(channelObject.config as ICensorConfig).selectedSessionId = msg.sessionId
                 }
                 else if (msg.kind === 'sessionconnected' && msg.sessionId !== undefined) {
@@ -189,6 +191,8 @@ export class CensorChannel implements IChannel {
                             }
                         }
                     }
+                    const connectedSession = data.sessions.find(s => s.id === msg.sessionId)
+                    data.startTime = connectedSession?.createdAt ? new Date(connectedSession.createdAt).getTime() : undefined
                     ;(channelObject.config as ICensorConfig).selectedSessionId = msg.sessionId
                 }
                 else if (msg.kind === 'sessionstopped') {
@@ -203,6 +207,7 @@ export class CensorChannel implements IChannel {
                 else if (msg.kind === 'sessiondisconnected') {
                     data.connectedSessionId = null
                     data.connectedSessionDescription = null
+                    data.startTime = undefined
                     data.receivedLines = []
                     data.businessLines = []
                     data.llmInputLines = []
@@ -262,7 +267,7 @@ export class CensorChannel implements IChannel {
         data.tokensOut = 0
         data.paused = false
         data.started = true
-        data.startTime = Date.now()
+        data.startTime = undefined
         data.sessions = []
         data.connectedSessionId = null
         data.connectedSessionDescription = null

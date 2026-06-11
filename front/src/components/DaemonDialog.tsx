@@ -285,7 +285,7 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                     <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
                         <Typography variant='subtitle2'>Available daemons</Typography>
                         <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
-                        <Tooltip title='Refresh catalog'><span><IconButton size='small' onClick={fetchManifest} disabled={loadingManifest}>{loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' />}</IconButton></span></Tooltip>
+                        <Tooltip title='Refresh catalog'><span><IconButton size='small' sx={{ width: 30, height: 30 }} onClick={fetchManifest} disabled={loadingManifest}>{loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' />}</IconButton></span></Tooltip>
                     </Stack>
 
                     {available.length === 0 && !loadingManifest &&

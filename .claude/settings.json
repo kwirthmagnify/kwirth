@@ -162,7 +162,8 @@
       "Bash(xargs grep -l \"alert.*sender\\\\|sender.*alert\\\\|notification.*config\")",
       "Bash(xargs grep -l \"alert\\\\|Alert\\\\|Notification\" -i)",
       "Bash(Get-ChildItem -Recurse c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\email-smtp\\\\src)",
-      "Bash(Get-ChildItem -Recurse c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\\\\src)"
+      "Bash(Get-ChildItem -Recurse c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\teams\\\\src)",
+      "Bash(npm unpublish *)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

@@ -301,7 +301,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                         <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
                         <Tooltip title='Refresh catalog'>
                             <span>
-                                <IconButton size='small' onClick={fetchManifest} disabled={loadingManifest}>
+                                <IconButton size='small' sx={{ width: 30, height: 30 }} onClick={fetchManifest} disabled={loadingManifest}>
                                     {loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' />}
                                 </IconButton>
                             </span>
