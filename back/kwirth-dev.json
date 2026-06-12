@@ -27,7 +27,8 @@
   },
   "themes": {
     "post-punk": "../themes/post-punk/dist",
-    "plexus": "../themes/plexus/dist"
+    "plexus": "../themes/plexus/dist",
+    "sfy": "../themes/sfy/dist"
   },
   "senderConfigs": {
     "email-resend": [

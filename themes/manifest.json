@@ -1,5 +1,14 @@
 [
   {
+    "id": "sfy",
+    "name": "@kwirthmagnify/kwirth-theme-sfy",
+    "displayName": "SFY",
+    "version": "0.1.0",
+    "description": "SFY-inspired theme — sky blue primary, charcoal dark surfaces, teal-mint secondary, Lato + Montserrat typography.",
+    "website": "https://sfy.com",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-sfy/-/kwirth-theme-sfy-0.1.0.tgz"
+  },
+  {
     "id": "plexus",
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
