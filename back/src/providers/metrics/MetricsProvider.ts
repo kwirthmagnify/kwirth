@@ -186,15 +186,17 @@ export class MetricsProvider implements IProvider {
                 let totrx = rx-prevrx
                 tottx = (tottx/1024/1024) / this.metricsInterval
                 totrx = (totrx/1024/1024) / this.metricsInterval
+                const pods = this.lastRead.nodes.reduce((sum, n) => sum + (n.summary?.pods?.length ?? 0), 0)
+                const maxPods = Array.from(this.clusterInfo.nodes.values()).reduce((sum, n) => sum + n.maxPods, 0)
                 return {
-                    // vcpus: this.vcpus,
                     vcpus: this.clusterInfo.vcpus,
-                    // memory: this.memory,
                     memory: this.clusterInfo.memory,
                     cpuUsage: (cpuUsed/(cpuNumber*Math.pow(10,9)))*100,
                     memoryUsage: memUsed/memTotal*100,
                     txmbps: tottx,
-                    rxmbps: totrx
+                    rxmbps: totrx,
+                    pods,
+                    maxPods
                 }
             }
             catch (err) {
@@ -203,14 +205,14 @@ export class MetricsProvider implements IProvider {
             }
         }
         return {
-            // vcpus: this.vcpus,
-            // memory: this.memory,
             vcpus: this.clusterInfo.vcpus,
             memory: this.clusterInfo.memory,
             cpuUsage: 0,
             memoryUsage: 0,
             txmbps: 0,
-            rxmbps: 0
+            rxmbps: 0,
+            pods: 0,
+            maxPods: 0
         }
     }
 

@@ -1,0 +1,85 @@
+import { IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
+import { Router, Request, Response } from 'express'
+import dgram from 'dgram'
+import net from 'net'
+import { ISyslogConfig, ISyslogMessage } from '../types/ISyslogMessage'
+import { UdpServer, TMessageCallback } from './UdpServer'
+import { TcpServer } from './TcpServer'
+
+export class SyslogProvider implements IProvider {
+    public readonly id = 'syslog'
+    public readonly providesRouter = true
+    public readonly requiresApiKeyApi = false
+    public router: Router
+    public routerAlias: string | undefined = 'syslog'
+    public apiKeyApi = undefined
+
+    private subscribers = new Map<IProviderSubscriber, unknown>()
+    private config: ISyslogConfig = { port: 514, protocol: 'both', tcpFraming: 'non-transparent', relayTargets: [] }
+    private udpServer: UdpServer | undefined
+    private tcpServer: TcpServer | undefined
+    private relayUdpSocket: dgram.Socket | undefined
+    private messageCount = 0
+
+    constructor(_clusterInfo: unknown, _kwirthData: unknown) {
+        this.router = Router()
+        this.router.get('/config', (_req: Request, res: Response) => res.json(this.config))
+        this.router.post('/config', (req: Request, res: Response) => {
+            this.config = { ...this.config, ...req.body }
+            res.json({ ok: true })
+        })
+    }
+
+    addSubscriber = async (c: IProviderSubscriber, _data: unknown): Promise<void> => {
+        this.subscribers.set(c, {})
+    }
+
+    removeSubscriber = async (c: IProviderSubscriber): Promise<void> => {
+        this.subscribers.delete(c)
+    }
+
+    startProvider = async (): Promise<void> => {
+        const { port, protocol, tcpFraming } = this.config
+        const onMessage: TMessageCallback = (msg: ISyslogMessage, raw: Buffer) => {
+            this.relay(raw)
+            for (const sub of this.subscribers.keys()) sub.processProviderEvent(this.id, msg)
+            this.messageCount++
+            //if (this.messageCount % 100 === 0) console.log(`[syslog] ${this.messageCount} messages received`)
+        }
+        if (protocol === 'udp' || protocol === 'both') {
+            this.udpServer = new UdpServer(port, onMessage)
+            await this.udpServer.start()
+        }
+        if (protocol === 'tcp' || protocol === 'both') {
+            this.tcpServer = new TcpServer(port, tcpFraming, onMessage)
+            await this.tcpServer.start()
+        }
+    }
+
+    stopProvider = async (): Promise<void> => {
+        await this.udpServer?.stop()
+        await this.tcpServer?.stop()
+        this.relayUdpSocket?.close()
+        this.relayUdpSocket = undefined
+    }
+
+    private relay(raw: Buffer): void {
+        for (const target of this.config.relayTargets) {
+            try {
+                if (target.protocol === 'udp') {
+                    if (!this.relayUdpSocket) this.relayUdpSocket = dgram.createSocket('udp4')
+                    this.relayUdpSocket.send(raw, target.port, target.host)
+                } else {
+                    const lenPrefix = Buffer.from(`${raw.length} `)
+                    const sock = net.connect(target.port, target.host, () => {
+                        sock.write(Buffer.concat([lenPrefix, raw]))
+                        sock.end()
+                    })
+                    sock.on('error', () => {})
+                }
+            } catch {}
+        }
+    }
+}
+
+export default SyslogProvider

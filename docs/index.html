@@ -239,6 +239,7 @@
     <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
     <div class="nav-item"><a href="daemons.html">Daemons</a><div class="nav-dropdown"><a href="daemons.html#what-is-a-daemon">What is a daemon?</a><a href="daemons.html#available-daemons">Available daemons</a><a href="daemons.html#daemon-interface">Daemon interface</a><a href="daemons.html#build-your-own-daemon">Build your own</a></div></div>
     <div class="nav-item"><a href="senders.html">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
+    <div class="nav-item"><a href="ui.html">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a></div></div>
     <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
     <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
     <a href="documentation/#/0.5.40/index">Documentation</a>
@@ -636,6 +637,79 @@
   </div>
 </section>
 
+<!-- UI CUSTOMISATION -->
+<div style="background:linear-gradient(135deg,rgba(45,212,191,.04) 0%,rgba(245,130,10,.04) 100%);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:80px 0;" id="ui">
+  <div style="max-width:1200px;margin:0 auto;padding:0 40px;">
+    <div class="section-tag">UI</div>
+    <h2 class="section-title">Customize as never before</h2>
+    <p class="section-sub">Kwirth's shell is fully pluggable — not just the data, but the entire look and feel. Install themes to repaint the UI, or swap the homepage for one that shows exactly what your team needs at a glance.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:48px;">
+
+      <!-- THEMES -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+        <div style="width:100%;aspect-ratio:16/7;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:0;">
+          <!-- mini theme swatches -->
+          <div style="flex:1;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;border-right:1px solid rgba(255,255,255,.06);">
+            <div style="font-family:monospace;font-size:0.65rem;color:#ff0080;text-shadow:0 0 8px #ff0080;letter-spacing:2px;">post-punk</div>
+            <div style="width:48px;height:3px;background:#ff0080;box-shadow:0 0 8px #ff0080;border-radius:2px;"></div>
+          </div>
+          <div style="flex:1;height:100%;background:#030c1e;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;border-right:1px solid rgba(255,255,255,.06);">
+            <div style="font-family:monospace;font-size:0.65rem;color:#4488ff;text-shadow:0 0 8px rgba(68,136,255,.6);letter-spacing:2px;">plexus</div>
+            <div style="width:48px;height:3px;background:#4488ff;box-shadow:0 0 8px rgba(68,136,255,.5);border-radius:2px;"></div>
+          </div>
+          <div style="flex:1;height:100%;background:#050510;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;">
+            <div style="font-family:monospace;font-size:0.65rem;color:#a855f7;text-shadow:0 0 8px rgba(168,85,247,.6);letter-spacing:2px;">SFY</div>
+            <div style="width:48px;height:3px;background:#a855f7;box-shadow:0 0 8px rgba(168,85,247,.5);border-radius:2px;"></div>
+          </div>
+        </div>
+        <div style="padding:24px 28px;">
+          <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:8px;">Pluggable themes</h3>
+          <p style="font-size:0.875rem;color:var(--muted);line-height:1.6;margin-bottom:16px;">Install theme packages to repaint the entire Kwirth shell — palette, typography, component styling — without touching the code. Three themes ship out of the box: <strong style="color:var(--text);">post-punk</strong>, <strong style="color:var(--text);">plexus</strong>, and <strong style="color:var(--text);">SFY</strong>. Switch between them live from the ThemeManager dialog.</p>
+          <a href="ui.html#themes" style="display:inline-flex;align-items:center;gap:6px;color:var(--teal);text-decoration:none;font-size:0.85rem;font-weight:600;">Explore themes &#x2192;</a>
+        </div>
+      </div>
+
+      <!-- HOMEPAGES -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+        <div style="width:100%;aspect-ratio:16/7;position:relative;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;opacity:0.6;">
+            <div style="background:#0a120a;border:1px solid #006620;border-radius:6px;padding:8px;">
+              <div style="font-family:monospace;font-size:0.5rem;color:#00ff41;margin-bottom:4px;">prod-cluster</div>
+              <div style="height:2px;background:#00ff41;margin-bottom:3px;width:70%;"></div>
+              <div style="height:2px;background:#00ff41;margin-bottom:3px;width:55%;"></div>
+              <div style="height:2px;background:#00ff41;width:40%;"></div>
+            </div>
+            <div style="background:#0a120a;border:1px solid #006620;border-radius:6px;padding:8px;">
+              <div style="font-family:monospace;font-size:0.5rem;color:#00ff41;margin-bottom:4px;">dev-cluster</div>
+              <div style="height:2px;background:#00ff41;margin-bottom:3px;width:30%;"></div>
+              <div style="height:2px;background:#00ff41;margin-bottom:3px;width:20%;"></div>
+              <div style="height:2px;background:#00ff41;width:15%;"></div>
+            </div>
+            <div style="background:#0a120a;border:1px solid #006620;border-radius:6px;padding:8px;">
+              <div style="font-family:monospace;font-size:0.5rem;color:#00ff41;margin-bottom:4px;">staging</div>
+              <div style="height:2px;background:#00ff41;margin-bottom:3px;width:85%;"></div>
+              <div style="height:2px;background:#00ff41;margin-bottom:3px;width:72%;"></div>
+              <div style="height:2px;background:#00ff41;width:60%;"></div>
+            </div>
+          </div>
+          <div style="position:relative;z-index:1;font-family:monospace;font-size:0.9rem;color:#00ff41;text-shadow:0 0 12px #00ff41;letter-spacing:3px;">MATRIX</div>
+        </div>
+        <div style="padding:24px 28px;">
+          <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:8px;">Pluggable homepages</h3>
+          <p style="font-size:0.875rem;color:var(--muted);line-height:1.6;margin-bottom:16px;">The login homepage is a pluggable React component. It receives live cluster metrics, event streams, and channel access as props — you decide what to show. The new <strong style="color:var(--text);">Matrix</strong> homepage renders a live digital-rain canvas per cluster with CPU/MEM/POD bars, a real-time event log, and quick-launch channel buttons.</p>
+          <a href="ui.html#homepages" style="display:inline-flex;align-items:center;gap:6px;color:var(--teal);text-decoration:none;font-size:0.85rem;font-weight:600;">Explore homepages &#x2192;</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SCREENSHOT: ui hero — themes switcher + matrix homepage side by side or combined -->
+    <img src="assets/img/screenshot-ui-hero.png" alt="Kwirth UI customisation — themes and homepages" style="width:100%;border-radius:12px;border:1px solid var(--border);box-shadow:0 24px 60px rgba(0,0,0,.5);">
+
+  </div>
+</div>
+
 <!-- CTA -->
 <div class="cta-section">
   <h2>Start managing & observing<br>your cluster in minutes</h2>
@@ -683,6 +757,7 @@
       <a href="plugins.html">Plugins</a>
       <a href="providers.html">Providers</a>
       <a href="senders.html">Senders</a>
+      <a href="ui.html">UI</a>
       <a href="roadmap.html">Roadmap</a>
     </div>
     <div class="footer-col">

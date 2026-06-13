@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react'
 import { Accordion, AccordionActions, AccordionDetails, AccordionSummary, Box, Button, Checkbox, FormControlLabel, MenuItem, Select, SelectChangeEvent, Stack, TextareaAutosize, TextField, Typography } from '@mui/material'
-import { ExpandMore } from '@mui/icons-material'
+import { ExpandMore } from '../../../tools/KwirthIcons'
 import { allKinds, IKind, MagnifyUserPreferences } from './MagnifyUserPreferences'
 import { IFileObject } from '@jfvilas/react-file-manager'
 import { IChannelObject } from '../../IChannel'

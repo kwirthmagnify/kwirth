@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Prepares the Docker build context with bundled-plugins support and runs docker build.
+ * Prepares the Docker build context with bundled extensions support and runs docker build.
  * Usage (from docker/ directory): node build-image.mjs [image-tag]
  * Default tag: kwirth
  */
@@ -14,10 +14,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
 const tag = process.argv[2] ?? 'kwirth'
 
-const manifestSrc = join(root, 'back', 'kwirth-bundled-plugins.json')
-const scriptSrc   = join(root, 'scripts', 'fetch-bundled-plugins.mjs')
-const manifestDst = join(__dirname, 'kwirth-bundled-plugins.json')
-const scriptDst   = join(__dirname, 'fetch-bundled-plugins.mjs')
+const manifestSrc = join(root, 'back', 'kwirth-bundled.json')
+const scriptSrc   = join(root, 'scripts', 'fetch-bundled.mjs')
+const manifestDst = join(__dirname, 'kwirth-bundled.json')
+const scriptDst   = join(__dirname, 'fetch-bundled.mjs')
 
 if (!existsSync(manifestSrc)) {
     console.error(`[build-image] ERROR: ${manifestSrc} not found.`)
@@ -30,7 +30,7 @@ if (!existsSync(scriptSrc)) {
 
 copyFileSync(manifestSrc, manifestDst)
 copyFileSync(scriptSrc, scriptDst)
-console.log('[build-image] Bundled-plugins manifest and script copied to docker context.')
+console.log('[build-image] Bundled extensions manifest and script copied to docker context.')
 
 try {
     execSync(`docker build -t ${tag} .`, { stdio: 'inherit', cwd: __dirname })

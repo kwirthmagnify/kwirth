@@ -39,6 +39,7 @@ export interface ICensorData {
     allTags: string[]
     regexes: ICensorRegex[]
     assets: ICensorAsset[]
+    syslogCount: number
     processedCount: number
     llmCount: number
     llmLinesCount: number
@@ -80,6 +81,7 @@ export class CensorData implements ICensorData {
     allTags: string[] = []
     regexes: ICensorRegex[] = []
     assets: ICensorAsset[] = []
+    syslogCount = 0
     processedCount = 0
     llmCount = 0
     llmLinesCount = 0

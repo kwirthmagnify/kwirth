@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 
 // material & icons
 import { Alert, AppBar, Box, createTheme, CssBaseline, Drawer, FormControlLabel, IconButton, PaletteMode, Snackbar, SnackbarCloseReason, Stack, Switch, Tab, Tabs, ThemeProvider, Toolbar, Tooltip, Typography } from '@mui/material'
-import { Settings as SettingsIcon, Menu, Person, Home, Notifications, NotificationsActive } from '@mui/icons-material'
+import { Settings as SettingsIcon, Menu, Person, Home, Notifications, NotificationsActive } from './tools/KwirthIcons'
 
 // model
 import { Cluster, IClusterInfo } from './model/Cluster'
@@ -49,6 +49,8 @@ import { ProviderDialog } from './components/ProviderDialog'
 import { SenderDialog } from './components/SenderDialog'
 import { DaemonDialog } from './components/DaemonDialog'
 import { ThemeDialog } from './components/ThemeDialog'
+import { HomepageDialog } from './components/HomepageDialog'
+import { IHomepageExtension } from '@kwirthmagnify/kwirth-common-front'
 
 interface IAppProps {
     backendUrl:string
@@ -57,7 +59,7 @@ interface IAppProps {
 }
 
 const App: React.FC<IAppProps> = (props:IAppProps) => {
-    const [mode, setMode] = useState<PaletteMode>('light')
+    const [mode, setMode] = useState<PaletteMode>((localStorage.getItem('kwirth.mode') as PaletteMode) || 'light')
     const [activeThemeName, setActiveThemeName] = useState<string | undefined>(undefined)
     const theme = useMemo( () => (activeThemeName && window.__kwirth_themes__?.[activeThemeName])
         ? createTheme(window.__kwirth_themes__[activeThemeName].getThemeOptions(mode))
@@ -180,6 +182,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }), [mode, activeThemeName])
 
     const [frontChannels, setFrontChannels] = useState<Map<string, TChannelConstructor>>(new Map())
+    const [licenseInfo, setLicenseInfo] = useState<{ customerId: string; extensions: Record<string, string[]>; expiry: string } | null>(null)
     const [user, setUser] = useState<IUser>()
     const [logged,setLogged] = useState(false)
     const [firstLogin,setFirstLogin]=useState(false)
@@ -232,6 +235,17 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showDaemonDialog, setShowDaemonDialog]=useState<boolean>(false)
     const [showSenderDialog, setShowSenderDialog]=useState<boolean>(false)
     const [showThemeDialog, setShowThemeDialog]=useState<boolean>(false)
+    const [showHomepageDialog, setShowHomepageDialog]=useState<boolean>(false)
+    const [activeHomepageId, setActiveHomepageId]=useState<string|undefined>(undefined)
+    const homepageIdMounted = useRef(false)
+
+    useEffect(() => { localStorage.setItem('kwirth.mode', mode) }, [mode])
+    useEffect(() => {
+        if (!homepageIdMounted.current) { homepageIdMounted.current = true; return }
+        if (activeHomepageId) localStorage.setItem('kwirth.homepage', activeHomepageId)
+        else localStorage.removeItem('kwirth.homepage')
+    }, [activeHomepageId])
+
     const [initialMessage, setInitialMessage]=useState<string>('')
 
     // last & favs
@@ -311,6 +325,23 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         script.id = `kwirth-theme-${id}`
         script.src = `${backendUrl}/themes/${id}/front?t=${Date.now()}`
         document.head.appendChild(script)
+    }
+
+    const loadHomepageFront = (id: string, onload?: () => void) => {
+        const existing = document.getElementById(`kwirth-homepage-${id}`)
+        if (existing) existing.remove()
+        const script = document.createElement('script')
+        script.id = `kwirth-homepage-${id}`
+        script.src = `${backendUrl}/homepages/${id}/front?t=${Date.now()}`
+        if (onload) script.onload = onload
+        document.head.appendChild(script)
+    }
+
+    const unloadHomepageFront = (id: string) => {
+        const script = document.getElementById(`kwirth-homepage-${id}`)
+        if (script) script.remove()
+        if (window.__kwirth_homepages__) delete window.__kwirth_homepages__[id]
+        if (activeHomepageId === id) setActiveHomepageId(undefined)
     }
 
     const unloadThemeFront = (id: string) => {
@@ -411,6 +442,19 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             .then(r => r.json())
             .then((themes: { id: string }[]) => themes.forEach(t => loadThemeFront(t.id)))
             .catch(err => console.log(`[themes] failed to load installed themes: ${err}`))
+
+        // load front.js for already-installed homepages, restoring active homepage from localStorage
+        fetch(`${backendUrl}/homepages`, addGetAuthorization(accessString))
+            .then(r => r.json())
+            .then((homepages: { id: string }[]) => {
+                const savedHomepage = localStorage.getItem('kwirth.homepage')
+                if (savedHomepage && !homepages.some(h => h.id === savedHomepage)) localStorage.removeItem('kwirth.homepage')
+                homepages.forEach(h => {
+                    const isActive = h.id === savedHomepage
+                    loadHomepageFront(h.id, isActive ? () => setActiveHomepageId(h.id) : undefined)
+                })
+            })
+            .catch(err => console.log(`[homepages] failed to load installed homepages: ${err}`))
 
         // check for extension updates (dev only)
         if (process.env.NODE_ENV !== 'production') {
@@ -753,6 +797,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setLogged(false)
         }
         newTab.channelObject.stopChannel = () => stopTabChannel(newTab)
+        newTab.channelObject.isExtensionLicensed = (type: string, id: string) => licenseInfo ? (licenseInfo.extensions[type]?.includes(id) ?? false) : true
         if (newTab.channel.requirements.userSettings) {
             // console.log(user)
             // this is reallyreallyreally tricky. 
@@ -1535,6 +1580,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageThemes:
                 setShowThemeDialog(true)
                 break
+            case MenuDrawerOption.ManageHomepages:
+                setShowHomepageDialog(true)
+                break
             case MenuDrawerOption.ExportWorkspaces: {
                 const allNames:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
                 if (allNames.length===0) { showNoWorkspaces(); break }
@@ -1732,10 +1780,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setLogged(true)
             setFirstLogin(firstTime)
             setUser(user)
-            setAccessString(user.accessKey.id + '|' + user.accessKey.type + '|' + user.accessKey.resources)
+            const as = user.accessKey.id + '|' + user.accessKey.type + '|' + user.accessKey.resources
+            setAccessString(as)
             setCurrentWorkspaceName('untitled')
             setCurrentWorkspaceDescription('No description yet')
             clearTabs()
+            fetch(`${backendUrl}/license`, addGetAuthorization(as))
+                .then(r => r.ok ? r.json() : null)
+                .then(data => { if (data && data.customerId) setLicenseInfo(data) })
+                .catch(() => {})
         }
         else {
             setLogged(false)
@@ -1938,7 +1991,32 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     }
                     { !selectedTab.current &&
                         <Box sx={{ display: 'flex', flexDirection: 'column', height:'100%', minHeight:0 }}>
-                            <Homepage lastTabs={lastTabs} favTabs={favTabs} lastWorkspaces={lastWorkspaces} favWorkspaces={favWorkspaces} onHomepageSelectTab={onHomepageSelectTab} onRestoreTabParameters={onHomepageRestoreParameters} onSelectWorkspace={onHomepageSelectWorkspace} onRestoreWorkspace={onHomepageRestoreWorkspace} frontChannels={frontChannels} onUpdateTabs={onHomepageUpdateTabs} cluster={clusters.find(c => c.name === selectedClusterName)} clusters={clusters} onUpdateWorkspaces={onHomepageUpdateWorkspaces} dataCpu={dataCpu.current} dataMemory={dataMemory.current} dataNetwork={dataNetwork.current}/>
+                            {(() => {
+                                const isExtensionLicensed = (type: string, id: string) => licenseInfo ? (licenseInfo.extensions[type]?.includes(id) ?? false) : true
+                                const getClusterEvents = async (clusterName: string, limit = 25) => {
+                                    const cluster = clusters.find(c => c.name === clusterName)
+                                    if (!cluster) return []
+                                    try {
+                                        const res = await fetch(`${cluster.url}/events?limit=${limit}`, addGetAuthorization(cluster.accessString))
+                                        if (!res.ok) return []
+                                        return await res.json()
+                                    } catch { return [] }
+                                }
+                                const getClusterMetrics = async (clusterName: string) => {
+                                    const cluster = clusters.find(c => c.name === clusterName)
+                                    if (!cluster) return null
+                                    try {
+                                        const res = await fetch(`${cluster.url}/metrics/usage/cluster`, addGetAuthorization(cluster.accessString))
+                                        if (!res.ok) return null
+                                        const data = await res.json()
+                                        return { cpu: data.cpuUsage as number, memory: data.memoryUsage as number, vcpus: data.vcpus as number, totalMemoryBytes: data.memory as number, pods: data.pods as number, maxPods: data.maxPods as number }
+                                    } catch { return null }
+                                }
+                                const homepageProps = { lastTabs, favTabs, lastWorkspaces, favWorkspaces, onHomepageSelectTab, onRestoreTabParameters: onHomepageRestoreParameters, onSelectWorkspace: onHomepageSelectWorkspace, onRestoreWorkspace: onHomepageRestoreWorkspace, frontChannels, onUpdateTabs: onHomepageUpdateTabs, cluster: clusters.find(c => c.name === selectedClusterName), clusters, onUpdateWorkspaces: onHomepageUpdateWorkspaces, dataCpu: dataCpu.current, dataMemory: dataMemory.current, dataNetwork: dataNetwork.current, isExtensionLicensed, getClusterEvents, getClusterMetrics }
+                                const ext: IHomepageExtension | undefined = activeHomepageId ? window.__kwirth_homepages__?.[activeHomepageId] : undefined
+                                const pendingSaved = !activeHomepageId && !!localStorage.getItem('kwirth.homepage')
+                                return ext ? <ext.Component {...homepageProps} /> : pendingSaved ? null : <Homepage {...homepageProps} />
+                            })()}
                         </Box>
                     }
 
@@ -1956,6 +2034,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showSenderDialog && <SenderDialog onClose={() => setShowSenderDialog(false)} /> }
                 { showDaemonDialog && <DaemonDialog onClose={() => setShowDaemonDialog(false)} /> }
                 { showThemeDialog && <ThemeDialog onClose={() => setShowThemeDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} /> }
+                { showHomepageDialog && <HomepageDialog onClose={() => setShowHomepageDialog(false)} activeHomepageId={activeHomepageId} onActivate={setActiveHomepageId} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }

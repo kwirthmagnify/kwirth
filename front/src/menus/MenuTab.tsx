@@ -1,6 +1,6 @@
 import React from 'react'
 import { Collapse, Menu, MenuItem, MenuList, Typography } from '@mui/material'
-import { Check, Pause, PlayArrow, RemoveCircleRounded,  Stop, ExpandLess, ExpandMore, DriveFileRenameOutline, KeyboardArrowLeft, KeyboardArrowRight, KeyboardDoubleArrowLeft, KeyboardDoubleArrowRight, PlayCircle, Info, FactCheck, Fullscreen } from '@mui/icons-material'
+import { Check, Pause, PlayArrow, RemoveCircleRounded,  Stop, ExpandLess, ExpandMore, DriveFileRenameOutline, KeyboardArrowLeft, KeyboardArrowRight, KeyboardDoubleArrowLeft, KeyboardDoubleArrowRight, PlayCircle, Info, FactCheck, Fullscreen } from '../tools/KwirthIcons'
 import { ITabObject } from '../model/ITabObject'
 import { BackChannelData } from '@kwirthmagnify/kwirth-common'
 

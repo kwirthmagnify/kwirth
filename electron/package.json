@@ -11,8 +11,8 @@
 	"homepage": "https://kwirthmagnify.dev",
 	"scripts": {
 		"start": "electron .",
-		"fetch-plugins": "node ../scripts/fetch-bundled-plugins.mjs ../back/kwirth-bundled-plugins.json bundled-plugins",
-		"predist": "node ../scripts/fetch-bundled-plugins.mjs ../back/kwirth-bundled-plugins.json bundled-plugins",
+		"fetch-plugins": "node ../scripts/fetch-bundled.mjs ../back/kwirth-bundled.json bundled",
+		"predist": "node ../scripts/fetch-bundled.mjs ../back/kwirth-bundled.json bundled",
 		"dist": "electron-builder",
 		"dist:win": "electron-builder --win",
 		"dist:linux": "electron-builder --linux",
@@ -28,7 +28,7 @@
 			"./kwirth-transparent.png",
 			"./version.js",
 			"./bundle/**/*",
-			"./bundled-plugins/**/*"
+			"./bundled/**/*"
 		],
 		"asar": false,
 		"directories": {

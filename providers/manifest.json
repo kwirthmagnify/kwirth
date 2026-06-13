@@ -1,5 +1,12 @@
 [
   {
+    "id": "syslog",
+    "version": "0.1.0",
+    "name": "Syslog",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.1.0.tgz",
+    "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support"
+  },
+  {
     "id": "otel",
     "version": "0.1.3",
     "name": "OpenTelemetry",

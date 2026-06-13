@@ -1,7 +1,7 @@
 import { Checkbox, DialogContent, DialogTitle, FormControlLabel, Stack, TextField, Typography } from '@mui/material'
 import { IFileObject } from '@jfvilas/react-file-manager'
 import { ChangeEvent, useRef, useState } from 'react'
-import { Search } from '@mui/icons-material'
+import { Search } from '../../../tools/KwirthIcons'
 import { objectClone, objectSearch } from '../Tools'
 import { getIconFromKind } from '../../../tools/Constants-React'
 // @ts-ignore

@@ -152,7 +152,7 @@ pub fn run() {
                     .env("NODE_ENV", "production")
                     .env("ANSILOG", "false")
                     .env("FORCE", "desktop")
-                    .env("BUNDLED_PLUGINS_PATH", resource_dir.join("bundled-plugins").to_string_lossy().to_string());
+                    .env("BUNDLED_EXTENSIONS_PATH", resource_dir.join("bundled").to_string_lossy().to_string());
 
                 let (mut rx, child) = sidecar.spawn().expect("failed to spawn kwirth-backend");
 

@@ -27,12 +27,14 @@ declare global {
         __kwirth_plugins__: Record<string, any>
         __kwirth_senders__: Record<string, { ConfigDialog?: React.ComponentType<any>; nodeLabel?: string; nodeDescription?: string; nodeIcon?: string }>
         __kwirth_themes__: Record<string, { displayName: string; getThemeOptions: (mode: 'light' | 'dark') => any }>
+        __kwirth_homepages__: Record<string, any>
     }
 }
 window.__kwirth__ = { React, MUI: { material: MUIMaterial, icons: MUIIcons }, kwirthCommon, kwirthCommonFront, kwirthCommonAiFront, codeMirrorView, codeMirrorState, codeMirrorCommands, codeMirrorSearch, codeMirrorLanguage, codeMirrorLangYaml, codeMirrorThemeOneDark, uiwReactCodeMirror, jfvilasReactFileManager: { FileManager: _rfmFileManager }, recharts }
 window.__kwirth_plugins__ = {}
 window.__kwirth_senders__ = {}
 window.__kwirth_themes__ = {}
+window.__kwirth_homepages__ = {}
 
 //const isDesktop = true
 const isDesktop = navigator.userAgent.toLowerCase().indexOf(' electron/') >= 0 || !!(globalThis as any).__TAURI__

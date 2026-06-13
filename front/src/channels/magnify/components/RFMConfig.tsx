@@ -1,5 +1,5 @@
 import { IFileObject, ISpace, ISpaceMenuItem } from '@jfvilas/react-file-manager'
-import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, ManageSearch, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@mui/icons-material'
+import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, ManageSearch, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '../../../tools/KwirthIcons'
 import { Cluster, Config, Customize, Kubernetes, Network, Pod, Security, Settings, Storage } from '../icons/Icons'
 
 const spaces = new Map<string, ISpace>()

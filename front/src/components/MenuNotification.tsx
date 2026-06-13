@@ -1,10 +1,8 @@
 
 import React from 'react'
 import { Popover, List, ListItem, ListItemText, IconButton, Typography, Box, Divider, Chip, Button, Stack } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
-import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
+import { Close as CloseIcon, NotificationsOff as NotificationsOffIcon, DeleteSweep } from '../tools/KwirthIcons'
 import { ENotifyLevel } from '../tools/Global'
-import { DeleteSweep } from '@mui/icons-material'
 import { getIconFromKind } from '../tools/Constants-React'
 import { TChannelConstructor } from '../channels/IChannel'
 

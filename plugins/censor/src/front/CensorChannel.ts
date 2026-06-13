@@ -16,7 +16,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     action: EInstanceMessageAction
     instance: string
-    kind?: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'regexstats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
+    kind?: 'received' | 'business' | 'syslog' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'regexstats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
     assets?: ICensorAsset[]
     analyzing?: boolean
     text?: string
@@ -95,6 +95,9 @@ export class CensorChannel implements IChannel {
                     data.businessLines.push({ text: msg.text, namespace: msg.namespace ?? '', pod: msg.pod ?? '', container: msg.container ?? '', timestamp: msg.timestamp })
                     if (data.businessLines.length > MAX_DISPLAY_LINES) data.businessLines.splice(0, data.businessLines.length - MAX_DISPLAY_LINES)
                 }
+                else if (msg.kind === 'syslog') {
+                    data.syslogCount = (data.syslogCount ?? 0) + 1
+                }
                 else if (msg.kind === 'llminput') {
                     const newLines: string[] = Array.isArray((msg as any).lines) ? (msg as any).lines : (msg.text !== undefined ? [msg.text] : [])
                     const maxInput = config.maxLlmInputLines ?? MAX_LLM_LINES
@@ -125,6 +128,7 @@ export class CensorChannel implements IChannel {
                 }
                 else if (msg.kind === 'stats') {
                     if (msg.processedCount !== undefined) data.processedCount = msg.processedCount
+                    if ((msg as any).syslogCount !== undefined) data.syslogCount = (msg as any).syslogCount
                     if (msg.llmCount !== undefined) data.llmCount = msg.llmCount
                     if ((msg as any).llmLinesCount !== undefined) data.llmLinesCount = (msg as any).llmLinesCount
                     if ((msg as any).totalBytesProcessed !== undefined) data.totalBytesProcessed = (msg as any).totalBytesProcessed
@@ -218,6 +222,7 @@ export class CensorChannel implements IChannel {
                     data.llmWarningLines = []
                     data.allTags = []
                     data.regexes = []
+                    data.syslogCount = 0
                     data.processedCount = 0
                     data.llmCount = 0
                     data.tokensIn = 0
@@ -264,6 +269,7 @@ export class CensorChannel implements IChannel {
         data.allTags = []
         data.regexes = []
         data.assets = []
+        data.syslogCount = 0
         data.processedCount = 0
         data.llmCount = 0
         data.tokensIn = 0

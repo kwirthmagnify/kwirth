@@ -4,8 +4,8 @@
   "description": "Kwirth Magnify Desktop (Tauri)",
   "scripts": {
     "tauri": "tauri",
-    "fetch-plugins": "node ../scripts/fetch-bundled-plugins.mjs ../back/kwirth-bundled-plugins.json resources/bundled-plugins",
-    "prebuild": "node ../scripts/fetch-bundled-plugins.mjs ../back/kwirth-bundled-plugins.json resources/bundled-plugins",
+    "fetch-plugins": "node ../scripts/fetch-bundled.mjs ../back/kwirth-bundled.json resources/bundled",
+    "prebuild": "node ../scripts/fetch-bundled.mjs ../back/kwirth-bundled.json resources/bundled",
     "build": "tauri build",
     "dev": "tauri dev"
   },

@@ -1,6 +1,7 @@
 import { IConfigMaps } from './IConfigMap'
 import { TChannelConstructor } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
+import { LicenseManager } from './LicenseManager'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -332,10 +333,15 @@ export class PluginManager {
         }
     }
 
-    async installBundled(dir: string, registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
+    async installBundled(dir: string, registeredChannels: Map<string, TChannelConstructor>, licenseManager?: LicenseManager): Promise<void> {
         if (!fs.existsSync(dir)) return
         const files = fs.readdirSync(dir).filter(f => f.endsWith('.tgz'))
         for (const file of files) {
+            const id = path.basename(file, '.tgz')
+            if (licenseManager && !licenseManager.isExtensionLicensed('channels', id)) {
+                logInfo(ELogComponent.CORE, `Bundled plugin '${id}' not licensed — skipping`)
+                continue
+            }
             const filePath = path.join(dir, file)
             try {
                 const meta = await this.install(filePath, registeredChannels, 'bundled')

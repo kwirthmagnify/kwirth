@@ -21,5 +21,6 @@ export interface IProvider {
     stopProvider: () => Promise<void>
     router: Router|undefined
     routerAlias: string|undefined
+    started?: boolean
     apiKeyApi: ApiKeyApi|undefined
 }

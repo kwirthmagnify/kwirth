@@ -21,7 +21,7 @@
     ],
     "resources": [
       "resources/front/**/*",
-      "resources/bundled-plugins/*"
+      "resources/bundled/*"
     ]
   },
   "app": {

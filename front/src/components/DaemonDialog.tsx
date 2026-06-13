@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Link, OpenInNew, Refresh, SmartToy, ViewList, ViewModule } from '@mui/icons-material'
+import { CheckCircle, Delete, Download, FolderOpen, Link, OpenInNew, Refresh, SmartToy, ViewList, ViewModule } from '../tools/KwirthIcons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'

@@ -11,15 +11,15 @@ RUN npm install
 
 COPY ./bundle ./dist
 
-# Bundled plugins: run 'node build-image.mjs' (in this folder) to prepare context and build.
-COPY kwirth-bundled-plugins.json ./
-COPY fetch-bundled-plugins.mjs ./
-RUN node fetch-bundled-plugins.mjs kwirth-bundled-plugins.json /usr/kwirth/bundled-plugins \
-    && rm kwirth-bundled-plugins.json fetch-bundled-plugins.mjs
+# Bundled extensions: run 'node build-image.mjs' (in this folder) to prepare context and build.
+COPY kwirth-bundled.json ./
+COPY fetch-bundled.mjs ./
+RUN node fetch-bundled.mjs kwirth-bundled.json /usr/kwirth/bundled \
+    && rm kwirth-bundled.json fetch-bundled.mjs
 
 WORKDIR /usr/kwirth/dist
 
-ENV BUNDLED_PLUGINS_PATH=/usr/kwirth/bundled-plugins
+ENV BUNDLED_EXTENSIONS_PATH=/usr/kwirth/bundled
 EXPOSE 3883
 
 CMD [ "node", "--expose-gc", "--no-incremental-marking", "bundle.js" ]

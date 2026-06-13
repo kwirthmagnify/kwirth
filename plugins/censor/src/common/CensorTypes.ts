@@ -26,6 +26,22 @@ export interface ICensorSession {
     createdAt?: string
 }
 
+export interface ICensorBusinessSource {
+    space?: string
+    type?: string
+    businessPath?: string
+    addTimestamp?: boolean
+}
+
+export interface ICensorSyslogSource {
+    sourceIp?: string
+    hostname?: string
+    appName?: string
+    severity?: number
+    filter?: string
+    addTimestamp?: boolean
+}
+
 export interface ICensorInstanceConfig {
     name: string
     version: string
@@ -37,13 +53,16 @@ export interface ICensorInstanceConfig {
     exampleJson: string
     temperature: number
     active?: boolean
-    space?: string
-    type?: string
-    addTimestamp?: boolean
-    businessPath?: string
+    businessSources?: ICensorBusinessSource[]
+    syslogSources?: ICensorSyslogSource[]
     senderId?: string
     senderConfigName?: string
     mode?: 'inference' | 'audit'
     maxLineLength?: number
     batchTimeout?: number
+    // legacy single-source fields (kept for backwards compat)
+    space?: string
+    type?: string
+    addTimestamp?: boolean
+    businessPath?: string
 }

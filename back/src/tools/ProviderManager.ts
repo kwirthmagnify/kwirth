@@ -9,6 +9,14 @@ import https from 'https'
 import http from 'http'
 import zlib from 'zlib'
 
+export interface IProviderSchemaField {
+    name: string
+    label: string
+    type: 'string' | 'number' | 'boolean' | 'password'
+    required?: boolean
+    default?: string | number | boolean
+}
+
 export interface IProviderMeta {
     id: string
     name: string
@@ -18,6 +26,9 @@ export interface IProviderMeta {
     website?: string
     installedFrom?: string
     backStored?: boolean
+    hasFront?: boolean
+    frontStored?: boolean
+    hasSchema?: boolean
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -31,6 +42,7 @@ export class ProviderManager {
     private configMaps: IConfigMaps
     private installedIds: string[] = []
     private devProviders = new Map<string, IDevProvider>()
+    private devSchemas = new Map<string, IProviderSchemaField[]>()
 
     constructor(configMaps: IConfigMaps) {
         this.configMaps = configMaps
@@ -87,14 +99,12 @@ export class ProviderManager {
 
         this.reloadDevBack(id, backPath, registeredProviders)
 
-        try {
-            fs.watch(backPath, { persistent: false }, () => {
+        fs.watchFile(backPath, { persistent: false, interval: 500 }, (curr, prev) => {
+            if (curr.mtimeMs !== prev.mtimeMs) {
                 logInfo(ELogComponent.CORE, `[dev] Provider '${id}' back.js changed — hot-reloading`)
                 this.reloadDevBack(id, backPath, registeredProviders)
-            })
-        } catch (err) {
-            logError(ELogComponent.CORE, `[dev] Cannot watch '${backPath}': ${err}`)
-        }
+            }
+        })
 
         logInfo(ELogComponent.CORE, `[dev] Provider '${id}' registered from ${absPath}`)
     }
@@ -109,6 +119,7 @@ export class ProviderManager {
                 registeredProviders.set(id, ProviderClass as TProviderConstructor)
                 logInfo(ELogComponent.CORE, `[dev] Provider '${id}' backend reloaded`)
             }
+            if (Array.isArray(providerModule.schema)) this.devSchemas.set(id, providerModule.schema)
         } catch (err) {
             logError(ELogComponent.CORE, `[dev] Provider '${id}' reload error: ${err}`)
         }
@@ -145,7 +156,9 @@ export class ProviderManager {
         const devMetas = Array.from(this.devProviders.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website }
+                const hasFront = fs.existsSync(path.join(dev.distPath, 'front.js'))
+                const hasSchema = this.devSchemas.has(id)
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, hasFront, hasSchema }
             } catch {
                 return dev.meta
             }
@@ -194,6 +207,16 @@ export class ProviderManager {
             meta.backStored = backCompressed.length <= CONFIGMAP_SIZE_LIMIT
             if (!meta.backStored) logInfo(ELogComponent.CORE, `Provider '${meta.id}' back.js (${Math.round(backCompressed.length / 1024)}KB) exceeds configmap limit — will fetch from source on startup`)
 
+            const frontPath = path.join(tmpDir, 'front.js')
+            meta.hasFront = fs.existsSync(frontPath)
+            if (meta.hasFront) {
+                const frontJs = fs.readFileSync(frontPath, 'utf-8')
+                const frontCompressed = zlib.gzipSync(Buffer.from(frontJs, 'utf-8')).toString('base64')
+                meta.frontStored = frontCompressed.length <= CONFIGMAP_SIZE_LIMIT
+                if (meta.frontStored) await this.configMaps.write(`kwirth-provider-${meta.id}-front`, { code: frontCompressed, compressed: true })
+                else logInfo(ELogComponent.CORE, `Provider '${meta.id}' front.js (${Math.round(frontCompressed.length / 1024)}KB) exceeds configmap limit`)
+            }
+
             await this.configMaps.write(`kwirth-provider-${meta.id}-meta`, meta)
             if (meta.backStored) await this.configMaps.write(`kwirth-provider-${meta.id}-back`, { code: backCompressed, compressed: true })
 
@@ -205,6 +228,16 @@ export class ProviderManager {
             if (!this.installedIds.includes(meta.id)) this.installedIds.push(meta.id)
 
             await this.loadBackProvider(meta.id, backJs, registeredProviders)
+
+            try {
+                const tmpModPath = path.join(os.tmpdir(), `kwirth-provider-${meta.id}-back.js`)
+                const mod = require(tmpModPath)
+                if (Array.isArray(mod.schema) && mod.schema.length > 0) {
+                    await this.configMaps.write(`kwirth-provider-${meta.id}-schema`, mod.schema)
+                    meta.hasSchema = true
+                }
+            } catch {}
+
             logInfo(ELogComponent.CORE, `Provider '${meta.id}' v${meta.version} installed`)
             return meta
         } finally {
@@ -225,6 +258,8 @@ export class ProviderManager {
 
     async uninstall(id: string, registeredProviders: Map<string, TProviderConstructor>): Promise<void> {
         if (this.isDevProvider(id)) throw new Error(`Provider '${id}' is a dev provider and cannot be uninstalled`)
+        const dev = this.devProviders.get(id)
+        if (dev) fs.unwatchFile(path.join(dev.distPath, 'back.js'))
         registeredProviders.delete(id)
         this.installedIds = this.installedIds.filter(i => i !== id)
 
@@ -232,6 +267,9 @@ export class ProviderManager {
         await this.configMaps.write('kwirth-providers-index', index.filter(p => p.id !== id))
         await this.configMaps.write(`kwirth-provider-${id}-meta`, null)
         await this.configMaps.write(`kwirth-provider-${id}-back`, null)
+        await this.configMaps.write(`kwirth-provider-${id}-front`, null)
+        await this.configMaps.write(`kwirth-provider-${id}-schema`, null)
+        await this.configMaps.write(`kwirth-provider-${id}-config`, null)
 
         const cacheFile = path.join(os.tmpdir(), `kwirth-provider-${id}-back.js`)
         if (fs.existsSync(cacheFile)) fs.rmSync(cacheFile)
@@ -275,6 +313,45 @@ export class ProviderManager {
         } catch (err) {
             logError(ELogComponent.CORE, `Error loading provider '${id}' backend: ${err}`)
         }
+    }
+
+    providerHasFront(id: string): boolean {
+        const dev = this.devProviders.get(id)
+        if (dev) return fs.existsSync(path.join(dev.distPath, 'front.js'))
+        // installed: hasFront set during install
+        return false
+    }
+
+    async getFrontJs(id: string): Promise<string | undefined> {
+        const dev = this.devProviders.get(id)
+        if (dev) {
+            try { return fs.readFileSync(path.join(dev.distPath, 'front.js'), 'utf-8') } catch { return undefined }
+        }
+        const cacheFile = path.join(os.tmpdir(), `kwirth-provider-${id}-front.js`)
+        if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
+        const data = await this.configMaps.read(`kwirth-provider-${id}-front`)
+        if (data?.code) {
+            const content = data.compressed ? zlib.gunzipSync(Buffer.from(data.code, 'base64')).toString('utf-8') : data.code
+            fs.writeFileSync(cacheFile, content)
+            return content
+        }
+        return undefined
+    }
+
+    async getSchemaAsync(id: string): Promise<IProviderSchemaField[] | undefined> {
+        const devSchema = this.devSchemas.get(id)
+        if (devSchema) return devSchema
+        const stored = await this.configMaps.read(`kwirth-provider-${id}-schema`)
+        return Array.isArray(stored) ? stored as IProviderSchemaField[] : undefined
+    }
+
+    async getConfig(id: string): Promise<Record<string, unknown>> {
+        const data = await this.configMaps.read(`kwirth-provider-${id}-config`, {})
+        return (data ?? {}) as Record<string, unknown>
+    }
+
+    async saveConfig(id: string, cfg: Record<string, unknown>): Promise<void> {
+        await this.configMaps.write(`kwirth-provider-${id}-config`, cfg)
     }
 
     private downloadFile(url: string, destPath: string): Promise<void> {

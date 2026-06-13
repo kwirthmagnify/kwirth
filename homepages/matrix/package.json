@@ -1,0 +1,22 @@
+{
+  "id": "matrix",
+  "name": "matrix",
+  "displayName": "Matrix",
+  "publisher": "@kwirthmagnify",
+  "version": "0.1.0",
+  "description": "Matrix-style cluster overview homepage for Kwirth",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node watch.mjs"
+  },
+  "devDependencies": {
+    "@kwirthmagnify/kwirth-common-front": "^0.5.15",
+    "@mui/icons-material": "7.1.2",
+    "@mui/material": "7.1.2",
+    "@types/react": "^18.3.0",
+    "esbuild": "^0.27.2",
+    "react": "^18.3.0",
+    "typescript": "^5.4.0"
+  }
+}

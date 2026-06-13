@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Backdrop, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, List, ListItemButton, Stack, Tab, Tabs, TextField, Tooltip, Typography} from '@mui/material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { Delete, Edit } from '@mui/icons-material'
+import { Delete, Edit } from '../tools/KwirthIcons'
 import { AccessKey } from '@kwirthmagnify/kwirth-common'
 
 interface IContextSelectorProps {

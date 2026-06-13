@@ -3,8 +3,6 @@
     "censor": "../daemons/censor/dist"
   },
   "channels": {
-    "alert": "../plugins/alert/dist",
-    "topology": "../plugins/topology/dist",
     "censor": "../plugins/censor/dist",
     "pinocchio": "../plugins/pinocchio/dist"
   },
@@ -12,7 +10,8 @@
     "tick": "../providers/tick/dist",
     "validating": "../providers/validating/dist",
     "kafka": "../providers/kafka/dist",
-    "otel": "../providers/otel/dist"
+    "otel": "../providers/otel/dist",
+    "syslog": "../providers/syslog/dist"
   },
   "senders": {
     "console": "../senders/console/dist",
@@ -24,6 +23,10 @@
     "composite": "../senders/composite/dist",
     "timed": "../senders/timed/dist",
     "teams": "../senders/teams/dist"
+  },
+  "homepages": {
+    "clusterized": "../homepages/clusterized/dist",
+    "matrix": "../homepages/matrix/dist"
   },
   "themes": {
     "post-punk": "../themes/post-punk/dist",

@@ -1,0 +1,324 @@
+import React, { useContext, useEffect, useRef, useState } from 'react'
+import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { CheckCircle, Delete, Download, FolderOpen, Home, Link, OpenInNew, Refresh } from '../tools/KwirthIcons'
+import { SessionContext, SessionContextType } from '../model/SessionContext'
+import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
+import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { useKeyboard } from '../tools/useKeyboard'
+
+const HOMEPAGES_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/homepages/manifest.json'
+
+interface IHomepageManifestEntry {
+    id: string
+    name: string
+    displayName: string
+    version: string
+    description: string
+    website?: string
+    url: string
+    previewUrl?: string
+}
+
+interface IInstalledHomepage {
+    id: string
+    name: string
+    displayName: string
+    version: string
+    description: string
+    website?: string
+    installedFrom?: string
+    hasPreview?: boolean
+}
+
+interface IHomepageDialogProps {
+    onClose: () => void
+    activeHomepageId: string | undefined
+    onActivate: (id: string | undefined) => void
+    onHomepageLoad: (id: string) => void
+    onHomepageUnload: (id: string) => void
+}
+
+const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogProps) => {
+    const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
+    useKeyboard(props.onClose)
+
+    const [available, setAvailable] = useState<IHomepageManifestEntry[]>([])
+    const [installed, setInstalled] = useState<IInstalledHomepage[]>([])
+    const [loadingManifest, setLoadingManifest] = useState(false)
+    const [installingId, setInstallingId] = useState<string | undefined>()
+    const [uninstallingId, setUninstallingId] = useState<string | undefined>()
+    const [error, setError] = useState<string | undefined>()
+    const [customUrl, setCustomUrl] = useState('')
+    const [installingCustom, setInstallingCustom] = useState(false)
+    const [installingFile, setInstallingFile] = useState(false)
+    const [filterText, setFilterText] = useState('')
+    const [installedFilter, setInstalledFilter] = useState('')
+    const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const groupedAvailable: Record<string, IHomepageManifestEntry[]> = available.reduce((acc, p) => {
+        if (!acc[p.id]) acc[p.id] = []
+        acc[p.id].push(p)
+        return acc
+    }, {} as Record<string, IHomepageManifestEntry[]>)
+    Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
+
+    const getSelectedEntry = (id: string): IHomepageManifestEntry => {
+        const group = groupedAvailable[id]
+        const version = selectedVersions[id] ?? group[0].version
+        return group.find(p => p.version === version) ?? group[0]
+    }
+
+    useEffect(() => {
+        loadInstalled()
+        fetchManifest()
+    }, [])
+
+    const loadInstalled = async () => {
+        try {
+            const res = await fetch(`${backendUrl}/homepages`, addGetAuthorization(accessString))
+            const data: IInstalledHomepage[] = await res.json()
+            setInstalled(data)
+        } catch (err) {
+            setError(`Failed to load installed homepages: ${err}`)
+        }
+    }
+
+    const fetchManifest = async () => {
+        setError(undefined)
+        setLoadingManifest(true)
+        try {
+            const res = await fetch(HOMEPAGES_MANIFEST_URL)
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            const data: IHomepageManifestEntry[] = await res.json()
+            setAvailable(data)
+        } catch (err) {
+            setError(`Failed to fetch homepage catalog: ${err}`)
+        } finally {
+            setLoadingManifest(false)
+        }
+    }
+
+    const install = async (hp: IHomepageManifestEntry) => {
+        setError(undefined)
+        setInstallingId(hp.id)
+        try {
+            const res = await fetch(`${backendUrl}/homepages/install`, addPostAuthorization(accessString, JSON.stringify({ url: hp.url })))
+            if (!res.ok) {
+                const body = await res.json()
+                throw new Error(body.error ?? `HTTP ${res.status}`)
+            }
+            await loadInstalled()
+            props.onHomepageLoad(hp.id)
+        } catch (err) {
+            setError(`Failed to install ${hp.name}: ${err}`)
+        } finally {
+            setInstallingId(undefined)
+        }
+    }
+
+    const uninstall = async (hp: IInstalledHomepage) => {
+        setError(undefined)
+        setUninstallingId(hp.id)
+        try {
+            const res = await fetch(`${backendUrl}/homepages/${hp.id}`, addDeleteAuthorization(accessString))
+            if (!res.ok) {
+                const body = await res.json()
+                throw new Error(body.error ?? `HTTP ${res.status}`)
+            }
+            if (props.activeHomepageId === hp.id) props.onActivate(undefined)
+            props.onHomepageUnload(hp.id)
+            await loadInstalled()
+        } catch (err) {
+            setError(`Failed to uninstall ${hp.name}: ${err}`)
+        } finally {
+            setUninstallingId(undefined)
+        }
+    }
+
+    const installFromUrl = async () => {
+        const url = customUrl.trim()
+        if (!url) return
+        setError(undefined)
+        setInstallingCustom(true)
+        try {
+            const res = await fetch(`${backendUrl}/homepages/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
+            if (!res.ok) {
+                const body = await res.json()
+                throw new Error(body.error ?? `HTTP ${res.status}`)
+            }
+            const meta: IInstalledHomepage = await res.json()
+            await loadInstalled()
+            props.onHomepageLoad(meta.id)
+            setCustomUrl('')
+        } catch (err) {
+            setError(`Failed to install homepage: ${err}`)
+        } finally {
+            setInstallingCustom(false)
+        }
+    }
+
+    const installFromFile = async (file: File) => {
+        setError(undefined)
+        setInstallingFile(true)
+        try {
+            const res = await fetch(`${backendUrl}/homepages/upload`, {
+                method: 'POST',
+                headers: {
+                    Authorization: accessString ? `Bearer ${accessString}` : '',
+                    'Content-Type': 'application/octet-stream',
+                    'X-Kwirth-App': 'true'
+                },
+                body: file
+            })
+            if (!res.ok) {
+                const body = await res.json()
+                throw new Error(body.error ?? `HTTP ${res.status}`)
+            }
+            const meta: IInstalledHomepage = await res.json()
+            await loadInstalled()
+            props.onHomepageLoad(meta.id)
+        } catch (err) {
+            setError(`Failed to install homepage: ${err}`)
+        } finally {
+            setInstallingFile(false)
+            if (fileInputRef.current) fileInputRef.current.value = ''
+        }
+    }
+
+    const isInstalled = (id: string) => installed.some(p => p.id === id && p.installedFrom !== 'dev')
+    const isDevInstalled = (id: string) => installed.some(p => p.id === id && p.installedFrom === 'dev')
+    const isActive = (id: string) => props.activeHomepageId === id
+
+    const resolveSource = (installedFrom?: string): React.ReactElement | null => {
+        if (!installedFrom) return null
+        if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
+        if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
+        if (installedFrom.includes('github.com/kwirthmagnify')) return <Chip icon={<Home />} label='Kwirth' size='small' variant='outlined' color='primary' />
+        const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
+        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
+    }
+
+    const filteredIds = Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(filterText.toLowerCase()))
+    const filteredInstalled = installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name).toLowerCase().includes(installedFilter.toLowerCase()))
+
+    return (
+        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
+            <DialogTitle>Manage homepages</DialogTitle>
+            <DialogContent>
+                <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
+
+                    <Stack direction='row' alignItems='center' spacing={1}>
+                        <Typography variant='subtitle2'>Installed homepages</Typography>
+                        <TextField size='small' placeholder='Filter…' value={installedFilter} onChange={e => setInstalledFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                    </Stack>
+
+                    {installed.length === 0
+                        ? <Typography variant='body2' color='text.secondary'>No homepages installed. The built-in homepage is always available.</Typography>
+                        : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                            {filteredInstalled.flatMap((hp, i, arr) => [
+                                <Box key={`${hp.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Home fontSize='small' /></Box>,
+                                <Box key={`${hp.id}-name`} sx={{ py: 1, minWidth: 0 }}>
+                                    <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hp.displayName || hp.name}</Typography>
+                                    <Typography variant='caption' color='text.secondary'>{hp.description}</Typography>
+                                </Box>,
+                                <Box key={`${hp.id}-active`} sx={{ py: 1 }}>{isActive(hp.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} />}</Box>,
+                                <Box key={`${hp.id}-source`} sx={{ py: 1 }}>{resolveSource(hp.installedFrom)}</Box>,
+                                <Box key={`${hp.id}-btn`} sx={{ py: 1 }}>
+                                    {isActive(hp.id)
+                                        ? <Button size='small' variant='outlined' onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>
+                                        : <Button size='small' variant='contained' onClick={() => { props.onActivate(hp.id) }}>ACTIVATE</Button>
+                                    }
+                                </Box>,
+                                <Box key={`${hp.id}-del`} sx={{ py: 1 }}>
+                                    <Tooltip title={hp.installedFrom === 'dev' ? 'Dev homepages cannot be uninstalled' : 'Uninstall'}>
+                                        <span>
+                                            <IconButton size='small' color='error' disabled={hp.installedFrom === 'dev' || uninstallingId === hp.id} onClick={() => uninstall(hp)}>
+                                                {uninstallingId === hp.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                </Box>,
+                                ...(i < arr.length - 1 ? [<Box key={`${hp.id}-sep`} sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', mx: -1.5 }} />] : [])
+                            ])}
+                          </Box>
+                    }
+
+                    <Typography variant='subtitle2' sx={{ pt: 1 }}>Install homepage</Typography>
+                    <Stack direction='row' spacing={1} alignItems='center'>
+                        <TextField size='small' fullWidth placeholder='https://...' value={customUrl} onChange={e => setCustomUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') installFromUrl() }} />
+                        <Tooltip title='Install from URL'>
+                            <span>
+                                <IconButton size='small' color='primary' disabled={installingCustom || !customUrl.trim()} onClick={installFromUrl}>
+                                    {installingCustom ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                        <Divider orientation='vertical' flexItem />
+                        <input ref={fileInputRef} type='file' accept='.tgz,application/gzip' style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) installFromFile(f) }} />
+                        <Tooltip title='Install from local file'>
+                            <span>
+                                <Button variant='outlined' size='small' startIcon={installingFile ? <CircularProgress size={14} /> : <FolderOpen fontSize='small' />} disabled={installingFile} onClick={() => fileInputRef.current?.click()} sx={{ whiteSpace: 'nowrap' }}>
+                                    {installingFile ? 'Installing…' : 'Browse…'}
+                                </Button>
+                            </span>
+                        </Tooltip>
+                    </Stack>
+
+                    <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
+                        <Typography variant='subtitle2'>Available homepages</Typography>
+                        <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                        <Tooltip title='Refresh catalog'>
+                            <span>
+                                <IconButton size='small' sx={{ width: 30, height: 30 }} onClick={fetchManifest} disabled={loadingManifest}>
+                                    {loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' />}
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                    </Stack>
+
+                    {filteredIds.length === 0 && !loadingManifest && !error &&
+                        <Typography variant='body2' color='text.secondary'>No homepages available in catalog.</Typography>
+                    }
+
+                    {filteredIds.length > 0 && (
+                        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                            {filteredIds.flatMap((id, i, arr) => {
+                                const t = getSelectedEntry(id)
+                                return [
+                                    <Box key={`${id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Home fontSize='small' /></Box>,
+                                    <Box key={`${id}-name`} sx={{ py: 1, minWidth: 0 }}>
+                                        <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.displayName || t.name}</Typography>
+                                        <Typography variant='caption' color='text.secondary'>{t.description}</Typography>
+                                    </Box>,
+                                    <Box key={`${id}-status`} sx={{ py: 1 }}>
+                                        {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' />
+                                        : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />
+                                        : null}
+                                    </Box>,
+                                    <Box key={`${id}-install`} sx={{ py: 1 }}>
+                                        <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
+                                            <span>
+                                                <IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id} onClick={() => install(t)}>
+                                                    {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    </Box>,
+                                    ...(i < arr.length - 1 ? [<Box key={`${id}-sep`} sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', mx: -1.5 }} />] : [])
+                                ]
+                            })}
+                        </Box>
+                    )}
+
+                    {error && <Typography variant='caption' color='error'>{error}</Typography>}
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={props.onClose}>CLOSE</Button>
+            </DialogActions>
+        </Dialog>
+    )
+}
+
+export { HomepageDialog }

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Kwirth UI — pluggable themes and pluggable homepages. Customize the look and feel of your Kwirth instance at runtime.">
+  <title>Kwirth — UI: Themes &amp; Homepages</title>
+  <link rel="icon" type="image/x-icon" href="_media/favicon.ico">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #060a12;
+      --bg2:       #0d1420;
+      --bg3:       #111827;
+      --card:      #0f1929;
+      --border:    #1e2d40;
+      --orange:    #f5820a;
+      --orange2:   #ff9a2e;
+      --teal:      #2dd4bf;
+      --blue:      #58a6ff;
+      --green:     #3fb950;
+      --yellow:    #e3b341;
+      --red:       #ff7b72;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --font:      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono:      'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+    html { scroll-behavior: smooth; scroll-padding-top: 70px; overflow-x: clip; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.6; }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; padding: 0 40px; height: 62px;
+      background: rgba(6,10,18,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo span { font-size: 1.1rem; font-weight: 700; color: var(--orange); line-height: 1; }
+    .nav-links { display: flex; gap: 6px; margin-left: 36px; }
+    .nav-links a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; line-height: 1.7; transition: all .2s; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--border); }
+    .nav-item { position: relative; display: inline-flex; align-items: center; }
+    .nav-item > a::after { content: ' ▾'; font-size: 0.65rem; opacity: .5; }
+    .nav-dropdown { display: none; position: absolute; top: 100%; padding-top: 8px; left: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; min-width: 200px; z-index: 300; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
+    .nav-item:hover .nav-dropdown { display: flex; flex-direction: column; gap: 1px; }
+    .nav-dropdown a { display: block !important; padding: 6px 10px !important; border-radius: 5px; color: var(--muted) !important; font-size: 0.82rem; white-space: nowrap; background: transparent !important; }
+    .nav-dropdown a:hover { color: var(--text) !important; background: var(--border) !important; }
+    .nav-spacer { flex: 1; }
+    .nav-gh { display: flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 0.875rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); transition: all .2s; }
+    .nav-gh:hover { color: var(--text); border-color: var(--muted); }
+    .btn-nav { background: var(--orange); color: white; text-decoration: none; padding: 7px 18px; border-radius: 6px; font-size: 0.875rem; font-weight: 600; margin-left: 10px; transition: background .2s; }
+    .btn-nav:hover { background: var(--orange2); }
+
+    /* PAGE HERO */
+    .page-hero {
+      padding: 120px 40px 64px; text-align: center;
+      background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(245,130,10,.1) 0%, transparent 70%);
+      border-bottom: 1px solid var(--border);
+    }
+    .page-hero .section-tag { display: inline-block; background: rgba(245,130,10,.1); border: 1px solid rgba(245,130,10,.25); color: var(--orange); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
+    .page-hero h1 { font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; }
+    .page-hero h1 .accent { background: linear-gradient(135deg, var(--orange), var(--orange2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .page-hero p { color: var(--muted); font-size: 1.1rem; max-width: 640px; margin: 0 auto; line-height: 1.7; }
+
+    /* SECTIONS */
+    section { padding: 80px 40px; max-width: 1200px; margin: 0 auto; }
+    section + section { border-top: 1px solid var(--border); }
+    .section-tag { display: inline-block; background: rgba(245,130,10,.1); border: 1px solid rgba(245,130,10,.25); color: var(--orange); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
+    h2.section-title { font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 800; margin-bottom: 12px; letter-spacing: -0.5px; }
+    p.section-sub { color: var(--muted); font-size: 1.05rem; max-width: 600px; line-height: 1.7; margin-bottom: 48px; }
+
+    /* THEME GRID */
+    .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 56px; }
+    .theme-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      overflow: hidden; transition: all .25s;
+    }
+    .theme-card:hover { border-color: rgba(245,130,10,.4); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.5); }
+    .theme-preview {
+      width: 100%; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-family: var(--mono); letter-spacing: 1px; text-transform: uppercase;
+      color: rgba(255,255,255,.3); position: relative; overflow: hidden;
+    }
+    /* post-punk preview */
+    .preview-post-punk { background: #0a0a0a; }
+    .preview-post-punk::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,0,128,.04) 2px, rgba(255,0,128,.04) 4px); }
+    .preview-post-punk .preview-label { color: #ff0080; text-shadow: 0 0 8px #ff0080; }
+    /* plexus preview */
+    .preview-plexus { background: #030c1e; }
+    .preview-plexus::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(0,100,255,.08) 0%, transparent 80%); }
+    .preview-plexus .preview-label { color: #4488ff; text-shadow: 0 0 8px rgba(68,136,255,.6); }
+    /* sfy preview */
+    .preview-sfy { background: #050510; }
+    .preview-sfy::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 40% at 50% 100%, rgba(80,0,160,.15) 0%, transparent 70%); }
+    .preview-sfy .preview-label { color: #a855f7; text-shadow: 0 0 8px rgba(168,85,247,.6); }
+    /* default preview */
+    .preview-default { background: #060a12; }
+    .preview-default .preview-label { color: #f5820a; text-shadow: 0 0 8px rgba(245,130,10,.5); }
+
+    .theme-info { padding: 20px 24px 24px; }
+    .theme-name { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .theme-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+    .theme-badge { display: inline-block; font-size: 0.7rem; padding: 2px 9px; border-radius: 10px; font-weight: 600; }
+    .badge-builtin { background: rgba(63,185,80,.1); color: var(--green); border: 1px solid rgba(63,185,80,.2); }
+    .badge-default { background: rgba(245,130,10,.1); color: var(--orange); border: 1px solid rgba(245,130,10,.2); }
+
+    /* SCREENSHOT PLACEHOLDER */
+    .screenshot-placeholder {
+      width: 100%; background: var(--bg3); border: 2px dashed var(--border);
+      border-radius: 12px; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 10px; color: var(--muted); font-size: 0.85rem;
+      font-family: var(--mono); padding: 48px 24px; margin: 32px 0;
+    }
+    .screenshot-placeholder .ph-icon { font-size: 2rem; opacity: .4; }
+    .screenshot-placeholder .ph-label { opacity: .6; }
+    .screenshot-placeholder .ph-hint { font-size: 0.75rem; opacity: .4; font-style: italic; }
+    .screenshot-actual { width: 100%; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 24px 60px rgba(0,0,0,.5); margin: 32px 0; display: block; }
+
+    /* HOMEPAGE GRID */
+    .homepage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 56px; }
+    .homepage-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; transition: all .25s; }
+    .homepage-card:hover { border-color: rgba(45,212,191,.35); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.5); }
+    .hp-preview { width: 100%; aspect-ratio: 16/9; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .preview-basic { background: #0d1420; }
+    .preview-basic::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(88,166,255,.04) 79px, rgba(88,166,255,.04) 80px); }
+    .preview-matrix { background: #000; }
+    .preview-matrix::before {
+      content: '01001 10110\A01110 00101\A10011 11010\A00101 01110'; white-space: pre;
+      position: absolute; top: 12px; left: 16px; font-family: var(--mono); font-size: 0.6rem;
+      color: rgba(0,255,65,.25); line-height: 1.8; pointer-events: none;
+    }
+    .preview-matrix::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(0,255,65,.05) 0%, transparent 80%);
+    }
+    .preview-label { position: relative; z-index: 1; }
+    .hp-info { padding: 20px 24px 24px; }
+    .hp-name { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .hp-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.55; margin-bottom: 14px; }
+    .hp-features { display: flex; flex-direction: column; gap: 6px; }
+    .hp-feature { display: flex; align-items: flex-start; gap: 8px; font-size: 0.82rem; color: var(--muted); }
+    .hp-feature::before { content: '→'; color: var(--teal); flex-shrink: 0; }
+
+    /* BUILD SECTION */
+    .build-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+    .step-list { display: flex; flex-direction: column; gap: 20px; }
+    .step { display: flex; gap: 16px; }
+    .step-num { width: 32px; height: 32px; border-radius: 50%; background: rgba(245,130,10,.15); border: 1px solid rgba(245,130,10,.3); color: var(--orange); font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+    .step h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+    .step p { font-size: 0.85rem; color: var(--muted); line-height: 1.55; }
+    .code-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .code-block pre { padding: 20px 24px; overflow-x: auto; font-family: var(--mono); font-size: 0.82rem; line-height: 1.7; color: var(--text); }
+    .code-block pre .comment { color: var(--muted); }
+    .code-block pre .key { color: var(--blue); }
+    .code-block pre .val { color: var(--orange); }
+    .code-block pre .str { color: var(--green); }
+    .code-block pre .type { color: var(--teal); }
+
+    /* FOOTER */
+    footer { background: var(--bg2); border-top: 1px solid var(--border); padding: 48px 40px 24px; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; max-width: 1200px; margin: 0 auto 40px; }
+    .footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .footer-logo span { font-size: 1.1rem; font-weight: 700; color: var(--orange); }
+    .footer-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.6; max-width: 280px; }
+    .footer-col h4 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 14px; }
+    .footer-col a { display: block; color: var(--muted); text-decoration: none; font-size: 0.875rem; margin-bottom: 8px; transition: color .2s; }
+    .footer-col a:hover { color: var(--text); }
+    .footer-bottom { max-width: 1200px; margin: 0 auto; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--muted); }
+    .footer-bottom a { color: var(--muted); text-decoration: none; }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 16px; }
+      .nav-links { display: none !important; }
+      .theme-grid { grid-template-columns: 1fr; }
+      .homepage-grid { grid-template-columns: 1fr; }
+      .build-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      section { padding: 60px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav>
+  <a class="nav-logo" href="/">
+    <img src="_media/favicon.ico" width="24" height="24" style="display:block"/>
+    <span>Kwirth</span>
+  </a>
+  <div class="nav-links">
+    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="index.html#features">Features</a><a href="index.html#install">Quick Install</a><a href="index.html#architecture">Architecture</a><a href="index.html#plugins">Plugins &amp; Senders</a><a href="index.html#about">About</a></div></div>
+    <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
+    <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
+    <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
+    <div class="nav-item"><a href="daemons.html">Daemons</a><div class="nav-dropdown"><a href="daemons.html#what-is-a-daemon">What is a daemon?</a><a href="daemons.html#available-daemons">Available daemons</a><a href="daemons.html#daemon-interface">Daemon interface</a><a href="daemons.html#build-your-own-daemon">Build your own</a></div></div>
+    <div class="nav-item"><a href="senders.html">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
+    <div class="nav-item"><a href="ui.html" class="active">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a></div></div>
+    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
+    <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
+    <a href="documentation/#/0.5.40/index">Documentation</a>
+  </div>
+  <div class="nav-spacer"></div>
+  <a class="nav-gh" href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+    GitHub
+  </a>
+  <a class="btn-nav" href="getting-started.html">Get Started</a>
+</nav>
+
+<!-- PAGE HERO -->
+<div class="page-hero">
+  <div class="section-tag">UI Customisation</div>
+  <h1>Themes &amp; <span class="accent">Homepages</span></h1>
+  <p>Kwirth's look and feel is fully pluggable. Install themes to change the visual identity of the entire shell, or swap the homepage for one that shows exactly the cluster data you care about.</p>
+</div>
+
+<!-- THEMES SECTION -->
+<section id="themes">
+  <div class="section-tag">Themes</div>
+  <h2 class="section-title">Pluggable UI themes</h2>
+  <p class="section-sub">A theme is a self-contained package — a React component plus a manifest — that overrides the colour palette, typography, and component styling of the entire Kwirth shell. Themes are installed, switched, and removed at runtime with no pod restart.</p>
+
+  <!-- SCREENSHOT: ThemeManager dialog open, list of installed themes, post-punk selected/active -->
+  <img class="screenshot-actual" src="assets/img/screenshot-theme-manager.png" alt="ThemeManager dialog showing installed themes">
+
+  <div class="theme-grid">
+    <div class="theme-card">
+      <div class="theme-preview preview-default">
+        <span class="preview-label">Default</span>
+      </div>
+      <div class="theme-info">
+        <div class="theme-name">Default</div>
+        <div class="theme-desc">The standard Kwirth look. Dark navy background, orange accent, clean sans-serif type. Ships with the core and cannot be removed.</div>
+        <span class="theme-badge badge-default">Default</span>
+      </div>
+    </div>
+    <div class="theme-card">
+      <div class="theme-preview preview-post-punk">
+        <span class="preview-label" style="color:#ff0080;text-shadow:0 0 8px #ff0080;font-family:monospace;">post-punk</span>
+      </div>
+      <div class="theme-info">
+        <div class="theme-name">Post-Punk</div>
+        <div class="theme-desc">High-contrast neon-on-black aesthetic. Hot-pink accents, monospaced everywhere, and scanline-style horizontal rules. Inspired by 80s CRT terminal art.</div>
+        <span class="theme-badge badge-builtin">Built-in</span>
+      </div>
+    </div>
+    <div class="theme-card">
+      <div class="theme-preview preview-plexus">
+        <span class="preview-label" style="color:#4488ff;text-shadow:0 0 8px rgba(68,136,255,.6);font-family:monospace;">plexus</span>
+      </div>
+      <div class="theme-info">
+        <div class="theme-name">Plexus</div>
+        <div class="theme-desc">Deep-space blue palette with electric-blue accents and subtle radial gradients. Designed for large displays in a NOC or operations room.</div>
+        <span class="theme-badge badge-builtin">Built-in</span>
+      </div>
+    </div>
+    <div class="theme-card">
+      <div class="theme-preview preview-sfy">
+        <span class="preview-label" style="color:#a855f7;text-shadow:0 0 8px rgba(168,85,247,.6);font-family:monospace;">SFY</span>
+      </div>
+      <div class="theme-info">
+        <div class="theme-name">SFY</div>
+        <div class="theme-desc">Science-fiction purple-and-violet palette. Deep black backgrounds, glowing violet highlights, and subtle bottom-lit gradients.</div>
+        <span class="theme-badge badge-builtin">Built-in</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREENSHOT: default theme vs post-punk — same view, nav + tab bar + one channel visible in both -->
+  <img class="screenshot-actual" src="assets/img/screenshot-themes-compare.png" alt="Default theme vs post-punk theme comparison">
+
+  <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:12px;">Switching themes</h3>
+  <p style="color:var(--muted);font-size:0.95rem;line-height:1.7;margin-bottom:24px;">Open the global menu (top-right) → <strong style="color:var(--text);">Themes</strong>. The ThemeManager dialog lists all installed themes with a live preview chip. Click the radio button next to a theme and the shell repaints instantly — no page reload, no connection interruption.</p>
+
+  <!-- SCREENSHOT: ThemeManager open, selecting a different theme — shell background visible changing in real time -->
+  <img class="screenshot-actual" src="assets/img/screenshot-theme-switch.png" alt="Switching themes live in the ThemeManager">
+</section>
+
+<!-- HOMEPAGES SECTION -->
+<section id="homepages">
+  <div class="section-tag">Homepages</div>
+  <h2 class="section-title">Pluggable homepages</h2>
+  <p class="section-sub">The homepage is the first thing you see after login. It is a pluggable React component that receives live cluster data, event streams, and metrics as props — you decide what to show and how.</p>
+
+  <div class="homepage-grid">
+
+    <div class="homepage-card">
+      <div class="hp-preview preview-basic">
+        <span class="preview-label" style="color:var(--blue);text-shadow:0 0 8px rgba(88,166,255,.5);font-family:monospace;position:relative;z-index:1;">Basic</span>
+      </div>
+      <div class="hp-info">
+        <div class="hp-name">Basic <span style="font-size:0.7rem;font-weight:400;color:var(--muted);">— default</span></div>
+        <div class="hp-desc">The classic Kwirth homepage. Shows a card per connected cluster with sparkline charts for CPU, memory, and network usage, plus last-used and favourite tabs and workspaces.</div>
+        <div class="hp-features">
+          <div class="hp-feature">CPU / memory / network sparklines (live, last 60 s)</div>
+          <div class="hp-feature">Last-used and favourite tabs &amp; workspaces</div>
+          <div class="hp-feature">One-click restore of any saved tab or workspace</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="homepage-card">
+      <div class="hp-preview preview-matrix">
+        <span class="preview-label" style="color:#00ff41;text-shadow:0 0 10px #00ff41;font-family:monospace;font-size:1.1rem;letter-spacing:2px;">MATRIX</span>
+      </div>
+      <div class="hp-info">
+        <div class="hp-name">Matrix</div>
+        <div class="hp-desc">A green-on-black homepage inspired by the Matrix digital rain. Each cluster gets a card with a live canvas rain animation, real-time CPU/MEM/POD utilisation bars, a live cluster event log, and quick-launch buttons for installed channels.</div>
+        <div class="hp-features">
+          <div class="hp-feature">Live Matrix rain canvas per cluster card</div>
+          <div class="hp-feature">CPU, MEM, POD utilisation bars with unicode block rendering</div>
+          <div class="hp-feature">Live cluster event log (newest at bottom, auto-scroll)</div>
+          <div class="hp-feature">Connectivity indicator (green pulse = online, red = offline)</div>
+          <div class="hp-feature">Quick-launch buttons for Topology and Magnify channels</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SCREENSHOT: Basic homepage full screen — 2-3 cluster cards with CPU/MEM/NET sparklines and last-used tabs -->
+  <img class="screenshot-actual" src="assets/img/screenshot-homepage-basic.png" alt="Basic homepage with cluster sparklines">
+
+  <!-- SCREENSHOT: Matrix homepage full screen — 2 cluster cards, CPU/MEM/POD bars, minicards, event log, matrix rain canvas -->
+  <img class="screenshot-actual" src="assets/img/screenshot-homepage-matrix.png" alt="Matrix homepage with live event log and utilisation bars">
+</section>
+
+<!-- BUILD YOUR OWN: THEME -->
+<section id="build-theme">
+  <div class="section-tag">Extensibility</div>
+  <h2 class="section-title">Build your own theme</h2>
+  <p class="section-sub">A theme package contains two files: a manifest and a React component. The component receives a <code style="font-family:var(--mono);font-size:0.9em;color:var(--teal);">ThemeProvider</code> children prop and wraps it with any MUI or custom style overrides you need.</p>
+
+  <div class="build-grid">
+    <div class="step-list">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h4>Create the manifest</h4>
+          <p>Add a <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">package.json</code> with <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">kwirth.type = "theme"</code> and a unique <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">kwirth.id</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h4>Implement ITheme</h4>
+          <p>Export a default React component that satisfies <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">ITheme</code>. Wrap children with an MUI <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">ThemeProvider</code> using your custom palette.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h4>Bundle and install</h4>
+          <p>Run <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">npm pack</code> to produce a <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">.tgz</code>. Upload it through the ThemeManager dialog — Kwirth hot-loads it immediately.</p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="code-block"><pre><span class="comment">// package.json (excerpt)</span>
+{
+  <span class="key">"name"</span>: <span class="str">"my-theme"</span>,
+  <span class="key">"kwirth"</span>: {
+    <span class="key">"type"</span>: <span class="str">"theme"</span>,
+    <span class="key">"id"</span>:   <span class="str">"my-theme"</span>,
+    <span class="key">"displayName"</span>: <span class="str">"My Theme"</span>
+  }
+}
+
+<span class="comment">// src/index.tsx</span>
+<span class="key">import</span> { createTheme, ThemeProvider } <span class="key">from</span> <span class="str">'@mui/material'</span>
+<span class="key">import</span> { <span class="type">IThemeProps</span> } <span class="key">from</span> <span class="str">'@kwirthmagnify/kwirth-common-front'</span>
+
+<span class="key">const</span> theme = createTheme({
+  palette: {
+    mode: <span class="str">'dark'</span>,
+    primary: { main: <span class="str">'#your-accent-color'</span> },
+  }
+})
+
+<span class="key">export default function</span> MyTheme({ children }: <span class="type">IThemeProps</span>) {
+  <span class="key">return</span> &lt;<span class="type">ThemeProvider</span> theme={theme}&gt;{children}&lt;/<span class="type">ThemeProvider</span>&gt;
+}</pre></div>
+    </div>
+  </div>
+</section>
+
+<!-- BUILD YOUR OWN: HOMEPAGE -->
+<section id="build-homepage">
+  <div class="section-tag">Extensibility</div>
+  <h2 class="section-title">Build your own homepage</h2>
+  <p class="section-sub">A homepage package exports a React component that receives clusters, live metrics, event helpers, and navigation callbacks as props via <code style="font-family:var(--mono);font-size:0.9em;color:var(--teal);">IHomepageProps</code>. The Kwirth shell handles authentication, data fetching, and prop injection — your component just renders.</p>
+
+  <div class="build-grid">
+    <div class="step-list">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h4>Create the manifest</h4>
+          <p>Add a <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">package.json</code> with <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">kwirth.type = "homepage"</code> and a unique <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">kwirth.id</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h4>Implement IHomepageProps</h4>
+          <p>Export a default React component typed as <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">FC&lt;IHomepageProps&gt;</code>. Use <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">props.getClusterMetrics()</code> and <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">props.getClusterEvents()</code> for live data.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h4>Bundle and install</h4>
+          <p>Run <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">npm pack</code> and upload the <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal);">.tgz</code> via the Homepage section of the Kwirth settings panel.</p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="code-block"><pre><span class="comment">// src/index.tsx</span>
+<span class="key">import</span> { FC, useEffect, useState } <span class="key">from</span> <span class="str">'react'</span>
+<span class="key">import</span> {
+  <span class="type">IHomepageProps</span>, <span class="type">IClusterEvent</span>
+} <span class="key">from</span> <span class="str">'@kwirthmagnify/kwirth-common-front'</span>
+
+<span class="key">const</span> MyHomepage: <span class="type">FC</span>&lt;<span class="type">IHomepageProps</span>&gt; = (props) =&gt; {
+  <span class="key">const</span> [metrics, setMetrics] = useState&lt;<span class="key">any</span>&gt;({})
+
+  useEffect(() =&gt; {
+    props.clusters.forEach(<span class="key">async</span> (c) =&gt; {
+      <span class="key">const</span> m = <span class="key">await</span> props.getClusterMetrics?.(c.name)
+      <span class="key">if</span> (m) setMetrics(prev =&gt; ({...prev, [c.name]: m}))
+    })
+  }, [props.clusters])
+
+  <span class="key">return</span> (
+    &lt;<span class="type">div</span>&gt;
+      {props.clusters.map(c =&gt; (
+        &lt;<span class="type">div</span> key={c.name}&gt;
+          &lt;<span class="type">h2</span>&gt;{c.name}&lt;/<span class="type">h2</span>&gt;
+          &lt;<span class="type">p</span>&gt;CPU: {metrics[c.name]?.cpu ?? <span class="str">'--'</span>}%&lt;/<span class="type">p</span>&gt;
+        &lt;/<span class="type">div</span>&gt;
+      ))}
+    &lt;/<span class="type">div</span>&gt;
+  )
+}
+<span class="key">export default</span> MyHomepage</pre></div>
+    </div>
+  </div>
+
+  <div style="margin-top:40px;padding:24px 28px;background:var(--card);border:1px solid var(--border);border-radius:12px;">
+    <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:8px;">Available props at a glance</h4>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+      <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;"><code style="font-family:var(--mono);color:var(--teal);">clusters</code> — array of connected cluster objects including URL, access string and kwirthData</div>
+      <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;"><code style="font-family:var(--mono);color:var(--teal);">frontChannels</code> — Map of installed channel constructors, for rendering channel icons or launching channels</div>
+      <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;"><code style="font-family:var(--mono);color:var(--teal);">getClusterMetrics(name)</code> — async, returns CPU%, MEM%, POD%, vCPUs, total RAM, pod counts</div>
+      <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;"><code style="font-family:var(--mono);color:var(--teal);">getClusterEvents(name, limit?)</code> — async, returns last N cluster events with time, type, reason, message</div>
+      <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;"><code style="font-family:var(--mono);color:var(--teal);">lastTabs / favTabs</code> — recently used and favourited tabs for restore shortcuts</div>
+      <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;"><code style="font-family:var(--mono);color:var(--teal);">isExtensionLicensed(type, id)</code> — check whether a specific extension is licensed for this instance</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-logo">
+        <img src="_media/favicon.ico" width="20px"/>
+        <span>kwirth</span>
+      </div>
+      <p class="footer-desc">Kubernetes observability platform. Single pod, zero dependencies, infinite possibilities.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <a href="index.html#features">Features</a>
+      <a href="index.html#magnify">Magnify</a>
+      <a href="index.html#install">Installation</a>
+      <a href="plugins.html">Plugins</a>
+      <a href="providers.html">Providers</a>
+      <a href="senders.html">Senders</a>
+      <a href="ui.html">UI</a>
+      <a href="roadmap.html">Roadmap</a>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <a href="getting-started.html">Getting Started</a>
+      <a href="documentation/#/0.5.40/index">Documentation</a>
+      <a href="project.html">Project</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/releases" target="_blank" rel="noopener">Releases</a>
+    </div>
+    <div class="footer-col">
+      <h4>Community</h4>
+      <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/issues" target="_blank" rel="noopener">Issues</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/discussions" target="_blank" rel="noopener">Discussions</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/blob/master/LICENSE" target="_blank" rel="noopener">License (Apache 2.0)</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; 2025 Kwirth Project — Open Source under Apache 2.0</span>
+    <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">github.com/kwirthmagnify/kwirth</a>
+  </div>
+</footer>
+
+</body>
+</html>

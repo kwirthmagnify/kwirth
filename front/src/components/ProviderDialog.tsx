@@ -1,6 +1,8 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Checklist, Delete, Download, FolderOpen, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@mui/icons-material'
+import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { CheckCircle, Delete, Download, Factory, FolderOpen, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '../tools/KwirthIcons'
+
+declare global { interface Window { __kwirth_providers__: Record<string, any> } }
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
@@ -33,6 +35,16 @@ interface IInstalledProvider {
     description: string
     website?: string
     installedFrom?: string
+    hasFront?: boolean
+    hasSchema?: boolean
+}
+
+interface IProviderSchemaField {
+    name: string
+    label: string
+    type: 'string' | 'number' | 'boolean' | 'password'
+    required?: boolean
+    default?: string | number | boolean
 }
 
 interface IProviderDialogProps {
@@ -55,6 +67,11 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [crossInstalled, setCrossInstalled] = useState<Record<string, { id: string, version: string }[]>>({})
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
+    const [expandedId, setExpandedId] = useState<string | undefined>()
+    const [frontLoaded, setFrontLoaded] = useState<Record<string, boolean>>({})
+    const [configSchema, setConfigSchema] = useState<IProviderSchemaField[] | undefined>()
+    const [configValues, setConfigValues] = useState<Record<string, unknown>>({})
+    const [savingConfig, setSavingConfig] = useState(false)
 
     const groupedAvailable: Record<string, IProviderManifestEntry[]> = available.reduce((acc, p) => { if (!acc[p.id]) acc[p.id]=[]; acc[p.id].push(p); return acc }, {} as Record<string, IProviderManifestEntry[]>)
     Object.values(groupedAvailable).forEach(g => g.sort((a,b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
@@ -68,6 +85,75 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         loadInstalled()
         fetchManifest()
     }, [])
+
+    useEffect(() => {
+        if (!expandedId) return
+        const provider = installed.find(p => p.id === expandedId)
+        if (!provider?.hasFront) {
+            loadSchemaAndConfig(expandedId)
+            return
+        }
+        // Remove any existing script tag and clear the registry entry so the latest front.js is always loaded
+        const existing = document.getElementById(`kwirth-provider-front-${expandedId}`)
+        if (existing) existing.remove()
+        if (window.__kwirth_providers__) delete window.__kwirth_providers__[expandedId]
+        setFrontLoaded(prev => ({ ...prev, [expandedId]: false }))
+
+        const script = document.createElement('script')
+        script.id = `kwirth-provider-front-${expandedId}`
+        script.src = `${backendUrl}/providers/${expandedId}/front?t=${Date.now()}`
+        script.crossOrigin = 'anonymous'
+        script.onload = () => setFrontLoaded(prev => ({ ...prev, [expandedId]: true }))
+        script.onerror = () => setError(`Failed to load UI for provider "${expandedId}"`)
+        document.head.appendChild(script)
+    }, [expandedId, installed])
+
+    const loadSchemaAndConfig = async (id: string) => {
+        setConfigSchema(undefined)
+        setConfigValues({})
+        try {
+            const [schemaRes, configRes] = await Promise.all([
+                fetch(`${backendUrl}/providers/${id}/schema`, addGetAuthorization(accessString)),
+                fetch(`${backendUrl}/providers/${id}/config`, addGetAuthorization(accessString))
+            ])
+            if (schemaRes.ok) setConfigSchema(await schemaRes.json())
+            if (configRes.ok) setConfigValues(await configRes.json())
+        } catch {}
+    }
+
+    const saveProviderConfig = async () => {
+        if (!expandedId) return
+        setSavingConfig(true)
+        try {
+            const res = await fetch(`${backendUrl}/providers/${expandedId}/config`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: accessString ? `Bearer ${accessString}` : '', 'X-Kwirth-App': 'true' },
+                body: JSON.stringify(configValues)
+            })
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            setExpandedId(undefined)
+        } catch (err) {
+            setError(`Failed to save config: ${err}`)
+        } finally {
+            setSavingConfig(false)
+        }
+    }
+
+    const renderConfigField = (field: IProviderSchemaField) => {
+        const val = configValues[field.name]
+        if (field.type === 'boolean') return (
+            <FormControlLabel key={field.name}
+                control={<Switch checked={!!val} onChange={e => setConfigValues(prev => ({ ...prev, [field.name]: e.target.checked }))} />}
+                label={field.label} />
+        )
+        return (
+            <TextField key={field.name} size='small' fullWidth label={field.label}
+                type={field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : 'text'}
+                value={val ?? field.default ?? ''}
+                onChange={e => setConfigValues(prev => ({ ...prev, [field.name]: field.type === 'number' ? Number(e.target.value) : e.target.value }))}
+                required={field.required} />
+        )
+    }
 
     const loadInstalled = async () => {
         try {
@@ -212,8 +298,9 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
     const filteredIds = Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].name?.toLowerCase().includes(filterText.toLowerCase()))
 
     return (
+        <>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '60vw', maxWidth: '60vw', height: '78vh' } }}>
-            <DialogTitle>Manage providers</DialogTitle>
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Factory fontSize='small' />Manage providers</DialogTitle>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
@@ -229,7 +316,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                 {installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name || '').toLowerCase().includes(installedFilter.toLowerCase())).map(provider => (
                                     <Box key={provider.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: providerGradient(provider.name) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
-                                            <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Checklist /></Box>
+                                            <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Factory /></Box>
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{provider.displayName || provider.name || provider.id}</Typography>
@@ -247,6 +334,13 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(provider.installedFrom)}</Box>
+                                            <Tooltip title={provider.hasFront || provider.hasSchema ? 'Configure' : 'No configuration available'}>
+                                                <span>
+                                                    <IconButton size='small' disabled={!provider.hasFront && !provider.hasSchema} onClick={() => setExpandedId(provider.id)}>
+                                                        <Settings fontSize='small' />
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
                                             <Tooltip title={provider.installedFrom === 'dev' ? 'Dev providers cannot be uninstalled' : 'Uninstall'}>
                                                 <span>
                                                     <IconButton size='small' color='error' disabled={provider.installedFrom === 'dev' || uninstallingId === provider.id} onClick={() => uninstall(provider)}>
@@ -261,10 +355,15 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                             : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
                                 {installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name || '').toLowerCase().includes(installedFilter.toLowerCase())).map(provider => (
                                     <Box key={provider.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
-                                        <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Checklist fontSize='small' /></Box>
+                                        <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Factory fontSize='small' /></Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{provider.displayName || provider.name || provider.id}</Typography>
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(provider.installedFrom)}</Box>
                                         <Chip label={`v${provider.version}`} size='small' sx={{ minWidth: 72 }} />
+                                        <Tooltip title='Configure'>
+                                            <IconButton size='small' onClick={() => setExpandedId(provider.id)}>
+                                                <Settings fontSize='small' />
+                                            </IconButton>
+                                        </Tooltip>
                                         <Tooltip title={provider.installedFrom === 'dev' ? 'Dev providers cannot be uninstalled' : 'Uninstall'}>
                                             <span>
                                                 <IconButton size='small' color='error' disabled={provider.installedFrom === 'dev' || uninstallingId === provider.id} onClick={() => uninstall(provider)}>
@@ -324,7 +423,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                     return (
                                     <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: providerGradient(provider.name) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
-                                            <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Checklist /></Box>
+                                            <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Factory /></Box>
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{provider.displayName || provider.name}</Typography>
@@ -368,7 +467,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                     const unmet = (provider.requires ?? []).filter(r => !isRequirementMet(r))
                                     return (
                                         <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
-                                            <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Checklist fontSize='small' /></Box>
+                                            <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Factory fontSize='small' /></Box>
                                             <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{provider.displayName || provider.name}</Typography>
                                             {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
                                             {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
@@ -396,6 +495,36 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                 <Button onClick={props.onClose}>CLOSE</Button>
             </DialogActions>
         </Dialog>
+
+        {/* Provider with custom front.js (complex providers like syslog) */}
+        {expandedId && installed.find(p => p.id === expandedId)?.hasFront && (() => {
+            const CustomFront = frontLoaded[expandedId] ? window.__kwirth_providers__?.[expandedId]?.ConfigDialog : undefined
+            return CustomFront
+                ? <CustomFront onClose={() => setExpandedId(undefined)} backendUrl={backendUrl} accessString={accessString} />
+                : null
+        })()}
+
+        {/* Generic config dialog for basic providers (schema-driven) */}
+        {expandedId && !installed.find(p => p.id === expandedId)?.hasFront && (
+            <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px', minHeight: '300px' } }}>
+                <DialogTitle>Configure: {installed.find(p => p.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
+                <DialogContent sx={{ pt: '16px !important' }}>
+                    {!configSchema
+                        ? <Typography variant='body2' color='text.secondary'>This provider has no configurable options.</Typography>
+                        : <Stack spacing={2}>{configSchema.map(f => renderConfigField(f))}</Stack>
+                    }
+                </DialogContent>
+                <DialogActions>
+                    {configSchema && (
+                        <Button variant='contained' disabled={savingConfig} onClick={saveProviderConfig}>
+                            {savingConfig ? <CircularProgress size={14} /> : 'Save'}
+                        </Button>
+                    )}
+                    <Button onClick={() => setExpandedId(undefined)}>Cancel</Button>
+                </DialogActions>
+            </Dialog>
+        )}
+        </>
     )
 }
 

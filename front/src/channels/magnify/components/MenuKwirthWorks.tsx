@@ -1,7 +1,7 @@
 import { Menu, MenuItem, MenuList } from '@mui/material'
 import React from 'react'
 import { ICustomAction } from './UserPreferences'
-import { Construction } from '@mui/icons-material'
+import { Construction } from '../../../tools/KwirthIcons'
 
 interface IMenuWorkProps {
     customActions: ICustomAction[]

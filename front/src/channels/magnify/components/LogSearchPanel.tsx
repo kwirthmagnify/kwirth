@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Checkbox, CircularProgress, Chip, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, InputAdornment, Stack, TextField, Tooltip, Typography } from '@mui/material'
-import { Launch, Search, Stop } from '@mui/icons-material'
+import { Launch, Search, Stop } from '../../../tools/KwirthIcons'
 import { ResizableDialog, IResizableDialogHandle } from './ResizableDialog'
 import { WindowTitleButtons } from './WindowTitleButtons'
 import { IContentWindow } from '../MagnifyTabContent'
 import { IMagnifyData, ILogSearchResult, EMagnifyCommand } from '../MagnifyData'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
+import { useKeyboard } from '../../../tools/useKeyboard'
 import { v4 as uuid } from 'uuid'
 // @ts-ignore
 import './ResizableDialog.css'
@@ -35,6 +36,8 @@ const LogSearchPanel: React.FC<ILogSearchPanelProps> = (props) => {
     const [tailLines, setTailLines] = useState(100)
     const [isMaximized, setIsMaximized] = useState(false)
     const [currentSearchId, setCurrentSearchId] = useState<string | null>(null)
+
+    useKeyboard(props.onClose, props.id)
 
     const { magnifyData } = props
     const searching = !magnifyData.logSearchDone

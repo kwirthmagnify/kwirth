@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Link, OpenInNew, Palette, Refresh, ViewList, ViewModule } from '@mui/icons-material'
+import { CheckCircle, Delete, Download, FolderOpen, Link, OpenInNew, Palette, Refresh, ViewList, ViewModule } from '../tools/KwirthIcons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
@@ -388,7 +388,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
                                             description={t.description}
                                             website={t.website}
                                             previewUrl={t.previewUrl}
-                                            badge={isActive(id) ? <Chip label='active' color='primary' size='small' icon={<CheckCircle />} /> : isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
+                                            badge={isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
                                             action={
                                                 <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
                                                     <span>
@@ -413,8 +413,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
                                         <Box key={`${id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Palette fontSize='small' /></Box>,
                                         <Typography key={`${id}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{t.displayName || t.name}</Typography>,
                                         <Box key={`${id}-status`} sx={{ py: 1 }}>
-                                            {isActive(id) ? <Chip label='active' color='primary' size='small' icon={<CheckCircle />} />
-                                            : isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' />
+                                            {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' />
                                             : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />
                                             : null}
                                         </Box>,

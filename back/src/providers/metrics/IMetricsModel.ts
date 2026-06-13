@@ -5,6 +5,8 @@ export interface IMetricsClusterUsage {
     memoryUsage: number
     txmbps: number
     rxmbps: number
+    pods: number
+    maxPods: number
 }
 
 export interface IMetricsCluster {

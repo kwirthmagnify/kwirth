@@ -1,4 +1,4 @@
-import { Info, Warning, Error, HelpOutline } from '@mui/icons-material';
+import { Info, Warning, Error, HelpOutline } from './KwirthIcons'
 import { Stack, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography, CircularProgress, Box } from '@mui/material';
 import { Dispatch, SetStateAction } from 'react';
 

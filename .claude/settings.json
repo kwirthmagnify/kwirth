@@ -179,7 +179,14 @@
       "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\console -Recurse | Where-Object { !$_.FullName.Contains\\(\"node_modules\"\\) -and !$_.FullName.Contains\\(\"dist\"\\) } | Select-Object FullName)",
       "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\senders\\\\regex -Recurse | Where-Object { !$_.FullName.Contains\\(\"node_modules\"\\) -and !$_.FullName.Contains\\(\"dist\"\\) } | Select-Object FullName)",
       "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\themes\\\\post-punk\\\\src\\\\front\")",
-      "PowerShell(\"dirs created\")"
+      "PowerShell(\"dirs created\")",
+      "PowerShell(New-Item -ItemType Directory -Force -Path c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\providers\\\\syslog\\\\src\\\\back)",
+      "PowerShell(New-Item -ItemType Directory -Force -Path c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\providers\\\\syslog\\\\src\\\\front)",
+      "PowerShell(New-Item -ItemType Directory -Force -Path c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\providers\\\\syslog\\\\src\\\\types)",
+      "PowerShell(New-Item -ItemType Directory -Force -Path c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\providers\\\\syslog\\\\dist)",
+      "PowerShell(Get-ChildItem \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tools\" -Recurse -File | Select-Object FullName | ForEach-Object { $_.FullName })",
+      "PowerShell(\\(Get-Content c:\\\\github\\\\jfvilas\\\\montag-agent\\\\Dockerfile\\) -replace 'censor-agent','montag-agent' | Set-Content c:\\\\github\\\\jfvilas\\\\montag-agent\\\\Dockerfile)",
+      "PowerShell(\\(Get-Content c:\\\\github\\\\jfvilas\\\\montag-agent\\\\README.md\\) -replace 'censor-agent','montag-agent' | Set-Content c:\\\\github\\\\jfvilas\\\\montag-agent\\\\README.md)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
@@ -195,7 +202,9 @@
       "c:\\github\\jfvilas\\grafana\\plugin-log\\panel",
       "c:\\github\\jfvilas\\grafana\\plugin-log\\k8s",
       "c:\\github\\jfvilas\\grafana\\plugin-log",
-      "C:\\Users\\julio.fernandezvila\\.claude"
+      "C:\\Users\\julio.fernandezvila\\.claude",
+      "c:\\github\\jfvilas\\censor-agent",
+      "c:\\github\\jfvilas"
     ]
   }
 }

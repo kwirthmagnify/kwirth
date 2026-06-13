@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { DialogTitle, DialogContent, DialogActions, Button, Typography, Stack, Tooltip, IconButton, Box } from '@mui/material'
-import { ContentCopy } from '@mui/icons-material'
+import { ContentCopy } from '../../../tools/KwirthIcons'
 // @ts-ignore
 import './ResizableDialog.css'
 import { ResizableDialog, IResizableDialogHandle } from './ResizableDialog'

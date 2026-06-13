@@ -19,6 +19,12 @@ Minor but powerful features:
   - **Daemon system**: Headless background workers can now run continuously inside Kwirth without requiring an active user session or WebSocket connection. Daemons are ideal for permanent log analysis, event watching, or continuous data forwarding.
   - **kwirth-common-ai**: New shared package that abstracts LLM provider integrations (OpenRouter, Gemini, Groq, OpenAI, Mistral…). Used by Pinocchio and Censor to offer a unified model/provider configuration across AI-powered features.
 
+### New UI capabilities
+
+  - **Pluggable themes**: Kwirth now supports installable UI themes. Themes are self-contained packages (bundled as `.tgz`) that can be installed, switched, and removed at runtime without restarting Kwirth. The `ThemeManager` exposes a unified API that channels and the shell use to apply color palettes, typography, and component overrides. Three themes ship out of the box: **post-punk** (high-contrast neon-on-black), **plexus** (dark blue grid aesthetic), and **SFY** (a science-fiction inspired palette). Building your own theme requires only a React component that satisfies the `ITheme` interface and a manifest declaring its id and display name.
+
+  - **Pluggable homepages**: The Kwirth homepage — the first screen shown after login — is now a pluggable component. Homepage packages expose a React component that receives the full cluster list, connection metadata, metrics helpers, and event stream accessors as props; the shell wires everything and renders whichever homepage is active. The classic **Basic** homepage (CPU, memory, and network sparklines per cluster) ships as the default. **Matrix** is a new homepage that renders a live Matrix-rain canvas backdrop per cluster card, showing real-time CPU / MEM / POD utilisation bars, cluster event streams, and quick-launch buttons for installed channels — all in a monochrome green-on-black aesthetic.
+
 ### Incremental improvements
 
   - **Magnify — LogSearch: Stop button and better defaults**: The LogSearch panel now defaults to **100 lines** (previously 500) and enforces a hard **500-line maximum**, making searches faster and more responsive. A red **Stop Search** button is available whenever a search is running and cancels it immediately. Cancellation uses a per-search UUID so multiple concurrent searches from the same client can each be stopped independently without interfering with each other. If the LogSearch panel is closed while a search is still running, the search is automatically cancelled on both the frontend and the backend.
@@ -43,6 +49,20 @@ Minor but powerful features:
   - **New LLM tool: `get_service_yaml`**: A new tool has been added to the `kwirth-common-ai` tool set. Given a namespace and a service name it returns the full Kubernetes Service manifest, equivalent to running `kubectl get service <name> -n <namespace> -o yaml`. It is immediately available to all LLM agents (Pinocchio, Censor…) without any additional configuration.
 
   - **Type safety: `MetricDefinition` promoted to `kwirth-common-front`**: The `MetricDefinition` class (fields: `metric`, `type`, `help`, `eval`) has been moved from the Metrics channel internals into `@kwirthmagnify/kwirth-common-front`. The `metricsList` field in `IChannelObject` is now typed `Map<string, MetricDefinition>` instead of `Map<string, unknown>`, eliminating a production TypeScript build error and providing full type safety to any channel that works with metric definitions.
+
+  - **Sender — Rate limiting**: Senders now support a configurable rate limit. When enabled, a sender will process at most N messages per time window and silently drop or queue excess messages. This prevents alert storms from overwhelming external notification endpoints (Teams channels, email inboxes, SMTP relay limits). The rate limit is configured per-sender instance and applies before any routing or composition step.
+
+  - **Sender — ISender refactor**: The `ISender` interface has been simplified and made more consistent. The `send` method now receives a unified `ISenderMessage` object instead of positional parameters, making it easier to build composite and routing senders. All nine built-in senders have been updated to the new interface. Custom senders built against the previous interface will need a one-line migration.
+
+  - **Censor — Performance improvements**: A series of targeted optimisations reduce Censor's steady-state memory footprint and CPU overhead. The LLM interface now batches log lines more efficiently before forwarding to the model, the internal rule-accumulation map has bounded growth, and several event-listener leaks that caused memory to grow unboundedly in long-running sessions have been fixed.
+
+  - **Censor — Extended configuration**: Two new configuration groups have been added to the Censor plugin and daemon. The *display* group controls how findings are rendered in the channel (show/hide timestamps, severity colouring, maximum visible lines). The *daemon* group controls headless-specific behaviour: maximum log lines buffered before flushing to the LLM, trim threshold for lines sent to the model, and an explicit on/off toggle for performance metrics in the status panel.
+
+  - **Pinocchio — UI improvements**: The Pinocchio playground has been redesigned for clarity. The user prompt area is larger, findings are displayed in a scrollable panel with a one-click **Clear findings** button, and the trigger list has been reorganised so active triggers are immediately visible without scrolling.
+
+  - **Ops channel — Fix one-off command execution (issue #3)**: `EOpsCommand.EXECUTE` was never dispatched by the backend, making one-off (non-interactive) command execution silently unavailable. The dispatch path has been repaired; one-off commands now execute correctly and their output is streamed back to the frontend as expected.
+
+  - **Extension managers — UX improvements**: The Plugin, Provider, Sender, and Daemon manager dialogs have been reorganised. Cards are larger, the install/remove actions are more prominent, and the status chip (installed version vs. available version) is now consistently shown across all four managers.
 
 ## 0.5.40
 Minor but powerful features:

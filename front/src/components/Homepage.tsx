@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { Box, Card, CardContent, CardHeader, Collapse, Divider, Fade, IconButton, Stack, Tooltip, Typography } from '@mui/material'
 import { IWorkspaceSummary } from '../model/IWorkspace'
 import { ITabSummary } from '../model/ITabObject'
-import { Delete, ExpandLess, ExpandMore, FactCheck, HelpOutline, OpenInBrowser, Star } from '@mui/icons-material'
+import { Delete, ExpandLess, ExpandMore, FactCheck, HelpOutline, OpenInBrowser, Star } from '../tools/KwirthIcons'
+
+import { IHomepageProps } from '@kwirthmagnify/kwirth-common-front'
 import { TChannelConstructor } from '../channels/IChannel'
 import { Cluster } from '../model/Cluster'
 import { addGetAuthorization } from '../tools/AuthorizationManagement'
@@ -16,25 +18,6 @@ import { MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 // Open source icons: https://iconbuddy.com/
 // transform svg to JSX https://svg2jsx.com/
 // remove background https://www.iloveimg.com/remove-background
-
-interface IHomepageProps {
-    cluster:Cluster|undefined,
-    clusters:Cluster[]
-    frontChannels: Map<string, TChannelConstructor>
-    lastTabs:ITabSummary[]
-    favTabs:ITabSummary[]
-    lastWorkspaces:IWorkspaceSummary[]
-    favWorkspaces:IWorkspaceSummary[]
-    onRestoreTabParameters: (tab:ITabSummary) => void
-    onHomepageSelectTab: (tab:ITabSummary) => void
-    onSelectWorkspace: (workspace:IWorkspaceSummary) => void
-    onRestoreWorkspace: (workspace:IWorkspaceSummary) => void
-    onUpdateTabs: (last:ITabSummary[], fav:ITabSummary[]) => void
-    onUpdateWorkspaces: (last:IWorkspaceSummary[], fav:IWorkspaceSummary[]) => void
-    dataCpu: {value:number}[]
-    dataMemory: {value:number}[]
-    dataNetwork: {value:number}[]
-}
 
 enum EListType {
     FAV='fav',
@@ -54,7 +37,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
 
     let homeCluster = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.name : 'n/a'
     let clusterUrl = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.url : 'n/a'
-    let homeChannels = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.channels.map(c => c.id).sort().join(', ') : ''
+    let homeChannels = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.channels.map((c: any) => c.id).sort().join(', ') : ''
     let kwirthVersion = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.version : 'n/a'
     let kwrithNamespace = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.namespace : 'n/a'
     let kwrithDeployment = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.deployment : 'n/a'
@@ -302,7 +285,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                         const channelClass = props.frontChannels.get(c.trim())
                                         if (channelClass) {
                                             let icon = new channelClass()!.getChannelIcon()
-                                            const isChannelActive = props.clusters.find(c => c.name === props.cluster!.name)!.kwirthData!.channels.some(ch => ch.id === c.trim())
+                                            const isChannelActive = props.clusters.find(c => c.name === props.cluster!.name)!.kwirthData!.channels.some((ch: any) => ch.id === c.trim())
                                             const colorToken = isChannelActive ? 'text.primary' : 'text.disabled';
                                             let newElement = React.cloneElement(icon, { fontSize: 'small', sx:{ color:colorToken } })
                                             return <Tooltip key={ci} title={c.trim()}>{newElement}</Tooltip>

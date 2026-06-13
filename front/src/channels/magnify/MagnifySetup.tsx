@@ -1,5 +1,5 @@
 import { ISetupProps } from '../IChannel'
-import { Search } from '@mui/icons-material'
+import { Search } from '../../tools/KwirthIcons'
 
 const MagnifyIcon = <Search />
 

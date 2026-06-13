@@ -2,7 +2,7 @@ import { Menu, MenuItem, MenuList } from '@mui/material'
 import React from 'react'
 import { IconAlpine, IconDebian, IconUbuntu } from '../icons/Icons'
 import { ICustomAction } from './UserPreferences'
-import { Construction } from '@mui/icons-material'
+import { Construction } from '../../../tools/KwirthIcons'
 
 interface IMenuWorkProps {
     customActions: ICustomAction[]

@@ -62,6 +62,7 @@ export interface IChannelObject {
     stopChannel?: () => void
     openManager?: (type: 'plugins' | 'providers' | 'senders' | 'daemons') => void
     metricsList?: Map<string, MetricDefinition>
+    isExtensionLicensed?: (type: string, id: string) => boolean
 }
 
 export class MetricDefinition {
@@ -109,3 +110,59 @@ export const cleanANSI = (text: string): string => text.replace(/\x1b\[[0-9;]*[m
 export { MarkdownViewer } from './MarkdownViewer'
 export { MiniGauge } from './MiniGauge'
 export type { IMiniGaugeProps } from './MiniGauge'
+
+export interface ITabSummary {
+    name: string
+    description: string
+    channel: string
+    channelObject: {
+        clusterName: string
+        view: EInstanceConfigView
+        namespace: string
+        group: string
+        pod: string
+        container: string
+    }
+}
+
+export interface IWorkspaceSummary {
+    name: string
+    description: string
+}
+
+export interface IClusterEvent {
+    time: string
+    type: string
+    reason: string
+    namespace?: string
+    object: string
+    message: string
+}
+
+export interface IHomepageProps {
+    cluster: any
+    clusters: any[]
+    frontChannels: Map<string, TChannelConstructor>
+    lastTabs: ITabSummary[]
+    favTabs: ITabSummary[]
+    lastWorkspaces: IWorkspaceSummary[]
+    favWorkspaces: IWorkspaceSummary[]
+    onRestoreTabParameters: (tab: ITabSummary) => void
+    onHomepageSelectTab: (tab: ITabSummary) => void
+    onSelectWorkspace: (workspace: IWorkspaceSummary) => void
+    onRestoreWorkspace: (workspace: IWorkspaceSummary) => void
+    onUpdateTabs: (last: ITabSummary[], fav: ITabSummary[]) => void
+    onUpdateWorkspaces: (last: IWorkspaceSummary[], fav: IWorkspaceSummary[]) => void
+    dataCpu: { value: number }[]
+    dataMemory: { value: number }[]
+    dataNetwork: { value: number }[]
+    isExtensionLicensed?: (type: string, id: string) => boolean
+    getClusterEvents?: (clusterName: string, limit?: number) => Promise<IClusterEvent[]>
+    getClusterMetrics?: (clusterName: string) => Promise<{ cpu: number; memory: number; vcpus: number; totalMemoryBytes: number; pods: number; maxPods: number } | null>
+}
+
+export interface IHomepageExtension {
+    homepageId: string
+    displayName: string
+    Component: FC<IHomepageProps>
+}

@@ -75,7 +75,9 @@ class MagnifyChannel implements IChannel {
         cpuUsage: 0,
         memoryUsage: 0,
         txmbps: 0,
-        rxmbps: 0
+        rxmbps: 0,
+        pods: 0,
+        maxPods: 0
     }
     clusterInfo : ClusterInfo
     backChannelObject: IBackChannelObject

@@ -4,7 +4,7 @@ import {
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography, useTheme
 } from '@mui/material'
-import { Add, CheckCircle, ContentCopy, Delete, Download, Edit, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule } from '@mui/icons-material'
+import { Add, CheckCircle, ContentCopy, Delete, Download, Edit, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule } from '../tools/KwirthIcons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
@@ -609,10 +609,10 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                         ? <Typography variant='body2' color='text.secondary'>No senders installed.</Typography>
                         : viewMode === 'card'
                             ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
-                                {installed.filter(s => !filterText || s.id.includes(filterText.toLowerCase()) || (s.displayName ?? '').toLowerCase().includes(filterText.toLowerCase())).map(s => <SenderCard key={s.id} sender={s} />)}
+                                {installed.filter(s => !filterText || s.name.toLowerCase().includes(filterText.toLowerCase()) || (s.displayName ?? '').toLowerCase().includes(filterText.toLowerCase()) || s.description.toLowerCase().includes(filterText.toLowerCase())).map(s => <SenderCard key={s.id} sender={s} />)}
                               </Box>
                             : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-                                {installed.filter(s => !filterText || s.id.includes(filterText.toLowerCase()) || (s.displayName ?? '').toLowerCase().includes(filterText.toLowerCase())).map(s => (
+                                {installed.filter(s => !filterText || s.name.toLowerCase().includes(filterText.toLowerCase()) || (s.displayName ?? '').toLowerCase().includes(filterText.toLowerCase()) || s.description.toLowerCase().includes(filterText.toLowerCase())).map(s => (
                                     <Box key={s.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Send fontSize='small' /></Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.displayName || s.id}</Typography>

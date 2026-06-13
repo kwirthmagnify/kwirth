@@ -64,6 +64,7 @@ import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsP
 
 import { ELogComponent, logError, logInfo, logTrace, logWarning, setLogConfig } from './tools/Logging'
 import { PluginManager } from './tools/PluginManager'
+import { LicenseManager } from './tools/LicenseManager'
 import { PluginApi } from './api/PluginApi'
 import { ProviderManager } from './tools/ProviderManager'
 import { ProviderApi } from './api/ProviderApi'
@@ -73,6 +74,8 @@ import { SenderManager } from './tools/SenderManager'
 import { DaemonManager } from './tools/DaemonManager'
 import { ThemeManager } from './tools/ThemeManager'
 import { ThemeApi } from './api/ThemeApi'
+import { HomepageManager } from './tools/HomepageManager'
+import { HomepageApi } from './api/HomepageApi'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -130,11 +133,17 @@ let providerManager: ProviderManager | undefined
 let senderManager: SenderManager | undefined
 let daemonManager: DaemonManager | undefined
 let themeManager: ThemeManager | undefined
+let homepageManager: HomepageManager | undefined
+const licenseManager = new LicenseManager()
+licenseManager.load()
 
 const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
 registeredProviders.set('business', BusinessProvider)
 registeredProviders.set('metrics', MetricsProvider)
+
+// providers instantiated at startup for router-only access (config endpoints), not yet fully started
+const routerOnlyProviders = new Set<string>()
 
 const registeredChannels = new Map<string, TChannelConstructor>()
 registeredChannels.set('metrics', MetricsChannel)
@@ -1148,10 +1157,11 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     const channelInstance = createChannelInstance(ChannelClass, activeRI.clusterInfo, activeRI.backChannelObject)
                     if (channelInstance) {
                         for (const provId of channelInstance.requirements.providers) {
-                            if (!activeRI.clusterInfo.providers.find(p => p.id === provId)) {
+                            let providerInstance = activeRI.clusterInfo.providers.find(p => p.id === provId)
+                            if (!providerInstance) {
                                 const provConstructor = registeredProviders.get(provId)
                                 if (provConstructor) {
-                                    const providerInstance = createProviderInstance(provConstructor, activeRI.clusterInfo, activeRI.kwirthData)
+                                    providerInstance = createProviderInstance(provConstructor, activeRI.clusterInfo, activeRI.kwirthData) ?? undefined
                                     if (providerInstance) {
                                         providerInstance.startProvider()
                                         activeRI.clusterInfo.providers.push(providerInstance)
@@ -1160,6 +1170,12 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                                 } else {
                                     logError(ELogComponent.CORE, `Required provider '${provId}' not registered (needed by plugin '${id}')`)
                                 }
+                            }
+                            if (providerInstance && providerInstance.providesRouter && providerInstance.router && !providerInstance.started) {
+                                const provPath = providerInstance.routerAlias ? `/${providerInstance.routerAlias}` : `/${activeRI.id}/provider/${providerInstance.id}`
+                                riRouter.use(provPath, providerInstance.router)
+                                providerInstance.started = true
+                                logInfo(ELogComponent.CORE, `Provider '${provId}' HTTP router registered at '${provPath}'`)
                             }
                         }
                         activeRI.channels.set(id, channelInstance)
@@ -1228,8 +1244,37 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let themeApi = new ThemeApi(themeManager, apiKeyApi)
             riRouter.use(`/themes`, themeApi.router)
         }
+        if (homepageManager) {
+            let homepageApi = new HomepageApi(homepageManager, apiKeyApi)
+            riRouter.use(`/homepages`, homepageApi.router)
+        }
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
+
+        riRouter.get('/events', async (req: Request, res: Response) => {
+            try {
+                const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
+                if (!accessKey) return
+                const limit = Math.min(parseInt(req.query.limit as string) || 25, 100)
+                const result = await ri.clusterInfo.coreApi.listEventForAllNamespaces({ limit: limit * 3 })
+                const events = (result.items ?? [])
+                    .filter(e => e.lastTimestamp)
+                    .sort((a, b) => new Date(b.lastTimestamp!).getTime() - new Date(a.lastTimestamp!).getTime())
+                    .slice(0, limit)
+                    .map(e => ({
+                        time: e.lastTimestamp,
+                        type: e.type,
+                        reason: e.reason,
+                        namespace: e.involvedObject?.namespace,
+                        object: `${e.involvedObject?.kind}/${e.involvedObject?.name}`,
+                        message: e.message,
+                    }))
+                res.json(events)
+            } catch (err) {
+                logError(ELogComponent.CORE, `GET /events error: ${err}`)
+                res.status(500).json([])
+            }
+        })
 
         riRouter.get('/daemons/instances', async (req: Request, res: Response) => {
             try {
@@ -1288,6 +1333,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     else
                         path = `/${ri.id}/provider/${provider.id}`
                     riRouter.use(path, provider.router)
+                    provider.started = true
                     logInfo(ELogComponent.CORE, `Provider ${provider.id} will listen HTTP requests at '${path}'`)
                 }
                 else {
@@ -1425,8 +1471,8 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (!pluginManager) {
             pluginManager = new PluginManager(runningInstance.configMaps)
             await pluginManager.init()
-            const bundledPluginsPath = process.env.BUNDLED_PLUGINS_PATH
-            if (bundledPluginsPath) await pluginManager.installBundled(bundledPluginsPath, registeredChannels)
+            const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
+            if (bundledExtensionsPath) await pluginManager.installBundled(bundledExtensionsPath, registeredChannels, licenseManager)
             await pluginManager.loadAll(registeredChannels)
             pluginManager.loadDevPlugins(registeredChannels)
             pluginManager.onDevPluginReloaded = (id, ChannelClass) => {
@@ -1504,6 +1550,22 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             }
         }
 
+        // Auto-instantiate providers with providesRouter=true so their config endpoints and listeners
+        // are available even before any plugin requires them.
+        for (const [provId, providerConstructor] of registeredProviders) {
+            if (localClusterInfo.providers.find(p => p.id === provId)) continue
+            try {
+                const tmpInstance = createProviderInstance(providerConstructor, localClusterInfo, localKwirthData)
+                if (tmpInstance?.providesRouter && tmpInstance.router) {
+                    localClusterInfo.providers.push(tmpInstance)
+                    await tmpInstance.startProvider()
+                    logInfo(ELogComponent.CORE, `Provider '${provId}' auto-instantiated and started`)
+                }
+            } catch {
+                // non-critical: provider may need specific env to instantiate
+            }
+        }
+
     }
     catch (err) {
         logError(ELogComponent.CORE, 'Error setting up kubernetes requirements')
@@ -1569,6 +1631,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                 senders: senderManager
             }
             daemonManager = new DaemonManager(runningInstance.clusterInfo, runningInstance.configMaps, backDaemonObject)
+            const bundledDaemonsPath = process.env.BUNDLED_EXTENSIONS_PATH
+            if (bundledDaemonsPath) await daemonManager.installBundled(bundledDaemonsPath, licenseManager)
             await daemonManager.loadAll()
             await daemonManager.init()
         }
@@ -1577,6 +1641,12 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             themeManager = new ThemeManager(runningInstance.configMaps)
             await themeManager.init()
             themeManager.loadDevThemes()
+        }
+
+        if (!homepageManager) {
+            homepageManager = new HomepageManager(runningInstance.configMaps)
+            await homepageManager.init()
+            homepageManager.loadDevHomepages()
         }
 
     let backChannelObject: IBackChannelObject = {
@@ -2345,6 +2415,8 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
         logInfo(ELogComponent.CORE, 'Configuring healthz endpoint for Kubernetes')
         app.get(`/healthz`, (_req:Request,res:Response) => { res.status(200).send() })
     }
+
+    app.get(`${envRootPath}/license`, (_req:Request, res:Response) => { res.json(licenseManager.getPublicInfo() ?? {}) })
 
     //const fs = require('fs')
     fs.readdir('.', (err:any, folderFiles:any) => {

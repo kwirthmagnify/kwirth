@@ -16,6 +16,7 @@ export interface IDaemon {
     stopInstance(instanceId: string): void
 
     processProviderEvent(providerId: string, event: unknown): void
+    getProviderSubscriptionData?(providerId: string): unknown
     processCommand(instanceId: string, command: string, data: unknown): Promise<unknown>
 
     subscribe(instanceId: string, callback: (event: unknown) => void): () => void

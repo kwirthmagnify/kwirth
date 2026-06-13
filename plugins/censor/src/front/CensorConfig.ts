@@ -1,5 +1,5 @@
 import type { ICensorInstanceConfig } from '../common/CensorTypes'
-export { ECensorCommand, ICensorSession, ICensorInstanceConfig } from '../common/CensorTypes'
+export { ECensorCommand, ICensorSession, ICensorInstanceConfig, ICensorBusinessSource, ICensorSyslogSource } from '../common/CensorTypes'
 
 export interface ICensorConfig {
     maxLines: number
@@ -26,10 +26,8 @@ export class CensorInstanceConfig implements ICensorInstanceConfig {
     exampleJson = '{"patterns":["example regex"]}'
     temperature = 0.2
     active = false
-    space = ''
-    type = ''
-    addTimestamp = false
-    businessPath = ''
+    businessSources: import('../common/CensorTypes').ICensorBusinessSource[] = []
+    syslogSources: import('../common/CensorTypes').ICensorSyslogSource[] = []
     senderId = ''
     senderConfigName = ''
     mode: 'inference' | 'audit' = 'inference'

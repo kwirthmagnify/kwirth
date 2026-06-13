@@ -27,6 +27,10 @@ export interface ICensorInstanceConfig {
     active?: boolean
 
     // for ingesting business events
+    businessSources?: Array<{ space?: string; type?: string; businessPath?: string; addTimestamp?: boolean }>
+    // for ingesting syslog events
+    syslogSources?: Array<{ sourceIp?: string; hostname?: string; appName?: string; severity?: number; filter?: string; addTimestamp?: boolean }>
+    // legacy single-source fields (backwards compat)
     space?: string
     type?: string
     addTimestamp?: boolean
@@ -91,6 +95,7 @@ interface IDaemonInstance {
     analyzing: boolean
     _initReady?: Promise<void>
     processedCount: number
+    syslogCount: number
     llmCount: number
     llmLinesCount: number
     totalBytesProcessed: number
@@ -118,7 +123,7 @@ export class CensorDaemon implements IDaemon {
     readonly daemonId = 'censor'
     readonly requirements: IBackDaemonRequirements = {
         storage: true,
-        providers: ['events', 'business']
+        providers: ['events', 'business', 'syslog']
     }
 
     private clusterInfo: unknown
@@ -172,6 +177,7 @@ export class CensorDaemon implements IDaemon {
                 assets: [],
                 analyzing: false,
                 processedCount: 0,
+                syslogCount: 0,
                 llmCount: 0,
                 llmLinesCount: 0,
                 totalBytesProcessed: 0,
@@ -258,6 +264,28 @@ export class CensorDaemon implements IDaemon {
         this.pendingSubscribers.delete(instanceId)
     }
 
+    getProviderSubscriptionData(providerId: string): unknown {
+        if (providerId === 'business') {
+            const spacesMap = new Map<string, Set<string>>()
+            for (const inst of this.instances.values()) {
+                const sources = inst.cfg.businessSources?.length
+                    ? inst.cfg.businessSources
+                    : (inst.cfg.space || inst.cfg.businessPath)
+                        ? [{ space: inst.cfg.space, type: inst.cfg.type, businessPath: inst.cfg.businessPath }]
+                        : []
+                for (const src of sources) {
+                    if (!src.businessPath || !src.space) continue
+                    const types = spacesMap.get(src.space) ?? new Set<string>()
+                    types.add(src.type ?? '')
+                    spacesMap.set(src.space, types)
+                }
+            }
+            const spaces = Array.from(spacesMap.entries()).map(([name, types]) => ({ name, types: Array.from(types) }))
+            return spaces.length > 0 ? { spaces } : undefined
+        }
+        return {}
+    }
+
     processProviderEvent(providerId: string, event: unknown): void {
         if (providerId === 'events') {
             const { type, obj } = event as { type: string, obj: { kind: string, metadata: { name: string, namespace: string } } }
@@ -274,6 +302,49 @@ export class CensorDaemon implements IDaemon {
             return
         }
 
+        if (providerId === 'syslog') {
+            const msg = event as { message: string; raw: string; sourceIp?: string; hostname: string; appName: string; severity: number }
+            const text = msg.message || msg.raw
+            if (!text) return
+            for (const inst of this.instances.values()) {
+                if (!inst.analyzing) continue
+                const sources = inst.cfg.syslogSources?.length ? inst.cfg.syslogSources : [{}]
+                const matchingSrc = sources.find(src => {
+                    if (src.sourceIp && src.sourceIp !== msg.sourceIp) return false
+                    if (src.hostname && src.hostname !== msg.hostname) return false
+                    if (src.appName && src.appName !== msg.appName) return false
+                    if (src.severity !== undefined && msg.severity > src.severity) return false
+                    if (src.filter) {
+                        try { if (!new RegExp(src.filter).test(msg.raw)) return false } catch { return false }
+                    }
+                    return true
+                })
+                if (!matchingSrc) continue
+                inst.syslogCount++
+                const ts = new Date().toISOString()
+                const llmText = matchingSrc.addTimestamp ? `${ts} ${text}` : text
+                this.broadcast(inst, 'syslog', { text, namespace: msg.hostname, pod: msg.appName, container: '', timestamp: ts })
+                if (inst.analyzing) {
+                    inst.processedCount++
+                    const clean = cleanANSI(llmText)
+                    let filtered = false
+                    for (const r of inst.regexes) {
+                        try { if (r.compiled.test(clean)) { r.matches++; filtered = true } } catch {}
+                    }
+                    if (!filtered) {
+                        const batchSize = this.effectiveBatchSize(inst)
+                        if (inst.lineBuffer.length < MAX_LINE_BUFFER) inst.lineBuffer.push(clean)
+                        if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
+                            const batch = inst.lineBuffer.splice(0, batchSize)
+                            this.callLlm(inst, batch)
+                        }
+                    }
+                    this.broadcastStats(inst)
+                }
+            }
+            return
+        }
+
         if (providerId === 'business') {
             const bEvent = event as { last: { event: { space: string, type: string, data: unknown } } }
             const eventSpace = bEvent.last?.event?.space ?? ''
@@ -281,27 +352,29 @@ export class CensorDaemon implements IDaemon {
             const eventBody = bEvent.last?.event
             this.backDaemonObject.logInfo?.(`[censor-daemon] business event: space='${eventSpace}' type='${eventType}' instances=${this.instances.size} body=${JSON.stringify(eventBody).slice(0, 200)}`)
             for (const inst of this.instances.values()) {
-                if (!inst.cfg.businessPath) {
-                    this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: no businessPath`)
+                if (!inst.analyzing) continue
+                const sources = inst.cfg.businessSources?.length
+                    ? inst.cfg.businessSources
+                    : (inst.cfg.space || inst.cfg.businessPath)
+                        ? [{ space: inst.cfg.space, type: inst.cfg.type, businessPath: inst.cfg.businessPath, addTimestamp: inst.cfg.addTimestamp }]
+                        : []
+                const matchingSrc = sources.find(src => {
+                    if (!src.businessPath) return false
+                    if (src.space && src.space !== eventSpace) return false
+                    if (src.type && src.type !== eventType) return false
+                    return true
+                })
+                if (!matchingSrc) {
+                    this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: no matching business source for space='${eventSpace}' type='${eventType}'`)
                     continue
                 }
-                const cfgSpace = inst.cfg.space ?? ''
-                const cfgType = inst.cfg.type ?? ''
-                if (cfgSpace && cfgSpace !== eventSpace) {
-                    this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: space mismatch cfg='${cfgSpace}' event='${eventSpace}'`)
-                    continue
-                }
-                if (cfgType && cfgType !== eventType) {
-                    this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: type mismatch cfg='${cfgType}' event='${eventType}'`)
-                    continue
-                }
-                const text = extractText(eventBody, inst.cfg.businessPath)
+                const text = extractText(eventBody, matchingSrc.businessPath!)
                 if (text === undefined) {
-                    this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: extractText returned undefined for path='${inst.cfg.businessPath}'`)
+                    this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: extractText returned undefined for path='${matchingSrc.businessPath}'`)
                     continue
                 }
                 const ts = new Date().toISOString()
-                const llmText = inst.cfg.addTimestamp ? `${ts} ${text}` : String(text)
+                const llmText = matchingSrc.addTimestamp ? `${ts} ${text}` : String(text)
                 this.broadcast(inst, 'business', { text: String(text), namespace: eventSpace, pod: eventType, container: '', timestamp: ts })
                 if (inst.analyzing) {
                     inst.processedCount++
@@ -349,7 +422,7 @@ export class CensorDaemon implements IDaemon {
                     target = {
                         instanceId,
                         cfg: cfg as ICensorInstanceConfig,
-                        assets: [], analyzing: true, processedCount: 0, llmCount: 0, llmLinesCount: 0, totalBytesProcessed: 0,
+                        assets: [], analyzing: true, processedCount: 0, syslogCount: 0, llmCount: 0, llmLinesCount: 0, totalBytesProcessed: 0,
                         tokensIn: 0, tokensOut: 0,
                         lineBuffer: [], regexes: [], llmBusy: false, llmErrorCooldownUntil: 0, subscribers: new Set(),
                         lastStatsBroadcast: 0, lastRegexStatsBroadcast: 0, pendingReceivedLines: []
@@ -484,6 +557,7 @@ export class CensorDaemon implements IDaemon {
         inst.lastStatsBroadcast = now
         this.broadcast(inst, 'stats', {
             processedCount: inst.processedCount,
+            syslogCount: inst.syslogCount,
             llmCount: inst.llmCount,
             llmLinesCount: inst.llmLinesCount,
             totalBytesProcessed: inst.totalBytesProcessed,
@@ -701,19 +775,17 @@ export class CensorDaemon implements IDaemon {
         }
         finally {
             inst.llmBusy = false
-            console.log(`[censor-autobatch] success=${success} batchMode=${inst.cfg.batchMode} pending=${inst.lineBuffer.length} currentBatchSize=${inst.currentBatchSize} cfgBatchSize=${inst.cfg.batchSize}`)
             if (success && inst.cfg.batchMode === 'auto') {
                 const maxSize = inst.cfg.batchSize ?? BATCH_SIZE
                 const minSize = inst.cfg.batchSizeMin ?? 1
                 const current = inst.currentBatchSize ?? maxSize
                 const pending = inst.lineBuffer.length
-                console.log(`[censor-autobatch] maxSize=${maxSize} minSize=${minSize} current=${current} pending=${pending} threshold=${current * 0.9}`)
                 if (pending >= current) {
                     inst.currentBatchSize = Math.min(maxSize, current + Math.max(1, Math.round(current * 0.2)))
                 } else if (pending < current * 0.9) {
                     inst.currentBatchSize = Math.max(minSize, current - Math.max(1, Math.round(current * 0.2)))
                 }
-                console.log(`[censor-autobatch] => newBatchSize=${inst.currentBatchSize}`)
+                console.log(`[censor-autobatch] success=${success} batchMode=${inst.cfg.batchMode} pending=${inst.lineBuffer.length} currentBatchSize=${inst.currentBatchSize} cfgBatchSize=${inst.cfg.batchSize} maxSize=${maxSize} minSize=${minSize} current=${current} pending=${pending} threshold=${current * 0.9} => newBatchSize=${inst.currentBatchSize}`)
             }
             if (success) {
                 const batchSize = this.effectiveBatchSize(inst)
