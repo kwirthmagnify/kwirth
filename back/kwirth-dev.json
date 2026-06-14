@@ -26,12 +26,13 @@
   },
   "homepages": {
     "clusterized": "../homepages/clusterized/dist",
-    "matrix": "../homepages/matrix/dist"
+    "matrix": "../homepages/matrix/dist",
+    "avicii": "../homepages/avicii/dist"
   },
   "themes": {
     "post-punk": "../themes/post-punk/dist",
-    "plexus": "../themes/plexus/dist",
-    "sfy": "../themes/sfy/dist"
+    "matrix": "../themes/matrix/dist",
+    "avicii": "../themes/avicii/dist"
   },
   "senderConfigs": {
     "email-resend": [

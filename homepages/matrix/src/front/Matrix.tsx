@@ -74,19 +74,25 @@ const MatrixRain: React.FC = () => {
     )
 }
 
-const StatusLight: React.FC<{ online: boolean; animationDelay?: string }> = ({ online, animationDelay }) => (
-    <Tooltip title={online ? 'Online' : 'Offline'}>
-        <Box sx={{
-            width: 12, height: 12, borderRadius: '50%',
-            bgcolor: online ? MATRIX_GREEN : '#ff3333',
-            boxShadow: online ? `0 0 6px 2px ${MATRIX_GREEN}` : '0 0 6px 2px #ff3333',
-            transition: 'all 0.3s ease',
-            cursor: 'default',
-            animation: online ? 'matrix-status-pulse 2.5s ease-in-out infinite' : 'none',
-            animationDelay: animationDelay ?? '0s',
-        }} />
-    </Tooltip>
-)
+const StatusLight: React.FC<{ online: boolean; events?: IClusterEvent[]; animationDelay?: string }> = ({ online, events, animationDelay }) => {
+    const hasError   = online && (events ?? []).some(e => e.type !== 'Normal' && e.type !== 'Warning')
+    const hasWarning = online && !hasError && (events ?? []).some(e => e.type === 'Warning')
+    const color = !online ? '#ff3333' : hasError ? '#ff3333' : hasWarning ? '#ff9800' : MATRIX_GREEN
+    const label = !online ? 'Offline' : hasError ? 'Errors detected' : hasWarning ? 'Warnings detected' : 'Online'
+    return (
+        <Tooltip title={label}>
+            <Box sx={{
+                width: 12, height: 12, borderRadius: '50%',
+                bgcolor: color,
+                boxShadow: `0 0 6px 2px ${color}`,
+                transition: 'all 0.3s ease',
+                cursor: 'default',
+                animation: online && !hasError && !hasWarning ? 'matrix-status-pulse 2.5s ease-in-out infinite' : 'none',
+                animationDelay: animationDelay ?? '0s',
+            }} />
+        </Tooltip>
+    )
+}
 
 const MetricBar: React.FC<{ label: string; value: number }> = ({ label, value }) => {
     const barRef = useRef<HTMLSpanElement>(null)
@@ -139,6 +145,7 @@ const EventLog: React.FC<{ events: IClusterEvent[] }> = ({ events }) => {
         <Box ref={boxRef} sx={{
             flex: 1,
             overflowY: 'auto',
+            overflowX: 'auto',
             fontFamily: 'monospace',
             fontSize: '0.55rem',
             lineHeight: 1.9,
@@ -147,21 +154,26 @@ const EventLog: React.FC<{ events: IClusterEvent[] }> = ({ events }) => {
             border: `1px solid ${MATRIX_DIM}`,
             borderRadius: 1,
             p: 1,
-            '&::-webkit-scrollbar': { width: 4 },
+            whiteSpace: 'nowrap',
+            '&::-webkit-scrollbar': { width: 4, height: 4 },
             '&::-webkit-scrollbar-thumb': { bgcolor: MATRIX_DIM, borderRadius: 2 },
         }}>
             {events.length === 0
                 ? <Box sx={{ color: MATRIX_GREEN, opacity: 0.4 }}>{'// follow the white rabbit'}</Box>
-                : [...events].reverse().map((e, i) => (
+                : [...events].reverse().map((e, i) => {
+                    const d = new Date(e.time)
+                    const t = [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2, '0')).join(':')
+                    return (
                     <Box key={i} sx={{ color: e.type === 'Warning' ? '#ff9800' : MATRIX_GREEN, mb: 0.2 }}>
                         <Box component="span" sx={{ color: MATRIX_DIM, mr: 0.5 }}>
-                            {new Date(e.time).toLocaleTimeString()}
+                            {t}
                         </Box>
                         <Box component="span" sx={{ mr: 0.5 }}>[{e.reason}]</Box>
                         <Box component="span" sx={{ color: MATRIX_DIM, mr: 0.5 }}>{e.object}</Box>
                         {e.message}
                     </Box>
-                ))
+                    )
+                })
             }
         </Box>
     )
@@ -272,7 +284,7 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
                 overflowY: 'auto',
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: 3,
+                gap: 4,
                 alignContent: 'start',
             }}>
                 {props.clusters.map((cluster: any, idx: number) => {
@@ -309,7 +321,7 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
                                         }}>
                                             {cluster.name}
                                         </Typography>
-                                        <StatusLight online={!!clusterMetrics[cluster.name]} animationDelay={`${(idx * 0.7) % 2.5}s`} />
+                                        <StatusLight online={!!clusterMetrics[cluster.name]} events={clusterEvents[cluster.name]} animationDelay={`${(idx * 0.7) % 2.5}s`} />
                                     </Stack>
 
                                     {/* Row 2: url */}

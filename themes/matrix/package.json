@@ -1,0 +1,17 @@
+{
+  "id": "matrix",
+  "name": "@kwirthmagnify/kwirth-theme-matrix",
+  "publisher": "@kwirthmagnify",
+  "version": "0.1.0",
+  "displayName": "Matrix",
+  "description": "Matrix digital rain theme — pure black background, phosphor-green monospace typography, matching the Matrix homepage aesthetic.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.13",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.4.0"
+  }
+}

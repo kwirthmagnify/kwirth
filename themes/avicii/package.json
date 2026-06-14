@@ -1,0 +1,17 @@
+{
+  "id": "avicii",
+  "name": "@kwirthmagnify/kwirth-theme-avicii",
+  "publisher": "@kwirthmagnify",
+  "version": "0.1.0",
+  "displayName": "Avicii",
+  "description": "Dark geometric theme inspired by Avicii — warm gold accents, sharp edges, Oswald typography, and triangle motifs.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.13",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.4.0"
+  }
+}

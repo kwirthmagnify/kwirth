@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 308.0 30">
+<g fill="#fff" stroke="none">
+<g transform="translate(37.0,30) scale(0.1,-0.1)"><path d="M132 167 l-132 -132 0 -18 0 -17 17 0 18 0 112 112 113 113 0 -113 0 -112 25 0 25 0 0 150 0 150 -23 0 -22 0 -133 -133z"/></g>
+<g transform="translate(206.0,30) scale(0.1,-0.1)"><path d="M132 167 l-132 -132 0 -18 0 -17 17 0 18 0 112 112 113 113 0 -113 0 -112 25 0 25 0 0 150 0 150 -23 0 -22 0 -133 -133z"/></g>
+</g>
+<path d="M 5.5 27.5 L 5.5 2.5 L 20.5 2.5 A 11 12.5 0 0 1 20.5 27.5 L 5.5 27.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="miter"/>
+<path d="M 99.5 2.5 L 79.75 2.5 A 6.25 6.25 0 0 0 79.75 15 L 93.25 15 A 6.25 6.25 0 0 1 93.25 27.5 L 73.5 27.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="miter"/>
+<path d="M 107.5 0 L 107.5 30 M 133.5 0 L 133.5 30 M 107.5 15.0 L 133.5 15.0" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="miter"/>
+<path d="M 141.5 0 L 141.5 30 M 141.5 2.5 L 161.5 2.5 A 6 6.25 0 0 1 161.5 15.0 L 141.5 15.0 M 141.5 15.0 L 160.0 15.0 A 7.5 6.25 0 0 1 160.0 27.5 L 141.5 27.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="miter"/>
+<path d="M 188.0 2.5 A 12.5 12.5 0 0 1 188.0 27.5 A 12.5 12.5 0 0 1 188.0 2.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="miter"/>
+<path d="M 242.5 30 L 242.5 2.5 L 259.5 2.5 A 9 6.25 0 0 1 259.5 15.0 L 242.5 15.0" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="miter"/>
+<path d="M 251.42 16.94 L 254.58 13.06 L 271.00 26.45 L 271.00 30.00 L 267.44 30.00 Z" fill="#fff" stroke="none"/>
+<path d="M 276.5 27.5 L 276.5 2.5 L 291.5 2.5 A 11 12.5 0 0 1 291.5 27.5 L 276.5 27.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="miter"/>
+</svg>

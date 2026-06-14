@@ -238,8 +238,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showHomepageDialog, setShowHomepageDialog]=useState<boolean>(false)
     const [activeHomepageId, setActiveHomepageId]=useState<string|undefined>(undefined)
     const homepageIdMounted = useRef(false)
+    const themeNameMounted = useRef(false)
 
     useEffect(() => { localStorage.setItem('kwirth.mode', mode) }, [mode])
+    useEffect(() => {
+        if (!themeNameMounted.current) { themeNameMounted.current = true; return }
+        if (activeThemeName) localStorage.setItem('kwirth.theme', activeThemeName)
+        else localStorage.removeItem('kwirth.theme')
+    }, [activeThemeName])
     useEffect(() => {
         if (!homepageIdMounted.current) { homepageIdMounted.current = true; return }
         if (activeHomepageId) localStorage.setItem('kwirth.homepage', activeHomepageId)
@@ -318,12 +324,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         setPluginVersion(v => v + 1)
     }
 
-    const loadThemeFront = (id: string) => {
+    const loadThemeFront = (id: string, onload?: () => void) => {
         const existing = document.getElementById(`kwirth-theme-${id}`)
         if (existing) existing.remove()
         const script = document.createElement('script')
         script.id = `kwirth-theme-${id}`
         script.src = `${backendUrl}/themes/${id}/front?t=${Date.now()}`
+        if (onload) script.onload = onload
         document.head.appendChild(script)
     }
 
@@ -440,7 +447,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         // load front.js for already-installed themes
         fetch(`${backendUrl}/themes`, addGetAuthorization(accessString))
             .then(r => r.json())
-            .then((themes: { id: string }[]) => themes.forEach(t => loadThemeFront(t.id)))
+            .then((themes: { id: string }[]) => {
+                const savedTheme = localStorage.getItem('kwirth.theme')
+                themes.forEach(t => {
+                    const isActive = t.id === savedTheme
+                    loadThemeFront(t.id, isActive ? () => setActiveThemeName(t.id) : undefined)
+                })
+            })
             .catch(err => console.log(`[themes] failed to load installed themes: ${err}`))
 
         // load front.js for already-installed homepages, restoring active homepage from localStorage
