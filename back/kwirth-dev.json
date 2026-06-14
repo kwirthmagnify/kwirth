@@ -25,14 +25,9 @@
     "teams": "../senders/teams/dist"
   },
   "homepages": {
-    "clusterized": "../homepages/clusterized/dist",
-    "matrix": "../homepages/matrix/dist",
-    "avicii": "../homepages/avicii/dist"
+    "clusterized": "../homepages/clusterized/dist"
   },
   "themes": {
-    "post-punk": "../themes/post-punk/dist",
-    "matrix": "../themes/matrix/dist",
-    "avicii": "../themes/avicii/dist"
   },
   "senderConfigs": {
     "email-resend": [

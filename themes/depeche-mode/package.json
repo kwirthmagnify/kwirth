@@ -1,10 +1,10 @@
 {
-  "id": "post-punk",
-  "name": "@kwirthmagnify/kwirth-theme-post-punk",
+  "id": "depeche-mode",
+  "name": "@kwirthmagnify/kwirth-theme-depeche-mode",
   "publisher": "@kwirthmagnify",
   "version": "0.1.1",
-  "displayName": "Post Punk",
-  "description": "Dark monochrome theme with acid-green accents and monospace typography, inspired by the post-punk aesthetic.",
+  "displayName": "Depeche Mode",
+  "description": "Depeche Mode Memento Mori theme — abyss black, blood red accent, bone parchment, condensed bold typography.",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",

@@ -7,6 +7,7 @@ export interface IDaemon {
     getDaemonData(): BackDaemonData
 
     startDaemon(): Promise<void>
+    initInstance?(instanceConfig: IDaemonInstanceConfig): Promise<void>
 
     addObject(instanceConfig: IDaemonInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean>
     deleteObject(instanceConfig: IDaemonInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean>

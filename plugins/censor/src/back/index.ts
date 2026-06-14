@@ -1,10 +1,11 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IDaemonInstanceConfig, IDaemonEvent, IDaemonManager } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, EInstanceConfigView, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IDaemonInstanceConfig, IDaemonEvent, IDaemonManager } from '@kwirthmagnify/kwirth-common'
 import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS } from '@kwirthmagnify/kwirth-common-ai'
 import { loadModels } from '@kwirthmagnify/kwirth-common-ai/back'
 import { randomUUID } from 'crypto'
 import { ECensorCommand, ICensorInstanceConfig, ICensorSession } from '../common/CensorTypes'
 
 const PROVIDERS_AVAILABLE = ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek']
+
 
 
 interface ICensorCommandMessage extends IInstanceMessage {
@@ -124,7 +125,7 @@ export class CensorChannel {
         sources: [EClusterType.KUBERNETES],
         endpoints: [],
         websocket: false,
-        cluster: false,
+        cluster: true,
         resourced: true
     })
 
@@ -168,7 +169,17 @@ export class CensorChannel {
                 instance.llm = llmList.find((l: ILlm) => l.id === instance.cfg.llmId)
                 if (instance.sessionId) {
                     const dm = this.backChannelObject.daemonManager
-                    if (dm) await dm.sendCommand(instance.sessionId, 'configset', { ...instance.cfg, _llms: llmList }).catch(() => {})
+                    if (dm) {
+                        console.log(`[censor-back] CONFIGSET hot-reload: logstreamEnabled=${instance.cfg.logstreamEnabled} logstreamAll=${instance.cfg.logstreamAll} sources=${JSON.stringify(instance.cfg.logstreamSources)} assets=${instance.assets.length}`)
+                        await dm.sendCommand(instance.sessionId, 'configset', { ...instance.cfg, _llms: llmList }).catch(() => {})
+                        // Re-notify daemon of all assets so it can re-evaluate with the new config
+                        for (const asset of instance.assets) {
+                            console.log(`[censor-back] CONFIGSET re-seed: ${asset.namespace}/${asset.pod}/${asset.container}`)
+                            await dm.directAddObject(instance.sessionId, asset.namespace, asset.pod, asset.container).catch(() => {})
+                        }
+                    }
+                } else {
+                    console.log(`[censor-back] CONFIGSET: no session active, config saved locally only`)
                 }
                 await this.executeConfigGet(webSocket, instance, llmList)
                 this.rebuildBusinessSubscription()
@@ -193,7 +204,6 @@ export class CensorChannel {
             case ECensorCommand.CONFIGSAVE: {
                 const cfgToSave = msg.data as ICensorInstanceConfig
                 let configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
-                if (cfgToSave.active) configs = configs.map(c => ({ ...c, active: false }))
                 const idx = configs.findIndex(c => c.name === cfgToSave.name && c.version === cfgToSave.version)
                 if (idx >= 0) configs[idx] = cfgToSave
                 else configs.push(cfgToSave)
@@ -259,28 +269,30 @@ export class CensorChannel {
                 const { description } = msg.data as { description: string }
                 const id = randomUUID()
                 const ic = instance.instanceConfig
+                const isCluster = ic.view === EInstanceConfigView.CLUSTER
                 const llmsForDaemon: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
+                console.log(`[censor-back] SESSIONSTART: logstreamEnabled=${instance.cfg.logstreamEnabled} logstreamAll=${instance.cfg.logstreamAll} sources=${JSON.stringify(instance.cfg.logstreamSources)} llmId=${instance.cfg.llmId} isCluster=${isCluster}`)
                 const daemonInstanceConfig: IDaemonInstanceConfig = {
                     id, daemonId: 'censor', description,
                     view: ic.view, namespace: ic.namespace,
                     ...(ic.group ? { group: ic.group } : {}),
                     ...(ic.pod ? { pod: ic.pod } : {}),
                     ...(ic.container ? { container: ic.container } : {}),
-                    data: { ...instance.cfg, _llms: llmsForDaemon }, started: true,
+                    data: { ...instance.cfg, _llms: llmsForDaemon, scope: isCluster ? 'cluster' : 'resource' }, started: true,
                     createdAt: new Date().toISOString()
                 }
                 await dm.createInstance('censor', daemonInstanceConfig)
                 await dm.sendCommand(id, 'configset', { ...instance.cfg, _llms: llmsForDaemon })
                 if (this.providers.length > 0) await dm.sendCommand(id, 'providersset', this.providers)
-                // Sync analyzing state before seeding pods so addObject restores it correctly from storage
                 if (!instance.analyzing) await dm.sendCommand(id, 'analyzestop', null)
-                // Seed daemon with pods the channel already has open
-                for (const asset of instance.assets) {
-                    await dm.directAddObject(id, asset.namespace, asset.pod, asset.container)
-                }
                 if (instance.sessionUnsub) instance.sessionUnsub()
                 instance.sessionId = id
                 instance.sessionUnsub = dm.subscribe(id, (event: IDaemonEvent) => this.forwardDaemonEvent(webSocket, instance, event))
+                if (!isCluster) {
+                    for (const asset of instance.assets) {
+                        await dm.directAddObject(id, asset.namespace, asset.pod, asset.container)
+                    }
+                }
                 const sessions = this.buildSessionList(dm.listInstances('censor'))
                 webSocket.send(JSON.stringify({ msgtype: 'censormessage', channel: 'censor', action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.DATA, instance: instance.instanceId, kind: 'sessionstarted', sessionId: id, sessionDescription: description, sessions, analyzing: instance.analyzing } as ICensorMessage))
                 this.rebuildBusinessSubscription()
@@ -377,8 +389,10 @@ export class CensorChannel {
 
     private forwardDaemonEvent(webSocket: WebSocket, instance: IInstance, event: IDaemonEvent): void {
         if (event.type === 'assets' && Array.isArray((event.data as any).assets)) {
-            // Keep instance.assets in sync with daemon so containsAsset() stays accurate
-            instance.assets = (event.data as any).assets as IAsset[]
+            // In cluster mode the daemon owns the asset list; in resource mode the plugin back manages it
+            if (instance.instanceConfig.view === EInstanceConfigView.CLUSTER) {
+                instance.assets = (event.data as any).assets as IAsset[]
+            }
         }
         if (event.type === 'llmwarning') {
             const sid = instance.cfg.senderId
@@ -466,18 +480,21 @@ export class CensorChannel {
 
         const dm = this.backChannelObject.daemonManager
         if (!instance.sessionId && dm) {
-if (!instance._startupPromise) {
+            if (!instance._startupPromise) {
                 instance._startupPromise = this.autoStartDaemon(webSocket, instance, dm)
                     .finally(() => { instance!._startupPromise = undefined })
             }
             await instance._startupPromise
         }
 
-        instance.assets.push({ namespace: ns, pod, container })
-        this.sendAssets(webSocket, instance)   // immediate feedback before daemon stream starts
+        const isClusterMode = ns === '*all' && pod === '*all' && container === '*all'
 
-        if (instance.sessionId && dm) {
-            await dm.directAddObject(instance.sessionId, ns, pod, container).catch(() => {})
+        if (!isClusterMode) {
+            instance.assets.push({ namespace: ns, pod, container })
+            this.sendAssets(webSocket, instance)
+            if (instance.sessionId && dm) {
+                await dm.directAddObject(instance.sessionId, ns, pod, container).catch(() => {})
+            }
         }
         return true
     }
@@ -485,6 +502,7 @@ if (!instance._startupPromise) {
     private autoStartDaemon = async (webSocket: WebSocket, instance: IInstance, dm: IDaemonManager) => {
         const id = randomUUID()
         const ic = instance.instanceConfig
+        const isCluster = ic.view === EInstanceConfigView.CLUSTER
         const llms: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
         const daemonCfg: IDaemonInstanceConfig = {
             id, daemonId: 'censor', description: 'auto-' + new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15),
@@ -492,10 +510,11 @@ if (!instance._startupPromise) {
             ...(ic.group ? { group: ic.group } : {}),
             ...(ic.pod ? { pod: ic.pod } : {}),
             ...(ic.container ? { container: ic.container } : {}),
-            data: { ...instance.cfg, _llms: llms, ephemeral: true }, started: true,
+            data: { ...instance.cfg, _llms: llms, ephemeral: true, scope: isCluster ? 'cluster' : 'resource' }, started: true,
             createdAt: new Date().toISOString()
         }
         await dm.createInstance('censor', daemonCfg)
+        console.log(`[censor-back] autoStartDaemon configset: logstreamEnabled=${instance.cfg.logstreamEnabled} logstreamAll=${instance.cfg.logstreamAll} sources=${JSON.stringify(instance.cfg.logstreamSources)}`)
         await dm.sendCommand(id, 'configset', { ...instance.cfg, _llms: llms })
         await dm.sendCommand(id, 'providersset', this.providers)
         if (!instance.analyzing) await dm.sendCommand(id, 'analyzestop', null)
@@ -520,6 +539,7 @@ if (!instance._startupPromise) {
         }
         const dm = this.backChannelObject.daemonManager
         const sessions = dm ? this.buildSessionList(dm.listInstances('censor')) : []
+        const derivedScope: 'cluster' | 'resource' = instance.instanceConfig.view === EInstanceConfigView.CLUSTER ? 'cluster' : 'resource'
         const msg: ICensorMessage = {
             msgtype: 'censormessage',
             channel: 'censor',
@@ -528,7 +548,7 @@ if (!instance._startupPromise) {
             type: EInstanceMessageType.DATA,
             instance: instance.instanceId,
             kind: 'config',
-            instanceConfig: instance.cfg,
+            instanceConfig: { ...instance.cfg, scope: derivedScope },
             configs,
             llms,
             providers: this.providers,

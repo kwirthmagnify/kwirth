@@ -193,7 +193,13 @@
       "PowerShell(Copy-Item c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\homepages\\\\matrix\\\\watch.mjs c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\homepages\\\\avicii\\\\watch.mjs)",
       "Bash(xargs grep -l \"censor\\\\|montag\")",
       "Bash(xargs grep -l \"censor\\\\|daemon\")",
-      "Bash(xargs grep -l \"instances\\\\|sendCommand\")"
+      "Bash(xargs grep -l \"instances\\\\|sendCommand\")",
+      "PowerShell(Get-ChildItem C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\src -Recurse -Exclude node_modules | Where-Object { $_.FullName -notmatch 'node_modules' } | Select-Object FullName)",
+      "PowerShell(Get-ChildItem C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front\\\\src -Recurse | Where-Object { $_.FullName -notmatch 'node_modules' } | Select-Object Name | Sort-Object Name | Select-String -Pattern \"censor|Censor|daemon|Daemon\")",
+      "PowerShell(Get-ChildItem C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins -Recurse | Where-Object { $_.FullName -notmatch 'node_modules' -and $_.FullName -notmatch 'dist' } | Select-Object FullName)",
+      "PowerShell(head -30)",
+      "PowerShell(Get-ChildItem \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\themes\" -Directory | ForEach-Object { $name = $_.Name; $hasWatch = Test-Path \\(Join-Path $_.FullName \"watch.mjs\"\\); \"$name : watch.mjs=$hasWatch\" })",
+      "PowerShell(Get-ChildItem \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\homepages\" -Directory | ForEach-Object { $name = $_.Name; $hasWatch = Test-Path \\(Join-Path $_.FullName \"watch.mjs\"\\); \"$name : watch.mjs=$hasWatch\" })"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

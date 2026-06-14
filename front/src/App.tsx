@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 
 // material & icons
-import { Alert, AppBar, Box, createTheme, CssBaseline, Drawer, FormControlLabel, IconButton, PaletteMode, Snackbar, SnackbarCloseReason, Stack, Switch, Tab, Tabs, ThemeProvider, Toolbar, Tooltip, Typography } from '@mui/material'
+import { Alert, AppBar, Box, CircularProgress, createTheme, CssBaseline, Drawer, FormControlLabel, IconButton, PaletteMode, Snackbar, SnackbarCloseReason, Stack, Switch, Tab, Tabs, ThemeProvider, Toolbar, Tooltip, Typography } from '@mui/material'
 import { Settings as SettingsIcon, Menu, Person, Home, Notifications, NotificationsActive } from './tools/KwirthIcons'
 
 // model
@@ -61,6 +61,7 @@ interface IAppProps {
 const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [mode, setMode] = useState<PaletteMode>((localStorage.getItem('kwirth.mode') as PaletteMode) || 'light')
     const [activeThemeName, setActiveThemeName] = useState<string | undefined>(undefined)
+    const [themeReady, setThemeReady] = useState(() => !localStorage.getItem('kwirth.theme'))
     const theme = useMemo( () => (activeThemeName && window.__kwirth_themes__?.[activeThemeName])
         ? createTheme(window.__kwirth_themes__[activeThemeName].getThemeOptions(mode))
         : createTheme({
@@ -451,10 +452,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 const savedTheme = localStorage.getItem('kwirth.theme')
                 themes.forEach(t => {
                     const isActive = t.id === savedTheme
-                    loadThemeFront(t.id, isActive ? () => setActiveThemeName(t.id) : undefined)
+                    loadThemeFront(t.id, isActive ? () => { setActiveThemeName(t.id); setThemeReady(true) } : undefined)
                 })
+                if (!savedTheme) setThemeReady(true)
             })
-            .catch(err => console.log(`[themes] failed to load installed themes: ${err}`))
+            .catch(err => { console.log(`[themes] failed to load installed themes: ${err}`); setThemeReady(true) })
 
         // load front.js for already-installed homepages, restoring active homepage from localStorage
         fetch(`${backendUrl}/homepages`, addGetAuthorization(accessString))
@@ -1908,6 +1910,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
+            {logged && !themeReady && (
+                <Box sx={{ position: 'fixed', inset: 0, zIndex: 9999, bgcolor: mode === 'dark' ? '#121212' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CircularProgress />
+                </Box>
+            )}
             <SessionContext.Provider value={{ user, accessString: accessString, logged, backendUrl }}>
                 { !fullscreenTab &&
                     <AppBar position='sticky' elevation={0} sx={{ zIndex: 1300, height:'64px'}}>

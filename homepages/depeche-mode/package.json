@@ -1,10 +1,10 @@
 {
-  "id": "clusterized",
-  "name": "@kwirthmagnify/kwirth-homepage-clusterized",
-  "displayName": "Clusterized",
+  "id": "depeche-mode",
+  "name": "@kwirthmagnify/kwirth-homepage-depeche-mode",
+  "displayName": "Depeche Mode",
   "publisher": "@kwirthmagnify",
   "version": "0.1.1",
-  "description": "Cluster-centric homepage for Kwirth — one card per cluster with status indicator and quick Magnify access",
+  "description": "Depeche Mode homepage — abyss black, blood red accents, bone text, condensed bold typography, ASCII metric bars and STRANGELOVE cluster launch.",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",

@@ -6,7 +6,7 @@ import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } fr
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import { ICensorData } from './CensorData'
-import { ECensorCommand, ICensorInstanceConfig, ICensorBusinessSource, ICensorSyslogSource } from './CensorConfig'
+import { ECensorCommand, ICensorInstanceConfig, ICensorBusinessSource, ICensorSyslogSource, ICensorLogstreamSource } from './CensorConfig'
 import { ICensorUiState } from './CensorData'
 
 const _defaultUi = (): ICensorUiState => ({
@@ -87,6 +87,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [exampleJsonError, setExampleJsonError] = useState('')
     const [businessSources, setBusinessSources] = useState<ICensorBusinessSource[]>([])
     const [syslogSources, setSyslogSources] = useState<ICensorSyslogSource[]>([])
+    const [logstreamEnabled, setLogstreamEnabled] = useState(false)
+    const [logstreamAll, setLogstreamAll] = useState(false)
+    const [logstreamSources, setLogstreamSources] = useState<ICensorLogstreamSource[]>([])
     const [senderId, setSenderId] = useState('')
     const [senderConfigName, setSenderConfigName] = useState('')
     const [senderEntries, setSenderEntries] = useState<Array<{ senderId: string; configName: string }>>([])
@@ -161,6 +164,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setExampleJsonError('')
         setBusinessSources(migrateBusinessSources(data.instanceConfig))
         setSyslogSources(data.instanceConfig.syslogSources ?? [])
+        setLogstreamEnabled(data.instanceConfig.logstreamEnabled ?? false)
+        setLogstreamAll(data.instanceConfig.logstreamAll ?? false)
+        setLogstreamSources(data.instanceConfig.logstreamSources ?? [])
         setSenderId(data.instanceConfig.senderId ?? '')
         setSenderConfigName(data.instanceConfig.senderConfigName ?? '')
     }, [data.instanceConfig])
@@ -218,7 +224,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setShowConfig(true)
     }
 
-    const currentConfig = (): ICensorInstanceConfig => ({ name: configName, version: configVersion, llmId, system, batchSize, batchMode, batchSizeMin, maxLineLength, batchTimeout, temperature, exampleJson, businessSources, syslogSources, senderId, senderConfigName })
+    const currentConfig = (): ICensorInstanceConfig => ({ name: configName, version: configVersion, llmId, system, batchSize, batchMode, batchSizeMin, maxLineLength, batchTimeout, temperature, exampleJson, businessSources, syslogSources, logstreamEnabled, logstreamAll, logstreamSources, senderId, senderConfigName })
 
     const saveConfig = () => {
         const cfg = currentConfig()
@@ -242,6 +248,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setExampleJsonError('')
         setBusinessSources(migrateBusinessSources(cfg))
         setSyslogSources(cfg.syslogSources ?? [])
+        setLogstreamEnabled(cfg.logstreamEnabled ?? false)
+        setLogstreamAll(cfg.logstreamAll ?? false)
+        setLogstreamSources(cfg.logstreamSources ?? [])
         setSenderId(cfg.senderId ?? '')
         setSenderConfigName(cfg.senderConfigName ?? '')
         setConfigActive(cfg.active ?? false)
@@ -264,6 +273,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setExampleJsonError('')
         setBusinessSources([])
         setSyslogSources([])
+        setLogstreamEnabled(false)
+        setLogstreamAll(false)
+        setLogstreamSources([])
         setSenderId('')
         setSenderConfigName('')
         setConfigActive(false)
@@ -857,6 +869,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
                             <Tab label='General' />
                             <Tab label='Prompt' />
+                            <Tab label='Logstream' />
                             <Tab label='Business' />
                             <Tab label='Syslog' />
                             <Tab label='Sender' />
@@ -929,8 +942,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 </Stack>
                             )}
 
-                            {/* Tab 2 — Business */}
-                            {configTab === 2 && (
+                            {/* Tab 3 — Business */}
+                            {configTab === 3 && (
                                 <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                                 <Stack spacing={1} sx={{ pt: 1.5 }}>
                                     {businessSources.map((src, i) => (
@@ -962,8 +975,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 </Box>
                             )}
 
-                            {/* Tab 3 — Syslog */}
-                            {configTab === 3 && (
+                            {/* Tab 4 — Syslog */}
+                            {configTab === 4 && (
                                 <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                                 <Stack spacing={1} sx={{ pt: 1.5 }}>
                                     {syslogSources.map((src, i) => (
@@ -981,7 +994,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                                 <FormControl size='small' sx={{ flex: 1 }}>
                                                     <InputLabel>Max severity</InputLabel>
                                                     <Select label='Max severity' value={src.severity ?? ''}
-                                                        onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, severity: e.target.value === '' ? undefined : Number(e.target.value) } : s))}>
+                                                        onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, severity: (e.target.value as unknown as string) === '' ? undefined : Number(e.target.value) } : s))}>
                                                         <MenuItem value=''><Typography variant='body2' color='text.secondary'>any</Typography></MenuItem>
                                                         {[['0','emerg'],['1','alert'],['2','crit'],['3','err'],['4','warning'],['5','notice'],['6','info'],['7','debug']].map(([v, n]) => (
                                                             <MenuItem key={v} value={v}>{v} — {n}</MenuItem>
@@ -1010,8 +1023,50 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 </Box>
                             )}
 
-                            {/* Tab 4 — Sender */}
-                            {configTab === 4 && (
+                            {/* Tab 2 — Logstream */}
+                            {configTab === 2 && (
+                                <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                                    <Stack spacing={1} sx={{ pt: 1.5 }}>
+                                        <FormControlLabel
+                                            control={<Switch checked={logstreamEnabled} onChange={e => setLogstreamEnabled(e.target.checked)} />}
+                                            label='Enable logstream ingestion' />
+                                        {logstreamEnabled && (
+                                            <>
+                                                <FormControlLabel
+                                                    control={<Switch checked={logstreamAll} onChange={e => setLogstreamAll(e.target.checked)} />}
+                                                    label='Audit all objects' />
+                                                {!logstreamAll && (
+                                                    <Stack spacing={1}>
+                                                        {logstreamSources.map((src, i) => (
+                                                            <Stack key={i} direction='row' spacing={1} alignItems='center'>
+                                                                <TextField label='Namespace' size='small' value={src.namespace ?? ''}
+                                                                    onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, namespace: e.target.value } : s))}
+                                                                    sx={{ flex: 1 }} placeholder='any' />
+                                                                <TextField label='Pod regex' size='small' value={src.podRegex ?? ''}
+                                                                    onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, podRegex: e.target.value } : s))}
+                                                                    sx={{ flex: 1.5 }} placeholder='e.g. myapp-.*' />
+                                                                <TextField label='Label selector' size='small' value={src.labelSelector ?? ''}
+                                                                    onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, labelSelector: e.target.value } : s))}
+                                                                    sx={{ flex: 2 }} placeholder='e.g. app=myapp' />
+                                                                <IconButton size='small' onClick={() => setLogstreamSources(prev => prev.filter((_, j) => j !== i))}>
+                                                                    <DeleteOutlineIcon sx={{ fontSize: 14 }} />
+                                                                </IconButton>
+                                                            </Stack>
+                                                        ))}
+                                                        <Button size='small' startIcon={<AddIcon />}
+                                                            onClick={() => setLogstreamSources(prev => [...prev, { namespace: '', podRegex: '', labelSelector: '' }])}>
+                                                            Add source
+                                                        </Button>
+                                                    </Stack>
+                                                )}
+                                            </>
+                                        )}
+                                    </Stack>
+                                </Box>
+                            )}
+
+                            {/* Tab 5 — Sender */}
+                            {configTab === 5 && (
                                 <Box sx={{ pt: 1.5 }}>
                                     <Stack direction='row' spacing={2} alignItems='center'>
                                         <FormControl size='small' sx={{ flex: 1 }}>

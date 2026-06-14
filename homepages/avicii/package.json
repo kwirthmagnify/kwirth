@@ -1,9 +1,9 @@
 {
   "id": "avicii",
-  "name": "avicii",
+  "name": "@kwirthmagnify/kwirth-homepage-avicii",
   "displayName": "Avicii",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Avicii-inspired homepage — warm gold on black, geometric triangle motifs, sharp Oswald typography, and live cluster metrics.",
   "type": "module",
   "scripts": {

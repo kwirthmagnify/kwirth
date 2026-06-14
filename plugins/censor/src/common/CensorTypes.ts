@@ -42,6 +42,12 @@ export interface ICensorSyslogSource {
     addTimestamp?: boolean
 }
 
+export interface ICensorLogstreamSource {
+    namespace?: string
+    labelSelector?: string
+    podRegex?: string
+}
+
 export interface ICensorInstanceConfig {
     name: string
     version: string
@@ -53,8 +59,12 @@ export interface ICensorInstanceConfig {
     exampleJson: string
     temperature: number
     active?: boolean
+    scope?: 'cluster' | 'resource'
     businessSources?: ICensorBusinessSource[]
     syslogSources?: ICensorSyslogSource[]
+    logstreamEnabled?: boolean
+    logstreamAll?: boolean
+    logstreamSources?: ICensorLogstreamSource[]
     senderId?: string
     senderConfigName?: string
     mode?: 'inference' | 'audit'

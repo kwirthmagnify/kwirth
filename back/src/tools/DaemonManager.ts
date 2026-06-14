@@ -91,6 +91,8 @@ export class DaemonManager implements IDaemonManager {
         await this.persistInstances()
         this.rebuildProviderSubscriptions()
         logInfo(ELogComponent.CORE, `Daemon instance '${instanceConfig.id}' (${daemonId}) created`)
+        const initInstance = (daemon as unknown as { initInstance?: (cfg: IDaemonInstanceConfig) => Promise<void> }).initInstance
+        if (initInstance) await initInstance.call(daemon, instanceConfig).catch((err: unknown) => logError(ELogComponent.CORE, `initInstance error for '${instanceConfig.id}': ${err}`))
     }
 
     async stopInstance(instanceId: string): Promise<void> {

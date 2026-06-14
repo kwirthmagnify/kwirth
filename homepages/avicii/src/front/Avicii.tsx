@@ -15,7 +15,7 @@ const AV_FONT      = "'Oswald', 'Barlow Condensed', 'Arial Narrow', sans-serif"
 const POLL_MS      = 10000
 const EVENTS_LIMIT = 25
 
-const TRIANGLE_BG = `url("data:image/svg+xml,%3Csvg width='80' height='70' viewBox='0 0 80 70' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='40,3 77,67 3,67' stroke='%23c9a22712' fill='none' stroke-width='1'/%3E%3C/svg%3E")`
+const TRIANGLE_BG = `url("data:image/svg+xml,%3Csvg width='160' height='60' viewBox='0 0 160 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg transform='translate(15,15)' opacity='0.045'%3E%3Cg transform='translate(0,30) scale(0.1,-0.1)' fill='%23c9a227' stroke='none'%3E%3Cpath d='M132 167 l-132 -132 0 -18 0 -17 17 0 18 0 112 112 113 113 0 -113 0 -112 25 0 25 0 0 150 0 150 -23 0 -22 0 -133 -133z'/%3E%3Cpath d='M360 150 l0 -150 38 0 37 0 113 113 112 112 0 35 0 35 -125 -125 -125 -125 0 128 0 127 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M710 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M1150 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M1250 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3C/g%3E%3Cpath d='M106.64,17.40 A12.0,12.0 0 1 1 106.88,12.83' fill='none' stroke='%23c9a227' stroke-width='5' stroke-linecap='butt'/%3E%3C/g%3E%3C/svg%3E")`
 
 // ── Logo: Avicii two-triangle mark ───────────────────────────────────────────
 const AviciiLogo: React.FC<{ size?: number }> = ({ size = 48 }) => (
@@ -26,18 +26,22 @@ const AviciiLogo: React.FC<{ size?: number }> = ({ size = 48 }) => (
     </svg>
 )
 
-// ── Wordmark: official Avicii SVG logotype ────────────────────────────────────
+// ── Wordmark: dashboard SVG logotype ─────────────────────────────────────────
 const AviciiWordmark: React.FC = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 30"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 308.0 30"
         height="19" style={{ display: 'block' }}>
-        <g transform="translate(0.000000,30.000000) scale(0.100000,-0.100000)" fill={AV_TEXT} stroke="none">
-            <path d="M132 167 l-132 -132 0 -18 0 -17 17 0 18 0 112 112 113 113 0 -113 0 -112 25 0 25 0 0 150 0 150 -23 0 -22 0 -133 -133z"/>
-            <path d="M360 150 l0 -150 38 0 37 0 113 113 112 112 0 35 0 35 -125 -125 -125 -125 0 128 0 127 -25 0 -25 0 0 -150z"/>
-            <path d="M710 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z"/>
-            <path d="M1150 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z"/>
-            <path d="M1250 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z"/>
+        <g fill={AV_TEXT} stroke="none">
+            <g transform="translate(37.0,30) scale(0.1,-0.1)"><path d="M132 167 l-132 -132 0 -18 0 -17 17 0 18 0 112 112 113 113 0 -113 0 -112 25 0 25 0 0 150 0 150 -23 0 -22 0 -133 -133z"/></g>
+            <g transform="translate(206.0,30) scale(0.1,-0.1)"><path d="M132 167 l-132 -132 0 -18 0 -17 17 0 18 0 112 112 113 113 0 -113 0 -112 25 0 25 0 0 150 0 150 -23 0 -22 0 -133 -133z"/></g>
         </g>
-        <path d="M106.64,17.40 A12.0,12.0 0 1 1 106.88,12.83" fill="none" stroke={AV_TEXT} strokeWidth="5.0" strokeLinecap="butt"/>
+        <path d="M 5.5 27.5 L 5.5 2.5 L 20.5 2.5 A 11 12.5 0 0 1 20.5 27.5 L 5.5 27.5" fill="none" stroke={AV_TEXT} strokeWidth="5" strokeLinecap="butt" strokeLinejoin="miter"/>
+        <path d="M 99.5 2.5 L 79.75 2.5 A 6.25 6.25 0 0 0 79.75 15 L 93.25 15 A 6.25 6.25 0 0 1 93.25 27.5 L 73.5 27.5" fill="none" stroke={AV_TEXT} strokeWidth="5" strokeLinecap="butt" strokeLinejoin="miter"/>
+        <path d="M 107.5 0 L 107.5 30 M 133.5 0 L 133.5 30 M 107.5 15.0 L 133.5 15.0" fill="none" stroke={AV_TEXT} strokeWidth="5" strokeLinecap="butt" strokeLinejoin="miter"/>
+        <path d="M 141.5 0 L 141.5 30 M 141.5 2.5 L 161.5 2.5 A 6 6.25 0 0 1 161.5 15.0 L 141.5 15.0 M 141.5 15.0 L 160.0 15.0 A 7.5 6.25 0 0 1 160.0 27.5 L 141.5 27.5" fill="none" stroke={AV_TEXT} strokeWidth="5" strokeLinecap="butt" strokeLinejoin="miter"/>
+        <path d="M 188.0 2.5 A 12.5 12.5 0 0 1 188.0 27.5 A 12.5 12.5 0 0 1 188.0 2.5" fill="none" stroke={AV_TEXT} strokeWidth="5" strokeLinecap="butt" strokeLinejoin="miter"/>
+        <path d="M 242.5 30 L 242.5 2.5 L 259.5 2.5 A 9 6.25 0 0 1 259.5 15.0 L 242.5 15.0" fill="none" stroke={AV_TEXT} strokeWidth="5" strokeLinecap="butt" strokeLinejoin="miter"/>
+        <path d="M 251.42 16.94 L 254.58 13.06 L 271.00 26.45 L 271.00 30.00 L 267.44 30.00 Z" fill={AV_TEXT} stroke="none"/>
+        <path d="M 276.5 27.5 L 276.5 2.5 L 291.5 2.5 A 11 12.5 0 0 1 291.5 27.5 L 276.5 27.5" fill="none" stroke={AV_TEXT} strokeWidth="5" strokeLinecap="butt" strokeLinejoin="miter"/>
     </svg>
 )
 
@@ -181,13 +185,13 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
         <Box ref={containerRef} sx={{
             position: 'relative', width: '100%', height: `${containerHeight}px`,
             overflow: 'hidden', bgcolor: AV_BG,
-            backgroundImage: TRIANGLE_BG, backgroundSize: '80px 70px',
+            backgroundImage: TRIANGLE_BG, backgroundSize: '160px 60px',
         }}>
             <Box sx={{ position: 'absolute', inset: 0, overflowY: 'auto' }}>
 
                 {/* ── Header ── */}
                 <Stack direction="row" alignItems="center" justifyContent="flex-start" spacing={2.5}
-                    sx={{ pt: 2, pb: 1.5, pl: 3, borderBottom: `1px solid ${AV_GOLD_DIM}` }}>
+                    sx={{ pt: 2, pb: 1.5, pl: 3, borderBottom: `1px solid ${AV_GOLD_DIM}`, bgcolor: AV_BG }}>
                     <AviciiLogo size={40} />
                     <AviciiWordmark />
                 </Stack>

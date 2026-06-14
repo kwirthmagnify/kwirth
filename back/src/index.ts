@@ -699,7 +699,7 @@ const processReconnect = async (webSocket: WebSocket, instanceMessage: IInstance
 const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSocket, instanceConfig: IInstanceConfig, accessKeyResources: ResourceIdentifier[], validNamespaces: string[], validPodNames: string[], validContainers: string[]) => {
     try {
         logInfo(ELogComponent.CORE, `Trying to perform instance config for channel '${instanceConfig.channel}' with view '${instanceConfig.view}'`)
-        if (ri.channels.get(instanceConfig.channel) && ri.channels.get(instanceConfig.channel)?.getChannelData().cluster) {
+        if (ri.channels.get(instanceConfig.channel) && ri.channels.get(instanceConfig.channel)?.getChannelData().cluster && instanceConfig.view === EInstanceConfigView.CLUSTER) {
             logWarning(ELogComponent.CORE, 'A cluster-wide access key has been received for access key')
             logWarning(ELogComponent.CORE, instanceConfig.accessKey.substring(0,8)+'... to access channel ' + instanceConfig.channel)
             let channel = ri.channels.get(instanceConfig.channel)

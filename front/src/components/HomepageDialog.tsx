@@ -226,8 +226,8 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                 <Box key={`${hp.id}-source`} sx={{ py: 1 }}>{resolveSource(hp.installedFrom)}</Box>,
                                 <Box key={`${hp.id}-btn`} sx={{ py: 1 }}>
                                     {isActive(hp.id)
-                                        ? <Button size='small' variant='outlined' onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>
-                                        : <Button size='small' variant='contained' onClick={() => { props.onActivate(hp.id) }}>ACTIVATE</Button>
+                                        ? <Button size='small' variant='outlined' sx={{ minWidth: 100 }} onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>
+                                        : <Button size='small' variant='contained' sx={{ minWidth: 100 }} onClick={() => { props.onActivate(hp.id) }}>ACTIVATE</Button>
                                     }
                                 </Box>,
                                 <Box key={`${hp.id}-del`} sx={{ py: 1 }}>
