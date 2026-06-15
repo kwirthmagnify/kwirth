@@ -2,12 +2,12 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { CheckCircle, Delete, Download, Factory, FolderOpen, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '../tools/KwirthIcons'
 
-declare global { interface Window { __kwirth_providers__: Record<string, any> } }
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
 
+declare global { interface Window { __kwirth_providers__: Record<string, any> } }
 const PROVIDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json'
 
 interface IRequirement {
