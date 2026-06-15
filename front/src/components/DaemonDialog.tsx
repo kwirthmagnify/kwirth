@@ -107,7 +107,6 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
         const found = list.find(x => x.id === req.id)
         return !!found && (found.version === req.minVersion || versionGreaterThan(found.version, req.minVersion))
     }
-    const allRequirementsMet = (requires?: IRequirement[]) => !requires?.length || requires.every(isRequirementMet)
 
     const installFromCatalog = async (daemon: IDaemonManifestEntry) => {
         setError(undefined)

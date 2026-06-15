@@ -32,5 +32,5 @@ if (fs.existsSync('preview.png')) {
     console.log('Copied preview.png')
 }
 
-console.log(`Done. Run 'npm publish' on your 'dist' folder to publish to npmjs.`)
+console.log(`Done. Run 'npm publish --access=public' on your 'dist' folder to publish to npmjs.`)
 console.log(`Package URL: https://registry.npmjs.org/${meta.name}/-/${meta.name.split('/').pop()}-${meta.version}.tgz`)

@@ -194,7 +194,6 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         const found = list.find(x => x.id === req.id)
         return !!found && (found.version === req.minVersion || versionGreaterThan(found.version, req.minVersion))
     }
-    const allRequirementsMet = (requires?: IRequirement[]) => !requires?.length || requires.every(isRequirementMet)
 
     const installFromCatalog = async (provider: IProviderManifestEntry) => {
         setError(undefined)

@@ -3,7 +3,7 @@
   "name": "@kwirthmagnify/kwirth-homepage-avicii",
   "displayName": "Avicii",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Avicii-inspired homepage — warm gold on black, geometric triangle motifs, sharp Oswald typography, and live cluster metrics.",
   "type": "module",
   "scripts": {

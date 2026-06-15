@@ -1,16 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Box, Button, Card, CardContent, Stack, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Card, CardContent, Stack, Tooltip, Typography, useTheme } from '@mui/material'
 import { AccountTree } from '@mui/icons-material'
 import { IHomepageProps, IClusterEvent } from '@kwirthmagnify/kwirth-common-front'
 
 const AV_GOLD      = '#c9a227'
 const AV_GOLD_DIM  = '#5c4810'
 const AV_GOLD_GLOW = 'rgba(201,162,39,0.45)'
-const AV_BG        = '#050505'
-const AV_CARD      = '#0b0907'
-const AV_TEXT      = '#f0ede6'
-const AV_MUTED     = '#4a443c'
 const AV_FONT      = "'Oswald', 'Barlow Condensed', 'Arial Narrow', sans-serif"
+
+const useAviciiColors = () => {
+    const theme = useTheme()
+    const dark = theme.palette.mode === 'dark'
+    return {
+        AV_BG:    dark ? '#050505' : '#faf7f0',
+        AV_CARD:  dark ? '#0b0907' : '#f0ebe1',
+        AV_TEXT:  dark ? '#f0ede6' : '#1a1510',
+        AV_MUTED: dark ? '#4a443c' : '#8a7a68',
+    }
+}
 
 const POLL_MS      = 10000
 const EVENTS_LIMIT = 25
@@ -18,16 +25,21 @@ const EVENTS_LIMIT = 25
 const TRIANGLE_BG = `url("data:image/svg+xml,%3Csvg width='160' height='60' viewBox='0 0 160 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg transform='translate(15,15)' opacity='0.045'%3E%3Cg transform='translate(0,30) scale(0.1,-0.1)' fill='%23c9a227' stroke='none'%3E%3Cpath d='M132 167 l-132 -132 0 -18 0 -17 17 0 18 0 112 112 113 113 0 -113 0 -112 25 0 25 0 0 150 0 150 -23 0 -22 0 -133 -133z'/%3E%3Cpath d='M360 150 l0 -150 38 0 37 0 113 113 112 112 0 35 0 35 -125 -125 -125 -125 0 128 0 127 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M710 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M1150 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M1250 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3C/g%3E%3Cpath d='M106.64,17.40 A12.0,12.0 0 1 1 106.88,12.83' fill='none' stroke='%23c9a227' stroke-width='5' stroke-linecap='butt'/%3E%3C/g%3E%3C/svg%3E")`
 
 // ── Logo: Avicii two-triangle mark ───────────────────────────────────────────
-const AviciiLogo: React.FC<{ size?: number }> = ({ size = 48 }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 18" fill={AV_TEXT}
-        width={size} height={Math.round(size * 18 / 37)}>
-        <polygon points="17,0 17,18 0,18"/>
-        <polygon points="19,0 37,0 19,18"/>
-    </svg>
-)
+const AviciiLogo: React.FC<{ size?: number }> = ({ size = 48 }) => {
+    const { AV_TEXT } = useAviciiColors()
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 18" fill={AV_TEXT}
+            width={size} height={Math.round(size * 18 / 37)}>
+            <polygon points="17,0 17,18 0,18"/>
+            <polygon points="19,0 37,0 19,18"/>
+        </svg>
+    )
+}
 
 // ── Wordmark: dashboard SVG logotype ─────────────────────────────────────────
-const AviciiWordmark: React.FC = () => (
+const AviciiWordmark: React.FC = () => {
+    const { AV_TEXT } = useAviciiColors()
+    return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 308.0 30"
         height="19" style={{ display: 'block' }}>
         <g fill={AV_TEXT} stroke="none">
@@ -43,7 +55,8 @@ const AviciiWordmark: React.FC = () => (
         <path d="M 251.42 16.94 L 254.58 13.06 L 271.00 26.45 L 271.00 30.00 L 267.44 30.00 Z" fill={AV_TEXT} stroke="none"/>
         <path d="M 276.5 27.5 L 276.5 2.5 L 291.5 2.5 A 11 12.5 0 0 1 291.5 27.5 L 276.5 27.5" fill="none" stroke={AV_TEXT} strokeWidth="5" strokeLinecap="butt" strokeLinejoin="miter"/>
     </svg>
-)
+    )
+}
 
 // ── Gold diamond connectivity indicator ──────────────────────────────────────
 const DiamondIndicator: React.FC<{ online: boolean; delay?: string }> = ({ online, delay = '0s' }) => (
@@ -63,6 +76,7 @@ const DiamondIndicator: React.FC<{ online: boolean; delay?: string }> = ({ onlin
 
 // ── Metric bar using rhombus fill characters ──────────────────────────────────
 const MetricBar: React.FC<{ label: string; value: number }> = ({ label, value }) => {
+    const { AV_MUTED } = useAviciiColors()
     const barRef = useRef<HTMLSpanElement>(null)
     const [cols, setCols] = useState(20)
     useEffect(() => {
@@ -86,19 +100,23 @@ const MetricBar: React.FC<{ label: string; value: number }> = ({ label, value })
 }
 
 // ── Mini stat card with gold top-border ───────────────────────────────────────
-const MiniCard: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-    <Box sx={{
-        border: `1px solid ${AV_GOLD_DIM}`, borderTop: `2px solid ${AV_GOLD}`,
-        px: 1.5, py: 0.75, minWidth: 70,
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-    }}>
-        <Typography sx={{ fontFamily: AV_FONT, fontSize: '1rem', fontWeight: 700, color: AV_TEXT, lineHeight: 1.2 }}>{value}</Typography>
-        <Typography sx={{ fontFamily: AV_FONT, fontSize: '0.58rem', fontWeight: 600, color: AV_MUTED, letterSpacing: '1.5px', textTransform: 'uppercase', lineHeight: 1.3 }}>{label}</Typography>
-    </Box>
-)
+const MiniCard: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+    const { AV_TEXT, AV_MUTED } = useAviciiColors()
+    return (
+        <Box sx={{
+            border: `1px solid ${AV_GOLD_DIM}`, borderTop: `2px solid ${AV_GOLD}`,
+            px: 1.5, py: 0.75, minWidth: 70,
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+        }}>
+            <Typography sx={{ fontFamily: AV_FONT, fontSize: '1rem', fontWeight: 700, color: AV_TEXT, lineHeight: 1.2 }}>{value}</Typography>
+            <Typography sx={{ fontFamily: AV_FONT, fontSize: '0.58rem', fontWeight: 600, color: AV_MUTED, letterSpacing: '1.5px', textTransform: 'uppercase', lineHeight: 1.3 }}>{label}</Typography>
+        </Box>
+    )
+}
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export const Avicii: React.FC<IHomepageProps> = (props) => {
+    const { AV_BG, AV_CARD, AV_TEXT, AV_MUTED } = useAviciiColors()
 
     useEffect(() => {
         const fontId = 'avicii-oswald-font'

@@ -7,7 +7,8 @@
   "description": "Matrix digital rain theme — pure black background, phosphor-green monospace typography, matching the Matrix homepage aesthetic.",
   "type": "module",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "watch": "node watch.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",

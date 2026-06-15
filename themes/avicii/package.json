@@ -7,7 +7,8 @@
   "description": "Dark geometric theme inspired by Avicii — warm gold accents, sharp edges, Oswald typography, and triangle motifs.",
   "type": "module",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "watch": "node watch.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",
