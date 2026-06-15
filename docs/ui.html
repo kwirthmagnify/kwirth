@@ -98,6 +98,28 @@
     /* default preview */
     .preview-default { background: #060a12; }
     .preview-default .preview-label { color: #f5820a; text-shadow: 0 0 8px rgba(245,130,10,.5); }
+    /* matrix theme preview */
+    .preview-matrix-theme { background: #000; }
+    .preview-matrix-theme::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 80% at 50% 50%, rgba(0,255,65,.06) 0%, transparent 80%);
+    }
+    .preview-matrix-theme .preview-label { color: #00ff41; text-shadow: 0 0 10px rgba(0,255,65,.7); font-family: 'IBM Plex Mono', monospace; }
+    /* avicii theme preview */
+    .preview-avicii-theme { background: #050505; }
+    .preview-avicii-theme::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='160' height='60' viewBox='0 0 160 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='40,8 40,52 14,52' fill='none' stroke='rgba(201,162,39,0.07)' stroke-width='1'/%3E%3Cpolygon points='56,8 82,8 56,52' fill='none' stroke='rgba(201,162,39,0.07)' stroke-width='1'/%3E%3C/svg%3E");
+    }
+    .preview-avicii-theme .preview-label { color: #c9a227; text-shadow: 0 0 10px rgba(201,162,39,.6); font-family: 'Oswald','Arial Narrow',sans-serif; }
+    /* depeche-mode theme preview */
+    .preview-depeche-theme { background: #0A0808; }
+    .preview-depeche-theme::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg opacity='0.08' stroke='%23c4303a' stroke-width='0.8'%3E%3Cline x1='0' y1='0' x2='40' y2='40'/%3E%3Cline x1='40' y1='0' x2='0' y2='40'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: 40px 40px;
+    }
+    .preview-depeche-theme .preview-label { color: #EDE0D0; text-shadow: 0 0 8px rgba(196,48,58,.4); font-family: 'Barlow Condensed','Impact',sans-serif; font-weight: 900; }
 
     .theme-info { padding: 20px 24px 24px; }
     .theme-name { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
@@ -134,6 +156,24 @@
     .preview-matrix::after {
       content: ''; position: absolute; inset: 0;
       background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(0,255,65,.05) 0%, transparent 80%);
+    }
+    /* avicii preview */
+    .preview-avicii { background: #050505; }
+    .preview-avicii::before {
+      content: ''; position: absolute; inset: 0;
+      background: repeating-linear-gradient(160px 60px, rgba(201,162,39,.04));
+      background-image: url("data:image/svg+xml,%3Csvg width='160' height='60' viewBox='0 0 160 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='40,8 40,52 14,52' fill='none' stroke='rgba(201,162,39,0.08)' stroke-width='1'/%3E%3Cpolygon points='56,8 82,8 56,52' fill='none' stroke='rgba(201,162,39,0.08)' stroke-width='1'/%3E%3C/svg%3E");
+    }
+    /* depeche-mode preview */
+    .preview-depeche { background: #0A0808; }
+    .preview-depeche::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg opacity='0.09' stroke='%23c4303a' stroke-width='0.8'%3E%3Cline x1='0' y1='0' x2='40' y2='40'/%3E%3Cline x1='40' y1='0' x2='0' y2='40'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: 40px 40px;
+    }
+    .preview-depeche::after {
+      content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+      background: #c4303a;
     }
     .preview-label { position: relative; z-index: 1; }
     .hp-info { padding: 20px 24px 24px; }
@@ -266,6 +306,36 @@
         <span class="theme-badge badge-builtin">Built-in</span>
       </div>
     </div>
+    <div class="theme-card">
+      <div class="theme-preview preview-matrix-theme">
+        <span class="preview-label">Matrix</span>
+      </div>
+      <div class="theme-info">
+        <div class="theme-name">Matrix</div>
+        <div class="theme-desc">Pure black background with phosphor-green (#00ff41) accents. Full monospace typography (IBM Plex Mono) across all UI elements, dark-green borders, and green-tinted scrollbars.</div>
+        <span class="theme-badge badge-builtin">Built-in</span>
+      </div>
+    </div>
+    <div class="theme-card">
+      <div class="theme-preview preview-avicii-theme">
+        <span class="preview-label">Avicii</span>
+      </div>
+      <div class="theme-info">
+        <div class="theme-name">Avicii</div>
+        <div class="theme-desc">Gold (#c9a227) on near-black with warm parchment light mode. Oswald condensed typography, sharp zero-radius corners throughout, and gold top-border accent on all cards and dialogs.</div>
+        <span class="theme-badge badge-builtin">Built-in</span>
+      </div>
+    </div>
+    <div class="theme-card">
+      <div class="theme-preview preview-depeche-theme">
+        <span class="preview-label">Depeche Mode</span>
+      </div>
+      <div class="theme-info">
+        <div class="theme-name">Depeche Mode</div>
+        <div class="theme-desc">Blood-red (#C4303A) accents on warm abyss-black, with a creamy parchment light mode. Barlow Condensed / Impact typography, left crimson border on cards, and full dark/light dual-mode palette.</div>
+        <span class="theme-badge badge-builtin">Built-in</span>
+      </div>
+    </div>
   </div>
 
   <!-- SCREENSHOT: default theme vs post-punk — same view, nav + tab bar + one channel visible in both -->
@@ -318,6 +388,40 @@
       </div>
     </div>
 
+    <div class="homepage-card">
+      <div class="hp-preview preview-avicii">
+        <span class="preview-label" style="color:#c9a227;text-shadow:0 0 10px rgba(201,162,39,.6);font-family:'Oswald','Arial Narrow',sans-serif;font-size:1rem;letter-spacing:4px;font-weight:700;">AVICII</span>
+      </div>
+      <div class="hp-info">
+        <div class="hp-name">Avicii</div>
+        <div class="hp-desc">Minimalist gold-on-black homepage inspired by the Avicii visual identity. Each cluster card features a gold top-border accent, rhombus metric bars (▰▱) for CPU/MEM/POD, mini stat cards for vCPUs, RAM and pods, and a pulsing gold diamond connectivity indicator.</div>
+        <div class="hp-features">
+          <div class="hp-feature">Gold rhombus metric bars (▰▱) for CPU, MEM, POD — width adapts to card size</div>
+          <div class="hp-feature">Mini stat cards for vCPUs, total RAM and running pods</div>
+          <div class="hp-feature">Pulsing gold diamond connectivity indicator per cluster</div>
+          <div class="hp-feature">Avicii two-triangle logo and SVG wordmark in the header</div>
+          <div class="hp-feature">EXPLORE quick-launch button for Magnify channel</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="homepage-card">
+      <div class="hp-preview preview-depeche">
+        <span class="preview-label" style="color:#EDE0D0;text-shadow:0 0 8px rgba(196,48,58,.4);font-family:'Barlow Condensed','Impact',sans-serif;font-size:0.9rem;letter-spacing:5px;font-weight:900;">DEPECHE MODE</span>
+      </div>
+      <div class="hp-info">
+        <div class="hp-name">Depeche Mode</div>
+        <div class="hp-desc">A dark/light dual-mode homepage with blood-red accents and a cross-hatch diagonal background. Adapts automatically to the active Kwirth theme. Each cluster card shows live ASCII history charts for CPU and MEM, with a left-side crimson border accent and a STRANGELOVE quick-launch button.</div>
+        <div class="hp-features">
+          <div class="hp-feature">Dark and light mode support — adapts to the active Kwirth theme automatically</div>
+          <div class="hp-feature">ASCII history charts for CPU and MEM (last 20 samples)</div>
+          <div class="hp-feature">Cross-hatch diagonal background pattern in blood red</div>
+          <div class="hp-feature">Blood diamond connectivity indicator per cluster</div>
+          <div class="hp-feature">STRANGELOVE quick-launch button for Magnify channel</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- SCREENSHOT: Basic homepage full screen — 2-3 cluster cards with CPU/MEM/NET sparklines and last-used tabs -->
@@ -325,6 +429,12 @@
 
   <!-- SCREENSHOT: Matrix homepage full screen — 2 cluster cards, CPU/MEM/POD bars, minicards, event log, matrix rain canvas -->
   <img class="screenshot-actual" src="assets/img/screenshot-homepage-matrix.png" alt="Matrix homepage with live event log and utilisation bars">
+
+  <!-- SCREENSHOT: Avicii homepage full screen — cluster cards with gold rhombus bars, mini stat cards, pulsing diamond indicator -->
+  <img class="screenshot-actual" src="assets/img/screenshot-homepage-avicii.png" alt="Avicii homepage with gold rhombus metric bars and mini stat cards">
+
+  <!-- SCREENSHOT: Depeche Mode homepage full screen — cluster cards with ASCII history charts, blood-red accents, dark mode -->
+  <img class="screenshot-actual" src="assets/img/screenshot-homepage-depeche-mode.png" alt="Depeche Mode homepage with ASCII history charts and blood-red accents">
 </section>
 
 <!-- BUILD YOUR OWN: THEME -->

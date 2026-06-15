@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { IChannelObject, ENotifyLevel } from '@kwirthmagnify/kwirth-common-front'
+import { IChannelObject, ENotifyLevel, MsgBoxOk } from '@kwirthmagnify/kwirth-common-front'
 import { EFilemanCommand, IFilemanMessage, IFilemanData } from './FilemanData'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material'
+import { Box } from '@mui/material'
 import { AccountTree, Edit, InfoOutlined, Visibility, AccountTreeOutlined, HexagonOutlined, DataObjectOutlined } from '@mui/icons-material'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { IError, IFileManagerHandle, IFileObject } from '@jfvilas/react-file-manager'
@@ -18,19 +18,6 @@ const addPostAuthorization = (accessString: string, body: string) => ({
     headers: { 'Authorization': 'Bearer ' + accessString, 'Content-Type': 'application/json' },
     body
 })
-
-// ─── Inline info dialog (replaces MsgBoxOk) ────────────────────────────────
-const MsgBoxOk = (title: string, content: string, setter: (v: React.ReactNode) => void): React.ReactNode => (
-    <Dialog open>
-        <DialogTitle sx={{ pb: 1 }}>{title}</DialogTitle>
-        <DialogContent dividers>
-            <Typography component='div' dangerouslySetInnerHTML={{ __html: content }} />
-        </DialogContent>
-        <DialogActions>
-            <Button variant='contained' onClick={() => setter(null)}>OK</Button>
-        </DialogActions>
-    </Dialog>
-)
 
 // ─── Inline icons for K8s kinds ────────────────────────────────────────────
 const makeIcon = (kind: string, size: number): JSX.Element => {
@@ -50,7 +37,7 @@ const FilemanTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const filemanBoxRef = useRef<HTMLDivElement | null>(null)
     const fileManagerRef = useRef<IFileManagerHandle>(null)
     const [logBoxTop, setLogBoxTop] = useState(0)
-    const [msgBox, setMsgBox] = useState<React.ReactNode>(null)
+    const [msgBox, setMsgBox] = useState(<></>)
     const [editDialog, setEditDialog] = useState<React.ReactNode>(null)
 
     let filemanData: IFilemanData = props.channelObject.data

@@ -82,6 +82,7 @@ export interface ISetupProps {
 
 export interface IContentProps {
     channelObject: IChannelObject
+    onEnd?: () => void
 }
 
 export interface IChannel {
@@ -110,6 +111,7 @@ export const cleanANSI = (text: string): string => text.replace(/\x1b\[[0-9;]*[m
 export { MarkdownViewer } from './MarkdownViewer'
 export { MiniGauge } from './MiniGauge'
 export type { IMiniGaugeProps } from './MiniGauge'
+export { MsgBoxButtons, MsgBoxOk, MsgBoxOkWarning, MsgBoxOkError, MsgBoxOkCancel, MsgBoxYesNo, MsgBoxYesNoCancel, MsgBoxWait, MsgBoxWaitCancel } from './MsgBox'
 
 export interface ITabSummary {
     name: string

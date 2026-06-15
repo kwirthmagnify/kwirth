@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && esbuild dist/index.js --bundle --platform=node --target=node24 --outfile=bundle/bundle.js --external:cpu-features",
-    "postbuild": "node -e \"const{cpSync}=require('fs');cpSync('kwirth-bundled.json','../docker/kwirth-bundled.json');cpSync('../scripts/fetch-bundled.mjs','../docker/fetch-bundled.mjs');console.log('Bundled-plugins files copied to docker context.');\"",
+    "postbuild": "node -e \"const{cpSync}=require('fs');cpSync('kwirth-bundled.json','../docker/kwirth-bundled.json');cpSync('../scripts/fetch-bundled.mjs','../docker/fetch-bundled.mjs');console.log('Bundled extensions files copied to docker context.');\"",
     "start": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" nodemon src/index.ts",
     "start:kubernetes": "cross-env NODE_OPTIONS=\"--expose-gc --heapsnapshot-near-heap-limit=1 --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=k8s nodemon src/index.ts",
     "run:kubernetes": "cross-env NODE_OPTIONS=\"--expose-gc --heapsnapshot-near-heap-limit=1 --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=k8s tsx src/index.ts",

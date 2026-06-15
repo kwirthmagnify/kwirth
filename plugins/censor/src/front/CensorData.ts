@@ -1,5 +1,7 @@
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
-import { ICensorInstanceConfig, ICensorSession } from './CensorConfig'
+import { ICensorInstanceConfig, ICensorSession, ERegexOrigin } from './CensorConfig'
+
+export { ERegexOrigin }
 
 export interface ICensorLine {
     text: string
@@ -20,40 +22,45 @@ export interface ICensorRegex {
     example: string
     explanation: string
     matches: number
+    origin: ERegexOrigin
 }
 
 export interface ICensorWarning {
     original: string
     explanation: string
     tags: string[]
+    runnerKey: string
+}
+
+export interface IRunnerData {
+    analyzing: boolean
+    regexes: ICensorRegex[]
+    processedCount: number
+    llmCount: number
+    llmLinesCount: number
+    totalBytesProcessed: number
+    tokensIn: number
+    tokensOut: number
+    pendingCount: number
+    currentBatchSize?: number
+    syslogCount: number
+    llmWarningLines: ICensorWarning[]
+    llmInputLines: string[][]
+    llmOutputLines: string[]
+    llmErrorLines: { text: string, timestamp: string, lines?: string[] }[]
+    allTags: string[]
 }
 
 export interface ICensorData {
     uiState?: ICensorUiState
     receivedLines: ICensorLine[]
     businessLines: ICensorLine[]
-    llmInputLines: string[][]
-    llmOutputLines: string[]
-    llmWarningLines: ICensorWarning[]
-    llmErrorLines: { text: string, timestamp: string, lines?: string[] }[]
-    allTags: string[]
-    regexes: ICensorRegex[]
     assets: ICensorAsset[]
-    syslogCount: number
-    processedCount: number
-    llmCount: number
-    llmLinesCount: number
-    totalBytesProcessed: number
-    pendingCount: number
     subscriberCount: number
-    currentBatchSize?: number
-    tokensIn: number
-    tokensOut: number
     paused: boolean
     started: boolean
     startTime?: number
     stopTime?: number
-    analyzing: boolean
     llms: ILlm[]
     providers: ILlmProvider[]
     providersAvailable: string[]
@@ -62,7 +69,9 @@ export interface ICensorData {
     sessions: ICensorSession[]
     connectedSessionId: string | null
     connectedSessionDescription: string | null
+    ephemeralSessionName: string | null
     pendingSessionId: string | null | undefined
+    runners: Map<string, IRunnerData>
 }
 
 export interface ICensorUiState {
@@ -74,26 +83,11 @@ export interface ICensorUiState {
 export class CensorData implements ICensorData {
     receivedLines: ICensorLine[] = []
     businessLines: ICensorLine[] = []
-    llmInputLines: string[][] = []
-    llmOutputLines: string[] = []
-    llmWarningLines: ICensorWarning[] = []
-    llmErrorLines: { text: string, timestamp: string, lines?: string[] }[] = []
-    allTags: string[] = []
-    regexes: ICensorRegex[] = []
     assets: ICensorAsset[] = []
-    syslogCount = 0
-    processedCount = 0
-    llmCount = 0
-    llmLinesCount = 0
-    totalBytesProcessed = 0
-    pendingCount = 0
     subscriberCount = 0
-    tokensIn = 0
-    tokensOut = 0
     paused = false
     started = false
     startTime?: number
-    analyzing = false
     llms: ILlm[] = []
     providers: ILlmProvider[] = []
     providersAvailable: string[] = []
@@ -102,5 +96,7 @@ export class CensorData implements ICensorData {
     sessions: ICensorSession[] = []
     connectedSessionId: string | null = null
     connectedSessionDescription: string | null = null
+    ephemeralSessionName: string | null = null
     pendingSessionId: string | null | undefined = undefined
+    runners: Map<string, IRunnerData> = new Map()
 }

@@ -83,10 +83,14 @@ export enum ECensorDaemonCommand {
     PROVIDERSSET = 'providersset',
     ANALYZESTART = 'analyzestart',
     ANALYZESTOP = 'analyzestop',
+    RUNNERREMOVE = 'runnerremove',
     REGEXDELETE = 'regexdelete',
+    REGEXADD = 'regexadd',
     STATSGET = 'statsget',
     REGEXGET = 'regexget',
     ANALYZESTATE = 'analyzestate',
+    REGEXESSAVE = 'regexessave',
+    REGEXESGET = 'regexesget',
 }
 
 interface IAsset {
@@ -123,47 +127,33 @@ interface IConfigRunner {
     flushTimer?: NodeJS.Timeout
 }
 
+enum ERegexOrigin {
+    LLM = 'llm',
+    MANUAL = 'manual',
+    HYBRID = 'hybrid'
+}
+
 interface IAccumRegex {
     pattern: string
     compiled: RegExp
     example: string
     explanation: string
     matches: number
+    origin: ERegexOrigin
 }
 
 interface IDaemonInstance {
     instanceId: string
-    // Per-instance shared state
     assets: IAsset[]
     subscribers: Set<(event: unknown) => void>
     ephemeral?: boolean
     scope?: string
     runners: Map<string, IConfigRunner>
-    // Legacy flat fields (kept during migration — will be removed once all methods use runners)
     cfg: ICensorInstanceConfig
     analyzing: boolean
     _initReady?: Promise<void>
-    processedCount: number
-    syslogCount: number
-    llmCount: number
-    llmLinesCount: number
-    totalBytesProcessed: number
-    tokensIn: number
-    tokensOut: number
-    lineBuffer: string[]
-    regexes: IAccumRegex[]
-    llmBusy: boolean
-    llmErrorCooldownUntil: number
-    llm?: ILlm
-    cachedSchema?: ReturnType<typeof zodFromExample>
-    cachedModel?: ReturnType<typeof buildModel>
-    cachedProviderOptions?: Record<string, Record<string, unknown>>
-    currentBatchSize?: number
-    lastStatsBroadcast: number
-    lastRegexStatsBroadcast: number
     pendingReceivedLines: { text: string; namespace: string; pod: string; container: string }[]
     receivedTimer?: NodeJS.Timeout
-    flushTimer?: NodeJS.Timeout
 }
 
 export class CensorDaemon implements IDaemon {
@@ -258,7 +248,7 @@ export class CensorDaemon implements IDaemon {
         try {
             const coreApi = (this.clusterInfo as any).coreApi
             const podList = await coreApi.listPodForAllNamespaces()
-            const fakeInstanceConfig = { id: inst.instanceId, daemonId: 'censor', description: '', view: 4, namespace: '', data: { ...cfg, scope: 'cluster' }, started: true, createdAt: '' } as IDaemonInstanceConfig
+            const fakeInstanceConfig = { id: inst.instanceId, daemonId: 'censor', description: '', view: 4, namespace: '', data: { ...cfg, scope: 'cluster' }, started: true, createdAt: '' } as unknown as IDaemonInstanceConfig
             let matched = 0
             for (const pod of (podList.items ?? [])) {
                 const ns: string = pod.metadata?.namespace
@@ -320,20 +310,7 @@ export class CensorDaemon implements IDaemon {
                 assets: [],
                 runners: new Map(),
                 analyzing: false,
-                processedCount: 0,
-                syslogCount: 0,
-                llmCount: 0,
-                llmLinesCount: 0,
-                totalBytesProcessed: 0,
-                tokensIn: 0,
-                tokensOut: 0,
-                lineBuffer: [],
-                regexes: [],
-                llmBusy: false,
-                llmErrorCooldownUntil: 0,
                 subscribers: new Set(),
-                lastStatsBroadcast: 0,
-                lastRegexStatsBroadcast: 0,
                 pendingReceivedLines: []
             }
             this.instances.set(instanceConfig.id, inst)
@@ -341,13 +318,9 @@ export class CensorDaemon implements IDaemon {
             const savedCfg: ICensorInstanceConfig = inst.cfg
             const dataCfg = instanceConfig.data as (ICensorInstanceConfig & { _llms?: ILlm[] }) | undefined
             const cfg = dataCfg?.llmId ? dataCfg : savedCfg
-            const storedLlms: ILlm[] = ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []) as ILlm[]
-            const llms: ILlm[] = storedLlms.length > 0 ? storedLlms : (dataCfg?._llms ?? [])
-            const llm = cfg.llmId ? llms.find(l => l.id === cfg.llmId) : undefined
 
             inst.cfg = cfg
-            inst.llm = llm
-            inst.analyzing = true
+            inst.analyzing = false
             inst.ephemeral = !!(instanceConfig.data as any)?.ephemeral
             inst.scope = (instanceConfig.data as any)?.scope ?? 'resource'
 
@@ -372,42 +345,7 @@ export class CensorDaemon implements IDaemon {
             }
             console.log(`[censor-daemon] addObject PASS ${podNamespace}/${podName}/${containerName} — runner-based (${inst.runners.size} runners)`)
         } else {
-            // Flat filter (backward compat: no runners yet)
-            console.log(`[censor-daemon] addObject filter ${podNamespace}/${podName}/${containerName}: logstreamEnabled=${inst.cfg.logstreamEnabled} logstreamAll=${inst.cfg.logstreamAll} sources=${JSON.stringify(inst.cfg.logstreamSources)}`)
-            if (!inst.cfg.logstreamEnabled) {
-                console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: logstreamEnabled=false`)
-                return true
-            }
-            if (!inst.cfg.logstreamAll) {
-                const sources = inst.cfg.logstreamSources ?? []
-                if (sources.length === 0) {
-                    console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: no sources configured`)
-                    return true
-                }
-                const basicMatches = sources.filter(src => {
-                    if (src.namespace && src.namespace !== podNamespace) return false
-                    if (src.podRegex) { try { if (!new RegExp(src.podRegex).test(podName)) return false } catch { return false } }
-                    return true
-                })
-                if (basicMatches.length === 0) {
-                    console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: no basic match`)
-                    return true
-                }
-                if (basicMatches.some(src => src.labelSelector)) {
-                    let labels: Record<string, string> = {}
-                    try {
-                        const coreApi = (this.clusterInfo as any).coreApi
-                        const podRes = await coreApi.readNamespacedPod({ name: podName, namespace: podNamespace })
-                        labels = podRes.metadata?.labels ?? {}
-                    } catch {}
-                    const fullMatch = basicMatches.some(src => !src.labelSelector || matchesLabelSelector(labels, src.labelSelector))
-                    if (!fullMatch) {
-                        console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: labelSelector no match`)
-                        return true
-                    }
-                }
-            }
-            console.log(`[censor-daemon] addObject PASS ${podNamespace}/${podName}/${containerName} — flat filter`)
+            console.log(`[censor-daemon] addObject PASS ${podNamespace}/${podName}/${containerName} — no runners yet, accepting`)
         }
 
         const logStream = new stream.PassThrough()
@@ -457,7 +395,10 @@ export class CensorDaemon implements IDaemon {
         const inst = this.instances.get(instanceId)
         if (!inst) return
         if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
-                    if (inst.flushTimer) { clearTimeout(inst.flushTimer); inst.flushTimer = undefined }
+        for (const runner of inst.runners.values()) {
+            if (runner.flushTimer) { clearTimeout(runner.flushTimer); runner.flushTimer = undefined }
+            if (runner.receivedTimer) { clearTimeout(runner.receivedTimer); runner.receivedTimer = undefined }
+        }
         for (const asset of inst.assets) {
             asset.passThroughStream.removeAllListeners()
             asset.passThroughStream.destroy()
@@ -529,7 +470,7 @@ export class CensorDaemon implements IDaemon {
                         })
                         logApi.log(namespace, podName, containerName, logStream, { follow: true, pretty: false, timestamps: false, tailLines: 1 })
                             .catch(err => {
-                                this.backChannelObject.logWarning?.(`[censor-daemon] cluster log stream error ${namespace}/${podName}/${containerName}: ${err}`)
+                                this.backDaemonObject.logWarning?.(`[censor-daemon] cluster log stream error ${namespace}/${podName}/${containerName}: ${err}`)
                                 inst!.assets = inst!.assets.filter(a => a !== asset)
                                 this.broadcast(inst!, 'assets', { assets: inst!.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
                             })
@@ -584,42 +525,6 @@ export class CensorDaemon implements IDaemon {
                         }
                         this.broadcastStats(inst, runner)
                     }
-                } else {
-                    // Flat fallback
-                    if (!inst.analyzing) continue
-                    const sources = inst.cfg.syslogSources?.length ? inst.cfg.syslogSources : []
-                    const matchingSrc = sources.find(src => {
-                        if (src.sourceIp && src.sourceIp !== msg.sourceIp) return false
-                        if (src.hostname && src.hostname !== msg.hostname) return false
-                        if (src.appName && src.appName !== msg.appName) return false
-                        if (src.severity !== undefined && msg.severity > src.severity) return false
-                        if (src.filter) {
-                            try { if (!new RegExp(src.filter).test(msg.raw)) return false } catch { return false }
-                        }
-                        return true
-                    })
-                    if (!matchingSrc) continue
-                    inst.syslogCount++
-                    const ts = new Date().toISOString()
-                    const llmText = matchingSrc.addTimestamp ? `${ts} ${text}` : text
-                    this.broadcast(inst, 'syslog', { text, namespace: msg.hostname, pod: msg.appName, container: '', timestamp: ts })
-                    if (inst.analyzing) {
-                        inst.processedCount++
-                        const clean = cleanANSI(llmText)
-                        let filtered = false
-                        for (const r of inst.regexes) {
-                            try { if (r.compiled.test(clean)) { r.matches++; filtered = true } } catch {}
-                        }
-                        if (!filtered) {
-                            const batchSize = this.effectiveBatchSize(inst)
-                            if (inst.lineBuffer.length < MAX_LINE_BUFFER) inst.lineBuffer.push(clean)
-                            if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
-                                const batch = inst.lineBuffer.splice(0, batchSize)
-                                this.callLlm(inst, batch)
-                            }
-                        }
-                        this.broadcastStats(inst)
-                    }
                 }
             }
             return
@@ -673,53 +578,6 @@ export class CensorDaemon implements IDaemon {
                         }
                         this.broadcastStats(inst, runner)
                     }
-                } else {
-                    // Flat fallback
-                    if (!inst.analyzing) continue
-                    const sources = inst.cfg.businessSources?.length
-                        ? inst.cfg.businessSources
-                        : (inst.cfg.space || inst.cfg.businessPath)
-                            ? [{ space: inst.cfg.space, type: inst.cfg.type, businessPath: inst.cfg.businessPath, addTimestamp: inst.cfg.addTimestamp }]
-                            : []
-                    const matchingSrc = sources.find(src => {
-                        if (!src.businessPath) return false
-                        if (src.space && src.space !== eventSpace) return false
-                        if (src.type && src.type !== eventType) return false
-                        return true
-                    })
-                    if (!matchingSrc) {
-                        this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: no matching business source for space='${eventSpace}' type='${eventType}'`)
-                        continue
-                    }
-                    const text = extractText(eventBody, matchingSrc.businessPath!)
-                    if (text === undefined) {
-                        this.backDaemonObject.logInfo?.(`[censor-daemon] skip instance ${inst.instanceId}: extractText returned undefined for path='${matchingSrc.businessPath}'`)
-                        continue
-                    }
-                    const ts = new Date().toISOString()
-                    const llmText = matchingSrc.addTimestamp ? `${ts} ${text}` : String(text)
-                    this.broadcast(inst, 'business', { text: String(text), namespace: eventSpace, pod: eventType, container: '', timestamp: ts })
-                    if (inst.analyzing) {
-                        inst.processedCount++
-                        const clean = cleanANSI(llmText)
-                        let filtered = false
-                        for (const r of inst.regexes) {
-                            try { if (r.compiled.test(clean)) { r.matches++; filtered = true } } catch {}
-                        }
-                        if (!filtered) {
-                            const batchSize = this.effectiveBatchSize(inst)
-                            // unshift so business events jump to front
-                            if (inst.lineBuffer.length < MAX_LINE_BUFFER) inst.lineBuffer.unshift(clean)
-                            this.backDaemonObject.logInfo?.(`[censor-daemon] business buffered: bufLen=${inst.lineBuffer.length} batchSize=${batchSize} llmBusy=${inst.llmBusy}`)
-                            if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
-                                const batch = inst.lineBuffer.splice(0, batchSize)
-                                this.callLlm(inst, batch)
-                            } else if (inst.llmBusy) {
-                                this.backDaemonObject.logInfo?.(`[censor-daemon] business buffered but LLM busy`)
-                            }
-                        }
-                        this.broadcastStats(inst)
-                    }
                 }
             }
         }
@@ -743,21 +601,14 @@ export class CensorDaemon implements IDaemon {
                     target = {
                         instanceId,
                         cfg: cfg as ICensorInstanceConfig,
-                        assets: [], runners: new Map(), analyzing: true, processedCount: 0, syslogCount: 0, llmCount: 0, llmLinesCount: 0, totalBytesProcessed: 0,
-                        tokensIn: 0, tokensOut: 0,
-                        lineBuffer: [], regexes: [], llmBusy: false, llmErrorCooldownUntil: 0, subscribers: new Set(),
-                        lastStatsBroadcast: 0, lastRegexStatsBroadcast: 0, pendingReceivedLines: []
+                        assets: [], runners: new Map(), analyzing: true, subscribers: new Set(),
+                        pendingReceivedLines: []
                     }
                     this.instances.set(instanceId, target)
                 }
                 target.cfg = cfg as ICensorInstanceConfig
-                target.currentBatchSize = undefined
-                target.cachedSchema = undefined
-                target.cachedModel = undefined
-                target.cachedProviderOptions = undefined
                 if (_llms) await this.backDaemonObject.writeStorageCommon!(STORAGE_KEY_LLMS, false, _llms)
                 const llmList: ILlm[] = (_llms ?? ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? [])) as ILlm[]
-                target.llm = llmList.find((l: ILlm) => l.id === target!.cfg.llmId)
                 // Create or update the runner for this config (keyed by name:version)
                 const rkey = `${(cfg as ICensorInstanceConfig).name}:${(cfg as ICensorInstanceConfig).version}`
                 const existingRunner = target.runners.get(rkey)
@@ -773,7 +624,7 @@ export class CensorDaemon implements IDaemon {
                 } else {
                     const newRunner: IConfigRunner = {
                         cfg: cfg as ICensorInstanceConfig,
-                        analyzing: true,
+                        analyzing: false,
                         processedCount: 0, syslogCount: 0, llmCount: 0, llmLinesCount: 0,
                         totalBytesProcessed: 0, tokensIn: 0, tokensOut: 0,
                         lineBuffer: [], regexes: [], llmBusy: false, llmErrorCooldownUntil: 0,
@@ -791,28 +642,16 @@ export class CensorDaemon implements IDaemon {
                         asset.runnerIds.delete(rkey)
                     }
                 }
-                // Tear down running log streams that no longer match the new config
-                // The plugin back re-seed will then start any new ones that now match
-                const newCfg = cfg as ICensorInstanceConfig
+                // Tear down log streams for assets no longer matched by any runner
                 console.log(`[censor-daemon] configset: inst had ${target.assets.length} assets before tear-down: ${target.assets.map(a => `${a.namespace}/${a.pod}`).join(', ')}`)
-                const toStop = target.assets.filter(a => {
-                    if (!newCfg.logstreamEnabled) return true
-                    if (newCfg.logstreamAll) return false
-                    const sources = newCfg.logstreamSources ?? []
-                    if (sources.length === 0) return true
-                    return !sources.some(src => {
-                        const nsOk = !src.namespace || a.namespace === src.namespace
-                        const podOk = !src.podRegex || new RegExp(src.podRegex).test(a.pod)
-                        return nsOk && podOk
-                    })
-                })
+                const toStop = target.assets.filter(a => a.runnerIds.size === 0)
                 for (const asset of toStop) {
                     console.log(`[censor-daemon] configset: stopping log stream ${asset.namespace}/${asset.pod}/${asset.container} (no longer matches new config)`)
                     asset.passThroughStream.removeAllListeners()
                     asset.passThroughStream.destroy()
                 }
                 target.assets = target.assets.filter(a => !toStop.includes(a))
-                if (toStop.length > 0) this.broadcast(target, 'assets', { assets: target.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
+                this.broadcast(target, 'assets', { assets: target.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
                 // In cluster mode, re-discover pods that now match the new config
                 // In resource mode, the plugin back re-seeds via directAddObject
                 if (target.scope === 'cluster') {
@@ -835,6 +674,7 @@ export class CensorDaemon implements IDaemon {
                 const configs: ICensorInstanceConfig[] = ((await this.backDaemonObject.readStorage!('censor-configs', false)) ?? []) as ICensorInstanceConfig[]
                 const filtered = configs.filter(c => !(c.name === name && c.version === version))
                 await this.backDaemonObject.writeStorage!('censor-configs', false, filtered)
+                await this.backDaemonObject.writeStorage!(`censor-regexes-${name}`, false, null)
                 return { configs: filtered }
             }
             case ECensorDaemonCommand.PROVIDERSAVAILABLE:
@@ -850,48 +690,159 @@ export class CensorDaemon implements IDaemon {
             }
             case ECensorDaemonCommand.ANALYZESTART:
                 if (inst) {
-                    inst.analyzing = true
-                    inst.lineBuffer = []
-                    inst.pendingReceivedLines = []
-                    if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
-                    if (inst.flushTimer) { clearTimeout(inst.flushTimer); inst.flushTimer = undefined }
-                    this.broadcast(inst, 'analyzing', { analyzing: true })
+                    const runnerKey = typeof data === 'string' ? data : null
+                    const targetRunner = runnerKey ? inst.runners.get(runnerKey) : null
+                    if (targetRunner) {
+                        console.log(`[censor-daemon] analyzestart runner '${runnerKey}'`)
+                        targetRunner.analyzing = true
+                        targetRunner.lineBuffer = []
+                        if (targetRunner.receivedTimer) { clearTimeout(targetRunner.receivedTimer); targetRunner.receivedTimer = undefined }
+                        if (targetRunner.flushTimer) { clearTimeout(targetRunner.flushTimer); targetRunner.flushTimer = undefined }
+                        this.broadcast(inst, 'analyzing', { analyzing: true, runnerKey })
+                    } else {
+                        inst.analyzing = true
+                        inst.pendingReceivedLines = []
+                        if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
+                        for (const [rk, runner] of inst.runners) {
+                            runner.analyzing = true
+                            runner.lineBuffer = []
+                            if (runner.flushTimer) { clearTimeout(runner.flushTimer); runner.flushTimer = undefined }
+                            this.broadcast(inst, 'analyzing', { analyzing: true, runnerKey: rk })
+                        }
+                        this.broadcast(inst, 'analyzing', { analyzing: true })
+                    }
                     this.persistState(inst)
                 }
                 return { analyzing: true }
             case ECensorDaemonCommand.ANALYZESTOP:
                 if (inst) {
-                    inst.analyzing = false
-                    inst.lineBuffer = []
-                    inst.pendingReceivedLines = []
-                    if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
-                    if (inst.flushTimer) { clearTimeout(inst.flushTimer); inst.flushTimer = undefined }
-                    this.broadcast(inst, 'analyzing', { analyzing: false })
+                    const runnerKey = typeof data === 'string' ? data : null
+                    const targetRunner = runnerKey ? inst.runners.get(runnerKey) : null
+                    if (targetRunner) {
+                        console.log(`[censor-daemon] analyzestop runner '${runnerKey}'`)
+                        targetRunner.analyzing = false
+                        targetRunner.lineBuffer = []
+                        if (targetRunner.receivedTimer) { clearTimeout(targetRunner.receivedTimer); targetRunner.receivedTimer = undefined }
+                        if (targetRunner.flushTimer) { clearTimeout(targetRunner.flushTimer); targetRunner.flushTimer = undefined }
+                        this.broadcast(inst, 'analyzing', { analyzing: false, runnerKey })
+                    } else {
+                        inst.analyzing = false
+                        inst.pendingReceivedLines = []
+                        if (inst.receivedTimer) { clearTimeout(inst.receivedTimer); inst.receivedTimer = undefined }
+                        for (const [rk, runner] of inst.runners) {
+                            runner.analyzing = false
+                            runner.lineBuffer = []
+                            if (runner.flushTimer) { clearTimeout(runner.flushTimer); runner.flushTimer = undefined }
+                            this.broadcast(inst, 'analyzing', { analyzing: false, runnerKey: rk })
+                        }
+                        this.broadcast(inst, 'analyzing', { analyzing: false })
+                    }
                     this.persistState(inst)
+                    if (targetRunner) {
+                        await this.saveRegexesForConfig(targetRunner.cfg.name)
+                    } else {
+                        const savedConfigs = new Set<string>()
+                        for (const [, runner] of inst.runners) {
+                            if (!savedConfigs.has(runner.cfg.name)) {
+                                savedConfigs.add(runner.cfg.name)
+                                await this.saveRegexesForConfig(runner.cfg.name)
+                            }
+                        }
+                    }
                 } else {
                     try {
-                        const existing = await this.backDaemonObject.readStorage!(`censor-state-${instanceId}`, false) as { processedCount?: number, llmCount?: number, analyzing?: boolean, regexes?: unknown[] } | null
-                        await this.backDaemonObject.writeStorage?.(`censor-state-${instanceId}`, false, { processedCount: existing?.processedCount ?? 0, llmCount: existing?.llmCount ?? 0, analyzing: false, regexes: existing?.regexes ?? [] })
+                        const existing = await this.backDaemonObject.readStorage!(`censor-state-${instanceId}`, false) as { processedCount?: number, llmCount?: number, analyzing?: boolean } | null
+                        await this.backDaemonObject.writeStorage?.(`censor-state-${instanceId}`, false, { processedCount: existing?.processedCount ?? 0, llmCount: existing?.llmCount ?? 0, analyzing: false })
                     } catch {}
                 }
                 return { analyzing: false }
+            case ECensorDaemonCommand.REGEXESSAVE: {
+                const configName = data as string
+                await this.saveRegexesForConfig(configName)
+                return {}
+            }
+            case ECensorDaemonCommand.REGEXESGET: {
+                const configName = data as string
+                const regexes = ((await this.backDaemonObject.readStorage!(`censor-regexes-${configName}`, false)) ?? [])
+                return { regexes }
+            }
+            case ECensorDaemonCommand.RUNNERREMOVE: {
+                if (!inst) return null
+                const rk = data as string
+                const runner = inst.runners.get(rk)
+                if (runner) {
+                    runner.analyzing = false
+                    runner.lineBuffer = []
+                    if (runner.flushTimer) { clearTimeout(runner.flushTimer); runner.flushTimer = undefined }
+                    inst.runners.delete(rk)
+                    for (const asset of inst.assets) asset.runnerIds.delete(rk)
+                    this.broadcast(inst, 'analyzing', { analyzing: false, runnerKey: rk })
+                    console.log(`[censor-daemon] runnerremove: removed runner '${rk}'`)
+                }
+                return {}
+            }
+            case ECensorDaemonCommand.REGEXADD: {
+                if (!inst) return null
+                const { runnerKey: addRunnerKey, pattern: addPattern, explanation: addExplanation, origin: addOrigin } = data as { runnerKey: string, pattern: string, explanation: string, origin?: ERegexOrigin }
+                const addRunner = inst.runners.get(addRunnerKey)
+                if (!addRunner) return null
+                if (addRunner.regexes.some(r => r.pattern === addPattern)) return null
+                try {
+                    const compiled = new RegExp(addPattern)
+                    const effectiveOrigin = addOrigin ?? ERegexOrigin.MANUAL
+                    addRunner.regexes.push({ pattern: addPattern, compiled, example: '', explanation: addExplanation, matches: 0, origin: effectiveOrigin })
+                    this.broadcast(inst, 'regex', { runnerKey: addRunnerKey, pattern: addPattern, example: '', explanation: addExplanation, origin: effectiveOrigin })
+                    this.persistState(inst)
+                } catch {}
+                return null
+            }
             case ECensorDaemonCommand.REGEXDELETE: {
                 if (!inst) return null
-                const pattern = data as string
-                const pos = inst.regexes.findIndex(r => r.pattern === pattern)
-                if (pos >= 0) inst.regexes.splice(pos, 1)
-                this.persistState(inst)
-                return { regexes: inst.regexes.map(r => ({ pattern: r.pattern, example: r.example, explanation: r.explanation })) }
+                const payload = typeof data === 'string' ? { pattern: data } : data as { pattern: string, runnerKey?: string }
+                const { pattern: delPattern, runnerKey: delRunnerKey } = payload
+                if (delRunnerKey && inst.runners.has(delRunnerKey)) {
+                    const runner = inst.runners.get(delRunnerKey)!
+                    const pos = runner.regexes.findIndex(r => r.pattern === delPattern)
+                    if (pos >= 0) runner.regexes.splice(pos, 1)
+                    console.log(`[censor-daemon] regexdelete runner '${delRunnerKey}' pattern '${delPattern}'`)
+                    this.persistState(inst)
+                    return { regexes: runner.regexes.map(r => ({ pattern: r.pattern, example: r.example, explanation: r.explanation, origin: r.origin })) }
+                }
+                return null
             }
-            case ECensorDaemonCommand.STATSGET:
+            case ECensorDaemonCommand.STATSGET: {
                 if (!inst) return null
-                return { processedCount: inst.processedCount, llmCount: inst.llmCount, tokensIn: inst.tokensIn, tokensOut: inst.tokensOut, analyzing: inst.analyzing }
+                const runnerStats: Record<string, unknown> = {}
+                for (const [rk, runner] of inst.runners) {
+                    runnerStats[rk] = {
+                        processedCount: runner.processedCount,
+                        llmCount: runner.llmCount,
+                        llmLinesCount: runner.llmLinesCount,
+                        totalBytesProcessed: runner.totalBytesProcessed,
+                        tokensIn: runner.tokensIn,
+                        tokensOut: runner.tokensOut,
+                        syslogCount: runner.syslogCount,
+                        pendingCount: runner.lineBuffer.length,
+                        analyzing: runner.analyzing
+                    }
+                }
+                return { analyzing: inst.analyzing, runners: runnerStats }
+            }
             case 'analyzestate':
-                if (inst) this.broadcast(inst, 'analyzing', { analyzing: inst.analyzing })
+                if (inst) {
+                    for (const [rk, runner] of inst.runners) {
+                        this.broadcast(inst, 'analyzing', { analyzing: runner.analyzing, runnerKey: rk })
+                    }
+                }
                 return { analyzing: inst?.analyzing ?? false }
-            case ECensorDaemonCommand.REGEXGET:
+            case ECensorDaemonCommand.REGEXGET: {
                 if (!inst) return null
-                return { regexes: inst.regexes.map(r => ({ pattern: r.pattern, example: r.example, explanation: r.explanation, matches: r.matches })) }
+                const runnerRegexes: Record<string, unknown[]> = {}
+                for (const [rk, runner] of inst.runners) {
+                    runnerRegexes[rk] = runner.regexes.map(r => ({ pattern: r.pattern, example: r.example, explanation: r.explanation, matches: r.matches, origin: r.origin }))
+                }
+                return { runnerRegexes }
+            }
         }
         return null
     }
@@ -920,11 +871,10 @@ export class CensorDaemon implements IDaemon {
 
     // ── Internal ────────────────────────────────────────────────────────────────
 
-    private effectiveBatchSize(inst: IDaemonInstance, runner?: IConfigRunner): number {
-        const t: IConfigRunner = runner ?? (inst as IConfigRunner)
-        const max = t.cfg.batchSize ?? BATCH_SIZE
-        if (t.cfg.batchMode !== 'auto') return max
-        return t.currentBatchSize ?? max
+    private effectiveBatchSize(_inst: IDaemonInstance, runner: IConfigRunner): number {
+        const max = runner.cfg.batchSize ?? BATCH_SIZE
+        if (runner.cfg.batchMode !== 'auto') return max
+        return runner.currentBatchSize ?? max
     }
 
     private broadcast(inst: IDaemonInstance, kind: string, data: Record<string, unknown>): void {
@@ -933,27 +883,28 @@ export class CensorDaemon implements IDaemon {
     }
 
     // Throttled stats broadcast: max 4/sec, regexMatches separated into a low-frequency regexstats event
-    private broadcastStats(inst: IDaemonInstance, runner?: IConfigRunner): void {
+    private broadcastStats(inst: IDaemonInstance, runner: IConfigRunner): void {
         const now = Date.now()
-        const t: IConfigRunner = runner ?? (inst as IConfigRunner)
-        if (now - t.lastStatsBroadcast < 250) return
-        t.lastStatsBroadcast = now
+        const runnerKey = `${runner.cfg.name}:${runner.cfg.version}`
+        if (now - runner.lastStatsBroadcast < 250) return
+        runner.lastStatsBroadcast = now
         this.broadcast(inst, 'stats', {
-            processedCount: t.processedCount,
-            syslogCount: t.syslogCount,
-            llmCount: t.llmCount,
-            llmLinesCount: t.llmLinesCount,
-            totalBytesProcessed: t.totalBytesProcessed,
-            tokensIn: t.tokensIn,
-            tokensOut: t.tokensOut,
-            pendingCount: t.lineBuffer.length,
+            ...(runnerKey ? { runnerKey } : {}),
+            processedCount: runner.processedCount,
+            syslogCount: runner.syslogCount,
+            llmCount: runner.llmCount,
+            llmLinesCount: runner.llmLinesCount,
+            totalBytesProcessed: runner.totalBytesProcessed,
+            tokensIn: runner.tokensIn,
+            tokensOut: runner.tokensOut,
+            pendingCount: runner.lineBuffer.length,
             subscriberCount: inst.subscribers.size,
-            currentBatchSize: t.cfg.batchMode === 'auto' ? (t.currentBatchSize ?? t.cfg.batchSize ?? BATCH_SIZE) : undefined
+            currentBatchSize: runner.cfg.batchMode === 'auto' ? (runner.currentBatchSize ?? runner.cfg.batchSize ?? BATCH_SIZE) : undefined
         })
         // regex match counts at most once per 5 seconds (550 regexes × 80B × high-freq = 1.7 MB/s otherwise)
-        if (now - t.lastRegexStatsBroadcast >= 5000) {
-            t.lastRegexStatsBroadcast = now
-            this.broadcast(inst, 'regexstats', { regexMatches: t.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
+        if (now - runner.lastRegexStatsBroadcast >= 5000) {
+            runner.lastRegexStatsBroadcast = now
+            this.broadcast(inst, 'regexstats', { runnerKey,regexMatches: runner.regexes.map(r => ({ pattern: r.pattern, matches: r.matches })) })
         }
     }
 
@@ -973,13 +924,28 @@ export class CensorDaemon implements IDaemon {
         // state is kept in memory only; lost on backend restart
     }
 
+    private async saveRegexesForConfig(configName: string): Promise<void> {
+        const seen = new Set<string>()
+        const regexes: { pattern: string, example: string, explanation: string, origin: ERegexOrigin }[] = []
+        for (const inst of this.instances.values()) {
+            for (const runner of inst.runners.values()) {
+                if (runner.cfg.name !== configName) continue
+                for (const r of runner.regexes) {
+                    if (!seen.has(r.pattern)) {
+                        seen.add(r.pattern)
+                        regexes.push({ pattern: r.pattern, example: r.example, explanation: r.explanation, origin: r.origin })
+                    }
+                }
+            }
+        }
+        await this.backDaemonObject.writeStorage!(`censor-regexes-${configName}`, false, regexes)
+    }
+
     private processChunk(inst: IDaemonInstance, asset: IAsset, chunk: string): void {
         const lines = chunk.split('\n').filter(l => l.trim() !== '')
         if (lines.length === 0) return
 
-        if (asset.runnerIds.size > 0) {
-            // Runner-based fan-out: each runner processes independently with its own cfg/regexes/buffer
-            for (const rkey of asset.runnerIds) {
+        for (const rkey of asset.runnerIds) {
                 const runner = inst.runners.get(rkey)
                 if (!runner || !runner.analyzing) continue
                 for (const line of lines) {
@@ -1012,66 +978,27 @@ export class CensorDaemon implements IDaemon {
                 }
                 this.broadcastStats(inst, runner)
             }
-            // Received lines for display (inst level — shows all lines arriving, regardless of runner)
+        // Only broadcast received lines when this asset matches at least one analyzing runner
+        const assetIsActive = [...asset.runnerIds].some(rk => inst.runners.get(rk)?.analyzing)
+        if (assetIsActive) {
             const receivedBatch = lines.map(text => ({ text, namespace: asset.namespace, pod: asset.pod, container: asset.container }))
             inst.pendingReceivedLines.push(...receivedBatch)
             if (inst.pendingReceivedLines.length > 1000) inst.pendingReceivedLines.splice(0, inst.pendingReceivedLines.length - 1000)
             this.scheduleReceivedBroadcast(inst)
-        } else {
-            // Flat fallback: no runners yet (pre-CONFIGSET state) — original behavior preserved exactly
-            if (!inst.analyzing) return
-            const receivedBatch: { text: string, namespace: string, pod: string, container: string }[] = []
-            for (const line of lines) {
-                inst.processedCount++
-                inst.totalBytesProcessed += Buffer.byteLength(line, 'utf8')
-                receivedBatch.push({ text: line, namespace: asset.namespace, pod: asset.pod, container: asset.container })
-                const clean = cleanANSI(line)
-                const maxLen = inst.cfg.maxLineLength ?? 0
-                const truncated = (maxLen > 0 && clean.length > maxLen) ? clean.slice(0, maxLen) : clean
-                let filtered = false
-                for (const r of inst.regexes) {
-                    try { if (r.compiled.test(truncated)) { r.matches++; filtered = true } } catch {}
-                }
-                const batchSize = this.effectiveBatchSize(inst)
-                if (!filtered && inst.lineBuffer.length < MAX_LINE_BUFFER) {
-                    inst.lineBuffer.push(truncated)
-                }
-                if (inst.lineBuffer.length >= batchSize && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
-                    if (inst.flushTimer) { clearTimeout(inst.flushTimer); inst.flushTimer = undefined }
-                    const batch = inst.lineBuffer.splice(0, batchSize)
-                    this.callLlm(inst, batch)
-                } else if (inst.lineBuffer.length > 0 && inst.lineBuffer.length < batchSize && !inst.llmBusy && !inst.flushTimer) {
-                    inst.flushTimer = setTimeout(() => {
-                        inst.flushTimer = undefined
-                        if (inst.lineBuffer.length > 0 && !inst.llmBusy && Date.now() >= inst.llmErrorCooldownUntil) {
-                            const batch = inst.lineBuffer.splice(0, inst.lineBuffer.length)
-                            this.callLlm(inst, batch)
-                        }
-                    }, (inst.cfg.batchTimeout ?? 2) * 1000)
-                }
-            }
-            // Cap pending buffer at 1000 lines (display is capped at MAX_DISPLAY_LINES=1000 in front anyway)
-            if (receivedBatch.length > 0) {
-                inst.pendingReceivedLines.push(...receivedBatch)
-                if (inst.pendingReceivedLines.length > 1000) inst.pendingReceivedLines.splice(0, inst.pendingReceivedLines.length - 1000)
-                this.scheduleReceivedBroadcast(inst)
-            }
-            this.broadcastStats(inst)
         }
     }
 
-    private async callLlm(inst: IDaemonInstance, lines: string[], runner?: IConfigRunner): Promise<void> {
-        // t = runner when in multi-runner mode, inst (duck-typed) when in flat/legacy mode
-        const t: IConfigRunner = runner ?? (inst as IConfigRunner)
-        t.llmBusy = true
+    private async callLlm(inst: IDaemonInstance, lines: string[], runner: IConfigRunner): Promise<void> {
+        const runnerKey = `${runner.cfg.name}:${runner.cfg.version}`
+        runner.llmBusy = true
         let success = false
         try {
-            if (!t.llm && t.cfg.llmId) {
+            if (!runner.llm && runner.cfg.llmId) {
                 const storedLlms: ILlm[] = ((await this.backDaemonObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []) as ILlm[]
-                t.llm = storedLlms.find(l => l.id === t.cfg.llmId)
+                runner.llm = storedLlms.find(l => l.id === runner.cfg.llmId)
             }
-            if (!t.llm) {
-                this.backDaemonObject.logWarning?.(`[censor-daemon] no LLM configured for instance ${inst.instanceId} llmId='${t.cfg.llmId}' cfg.name='${t.cfg.name}'`)
+            if (!runner.llm) {
+                this.backDaemonObject.logWarning?.(`[censor-daemon] no LLM configured for instance ${inst.instanceId} llmId='${runner.cfg.llmId}' cfg.name='${runner.cfg.name}'`)
                 return
             }
             if (this.providers.length === 0) {
@@ -1081,60 +1008,60 @@ export class CensorDaemon implements IDaemon {
                     await loadModels(this.providers, this.backDaemonObject)
                 }
             }
-            if (!t.cachedModel) {
-                t.cachedModel = buildModel(t.llm, this.providers)
+            if (!runner.cachedModel) {
+                runner.cachedModel = buildModel(runner.llm, this.providers)
             }
-            const model = t.cachedModel
+            const model = runner.cachedModel
             if (!model) {
-                this.backDaemonObject.logWarning?.(`[censor-daemon] could not build model for LLM '${t.llm.id}'`)
+                this.backDaemonObject.logWarning?.(`[censor-daemon] could not build model for LLM '${runner.llm.id}'`)
                 return
             }
 
-            const system = t.cfg.system?.trim() || DEFAULT_SYSTEM
+            const system = runner.cfg.system?.trim() || DEFAULT_SYSTEM
             const prompt = `${DEFAULT_USER_PROMPT(lines.length)}\n\n${lines.join('\n')}`
 
-            if (!t.cachedProviderOptions) {
+            if (!runner.cachedProviderOptions) {
                 const opts: Record<string, Record<string, unknown>> = {}
-                switch (t.llm.provider) {
+                switch (runner.llm.provider) {
                     case 'google':   Object.assign(opts, { google: { structuredOutputs: true } }); break
                     case 'groq':     Object.assign(opts, { groq: { structuredOutputs: true } }); break
                     case 'mistral':  Object.assign(opts, { mistral: { strictJsonSchema: true, structuredOutputs: true } }); break
                     default:         Object.assign(opts, { openai: {} })
                 }
-                t.cachedProviderOptions = opts
+                runner.cachedProviderOptions = opts
             }
-            const providerOptions = t.cachedProviderOptions
+            const providerOptions = runner.cachedProviderOptions
 
-            if (!t.cachedSchema) {
+            if (!runner.cachedSchema) {
                 let example: Record<string, unknown>
                 try {
-                    example = JSON.parse(t.cfg.exampleJson?.trim() || '{"patterns":[""]}')
+                    example = JSON.parse(runner.cfg.exampleJson?.trim() || '{"patterns":[""]}')
                 } catch (err) {
                     this.backDaemonObject.logWarning?.(`[censor-daemon] invalid exampleJson, using default. Error: ${err}`)
                     example = { patterns: [''] }
                 }
-                t.cachedSchema = zodFromExample(example)
+                runner.cachedSchema = zodFromExample(example)
             }
-            const schema = t.cachedSchema
+            const schema = runner.cachedSchema
 
-            t.llmCount++
-            t.llmLinesCount += lines.length
-            t.lastStatsBroadcast = 0  // force next broadcastStats to fire immediately
+            runner.llmCount++
+            runner.llmLinesCount += lines.length
+            runner.lastStatsBroadcast = 0  // force next broadcastStats to fire immediately
             this.broadcastStats(inst, runner)
-            this.broadcast(inst, 'llminput', { lines })
+            this.broadcast(inst, 'llminput', { runnerKey,lines })
 
             const { output, usage } = await generateText({
                 model, system, prompt,
-                temperature: t.cfg.temperature ?? 0.2,
+                temperature: runner.cfg.temperature ?? 0.2,
                 providerOptions: providerOptions as never,
                 output: Output.object({ schema })
             })
 
-            t.tokensIn += usage.inputTokens ?? 0
-            t.tokensOut += usage.outputTokens ?? 0
-            t.lastStatsBroadcast = 0  // force stats update after LLM response
+            runner.tokensIn += usage.inputTokens ?? 0
+            runner.tokensOut += usage.outputTokens ?? 0
+            runner.lastStatsBroadcast = 0  // force stats update after LLM response
             this.broadcastStats(inst, runner)
-            this.broadcast(inst, 'llmoutput', { text: JSON.stringify(output, null, 2) })
+            this.broadcast(inst, 'llmoutput', { runnerKey,text: JSON.stringify(output, null, 2) })
 
             const patterns: string[] = ((output as any).info ?? []).filter((x: any) => x.type === 'discard').map((x: any) => x.regex)
             // no tocar estas lineas es debug del daemon
@@ -1157,7 +1084,7 @@ export class CensorDaemon implements IDaemon {
                     }
                 }
             }
-            if (allTags.length > 0) this.broadcast(inst, 'tags', { tags: allTags })
+            if (allTags.length > 0) this.broadcast(inst, 'tags', { runnerKey,tags: allTags })
 
             const warnings: { original: string, explanation: string, tags: string[] }[] =
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1165,9 +1092,9 @@ export class CensorDaemon implements IDaemon {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     .map((x: any) => ({ original: x.original ?? '', explanation: x.explanation ?? '', tags: Array.isArray(x.tags) ? x.tags.filter((tg: unknown) => typeof tg === 'string') : [] })) ?? []
             for (const w of warnings) {
-                this.broadcast(inst, 'llmwarning', { text: w.original, explanation: w.explanation, tags: w.tags })
-                const sid = t.cfg.senderId
-                const scn = t.cfg.senderConfigName
+                this.broadcast(inst, 'llmwarning', { runnerKey,text: w.original, explanation: w.explanation, tags: w.tags })
+                const sid = runner.cfg.senderId
+                const scn = runner.cfg.senderConfigName
                 if (sid && scn) {
                     const tagStr = w.tags.length > 0 ? ` [${w.tags.join(', ')}]` : ''
                     this.backDaemonObject.senders?.send(sid, scn, {
@@ -1180,14 +1107,14 @@ export class CensorDaemon implements IDaemon {
 
             for (const pattern of patterns) {
                 if (typeof pattern !== 'string') continue
-                if (t.regexes.some(r => r.pattern === pattern)) continue
+                if (runner.regexes.some(r => r.pattern === pattern)) continue
                 try {
                     const compiled = new RegExp(pattern)
                     const matchExample = lines.find(l => { try { return compiled.test(l) } catch { return false } }) ?? ''
                     const explanation = patternExplanations.get(pattern) ?? ''
-                    t.regexes.push({ pattern, compiled, example: matchExample, explanation, matches: 1 })
-                    if ((t.cfg.mode ?? 'inference') === 'inference') {
-                        this.broadcast(inst, 'regex', { pattern, example: matchExample, explanation })
+                    if ((runner.cfg.mode ?? 'inference') === 'inference') {
+                        runner.regexes.push({ pattern, compiled, example: matchExample, explanation, matches: 1, origin: ERegexOrigin.LLM })
+                        this.broadcast(inst, 'regex', { runnerKey, pattern, example: matchExample, explanation, origin: ERegexOrigin.LLM })
                     }
                 }
                 catch {
@@ -1199,28 +1126,28 @@ export class CensorDaemon implements IDaemon {
         }
         catch (err) {
             this.backDaemonObject.logError?.(`[censor-daemon] LLM call error: ${err}`)
-            this.broadcast(inst, 'llmerror', { text: String(err), timestamp: new Date().toISOString(), inputLines: lines })
-            t.lineBuffer.unshift(...lines)
-            t.llmErrorCooldownUntil = Date.now() + 5_000
+            this.broadcast(inst, 'llmerror', { runnerKey,text: String(err), timestamp: new Date().toISOString(), inputLines: lines })
+            runner.lineBuffer.unshift(...lines)
+            runner.llmErrorCooldownUntil = Date.now() + 5_000
         }
         finally {
-            t.llmBusy = false
-            if (success && t.cfg.batchMode === 'auto') {
-                const maxSize = t.cfg.batchSize ?? BATCH_SIZE
-                const minSize = t.cfg.batchSizeMin ?? 1
-                const current = t.currentBatchSize ?? maxSize
-                const pending = t.lineBuffer.length
+            runner.llmBusy = false
+            if (success && runner.cfg.batchMode === 'auto') {
+                const maxSize = runner.cfg.batchSize ?? BATCH_SIZE
+                const minSize = runner.cfg.batchSizeMin ?? 1
+                const current = runner.currentBatchSize ?? maxSize
+                const pending = runner.lineBuffer.length
                 if (pending >= current) {
-                    t.currentBatchSize = Math.min(maxSize, current + Math.max(1, Math.round(current * 0.2)))
+                    runner.currentBatchSize = Math.min(maxSize, current + Math.max(1, Math.round(current * 0.2)))
                 } else if (pending < current * 0.9) {
-                    t.currentBatchSize = Math.max(minSize, current - Math.max(1, Math.round(current * 0.2)))
+                    runner.currentBatchSize = Math.max(minSize, current - Math.max(1, Math.round(current * 0.2)))
                 }
-                console.log(`[censor-autobatch] success=${success} batchMode=${t.cfg.batchMode} pending=${t.lineBuffer.length} currentBatchSize=${t.currentBatchSize} cfgBatchSize=${t.cfg.batchSize} maxSize=${maxSize} minSize=${minSize} current=${current} pending=${pending} threshold=${current * 0.9} => newBatchSize=${t.currentBatchSize}`)
+                console.log(`[censor-autobatch] success=${success} batchMode=${runner.cfg.batchMode} pending=${runner.lineBuffer.length} currentBatchSize=${runner.currentBatchSize} cfgBatchSize=${runner.cfg.batchSize} maxSize=${maxSize} minSize=${minSize} current=${current} pending=${pending} threshold=${current * 0.9} => newBatchSize=${runner.currentBatchSize}`)
             }
             if (success) {
                 const batchSize = this.effectiveBatchSize(inst, runner)
-                if (t.lineBuffer.length >= batchSize) {
-                    const batch = t.lineBuffer.splice(0, batchSize)
+                if (runner.lineBuffer.length >= batchSize) {
+                    const batch = runner.lineBuffer.splice(0, batchSize)
                     this.callLlm(inst, batch, runner)
                 }
             }

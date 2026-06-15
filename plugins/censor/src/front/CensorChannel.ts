@@ -4,7 +4,7 @@ import { IChannel, IChannelObject, IContentProps, ISetupProps } from '@kwirthmag
 import { CensorSetup, CensorIcon } from './CensorSetup'
 import { CensorTabContent } from './CensorTabContent'
 import { CensorConfig, ECensorCommand, ICensorConfig, ICensorInstanceConfig, ICensorSession } from './CensorConfig'
-import { CensorData, ICensorAsset, ICensorData, ICensorRegex } from './CensorData'
+import { CensorData, ICensorAsset, ICensorData, ICensorRegex, IRunnerData, ERegexOrigin } from './CensorData'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 
 const MAX_DISPLAY_LINES = 1000
@@ -16,7 +16,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     action: EInstanceMessageAction
     instance: string
-    kind?: 'received' | 'business' | 'syslog' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'regexstats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
+    kind?: 'received' | 'business' | 'syslog' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'configsaved' | 'providers' | 'analyzing' | 'stats' | 'regexstats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
     assets?: ICensorAsset[]
     analyzing?: boolean
     text?: string
@@ -27,6 +27,7 @@ interface ICensorMessage {
     pattern?: string
     example?: string
     explanation?: string
+    origin?: ERegexOrigin
     tags?: string[]
     processedCount?: number
     llmCount?: number
@@ -45,6 +46,9 @@ interface ICensorMessage {
     regexes?: ICensorRegex[]
     inputLines?: string[]
     timestamp?: string
+    runnerKey?: string
+    runnerStats?: Record<string, { processedCount: number, llmCount: number, llmLinesCount: number, totalBytesProcessed: number, tokensIn: number, tokensOut: number, syslogCount: number, pendingCount: number, analyzing: boolean }>
+    runnerRegexes?: Record<string, ICensorRegex[]>
 }
 
 export class CensorChannel implements IChannel {
@@ -80,6 +84,18 @@ export class CensorChannel implements IChannel {
         const data: ICensorData = channelObject.data
         const config: ICensorConfig = channelObject.config as ICensorConfig
 
+        const ensureRunner = (rk: string): IRunnerData => {
+            if (!data.runners.has(rk)) {
+                data.runners.set(rk, {
+                    analyzing: false, regexes: [], processedCount: 0, llmCount: 0, llmLinesCount: 0,
+                    totalBytesProcessed: 0, tokensIn: 0, tokensOut: 0, pendingCount: 0,
+                    syslogCount: 0, llmWarningLines: [], llmInputLines: [], llmOutputLines: [],
+                    llmErrorLines: [], allTags: []
+                })
+            }
+            return data.runners.get(rk)!
+        }
+
         switch (msg.type) {
             case EInstanceMessageType.DATA:
                 if (msg.instance && !channelObject.instanceId) channelObject.instanceId = msg.instance
@@ -95,57 +111,68 @@ export class CensorChannel implements IChannel {
                     data.businessLines.push({ text: msg.text, namespace: msg.namespace ?? '', pod: msg.pod ?? '', container: msg.container ?? '', timestamp: msg.timestamp })
                     if (data.businessLines.length > MAX_DISPLAY_LINES) data.businessLines.splice(0, data.businessLines.length - MAX_DISPLAY_LINES)
                 }
-                else if (msg.kind === 'syslog') {
-                    data.syslogCount = (data.syslogCount ?? 0) + 1
+                else if (msg.kind === 'syslog' && msg.runnerKey) {
+                    const rd = ensureRunner(msg.runnerKey)
+                    rd.syslogCount = (rd.syslogCount ?? 0) + 1
                 }
-                else if (msg.kind === 'llminput') {
+                else if (msg.kind === 'llminput' && msg.runnerKey) {
                     const newLines: string[] = Array.isArray((msg as any).lines) ? (msg as any).lines : (msg.text !== undefined ? [msg.text] : [])
                     const maxInput = config.maxLlmInputLines ?? MAX_LLM_LINES
-                    if (newLines.length > 0) data.llmInputLines.push(newLines)
-                    if (data.llmInputLines.length > maxInput) data.llmInputLines.splice(0, data.llmInputLines.length - maxInput)
+                    if (newLines.length > 0) {
+                        const rd = ensureRunner(msg.runnerKey)
+                        rd.llmInputLines.push(newLines)
+                        if (rd.llmInputLines.length > maxInput) rd.llmInputLines.splice(0, rd.llmInputLines.length - maxInput)
+                    }
                 }
-                else if (msg.kind === 'llmoutput' && msg.text !== undefined) {
+                else if (msg.kind === 'llmoutput' && msg.text !== undefined && msg.runnerKey) {
                     const maxOutput = config.maxLlmOutputLines ?? MAX_LLM_LINES
-                    data.llmOutputLines.push(msg.text)
-                    if (data.llmOutputLines.length > maxOutput) data.llmOutputLines.splice(0, data.llmOutputLines.length - maxOutput)
+                    const rd = ensureRunner(msg.runnerKey)
+                    rd.llmOutputLines.push(msg.text)
+                    if (rd.llmOutputLines.length > maxOutput) rd.llmOutputLines.splice(0, rd.llmOutputLines.length - maxOutput)
                 }
-                else if (msg.kind === 'llmwarning' && msg.text !== undefined) {
+                else if (msg.kind === 'llmwarning' && msg.text !== undefined && msg.runnerKey) {
                     const tags = msg.tags ?? []
-                    data.llmWarningLines.push({ original: msg.text, explanation: msg.explanation ?? '', tags })
-                    if (data.llmWarningLines.length > MAX_DISPLAY_LINES) data.llmWarningLines.splice(0, data.llmWarningLines.length - MAX_DISPLAY_LINES)
-                    for (const tag of tags) {
-                        if (!data.allTags.includes(tag)) data.allTags.push(tag)
+                    const rd = ensureRunner(msg.runnerKey)
+                    rd.llmWarningLines.push({ original: msg.text, explanation: msg.explanation ?? '', tags, runnerKey: msg.runnerKey })
+                    if (rd.llmWarningLines.length > MAX_DISPLAY_LINES) rd.llmWarningLines.splice(0, rd.llmWarningLines.length - MAX_DISPLAY_LINES)
+                    for (const tag of tags) { if (!rd.allTags.includes(tag)) rd.allTags.push(tag) }
+                }
+                else if (msg.kind === 'llmerror' && msg.text !== undefined && msg.runnerKey) {
+                    const rd = ensureRunner(msg.runnerKey)
+                    rd.llmErrorLines.push({ text: msg.text, timestamp: msg.timestamp ?? new Date().toISOString(), lines: msg.inputLines })
+                    if (rd.llmErrorLines.length > MAX_DISPLAY_LINES) rd.llmErrorLines.splice(0, rd.llmErrorLines.length - MAX_DISPLAY_LINES)
+                }
+                else if (msg.kind === 'regex' && msg.pattern !== undefined && msg.runnerKey) {
+                    const rd = ensureRunner(msg.runnerKey)
+                    if (!rd.regexes.some((r: ICensorRegex) => r.pattern === msg.pattern)) {
+                        rd.regexes.push({ pattern: msg.pattern!, example: msg.example ?? '', explanation: msg.explanation ?? '', matches: 1, origin: msg.origin ?? ERegexOrigin.HYBRID })
                     }
                 }
-                else if (msg.kind === 'llmerror' && msg.text !== undefined) {
-                    data.llmErrorLines.push({ text: msg.text, timestamp: msg.timestamp ?? new Date().toISOString(), lines: msg.inputLines })
-                    if (data.llmErrorLines.length > MAX_DISPLAY_LINES) data.llmErrorLines.splice(0, data.llmErrorLines.length - MAX_DISPLAY_LINES)
-                }
-                else if (msg.kind === 'regex' && msg.pattern !== undefined) {
-                    if (!data.regexes.some((r: ICensorRegex) => r.pattern === msg.pattern)) {
-                        data.regexes.push({ pattern: msg.pattern, example: msg.example ?? '', explanation: msg.explanation ?? '', matches: 1 })
-                    }
-                }
-                else if (msg.kind === 'stats') {
-                    if (msg.processedCount !== undefined) data.processedCount = msg.processedCount
-                    if ((msg as any).syslogCount !== undefined) data.syslogCount = (msg as any).syslogCount
-                    if (msg.llmCount !== undefined) data.llmCount = msg.llmCount
-                    if ((msg as any).llmLinesCount !== undefined) data.llmLinesCount = (msg as any).llmLinesCount
-                    if ((msg as any).totalBytesProcessed !== undefined) data.totalBytesProcessed = (msg as any).totalBytesProcessed
-                    if (msg.tokensIn !== undefined) data.tokensIn = msg.tokensIn
-                    if (msg.tokensOut !== undefined) data.tokensOut = msg.tokensOut
-                    if (msg.pendingCount !== undefined) data.pendingCount = msg.pendingCount
+                else if (msg.kind === 'stats' && msg.runnerKey) {
+                    const rd = ensureRunner(msg.runnerKey)
+                    if (msg.processedCount !== undefined) rd.processedCount = msg.processedCount
+                    if ((msg as any).syslogCount !== undefined) rd.syslogCount = (msg as any).syslogCount
+                    if (msg.llmCount !== undefined) rd.llmCount = msg.llmCount
+                    if ((msg as any).llmLinesCount !== undefined) rd.llmLinesCount = (msg as any).llmLinesCount
+                    if ((msg as any).totalBytesProcessed !== undefined) rd.totalBytesProcessed = (msg as any).totalBytesProcessed
+                    if (msg.tokensIn !== undefined) rd.tokensIn = msg.tokensIn
+                    if (msg.tokensOut !== undefined) rd.tokensOut = msg.tokensOut
+                    if (msg.pendingCount !== undefined) rd.pendingCount = msg.pendingCount
+                    if ((msg as any).currentBatchSize !== undefined) rd.currentBatchSize = (msg as any).currentBatchSize
                     if (msg.subscriberCount !== undefined) data.subscriberCount = msg.subscriberCount
-                    if ((msg as any).currentBatchSize !== undefined) data.currentBatchSize = (msg as any).currentBatchSize
                 }
                 else if (msg.kind === 'regexstats') {
-                    // low-frequency event (once per 5s) carrying regex match counts
                     if (Array.isArray((msg as any).regexMatches)) {
+                        const target = msg.runnerKey ? ensureRunner(msg.runnerKey).regexes : []
                         for (const rm of (msg as any).regexMatches as { pattern: string; matches: number }[]) {
-                            const rx = data.regexes.find((r: ICensorRegex) => r.pattern === rm.pattern)
+                            const rx = target.find((r: ICensorRegex) => r.pattern === rm.pattern)
                             if (rx) rx.matches = rm.matches
                         }
                     }
+                }
+                else if (msg.kind === 'configsaved') {
+                    data.assets = []
+                    data.runners = new Map()
                 }
                 else if (msg.kind === 'config') {
                     if (msg.llms !== undefined) data.llms = msg.llms
@@ -154,21 +181,22 @@ export class CensorChannel implements IChannel {
                     if (msg.instanceConfig) data.instanceConfig = msg.instanceConfig
                     if (msg.configs !== undefined) data.configs = msg.configs
                     if (msg.sessions !== undefined) data.sessions = msg.sessions
+                    if (msg.sessionDescription !== undefined) data.ephemeralSessionName = msg.sessionDescription ?? null
                 }
                 else if (msg.kind === 'providers') {
                     if (msg.providers !== undefined) data.providers = msg.providers
                     if (msg.providersAvailable !== undefined) data.providersAvailable = msg.providersAvailable
                 }
-                else if (msg.kind === 'analyzing' && msg.analyzing !== undefined) {
-                    data.analyzing = msg.analyzing
+                else if (msg.kind === 'analyzing' && msg.analyzing !== undefined && msg.runnerKey) {
+                    const rd = ensureRunner(msg.runnerKey)
+                    rd.analyzing = msg.analyzing
                 }
                 else if (msg.kind === 'assets' && msg.assets !== undefined) {
                     data.assets = msg.assets
                 }
-                else if (msg.kind === 'tags' && msg.tags !== undefined) {
-                    for (const tag of msg.tags) {
-                        if (!data.allTags.includes(tag)) data.allTags.push(tag)
-                    }
+                else if (msg.kind === 'tags' && msg.tags !== undefined && msg.runnerKey) {
+                    const rd = ensureRunner(msg.runnerKey)
+                    for (const tag of msg.tags) { if (!rd.allTags.includes(tag)) rd.allTags.push(tag) }
                 }
                 else if (msg.kind === 'sessions' && msg.sessions !== undefined) {
                     data.sessions = msg.sessions
@@ -177,7 +205,9 @@ export class CensorChannel implements IChannel {
                     data.connectedSessionId = msg.sessionId
                     data.connectedSessionDescription = msg.sessionDescription ?? null
                     if (msg.sessions !== undefined) data.sessions = msg.sessions
-                    if (msg.analyzing !== undefined) data.analyzing = msg.analyzing
+                    data.runners = new Map()
+                    data.receivedLines = []
+                    data.businessLines = []
                     const startedSession = data.sessions.find(s => s.id === msg.sessionId)
                     data.startTime = startedSession?.createdAt ? new Date(startedSession.createdAt).getTime() : Date.now()
                     ;(channelObject.config as ICensorConfig).selectedSessionId = msg.sessionId
@@ -186,15 +216,30 @@ export class CensorChannel implements IChannel {
                     data.connectedSessionId = msg.sessionId
                     data.connectedSessionDescription = msg.sessionDescription ?? null
                     if (msg.sessions !== undefined) data.sessions = msg.sessions
-                    if (msg.processedCount !== undefined) data.processedCount = msg.processedCount
-                    if (msg.llmCount !== undefined) data.llmCount = msg.llmCount
-                    if (msg.tokensIn !== undefined) data.tokensIn = msg.tokensIn
-                    if (msg.tokensOut !== undefined) data.tokensOut = msg.tokensOut
-                    if (msg.analyzing !== undefined) data.analyzing = msg.analyzing
-                    if (msg.regexes) {
-                        for (const r of msg.regexes) {
-                            if (!data.regexes.some((x: ICensorRegex) => x.pattern === r.pattern)) {
-                                data.regexes.push(r)
+                    data.runners = new Map()
+                    data.receivedLines = []
+                    data.businessLines = []
+
+                    // Restore per-runner stats and regexes
+                    if (msg.runnerStats) {
+                        for (const [rk, rs] of Object.entries(msg.runnerStats)) {
+                            const rd = ensureRunner(rk)
+                            rd.processedCount = rs.processedCount
+                            rd.llmCount = rs.llmCount
+                            rd.llmLinesCount = rs.llmLinesCount
+                            rd.totalBytesProcessed = rs.totalBytesProcessed
+                            rd.tokensIn = rs.tokensIn
+                            rd.tokensOut = rs.tokensOut
+                            rd.syslogCount = rs.syslogCount
+                            rd.pendingCount = rs.pendingCount
+                            rd.analyzing = rs.analyzing
+                        }
+                    }
+                    if (msg.runnerRegexes) {
+                        for (const [rk, rxs] of Object.entries(msg.runnerRegexes)) {
+                            const rd = ensureRunner(rk)
+                            for (const r of rxs) {
+                                if (!rd.regexes.some((x: ICensorRegex) => x.pattern === r.pattern)) rd.regexes.push({ ...r, origin: r.origin ?? ERegexOrigin.HYBRID })
                             }
                         }
                     }
@@ -217,18 +262,7 @@ export class CensorChannel implements IChannel {
                     data.startTime = undefined
                     data.receivedLines = []
                     data.businessLines = []
-                    data.llmInputLines = []
-                    data.llmOutputLines = []
-                    data.llmWarningLines = []
-                    data.allTags = []
-                    data.regexes = []
-                    data.syslogCount = 0
-                    data.processedCount = 0
-                    data.llmCount = 0
-                    data.tokensIn = 0
-                    data.tokensOut = 0
-                    data.pendingCount = 0
-                    data.analyzing = false
+                    data.runners = new Map()
                     ;(channelObject.config as ICensorConfig).selectedSessionId = null
                 }
                 return { action: EChannelRefreshAction.NONE }
@@ -263,21 +297,12 @@ export class CensorChannel implements IChannel {
         const config: ICensorConfig = channelObject.config
         data.receivedLines = []
         data.businessLines = []
-        data.llmInputLines = []
-        data.llmOutputLines = []
-        data.llmWarningLines = []
-        data.allTags = []
-        data.regexes = []
         data.assets = []
-        data.syslogCount = 0
-        data.processedCount = 0
-        data.llmCount = 0
-        data.tokensIn = 0
-        data.tokensOut = 0
         data.paused = false
         data.started = true
         data.startTime = undefined
         data.sessions = []
+        data.runners = new Map()
         data.connectedSessionId = null
         data.connectedSessionDescription = null
         data.pendingSessionId = config.selectedSessionId

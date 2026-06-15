@@ -199,7 +199,14 @@
       "PowerShell(Get-ChildItem C:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins -Recurse | Where-Object { $_.FullName -notmatch 'node_modules' -and $_.FullName -notmatch 'dist' } | Select-Object FullName)",
       "PowerShell(head -30)",
       "PowerShell(Get-ChildItem \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\themes\" -Directory | ForEach-Object { $name = $_.Name; $hasWatch = Test-Path \\(Join-Path $_.FullName \"watch.mjs\"\\); \"$name : watch.mjs=$hasWatch\" })",
-      "PowerShell(Get-ChildItem \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\homepages\" -Directory | ForEach-Object { $name = $_.Name; $hasWatch = Test-Path \\(Join-Path $_.FullName \"watch.mjs\"\\); \"$name : watch.mjs=$hasWatch\" })"
+      "PowerShell(Get-ChildItem \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\homepages\" -Directory | ForEach-Object { $name = $_.Name; $hasWatch = Test-Path \\(Join-Path $_.FullName \"watch.mjs\"\\); \"$name : watch.mjs=$hasWatch\" })",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\front && npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"error TS\" } | Select-Object -First 20)",
+      "PowerShell(npx tsc --noEmit --project \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\ops\\\\tsconfig.json\" 2>&1 | Where-Object { $_ -match \"error TS\" } | Select-Object -First 10)",
+      "PowerShell(npx tsc --noEmit --project \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\tsconfig.json\" 2>&1 | Where-Object { $_ -match \"error TS\" })",
+      "PowerShell(npx tsc --noEmit --project \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\tsconfig.json\" 2>&1)",
+      "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor && node_modules\\\\.bin\\\\tsc --noEmit 2>&1 | Where-Object { $_ -match \"error TS\" } | Select-Object -First 10)",
+      "PowerShell(Copy-Item -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-front\\\\dist\\\\MiniGauge.js\" -Destination \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-front\\\\dist\\\\MiniGauge.js\" -Force)",
+      "PowerShell(Copy-Item -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-front\\\\dist\\\\MiniGauge.d.ts\" -Destination \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-front\\\\dist\\\\MiniGauge.d.ts\" -Force)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
@@ -217,7 +224,8 @@
       "c:\\github\\jfvilas\\grafana\\plugin-log",
       "C:\\Users\\julio.fernandezvila\\.claude",
       "c:\\github\\jfvilas\\censor-agent",
-      "c:\\github\\jfvilas"
+      "c:\\github\\jfvilas",
+      "c:\\github\\aisdkvercel\\kwirth\\common\\dist"
     ]
   }
 }

@@ -1,8 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Box, Button, Card, CardContent, CardHeader, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, ListItem, ListItemButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { Box, Button, Card, CardContent, CardHeader, IconButton, ListItem, ListItemButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { IOpsData, IScopedObject, OpsData } from './OpsData'
 import { IInstanceConfig, EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { IContentProps, MsgBoxButtons, MsgBoxOk, MsgBoxYesNo } from '@kwirthmagnify/kwirth-common-front'
 import { v4 as uuid } from 'uuid'
 import { Delete, Home, MoreVert, RestartAlt, Terminal } from '@mui/icons-material'
 import { defaultStyles, JsonView } from 'react-json-view-lite'
@@ -12,28 +12,6 @@ import { TerminalInstance } from './terminal/TerminalInstance'
 import { ESwitchKey, IOpsConfig, OpsConfig } from './OpsConfig'
 import { EOpsCommand, IOpsMessage } from './OpsTypes'
 import { IResourceSelected, ILogConfig, ILogInstanceConfig, ELogSortOrder, IMetricsConfig, IMetricsInstanceConfig, EChartType, EMetricsConfigMode } from './OpsExternalTypes'
-
-// ─── Inline MsgBox helpers ──────────────────────────────────────────────────
-enum MsgBoxButtons { Ok = 'ok', Yes = 'yes', No = 'no' }
-
-const MsgBoxOk = (title: string, content: React.ReactNode, setter: (v: React.ReactNode) => void): React.ReactNode => (
-    <Dialog open>
-        <DialogTitle sx={{ pb: 1 }}>{title}</DialogTitle>
-        <DialogContent dividers>{typeof content === 'string' ? <Typography dangerouslySetInnerHTML={{ __html: content }} /> : content}</DialogContent>
-        <DialogActions><Button variant='contained' onClick={() => setter(null)}>OK</Button></DialogActions>
-    </Dialog>
-)
-
-const MsgBoxYesNo = (title: string, content: string, setter: (v: React.ReactNode) => void, cb: (b: MsgBoxButtons) => void): React.ReactNode => (
-    <Dialog open>
-        <DialogTitle sx={{ pb: 1 }}>{title}</DialogTitle>
-        <DialogContent dividers><Typography dangerouslySetInnerHTML={{ __html: content }} /></DialogContent>
-        <DialogActions>
-            <Button onClick={() => { setter(null); cb(MsgBoxButtons.No) }}>NO</Button>
-            <Button variant='contained' onClick={() => { setter(null); cb(MsgBoxButtons.Yes) }}>YES</Button>
-        </DialogActions>
-    </Dialog>
-)
 
 const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     let opsData: IOpsData = props.channelObject.data || new OpsData()
@@ -46,7 +24,7 @@ const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [selectedScopedObject, setSelectedScopedObject] = useState<IScopedObject | null>(null)
     const [anchorMenuChart, setAnchorMenuChart] = useState<null | HTMLElement>(null)
     const [selectedTerminal, setSelectedTerminal] = useState<string | undefined>(undefined)
-    const [msgBox, setMsgBox] = useState<React.ReactNode>(null)
+    const [msgBox, setMsgBox] = useState(<></>)
     const [refresh, setRefresh] = useState(0)
     const [filter, setFilter] = useState<string>('')
 

@@ -41,7 +41,7 @@ export const loadModels = async (providers: ILlmProvider[], log: IBackChannelObj
             switch (provider.name) {
                 case 'deepseek': {
                     const resp = await fetch('https://api.deepseek.com/models', { headers: { Authorization: 'Bearer ' + provider.key } })
-                    const data = await resp.json()
+                    const data = await resp.json() as any
                     provider.models = data.data.filter((m: { object: string }) => m.object === 'model').map((m: { id: string; description: string }) => ({
                         id: m.id, name: m.id, description: m.description, type: 'text'
                     } satisfies ILlmModel))
@@ -49,7 +49,7 @@ export const loadModels = async (providers: ILlmProvider[], log: IBackChannelObj
                 }
                 case 'google': {
                     const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${provider.key}`)
-                    const data = await resp.json()
+                    const data = await resp.json() as any
                     provider.models = data.models.map((m: { name: string; displayName: string; description: string }) => ({
                         id: m.name.startsWith('models/') ? m.name.substring(7) : m.name,
                         name: m.displayName,
@@ -60,7 +60,7 @@ export const loadModels = async (providers: ILlmProvider[], log: IBackChannelObj
                 }
                 case 'groq': {
                     const resp = await fetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: 'Bearer ' + provider.key } })
-                    const data = await resp.json()
+                    const data = await resp.json() as any
                     provider.models = data.data.filter((m: { object: string; active: boolean }) => m.object === 'model' && m.active).map((m: { id: string; description: string }) => ({
                         id: m.id, name: m.id, description: m.description, type: 'text'
                     } satisfies ILlmModel))
@@ -68,7 +68,7 @@ export const loadModels = async (providers: ILlmProvider[], log: IBackChannelObj
                 }
                 case 'openai': {
                     const resp = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: 'Bearer ' + provider.key } })
-                    const data = await resp.json()
+                    const data = await resp.json() as any
                     provider.models = data.data.filter((m: { object: string }) => m.object === 'model').map((m: { id: string; description: string }) => ({
                         id: m.id, name: m.id, description: m.description, type: 'text'
                     } satisfies ILlmModel))
@@ -76,7 +76,7 @@ export const loadModels = async (providers: ILlmProvider[], log: IBackChannelObj
                 }
                 case 'openrouter': {
                     const resp = await fetch('https://openrouter.ai/api/v1/models', { headers: { Authorization: 'Bearer ' + provider.key } })
-                    const data = await resp.json()
+                    const data = await resp.json() as any
                     provider.models = data.data.map((m: { id: string; name: string; description: string }) => ({
                         id: m.id, name: m.name, description: m.description, type: 'text'
                     } satisfies ILlmModel))
@@ -84,7 +84,7 @@ export const loadModels = async (providers: ILlmProvider[], log: IBackChannelObj
                 }
                 case 'mistral': {
                     const resp = await fetch('https://api.mistral.ai/v1/models', { headers: { Authorization: 'Bearer ' + provider.key } })
-                    const data = await resp.json()
+                    const data = await resp.json() as any
                     provider.models = data.data.filter((m: { object: string }) => m.object === 'model').map((m: { id: string; description: string; capabilities?: { completion_chat?: boolean } }) => ({
                         id: m.id, name: m.id, description: m.description,
                         type: m.capabilities?.completion_chat === true ? 'text' : 'other'

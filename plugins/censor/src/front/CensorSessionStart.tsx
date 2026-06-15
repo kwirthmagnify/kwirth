@@ -19,7 +19,7 @@ export const CensorSessionStart: React.FC<CensorSessionStartProps> = ({ onConfir
             <DialogTitle>Launch session</DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 1 }}>
                 <Alert severity='warning' sx={{ fontSize: '0.8rem' }}>
-                    The current channel will close after launching. The session will keep running in the background.
+                    New session will be launched to daemon and will start processing immediately.
                 </Alert>
                 <TextField
                     autoFocus

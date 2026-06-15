@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react'
-import { Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, Typography } from '@mui/material'
-import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
+import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, Typography } from '@mui/material'
+import { ISetupProps, MsgBoxOk, MsgBoxOkError, MsgBoxWaitCancel } from '@kwirthmagnify/kwirth-common-front'
 import { TrivyConfig, TrivyInstanceConfig } from './TrivyConfig'
 import { VerifiedUser } from '@mui/icons-material'
 import { TrivyOperator } from './TrivyOperator'
@@ -8,27 +8,6 @@ import { ITrivyData } from './TrivyData'
 import { ITrivyConfig, ITrivyInstanceConfig } from './TrivyTypes'
 
 const addGetAuthorization = (accessString: string) => ({ headers: { 'Authorization': 'Bearer ' + accessString } })
-
-enum MsgBoxButtons { Ok = 'ok', Yes = 'yes', No = 'no' }
-
-const MsgBoxOk = (title: string, content: string, setter: (v: React.ReactNode) => void): React.ReactNode => (
-    <Dialog open><DialogTitle>{title}</DialogTitle>
-        <DialogContent><Typography>{content}</Typography></DialogContent>
-        <DialogActions><Button variant='contained' onClick={() => setter(null)}>OK</Button></DialogActions>
-    </Dialog>
-)
-const MsgBoxOkError = (title: string, content: string, setter: (v: React.ReactNode) => void): React.ReactNode => (
-    <Dialog open><DialogTitle sx={{ color: 'error.main' }}>{title}</DialogTitle>
-        <DialogContent><Typography>{content}</Typography></DialogContent>
-        <DialogActions><Button variant='contained' color='error' onClick={() => setter(null)}>OK</Button></DialogActions>
-    </Dialog>
-)
-const MsgBoxWaitCancel = (title: string, content: string, setter: (v: React.ReactNode) => void, _cb: (b: MsgBoxButtons) => void): React.ReactNode => (
-    <Dialog open><DialogTitle>{title}</DialogTitle>
-        <DialogContent><Stack direction='row' spacing={2} alignItems='center'><CircularProgress size={20} /><Typography>{content}</Typography></Stack></DialogContent>
-        <DialogActions><Button onClick={() => setter(null)}>CANCEL</Button></DialogActions>
-    </Dialog>
-)
 
 const TrivyIcon = <VerifiedUser />
 
@@ -41,7 +20,7 @@ const TrivySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     const [ignoreHigh, setIgnoreHigh] = useState(trivyInstanceConfig.ignoreHigh || false)
     const [ignoreMedium, setIgnoreMedium] = useState(trivyInstanceConfig.ignoreMedium ? true : false)
     const [ignoreLow, setIgnoreLow] = useState(trivyInstanceConfig.ignoreLow ? true : false)
-    const [msgBox, setMsgBox] = useState<React.ReactNode>(null)
+    const [msgBox, setMsgBox] = useState(<></>)
     const [showOperatorManage, setShowOperatorManage] = useState<boolean>(false)
     const defaultRef = useRef<HTMLInputElement | null>(null)
 
@@ -60,7 +39,7 @@ const TrivySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     const onOperatorManageClosed = async (action?: string) => {
         setShowOperatorManage(false)
         if (action) {
-            setMsgBox(MsgBoxWaitCancel('Manage Trivy', `We are waiting for the action to complete...`, setMsgBox, (_a: MsgBoxButtons) => setMsgBox(null)))
+            setMsgBox(MsgBoxWaitCancel('Manage Trivy', `We are waiting for the action to complete...`, setMsgBox))
             const result = await fetch(`${props.channelObject.clusterUrl}/${trivyData.ri}/channel/trivy/operator?action=${action}`, addGetAuthorization(props.channelObject.accessString!))
             if (result.status === 200)
                 setMsgBox(MsgBoxOk('Trivy', `Action '${action}' successfully sent, check results on your cluster.`, setMsgBox))

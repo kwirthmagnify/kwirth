@@ -1,22 +1,42 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Box, Button, Card, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItem, ListItemButton, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
-import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon, DeleteSweep, Download as DownloadIcon, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
+import { Box, Button, Card, CardContent, CardHeader, Chip, Divider, FormControl, FormControlLabel, IconButton, List, ListItem, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, Tooltip, Typography } from '@mui/material'
+import { Add as AddIcon, ArrowDownward, ArrowUpward, DeleteOutline as DeleteOutlineIcon, DeleteSweep, Download as DownloadIcon, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
 import { cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
+import { MsgBoxButtons, MsgBoxYesNo } from './utils'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
-import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
-import { ICensorData } from './CensorData'
-import { ECensorCommand, ICensorInstanceConfig, ICensorBusinessSource, ICensorSyslogSource, ICensorLogstreamSource } from './CensorConfig'
-import { ICensorUiState } from './CensorData'
+import { ICensorData, ICensorUiState, IRunnerData } from './CensorData'
+import { ECensorCommand, ERegexOrigin } from './CensorConfig'
+import { CensorConfigDialog } from './CensorConfigDialog'
+import { CensorAddRegexDialog } from './CensorAddRegexDialog'
+import { CensorSessionStart } from './CensorSessionStart'
+import { CensorSessionPicker } from './CensorSessionPicker'
+
+const aggregateRunners = (runners: Map<string, IRunnerData>): IRunnerData => {
+    const all = [...runners.values()]
+    const seen = new Set<string>()
+    return {
+        analyzing: all.some(r => r.analyzing),
+        regexes: all.flatMap(r => r.regexes).filter(r => { if (seen.has(r.pattern)) return false; seen.add(r.pattern); return true }),
+        processedCount: all.reduce((s, r) => s + r.processedCount, 0),
+        llmCount: all.reduce((s, r) => s + r.llmCount, 0),
+        llmLinesCount: all.reduce((s, r) => s + r.llmLinesCount, 0),
+        totalBytesProcessed: all.reduce((s, r) => s + r.totalBytesProcessed, 0),
+        tokensIn: all.reduce((s, r) => s + r.tokensIn, 0),
+        tokensOut: all.reduce((s, r) => s + r.tokensOut, 0),
+        pendingCount: all.reduce((s, r) => s + r.pendingCount, 0),
+        syslogCount: all.reduce((s, r) => s + r.syslogCount, 0),
+        llmWarningLines: all.flatMap(r => r.llmWarningLines),
+        llmInputLines: all.flatMap(r => r.llmInputLines),
+        llmOutputLines: all.flatMap(r => r.llmOutputLines),
+        llmErrorLines: all.flatMap(r => r.llmErrorLines),
+        allTags: [...new Set(all.flatMap(r => r.allTags))],
+    }
+}
 
 const _defaultUi = (): ICensorUiState => ({
     tab: 0, regexSort: 'none',
     autoScrolls: { regex: true, received: true, business: true, llmInput: true, llmOutput: true, warning: true, llmError: true }
 })
-import { CensorImportExport } from './CensorImportExport'
-import { CensorSessionStart } from './CensorSessionStart'
-import { MsgBoxButtons, MsgBoxYesNo } from './utils'
-
 const formatPerfValue = (v: number) => v >= 10000 ? `${(v / 1000).toFixed(0)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
 
 const REFRESH_INTERVAL_MS = 250
@@ -26,6 +46,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const contentRef = useRef<HTMLDivElement>(null)
     const [contentTop, setContentTop] = useState(0)
     const [, forceUpdate] = useState(0)
+    const [selectedRunnerKey, setSelectedRunnerKey] = useState<string>('')
+    const rd = data.runners.size === 0 ? null
+        : selectedRunnerKey && data.runners.has(selectedRunnerKey)
+            ? data.runners.get(selectedRunnerKey)!
+            : aggregateRunners(data.runners)
     useEffect(() => {
         const id = setInterval(() => forceUpdate(v => v + 1), REFRESH_INTERVAL_MS)
         return () => clearInterval(id)
@@ -52,7 +77,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     useEffect(() => {
         const now = Date.now()
         const samples = perfSamplesRef.current
-        samples.push({ ts: now, count: data.processedCount, tokensIn: data.tokensIn, tokensOut: data.tokensOut, llmLines: data.llmLinesCount })
+        samples.push({ ts: now, count: rd?.processedCount ?? 0, tokensIn: rd?.tokensIn ?? 0, tokensOut: rd?.tokensOut ?? 0, llmLines: rd?.llmLinesCount ?? 0 })
         if (samples.length > 120) samples.splice(0, samples.length - 120)
         const calcRate = (windowMs: number, scaleToMin: boolean, field: 'count' | 'tokensIn' | 'tokensOut' | 'llmLines') => {
             const w = samples.filter(s => now - s.ts < windowMs)
@@ -70,32 +95,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setTokensOutPerMin(calcRate(60000, true, 'tokensOut'))
         setLlmLinesPerSec(calcRate(10000, false, 'llmLines'))
         setLlmLinesPerMin(calcRate(60000, true, 'llmLines'))
-    }, [data.processedCount, data.tokensIn, data.tokensOut, data.llmLinesCount])
+    }, [rd?.processedCount, rd?.tokensIn, rd?.tokensOut, rd?.llmLinesCount])
     const [showConfig, setShowConfig] = useState(false)
+    const [addRegexState, setAddRegexState] = useState<{ runnerKey?: string, pattern?: string, explanation?: string, lockRunner?: boolean } | null>(null)
     const [showSessionStart, setShowSessionStart] = useState(false)
-    const [configName, setConfigName] = useState('')
-    const [configVersion, setConfigVersion] = useState('1')
-    const [llmId, setLlmId] = useState('')
-    const [system, setSystem] = useState('')
-    const [batchSize, setBatchSize] = useState(10)
-    const [batchMode, setBatchMode] = useState<'fixed' | 'auto'>('fixed')
-    const [batchSizeMin, setBatchSizeMin] = useState(5)
-    const [maxLineLength, setMaxLineLength] = useState(0)
-    const [batchTimeout, setBatchTimeout] = useState(2)
-    const [temperature, setTemperature] = useState(0.2)
-    const [exampleJson, setExampleJson] = useState('{"patterns":["example regex"]}')
-    const [exampleJsonError, setExampleJsonError] = useState('')
-    const [businessSources, setBusinessSources] = useState<ICensorBusinessSource[]>([])
-    const [syslogSources, setSyslogSources] = useState<ICensorSyslogSource[]>([])
-    const [logstreamEnabled, setLogstreamEnabled] = useState(false)
-    const [logstreamAll, setLogstreamAll] = useState(false)
-    const [logstreamSources, setLogstreamSources] = useState<ICensorLogstreamSource[]>([])
-    const [senderId, setSenderId] = useState('')
-    const [senderConfigName, setSenderConfigName] = useState('')
-    const [senderEntries, setSenderEntries] = useState<Array<{ senderId: string; configName: string }>>([])
-    const [showConfigLlm, setShowConfigLlm] = useState(false)
-    const [showConfigProvider, setShowConfigProvider] = useState(false)
-    const [showImportExport, setShowImportExport] = useState(false)
+    const [showSessionPicker, setShowSessionPicker] = useState(false)
     const [msgBox, setMsgBox] = useState(<></>)
     const [activeTagFilters, setActiveTagFilters] = useState<string[]>([])
     const [tagFilterAnd, setTagFilterAnd] = useState(false)
@@ -122,10 +126,12 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const setRegexSort = (fn: (s: 'asc'|'desc'|'none') => 'asc'|'desc'|'none') => {
         setRegexSortState(prev => { const v = fn(prev); data.uiState = { ...(data.uiState ?? _defaultUi()), regexSort: v }; return v })
     }
-    const [selectedConfigIndex, setSelectedConfigIndex] = useState<number | null>(null)
-    const [configActive, setConfigActive] = useState(false)
-    const [configTab, setConfigTab] = useState(0)
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
+    useEffect(() => {
+        if (selectedRunnerKey !== '' && !data.runners.has(selectedRunnerKey)) {
+            setSelectedRunnerKey('')
+        }
+    }, [data.runners.size])
 
     useEffect(() => {
         if (contentRef.current) {
@@ -146,62 +152,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             (tab === 8 && llmErrorAutoScroll)
         if (!shouldScroll) return
         contentRef.current.scrollTop = contentRef.current.scrollHeight
-    }, [data.regexes.length, data.receivedLines.length, data.llmInputLines.length, data.llmOutputLines.length, data.llmWarningLines.length, data.llmErrorLines.length, data.businessLines.length, tab, regexAutoScroll, receivedAutoScroll, llmInputAutoScroll, llmOutputAutoScroll, warningAutoScroll, llmErrorAutoScroll, businessAutoScroll])
-
-    useEffect(() => {
-        if (showConfig) return
-        setConfigName(data.instanceConfig.name ?? '')
-        setConfigVersion(data.instanceConfig.version ?? '1')
-        setLlmId(data.instanceConfig.llmId ?? '')
-        setSystem(data.instanceConfig.system ?? '')
-        setBatchSize(data.instanceConfig.batchSize ?? 10)
-        setBatchMode(data.instanceConfig.batchMode ?? 'fixed')
-        setBatchSizeMin(data.instanceConfig.batchSizeMin ?? 5)
-        setMaxLineLength(data.instanceConfig.maxLineLength ?? 0)
-        setBatchTimeout(data.instanceConfig.batchTimeout ?? 2)
-        setTemperature(data.instanceConfig.temperature ?? 0.2)
-        setExampleJson(data.instanceConfig.exampleJson ?? '{"patterns":["example regex"]}')
-        setExampleJsonError('')
-        setBusinessSources(migrateBusinessSources(data.instanceConfig))
-        setSyslogSources(data.instanceConfig.syslogSources ?? [])
-        setLogstreamEnabled(data.instanceConfig.logstreamEnabled ?? false)
-        setLogstreamAll(data.instanceConfig.logstreamAll ?? false)
-        setLogstreamSources(data.instanceConfig.logstreamSources ?? [])
-        setSenderId(data.instanceConfig.senderId ?? '')
-        setSenderConfigName(data.instanceConfig.senderConfigName ?? '')
-    }, [data.instanceConfig])
-
-    useEffect(() => {
-        if (!showConfig) return
-        const url = props.channelObject.clusterUrl
-        const token = props.channelObject.accessString
-        if (!url || !token) return
-        fetch(`${url}/senders`, { headers: { Authorization: `Bearer ${token}` } })
-            .then(r => r.json())
-            .then((data: Array<{ id: string; configNames: string[] }>) => {
-                const entries: Array<{ senderId: string; configName: string }> = []
-                for (const s of data) {
-                    for (const cn of s.configNames ?? []) entries.push({ senderId: s.id, configName: cn })
-                }
-                setSenderEntries(entries)
-            })
-            .catch(() => {})
-    }, [showConfig])
-
-    useEffect(() => {
-        if (!showConfig || selectedConfigIndex !== null) return
-        const activeIdx = data.configs.findIndex(c => c.active)
-        if (activeIdx >= 0) {
-            setSelectedConfigIndex(activeIdx)
-            loadConfig(data.configs[activeIdx])
-        }
-    }, [data.configs.length, showConfig])
-
-    const migrateBusinessSources = (cfg: ICensorInstanceConfig): ICensorBusinessSource[] => {
-        if (cfg.businessSources && cfg.businessSources.length > 0) return cfg.businessSources
-        if (cfg.space || cfg.businessPath) return [{ space: cfg.space ?? '', type: cfg.type ?? '', businessPath: cfg.businessPath ?? '', addTimestamp: cfg.addTimestamp ?? false }]
-        return []
-    }
+    }, [data.runners.get(selectedRunnerKey)?.regexes.length, data.receivedLines.length, data.runners.get(selectedRunnerKey)?.llmInputLines.length, data.runners.get(selectedRunnerKey)?.llmOutputLines.length, data.runners.get(selectedRunnerKey)?.llmWarningLines.length, data.runners.get(selectedRunnerKey)?.llmErrorLines.length, data.businessLines.length, tab, regexAutoScroll, receivedAutoScroll, llmInputAutoScroll, llmOutputAutoScroll, warningAutoScroll, llmErrorAutoScroll, businessAutoScroll])
 
     const sendCommand = (command: ECensorCommand, payload?: unknown) => {
         if (!props.channelObject.instanceId) return
@@ -220,106 +171,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
     const openConfig = () => {
         sendCommand(ECensorCommand.CONFIGGET)
-        setSelectedConfigIndex(null)
         setShowConfig(true)
     }
-
-    const currentConfig = (): ICensorInstanceConfig => ({ name: configName, version: configVersion, llmId, system, batchSize, batchMode, batchSizeMin, maxLineLength, batchTimeout, temperature, exampleJson, businessSources, syslogSources, logstreamEnabled, logstreamAll, logstreamSources, senderId, senderConfigName })
-
-    const saveConfig = () => {
-        const cfg = currentConfig()
-        data.instanceConfig = cfg
-        sendCommand(ECensorCommand.CONFIGSET, cfg)
-        setShowConfig(false)
-    }
-
-    const loadConfig = (cfg: ICensorInstanceConfig) => {
-        setConfigName(cfg.name)
-        setConfigVersion(cfg.version)
-        setLlmId(cfg.llmId ?? '')
-        setSystem(cfg.system ?? '')
-        setBatchSize(cfg.batchSize ?? 10)
-        setBatchMode(cfg.batchMode ?? 'fixed')
-        setBatchSizeMin(cfg.batchSizeMin ?? 5)
-        setMaxLineLength(cfg.maxLineLength ?? 0)
-        setBatchTimeout(cfg.batchTimeout ?? 2)
-        setTemperature(cfg.temperature ?? 0.2)
-        setExampleJson(cfg.exampleJson ?? '{"patterns":["example regex"]}')
-        setExampleJsonError('')
-        setBusinessSources(migrateBusinessSources(cfg))
-        setSyslogSources(cfg.syslogSources ?? [])
-        setLogstreamEnabled(cfg.logstreamEnabled ?? false)
-        setLogstreamAll(cfg.logstreamAll ?? false)
-        setLogstreamSources(cfg.logstreamSources ?? [])
-        setSenderId(cfg.senderId ?? '')
-        setSenderConfigName(cfg.senderConfigName ?? '')
-        setConfigActive(cfg.active ?? false)
-    }
-
-    const onConfigSelect = (cfg: ICensorInstanceConfig, i: number) => {
-        setSelectedConfigIndex(i)
-        loadConfig(cfg)
-    }
-
-    const onConfigNew = () => {
-        setSelectedConfigIndex(null)
-        setConfigName('')
-        setConfigVersion('1')
-        setLlmId('')
-        setSystem('')
-        setBatchSize(50)
-        setTemperature(0.2)
-        setExampleJson('{"patterns":["example regex"]}')
-        setExampleJsonError('')
-        setBusinessSources([])
-        setSyslogSources([])
-        setLogstreamEnabled(false)
-        setLogstreamAll(false)
-        setLogstreamSources([])
-        setSenderId('')
-        setSenderConfigName('')
-        setConfigActive(false)
-    }
-
-    const onConfigSave = () => {
-        const cfg = currentConfig()
-        sendCommand(ECensorCommand.CONFIGSAVE, { ...cfg, active: configActive })
-    }
-
-    const onConfigDelete = () => {
-        if (selectedConfigIndex === null) return
-        const cfg = data.configs[selectedConfigIndex]
-        setMsgBox(MsgBoxYesNo('Delete config', `Delete "${cfg.name} v${cfg.version}"?`, setMsgBox, (a: MsgBoxButtons) => {
-            if (a !== MsgBoxButtons.Yes) return
-            sendCommand(ECensorCommand.CONFIGDELETE, { name: cfg.name, version: cfg.version })
-            setSelectedConfigIndex(null)
-        }))
-    }
-
-    const onConfigToggleActive = (i: number) => {
-        const cfg = data.configs[i]
-        const newActive = !(cfg.active ?? false)
-        if (selectedConfigIndex === i) setConfigActive(newActive)
-        sendCommand(ECensorCommand.CONFIGSAVE, { ...cfg, active: newActive })
-    }
-
-    const aiConfigLlmClose = (llms: ILlm[] | undefined) => {
-        setShowConfigLlm(false)
-        if (llms) sendCommand(ECensorCommand.CONFIGSET, { llmId, system, batchSize, exampleJson, _llms: llms })
-    }
-
-    const aiConfigProviderClose = (providers: ILlmProvider[] | undefined) => {
-        setShowConfigProvider(false)
-        if (providers) sendCommand(ECensorCommand.PROVIDERSSET, providers)
-    }
-
-    const importExportClose = (imported?: ICensorInstanceConfig[]) => {
-        setShowImportExport(false)
-        if (imported) {
-            for (const cfg of imported) sendCommand(ECensorCommand.CONFIGSAVE, cfg)
-        }
-    }
-
 
     const onSessionStart = (description: string) => {
         setShowSessionStart(false)
@@ -340,19 +193,64 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         sendCommand(ECensorCommand.SESSIONDISCONNECT)
     }
 
-    const panelHeight = `calc(100vh - ${contentTop}px - 16px)`
+    const onConnectSession = (sessionId: string) => {
+        sendCommand(ECensorCommand.SESSIONCONNECT, sessionId)
+        setShowSessionPicker(false)
+    }
 
+    const toggleSessionAnalyze = (sessionId: string, analyzing: boolean) => {
+        const url = props.channelObject.clusterUrl
+        const token = props.channelObject.accessString
+        if (!url || !token) return
+        const session = data.sessions.find(s => s.id === sessionId)
+        if (session) { session.analyzing = analyzing; forceUpdate(n => n + 1) }
+        fetch(`${url}/daemons/instances/${sessionId}/analyze`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ analyzing }) })
+    }
+
+    const onDeleteSession = (sessionId: string) => {
+        const url = props.channelObject.clusterUrl
+        const token = props.channelObject.accessString
+        if (!url || !token) return
+        const isConnected = data.connectedSessionId === sessionId
+        const msg = isConnected
+            ? 'You are currently connected to this session. It will be disconnected and deleted. Are you sure?'
+            : 'Are you sure you want to delete this session?'
+        setMsgBox(MsgBoxYesNo('Delete session', msg, setMsgBox, (btn) => {
+            if (btn !== MsgBoxButtons.Yes) return
+            fetch(`${url}/daemons/instances/${sessionId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+            setShowSessionPicker(false)
+            if (isConnected) sendCommand(ECensorCommand.SESSIONDISCONNECT)
+        }))
+    }
+
+    const panelHeight = `calc(100vh - ${contentTop}px - 16px)`
     return <>
         {data.started &&
         <Card sx={{ display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', mt: 1, minHeight: 0 }}>
             <CardHeader title={
                 <Stack direction='row' alignItems='center' spacing={1}>
-                    <Typography><b>Processed:</b> {data.processedCount}</Typography>
-                    <Typography><b>Pending:</b> {data.pendingCount}</Typography>
+                    <Typography><b>Processed:</b> {rd?.processedCount ?? 0}</Typography>
+                    <Typography><b>Pending:</b> {rd?.pendingCount ?? 0}</Typography>
                     <Typography flex={1} />
-                    {data.connectedSessionId &&
-                        <Chip label={data.connectedSessionDescription ?? 'Session'} size='small' color='success' sx={{ maxWidth: 160 }} />
-                    }
+                    {(data.runners.size > 0 || !!data.connectedSessionId) && (<>
+                        {data.connectedSessionId
+                            ? <Chip label={data.connectedSessionDescription ?? 'Session'} size='small' color='success' sx={{ maxWidth: 160 }} />
+                            : data.ephemeralSessionName
+                                ? <Chip label={data.ephemeralSessionName} size='small' color='default' sx={{ maxWidth: 160 }} />
+                                : null
+                        }
+                        <FormControl size='small' sx={{ width: 255, flexShrink: 0 }}>
+                            <Select value={selectedRunnerKey} onChange={e => setSelectedRunnerKey(e.target.value)} displayEmpty
+                                sx={{ fontSize: '11px', height: 26 }}>
+                                <MenuItem value='' sx={{ fontSize: '12px', fontStyle: 'italic' }}>All configs</MenuItem>
+                                {[...data.runners.keys()].map(rk => (
+                                    <Tooltip key={rk} title={rk} placement='bottom'>
+                                        <MenuItem value={rk} sx={{ fontSize: '12px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{rk}</MenuItem>
+                                    </Tooltip>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </>)}
                     { data.instanceConfig.name && (
                         <Stack direction='column' alignItems='flex-end' spacing={0}>
                             <Typography variant='caption' color='text.secondary'>
@@ -372,11 +270,11 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         <Switch
                             size='small'
                             checked={(data.instanceConfig?.mode ?? 'inference') === 'audit'}
-                            disabled={data.analyzing}
+                            disabled={!data.ephemeralSessionName || (rd?.analyzing ?? false) || !!data.connectedSessionId}
                             onChange={(e) => {
                                 const newMode = e.target.checked ? 'audit' : 'inference'
                                 data.instanceConfig.mode = newMode
-                                sendCommand(ECensorCommand.CONFIGSET, { ...data.instanceConfig, mode: newMode })
+                                forceUpdate(n => n + 1)
                             }}
                         />
                         <Typography variant='caption' sx={{ fontSize: '0.6rem', lineHeight: 1 }}>
@@ -384,19 +282,21 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         </Typography>
                     </Stack>
                     <Button onClick={() => {
-                        if (!data.analyzing) { data.startTime = Date.now(); data.stopTime = undefined }
+                        const isAnalyzing = rd?.analyzing ?? false
+                        if (!isAnalyzing) { data.startTime = Date.now(); data.stopTime = undefined }
                         else data.stopTime = Date.now()
-                        sendCommand(data.analyzing ? ECensorCommand.ANALYZESTOP : ECensorCommand.ANALYZESTART)
-                    }} color={data.analyzing ? 'error' : 'success'} variant='outlined' size='small'
-                        disabled={!data.analyzing && !data.instanceConfig?.llmId}>
-                        {data.analyzing ? 'Stop' : 'Start'}
+                        sendCommand(isAnalyzing ? ECensorCommand.ANALYZESTOP : ECensorCommand.ANALYZESTART)
+                    }} color={(rd?.analyzing ?? false) ? 'error' : 'success'} variant='outlined' size='small'
+                        disabled={!data.ephemeralSessionName || (!(rd?.analyzing ?? false) && !data.configs.filter(c => c.active).some(c => c.logstreamEnabled || (c.businessSources?.length ?? 0) > 0 || (c.syslogSources?.length ?? 0) > 0))}>
+                        {(rd?.analyzing ?? false) ? 'Stop' : 'Start'}
                     </Button>
                     <IconButton size='small' onClick={(e) => setMenuAnchor(e.currentTarget)}>
                         <MoreVertIcon fontSize='small' />
                     </IconButton>
                     <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
-                        <MenuItem onClick={() => { setMenuAnchor(null); openConfig() }}>Config</MenuItem>
-                        <MenuItem onClick={() => { setMenuAnchor(null); setShowSessionStart(true) }} disabled={!!data.connectedSessionId || !data.analyzing}>Launch</MenuItem>
+                        <MenuItem onClick={() => { setMenuAnchor(null); openConfig() }} disabled={!data.ephemeralSessionName}>Config</MenuItem>
+                        <MenuItem onClick={() => { setMenuAnchor(null); sendCommand(ECensorCommand.SESSIONLIST); setShowSessionPicker(true) }} disabled={!data.ephemeralSessionName}>Sessions</MenuItem>
+                        <MenuItem onClick={() => { setMenuAnchor(null); setShowSessionStart(true) }} disabled={!data.ephemeralSessionName || !!data.connectedSessionId}>Launch</MenuItem>
                         <MenuItem onClick={deleteSession} disabled={!data.connectedSessionId}>Delete session</MenuItem>
                     </Menu>
                 </Stack>
@@ -405,24 +305,31 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                 <Tabs value={tab} onChange={(_, v) => setTab(v)} variant='fullWidth'
                     sx={{ borderBottom: 1, borderColor: 'divider', px: 1, minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
                     <Tab label={`Objects (${data.assets.length})`} />
-                    <Tab label={`Regex (${data.regexes.length})`} />
+                    <Tab label={`Regex (${(rd?.regexes ?? []).length})`} />
                     <Tab label={`Logstream (${data.receivedLines.length})`} />
                     <Tab label={`Business (${data.businessLines.length})`} />
-                    <Tab label={`Syslog (${data.syslogCount ?? 0})`} />
-                    <Tab label={`LLM Input (${data.llmInputLines.length})`} />
-                    <Tab label={`LLM Responses (${data.llmOutputLines.length})`} />
-                    <Tab label={`Issues (${data.llmWarningLines.length})`} />
-                    <Tab label={`LLM Errors (${data.llmErrorLines.length})`} />
+                    <Tab label={`Syslog (${rd?.syslogCount ?? 0})`} />
+                    <Tab label={`LLM Input (${(rd?.llmInputLines ?? []).length})`} />
+                    <Tab label={`LLM Responses (${(rd?.llmOutputLines ?? []).length})`} />
+                    <Tab label={`Issues (${(rd?.llmWarningLines ?? []).length})`} />
+                    <Tab label={`LLM Errors (${(rd?.llmErrorLines ?? []).length})`} />
                     <Tab label='Performance' />
                 </Tabs>
                 {(tab === 1 || tab === 2 || tab === 3 || tab === 5 || tab === 6 || tab === 8) && (
                     <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
                         {tab === 1 && (
+                            <>
+                            <Tooltip title='Add regex manually'>
+                                <IconButton size='small' onClick={() => setAddRegexState({})}>
+                                    <AddIcon fontSize='small' />
+                                </IconButton>
+                            </Tooltip>
                             <Tooltip title={regexSort === 'none' ? 'Sort by matches: no order' : regexSort === 'desc' ? 'Sort by matches: descending' : 'Sort by matches: ascending'}>
                                 <IconButton size='small' onClick={() => setRegexSort(s => s === 'none' ? 'desc' : s === 'desc' ? 'asc' : 'none')}>
                                     {regexSort === 'none' ? <SwapVert fontSize='small' sx={{ color: 'text.disabled' }} /> : regexSort === 'desc' ? <ArrowDownward fontSize='small' color='primary' /> : <ArrowUpward fontSize='small' color='primary' />}
                                 </IconButton>
                             </Tooltip>
+                            </>
                         )}
                         <Box sx={{ flex: 1 }} />
                         {tab === 1 && (
@@ -430,7 +337,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 <Tooltip title='Download CSV'>
                                     <IconButton size='small' onClick={() => {
                                         const rows = [['matches', 'regex', 'explanation']]
-                                        for (const r of data.regexes) {
+                                        for (const r of (rd?.regexes ?? [])) {
                                             const esc = (s: string) => `"${s.replace(/"/g, '""')}"`
                                             rows.push([String(r.matches ?? 0), esc(r.pattern), esc(r.explanation)])
                                         }
@@ -445,7 +352,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     </IconButton>
                                 </Tooltip>
                                 <Tooltip title='Clear'>
-                                    <IconButton size='small' onClick={() => { data.regexes = []; forceUpdate(n => n + 1) }}>
+                                    <IconButton size='small' onClick={() => { if (rd) rd.regexes = []; forceUpdate(n => n + 1) }}>
                                         <DeleteSweep fontSize='small' />
                                     </IconButton>
                                 </Tooltip>
@@ -456,9 +363,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 <IconButton size='small' onClick={() => {
                                     if (tab === 2) { data.receivedLines = []; forceUpdate(n => n + 1) }
                                     else if (tab === 3) { data.businessLines = []; forceUpdate(n => n + 1) }
-                                    else if (tab === 5) { data.llmInputLines = []; forceUpdate(n => n + 1) }
-                                    else if (tab === 6) { data.llmOutputLines = []; forceUpdate(n => n + 1) }
-                                    else if (tab === 8) { data.llmErrorLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === 5) { if (rd) rd.llmInputLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === 6) { if (rd) rd.llmOutputLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === 8) { if (rd) rd.llmErrorLines = []; forceUpdate(n => n + 1) }
                                 }}>
                                     <DeleteSweep fontSize='small' />
                                 </IconButton>
@@ -474,7 +381,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                 )}
                 {tab === 7 && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
-                        {data.allTags.map(tag => (
+                        {(rd?.allTags ?? []).map(tag => (
                             <Chip key={tag} label={tag} size='small'
                                 color={activeTagFilters.includes(tag) ? 'primary' : 'default'}
                                 variant={activeTagFilters.includes(tag) ? 'filled' : 'outlined'}
@@ -483,7 +390,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 )}
                                 sx={{ fontSize: '10px', height: 20 }} />
                         ))}
-                        {data.allTags.length > 0 && (
+                        {(rd?.allTags ?? []).length > 0 && (
                             <FormControlLabel
                                 control={<Switch size='small' checked={tagFilterAnd} disabled={activeTagFilters.length < 2} onChange={e => setTagFilterAnd(e.target.checked)} />}
                                 label={<Typography variant='caption'>{tagFilterAnd ? 'All' : 'Any'}</Typography>}
@@ -493,7 +400,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         <Tooltip title='Download CSV'>
                             <IconButton size='small' onClick={() => {
                                 const rows = [['tags', 'original', 'explanation']]
-                                for (const w of data.llmWarningLines) {
+                                for (const w of (rd?.llmWarningLines ?? [])) {
                                     const esc = (s: string) => `"${s.replace(/"/g, '""')}"`
                                     rows.push([esc(w.tags.join(';')), esc(w.original), esc(w.explanation)])
                                 }
@@ -508,7 +415,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             </IconButton>
                         </Tooltip>
                         <Tooltip title='Clear'>
-                            <IconButton size='small' onClick={() => { data.llmWarningLines = []; forceUpdate(n => n + 1) }}>
+                            <IconButton size='small' onClick={() => { if (rd) rd.llmWarningLines = []; forceUpdate(n => n + 1) }}>
                                 <DeleteSweep fontSize='small' />
                             </IconButton>
                         </Tooltip>
@@ -539,31 +446,36 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     )}
 
                     {/* Tab 1 — Regex list */}
-                    {tab === 1 && (
-                        data.regexes.length === 0
+                    {tab === 1 && (() => {
+                        const regexes = rd?.regexes ?? []
+                        return regexes.length === 0
                             ? <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>
-                                No filters yet. Waiting for first {batchSize} lines...
+                                No filters yet. Waiting for first lines...
                             </Typography>
                             : <List dense disablePadding>
-                                {[...data.regexes].sort((a, b) => regexSort === 'desc' ? (b.matches ?? 0) - (a.matches ?? 0) : regexSort === 'asc' ? (a.matches ?? 0) - (b.matches ?? 0) : 0).map((regex, i) => (
+                                {[...regexes].sort((a, b) => regexSort === 'desc' ? (b.matches ?? 0) - (a.matches ?? 0) : regexSort === 'asc' ? (a.matches ?? 0) - (b.matches ?? 0) : 0).map((regex, i) => (
                                     <Tooltip key={i} title={regex.explanation || '(no explanation)'} placement='bottom-start' arrow>
                                         <ListItem disableGutters sx={{ px: 0.5 }}>
-                                            <IconButton size='small' sx={{ mr: 0.5 }} onClick={() => {
-                                                const idx = data.regexes.findIndex(r => r.pattern === regex.pattern)
-                                                if (idx >= 0) data.regexes.splice(idx, 1)
+                                            <IconButton size='small' sx={{ mr: 0.5 }} disabled={!selectedRunnerKey} onClick={() => {
+                                                const idx = regexes.findIndex(r => r.pattern === regex.pattern)
+                                                if (idx >= 0) regexes.splice(idx, 1)
                                                 forceUpdate(n => n + 1)
-                                                sendCommand(ECensorCommand.REGEXDELETE, regex.pattern)
+                                                sendCommand(ECensorCommand.REGEXDELETE, { pattern: regex.pattern, runnerKey: selectedRunnerKey })
                                             }}>
                                                 <DeleteOutlineIcon sx={{ fontSize: 14 }} />
                                             </IconButton>
                                             {(() => {
-                                                const totalMatches = data.regexes.reduce((s, r) => s + (r.matches ?? 0), 0)
+                                                const totalMatches = regexes.reduce((s, r) => s + (r.matches ?? 0), 0)
                                                 const pct = totalMatches > 0 ? Math.round(((regex.matches ?? 0) / totalMatches) * 100) : 0
+                                                const originLabel = regex.origin === ERegexOrigin.LLM ? 'L' : regex.origin === ERegexOrigin.MANUAL ? 'M' : 'H'
+                                                const originColor = regex.origin === ERegexOrigin.LLM ? '#1976d2' : regex.origin === ERegexOrigin.MANUAL ? '#388e3c' : '#f57c00'
                                                 return (<>
                                                     <Chip label={regex.matches ?? 1} size='small' variant='outlined'
-                                                        sx={{ height: 16, fontSize: '9px', minWidth: 28, mr: 0.5, '& .MuiChip-label': { px: 0.5 } }} />
+                                                        sx={{ height: 16, fontSize: '9px', minWidth: 42, mr: 0.5, '& .MuiChip-label': { px: 0.5 } }} />
                                                     <Chip label={`${pct}%`} size='small' variant='outlined' color='primary'
                                                         sx={{ height: 16, fontSize: '9px', minWidth: 36, mr: 0.5, '& .MuiChip-label': { px: 0.5 } }} />
+                                                    <Chip label={originLabel} size='small'
+                                                        sx={{ height: 16, fontSize: '9px', minWidth: 20, mr: 0.5, bgcolor: originColor, color: '#fff', '& .MuiChip-label': { px: 0.5 } }} />
                                                 </>)
                                             })()}
                                             <ListItemText primary={regex.pattern}
@@ -572,7 +484,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     </Tooltip>
                                 ))}
                             </List>
-                    )}
+                    })()}
 
                     {/* Tab 2 — All received lines */}
                     {tab === 2 && data.receivedLines.map((line, i) => (
@@ -609,7 +521,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     )}
 
                     {/* Tab 5 — Lines sent to LLM (one block per call) */}
-                    {tab === 5 && data.llmInputLines.map((batch, i) => (
+                    {tab === 5 && (rd?.llmInputLines ?? []).map((batch, i) => (
                         <Box key={i} sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '11px' }}>
                             <Typography variant='caption' sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>Call #{i + 1} — {batch.length} lines</Typography>
                             {batch.map((line, j) => <Typography key={j} variant='caption' sx={{ fontFamily: 'monospace', display: 'block', wordBreak: 'break-all' }}>{line}</Typography>)}
@@ -617,7 +529,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     ))}
 
                     {/* Tab 6 — LLM responses */}
-                    {tab === 6 && data.llmOutputLines.map((out, i) => (
+                    {tab === 6 && (rd?.llmOutputLines ?? []).map((out, i) => (
                         <Box key={i} sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '11px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                             {out}
                         </Box>
@@ -625,7 +537,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
                     {/* Tab 7 — Issues */}
                     {tab === 7 && <>
-                        {data.llmWarningLines
+                        {(rd?.llmWarningLines ?? [])
                             .filter(w => {
                                 if (activeTagFilters.length === 0) return true
                                 return tagFilterAnd
@@ -634,20 +546,32 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             })
                             .map((w, i) => (
                                 <Box key={i} sx={{ display: 'flex', flexDirection: 'column', px: 0.5, py: 0.25, borderBottom: 1, borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}>
-                                    {w.tags.length > 0 && (
-                                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 0.25 }}>
-                                            {w.tags.map(t => <Chip key={t} label={t} size='small' variant='outlined' sx={{ fontSize: '10px', height: 18 }} />)}
+                                    <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                                        <Box sx={{ flex: 1 }}>
+                                            {w.tags.length > 0 && (
+                                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 0.25 }}>
+                                                    {w.tags.map(t => <Chip key={t} label={t} size='small' variant='outlined' sx={{ fontSize: '10px', height: 18 }} />)}
+                                                </Box>
+                                            )}
+                                            <Typography variant='caption' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{w.original}</Typography>
+                                            <Typography variant='caption' color='text.secondary' sx={{ fontStyle: 'italic' }}>{w.explanation}</Typography>
                                         </Box>
-                                    )}
-                                    <Typography variant='caption' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{w.original}</Typography>
-                                    <Typography variant='caption' color='text.secondary' sx={{ fontStyle: 'italic' }}>{w.explanation}</Typography>
+                                        <Tooltip title='Add as regex'>
+                                            <IconButton size='small' sx={{ ml: 0.5, mt: 0.25, flexShrink: 0 }} onClick={() => {
+                                                const escaped = w.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                                                setAddRegexState({ runnerKey: w.runnerKey, pattern: escaped, explanation: w.explanation, lockRunner: true })
+                                            }}>
+                                                <AddIcon sx={{ fontSize: 14 }} />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Box>
                                 </Box>
                             ))
                         }
                     </>}
 
                     {/* Tab 8 — LLM Errors */}
-                    {tab === 8 && data.llmErrorLines.map((e, i) => (
+                    {tab === 8 && (rd?.llmErrorLines ?? []).map((e, i) => (
                         <Box key={i} sx={{ display: 'flex', flexDirection: 'column', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}>
                             <Typography variant='caption' color='text.disabled' sx={{ fontFamily: 'monospace', fontSize: '10px' }}>{e.timestamp}</Typography>
                             <Typography variant='caption' color='error.main' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{e.text}</Typography>
@@ -670,9 +594,16 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         const selectedLlm = data.llms.find(l => l.id === data.instanceConfig?.llmId)
                         const icpm = selectedLlm?.inputCostPerMillion ?? 0
                         const ocpm = selectedLlm?.outputCostPerMillion ?? 0
-                        const spent = (icpm > 0 || ocpm > 0) ? (data.tokensIn / 1_000_000 * icpm + data.tokensOut / 1_000_000 * ocpm) : 0
-                        const avgTkPerLine = data.llmLinesCount > 0 ? data.tokensIn / data.llmLinesCount : 0
-                        const filtered = Math.max(0, data.processedCount - data.llmLinesCount - data.pendingCount)
+                        const tokensIn = rd?.tokensIn ?? 0
+                        const tokensOut = rd?.tokensOut ?? 0
+                        const llmLinesCount = rd?.llmLinesCount ?? 0
+                        const processedCount = rd?.processedCount ?? 0
+                        const pendingCount = rd?.pendingCount ?? 0
+                        const llmCount = rd?.llmCount ?? 0
+                        const totalBytesProcessed = rd?.totalBytesProcessed ?? 0
+                        const spent = (icpm > 0 || ocpm > 0) ? (tokensIn / 1_000_000 * icpm + tokensOut / 1_000_000 * ocpm) : 0
+                        const avgTkPerLine = llmLinesCount > 0 ? tokensIn / llmLinesCount : 0
+                        const filtered = Math.max(0, processedCount - llmLinesCount - pendingCount)
                         const savedTk = filtered > 0 && avgTkPerLine > 0 ? Math.round(filtered * avgTkPerLine) : 0
                         const savedCost = icpm > 0 && savedTk > 0 ? savedTk / 1_000_000 * icpm : 0
                         const total = spent + savedCost
@@ -688,13 +619,13 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 190, flex: 1 }}>
                                 <Typography variant='subtitle2' fontWeight='bold' gutterBottom>Log</Typography>
                                 <Stack spacing={0.5}>
-                                    {col('Processed', data.processedCount)}
-                                    {col('Sent to LLM', data.llmLinesCount)}
+                                    {col('Processed', processedCount)}
+                                    {col('Sent to LLM', llmLinesCount)}
                                     {col('Filtered (regex)', filtered)}
-                                    {col('Savings', data.processedCount > 0 ? `${Math.round(filtered / data.processedCount * 100)}%` : '—')}
-                                    {col('Pending', data.pendingCount)}
+                                    {col('Savings', processedCount > 0 ? `${Math.round(filtered / processedCount * 100)}%` : '—')}
+                                    {col('Pending', pendingCount)}
                                     {col('Subscribers', data.subscriberCount)}
-                                    {col('Avg line size', data.processedCount > 0 && data.totalBytesProcessed > 0 ? `${Math.round(data.totalBytesProcessed / data.processedCount)} B` : '—')}
+                                    {col('Avg line size', processedCount > 0 && totalBytesProcessed > 0 ? `${Math.round(totalBytesProcessed / processedCount)} B` : '—')}
                                     <Divider sx={{ my: 0.5 }} />
                                     {col('Start', data.startTime ? new Date(data.startTime).toLocaleTimeString() : '—')}
                                     {col('Elapsed', data.startTime ? (() => {
@@ -707,19 +638,19 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 190, flex: 1 }}>
                                 <Typography variant='subtitle2' fontWeight='bold' gutterBottom>LLM</Typography>
                                 <Stack spacing={0.5}>
-                                    {col('Calls', data.llmCount)}
-                                    {col('Responses', data.llmCount)}
-                                    {col('Avg lines/call', data.llmCount > 0 ? Math.round(data.llmLinesCount / data.llmCount) : '—')}
-                                    {col('Tokens in', data.tokensIn)}
-                                    {col('Tokens out', data.tokensOut)}
-                                    {savedTk > 0 && col('Est. tokens saved', `~${savedTk.toLocaleString()} (${Math.round(savedTk / (data.tokensIn + savedTk) * 100)}%)`)}
+                                    {col('Calls', llmCount)}
+                                    {col('Responses', llmCount)}
+                                    {col('Avg lines/call', llmCount > 0 ? Math.round(llmLinesCount / llmCount) : '—')}
+                                    {col('Tokens in', tokensIn)}
+                                    {col('Tokens out', tokensOut)}
+                                    {savedTk > 0 && col('Est. tokens saved', `~${savedTk.toLocaleString()} (${Math.round(savedTk / (tokensIn + savedTk) * 100)}%)`)}
                                 </Stack>
                                 <Stack spacing={0.5} sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: 'divider' }}>
                                     {col('Batch mode', data.instanceConfig?.batchMode ?? 'fixed')}
                                     {col('Batch size', data.instanceConfig?.batchMode === 'auto'
-                                        ? `${data.currentBatchSize ?? data.instanceConfig?.batchSize ?? 10} / ${data.instanceConfig?.batchSize ?? 10} (min ${data.instanceConfig?.batchSizeMin ?? 5})`
+                                        ? `${rd?.currentBatchSize ?? data.instanceConfig?.batchSize ?? 10} / ${data.instanceConfig?.batchSize ?? 10} (min ${data.instanceConfig?.batchSizeMin ?? 5})`
                                         : (data.instanceConfig?.batchSize ?? 10))}
-                                    {col('Avg tokens/batch', data.llmCount > 0 ? Math.round(data.tokensIn / data.llmCount) : '—')}
+                                    {col('Avg tokens/batch', llmCount > 0 ? Math.round(tokensIn / llmCount) : '—')}
                                 </Stack>
                             </Box>
                             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, minWidth: 260, flex: 1 }}>
@@ -730,23 +661,23 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                     if (tokensOutPerSec > peakTkOutRef.current) peakTkOutRef.current = tokensOutPerSec
                                     if (llmLinesPerSec > peakLlmLinesRef.current) peakLlmLinesRef.current = llmLinesPerSec
                                     const elapsedSec = data.startTime ? Math.max(1, ((data.stopTime ?? Date.now()) - data.startTime) / 1000) : null
-                                    const avgProcessed = elapsedSec ? data.processedCount / elapsedSec : 0
-                                    const avgLlmLines = elapsedSec ? data.llmLinesCount / elapsedSec : 0
-                                    const avgTkIn = elapsedSec ? data.tokensIn / elapsedSec : 0
-                                    const avgTkOut = elapsedSec ? data.tokensOut / elapsedSec : 0
+                                    const avgProcessed = elapsedSec ? processedCount / elapsedSec : 0
+                                    const avgLlmLines = elapsedSec ? llmLinesCount / elapsedSec : 0
+                                    const avgTkIn = elapsedSec ? tokensIn / elapsedSec : 0
+                                    const avgTkOut = elapsedSec ? tokensOut / elapsedSec : 0
                                     return (
                                         <>
                                         <Stack direction='row' spacing={0} sx={{ mb: 2 }}>
-                                            <MiniGauge value={msgsPerSec} max={(peakProcessedRef.current * 1.1) || 10} label='Lines/sec' format={formatPerfValue} />
-                                            <MiniGauge value={llmLinesPerSec} max={(peakLlmLinesRef.current * 1.1) || 10} label='LLM lines/s' format={formatPerfValue} />
-                                            <MiniGauge value={tokensInPerSec} max={(peakTkInRef.current * 1.1) || 10} label='Tok in/sec' format={formatPerfValue} />
-                                            <MiniGauge value={tokensOutPerSec} max={(peakTkOutRef.current * 1.1) || 10} label='Tok out/sec' format={formatPerfValue} />
+                                            <MiniGauge value={msgsPerSec} max={(peakProcessedRef.current * 1.1) || 10} label='Lines/sec' format={formatPerfValue} valuePosition='inside' />
+                                            <MiniGauge value={llmLinesPerSec} max={(peakLlmLinesRef.current * 1.1) || 10} label='LLM lines/s' format={formatPerfValue} valuePosition='inside' />
+                                            <MiniGauge value={tokensInPerSec} max={(peakTkInRef.current * 1.1) || 10} label='Tok in/sec' format={formatPerfValue} valuePosition='inside' />
+                                            <MiniGauge value={tokensOutPerSec} max={(peakTkOutRef.current * 1.1) || 10} label='Tok out/sec' format={formatPerfValue} valuePosition='inside' />
                                         </Stack>
                                         <Stack direction='row' spacing={0} sx={{ mb: 1 }}>
-                                            <MiniGauge value={avgProcessed} max={(peakProcessedRef.current * 1.1) || 10} label='Avg l/sec' />
-                                            <MiniGauge value={avgLlmLines} max={(peakLlmLinesRef.current * 1.1) || 10} label='Avg LLM/s' />
-                                            <MiniGauge value={avgTkIn} max={(peakTkInRef.current * 1.1) || 10} label='Avg tk in' />
-                                            <MiniGauge value={avgTkOut} max={(peakTkOutRef.current * 1.1) || 10} label='Avg tk out' />
+                                            <MiniGauge value={avgProcessed} max={(peakProcessedRef.current * 1.1) || 10} label='Avg l/sec' valuePosition='inside' />
+                                            <MiniGauge value={avgLlmLines} max={(peakLlmLinesRef.current * 1.1) || 10} label='Avg LLM/s' valuePosition='inside' />
+                                            <MiniGauge value={avgTkIn} max={(peakTkInRef.current * 1.1) || 10} label='Avg tk in' valuePosition='inside' />
+                                            <MiniGauge value={avgTkOut} max={(peakTkOutRef.current * 1.1) || 10} label='Avg tk out' valuePosition='inside' />
                                         </Stack>
                                         </>
                                     )
@@ -776,8 +707,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 {(() => {
                                     const INGEST_PER_GB = 0.10
                                     const IDX = { '3d': 1.27, '15d': 1.70, '30d': 2.50 }
-                                    const totalBytes = data.totalBytesProcessed
-                                    const avgBytes = data.processedCount > 0 && totalBytes > 0 ? totalBytes / data.processedCount : 0
+                                    const totalBytes = totalBytesProcessed
+                                    const avgBytes = processedCount > 0 && totalBytes > 0 ? totalBytes / processedCount : 0
                                     const filteredBytes = avgBytes > 0 ? filtered * avgBytes : 0
                                     const remainBytes = totalBytes - filteredBytes
                                     const fmtSz = (b: number) => b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`
@@ -797,9 +728,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                                 {Object.keys(IDX).map(k => <Typography key={k} variant='caption' color='text.disabled' sx={{ width: 56, textAlign: 'right' }}>{k}</Typography>)}
                                             </Stack>
                                             {[
-                                                { label: 'All events', n: data.processedCount },
+                                                { label: 'All events', n: processedCount },
                                                 { label: 'Regex filtered', n: filtered },
-                                                { label: 'Remaining', n: data.processedCount - filtered },
+                                                { label: 'Remaining', n: processedCount - filtered },
                                             ].map(({ label, n }) => (
                                                 <Stack key={label} direction='row' alignItems='center'>
                                                     <Typography variant='body2' color='text.secondary' sx={{ flex: 1 }}>{label}</Typography>
@@ -834,298 +765,50 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             </CardContent>
         </Card>}
 
+        {addRegexState !== null && (
+            <CensorAddRegexDialog
+                data={data} sendCommand={sendCommand}
+                initialRunnerKey={addRegexState.runnerKey}
+                initialPattern={addRegexState.pattern}
+                initialExplanation={addRegexState.explanation}
+                lockRunner={addRegexState.lockRunner}
+                onAdded={(pattern, rk, origin, explanation) => {
+                    try {
+                        const re = new RegExp(pattern)
+                        let matches = 0
+                        for (const runner of data.runners.values()) {
+                            const before = runner.llmWarningLines.length
+                            runner.llmWarningLines = runner.llmWarningLines.filter(w => !re.test(w.original))
+                            matches += before - runner.llmWarningLines.length
+                        }
+                        const targetRunner = data.runners.get(rk)
+                        if (targetRunner && !targetRunner.regexes.some(r => r.pattern === pattern)) {
+                            targetRunner.regexes.push({ pattern, example: '', explanation, matches, origin })
+                        }
+                        forceUpdate(n => n + 1)
+                    } catch {}
+                }}
+                onClose={() => setAddRegexState(null)}
+            />
+        )}
         {showConfig && (
-            <Dialog open={true} PaperProps={{ sx: { width: '92vw', maxWidth: '1200px', height: '82vh' } }}>
-                <DialogTitle>Censor config</DialogTitle>
-                <DialogContent style={{ display: 'flex', height: '100%', overflow: 'hidden', padding: '8px 16px' }}>
-
-                    {/* Left panel — config list */}
-                    <Box sx={{ flex: '0 0 230px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pr: 1 }}>
-                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 'bold', px: 0.5, pt: 0.5 }}>Configs</Typography>
-                        <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', border: 1, borderColor: 'divider', borderRadius: 1, mt: 0.5 }}>
-                            <List dense sx={{ py: 0 }}>
-                                {data.configs.map((cfg, i) => (
-                                    <ListItemButton key={i} selected={selectedConfigIndex === i} onClick={() => onConfigSelect(cfg, i)} dense sx={{ py: 0.5 }}>
-                                        <Switch size='small' checked={cfg.active ?? false}
-                                            onChange={() => onConfigToggleActive(i)} onClick={e => e.stopPropagation()} sx={{ mr: 0.5 }} />
-                                        <Stack direction='column' sx={{ minWidth: 0 }}>
-                                            <Typography variant='body2' sx={{ fontWeight: selectedConfigIndex === i ? 'bold' : 'normal', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {cfg.name}
-                                            </Typography>
-                                            <Typography color='textSecondary' fontSize={10}>v{cfg.version}</Typography>
-                                        </Stack>
-                                    </ListItemButton>
-                                ))}
-                            </List>
-                        </Box>
-                        <Stack direction='row' spacing={0.5} sx={{ px: 0.5, pt: 0.5, justifyContent: 'center' }}>
-                            <Button size='small' startIcon={<AddIcon />} onClick={onConfigNew} sx={{ fontSize: 11 }}>New</Button>
-                            <Button size='small' color='error' startIcon={<DeleteIcon />} onClick={onConfigDelete} disabled={selectedConfigIndex === null} sx={{ fontSize: 11 }}>Delete</Button>
-                        </Stack>
-                    </Box>
-
-                    {/* Right panel — editor */}
-                    <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', pl: 2, pt: 1 }}>
-                        <Tabs value={configTab} onChange={(_, v) => setConfigTab(v)} variant='fullWidth'
-                            sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
-                            <Tab label='General' />
-                            <Tab label='Prompt' />
-                            <Tab label='Logstream' />
-                            <Tab label='Business' />
-                            <Tab label='Syslog' />
-                            <Tab label='Sender' />
-                        </Tabs>
-
-                        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-
-                            {/* Tab 0 — General */}
-                            {configTab === 0 && (
-                                <Stack spacing={1.5} sx={{ pt: 1.5 }}>
-                                    <Stack direction='row' spacing={2}>
-                                        <TextField label='Name' size='small' value={configName} onChange={e => setConfigName(e.target.value)} sx={{ flex: 1 }} />
-                                        <TextField label='Version' size='small' value={configVersion} onChange={e => setConfigVersion(e.target.value)} sx={{ width: 100 }} />
-                                    </Stack>
-                                    <Stack direction='row' spacing={2} alignItems='center'>
-                                        <FormControl size='small' sx={{ flex: 3, minWidth: 0 }}>
-                                            <InputLabel>LLM</InputLabel>
-                                            <Select label='LLM' value={llmId} onChange={e => setLlmId(e.target.value)} renderValue={v => v as string}>
-                                                {data.llms.length === 0 && <MenuItem value='' disabled>No LLMs configured</MenuItem>}
-                                                {data.llms.map(llm => (
-                                                    <MenuItem key={llm.id} value={llm.id}>{llm.id} ({llm.provider}/{llm.model})</MenuItem>
-                                                ))}
-                                            </Select>
-                                        </FormControl>
-                                        <TextField label='Temperature' size='small' type='number' value={temperature}
-                                            onChange={e => setTemperature(Math.min(2, Math.max(0, +e.target.value)))}
-                                            sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 0, max: 2, step: 0.1 }} />
-                                    </Stack>
-                                    <Stack direction='row' spacing={2} alignItems='center'>
-                                        <FormControl size='small' sx={{ flex: 1, minWidth: 0 }}>
-                                            <InputLabel>Batch</InputLabel>
-                                            <Select label='Batch' value={batchMode} onChange={e => setBatchMode(e.target.value as 'fixed' | 'auto')}>
-                                                <MenuItem value='fixed'>Fixed</MenuItem>
-                                                <MenuItem value='auto'>Auto</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                        <TextField label={batchMode === 'auto' ? 'Initial size' : 'Batch size'} size='small' type='number' value={batchSize}
-                                            onChange={e => setBatchSize(Math.max(1, +e.target.value))}
-                                            sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />
-                                        <TextField label='Min size' size='small' type='number' value={batchSizeMin}
-                                            onChange={e => setBatchSizeMin(Math.max(1, +e.target.value))}
-                                            disabled={batchMode !== 'auto'}
-                                            sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />
-                                        <TextField label='Max line (0=∞)' size='small' type='number' value={maxLineLength}
-                                            onChange={e => setMaxLineLength(Math.max(0, +e.target.value))}
-                                            sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 0 }} />
-                                        <TextField label='Timeout (s)' size='small' type='number' value={batchTimeout}
-                                            onChange={e => setBatchTimeout(Math.max(1, +e.target.value))}
-                                            sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />
-                                    </Stack>
-                                </Stack>
-                            )}
-
-                            {/* Tab 1 — Prompt */}
-                            {configTab === 1 && (
-                                <Stack spacing={1.5} sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, pt: 1.5 }}>
-                                    <TextField label='System prompt (optional)' size='small' multiline value={system}
-                                        onChange={e => setSystem(e.target.value)} fullWidth
-                                        placeholder='Leave empty to use the default noise-filtering prompt'
-                                        sx={{ flex: 1, minHeight: 0, '& .MuiInputBase-root': { height: '100%', alignItems: 'flex-start' }, '& textarea': { height: '100% !important', overflow: 'auto !important', boxSizing: 'border-box' } }} />
-                                    <TextField label='Output example (JSON)' size='small' multiline value={exampleJson}
-                                        onChange={e => {
-                                            setExampleJson(e.target.value)
-                                            try { JSON.parse(e.target.value); setExampleJsonError('') }
-                                            catch (err) { setExampleJsonError(String(err)) }
-                                        }}
-                                        error={!!exampleJsonError} helperText={exampleJsonError || 'Must be valid JSON with double quotes'}
-                                        fullWidth inputProps={{ style: { fontFamily: 'monospace', fontSize: '12px' } }}
-                                        sx={{ flex: 1, minHeight: 0, '& .MuiInputBase-root': { height: '100%', alignItems: 'flex-start' }, '& textarea': { height: '100% !important', overflow: 'auto !important', boxSizing: 'border-box' } }} />
-                                </Stack>
-                            )}
-
-                            {/* Tab 3 — Business */}
-                            {configTab === 3 && (
-                                <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                                <Stack spacing={1} sx={{ pt: 1.5 }}>
-                                    {businessSources.map((src, i) => (
-                                        <Stack key={i} direction='row' spacing={1} alignItems='center'>
-                                            <TextField label='Space' size='small' value={src.space ?? ''}
-                                                onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, space: e.target.value } : s))}
-                                                sx={{ flex: 1 }} placeholder='any' />
-                                            <TextField label='Type' size='small' value={src.type ?? ''}
-                                                onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, type: e.target.value } : s))}
-                                                sx={{ flex: 1 }} placeholder='any' />
-                                            <TextField label='Path' size='small' value={src.businessPath ?? ''}
-                                                onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, businessPath: e.target.value } : s))}
-                                                sx={{ flex: 2 }} placeholder='dot-notation' />
-                                            <FormControlLabel
-                                                control={<Switch size='small' checked={src.addTimestamp ?? false}
-                                                    onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, addTimestamp: e.target.checked } : s))} />}
-                                                label={<Typography variant='caption'>TS</Typography>}
-                                                sx={{ ml: 0, mr: 0, whiteSpace: 'nowrap' }} />
-                                            <IconButton size='small' onClick={() => setBusinessSources(prev => prev.filter((_, j) => j !== i))}>
-                                                <DeleteOutlineIcon sx={{ fontSize: 14 }} />
-                                            </IconButton>
-                                        </Stack>
-                                    ))}
-                                    <Button size='small' startIcon={<AddIcon />}
-                                        onClick={() => setBusinessSources(prev => [...prev, { space: '', type: '', businessPath: '', addTimestamp: false }])}>
-                                        Add source
-                                    </Button>
-                                </Stack>
-                                </Box>
-                            )}
-
-                            {/* Tab 4 — Syslog */}
-                            {configTab === 4 && (
-                                <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                                <Stack spacing={1} sx={{ pt: 1.5 }}>
-                                    {syslogSources.map((src, i) => (
-                                        <Stack key={i} spacing={1}>
-                                            <Stack direction='row' spacing={1} alignItems='center'>
-                                                <TextField label='Source IP' size='small' value={src.sourceIp ?? ''}
-                                                    onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, sourceIp: e.target.value } : s))}
-                                                    sx={{ flex: 1 }} placeholder='any' />
-                                                <TextField label='Hostname' size='small' value={src.hostname ?? ''}
-                                                    onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, hostname: e.target.value } : s))}
-                                                    sx={{ flex: 1 }} placeholder='any' />
-                                                <TextField label='App name' size='small' value={src.appName ?? ''}
-                                                    onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, appName: e.target.value } : s))}
-                                                    sx={{ flex: 1 }} placeholder='any' />
-                                                <FormControl size='small' sx={{ flex: 1 }}>
-                                                    <InputLabel>Max severity</InputLabel>
-                                                    <Select label='Max severity' value={src.severity ?? ''}
-                                                        onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, severity: (e.target.value as unknown as string) === '' ? undefined : Number(e.target.value) } : s))}>
-                                                        <MenuItem value=''><Typography variant='body2' color='text.secondary'>any</Typography></MenuItem>
-                                                        {[['0','emerg'],['1','alert'],['2','crit'],['3','err'],['4','warning'],['5','notice'],['6','info'],['7','debug']].map(([v, n]) => (
-                                                            <MenuItem key={v} value={v}>{v} — {n}</MenuItem>
-                                                        ))}
-                                                    </Select>
-                                                </FormControl>
-                                                <FormControlLabel
-                                                    control={<Switch size='small' checked={src.addTimestamp ?? false}
-                                                        onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, addTimestamp: e.target.checked } : s))} />}
-                                                    label={<Typography variant='caption'>TS</Typography>}
-                                                    sx={{ ml: 0, mr: 0, whiteSpace: 'nowrap' }} />
-                                                <IconButton size='small' onClick={() => setSyslogSources(prev => prev.filter((_, j) => j !== i))}>
-                                                    <DeleteOutlineIcon sx={{ fontSize: 14 }} />
-                                                </IconButton>
-                                            </Stack>
-                                            <TextField label='Filter (regex on raw message)' size='small' value={src.filter ?? ''}
-                                                onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, filter: e.target.value } : s))}
-                                                fullWidth placeholder='e.g. action:"Accept" or sshd.*Failed (empty = all)' />
-                                        </Stack>
-                                    ))}
-                                    <Button size='small' startIcon={<AddIcon />}
-                                        onClick={() => setSyslogSources(prev => [...prev, { hostname: '', appName: '', addTimestamp: false }])}>
-                                        Add source
-                                    </Button>
-                                </Stack>
-                                </Box>
-                            )}
-
-                            {/* Tab 2 — Logstream */}
-                            {configTab === 2 && (
-                                <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                                    <Stack spacing={1} sx={{ pt: 1.5 }}>
-                                        <FormControlLabel
-                                            control={<Switch checked={logstreamEnabled} onChange={e => setLogstreamEnabled(e.target.checked)} />}
-                                            label='Enable logstream ingestion' />
-                                        {logstreamEnabled && (
-                                            <>
-                                                <FormControlLabel
-                                                    control={<Switch checked={logstreamAll} onChange={e => setLogstreamAll(e.target.checked)} />}
-                                                    label='Audit all objects' />
-                                                {!logstreamAll && (
-                                                    <Stack spacing={1}>
-                                                        {logstreamSources.map((src, i) => (
-                                                            <Stack key={i} direction='row' spacing={1} alignItems='center'>
-                                                                <TextField label='Namespace' size='small' value={src.namespace ?? ''}
-                                                                    onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, namespace: e.target.value } : s))}
-                                                                    sx={{ flex: 1 }} placeholder='any' />
-                                                                <TextField label='Pod regex' size='small' value={src.podRegex ?? ''}
-                                                                    onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, podRegex: e.target.value } : s))}
-                                                                    sx={{ flex: 1.5 }} placeholder='e.g. myapp-.*' />
-                                                                <TextField label='Label selector' size='small' value={src.labelSelector ?? ''}
-                                                                    onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, labelSelector: e.target.value } : s))}
-                                                                    sx={{ flex: 2 }} placeholder='e.g. app=myapp' />
-                                                                <IconButton size='small' onClick={() => setLogstreamSources(prev => prev.filter((_, j) => j !== i))}>
-                                                                    <DeleteOutlineIcon sx={{ fontSize: 14 }} />
-                                                                </IconButton>
-                                                            </Stack>
-                                                        ))}
-                                                        <Button size='small' startIcon={<AddIcon />}
-                                                            onClick={() => setLogstreamSources(prev => [...prev, { namespace: '', podRegex: '', labelSelector: '' }])}>
-                                                            Add source
-                                                        </Button>
-                                                    </Stack>
-                                                )}
-                                            </>
-                                        )}
-                                    </Stack>
-                                </Box>
-                            )}
-
-                            {/* Tab 5 — Sender */}
-                            {configTab === 5 && (
-                                <Box sx={{ pt: 1.5 }}>
-                                    <Stack direction='row' spacing={2} alignItems='center'>
-                                        <FormControl size='small' sx={{ flex: 1 }}>
-                                            <InputLabel>Sender config</InputLabel>
-                                            <Select label='Sender config' value={senderId && senderConfigName ? `${senderId}::${senderConfigName}` : ''}
-                                                onChange={e => {
-                                                    const val = e.target.value
-                                                    if (!val) { setSenderId(''); setSenderConfigName('') }
-                                                    else { const [sid, scn] = val.split('::'); setSenderId(sid); setSenderConfigName(scn) }
-                                                }}>
-                                                <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
-                                                {senderEntries.map(e => (
-                                                    <MenuItem key={`${e.senderId}::${e.configName}`} value={`${e.senderId}::${e.configName}`}>
-                                                        <Stack direction='row' spacing={1} alignItems='center'>
-                                                            <Chip label={e.senderId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
-                                                            <Typography variant='body2'>{e.configName}</Typography>
-                                                        </Stack>
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                        </FormControl>
-                                    </Stack>
-                                </Box>
-                            )}
-
-                        </Box>
-
-                        <Stack direction='row' spacing={2} alignItems='center' sx={{ pt: 1 }}>
-                            <Button variant='outlined' size='small' onClick={() => setShowConfigLlm(true)}>LLM config</Button>
-                            <Button variant='outlined' size='small' onClick={() => setShowConfigProvider(true)}>Provider config</Button>
-                            <Button variant='outlined' size='small' onClick={() => setShowImportExport(true)}>Import/Export</Button>
-                            <Box sx={{ flex: 1 }} />
-                            <Button variant='contained' size='small'
-                                disabled={!configName || !configVersion || !!exampleJsonError}
-                                onClick={onConfigSave}>
-                                {data.configs.some(c => c.name === configName && c.version === configVersion) ? 'Update' : 'Add'}
-                            </Button>
-                        </Stack>
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={saveConfig} variant='contained' disabled={!llmId || !!exampleJsonError}>OK</Button>
-                    <Button onClick={() => setShowConfig(false)} color='inherit'>Cancel</Button>
-                </DialogActions>
-            </Dialog>
-        )}
-
-        {showConfigLlm && (
-            <AiConfigLlm llms={data.llms} providers={data.providers} onClose={aiConfigLlmClose} />
-        )}
-        {showConfigProvider && (
-            <AiConfigProvider providers={data.providers} providersAvailable={data.providersAvailable} onClose={aiConfigProviderClose} />
-        )}
-        {showImportExport && (
-            <CensorImportExport configs={data.configs} onClose={importExportClose} />
+            <CensorConfigDialog data={data} channelObject={props.channelObject} sendCommand={sendCommand} onClose={() => setShowConfig(false)} />
         )}
         {showSessionStart && (
             <CensorSessionStart onConfirm={onSessionStart} onClose={() => setShowSessionStart(false)} />
+        )}
+        {showSessionPicker && (
+            <CensorSessionPicker
+                sessions={data.sessions}
+                connectedSessionId={data.connectedSessionId}
+                ephemeralSessionName={data.ephemeralSessionName}
+                onConnect={onConnectSession}
+                onStart={id => toggleSessionAnalyze(id, true)}
+                onStop={id => toggleSessionAnalyze(id, false)}
+                onDelete={onDeleteSession}
+                onDisconnect={() => { sendCommand(ECensorCommand.SESSIONDISCONNECT); setShowSessionPicker(false) }}
+                onClose={() => setShowSessionPicker(false)}
+            />
         )}
         {msgBox}
     </>

@@ -283,7 +283,7 @@ export class PinocchioChannel {
             case 'events':
                 let eventsEvent = event as IEventsProviderEvent
                 try {
-                    if (eventsEvent.type!=='MODIFIED') this.backChannelObject.logInfo?.(`[pinocchio] k8s event: ${eventsEvent.type} ${eventsEvent.obj.kind}/${eventsEvent.obj.metadata?.name} — triggers: ${this.pinocchioConfig.triggers?.length ?? 0}`)
+                    //if (eventsEvent.type!=='MODIFIED') this.backChannelObject.logInfo?.(`[pinocchio] k8s event: ${eventsEvent.type} ${eventsEvent.obj.kind}/${eventsEvent.obj.metadata?.name} — triggers: ${this.pinocchioConfig.triggers?.length ?? 0}`)
                     for (let t of this.pinocchioConfig.triggers.filter(t => t.trigger === 'artifact' && t.kind === eventsEvent.obj.kind && (!t.k8sEvent || t.k8sEvent === eventsEvent.type))) {
                       for (let version of t.versions.filter(v => v.enabled)) {
                         this.backChannelObject.logInfo?.(`[pinocchio] ${eventsEvent.type} ${eventsEvent.obj.kind} ${eventsEvent.obj.metadata?.name}`)

@@ -1,3 +1,9 @@
+export enum ERegexOrigin {
+    LLM = 'llm',
+    MANUAL = 'manual',
+    HYBRID = 'hybrid'
+}
+
 export enum ECensorCommand {
     CONFIGGET = 'configget',
     CONFIGSET = 'configset',
@@ -9,11 +15,14 @@ export enum ECensorCommand {
     ANALYZESTART = 'analyzestart',
     ANALYZESTOP = 'analyzestop',
     REGEXDELETE = 'regexdelete',
+    REGEXADD = 'regexadd',
     SESSIONLIST = 'sessionlist',
     SESSIONSTART = 'sessionstart',
     SESSIONSTOP = 'sessionstop',
     SESSIONCONNECT = 'sessionconnect',
-    SESSIONDISCONNECT = 'sessiondisconnect'
+    SESSIONDISCONNECT = 'sessiondisconnect',
+    REGEXESSAVE = 'regexessave',
+    REGEXESGET = 'regexesget'
 }
 
 export interface ICensorSession {
@@ -24,6 +33,7 @@ export interface ICensorSession {
     pod?: string
     container?: string
     createdAt?: string
+    analyzing?: boolean
 }
 
 export interface ICensorBusinessSource {

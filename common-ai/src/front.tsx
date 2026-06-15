@@ -4,7 +4,10 @@ import {
     FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, List, ListItemButton,
     MenuItem, Select, Stack, Switch, TextField, Typography
 } from '@mui/material'
-import { FileDownload, FileUpload, Visibility, VisibilityOff } from '@mui/icons-material'
+import FileDownload from '@mui/icons-material/FileDownload'
+import FileUpload from '@mui/icons-material/FileUpload'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 
 const downloadJson = async (data: unknown, filename: string) => {
     const json = JSON.stringify(data, null, 2)
