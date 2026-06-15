@@ -207,9 +207,13 @@ export class DaemonManager implements IDaemonManager {
         this.devDaemons.set(id, { distPath: absPath, meta })
         this.reloadDevBack(id, backPath)
         try {
-            const watcher = fs.watch(backPath, () => {
-                logInfo(ELogComponent.CORE, `[dev] Daemon '${id}' back.js changed — hot-reloading`)
-                this.reloadDevBack(id, backPath)
+            const dir = path.dirname(backPath)
+            const filename = path.basename(backPath)
+            const watcher = fs.watch(dir, (_, changedFile) => {
+                if (changedFile === filename) {
+                    logInfo(ELogComponent.CORE, `[dev] Daemon '${id}' back.js changed — hot-reloading`)
+                    this.reloadDevBack(id, backPath)
+                }
             })
             this.devWatchers.set(id, watcher)
         } catch (err) {

@@ -114,9 +114,13 @@ export class PluginManager {
         this.reloadDevBack(id, backPath, registeredChannels)
 
         try {
-            const watcher = fs.watch(backPath, () => {
-                logInfo(ELogComponent.CORE, `[dev] Plugin '${id}' back.js changed — hot-reloading`)
-                this.reloadDevBack(id, backPath, registeredChannels)
+            const dir = path.dirname(backPath)
+            const filename = path.basename(backPath)
+            const watcher = fs.watch(dir, (_, changedFile) => {
+                if (changedFile === filename) {
+                    logInfo(ELogComponent.CORE, `[dev] Daemon '${id}' back.js changed — hot-reloading`)
+                    this.reloadDevBack(id, backPath, registeredChannels)
+                }
             })
             this.devWatchers.set(id, watcher)
         } catch (err) {
