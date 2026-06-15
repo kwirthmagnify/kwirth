@@ -266,12 +266,12 @@ export class CensorChannel {
                     instance.sessionId = undefined
                     instance.ephemeral = false
                 }
-                const { description } = msg.data as { description: string }
+                const { description, activeConfigs } = msg.data as { description: string, activeConfigs?: ICensorInstanceConfig[] }
                 const id = randomUUID()
                 const ic = instance.instanceConfig
                 const isCluster = ic.view === EInstanceConfigView.CLUSTER
                 const llmsForDaemon: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
-                console.log(`[censor-back] SESSIONSTART: logstreamEnabled=${instance.cfg.logstreamEnabled} logstreamAll=${instance.cfg.logstreamAll} sources=${JSON.stringify(instance.cfg.logstreamSources)} llmId=${instance.cfg.llmId} isCluster=${isCluster}`)
+                console.log(`[censor-back] SESSIONSTART: logstreamEnabled=${instance.cfg.logstreamEnabled} logstreamAll=${instance.cfg.logstreamAll} sources=${JSON.stringify(instance.cfg.logstreamSources)} llmId=${instance.cfg.llmId} isCluster=${isCluster} activeConfigs=${activeConfigs?.length ?? 0}`)
                 const daemonInstanceConfig: IDaemonInstanceConfig = {
                     id, daemonId: 'censor', description,
                     view: ic.view, namespace: ic.namespace,
@@ -282,7 +282,12 @@ export class CensorChannel {
                     createdAt: new Date().toISOString()
                 }
                 await dm.createInstance('censor', daemonInstanceConfig)
-                await dm.sendCommand(id, 'configset', { ...instance.cfg, _llms: llmsForDaemon })
+                // Send one CONFIGSET per active config to create a runner for each
+                const allActive: ICensorInstanceConfig[] = activeConfigs?.length ? activeConfigs : [instance.cfg]
+                for (const activeCfg of allActive) {
+                    console.log(`[censor-back] SESSIONSTART configset runner: ${activeCfg.name}:${activeCfg.version}`)
+                    await dm.sendCommand(id, 'configset', { ...activeCfg, _llms: llmsForDaemon })
+                }
                 if (this.providers.length > 0) await dm.sendCommand(id, 'providersset', this.providers)
                 if (!instance.analyzing) await dm.sendCommand(id, 'analyzestop', null)
                 if (instance.sessionUnsub) instance.sessionUnsub()
@@ -514,8 +519,14 @@ export class CensorChannel {
             createdAt: new Date().toISOString()
         }
         await dm.createInstance('censor', daemonCfg)
-        console.log(`[censor-back] autoStartDaemon configset: logstreamEnabled=${instance.cfg.logstreamEnabled} logstreamAll=${instance.cfg.logstreamAll} sources=${JSON.stringify(instance.cfg.logstreamSources)}`)
-        await dm.sendCommand(id, 'configset', { ...instance.cfg, _llms: llms })
+        // Send one CONFIGSET per active config (read from storage; active field persisted with each config)
+        const savedConfigs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
+        const activeConfigs = savedConfigs.filter(c => c.active)
+        const allActive = activeConfigs.length > 0 ? activeConfigs : [instance.cfg]
+        for (const activeCfg of allActive) {
+            console.log(`[censor-back] autoStartDaemon configset runner: ${activeCfg.name}:${activeCfg.version}`)
+            await dm.sendCommand(id, 'configset', { ...activeCfg, _llms: llms })
+        }
         await dm.sendCommand(id, 'providersset', this.providers)
         if (!instance.analyzing) await dm.sendCommand(id, 'analyzestop', null)
         instance.sessionId = id

@@ -323,7 +323,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
     const onSessionStart = (description: string) => {
         setShowSessionStart(false)
-        sendCommand(ECensorCommand.SESSIONSTART, { description })
+        const activeConfigs = data.configs.filter(c => c.active)
+        sendCommand(ECensorCommand.SESSIONSTART, { description, activeConfigs })
     }
 
     const deleteSession = () => {

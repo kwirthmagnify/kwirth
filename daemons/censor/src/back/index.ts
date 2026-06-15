@@ -363,42 +363,52 @@ export class CensorDaemon implements IDaemon {
             return true
         }
 
-        // Logstream filter
-        console.log(`[censor-daemon] addObject filter ${podNamespace}/${podName}/${containerName}: logstreamEnabled=${inst.cfg.logstreamEnabled} logstreamAll=${inst.cfg.logstreamAll} sources=${JSON.stringify(inst.cfg.logstreamSources)}`)
-        if (!inst.cfg.logstreamEnabled) {
-            console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: logstreamEnabled=false`)
-            return true
-        }
-        if (!inst.cfg.logstreamAll) {
-            const sources = inst.cfg.logstreamSources ?? []
-            if (sources.length === 0) {
-                console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: no sources configured`)
+        // Logstream filter: runner-based when runners exist, flat otherwise
+        if (inst.runners.size > 0) {
+            const anyRunnerWants = [...inst.runners.values()].some(r => this.podMatchesRunnerCfg(r.cfg, podNamespace, podName))
+            if (!anyRunnerWants) {
+                console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: no runner matches (${inst.runners.size} runners)`)
                 return true
             }
-            const basicMatches = sources.filter(src => {
-                if (src.namespace && src.namespace !== podNamespace) return false
-                if (src.podRegex) { try { if (!new RegExp(src.podRegex).test(podName)) return false } catch { return false } }
-                return true
-            })
-            if (basicMatches.length === 0) {
-                console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: no basic match`)
+            console.log(`[censor-daemon] addObject PASS ${podNamespace}/${podName}/${containerName} — runner-based (${inst.runners.size} runners)`)
+        } else {
+            // Flat filter (backward compat: no runners yet)
+            console.log(`[censor-daemon] addObject filter ${podNamespace}/${podName}/${containerName}: logstreamEnabled=${inst.cfg.logstreamEnabled} logstreamAll=${inst.cfg.logstreamAll} sources=${JSON.stringify(inst.cfg.logstreamSources)}`)
+            if (!inst.cfg.logstreamEnabled) {
+                console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: logstreamEnabled=false`)
                 return true
             }
-            if (basicMatches.some(src => src.labelSelector)) {
-                let labels: Record<string, string> = {}
-                try {
-                    const coreApi = (this.clusterInfo as any).coreApi
-                    const podRes = await coreApi.readNamespacedPod({ name: podName, namespace: podNamespace })
-                    labels = podRes.metadata?.labels ?? {}
-                } catch {}
-                const fullMatch = basicMatches.some(src => !src.labelSelector || matchesLabelSelector(labels, src.labelSelector))
-                if (!fullMatch) {
-                    console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: labelSelector no match`)
+            if (!inst.cfg.logstreamAll) {
+                const sources = inst.cfg.logstreamSources ?? []
+                if (sources.length === 0) {
+                    console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: no sources configured`)
                     return true
                 }
+                const basicMatches = sources.filter(src => {
+                    if (src.namespace && src.namespace !== podNamespace) return false
+                    if (src.podRegex) { try { if (!new RegExp(src.podRegex).test(podName)) return false } catch { return false } }
+                    return true
+                })
+                if (basicMatches.length === 0) {
+                    console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: no basic match`)
+                    return true
+                }
+                if (basicMatches.some(src => src.labelSelector)) {
+                    let labels: Record<string, string> = {}
+                    try {
+                        const coreApi = (this.clusterInfo as any).coreApi
+                        const podRes = await coreApi.readNamespacedPod({ name: podName, namespace: podNamespace })
+                        labels = podRes.metadata?.labels ?? {}
+                    } catch {}
+                    const fullMatch = basicMatches.some(src => !src.labelSelector || matchesLabelSelector(labels, src.labelSelector))
+                    if (!fullMatch) {
+                        console.log(`[censor-daemon] addObject SKIP ${podNamespace}/${podName}/${containerName}: labelSelector no match`)
+                        return true
+                    }
+                }
             }
+            console.log(`[censor-daemon] addObject PASS ${podNamespace}/${podName}/${containerName} — flat filter`)
         }
-        console.log(`[censor-daemon] addObject PASS ${podNamespace}/${podName}/${containerName} — starting log stream`)
 
         const logStream = new stream.PassThrough()
         const asset: IAsset = { namespace: podNamespace, pod: podName, container: containerName, passThroughStream: logStream, runnerIds: new Set() }
