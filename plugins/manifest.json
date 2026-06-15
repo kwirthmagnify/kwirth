@@ -1,5 +1,99 @@
 [
   {
+    "id": "alert",
+    "version": "0.2.10",
+    "name": "Alert",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.10.tgz",
+    "description": "Alert plugin for Kwirth - Build an alert system based on log messages and cluster metrics",
+    "icon": "Warning"
+  },
+  {
+    "id": "censor",
+    "version": "0.2.28",
+    "name": "Censor",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.28.tgz",
+    "description": "Censor plugin for Kwirth - LLM-powered real-time log analysis and sensitive pattern detection",
+    "icon": "ManageSearch",
+    "requires": [
+      {
+        "type": "daemon",
+        "id": "censor",
+        "minVersion": "0.2.6"
+      }
+    ]
+  },
+  {
+    "id": "echo",
+    "version": "0.2.9",
+    "name": "Echo",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.9.tgz",
+    "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
+    "icon": "Science",
+    "requires": [
+      {
+        "type": "provider",
+        "id": "otel",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "id": "fileman",
+    "version": "0.2.9",
+    "name": "Fileman",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.9.tgz",
+    "description": "Fileman Kwirth plugin for in-container file management live",
+    "icon": "FolderCopyTwoTone"
+  },
+  {
+    "id": "log",
+    "version": "0.2.9",
+    "name": "Log",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.9.tgz",
+    "description": "Log plugin for Kwirth - Aggregate an filter real-time Kubernetes logs",
+    "icon": "Subject"
+  },
+  {
+    "id": "news",
+    "version": "0.2.8",
+    "name": "News",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.8.tgz",
+    "description": "Displays Kubernetes and AI news feeds",
+    "icon": "Newspaper"
+  },
+  {
+    "id": "ops",
+    "version": "0.2.8",
+    "name": "Ops",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.8.tgz",
+    "description": "Ops plugin for Kwirth - Shell & operations against cluster workload",
+    "icon": "Terminal"
+  },
+  {
+    "id": "pinocchio",
+    "version": "0.2.21",
+    "name": "Pinocchio",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.21.tgz",
+    "description": "Pinocchio plugin for Kwirth - AI-powered Kubernetes artifact validation and business data analysis",
+    "icon": "AutoFixHigh"
+  },
+  {
+    "id": "topology",
+    "version": "0.2.10",
+    "name": "Topology",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.10.tgz",
+    "description": "Displays Kubernetes artifacts topology in 3D, you can also interact with objects",
+    "icon": "AccountTree"
+  },
+  {
+    "id": "trivy",
+    "version": "0.2.11",
+    "name": "Trivy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.11.tgz",
+    "description": "Trivy plugin for Kwirth - Secret exposure, CVE's, audit and SBoM: all integrated in Kwirth",
+    "icon": "VerifiedUser"
+  },
+  {
     "id": "censor",
     "version": "0.2.27",
     "name": "Censor",
