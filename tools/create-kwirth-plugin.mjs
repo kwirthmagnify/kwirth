@@ -50,8 +50,8 @@ write('package.json', `{
         "watch": "node watch.mjs"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common": "^0.5.2",
-        "@kwirthmagnify/kwirth-common-front": "^0.5.2"
+        "@kwirthmagnify/kwirth-common": "^0.5.14",
+        "@kwirthmagnify/kwirth-common-front": "^0.5.16"
     },
     "devDependencies": {
         "@mui/icons-material": "7.1.2",
@@ -80,15 +80,30 @@ const kwirthGlobalsPlugin = {
             '@mui/material': 'window.__kwirth__.MUI.material',
             '@mui/icons-material': 'window.__kwirth__.MUI.icons',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
+            '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
         }
         for (const pkg of Object.keys(globals)) {
-            build.onResolve({ filter: new RegExp(\`^\${pkg.replace(/[.*+?^\$\{\}()|[\\\\]\\\\]/g, '\\\\$&')}$\`) }, () => ({
-                path: pkg,
-                namespace: 'kwirth-globals',
-            }))
+            build.onResolve({ filter: new RegExp(\`^\${pkg.replace(/[.*+?^\$\{\}()|[\\\\]\\\\]/g, '\\\\$&')}$\`) }, () => ({ path: pkg, namespace: 'kwirth-globals' }))
         }
         build.onLoad({ filter: /.*/, namespace: 'kwirth-globals' }, (args) => ({
-            contents: \`module.exports = \${globals[args.path]}\`,
+            contents: \`const _m = \${globals[args.path]}; let _d = (_m != null && 'default' in Object(_m)) ? _m.default : _m; if (typeof _d !== 'function' && _d != null && typeof _d.default !== 'undefined') _d = _d.default; module.exports = Object.assign({}, (typeof _m === 'object' && _m !== null) ? _m : {}, {default: _d, __esModule: true});\`,
+            loader: 'js',
+        }))
+    },
+}
+
+const kwirthBackGlobalsPlugin = {
+    name: 'kwirth-back-globals',
+    setup(build) {
+        const backGlobals = {
+            '@kwirthmagnify/kwirth-common': 'global.__kwirth_back__.kwirthCommon',
+            '@kwirthmagnify/kwirth-common-back': 'global.__kwirth_back__.kwirthCommonBack',
+        }
+        build.onResolve({ filter: /^@kwirthmagnify\\/kwirth-common(-back)?$/ }, (args) => {
+            if (backGlobals[args.path]) return { path: args.path, namespace: 'kwirth-back-globals' }
+        })
+        build.onLoad({ filter: /.*/, namespace: 'kwirth-back-globals' }, (args) => ({
+            contents: 'module.exports = ' + backGlobals[args.path],
             loader: 'js',
         }))
     },
@@ -118,16 +133,18 @@ await esbuild.build({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
+    plugins: [kwirthBackGlobalsPlugin],
+    external: ['express'],
     loader: { '.ts': 'ts' },
     minify: false,
 })
 console.log('Built dist/back.js')
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
-const npmName = (meta.publisher ? meta.publisher + '/' : '') + 'kwirth-plugin-' + meta.id
 const distMeta = {
     id: meta.id,
-    name: npmName,
+    name: \`@kwirthmagnify/kwirth-plugin-\${meta.id}\`,
+    displayName: meta.displayName,
     version: meta.version,
     description: meta.description,
     icon: meta.icon,
@@ -136,8 +153,9 @@ const distMeta = {
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
-console.log("Done. Run 'npm publish' on your 'dist' folder in order to publish your package to npmjs.")
-console.log(\`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/\${npmName}/-/\${meta.id.replace('@', '').replace('/', '-')}-\${meta.version}.tgz\`)
+const npmName = \`@kwirthmagnify/kwirth-plugin-\${meta.id}\`
+console.log("Done. Run 'npm publish --access=public' on your 'dist' folder in order to publish your package to npmjs.")
+console.log(\`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/\${npmName}/-/kwirth-plugin-\${meta.id}-\${meta.version}.tgz\`)
 `)
 
 // ─── watch.mjs ─────────────────────────────────────────────────────────────
@@ -154,15 +172,30 @@ const kwirthGlobalsPlugin = {
             '@mui/material': 'window.__kwirth__.MUI.material',
             '@mui/icons-material': 'window.__kwirth__.MUI.icons',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
+            '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
         }
         for (const pkg of Object.keys(globals)) {
-            build.onResolve({ filter: new RegExp(\`^\${pkg.replace(/[.*+?^\$\{\}()|[\\\\]\\\\]/g, '\\\\$&')}$\`) }, () => ({
-                path: pkg,
-                namespace: 'kwirth-globals',
-            }))
+            build.onResolve({ filter: new RegExp(\`^\${pkg.replace(/[.*+?^\$\{\}()|[\\\\]\\\\]/g, '\\\\$&')}$\`) }, () => ({ path: pkg, namespace: 'kwirth-globals' }))
         }
         build.onLoad({ filter: /.*/, namespace: 'kwirth-globals' }, (args) => ({
-            contents: \`module.exports = \${globals[args.path]}\`,
+            contents: \`const _m = \${globals[args.path]}; let _d = (_m != null && 'default' in Object(_m)) ? _m.default : _m; if (typeof _d !== 'function' && _d != null && typeof _d.default !== 'undefined') _d = _d.default; module.exports = Object.assign({}, (typeof _m === 'object' && _m !== null) ? _m : {}, {default: _d, __esModule: true});\`,
+            loader: 'js',
+        }))
+    },
+}
+
+const kwirthBackGlobalsPlugin = {
+    name: 'kwirth-back-globals',
+    setup(build) {
+        const backGlobals = {
+            '@kwirthmagnify/kwirth-common': 'global.__kwirth_back__.kwirthCommon',
+            '@kwirthmagnify/kwirth-common-back': 'global.__kwirth_back__.kwirthCommonBack',
+        }
+        build.onResolve({ filter: /^@kwirthmagnify\\/kwirth-common(-back)?$/ }, (args) => {
+            if (backGlobals[args.path]) return { path: args.path, namespace: 'kwirth-back-globals' }
+        })
+        build.onLoad({ filter: /.*/, namespace: 'kwirth-back-globals' }, (args) => ({
+            contents: 'module.exports = ' + backGlobals[args.path],
             loader: 'js',
         }))
     },
@@ -171,10 +204,9 @@ const kwirthGlobalsPlugin = {
 fs.mkdirSync('dist', { recursive: true })
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
-const npmName = (meta.publisher ? meta.publisher + '/' : '') + 'kwirth-plugin-' + meta.id
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
-    id: meta.id, name: npmName, version: meta.version,
-    description: meta.description, icon: meta.icon,
+    id: meta.id, name: \`@kwirthmagnify/kwirth-plugin-\${meta.id}\`, displayName: meta.displayName,
+    version: meta.version, description: meta.description, icon: meta.icon,
     ...(meta.website ? { website: meta.website } : {})
 }, null, 2))
 
@@ -199,6 +231,8 @@ const backCtx = await esbuild.context({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
+    plugins: [kwirthBackGlobalsPlugin],
+    external: ['express'],
     loader: { '.ts': 'ts' },
     minify: false,
 })
@@ -493,7 +527,7 @@ export class ${className}Data implements I${className}Data {
 
 write(`src/front/${className}Setup.tsx`, `import React from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material'
-import { ${icon} } from '@mui/icons-material'
+import ${icon} from '@mui/icons-material/${icon}'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { ${className}Config, ${className}InstanceConfig } from './${className}Config'
 
@@ -517,8 +551,8 @@ const ${className}Setup: React.FC<ISetupProps> = (props: ISetupProps) => {
             <DialogContent>
             </DialogContent>
             <DialogActions>
-                <Button onClick={cancel}>Cancel</Button>
                 <Button variant='contained' onClick={ok}>OK</Button>
+                <Button onClick={cancel}>Cancel</Button>
             </DialogActions>
         </Dialog>
     )
@@ -532,7 +566,7 @@ export { ${className}Setup, ${className}Icon }
 write(`src/front/${className}TabContent.tsx`, `import React from 'react'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { Box, List, ListItem, ListItemText, Typography } from '@mui/material'
-import { ${icon} } from '@mui/icons-material'
+import ${icon} from '@mui/icons-material/${icon}'
 import { I${className}Data } from './${className}Data'
 
 export const ${className}TabContent: React.FC<IContentProps> = ({ channelObject }) => {
