@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Home, Link, OpenInNew, Refresh, ViewList, ViewModule } from '../tools/KwirthIcons'
+import { CheckCircle, Delete, Download, FolderOpen, Home, Link, Refresh, ViewList, ViewModule } from '../tools/KwirthIcons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
@@ -54,7 +54,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
     const [installingFile, setInstallingFile] = useState(false)
     const [filterText, setFilterText] = useState('')
     const [installedFilter, setInstalledFilter] = useState('')
-    const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
+    const [selectedVersions, _setSelectedVersions] = useState<Record<string, string>>({})
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
     const fileInputRef = useRef<HTMLInputElement>(null)
 

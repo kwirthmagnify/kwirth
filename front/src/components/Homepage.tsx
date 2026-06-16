@@ -5,7 +5,6 @@ import { ITabSummary } from '../model/ITabObject'
 import { Delete, ExpandLess, ExpandMore, FactCheck, HelpOutline, OpenInBrowser, Star } from '../tools/KwirthIcons'
 
 import { IHomepageProps } from '@kwirthmagnify/kwirth-common-front'
-import { TChannelConstructor } from '../channels/IChannel'
 import { Cluster } from '../model/Cluster'
 import { addGetAuthorization } from '../tools/AuthorizationManagement'
 import { getIconFromKind } from '../tools/Constants-React'

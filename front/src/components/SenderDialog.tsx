@@ -4,7 +4,7 @@ import {
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography, useTheme
 } from '@mui/material'
-import { Add, CheckCircle, ContentCopy, Delete, Download, Edit, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule } from '../tools/KwirthIcons'
+import { Add, CheckCircle, ContentCopy, Delete, Download, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule } from '../tools/KwirthIcons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
@@ -398,14 +398,6 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             setError(`Imported ${count} config(s)`)
         } catch (err) { setError(`Import failed: ${err}`) }
         finally { if (senderFileInputRef.current) senderFileInputRef.current.value = '' }
-    }
-
-    const exportSender = async (id: string) => {
-        try {
-            const res = await fetch(`${backendUrl}/senders/${id}/export`, addGetAuthorization(accessString))
-            if (!res.ok) throw new Error(`HTTP ${res.status}`)
-            triggerDownload(await res.json(), `kwirth-sender-${id}.json`)
-        } catch (err) { setError(`Export failed: ${err}`) }
     }
 
     const openImportDialog = async (file: File) => {

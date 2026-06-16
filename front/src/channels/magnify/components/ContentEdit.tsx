@@ -1,4 +1,4 @@
-import { Button, DialogActions, DialogContent, DialogTitle, IconButton, Stack, Typography, useTheme } from '@mui/material'
+import { Button, DialogActions, DialogContent, DialogTitle, Stack, Typography, useTheme } from '@mui/material'
 import { IFileObject } from '@jfvilas/react-file-manager'
 import { useEffect, useRef, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
