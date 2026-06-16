@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 
 // material & icons
 import { Alert, AppBar, Box, CircularProgress, createTheme, CssBaseline, Drawer, FormControlLabel, IconButton, PaletteMode, Snackbar, SnackbarCloseReason, Stack, Switch, Tab, Tabs, ThemeProvider, Toolbar, Tooltip, Typography } from '@mui/material'
-import { Settings as SettingsIcon, Menu, Person, Home, Notifications, NotificationsActive } from './tools/KwirthIcons'
+import { Settings as SettingsIcon, Menu, Person, VerifiedUser, Home, Notifications, NotificationsActive } from './tools/KwirthIcons'
 
 // model
 import { Cluster, IClusterInfo } from './model/Cluster'
@@ -1936,8 +1936,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                             }
                         </Tooltip>
                         <FormControlLabel control={<Switch size='small' onClick={toggleColorMode} checked={mode==='dark'}/>} label={mode === 'light' ? 'light' : 'dark'} labelPlacement='bottom'/>
-                        <Tooltip title={<div style={{textAlign:'center'}}>{user?.id}<br/>{user?.name}<br/>[{user && parseResources(user.accessKey.resources).map(r=>r.scopes).join(',')}]</div>} sx={{ mr:2 }} slotProps={{popper: {modifiers: [{name: 'offset', options: {offset: [0, -6]}}]}}}>
-                            <Person/>
+                        <Tooltip title={<div style={{textAlign:'center'}}>{user?.id}<br/>{user?.name}<br/>[{user && parseResources(user.accessKey.resources).map(r=>r.scopes).join(',')}]{licenseInfo && <><br/>customer: {licenseInfo.customerId}<br/>expires: {licenseInfo.expiry}</>}</div>} sx={{ mr:2 }} slotProps={{popper: {modifiers: [{name: 'offset', options: {offset: [0, -6]}}]}}}>
+                            {licenseInfo ? <VerifiedUser/> : <Person/>}
                         </Tooltip>
                     </Toolbar>
                     </AppBar>
