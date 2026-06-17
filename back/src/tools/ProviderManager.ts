@@ -113,8 +113,7 @@ export class ProviderManager {
         try {
             const resolved = require.resolve(backPath)
             if (require.cache[resolved]) delete require.cache[resolved]
-            //const providerModule = require(backPath)
-            const providerModule = require('module').createRequire(__filename)(backPath)
+            const providerModule = require(backPath)
             const ProviderClass = providerModule.default ?? Object.values(providerModule).find(v => typeof v === 'function')
             if (ProviderClass) {
                 registeredProviders.set(id, ProviderClass as TProviderConstructor)
@@ -304,8 +303,7 @@ export class ProviderManager {
         fs.writeFileSync(tmpPath, backJs)
         try {
             if (require.cache[require.resolve(tmpPath)]) delete require.cache[require.resolve(tmpPath)]
-            //const providerModule = require(tmpPath)
-            const providerModule = require('module').createRequire(__filename)(tmpPath)
+            const providerModule = require(tmpPath)
             const ProviderClass = providerModule.default ?? Object.values(providerModule).find(v => typeof v === 'function')
             if (ProviderClass) {
                 registeredProviders.set(id, ProviderClass as TProviderConstructor)
