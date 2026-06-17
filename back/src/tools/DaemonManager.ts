@@ -141,6 +141,13 @@ export class DaemonManager implements IDaemonManager {
         return result
     }
 
+    async sendDaemonCommand(daemonId: string, command: string, data: unknown): Promise<unknown> {
+        const daemon = this.daemonInstances.get(daemonId)
+        if (!daemon) throw new Error(`Daemon '${daemonId}' not found`)
+        if (!daemon.processDaemonCommand) throw new Error(`Daemon '${daemonId}' does not support processDaemonCommand`)
+        return daemon.processDaemonCommand(command, data)
+    }
+
     // ── Pod event routing ───────────────────────────────────────────────────────
 
     async routeAddObject(podNamespace: string, podName: string, containerName: string): Promise<void> {

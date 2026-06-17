@@ -49,6 +49,7 @@ export interface IDaemonManager {
     listInstances(daemonId?: string): IDaemonInstanceConfig[]
     subscribe(instanceId: string, callback: (event: IDaemonEvent) => void): () => void
     sendCommand(instanceId: string, command: string, data: unknown): Promise<unknown>
+    sendDaemonCommand(daemonId: string, command: string, data: unknown): Promise<unknown>
     routeAddObject(podNamespace: string, podName: string, containerName: string): Promise<void>
     directAddObject(instanceId: string, podNamespace: string, podName: string, containerName: string): Promise<void>
     directDeleteObject(instanceId: string, podNamespace: string, podName: string, containerName: string): Promise<void>
