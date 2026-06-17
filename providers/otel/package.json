@@ -11,7 +11,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.12",
+    "@kwirthmagnify/kwirth-common-back": "^0.5.13",
     "express": "^4.19.0"
   },
   "devDependencies": {
