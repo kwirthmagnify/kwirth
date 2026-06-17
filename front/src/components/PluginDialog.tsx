@@ -453,9 +453,9 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                               </Box>
                     )}
 
-                    {error && <Typography variant='caption' color='error'>{error}</Typography>}
                 </Stack>
             </DialogContent>
+            {error && <Box sx={{ px: 3, pb: 1 }}><Typography variant='caption' color='error'>{error}</Typography></Box>}
             <DialogActions>
                 <Button onClick={props.onClose}>CLOSE</Button>
             </DialogActions>

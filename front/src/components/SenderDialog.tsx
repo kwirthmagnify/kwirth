@@ -741,9 +741,9 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                               </Box>
                     })()}
 
-                    {error && <Typography variant='caption' color={error.startsWith('Imported') ? 'success.main' : 'error'}>{error}</Typography>}
                 </Stack>
             </DialogContent>
+            {error && <Box sx={{ px: 3, pb: 1 }}><Typography variant='caption' color={error.startsWith('Imported') ? 'success.main' : 'error'}>{error}</Typography></Box>}
             <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
                 <Stack direction='row' spacing={1}>
                     <input ref={senderFileInputRef} type='file' accept='.json' style={{ display: 'none' }}

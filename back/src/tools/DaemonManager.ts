@@ -2,7 +2,7 @@ import { IBackDaemonObject, IDaemonEvent, IDaemonInstanceConfig, IDaemonManager 
 import { IDaemon } from '@kwirthmagnify/kwirth-common-back'
 import { ClusterInfo } from '../model/ClusterInfo'
 import { IConfigMaps } from './IConfigMap'
-import { ELogComponent, logError, logInfo } from './Logging'
+import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { TDaemonConstructor, createDaemonInstance } from '../daemons/IDaemon'
 import { LicenseManager } from './LicenseManager'
 import fs from 'fs'
@@ -285,7 +285,10 @@ export class DaemonManager implements IDaemonManager {
             for (const provId of daemon.requirements.providers) {
                 if (provId === 'events') continue  // events handled separately at startup
                 const provider = ci.providers.find(p => p.id === provId)
-                if (!provider) continue
+                if (!provider) {
+                    logWarning(ELogComponent.CORE, `Provider '${provId}' is not available for daemon '${daemon.daemonId}'`)
+                    continue
+                }
                 const data = daemon.getProviderSubscriptionData?.(provId)
                 if (data === undefined) continue  // daemon signals: skip subscription for now
                 provider.addSubscriber(this, data)
