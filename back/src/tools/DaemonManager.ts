@@ -110,6 +110,12 @@ export class DaemonManager implements IDaemonManager {
         return daemonId ? all.filter(c => c.daemonId === daemonId) : all
     }
 
+    getDaemonRouters(): { id: string; router: any; routerAlias?: string }[] {
+        return Array.from(this.daemonInstances.entries())
+            .filter(([, d]) => d.providesRouter && d.router)
+            .map(([id, d]) => ({ id, router: d.router, routerAlias: d.routerAlias }))
+    }
+
     subscribe(instanceId: string, callback: (event: IDaemonEvent) => void): () => void {
         const running = this.runningInstances.get(instanceId)
         if (!running) return () => {}

@@ -3,6 +3,9 @@ import { IDaemonInstanceConfig, BackDaemonData, IBackDaemonRequirements } from '
 export interface IDaemon {
     readonly daemonId: string
     readonly requirements: IBackDaemonRequirements
+    readonly providesRouter?: boolean
+    router?: any
+    routerAlias?: string
 
     getDaemonData(): BackDaemonData
 

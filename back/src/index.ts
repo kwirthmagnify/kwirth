@@ -1239,6 +1239,11 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         if (daemonManager) {
             let daemonApi = new DaemonApi(daemonManager, apiKeyApi)
             riRouter.use(`/daemons`, daemonApi.router)
+            for (const { id, router, routerAlias } of daemonManager.getDaemonRouters()) {
+                const mountPath = routerAlias ? `/${routerAlias}` : `/${ri.id}/daemon/${id}`
+                riRouter.use(mountPath, router)
+                logInfo(ELogComponent.CORE, `Daemon '${id}' HTTP router mounted at '${mountPath}'`)
+            }
         }
         if (themeManager) {
             let themeApi = new ThemeApi(themeManager, apiKeyApi)
