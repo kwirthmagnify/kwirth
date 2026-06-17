@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAsync } from 'react-use'
 import { Box, DialogContent, DialogTitle, Divider, IconButton, Popover, Stack, Typography } from '@mui/material'
-import { Fullscreen, FullscreenExit, Info, PauseCircle, PlayCircle, Settings, StopCircle } from '../../../tools/KwirthIcons'
+import { Info, PauseCircle, PlayCircle, Settings, StopCircle } from '../../../tools/KwirthIcons'
 
 import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelObject, IContentProps } from '../../IChannel'

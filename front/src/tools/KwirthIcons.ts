@@ -1,6 +1,7 @@
 // Curated MUI icon list exposed via window.__kwirth__.MUI.icons
 // To add a new icon: add an export line here. It will be available to all plugins at runtime.
 export { default as AccessTime } from '@mui/icons-material/AccessTime'
+export { default as AccountCircle } from '@mui/icons-material/AccountCircle'
 export { default as AccountTree } from '@mui/icons-material/AccountTree'
 export { default as AccountTreeOutlined } from '@mui/icons-material/AccountTreeOutlined'
 export { default as Add } from '@mui/icons-material/Add'

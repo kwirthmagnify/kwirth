@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 
 // material & icons
 import { Alert, AppBar, Box, CircularProgress, createTheme, CssBaseline, Drawer, FormControlLabel, IconButton, PaletteMode, Snackbar, SnackbarCloseReason, Stack, Switch, Tab, Tabs, ThemeProvider, Toolbar, Tooltip, Typography } from '@mui/material'
-import { Settings as SettingsIcon, Menu, Person, VerifiedUser, Home, Notifications, NotificationsActive } from './tools/KwirthIcons'
+import { Settings as SettingsIcon, Menu, Person, AccountCircle, Home, Notifications, NotificationsActive } from './tools/KwirthIcons'
 
 // model
 import { Cluster, IClusterInfo } from './model/Cluster'
@@ -331,7 +331,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const script = document.createElement('script')
         script.id = `kwirth-theme-${id}`
         script.src = `${backendUrl}/themes/${id}/front?t=${Date.now()}`
-        if (onload) script.onload = onload
+        if (onload) {
+            script.onload = () => { console.log(`[themes] loaded theme front: ${id}`); onload() }
+            script.onerror = () => { console.log(`[themes] failed to load theme front: ${id}`); setThemeReady(true) }
+        }
         document.head.appendChild(script)
     }
 
@@ -450,11 +453,16 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             .then(r => r.json())
             .then((themes: { id: string }[]) => {
                 const savedTheme = localStorage.getItem('kwirth.theme')
+                console.log(`[themes] installed themes: [${themes.map(t => t.id).join(', ')}], saved theme: ${savedTheme ?? 'none'}`)
+                const activeFound = savedTheme && themes.some(t => t.id === savedTheme)
                 themes.forEach(t => {
                     const isActive = t.id === savedTheme
                     loadThemeFront(t.id, isActive ? () => { setActiveThemeName(t.id); setThemeReady(true) } : undefined)
                 })
-                if (!savedTheme) setThemeReady(true)
+                if (!savedTheme || !activeFound) {
+                    console.log(`[themes] no active theme to load — marking ready`)
+                    setThemeReady(true)
+                }
             })
             .catch(err => { console.log(`[themes] failed to load installed themes: ${err}`); setThemeReady(true) })
 
@@ -1937,7 +1945,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         </Tooltip>
                         <FormControlLabel control={<Switch size='small' onClick={toggleColorMode} checked={mode==='dark'}/>} label={mode === 'light' ? 'light' : 'dark'} labelPlacement='bottom'/>
                         <Tooltip title={<div style={{textAlign:'center'}}>{user?.id}<br/>{user?.name}<br/>[{user && parseResources(user.accessKey.resources).map(r=>r.scopes).join(',')}]{licenseInfo && <><br/>customer: {licenseInfo.customerId}<br/>expires: {licenseInfo.expiry}</>}</div>} sx={{ mr:2 }} slotProps={{popper: {modifiers: [{name: 'offset', options: {offset: [0, -6]}}]}}}>
-                            {licenseInfo ? <VerifiedUser/> : <Person/>}
+                            {licenseInfo ? <AccountCircle/> : <Person/>}
                         </Tooltip>
                     </Toolbar>
                     </AppBar>
