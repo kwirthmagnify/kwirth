@@ -194,10 +194,7 @@ export class DaemonManager implements IDaemonManager {
     routeProviderEvent(providerId: string, event: unknown): void {
         const seen = new Set<unknown>()
         for (const { daemon } of this.runningInstances.values()) {
-            if (seen.has(daemon)) {
-                console.log(`[DaemonManager] routeProviderEvent SKIP duplicate daemon '${(daemon as any).daemonId}'`)
-                continue
-            }
+            if (seen.has(daemon)) continue
             seen.add(daemon)
             daemon.processProviderEvent(providerId, event)
         }
