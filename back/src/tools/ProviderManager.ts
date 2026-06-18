@@ -298,8 +298,7 @@ export class ProviderManager {
     }
 
     private async loadBackProvider(id: string, backJs: string, registeredProviders: Map<string, TProviderConstructor>): Promise<void> {
-        //const tmpPath = path.join(os.tmpdir(), `kwirth-provider-${id}-back.js`)
-        const tmpPath = path.join(__dirname, `kwirth-provider-${id}-back.js`)
+        const tmpPath = path.join(os.tmpdir(), `kwirth-provider-${id}-back.js`)
         fs.writeFileSync(tmpPath, backJs)
         try {
             if (require.cache[require.resolve(tmpPath)]) delete require.cache[require.resolve(tmpPath)]
