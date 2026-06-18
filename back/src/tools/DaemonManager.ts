@@ -456,6 +456,7 @@ export class DaemonManager implements IDaemonManager {
     async loadAll(): Promise<void> {
         const index = ((await this.configMaps.read('kwirth-daemons-index', [])) as IDaemonMeta[]) ?? []
         for (const meta of index) {
+            if (meta.installedFrom === 'bundled') continue
             try {
                 let backJs: string | undefined
                 if (meta.backStored === false) {

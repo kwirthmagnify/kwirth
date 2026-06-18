@@ -293,6 +293,7 @@ export class PluginManager {
     async loadAll(registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
         const index = this.cachedIndex
         for (const meta of index) {
+            if (meta.installedFrom === 'bundled') continue
             try {
                 let backJs: string | undefined
                 if (meta.backStored === false) {
