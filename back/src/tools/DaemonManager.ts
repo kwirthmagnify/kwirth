@@ -249,12 +249,24 @@ export class DaemonManager implements IDaemonManager {
             if (require.cache[resolved]) delete require.cache[resolved]
             const mod = require(backPath)
             const DaemonClass: TDaemonConstructor = mod.default ?? Object.values(mod).find(v => typeof v === 'function') as TDaemonConstructor
-            if (DaemonClass) {
-                this.registeredDaemons.set(id, DaemonClass)
-                logInfo(ELogComponent.CORE, `[dev] Daemon '${id}' backend reloaded`)
-            } else {
+            if (!DaemonClass) {
                 logError(ELogComponent.CORE, `[dev] Daemon '${id}' back.js exports no class`)
+                return
             }
+            this.registeredDaemons.set(id, DaemonClass)
+            const newInstance = createDaemonInstance(DaemonClass, this.clusterInfo, this.backDaemonObject)
+            if (!newInstance) {
+                logError(ELogComponent.CORE, `[dev] Daemon '${id}' could not create new instance`)
+                return
+            }
+            newInstance.startDaemon().then(() => {
+                this.daemonInstances.set(id, newInstance)
+                for (const running of this.runningInstances.values()) {
+                    if (running.instanceConfig.daemonId === id) running.daemon = newInstance
+                }
+                this.rebuildProviderSubscriptions()
+                logInfo(ELogComponent.CORE, `[dev] Daemon '${id}' backend hot-reloaded (instance replaced)`)
+            }).catch((err: unknown) => logError(ELogComponent.CORE, `[dev] Daemon '${id}' startDaemon error after reload: ${err}`))
         } catch (err) {
             logError(ELogComponent.CORE, `[dev] Daemon '${id}' reload error: ${err}`)
         }
