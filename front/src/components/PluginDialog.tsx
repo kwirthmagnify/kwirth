@@ -218,6 +218,8 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
             return <Chip label='dev' size='small' variant='outlined' color='warning' />
         if (installedFrom === 'local')
             return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
+        if (installedFrom === 'bundled')
+            return <Chip label='bundled' size='small' variant='outlined' color='secondary' />
         if (installedFrom.includes('github.com/kwirthmagnify'))
             return <Chip icon={<Extension />} label='Kwirth' size='small' variant='outlined' color='primary' />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
@@ -319,9 +321,9 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                         website={plugin.website}
                                         source={resolveSource(plugin.installedFrom)}
                                         action={
-                                            <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : 'Uninstall'}>
+                                            <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : plugin.installedFrom === 'bundled' ? 'Bundled plugins cannot be uninstalled' : 'Uninstall'}>
                                                 <span>
-                                                    <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
+                                                    <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || plugin.installedFrom === 'bundled' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
                                                         {uninstallingId === plugin.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                     </IconButton>
                                                 </span>
@@ -337,9 +339,9 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plugin.displayName || plugin.name}</Typography>
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(plugin.installedFrom)}</Box>
                                         <Chip label={`v${plugin.version}`} size='small' sx={{ minWidth: 72 }} />
-                                        <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : 'Uninstall'}>
+                                        <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : plugin.installedFrom === 'bundled' ? 'Bundled plugins cannot be uninstalled' : 'Uninstall'}>
                                             <span>
-                                                <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
+                                                <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || plugin.installedFrom === 'bundled' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
                                                     {uninstallingId === plugin.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                 </IconButton>
                                             </span>

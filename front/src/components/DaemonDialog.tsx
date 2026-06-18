@@ -179,6 +179,7 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
         if (!installedFrom) return null
         if (installedFrom === 'local') return <Typography variant='caption' color='text.secondary'>Local file</Typography>
         if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
+        if (installedFrom === 'bundled') return <Chip label='bundled' size='small' variant='outlined' color='secondary' />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
         return <Tooltip title={installedFrom}><Typography variant='caption' color='text.secondary'><Link fontSize='inherit' sx={{ verticalAlign: 'middle', mr: 0.3 }} />{short}</Typography></Tooltip>
     }
@@ -240,9 +241,9 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(daemon.installedFrom)}</Box>
-                                            <Tooltip title={daemon.installedFrom === 'dev' ? 'Dev daemons cannot be uninstalled' : 'Uninstall'}>
+                                            <Tooltip title={daemon.installedFrom === 'dev' ? 'Dev daemons cannot be uninstalled' : daemon.installedFrom === 'bundled' ? 'Bundled daemons cannot be uninstalled' : 'Uninstall'}>
                                                 <span>
-                                                    <IconButton size='small' color='error' disabled={daemon.installedFrom === 'dev' || uninstallingId === daemon.id} onClick={() => uninstall(daemon)}>
+                                                    <IconButton size='small' color='error' disabled={daemon.installedFrom === 'dev' || daemon.installedFrom === 'bundled' || uninstallingId === daemon.id} onClick={() => uninstall(daemon)}>
                                                         {uninstallingId === daemon.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                     </IconButton>
                                                 </span>
@@ -258,9 +259,9 @@ const DaemonDialog: React.FC<IDaemonDialogProps> = (props: IDaemonDialogProps) =
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{daemon.displayName || daemon.name || daemon.id}</Typography>
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(daemon.installedFrom)}</Box>
                                         <Chip label={`v${daemon.version}`} size='small' sx={{ minWidth: 72 }} />
-                                        <Tooltip title={daemon.installedFrom === 'dev' ? 'Dev daemons cannot be uninstalled' : 'Uninstall'}>
+                                        <Tooltip title={daemon.installedFrom === 'dev' ? 'Dev daemons cannot be uninstalled' : daemon.installedFrom === 'bundled' ? 'Bundled daemons cannot be uninstalled' : 'Uninstall'}>
                                             <span>
-                                                <IconButton size='small' color='error' disabled={daemon.installedFrom === 'dev' || uninstallingId === daemon.id} onClick={() => uninstall(daemon)}>
+                                                <IconButton size='small' color='error' disabled={daemon.installedFrom === 'dev' || daemon.installedFrom === 'bundled' || uninstallingId === daemon.id} onClick={() => uninstall(daemon)}>
                                                     {uninstallingId === daemon.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                 </IconButton>
                                             </span>

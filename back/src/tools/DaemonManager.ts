@@ -429,6 +429,9 @@ export class DaemonManager implements IDaemonManager {
 
     async uninstall(id: string): Promise<void> {
         if (this.devDaemons.has(id)) throw new Error(`Daemon '${id}' is a dev daemon and cannot be uninstalled`)
+        const index = ((await this.configMaps.read('kwirth-daemons-index', [])) as IDaemonMeta[]) ?? []
+        const meta = index.find(d => d.id === id)
+        if (meta?.installedFrom === 'bundled') throw new Error(`Daemon '${id}' is bundled and cannot be uninstalled`)
         const daemon = this.daemonInstances.get(id)
         if (daemon) {
             for (const [instanceId, running] of this.runningInstances) {
@@ -442,7 +445,6 @@ export class DaemonManager implements IDaemonManager {
         this.daemonInstances.delete(id)
         this.registeredDaemons.delete(id)
 
-        const index = ((await this.configMaps.read('kwirth-daemons-index', [])) as IDaemonMeta[]) ?? []
         await this.configMaps.write('kwirth-daemons-index', index.filter(d => d.id !== id))
         await this.configMaps.write(`kwirth-daemon-${id}-meta`, null)
         await this.configMaps.write(`kwirth-daemon-${id}-back`, null)
