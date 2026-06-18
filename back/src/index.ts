@@ -1237,13 +1237,19 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             riRouter.use(`/senders`, senderApi.router)
         }
         if (daemonManager) {
+            logInfo(ELogComponent.CORE, `[setUpRoutes] daemonManager present, calling getDaemonRouters`)
             let daemonApi = new DaemonApi(daemonManager, apiKeyApi)
             riRouter.use(`/daemons`, daemonApi.router)
-            for (const { id, router, routerAlias } of daemonManager.getDaemonRouters()) {
+            const daemonRouters = daemonManager.getDaemonRouters()
+            logInfo(ELogComponent.CORE, `[setUpRoutes] getDaemonRouters returned ${daemonRouters.length} router(s)`)
+            for (const { id, router, routerAlias } of daemonRouters) {
                 const mountPath = routerAlias ? `/${routerAlias}` : `/${ri.id}/daemon/${id}`
+                logInfo(ELogComponent.CORE, `[setUpRoutes] mounting daemon '${id}' at '${mountPath}' router type=${typeof router}`)
                 riRouter.use(mountPath, router)
                 logInfo(ELogComponent.CORE, `Daemon '${id}' HTTP router mounted at '${mountPath}'`)
             }
+        } else {
+            logInfo(ELogComponent.CORE, `[setUpRoutes] daemonManager is null/undefined — no daemon routers mounted`)
         }
         if (themeManager) {
             let themeApi = new ThemeApi(themeManager, apiKeyApi)

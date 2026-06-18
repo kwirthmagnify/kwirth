@@ -111,9 +111,16 @@ export class DaemonManager implements IDaemonManager {
     }
 
     getDaemonRouters(): { id: string; router: any; routerAlias?: string }[] {
-        return Array.from(this.daemonInstances.entries())
+        const all = Array.from(this.daemonInstances.entries())
+        logInfo(ELogComponent.CORE, `[getDaemonRouters] daemonInstances.size=${all.length}`)
+        for (const [id, d] of all) {
+            logInfo(ELogComponent.CORE, `[getDaemonRouters] daemon='${id}' providesRouter=${d.providesRouter} router=${typeof d.router} (truthy=${!!d.router}) routerAlias='${d.routerAlias}'`)
+        }
+        const result = all
             .filter(([, d]) => d.providesRouter && d.router)
             .map(([id, d]) => ({ id, router: d.router, routerAlias: d.routerAlias }))
+        logInfo(ELogComponent.CORE, `[getDaemonRouters] returning ${result.length} router(s): ${result.map(r => r.id).join(', ')}`)
+        return result
     }
 
     subscribe(instanceId: string, callback: (event: IDaemonEvent) => void): () => void {
@@ -476,18 +483,26 @@ export class DaemonManager implements IDaemonManager {
 
     private async loadBackDaemon(id: string, backJs: string): Promise<void> {
         const tmpPath = path.join(os.tmpdir(), `kwirth-daemon-${id}-back.js`)
+        logInfo(ELogComponent.CORE, `[loadBackDaemon] writing ${backJs.length} bytes to ${tmpPath}`)
         fs.writeFileSync(tmpPath, backJs)
         try {
             if (require.cache[require.resolve(tmpPath)]) delete require.cache[require.resolve(tmpPath)]
+            logInfo(ELogComponent.CORE, `[loadBackDaemon] requiring ${tmpPath}`)
             const mod = require(tmpPath)
+            logInfo(ELogComponent.CORE, `[loadBackDaemon] mod exports keys: ${Object.keys(mod).join(', ')}`)
             const DaemonClass: TDaemonConstructor = mod.default ?? Object.values(mod).find(v => typeof v === 'function') as TDaemonConstructor
+            logInfo(ELogComponent.CORE, `[loadBackDaemon] DaemonClass found: ${!!DaemonClass} (${typeof DaemonClass})`)
             if (DaemonClass) {
                 this.registeredDaemons.set(id, DaemonClass)
                 const instance = createDaemonInstance(DaemonClass, this.clusterInfo, this.backDaemonObject)
+                logInfo(ELogComponent.CORE, `[loadBackDaemon] instance created: ${!!instance}`)
                 if (instance) {
+                    logInfo(ELogComponent.CORE, `[loadBackDaemon] instance.providesRouter=${(instance as any).providesRouter} instance.router=${typeof (instance as any).router} (truthy=${!!(instance as any).router}) instance.routerAlias='${(instance as any).routerAlias}'`)
                     this.daemonInstances.set(id, instance)
+                    logInfo(ELogComponent.CORE, `[loadBackDaemon] added to daemonInstances, size now ${this.daemonInstances.size}`)
                     await instance.startDaemon()
                     logInfo(ELogComponent.CORE, `Daemon '${id}' backend registered and started`)
+                    logInfo(ELogComponent.CORE, `[loadBackDaemon] post-startDaemon: instance.router=${typeof (instance as any).router} (truthy=${!!(instance as any).router})`)
                 }
             } else {
                 logError(ELogComponent.CORE, `Daemon '${id}' back.js exports no daemon class`)
