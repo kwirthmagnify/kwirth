@@ -230,10 +230,13 @@ export class ProviderManager {
             await this.loadBackProvider(meta.id, backJs, registeredProviders)
 
             try {
-                const tmpModPath = path.join(os.tmpdir(), `kwirth-provider-${meta.id}-back.js`)
-                const mod = require(tmpModPath)
-                if (Array.isArray(mod.schema) && mod.schema.length > 0) {
-                    await this.configMaps.write(`kwirth-provider-${meta.id}-schema`, mod.schema)
+                const { createRequire } = await import('module')
+                const localRequire = createRequire(path.join(process.cwd(), 'package.json'))
+                const schemaMod = { exports: {} as Record<string, unknown> }
+                const wrapFn = new Function('module', 'exports', 'require', '__filename', '__dirname', backJs)
+                wrapFn(schemaMod, schemaMod.exports, localRequire, `kwirth-provider-${meta.id}-back.js`, process.cwd())
+                if (Array.isArray(schemaMod.exports['schema']) && (schemaMod.exports['schema'] as unknown[]).length > 0) {
+                    await this.configMaps.write(`kwirth-provider-${meta.id}-schema`, schemaMod.exports['schema'])
                     meta.hasSchema = true
                 }
             } catch {}
@@ -298,12 +301,13 @@ export class ProviderManager {
     }
 
     private async loadBackProvider(id: string, backJs: string, registeredProviders: Map<string, TProviderConstructor>): Promise<void> {
-        const tmpPath = path.join(os.tmpdir(), `kwirth-provider-${id}-back.js`)
-        fs.writeFileSync(tmpPath, backJs)
         try {
-            if (require.cache[require.resolve(tmpPath)]) delete require.cache[require.resolve(tmpPath)]
-            const providerModule = require(tmpPath)
-            const ProviderClass = providerModule.default ?? Object.values(providerModule).find(v => typeof v === 'function')
+            const { createRequire } = await import('module')
+            const localRequire = createRequire(path.join(process.cwd(), 'package.json'))
+            const mod = { exports: {} as Record<string, unknown> }
+            const wrapFn = new Function('module', 'exports', 'require', '__filename', '__dirname', backJs)
+            wrapFn(mod, mod.exports, localRequire, `kwirth-provider-${id}-back.js`, process.cwd())
+            const ProviderClass = mod.exports['default'] ?? Object.values(mod.exports).find(v => typeof v === 'function')
             if (ProviderClass) {
                 registeredProviders.set(id, ProviderClass as TProviderConstructor)
                 logInfo(ELogComponent.CORE, `Provider '${id}' backend registered`)

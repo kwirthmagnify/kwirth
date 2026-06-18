@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Box, Button, Card, CardContent, Stack, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Card, CardContent, Divider, IconButton, Stack, Tooltip, Typography } from '@mui/material'
 import { AccountTree } from '@mui/icons-material'
-import { IClusterEvent, IHomepageProps } from '@kwirthmagnify/kwirth-common-front'
+import { IClusterEvent, IHomepageProps, ITabSummary, IWorkspaceSummary } from '@kwirthmagnify/kwirth-common-front'
 
 const MATRIX_GREEN = '#00ff41'
 const MATRIX_DIM = '#006620'
@@ -179,6 +179,127 @@ const EventLog: React.FC<{ events: IClusterEvent[] }> = ({ events }) => {
     )
 }
 
+const matrixCardSx = {
+    bgcolor: 'rgba(0,0,0,0.80)',
+    border: `1px solid ${MATRIX_GREEN}`,
+    boxShadow: `0 0 10px ${MATRIX_GLOW}, inset 0 0 10px rgba(0,255,65,0.05)`,
+    color: MATRIX_GREEN,
+    backdropFilter: 'blur(2px)',
+}
+
+const matrixIconBtnSx = {
+    color: MATRIX_DIM,
+    p: 0.25,
+    borderRadius: 0.5,
+    fontSize: '0.6rem',
+    fontFamily: 'monospace',
+    lineHeight: 1,
+    '&:hover': { color: MATRIX_GREEN, bgcolor: 'rgba(0,255,65,0.1)' },
+}
+
+interface QuickColumnProps<T> {
+    label: string
+    items: T[]
+    getKey: (item: T) => string
+    getName: (item: T) => string
+    getSub: (item: T) => string
+    onLaunch: (item: T) => void
+    onDelete: (item: T) => void
+}
+
+function QuickColumn<T>({ label, items, getKey, getName, getSub, onLaunch, onDelete }: QuickColumnProps<T>) {
+    return (
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.5, alignSelf: 'stretch' }}>
+            <Typography sx={{ fontFamily: 'monospace', fontSize: '0.7rem', color: MATRIX_DIM, letterSpacing: 1, mb: 0.25 }}>
+                {'// '}{label}
+            </Typography>
+            <Box sx={{ borderTop: `1px solid ${MATRIX_DIM}`, mb: 0.5 }} />
+            {items.length === 0
+                ? <Typography sx={{ fontFamily: 'monospace', fontSize: '0.65rem', color: MATRIX_DIM, opacity: 0.5 }}>{'// empty'}</Typography>
+                : items.map(item => (
+                    <Stack key={getKey(item)} direction='row' alignItems='center' spacing={0.5} sx={{ minWidth: 0 }}>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography sx={{ fontFamily: 'monospace', fontSize: '0.7rem', color: MATRIX_GREEN, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {getName(item)}
+                            </Typography>
+                            {getSub(item) && (
+                                <Typography sx={{ fontFamily: 'monospace', fontSize: '0.6rem', color: MATRIX_DIM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {getSub(item)}
+                                </Typography>
+                            )}
+                        </Box>
+                        <Tooltip title='Launch'>
+                            <IconButton size='small' sx={matrixIconBtnSx} onClick={() => onLaunch(item)}>▶</IconButton>
+                        </Tooltip>
+                        <Tooltip title='Remove'>
+                            <IconButton size='small' sx={matrixIconBtnSx} onClick={() => onDelete(item)}>✕</IconButton>
+                        </Tooltip>
+                    </Stack>
+                ))
+            }
+        </Box>
+    )
+}
+
+const QuickAccessCard: React.FC<IHomepageProps> = (props) => {
+    const delLastTab = (tab: ITabSummary) => props.onUpdateTabs(props.lastTabs.filter(t => t.name !== tab.name || t.channel !== tab.channel), props.favTabs)
+    const delFavTab  = (tab: ITabSummary) => props.onUpdateTabs(props.lastTabs, props.favTabs.filter(t => t.name !== tab.name || t.channel !== tab.channel))
+    const delLastWs  = (ws: IWorkspaceSummary) => props.onUpdateWorkspaces(props.lastWorkspaces.filter(w => w.name !== ws.name), props.favWorkspaces)
+    const delFavWs   = (ws: IWorkspaceSummary) => props.onUpdateWorkspaces(props.lastWorkspaces, props.favWorkspaces.filter(w => w.name !== ws.name))
+
+    const allEmpty = props.lastTabs.length === 0 && props.favTabs.length === 0 && props.lastWorkspaces.length === 0 && props.favWorkspaces.length === 0
+
+    if (allEmpty) return null
+
+    return (
+        <Card variant='outlined' sx={{ ...matrixCardSx, gridColumn: '1 / -1', minHeight: 220 }}>
+            <CardContent sx={{ py: 1.5, px: 2, height: '100%', boxSizing: 'border-box', '&:last-child': { pb: 1.5 } }}>
+                <Stack direction='row' spacing={2} alignItems='flex-start' sx={{ minWidth: 0 }}>
+                    <QuickColumn<ITabSummary>
+                        label='LAST TABS'
+                        items={props.lastTabs}
+                        getKey={t => `${t.channel}::${t.name}`}
+                        getName={t => t.name}
+                        getSub={t => `${t.channel} · ${t.channelObject.clusterName}`}
+                        onLaunch={t => props.onHomepageSelectTab(t)}
+                        onDelete={delLastTab}
+                    />
+                    <Divider orientation='vertical' flexItem sx={{ borderColor: MATRIX_DIM, opacity: 0.4 }} />
+                    <QuickColumn<ITabSummary>
+                        label='FAV TABS'
+                        items={props.favTabs}
+                        getKey={t => `${t.channel}::${t.name}`}
+                        getName={t => t.name}
+                        getSub={t => `${t.channel} · ${t.channelObject.clusterName}`}
+                        onLaunch={t => props.onHomepageSelectTab(t)}
+                        onDelete={delFavTab}
+                    />
+                    <Divider orientation='vertical' flexItem sx={{ borderColor: MATRIX_DIM, opacity: 0.4 }} />
+                    <QuickColumn<IWorkspaceSummary>
+                        label='LAST WORKSPACES'
+                        items={props.lastWorkspaces}
+                        getKey={w => w.name}
+                        getName={w => w.name}
+                        getSub={w => w.description}
+                        onLaunch={w => props.onSelectWorkspace(w)}
+                        onDelete={delLastWs}
+                    />
+                    <Divider orientation='vertical' flexItem sx={{ borderColor: MATRIX_DIM, opacity: 0.4 }} />
+                    <QuickColumn<IWorkspaceSummary>
+                        label='FAV WORKSPACES'
+                        items={props.favWorkspaces}
+                        getKey={w => w.name}
+                        getName={w => w.name}
+                        getSub={w => w.description}
+                        onLaunch={w => props.onSelectWorkspace(w)}
+                        onDelete={delFavWs}
+                    />
+                </Stack>
+            </CardContent>
+        </Card>
+    )
+}
+
 const Matrix: React.FC<IHomepageProps> = (props) => {
     useEffect(() => {
         const id = 'matrix-keyframes'
@@ -287,6 +408,7 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
                 gap: 4,
                 alignContent: 'start',
             }}>
+                <QuickAccessCard {...props} />
                 {props.clusters.map((cluster: any, idx: number) => {
                     const clusterChannelIds = new Set<string>((cluster.kwirthData?.channels ?? []).map((ch: any) => ch.id))
                     const clusterHasMagnify = hasMagnify && clusterChannelIds.has('magnify')
