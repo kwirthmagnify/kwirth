@@ -210,24 +210,18 @@ interface QuickColumnProps<T> {
 function QuickColumn<T>({ label, items, getKey, getName, getSub, onLaunch, onDelete }: QuickColumnProps<T>) {
     return (
         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.5, alignSelf: 'stretch' }}>
-            <Typography sx={{ fontFamily: 'monospace', fontSize: '0.7rem', color: MATRIX_DIM, letterSpacing: 1, mb: 0.25 }}>
+            <Typography sx={{ fontFamily: 'monospace', fontSize: '0.75rem', color: MATRIX_DIM, letterSpacing: 1, mb: 0.25 }}>
                 {'// '}{label}
             </Typography>
             <Box sx={{ borderTop: `1px solid ${MATRIX_DIM}`, mb: 0.5 }} />
             {items.length === 0
-                ? <Typography sx={{ fontFamily: 'monospace', fontSize: '0.65rem', color: MATRIX_DIM, opacity: 0.5 }}>{'// empty'}</Typography>
+                ? <Typography sx={{ fontFamily: 'monospace', fontSize: '0.7rem', color: MATRIX_DIM, opacity: 0.5 }}>{'// empty'}</Typography>
                 : items.map(item => (
-                    <Stack key={getKey(item)} direction='row' alignItems='center' spacing={0.5} sx={{ minWidth: 0 }}>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography sx={{ fontFamily: 'monospace', fontSize: '0.7rem', color: MATRIX_GREEN, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {getName(item)}
-                            </Typography>
-                            {getSub(item) && (
-                                <Typography sx={{ fontFamily: 'monospace', fontSize: '0.6rem', color: MATRIX_DIM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {getSub(item)}
-                                </Typography>
-                            )}
-                        </Box>
+                    <Stack key={getKey(item)} direction='row' alignItems='center' sx={{ minWidth: 0, gap: 0.5 }}>
+                        <Typography sx={{ fontFamily: 'monospace', fontSize: '0.75rem', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span style={{ color: MATRIX_GREEN }}>{getName(item)}</span>
+                            {getSub(item) && <span style={{ color: MATRIX_DIM, paddingLeft: '20px' }}>{getSub(item)}</span>}
+                        </Typography>
                         <Tooltip title='Launch'>
                             <IconButton size='small' sx={matrixIconBtnSx} onClick={() => onLaunch(item)}>▶</IconButton>
                         </Tooltip>
@@ -252,7 +246,7 @@ const QuickAccessCard: React.FC<IHomepageProps> = (props) => {
     if (allEmpty) return null
 
     return (
-        <Card variant='outlined' sx={{ ...matrixCardSx, gridColumn: '1 / -1', minHeight: 220 }}>
+        <Card variant='outlined' sx={{ ...matrixCardSx, gridColumn: '1 / -1', minHeight: 160 }}>
             <CardContent sx={{ py: 1.5, px: 2, height: '100%', boxSizing: 'border-box', '&:last-child': { pb: 1.5 } }}>
                 <Stack direction='row' spacing={2} alignItems='flex-start' sx={{ minWidth: 0 }}>
                     <QuickColumn<ITabSummary>
