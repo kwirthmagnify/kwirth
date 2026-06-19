@@ -2153,6 +2153,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
             }
         })
 
+        if (process.env.BUILD_TIME) logInfo(ELogComponent.CORE, `Build time: ${process.env.BUILD_TIME}`)
         logInfo(ELogComponent.CORE, 'Listening...')
         httpServer.listen(envPort, () => {
             logInfo(ELogComponent.CORE, `Server is listening on port ${envPort}`)
