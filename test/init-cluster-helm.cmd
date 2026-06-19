@@ -1,6 +1,6 @@
 k3d cluster stop kwirth-helm
 k3d cluster delete kwirth-helm
-k3d cluster create kwirth-helm -p "80:80@loadbalancer" -p "443:443@loadbalancer" -p "8080:8080@loadbalancer" --k3s-arg "--disable=traefik@server:*" -a 1 
+k3d cluster create kwirth-helm -p "80:80@loadbalancer" -p "443:443@loadbalancer" -p "8080:8080@loadbalancer" -p "15514:30514/udp@loadbalancer" --k3s-arg "--disable=traefik@server:*" -a 1 
 
 kubectl config use-context k3d-kwirth-helm
 

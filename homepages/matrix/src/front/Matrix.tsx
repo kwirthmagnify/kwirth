@@ -467,6 +467,7 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
                                         <MiniInfoCard label="vCPUs" value={clusterMetrics[cluster.name].vcpus != null ? String(clusterMetrics[cluster.name].vcpus) : '--'} />
                                         <MiniInfoCard label="RAM" value={clusterMetrics[cluster.name].totalMemoryBytes != null ? `${(clusterMetrics[cluster.name].totalMemoryBytes / 1073741824).toFixed(0)}G` : '--'} />
                                         <MiniInfoCard label="Pods" value={clusterMetrics[cluster.name].pods ? String(clusterMetrics[cluster.name].pods) : '--'} />
+                                        <MiniInfoCard label="Nodes" value={cluster.clusterInfo?.nodes?.length != null ? String(cluster.clusterInfo.nodes.length) : '--'} />
                                     </Stack>
                                 )}
 

@@ -547,7 +547,9 @@ export class MetricsProvider implements IProvider {
             }
         }
 
-        let newSummary = (await this.readCAdvisorSummary(srcNode)).node as IMetricsNodeSummary
+        const rawSummary = await this.readCAdvisorSummary(srcNode)
+        let newSummary = rawSummary.node as IMetricsNodeSummary
+        if (newSummary && rawSummary.pods) newSummary.pods = rawSummary.pods
         if (newSummary && newSummary.network) {
             if (!newSummary.network.txBytes) newSummary.network.txBytes = newSummary.network.interfaces.reduce( (tot,iface) => tot+iface.txBytes, 0 )
             if (!newSummary.network.rxBytes) newSummary.network.rxBytes = newSummary.network.interfaces.reduce( (tot,iface) => tot+iface.rxBytes, 0 )

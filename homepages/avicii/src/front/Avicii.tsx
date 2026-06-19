@@ -59,20 +59,23 @@ const AviciiWordmark: React.FC = () => {
 }
 
 // ── Gold diamond connectivity indicator ──────────────────────────────────────
-const DiamondIndicator: React.FC<{ online: boolean; delay?: string }> = ({ online, delay = '0s' }) => (
-    <Tooltip title={online ? 'Online' : 'Offline'}>
-        <Box sx={{
-            width: 10, height: 10, flexShrink: 0,
-            bgcolor: online ? AV_GOLD : AV_MUTED,
-            transform: 'rotate(45deg)',
-            boxShadow: online ? `0 0 8px 2px ${AV_GOLD_GLOW}` : 'none',
-            transition: 'all 0.3s',
-            animation: online ? 'avicii-pulse 2.8s ease-in-out infinite' : 'none',
-            animationDelay: delay,
-            cursor: 'default',
-        }} />
-    </Tooltip>
-)
+const DiamondIndicator: React.FC<{ online: boolean; delay?: string }> = ({ online, delay = '0s' }) => {
+    const { AV_MUTED } = useAviciiColors()
+    return (
+        <Tooltip title={online ? 'Online' : 'Offline'}>
+            <Box sx={{
+                width: 10, height: 10, flexShrink: 0,
+                bgcolor: online ? AV_GOLD : AV_MUTED,
+                transform: 'rotate(45deg)',
+                boxShadow: online ? `0 0 8px 2px ${AV_GOLD_GLOW}` : 'none',
+                transition: 'all 0.3s',
+                animation: online ? 'avicii-pulse 2.8s ease-in-out infinite' : 'none',
+                animationDelay: delay,
+                cursor: 'default',
+            }} />
+        </Tooltip>
+    )
+}
 
 // ── Metric bar using rhombus fill characters ──────────────────────────────────
 const MetricBar: React.FC<{ label: string; value: number }> = ({ label, value }) => {
