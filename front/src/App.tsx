@@ -814,6 +814,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             else if (type === 'providers') setShowProviderDialog(true)
             else if (type === 'senders') setShowSenderDialog(true)
             else if (type === 'daemons') setShowDaemonDialog(true)
+            else if (type === 'themes') setShowThemeDialog(true)
+            else if (type === 'homepages') setShowHomepageDialog(true)
         }
         if (newTab.channel.requirements.exit) newTab.channelObject.exit = () => {
             setBackendUrl(props.backendUrl)
@@ -1852,11 +1854,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             config: undefined,
             instanceConfig: undefined
         }
-        await populateTabObject(user, 'ELECTRON', 'magnify', srcCluster, EInstanceConfigView.NAMESPACE  , 'default', '', '', '', true, true, magnifySettings)
+        await populateTabObject(user, 'ELECTRON', 'magnify', srcCluster, EInstanceConfigView.CLUSTER, '', '', '', '', true, true, magnifySettings)
         setFirstLogin(false)
         setLogged(true)
     }
-    
+
     const onContextSelectorRemote = async (name:string, url:string, accessString:string) => {
         setBackendUrl(url)
         setAccessString(accessString)

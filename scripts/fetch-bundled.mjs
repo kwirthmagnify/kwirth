@@ -7,7 +7,7 @@
  * Example (Docker):    node scripts/fetch-bundled.mjs kwirth-bundled.json /usr/kwirth/bundled
  */
 
-import { createWriteStream, mkdirSync, existsSync } from 'fs'
+import { createWriteStream, mkdirSync, existsSync, writeFileSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { fileURLToPath } from 'url'
 import { dirname, join, resolve } from 'path'
@@ -47,12 +47,13 @@ for (const type of EXTENSION_TYPES) {
     total += Object.keys(manifest[type] ?? {}).length
 }
 
+mkdirSync(outputDir, { recursive: true })
+
 if (total === 0) {
     console.log('[bundled] No extensions declared in manifest — nothing to download.')
+    writeFileSync(join(outputDir, '.keep'), '')
     process.exit(0)
 }
-
-mkdirSync(outputDir, { recursive: true })
 
 for (const type of EXTENSION_TYPES) {
     const entries = manifest[type] ?? {}

@@ -3,7 +3,7 @@
   "name": "topology",
   "displayName": "Topology",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "website": "https://kwirthmagnify.dev",
   "description": "Topology channel plugin for Kwirth - 3D visualization of Kubernetes cluster topology",
   "icon": "AccountTree",
@@ -13,7 +13,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-front": "^0.5.16"
+    "@kwirthmagnify/kwirth-common-front": "^0.5.17"
   },
   "devDependencies": {
     "@mui/icons-material": "7.1.2",

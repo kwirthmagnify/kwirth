@@ -5,15 +5,13 @@
 </p>
 
 # Kwirth project
-Kwirth is the final implementation of the idea of having a simple way to be able to **manage your Kubernetes cluster** and **receive live-streaming observability data** from your kubernetes clusters (or even another container orchestration systems like Docker or Docker Compose). With Kwirth you will have **the chance to interact** with your clusters. There are options for managing (K9s, Lens, Headlamp) or observing (Prometheus, Grafana...) your clusters, but maybe you just need a simple tool with extremely low footprint requirements
-
-When working with Kubernetes the need for viewing real-time logs, metrics, alerts or whatever observability artifact without the need for storing them is a common scenario.
+Kwirth is the final implementation of the idea of having a simple way to be able to **manage your Kubernetes cluster** and **receive live-streaming observability data** from your kubernetes clusters (or even another container orchestration systems like Docker or Docker Compose). With Kwirth you will have **the chance to interact** with your clusters in a centralized way. There are options for managing (K9s, Lens, Headlamp) or observing (Prometheus, Grafana...) your clusters, but maybe you just need a simple tool with extremely low footprint requirements, and one only tool for all these works.
 
 In addition, **managing Kubernetes with real-time data** improves the quality, effectiveness and efficiency of your decisions, helping you on performing the right action on the right instant. 
 
 **Kwirth is what you need**.
 
-You can go to Kwirth site if you prefer a user-friendly (non-developer) web interface [here](https://kwirthmagnify.github.io/kwirth) for reading Kwirth docs.
+You can go to Kwirth site if you prefer a user-friendly (non-developer) web interface [here](https://kwirthmagnify.dev) for reading Kwirth docs.
 
 ## What you can do with Kwirth
 Basically, Kwirth receives live streams of **observability data** that comes from one or more Kubernetes clusters in real-time, and with the data received you can perform several activities depending on your role and your needs.
