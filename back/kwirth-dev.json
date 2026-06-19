@@ -11,7 +11,8 @@
     "validating": "../providers/validating/dist",
     "kafka": "../providers/kafka/dist",
     "otel": "../providers/otel/dist",
-    "syslog": "../providers/syslog/dist"
+    "syslog": "../providers/syslog/dist",
+    "trivy": "../providers/trivy/dist"
   },
   "senders": {
     "console": "../senders/console/dist",

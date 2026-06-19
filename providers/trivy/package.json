@@ -1,10 +1,10 @@
 {
-  "id": "tick",
-  "name": "@kwirthmagnify/kwirth-provider-tick",
+  "id": "trivy",
+  "name": "@kwirthmagnify/kwirth-provider-trivy",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.4",
-  "displayName": "Tick Provider",
-  "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
+  "version": "0.1.0",
+  "displayName": "Trivy Provider",
+  "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
   "website": "https://kwirthmagnify.dev",
   "type": "module",
   "scripts": {

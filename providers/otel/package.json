@@ -2,7 +2,7 @@
   "id": "otel",
   "name": "@kwirthmagnify/kwirth-provider-otel",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "displayName": "OpenTelemetry Provider",
   "description": "OpenTelemetry provider plugin for Kwirth — receives OTLP/HTTP signals (traces, metrics, logs) and dispatches them grouped by spaces",
   "type": "module",
@@ -11,7 +11,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.13",
+    "@kwirthmagnify/kwirth-common-back": "^0.5.15",
     "express": "^4.19.0"
   },
   "devDependencies": {

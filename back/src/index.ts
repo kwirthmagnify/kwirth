@@ -2153,7 +2153,6 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
             }
         })
 
-        if (process.env.BUILD_TIME) logInfo(ELogComponent.CORE, `Build time: ${process.env.BUILD_TIME}`)
         logInfo(ELogComponent.CORE, 'Listening...')
         httpServer.listen(envPort, () => {
             logInfo(ELogComponent.CORE, `Server is listening on port ${envPort}`)
@@ -2315,6 +2314,8 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 setLogConfig(envAnsiLog)
 logInfo(ELogComponent.CORE, `Kwirth version is ${VERSION}`)
+if (process.env.PRO_VERSION) logInfo(ELogComponent.CORE, `Kwirth Pro build: ${process.env.PRO_VERSION}`)
+if (process.env.BUILD_TIME) logInfo(ELogComponent.CORE, `Build time: ${process.env.BUILD_TIME}`)
 logInfo(ELogComponent.CORE, `Kwirth started at ${new Date().toISOString()}`)
 logInfo(ELogComponent.CORE, 'Kwirth running environment:')
 logInfo(ELogComponent.CORE, runningEnv)

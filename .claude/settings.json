@@ -214,7 +214,8 @@
       "PowerShell(node --check c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\tools\\\\create-kwirth-daemon.mjs 2>&1)",
       "PowerShell(node --check tools/create-kwirth-theme.mjs 2>&1)",
       "PowerShell(node --check tools/create-kwirth-homepage.mjs 2>&1)",
-      "Bash(xargs grep -l \"available\\\\|Available\\\\|install\\\\|Install\")"
+      "Bash(xargs grep -l \"available\\\\|Available\\\\|install\\\\|Install\")",
+      "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\providers\\\\tick -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

@@ -18,6 +18,7 @@ export interface IProvider {
     readonly requiresApiKeyApi: boolean
     addSubscriber(c: IProviderSubscriber, data: any): Promise<void>
     removeSubscriber(c: IProviderSubscriber): Promise<void>
+    updateSubscription?(c: IProviderSubscriber, data: any): Promise<void>
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
     router: any
