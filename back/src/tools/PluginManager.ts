@@ -349,6 +349,24 @@ export class PluginManager {
                 continue
             }
             const filePath = path.join(dir, file)
+            let _bvVersion: string | undefined
+            try {
+                const _bvTmp = path.join(os.tmpdir(), `kwirth-bv-${id}`)
+                fs.mkdirSync(_bvTmp, { recursive: true })
+                await tar.x({ file: filePath, cwd: _bvTmp, filter: (p: string) => p.endsWith('package.json') })
+                const _bvPkg = [path.join(_bvTmp, 'package.json'), path.join(_bvTmp, 'package', 'package.json')].find(p => fs.existsSync(p))
+                if (_bvPkg) _bvVersion = JSON.parse(fs.readFileSync(_bvPkg, 'utf-8')).version
+                fs.rmSync(_bvTmp, { recursive: true, force: true })
+            } catch {}
+            const _bvExisting = this.cachedIndex.find(p => p.id === id)
+            if (_bvExisting && _bvVersion && _bvExisting.version === _bvVersion) {
+                logInfo(ELogComponent.CORE, `Bundled plugin '${id}' v${_bvVersion} up to date — skipping`)
+                continue
+            }
+            if (_bvExisting) {
+                logInfo(ELogComponent.CORE, `Bundled plugin '${id}' updating v${_bvExisting.version} → v${_bvVersion ?? '?'}`)
+                this.installedIds = this.installedIds.filter(i => i !== id)
+            }
             try {
                 const meta = await this.install(filePath, registeredChannels, 'bundled')
                 logInfo(ELogComponent.CORE, `Bundled plugin '${meta.id}' v${meta.version} installed`)
