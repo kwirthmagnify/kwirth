@@ -161,10 +161,19 @@ export interface IHomepageProps {
     isExtensionLicensed?: (type: string, id: string) => boolean
     getClusterEvents?: (clusterName: string, limit?: number) => Promise<IClusterEvent[]>
     getClusterMetrics?: (clusterName: string) => Promise<{ cpu: number; memory: number; vcpus: number; totalMemoryBytes: number; pods: number; maxPods: number } | null>
+    config?: Record<string, any>
+}
+
+export interface IHomepageSetupProps {
+    config: Record<string, any>
+    onSave: (config: Record<string, any>) => void
+    onClose: () => void
 }
 
 export interface IHomepageExtension {
     homepageId: string
     displayName: string
     Component: FC<IHomepageProps>
+    SetupDialog?: FC<IHomepageSetupProps>
+    defaultConfig?: Record<string, any>
 }

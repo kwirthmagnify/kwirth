@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Home, Link, Refresh, ViewList, ViewModule } from '../tools/KwirthIcons'
+import { CheckCircle, Delete, Download, FolderOpen, Home, Link, Refresh, Settings, ViewList, ViewModule } from '../tools/KwirthIcons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
@@ -33,7 +33,7 @@ interface IInstalledHomepage {
 interface IHomepageDialogProps {
     onClose: () => void
     activeHomepageId: string | undefined
-    onActivate: (id: string | undefined) => void
+    onActivate: (id: string | undefined, config: Record<string, any>) => void
     onHomepageLoad: (id: string) => void
     onHomepageUnload: (id: string) => void
 }
@@ -56,7 +56,29 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
     const [installedFilter, setInstalledFilter] = useState('')
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
+    const [setupHomepageId, setSetupHomepageId] = useState<string | undefined>()
+    const [setupConfig, setSetupConfig] = useState<Record<string, any>>({})
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const getExt = (id: string) => (window as any).__kwirth_homepages__?.[id]
+
+    const handleActivate = (id: string) => {
+        const ext = getExt(id)
+        if (ext?.SetupDialog) {
+            const saved = localStorage.getItem(`kwirth.homepage.config.${id}`)
+            setSetupConfig(saved ? JSON.parse(saved) : (ext.defaultConfig ?? {}))
+            setSetupHomepageId(id)
+        } else {
+            props.onActivate(id, ext?.defaultConfig ?? {})
+        }
+    }
+
+    const openReconfigure = (id: string) => {
+        const ext = getExt(id)
+        const saved = localStorage.getItem(`kwirth.homepage.config.${id}`)
+        setSetupConfig(saved ? JSON.parse(saved) : (ext?.defaultConfig ?? {}))
+        setSetupHomepageId(id)
+    }
 
     const groupedAvailable: Record<string, IHomepageManifestEntry[]> = available.reduce((acc, p) => {
         if (!acc[p.id]) acc[p.id] = []
@@ -128,7 +150,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
-            if (props.activeHomepageId === hp.id) props.onActivate(undefined)
+            if (props.activeHomepageId === hp.id) props.onActivate(undefined, {})
             props.onHomepageUnload(hp.id)
             await loadInstalled()
         } catch (err) {
@@ -254,6 +276,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
     const filteredInstalled = installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name).toLowerCase().includes(installedFilter.toLowerCase()))
 
     return (
+        <>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
             <DialogTitle>Manage homepages</DialogTitle>
             <DialogContent>
@@ -281,9 +304,16 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                         action={
                                             <Stack direction='row' alignItems='center' spacing={0.5}>
                                                 {isActive(hp.id)
-                                                    ? <Button size='small' variant='outlined' sx={{ minWidth: 100 }} onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>
-                                                    : <Button size='small' variant='contained' sx={{ minWidth: 100 }} onClick={() => props.onActivate(hp.id)}>ACTIVATE</Button>
+                                                    ? <Button size='small' variant='outlined' sx={{ minWidth: 100 }} onClick={() => props.onActivate(undefined, {})}>DEACTIVATE</Button>
+                                                    : <Button size='small' variant='contained' sx={{ minWidth: 100 }} onClick={() => handleActivate(hp.id)}>ACTIVATE</Button>
                                                 }
+                                                {isActive(hp.id) && getExt(hp.id)?.SetupDialog && (
+                                                    <Tooltip title='Configure'>
+                                                        <IconButton size='small' onClick={() => openReconfigure(hp.id)}>
+                                                            <Settings fontSize='small' />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                )}
                                                 <Tooltip title={hp.installedFrom === 'dev' ? 'Dev homepages cannot be uninstalled' : 'Uninstall'}>
                                                     <span>
                                                         <IconButton size='small' color='error' disabled={hp.installedFrom === 'dev' || uninstallingId === hp.id} onClick={() => uninstall(hp)}>
@@ -307,10 +337,19 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                     <Box key={`${hp.id}-version`} sx={{ py: 1 }}><Chip label={`v${hp.version}`} size='small' sx={{ minWidth: 72 }} /></Box>,
                                     <Box key={`${hp.id}-source`} sx={{ py: 1 }}>{resolveSource(hp.installedFrom)}</Box>,
                                     <Box key={`${hp.id}-btn`} sx={{ py: 1 }}>
-                                        {isActive(hp.id)
-                                            ? <Button size='small' variant='outlined' sx={{ minWidth: 100 }} onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>
-                                            : <Button size='small' variant='contained' sx={{ minWidth: 100 }} onClick={() => { props.onActivate(hp.id) }}>ACTIVATE</Button>
-                                        }
+                                        <Stack direction='row' alignItems='center' spacing={0.5}>
+                                            {isActive(hp.id)
+                                                ? <Button size='small' variant='outlined' sx={{ minWidth: 100 }} onClick={() => props.onActivate(undefined, {})}>DEACTIVATE</Button>
+                                                : <Button size='small' variant='contained' sx={{ minWidth: 100 }} onClick={() => handleActivate(hp.id)}>ACTIVATE</Button>
+                                            }
+                                            {isActive(hp.id) && getExt(hp.id)?.SetupDialog && (
+                                                <Tooltip title='Configure'>
+                                                    <IconButton size='small' onClick={() => openReconfigure(hp.id)}>
+                                                        <Settings fontSize='small' />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            )}
+                                        </Stack>
                                     </Box>,
                                     <Box key={`${hp.id}-del`} sx={{ py: 1 }}>
                                         <Tooltip title={hp.installedFrom === 'dev' ? 'Dev homepages cannot be uninstalled' : 'Uninstall'}>
@@ -439,6 +478,18 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                 <Button onClick={props.onClose}>CLOSE</Button>
             </DialogActions>
         </Dialog>
+
+        {setupHomepageId && (() => {
+            const ext = getExt(setupHomepageId)
+            if (!ext?.SetupDialog) return null
+            const SetupComp = ext.SetupDialog
+            return <SetupComp
+                config={setupConfig}
+                onSave={(cfg: Record<string, any>) => { props.onActivate(setupHomepageId, cfg); setSetupHomepageId(undefined) }}
+                onClose={() => setSetupHomepageId(undefined)}
+            />
+        })()}
+        </>
     )
 }
 

@@ -26,8 +26,6 @@
     "teams": "../senders/teams/dist"
   },
   "homepages": {
-    "clusterized": "../homepages/clusterized/dist",
-    "matrix": "../homepages/matrix/dist"
   },
   "themes": {
   },

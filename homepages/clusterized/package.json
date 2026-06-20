@@ -3,7 +3,7 @@
   "name": "@kwirthmagnify/kwirth-homepage-clusterized",
   "displayName": "Clusterized",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.1",
+  "version": "0.1.4",
   "description": "Cluster-centric homepage for Kwirth — one card per cluster with status indicator and quick Magnify access",
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
     "watch": "node watch.mjs"
   },
   "devDependencies": {
-    "@kwirthmagnify/kwirth-common-front": "^0.5.15",
+    "@kwirthmagnify/kwirth-common-front": "^0.5.18",
     "@mui/icons-material": "7.1.2",
     "@mui/material": "7.1.2",
     "@types/react": "^18.3.0",

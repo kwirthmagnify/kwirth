@@ -22,7 +22,9 @@ const useAviciiColors = () => {
 const POLL_MS      = 10000
 const EVENTS_LIMIT = 25
 
-const TRIANGLE_BG = `url("data:image/svg+xml,%3Csvg width='160' height='60' viewBox='0 0 160 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg transform='translate(15,15)' opacity='0.045'%3E%3Cg transform='translate(0,30) scale(0.1,-0.1)' fill='%23c9a227' stroke='none'%3E%3Cpath d='M132 167 l-132 -132 0 -18 0 -17 17 0 18 0 112 112 113 113 0 -113 0 -112 25 0 25 0 0 150 0 150 -23 0 -22 0 -133 -133z'/%3E%3Cpath d='M360 150 l0 -150 38 0 37 0 113 113 112 112 0 35 0 35 -125 -125 -125 -125 0 128 0 127 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M710 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M1150 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M1250 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3C/g%3E%3Cpath d='M106.64,17.40 A12.0,12.0 0 1 1 106.88,12.83' fill='none' stroke='%23c9a227' stroke-width='5' stroke-linecap='butt'/%3E%3C/g%3E%3C/svg%3E")`
+const _LP = `%3Cg transform='translate(0,30) scale(0.1,-0.1)' fill='%23c9a227' stroke='none'%3E%3Cpath d='M132 167 l-132 -132 0 -18 0 -17 17 0 18 0 112 112 113 113 0 -113 0 -112 25 0 25 0 0 150 0 150 -23 0 -22 0 -133 -133z'/%3E%3Cpath d='M360 150 l0 -150 38 0 37 0 113 113 112 112 0 35 0 35 -125 -125 -125 -125 0 128 0 127 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M710 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M1150 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3Cpath d='M1250 150 l0 -150 25 0 25 0 0 150 0 150 -25 0 -25 0 0 -150z'/%3E%3C/g%3E%3Cpath d='M106.64,17.40 A12.0,12.0 0 1 1 106.88,12.83' fill='none' stroke='%23c9a227' stroke-width='5' stroke-linecap='butt'/%3E`
+const _LG = (x: number, y: number) => `%3Cg transform='translate(${x},${y})' opacity='0.045'%3E${_LP}%3C/g%3E`
+const TRIANGLE_BG = `url("data:image/svg+xml,%3Csvg width='320' height='200' viewBox='0 0 320 200' xmlns='http://www.w3.org/2000/svg'%3E${_LG(20,18)}${_LG(185,95)}${_LG(80,158)}${_LG(265,48)}%3C/svg%3E")`
 
 // ── Logo: Avicii two-triangle mark ───────────────────────────────────────────
 const AviciiLogo: React.FC<{ size?: number }> = ({ size = 48 }) => {
@@ -186,7 +188,9 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
     const topologyClass = props.frontChannels.get('topology')
     const topologyIcon  = topologyClass ? new topologyClass().getChannelIcon() : <AccountTree />
 
-    const cardHeight = containerHeight > 0 ? Math.floor((containerHeight - 72 - 24 * 2 - 24) / 2) - 4 : 280
+    const showMetricBars    = props.config?.showMetricBars    ?? true
+    const showResourceCards = props.config?.showResourceCards ?? true
+    const showChannelIcons  = props.config?.showChannelIcons  ?? true
 
     const avBtnSx = {
         borderRadius: 0,
@@ -206,7 +210,7 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
         <Box ref={containerRef} sx={{
             position: 'relative', width: '100%', height: `${containerHeight}px`,
             overflow: 'hidden', bgcolor: AV_BG,
-            backgroundImage: TRIANGLE_BG, backgroundSize: '160px 60px',
+            backgroundImage: TRIANGLE_BG, backgroundSize: '320px 200px',
         }}>
             <Box sx={{ position: 'absolute', inset: 0, overflowY: 'auto' }}>
 
@@ -230,7 +234,6 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
                                 bgcolor: AV_CARD, borderRadius: 0,
                                 border: `1px solid ${AV_GOLD_DIM}`,
                                 borderTop: `2px solid ${AV_GOLD}`,
-                                height: cardHeight, overflow: 'hidden',
                                 backgroundImage: 'none',
                                 position: 'relative',
                                 '&::after': {
@@ -240,11 +243,11 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
                                     borderColor: `transparent ${AV_GOLD} transparent transparent`,
                                 },
                             }}>
-                                <CardContent sx={{ height: '100%', p: '12px !important' }}>
-                                    <Stack direction="column" justifyContent="space-between" sx={{ height: '100%' }}>
+                                <CardContent sx={{ p: '12px !important' }}>
+                                    <Stack direction="column" spacing={1.25}>
 
-                                        {/* Top: name, url, bars */}
-                                        <Stack direction="column" spacing={0.75}>
+                                        {/* Name + URL */}
+                                        <Stack direction="column" spacing={0.5}>
                                             <Stack direction="row" alignItems="center" spacing={1}>
                                                 <Typography sx={{
                                                     fontFamily: AV_FONT, fontWeight: 700, fontSize: '0.9rem',
@@ -257,38 +260,44 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
                                                 fontFamily: AV_FONT, fontSize: '0.7rem', color: AV_MUTED,
                                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                             }}>{cluster.url}</Typography>
-                                            {metrics && (
-                                                <Stack direction="column" spacing={0.25}>
-                                                    <MetricBar label="CPU" value={metrics.cpu} />
-                                                    <MetricBar label="MEM" value={metrics.memory} />
-                                                    <MetricBar label="POD" value={metrics.maxPods > 0 ? (metrics.pods / metrics.maxPods) * 100 : 0} />
-                                                </Stack>
-                                            )}
                                         </Stack>
 
-                                        {/* Middle: minicards */}
-                                        {metrics && (
-                                            <Stack direction="row" spacing={1} sx={{ justifyContent: 'center' }}>
-                                                <MiniCard label="vCPUs" value={metrics.vcpus  != null ? String(metrics.vcpus) : '--'} />
-                                                <MiniCard label="RAM"   value={metrics.totalMemoryBytes != null ? `${(metrics.totalMemoryBytes / 1073741824).toFixed(0)}G` : '--'} />
-                                                <MiniCard label="Pods"  value={metrics.pods ? String(metrics.pods) : '--'} />
+                                        {/* Metric bars */}
+                                        {metrics && showMetricBars && (
+                                            <Stack direction="column" spacing={0.25}>
+                                                <MetricBar label="CPU" value={metrics.cpu} />
+                                                <MetricBar label="MEM" value={metrics.memory} />
+                                                <MetricBar label="POD" value={metrics.maxPods > 0 ? (metrics.pods / metrics.maxPods) * 100 : 0} />
                                             </Stack>
                                         )}
 
-                                        {/* Bottom: icons left, EXPLORE button right */}
-                                        <Stack direction="row" alignItems="center" justifyContent="space-between">
-                                            <Stack direction="row" spacing={0.5} alignItems="center">
-                                                {(cluster.kwirthData?.channels ?? []).map((ch: any) => {
-                                                    const cls = props.frontChannels.get(ch.id)
-                                                    if (!cls) return null
-                                                    const icon = new cls().getChannelIcon()
-                                                    return (
-                                                        <Tooltip key={ch.id} title={ch.id}>
-                                                            {React.cloneElement(icon, { fontSize: 'small', sx: { color: AV_GOLD, opacity: 0.55 } })}
-                                                        </Tooltip>
-                                                    )
-                                                })}
+                                        {/* Resource counters */}
+                                        {metrics && showResourceCards && (
+                                            <Stack direction="row" spacing={1} sx={{ justifyContent: 'center' }}>
+                                                <MiniCard label="vCPUs"  value={metrics.vcpus != null ? String(metrics.vcpus) : '--'} />
+                                                <MiniCard label="RAM"    value={metrics.totalMemoryBytes != null ? `${(metrics.totalMemoryBytes / 1073741824).toFixed(0)}G` : '--'} />
+                                                <MiniCard label="Pods"   value={metrics.pods ? String(metrics.pods) : '--'} />
+                                                <MiniCard label="Nodes"  value={cluster.clusterInfo?.nodes?.length != null ? String(cluster.clusterInfo.nodes.length) : '--'} />
                                             </Stack>
+                                        )}
+
+                                        {/* Channel icons + buttons */}
+                                        <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                            {showChannelIcons
+                                                ? <Stack direction="row" spacing={0.5} alignItems="center">
+                                                    {(cluster.kwirthData?.channels ?? []).map((ch: any) => {
+                                                        const cls = props.frontChannels.get(ch.id)
+                                                        if (!cls) return null
+                                                        const icon = new cls().getChannelIcon()
+                                                        return (
+                                                            <Tooltip key={ch.id} title={ch.id}>
+                                                                {React.cloneElement(icon, { fontSize: 'small', sx: { color: AV_GOLD, opacity: 0.55 } })}
+                                                            </Tooltip>
+                                                        )
+                                                    })}
+                                                  </Stack>
+                                                : <Box />
+                                            }
                                             <Button variant="outlined" size="small" disabled={!clusterHasMagnify}
                                                 startIcon={magnifyIcon} onClick={() => launchMagnify(cluster.name)} sx={avBtnSx}>
                                                 EXPLORE

@@ -238,6 +238,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showThemeDialog, setShowThemeDialog]=useState<boolean>(false)
     const [showHomepageDialog, setShowHomepageDialog]=useState<boolean>(false)
     const [activeHomepageId, setActiveHomepageId]=useState<string|undefined>(undefined)
+    const [homepageConfig, setHomepageConfig]=useState<Record<string, any>>({})
     const homepageIdMounted = useRef(false)
     const themeNameMounted = useRef(false)
 
@@ -252,6 +253,24 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (activeHomepageId) localStorage.setItem('kwirth.homepage', activeHomepageId)
         else localStorage.removeItem('kwirth.homepage')
     }, [activeHomepageId])
+    useEffect(() => {
+        if (activeHomepageId) {
+            const saved = localStorage.getItem(`kwirth.homepage.config.${activeHomepageId}`)
+            setHomepageConfig(saved ? JSON.parse(saved) : {})
+        } else {
+            setHomepageConfig({})
+        }
+    }, [activeHomepageId])
+
+    const onHomepageActivate = (id: string | undefined, config: Record<string, any>) => {
+        if (id) {
+            localStorage.setItem(`kwirth.homepage.config.${id}`, JSON.stringify(config))
+            setHomepageConfig(config)
+        } else {
+            setHomepageConfig({})
+        }
+        setActiveHomepageId(id)
+    }
 
     const [initialMessage, setInitialMessage]=useState<string>('')
 
@@ -2042,7 +2061,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                         return { cpu: data.cpuUsage as number, memory: data.memoryUsage as number, vcpus: data.vcpus as number, totalMemoryBytes: data.memory as number, pods: data.pods as number, maxPods: data.maxPods as number }
                                     } catch { return null }
                                 }
-                                const homepageProps = { lastTabs, favTabs, lastWorkspaces, favWorkspaces, onHomepageSelectTab, onRestoreTabParameters: onHomepageRestoreParameters, onSelectWorkspace: onHomepageSelectWorkspace, onRestoreWorkspace: onHomepageRestoreWorkspace, frontChannels, onUpdateTabs: onHomepageUpdateTabs, cluster: clusters.find(c => c.name === selectedClusterName), clusters, onUpdateWorkspaces: onHomepageUpdateWorkspaces, dataCpu: dataCpu.current, dataMemory: dataMemory.current, dataNetwork: dataNetwork.current, isExtensionLicensed, getClusterEvents, getClusterMetrics }
+                                const homepageProps = { lastTabs, favTabs, lastWorkspaces, favWorkspaces, onHomepageSelectTab, onRestoreTabParameters: onHomepageRestoreParameters, onSelectWorkspace: onHomepageSelectWorkspace, onRestoreWorkspace: onHomepageRestoreWorkspace, frontChannels, onUpdateTabs: onHomepageUpdateTabs, cluster: clusters.find(c => c.name === selectedClusterName), clusters, onUpdateWorkspaces: onHomepageUpdateWorkspaces, dataCpu: dataCpu.current, dataMemory: dataMemory.current, dataNetwork: dataNetwork.current, isExtensionLicensed, getClusterEvents, getClusterMetrics, config: homepageConfig }
                                 const ext: IHomepageExtension | undefined = activeHomepageId ? window.__kwirth_homepages__?.[activeHomepageId] : undefined
                                 const pendingSaved = !activeHomepageId && !!localStorage.getItem('kwirth.homepage')
                                 return ext ? <ext.Component {...homepageProps} /> : pendingSaved ? null : <Homepage {...homepageProps} />
@@ -2064,7 +2083,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showSenderDialog && <SenderDialog onClose={() => setShowSenderDialog(false)} /> }
                 { showDaemonDialog && <DaemonDialog onClose={() => setShowDaemonDialog(false)} /> }
                 { showThemeDialog && <ThemeDialog onClose={() => setShowThemeDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} /> }
-                { showHomepageDialog && <HomepageDialog onClose={() => setShowHomepageDialog(false)} activeHomepageId={activeHomepageId} onActivate={setActiveHomepageId} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} /> }
+                { showHomepageDialog && <HomepageDialog onClose={() => setShowHomepageDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }

@@ -9,7 +9,7 @@ const MATRIX_GLOW = 'rgba(0,255,65,0.3)'
 const EVENTS_LIMIT = 25
 const POLL_INTERVAL_MS = 10000
 
-const MatrixRain: React.FC = () => {
+const MatrixRain: React.FC<{ speed: number; activeLines: number }> = ({ speed, activeLines }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
     useEffect(() => {
@@ -21,15 +21,34 @@ const MatrixRain: React.FC = () => {
         const fontSize = 22
         const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         let drops: number[] = []
+        let active: boolean[] = []
         let animId: number
         let frame = 0
-        const SPEED = 12
+
+        const activateDrops = (cols: number, h: number, count: number) => {
+            const indices = Array.from({ length: cols }, (_, i) => i)
+            for (let i = indices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [indices[i], indices[j]] = [indices[j], indices[i]]
+            }
+            const n = Math.min(count, cols)
+            indices.slice(0, n).forEach(i => {
+                active[i] = true
+                drops[i] = -Math.floor(Math.random() * (h / fontSize) * 2)
+            })
+            indices.slice(n).forEach(i => {
+                active[i] = false
+                drops[i] = -99999
+            })
+        }
 
         const resize = (w: number, h: number) => {
             canvas.width = w
             canvas.height = h
             const cols = Math.floor(w / fontSize)
-            drops = Array.from({ length: cols }, () => -Math.floor(Math.random() * (h / fontSize) * 4))
+            drops = new Array(cols).fill(0)
+            active = new Array(cols).fill(false)
+            activateDrops(cols, h, activeLines)
         }
 
         const draw = () => {
@@ -37,8 +56,9 @@ const MatrixRain: React.FC = () => {
             ctx.fillStyle = 'rgba(0,0,0,0.02)'
             ctx.fillRect(0, 0, canvas.width, canvas.height)
             ctx.font = `${fontSize}px monospace`
-            if (frame % SPEED === 0) {
+            if (frame % speed === 0) {
                 for (let i = 0; i < drops.length; i++) {
+                    if (!active[i]) continue
                     if (drops[i] > 0) {
                         const bright = Math.random() > 0.97
                         ctx.fillStyle = bright ? '#ccffcc' : MATRIX_GREEN
@@ -64,7 +84,7 @@ const MatrixRain: React.FC = () => {
             cancelAnimationFrame(animId)
             observer.disconnect()
         }
-    }, [])
+    }, [speed, activeLines])
 
     return (
         <canvas
@@ -370,6 +390,11 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
         })
     }
 
+    const showQuickAccess = props.config?.showQuickAccess ?? true
+    const showRain        = props.config?.showRain ?? true
+    const rainSpeed       = props.config?.rainSpeed ?? 12
+    const rainActiveLines = props.config?.rainActiveLines ?? 50
+
     const hasMagnify = props.frontChannels.has('magnify')
     const hasTopology = props.frontChannels.has('topology')
 
@@ -390,7 +415,7 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
 
     return (
         <Box ref={containerRef} sx={{ position: 'relative', width: '100%', height: `${containerHeight}px`, overflow: 'hidden', bgcolor: '#000' }}>
-            <MatrixRain />
+            {showRain && <MatrixRain speed={rainSpeed} activeLines={rainActiveLines} />}
             <Box sx={{
                 position: 'relative',
                 zIndex: 1,
@@ -402,7 +427,7 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
                 gap: 4,
                 alignContent: 'start',
             }}>
-                <QuickAccessCard {...props} />
+                {showQuickAccess && <QuickAccessCard {...props} />}
                 {props.clusters.map((cluster: any, idx: number) => {
                     const clusterChannelIds = new Set<string>((cluster.kwirthData?.channels ?? []).map((ch: any) => ch.id))
                     const clusterHasMagnify = hasMagnify && clusterChannelIds.has('magnify')
