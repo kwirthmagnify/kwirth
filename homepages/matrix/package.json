@@ -3,7 +3,7 @@
   "name": "@kwirthmagnify/kwirth-homepage-matrix",
   "displayName": "Matrix",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Matrix-style cluster overview homepage for Kwirth",
   "type": "module",
   "scripts": {

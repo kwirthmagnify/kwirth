@@ -217,7 +217,10 @@
       "Bash(xargs grep -l \"available\\\\|Available\\\\|install\\\\|Install\")",
       "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\providers\\\\tick -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName)",
       "Bash(node -p \"require\\('./package.json'\\).version\")",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "PowerShell(npm view @kwirthmagnify/kwirth-homepage-matrix version 2>&1)",
+      "PowerShell(npm view @kwirthmagnify/kwirth-theme-matrix version 2>&1)",
+      "PowerShell(git -C c:\\\\github\\\\aisdkvercel\\\\kwirth log --oneline -10 -- homepages/matrix/ themes/matrix/)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

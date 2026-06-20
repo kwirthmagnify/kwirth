@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { CheckCircle, Delete, Download, FolderOpen, Home, Link, Refresh, ViewList, ViewModule } from '../tools/KwirthIcons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
@@ -54,7 +54,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
     const [installingFile, setInstallingFile] = useState(false)
     const [filterText, setFilterText] = useState('')
     const [installedFilter, setInstalledFilter] = useState('')
-    const [selectedVersions, _setSelectedVersions] = useState<Record<string, string>>({})
+    const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -209,14 +209,21 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
         return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.14 : 0.26}) 100%)`
     }
 
-    const HomepageCard = ({ id, displayName, description, badge, source, action }: { id: string; displayName: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; action: React.ReactNode }) => (
+    const HomepageCard = ({ id, displayName, version, versions, onVersionChange, description, badge, source, action }: { id: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; action: React.ReactNode }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: homepageGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Home /></Box>
                 <Box flex={1} minWidth={0}>
-                    <Stack direction='row' alignItems='center' spacing={0.5}>
+                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName}</Typography>
                         {badge}
+                        {versions && versions.length > 1
+                            ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
+                                sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                              </Select>
+                            : <Chip label={`v${version}`} size='small' sx={{ minWidth: 72 }} />
+                        }
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
                 </Box>
@@ -267,6 +274,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                         key={hp.id}
                                         id={hp.id}
                                         displayName={hp.displayName || hp.name}
+                                        version={hp.version}
                                         description={hp.description}
                                         badge={isActive(hp.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} /> : undefined}
                                         source={resolveSource(hp.installedFrom)}
@@ -288,7 +296,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                     />
                                 ))}
                               </Box>
-                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                 {filteredInstalled.flatMap((hp, i, arr) => [
                                     <Box key={`${hp.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Home fontSize='small' /></Box>,
                                     <Box key={`${hp.id}-name`} sx={{ py: 1, minWidth: 0 }}>
@@ -296,6 +304,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                         <Typography variant='caption' color='text.secondary'>{hp.description}</Typography>
                                     </Box>,
                                     <Box key={`${hp.id}-active`} sx={{ py: 1 }}>{isActive(hp.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} />}</Box>,
+                                    <Box key={`${hp.id}-version`} sx={{ py: 1 }}><Chip label={`v${hp.version}`} size='small' sx={{ minWidth: 72 }} /></Box>,
                                     <Box key={`${hp.id}-source`} sx={{ py: 1 }}>{resolveSource(hp.installedFrom)}</Box>,
                                     <Box key={`${hp.id}-btn`} sx={{ py: 1 }}>
                                         {isActive(hp.id)
@@ -358,12 +367,17 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                         viewMode === 'card'
                             ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                                 {filteredIds.map(id => {
+                                    const group = groupedAvailable[id]
                                     const t = getSelectedEntry(id)
+                                    const versions = group.map(p => p.version)
                                     return (
                                         <HomepageCard
                                             key={id}
                                             id={id}
                                             displayName={t.displayName || t.name}
+                                            version={t.version}
+                                            versions={versions}
+                                            onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [id]: v }))}
                                             description={t.description}
                                             badge={isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
                                             action={
@@ -379,9 +393,11 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                     )
                                 })}
                               </Box>
-                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                 {filteredIds.flatMap((id, i, arr) => {
+                                    const group = groupedAvailable[id]
                                     const t = getSelectedEntry(id)
+                                    const versions = group.map(p => p.version)
                                     return [
                                         <Box key={`${id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Home fontSize='small' /></Box>,
                                         <Box key={`${id}-name`} sx={{ py: 1, minWidth: 0 }}>
@@ -392,6 +408,14 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                             {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' />
                                             : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />
                                             : null}
+                                        </Box>,
+                                        <Box key={`${id}-version`} sx={{ py: 1 }}>
+                                            {versions.length > 1
+                                                ? <Select size='small' value={t.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                    {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                                                  </Select>
+                                                : <Chip label={`v${t.version}`} size='small' sx={{ minWidth: 72 }} />
+                                            }
                                         </Box>,
                                         <Box key={`${id}-install`} sx={{ py: 1 }}>
                                             <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
