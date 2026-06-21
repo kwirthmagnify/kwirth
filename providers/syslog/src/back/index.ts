@@ -1,5 +1,5 @@
 import { IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
-import { Router, Request, Response } from 'express'
+import { Router } from 'express'
 import dgram from 'dgram'
 import net from 'net'
 import { ISyslogConfig, ISyslogMessage } from '../types/ISyslogMessage'
@@ -23,11 +23,6 @@ export class SyslogProvider implements IProvider {
 
     constructor(_clusterInfo: unknown, _kwirthData: unknown) {
         this.router = Router()
-        this.router.get('/config', (_req: Request, res: Response) => res.json(this.config))
-        this.router.post('/config', (req: Request, res: Response) => {
-            this.config = { ...this.config, ...req.body }
-            res.json({ ok: true })
-        })
     }
 
     addSubscriber = async (c: IProviderSubscriber, _data: unknown): Promise<void> => {

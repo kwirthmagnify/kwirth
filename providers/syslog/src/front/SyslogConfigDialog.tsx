@@ -29,7 +29,7 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
 
     useEffect(() => {
         const headers = { Authorization: accessString ? `Bearer ${accessString}` : '', 'X-Kwirth-App': 'true' }
-        fetch(`${backendUrl}/syslog/config`, { headers })
+        fetch(`${backendUrl}/providers/syslog/config`, { headers })
             .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
             .then(data => setConfig(data))
             .catch(err => setError(`Failed to load config: ${err}`))
@@ -41,11 +41,8 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
         setError(undefined)
         try {
             const body = JSON.stringify(config)
-            const [res1, res2] = await Promise.all([
-                fetch(`${backendUrl}/syslog/config`, { method: 'POST', headers: authHeaders(accessString), body }),
-                fetch(`${backendUrl}/providers/syslog/config`, { method: 'PUT', headers: authHeaders(accessString), body }),
-            ])
-            if (!res1.ok || !res2.ok) throw new Error(`HTTP ${res1.status}/${res2.status}`)
+            const res = await fetch(`${backendUrl}/providers/syslog/config`, { method: 'PUT', headers: authHeaders(accessString), body })
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
             onClose()
         } catch (err) {
             setError(`Failed to save: ${err}`)
