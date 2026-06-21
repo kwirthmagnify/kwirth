@@ -40,12 +40,12 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
         setSaving(true)
         setError(undefined)
         try {
-            const res = await fetch(`${backendUrl}/syslog/config`, {
-                method: 'POST',
-                headers: authHeaders(accessString),
-                body: JSON.stringify(config),
-            })
-            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            const body = JSON.stringify(config)
+            const [res1, res2] = await Promise.all([
+                fetch(`${backendUrl}/syslog/config`, { method: 'POST', headers: authHeaders(accessString), body }),
+                fetch(`${backendUrl}/providers/syslog/config`, { method: 'PUT', headers: authHeaders(accessString), body }),
+            ])
+            if (!res1.ok || !res2.ok) throw new Error(`HTTP ${res1.status}/${res2.status}`)
             onClose()
         } catch (err) {
             setError(`Failed to save: ${err}`)

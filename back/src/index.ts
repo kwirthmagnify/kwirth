@@ -1148,7 +1148,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         let manageCluster:ManageClusterApi = new ManageClusterApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, apiKeyApi)
         riRouter.use(`/managecluster`, manageCluster.router)
         if (pluginManager) {
-            const onPluginInstalled = (id: string) => {
+            const onPluginInstalled = async (id: string) => {
                 const activeRI = runningInstances.find(r => r.active)
                 if (!activeRI) return
                 const ChannelClass = registeredChannels.get(id)
@@ -1163,6 +1163,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                                 if (provConstructor) {
                                     providerInstance = createProviderInstance(provConstructor, activeRI.clusterInfo, activeRI.kwirthData) ?? undefined
                                     if (providerInstance) {
+                                        if (providerInstance.configure && providerManager) {
+                                            const cfg = await providerManager.getConfig(provId)
+                                            if (Object.keys(cfg).length > 0) providerInstance.configure(cfg)
+                                        }
                                         providerInstance.startProvider()
                                         activeRI.clusterInfo.providers.push(providerInstance)
                                         logInfo(ELogComponent.CORE, `Provider '${provId}' started for plugin '${id}'`)
@@ -1548,6 +1552,10 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             if (provider) {
                 let providerInstance = createProviderInstance(registeredProviders.get(provId), localClusterInfo, localKwirthData)
                 if (providerInstance) {
+                    if (providerInstance.configure) {
+                        const cfg = await providerManager.getConfig(provId)
+                        if (Object.keys(cfg).length > 0) providerInstance.configure(cfg)
+                    }
                     providerInstance!.startProvider()
                     logInfo(ELogComponent.CORE, `Provider '${provId}' started`)
                     localClusterInfo.providers.push(providerInstance!)
@@ -1568,6 +1576,10 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             try {
                 const tmpInstance = createProviderInstance(providerConstructor, localClusterInfo, localKwirthData)
                 if (tmpInstance?.providesRouter && tmpInstance.router) {
+                    if (tmpInstance.configure) {
+                        const cfg = await providerManager.getConfig(provId)
+                        if (Object.keys(cfg).length > 0) tmpInstance.configure(cfg)
+                    }
                     localClusterInfo.providers.push(tmpInstance)
                     await tmpInstance.startProvider()
                     logInfo(ELogComponent.CORE, `Provider '${provId}' auto-instantiated and started`)

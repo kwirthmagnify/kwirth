@@ -38,6 +38,10 @@ export class SyslogProvider implements IProvider {
         this.subscribers.delete(c)
     }
 
+    configure = (config: Record<string, unknown>): void => {
+        this.config = { ...this.config, ...(config as Partial<ISyslogConfig>) }
+    }
+
     startProvider = async (): Promise<void> => {
         const { port, protocol, tcpFraming } = this.config
         const onMessage: TMessageCallback = (msg: ISyslogMessage, raw: Buffer) => {

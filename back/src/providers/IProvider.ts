@@ -13,10 +13,11 @@ export const createProviderInstance = (providerConstructor:TProviderConstructor,
 
 export interface IProvider {
     readonly id: string
-    readonly providesRouter: boolean 
-    readonly requiresApiKeyApi: boolean 
+    readonly providesRouter: boolean
+    readonly requiresApiKeyApi: boolean
     addSubscriber: (c:IChannel, data:any) => Promise<void>
     removeSubscriber: (c:IChannel) => Promise<void>
+    configure?(config: Record<string, unknown>): void
     startProvider: () => Promise<void>
     stopProvider: () => Promise<void>
     router: Router|undefined
