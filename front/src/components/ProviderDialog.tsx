@@ -323,13 +323,13 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{provider.description}</Typography>
                                             </Box>
-                                            {provider.website &&
-                                                <Tooltip title='Open provider website'>
-                                                    <IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(provider.website, '_blank', 'noopener')}>
+                                            <Tooltip title={provider.website ? 'Open provider website' : 'No website available'}>
+                                                <span>
+                                                    <IconButton size='small' sx={{ mr: -0.5 }} disabled={!provider.website} onClick={() => window.open(provider.website!, '_blank', 'noopener')}>
                                                         <OpenInNew fontSize='small' />
                                                     </IconButton>
-                                                </Tooltip>
-                                            }
+                                                </span>
+                                            </Tooltip>
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(provider.installedFrom)}</Box>
@@ -443,7 +443,13 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                                     </Stack>
                                                 )}
                                             </Box>
-                                            {provider.website && <Tooltip title='Open provider website'><IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(provider.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
+                                            <Tooltip title={provider.website ? 'Open provider website' : 'No website available'}>
+                                                <span>
+                                                    <IconButton size='small' sx={{ mr: -0.5 }} disabled={!provider.website} onClick={() => window.open(provider.website!, '_blank', 'noopener')}>
+                                                        <OpenInNew fontSize='small' />
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
                                         </Stack>
                                         <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
                                             {(() => { const unmet = (provider.requires ?? []).filter(r => !isRequirementMet(r)); return (

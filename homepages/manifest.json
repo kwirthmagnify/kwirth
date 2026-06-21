@@ -3,6 +3,14 @@
     "id": "clusterized",
     "name": "@kwirthmagnify/kwirth-homepage-clusterized",
     "displayName": "Clusterized",
+    "version": "0.1.5",
+    "description": "Cluster-centric homepage for Kwirth — one card per cluster with status indicator and quick Magnify access.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-clusterized/-/kwirth-homepage-clusterized-0.1.5.tgz"
+  },
+  {
+    "id": "clusterized",
+    "name": "@kwirthmagnify/kwirth-homepage-clusterized",
+    "displayName": "Clusterized",
     "version": "0.1.4",
     "description": "Cluster-centric homepage for Kwirth — one card per cluster with status indicator and quick Magnify access.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-clusterized/-/kwirth-homepage-clusterized-0.1.4.tgz"
@@ -35,6 +43,22 @@
     "id": "matrix",
     "name": "@kwirthmagnify/kwirth-homepage-matrix",
     "displayName": "Matrix",
+    "version": "0.1.5",
+    "description": "Matrix-style cluster overview homepage for Kwirth.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-matrix/-/kwirth-homepage-matrix-0.1.5.tgz"
+  },
+  {
+    "id": "matrix",
+    "name": "@kwirthmagnify/kwirth-homepage-matrix",
+    "displayName": "Matrix",
+    "version": "0.1.4",
+    "description": "Matrix-style cluster overview homepage for Kwirth.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-matrix/-/kwirth-homepage-matrix-0.1.4.tgz"
+  },
+  {
+    "id": "matrix",
+    "name": "@kwirthmagnify/kwirth-homepage-matrix",
+    "displayName": "Matrix",
     "version": "0.1.3",
     "description": "Matrix-style cluster overview homepage for Kwirth.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-matrix/-/kwirth-homepage-matrix-0.1.3.tgz"
@@ -54,6 +78,14 @@
     "version": "0.1.1",
     "description": "Matrix-style cluster overview homepage for Kwirth.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-matrix/-/kwirth-homepage-matrix-0.1.1.tgz"
+  },
+  {
+    "id": "avicii",
+    "name": "@kwirthmagnify/kwirth-homepage-avicii",
+    "displayName": "Avicii",
+    "version": "0.1.8",
+    "description": "Avicii-inspired homepage — warm gold on black, geometric triangle motifs, sharp Oswald typography, and live cluster metrics.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-avicii/-/kwirth-homepage-avicii-0.1.8.tgz"
   },
   {
     "id": "avicii",

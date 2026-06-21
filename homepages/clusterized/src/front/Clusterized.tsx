@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Button, Card, CardContent, LinearProgress, Stack, Tooltip, Typography } from '@mui/material'
-import { OpenInBrowser } from '@mui/icons-material'
+import { Box, Button, Card, CardContent, IconButton, LinearProgress, Stack, Tooltip, Typography } from '@mui/material'
+import { OpenInBrowser, Settings as SettingsIcon } from '@mui/icons-material'
 import { IHomepageProps } from '@kwirthmagnify/kwirth-common-front'
+import { ClusterizedSetup } from './ClusterizedSetup'
 
 type ClusterMetrics = { cpu: number; memory: number; vcpus: number; totalMemoryBytes: number; pods: number; maxPods: number }
 
@@ -42,11 +43,13 @@ const MetricPlaceholder: React.FC<{ label: string }> = ({ label }) => (
 )
 
 const Clusterized: React.FC<IHomepageProps> = (props) => {
+    const [localConfig, setLocalConfig] = useState<Record<string, any>>(props.config ?? {})
+    const [showSetup, setShowSetup] = useState(false)
     const [metrics, setMetrics] = useState<Record<string, ClusterMetrics>>({})
 
-    const showCpu = props.config?.showCpu ?? true
-    const showMem = props.config?.showMem ?? true
-    const showPods = props.config?.showPods ?? true
+    const showCpu = localConfig.showCpu ?? true
+    const showMem = localConfig.showMem ?? true
+    const showPods = localConfig.showPods ?? true
     const needsMetrics = showCpu || showMem || showPods
 
     useEffect(() => {
@@ -61,7 +64,13 @@ const Clusterized: React.FC<IHomepageProps> = (props) => {
         fetchAll()
         const timer = setInterval(fetchAll, 30000)
         return () => clearInterval(timer)
-    }, [props.clusters, props.config, needsMetrics])
+    }, [props.clusters, localConfig, needsMetrics])
+
+    const saveConfig = (cfg: Record<string, any>) => {
+        localStorage.setItem('kwirth.homepage.config.clusterized', JSON.stringify(cfg))
+        setLocalConfig(cfg)
+        setShowSetup(false)
+    }
 
     const launchMagnify = (clusterName: string) => {
         props.onHomepageSelectTab({
@@ -80,7 +89,13 @@ const Clusterized: React.FC<IHomepageProps> = (props) => {
     }
 
     return (
-        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', height: '100%' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1.5, py: 0.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                <IconButton size='small' onClick={() => setShowSetup(true)}>
+                    <SettingsIcon fontSize='small' />
+                </IconButton>
+            </Box>
+            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flexGrow: 1 }}>
             {props.clusters.map(cluster => {
                 const m = metrics[cluster.name]
                 return (
@@ -123,6 +138,8 @@ const Clusterized: React.FC<IHomepageProps> = (props) => {
                     No clusters defined. Add a cluster to get started.
                 </Typography>
             )}
+            </Box>
+            {showSetup && <ClusterizedSetup config={localConfig} onSave={saveConfig} onClose={() => setShowSetup(false)} />}
         </Box>
     )
 }

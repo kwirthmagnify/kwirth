@@ -4,7 +4,8 @@
   },
   "channels": {
     "censor": "../plugins/censor/dist",
-    "pinocchio": "../plugins/pinocchio/dist"
+    "pinocchio": "../plugins/pinocchio/dist",
+    "mirc": "../plugins/mirc/dist"
   },
   "providers": {
     "tick": "../providers/tick/dist",
@@ -26,6 +27,9 @@
     "teams": "../senders/teams/dist"
   },
   "homepages": {
+    "clusterized": "../homepages/clusterized/dist",
+    "matrix": "../homepages/matrix/dist",
+    "avicii": "../homepages/avicii/dist"
   },
   "themes": {
   },

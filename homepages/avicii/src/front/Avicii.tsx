@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Box, Button, Card, CardContent, Stack, Tooltip, Typography, useTheme } from '@mui/material'
-import { AccountTree } from '@mui/icons-material'
+import { Box, Button, Card, CardContent, IconButton, Stack, Tooltip, Typography, useTheme } from '@mui/material'
+import { AccountTree, Settings as SettingsIcon } from '@mui/icons-material'
 import { IHomepageProps, IClusterEvent } from '@kwirthmagnify/kwirth-common-front'
+import { AviciiSetup } from './AviciiSetup'
 
 const AV_GOLD      = '#c9a227'
 const AV_GOLD_DIM  = '#5c4810'
@@ -188,9 +189,18 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
     const topologyClass = props.frontChannels.get('topology')
     const topologyIcon  = topologyClass ? new topologyClass().getChannelIcon() : <AccountTree />
 
-    const showMetricBars    = props.config?.showMetricBars    ?? true
-    const showResourceCards = props.config?.showResourceCards ?? true
-    const showChannelIcons  = props.config?.showChannelIcons  ?? true
+    const [localConfig, setLocalConfig] = useState<Record<string, any>>(props.config ?? {})
+    const [showSetup, setShowSetup] = useState(false)
+
+    const showMetricBars    = localConfig.showMetricBars    ?? true
+    const showResourceCards = localConfig.showResourceCards ?? true
+    const showChannelIcons  = localConfig.showChannelIcons  ?? true
+
+    const saveConfig = (cfg: Record<string, any>) => {
+        localStorage.setItem('kwirth.homepage.config.avicii', JSON.stringify(cfg))
+        setLocalConfig(cfg)
+        setShowSetup(false)
+    }
 
     const avBtnSx = {
         borderRadius: 0,
@@ -215,10 +225,15 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
             <Box sx={{ position: 'absolute', inset: 0, overflowY: 'auto' }}>
 
                 {/* ── Header ── */}
-                <Stack direction="row" alignItems="center" justifyContent="flex-start" spacing={2.5}
-                    sx={{ pt: 2, pb: 1.5, pl: 3, borderBottom: `1px solid ${AV_GOLD_DIM}`, bgcolor: AV_BG }}>
+                <Stack direction="row" alignItems="center" spacing={2.5}
+                    sx={{ pt: 2, pb: 1.5, pl: 3, pr: 1.5, borderBottom: `1px solid ${AV_GOLD_DIM}`, bgcolor: AV_BG }}>
                     <AviciiLogo size={40} />
                     <AviciiWordmark />
+                    <Box sx={{ flex: 1 }} />
+                    <IconButton size='small' onClick={() => setShowSetup(true)}
+                        sx={{ color: AV_GOLD_DIM, '&:hover': { color: AV_GOLD, bgcolor: 'rgba(201,162,39,0.08)' } }}>
+                        <SettingsIcon fontSize='small' />
+                    </IconButton>
                 </Stack>
 
                 {/* ── Cluster grid: 3 columns ── */}
@@ -317,6 +332,7 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
                     )}
                 </Box>
             </Box>
+            {showSetup && <AviciiSetup config={localConfig} onSave={saveConfig} onClose={() => setShowSetup(false)} />}
         </Box>
     )
 }
