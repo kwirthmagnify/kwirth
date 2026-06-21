@@ -48,11 +48,21 @@ export class SyslogProvider implements IProvider {
         }
         if (protocol === 'udp' || protocol === 'both') {
             this.udpServer = new UdpServer(port, onMessage)
-            await this.udpServer.start()
+            try {
+                await this.udpServer.start()
+            } catch (err) {
+                console.error(`[syslog] UDP server failed to start on port ${port}: ${err}`)
+                this.udpServer = undefined
+            }
         }
         if (protocol === 'tcp' || protocol === 'both') {
             this.tcpServer = new TcpServer(port, tcpFraming, onMessage)
-            await this.tcpServer.start()
+            try {
+                await this.tcpServer.start()
+            } catch (err) {
+                console.error(`[syslog] TCP server failed to start on port ${port}: ${err}`)
+                this.tcpServer = undefined
+            }
         }
     }
 

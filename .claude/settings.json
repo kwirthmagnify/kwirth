@@ -220,7 +220,8 @@
       "Bash(echo \"EXIT:$?\")",
       "PowerShell(npm view @kwirthmagnify/kwirth-homepage-matrix version 2>&1)",
       "PowerShell(npm view @kwirthmagnify/kwirth-theme-matrix version 2>&1)",
-      "PowerShell(git -C c:\\\\github\\\\aisdkvercel\\\\kwirth log --oneline -10 -- homepages/matrix/ themes/matrix/)"
+      "PowerShell(git -C c:\\\\github\\\\aisdkvercel\\\\kwirth log --oneline -10 -- homepages/matrix/ themes/matrix/)",
+      "PowerShell(npm view @kwirthmagnify/kwirth-provider-syslog version 2>&1)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
