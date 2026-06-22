@@ -276,6 +276,8 @@ export class ProviderManager {
 
         const cacheFile = path.join(os.tmpdir(), `kwirth-provider-${id}-back.js`)
         if (fs.existsSync(cacheFile)) fs.rmSync(cacheFile)
+        const frontCacheFile = path.join(os.tmpdir(), `kwirth-provider-${id}-front.js`)
+        if (fs.existsSync(frontCacheFile)) fs.rmSync(frontCacheFile)
 
         logInfo(ELogComponent.CORE, `Provider '${id}' uninstalled`)
     }

@@ -39,3 +39,6 @@ yarn-error.log*
 kwirth-provider-*-back.js
 kwirth-daemon-*-back.js
 kwirth-plugin-*-back.js
+
+kwirth-dev.json
+kwirth-bundled.json

@@ -74,7 +74,7 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
                         {/* Port + Protocol + TCP Framing */}
                         <Stack direction='row' spacing={2} alignItems='center' flexWrap='wrap' useFlexGap>
                             <TextField size='small' label='Port' type='number' value={config.port}
-                                onChange={e => setConfig(prev => ({ ...prev, port: parseInt(e.target.value, 10) || 514 }))}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfig(prev => ({ ...prev, port: parseInt(e.target.value, 10) || 514 }))}
                                 sx={{ width: 100 }} slotProps={{ htmlInput: { min: 1, max: 65535 } }} />
 
                             <FormControl size='small' sx={{ minWidth: 150 }}>
@@ -145,7 +145,7 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
                                             onChange={e => setNewRelay(prev => ({ ...prev, host: e.target.value }))}
                                             sx={{ flex: 1 }} />
                                         <TextField size='small' label='Port' type='number' value={newRelay.port}
-                                            onChange={e => setNewRelay(prev => ({ ...prev, port: parseInt(e.target.value, 10) || 514 }))}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewRelay(prev => ({ ...prev, port: parseInt(e.target.value, 10) || 514 }))}
                                             sx={{ width: 80 }} slotProps={{ htmlInput: { min: 1, max: 65535 } }} />
                                         <Button size='small' variant='contained' onClick={addRelay}
                                             disabled={!newRelay.host.trim()}>Add</Button>
