@@ -19,6 +19,7 @@ export interface IProvider {
     addSubscriber(c: IProviderSubscriber, data: any): Promise<void>
     removeSubscriber(c: IProviderSubscriber): Promise<void>
     updateSubscription?(c: IProviderSubscriber, data: any): Promise<void>
+    configure?(config: Record<string, unknown>): void
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
     router: any
