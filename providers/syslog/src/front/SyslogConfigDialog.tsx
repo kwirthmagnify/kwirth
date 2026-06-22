@@ -31,7 +31,7 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
         const headers = { Authorization: accessString ? `Bearer ${accessString}` : '', 'X-Kwirth-App': 'true' }
         fetch(`${backendUrl}/providers/syslog/config`, { headers })
             .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
-            .then(data => setConfig(data))
+            .then(data => setConfig(prev => ({ ...prev, ...data, relayTargets: data.relayTargets ?? [] })))
             .catch(err => setError(`Failed to load config: ${err}`))
             .finally(() => setLoading(false))
     }, [])
