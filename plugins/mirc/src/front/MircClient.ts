@@ -112,7 +112,7 @@ export class MircClient {
                 this.emit(); break
             }
             case 'mirc-receipt': {
-                this.updateState(clusterId, msg.msgId, msg.state as TMircState, msg.ts)
+                this.updateState(clusterId, msg.msgId, msg.state as TMircState)
                 this.emit(); break
             }
         }

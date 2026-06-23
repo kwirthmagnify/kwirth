@@ -348,7 +348,6 @@ export class PinocchioChannel {
                                     prompt: prompt||'Hi AI, how are you?',
                                 }))
 
-                                console.log(output)
                                 let analysis:IAnalysis = {
                                     text: `${eventsEvent.type} ${eventsEvent.obj.kind} '${eventsEvent.obj.metadata.name}' in namespace '${eventsEvent.obj.metadata.namespace}' [LLM:${llmProviderId}/${llmModelId}, IN:${usage.inputTokens}, OUT:${usage.outputTokens}]`,
                                     findings: output.findings,
@@ -375,7 +374,6 @@ export class PinocchioChannel {
                             }
                             catch (err:any) {
                                 let message = `Pinocchio analysis ended in error while processing 'events' when analyzing '${eventsEvent.obj.metadata.name}' in namespace '${eventsEvent.obj.metadata.namespace}' [Kind:${eventsEvent.obj.kind}]`
-                                console.log(err)
                                 this.backChannelObject.logError?.(`${message}: ${err}`)
                                 try {
                                     let msg = _.get(err, errorPath)

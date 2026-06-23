@@ -140,7 +140,8 @@ class MircChannel implements IChannel {
 
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) { const n = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] }); socket = this.webSockets[n - 1] }
-        const nick: string = instanceConfig.data?.nick || accessKeyDeserialize(instanceConfig.accessKey).id || 'anon'
+        const nick: string = instanceConfig.data?.nick || ''
+        if (!nick) return true  // kwirth-core protocol connection — track socket only, not a mirc user
         await this.registerKnownNick(nick)
         const wasOnline = this.isOnline(nick)
         if (!socket.instances.find(i => i.instanceId === instanceConfig.instance)) {

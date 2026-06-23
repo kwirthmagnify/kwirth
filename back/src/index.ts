@@ -131,7 +131,7 @@ const runningInstances:IRunningInstance[] = []
 let pluginManager: PluginManager | undefined
 let providerManager: ProviderManager | undefined
 let senderManager: SenderManager | undefined
-let daemonManager: DaemonManager | undefined
+//let daemonManager: DaemonManager | undefined
 let themeManager: ThemeManager | undefined
 let homepageManager: HomepageManager | undefined
 const licenseManager = new LicenseManager()
@@ -427,7 +427,7 @@ const addObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, po
             logError(ELogComponent.CORE, `Invalid channel ${instanceConfig.channel}`)
         }
         // route to daemons (headless, independent of channel/websocket)
-        if (daemonManager) await daemonManager.routeAddObject(podNamespace, podName, containerName)
+        //if (daemonManager) await daemonManager.routeAddObject(podNamespace, podName, containerName)
     }
     catch (err) {
         logError(ELogComponent.CORE, 'Error adding object')
@@ -444,7 +444,7 @@ const deleteObject = async (webSocket:WebSocket, _eventType:string, podNamespace
         logError(ELogComponent.CORE, `Invalid channel ${instanceConfig.channel}`)
     }
     // route to daemons
-    if (daemonManager) await daemonManager.routeDeleteObject(podNamespace, podName, containerName)
+    //if (daemonManager) await daemonManager.routeDeleteObject(podNamespace, podName, containerName)
 }
 
 const processEvent = async (eventType:string, obj: any, webSocket:WebSocket, instanceConfig:IInstanceConfig, podNamespace:string, podName:string, containers:string[], ri:IRunningInstance) => {
@@ -1240,21 +1240,21 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let senderApi = new SenderApi(senderManager, apiKeyApi)
             riRouter.use(`/senders`, senderApi.router)
         }
-        if (daemonManager) {
-            logInfo(ELogComponent.CORE, `[setUpRoutes] daemonManager present, calling getDaemonRouters`)
-            let daemonApi = new DaemonApi(daemonManager, apiKeyApi)
-            riRouter.use(`/daemons`, daemonApi.router)
-            const daemonRouters = daemonManager.getDaemonRouters()
-            logInfo(ELogComponent.CORE, `[setUpRoutes] getDaemonRouters returned ${daemonRouters.length} router(s)`)
-            for (const { id, router, routerAlias } of daemonRouters) {
-                const mountPath = routerAlias ? `/${routerAlias}` : `/${ri.id}/daemon/${id}`
-                logInfo(ELogComponent.CORE, `[setUpRoutes] mounting daemon '${id}' at '${mountPath}' router type=${typeof router}`)
-                riRouter.use(mountPath, router)
-                logInfo(ELogComponent.CORE, `Daemon '${id}' HTTP router mounted at '${mountPath}'`)
-            }
-        } else {
-            logInfo(ELogComponent.CORE, `[setUpRoutes] daemonManager is null/undefined — no daemon routers mounted`)
-        }
+        // if (daemonManager) {
+        //     logInfo(ELogComponent.CORE, `[setUpRoutes] daemonManager present, calling getDaemonRouters`)
+        //     let daemonApi = new DaemonApi(daemonManager, apiKeyApi)
+        //     riRouter.use(`/daemons`, daemonApi.router)
+        //     const daemonRouters = daemonManager.getDaemonRouters()
+        //     logInfo(ELogComponent.CORE, `[setUpRoutes] getDaemonRouters returned ${daemonRouters.length} router(s)`)
+        //     for (const { id, router, routerAlias } of daemonRouters) {
+        //         const mountPath = routerAlias ? `/${routerAlias}` : `/${ri.id}/daemon/${id}`
+        //         logInfo(ELogComponent.CORE, `[setUpRoutes] mounting daemon '${id}' at '${mountPath}' router type=${typeof router}`)
+        //         riRouter.use(mountPath, router)
+        //         logInfo(ELogComponent.CORE, `Daemon '${id}' HTTP router mounted at '${mountPath}'`)
+        //     }
+        // } else {
+        //     logInfo(ELogComponent.CORE, `[setUpRoutes] daemonManager is null/undefined — no daemon routers mounted`)
+        // }
         if (themeManager) {
             let themeApi = new ThemeApi(themeManager, apiKeyApi)
             riRouter.use(`/themes`, themeApi.router)
@@ -1291,49 +1291,49 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             }
         })
 
-        riRouter.get('/daemons/instances', async (req: Request, res: Response) => {
-            try {
-                const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
-                if (!accessKey) return
-                const qDaemonId = req.query.daemonId as string | undefined
-                const instances = daemonManager ? daemonManager.listInstances(qDaemonId) : []
-                const enriched = await Promise.all(instances.map(async inst => {
-                    try {
-                        const stats = daemonManager ? await daemonManager.sendCommand(inst.id, 'statsget', null) as { analyzing?: boolean } | null : null
-                        return { ...inst, analyzing: stats?.analyzing ?? false }
-                    } catch { return { ...inst, analyzing: false } }
-                }))
-                res.json(enriched)
-            } catch (err) {
-                logError(ELogComponent.CORE, `GET /daemons/instances error: ${err}`)
-                res.status(500).json([])
-            }
-        })
+        // riRouter.get('/daemons/instances', async (req: Request, res: Response) => {
+        //     try {
+        //         const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
+        //         if (!accessKey) return
+        //         const qDaemonId = req.query.daemonId as string | undefined
+        //         const instances = daemonManager ? daemonManager.listInstances(qDaemonId) : []
+        //         const enriched = await Promise.all(instances.map(async inst => {
+        //             try {
+        //                 const stats = daemonManager ? await daemonManager.sendCommand(inst.id, 'statsget', null) as { analyzing?: boolean } | null : null
+        //                 return { ...inst, analyzing: stats?.analyzing ?? false }
+        //             } catch { return { ...inst, analyzing: false } }
+        //         }))
+        //         res.json(enriched)
+        //     } catch (err) {
+        //         logError(ELogComponent.CORE, `GET /daemons/instances error: ${err}`)
+        //         res.status(500).json([])
+        //     }
+        // })
 
-        riRouter.delete('/daemons/instances/:id', async (req: Request, res: Response) => {
-            try {
-                const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
-                if (!accessKey) return
-                if (daemonManager) await daemonManager.stopInstance(req.params.id)
-                res.json({ ok: true })
-            } catch (err) {
-                logError(ELogComponent.CORE, `DELETE /daemons/instances error: ${err}`)
-                res.status(500).json({ ok: false })
-            }
-        })
+        // riRouter.delete('/daemons/instances/:id', async (req: Request, res: Response) => {
+        //     try {
+        //         const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
+        //         if (!accessKey) return
+        //         if (daemonManager) await daemonManager.stopInstance(req.params.id)
+        //         res.json({ ok: true })
+        //     } catch (err) {
+        //         logError(ELogComponent.CORE, `DELETE /daemons/instances error: ${err}`)
+        //         res.status(500).json({ ok: false })
+        //     }
+        // })
 
-        riRouter.post('/daemons/instances/:id/analyze', async (req: Request, res: Response) => {
-            try {
-                const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
-                if (!accessKey) return
-                const { analyzing } = req.body as { analyzing: boolean }
-                if (daemonManager) await daemonManager.sendCommand(req.params.id, analyzing ? 'analyzestart' : 'analyzestop', null)
-                res.json({ ok: true })
-            } catch (err) {
-                logError(ELogComponent.CORE, `POST /daemons/instances/analyze error: ${err}`)
-                res.status(500).json({ ok: false })
-            }
-        })
+        // riRouter.post('/daemons/instances/:id/analyze', async (req: Request, res: Response) => {
+        //     try {
+        //         const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
+        //         if (!accessKey) return
+        //         const { analyzing } = req.body as { analyzing: boolean }
+        //         if (daemonManager) await daemonManager.sendCommand(req.params.id, analyzing ? 'analyzestart' : 'analyzestop', null)
+        //         res.json({ ok: true })
+        //     } catch (err) {
+        //         logError(ELogComponent.CORE, `POST /daemons/instances/analyze error: ${err}`)
+        //         res.status(500).json({ ok: false })
+        //     }
+        // })
 
         for (let provider of ri.clusterInfo.providers) {
             if (provider.providesRouter) {
@@ -1607,58 +1607,58 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             senderManager.loadDevSenderConfigs()
         }
 
-        if (!daemonManager) {
-            const backDaemonObject = {
-                logInfo: (message: unknown) => logInfo(ELogComponent.CHANNEL, message),
-                logTrace: (message: unknown) => logTrace(message),
-                logWarning: (message: unknown) => logWarning(ELogComponent.CHANNEL, message),
-                logError: (message: unknown) => logError(ELogComponent.CHANNEL, message),
-                writeStorage: async (id: string, secret: boolean, data: unknown) => {
-                    if (secret) {
-                        const base64Data = Buffer.from(JSON.stringify(data), 'utf8').toString('base64')
-                        await runningInstance.secrets.write('kwirth-store-daemon-' + id, { data: base64Data })
-                    } else {
-                        await runningInstance.configMaps.write('kwirth-store-daemon-' + id, data === null ? null : JSON.stringify(data))
-                    }
-                },
-                readStorage: async (id: string, secret: boolean) => {
-                    if (secret) {
-                        const content = await runningInstance.secrets.read('kwirth-store-daemon-' + id)
-                        if (content?.data) return JSON.parse(Buffer.from(content.data, 'base64').toString('utf8'))
-                        return undefined
-                    } else {
-                        const content = await runningInstance.configMaps.read('kwirth-store-daemon-' + id)
-                        if (content) return JSON.parse(content)
-                        return undefined
-                    }
-                },
-                writeStorageCommon: async (id: string, secret: boolean, data: unknown) => {
-                    if (secret) {
-                        const base64Data = Buffer.from(JSON.stringify(data), 'utf8').toString('base64')
-                        await runningInstance.secrets.write('kwirth-store-common-' + id, { data: base64Data })
-                    } else {
-                        await runningInstance.configMaps.write('kwirth-store-common-' + id, data === null ? null : JSON.stringify(data))
-                    }
-                },
-                readStorageCommon: async (id: string, secret: boolean) => {
-                    if (secret) {
-                        const content = await runningInstance.secrets.read('kwirth-store-common-' + id)
-                        if (content?.data) return JSON.parse(Buffer.from(content.data, 'base64').toString('utf8'))
-                        return undefined
-                    } else {
-                        const content = await runningInstance.configMaps.read('kwirth-store-common-' + id)
-                        if (content) return JSON.parse(content)
-                        return undefined
-                    }
-                },
-                senders: senderManager
-            }
-            daemonManager = new DaemonManager(runningInstance.clusterInfo, runningInstance.configMaps, backDaemonObject)
-            const bundledDaemonsPath = process.env.BUNDLED_EXTENSIONS_PATH
-            if (bundledDaemonsPath) await daemonManager.installBundled(bundledDaemonsPath, licenseManager)
-            await daemonManager.loadAll()
-            await daemonManager.init()
-        }
+        // if (!daemonManager) {
+        //     const backDaemonObject = {
+        //         logInfo: (message: unknown) => logInfo(ELogComponent.CHANNEL, message),
+        //         logTrace: (message: unknown) => logTrace(message),
+        //         logWarning: (message: unknown) => logWarning(ELogComponent.CHANNEL, message),
+        //         logError: (message: unknown) => logError(ELogComponent.CHANNEL, message),
+        //         writeStorage: async (id: string, secret: boolean, data: unknown) => {
+        //             if (secret) {
+        //                 const base64Data = Buffer.from(JSON.stringify(data), 'utf8').toString('base64')
+        //                 await runningInstance.secrets.write('kwirth-store-daemon-' + id, { data: base64Data })
+        //             } else {
+        //                 await runningInstance.configMaps.write('kwirth-store-daemon-' + id, data === null ? null : JSON.stringify(data))
+        //             }
+        //         },
+        //         readStorage: async (id: string, secret: boolean) => {
+        //             if (secret) {
+        //                 const content = await runningInstance.secrets.read('kwirth-store-daemon-' + id)
+        //                 if (content?.data) return JSON.parse(Buffer.from(content.data, 'base64').toString('utf8'))
+        //                 return undefined
+        //             } else {
+        //                 const content = await runningInstance.configMaps.read('kwirth-store-daemon-' + id)
+        //                 if (content) return JSON.parse(content)
+        //                 return undefined
+        //             }
+        //         },
+        //         writeStorageCommon: async (id: string, secret: boolean, data: unknown) => {
+        //             if (secret) {
+        //                 const base64Data = Buffer.from(JSON.stringify(data), 'utf8').toString('base64')
+        //                 await runningInstance.secrets.write('kwirth-store-common-' + id, { data: base64Data })
+        //             } else {
+        //                 await runningInstance.configMaps.write('kwirth-store-common-' + id, data === null ? null : JSON.stringify(data))
+        //             }
+        //         },
+        //         readStorageCommon: async (id: string, secret: boolean) => {
+        //             if (secret) {
+        //                 const content = await runningInstance.secrets.read('kwirth-store-common-' + id)
+        //                 if (content?.data) return JSON.parse(Buffer.from(content.data, 'base64').toString('utf8'))
+        //                 return undefined
+        //             } else {
+        //                 const content = await runningInstance.configMaps.read('kwirth-store-common-' + id)
+        //                 if (content) return JSON.parse(content)
+        //                 return undefined
+        //             }
+        //         },
+        //         senders: senderManager
+        //     }
+        //     daemonManager = new DaemonManager(runningInstance.clusterInfo, runningInstance.configMaps, backDaemonObject)
+        //     const bundledDaemonsPath = process.env.BUNDLED_EXTENSIONS_PATH
+        //     if (bundledDaemonsPath) await daemonManager.installBundled(bundledDaemonsPath, licenseManager)
+        //     await daemonManager.loadAll()
+        //     await daemonManager.init()
+        // }
 
         if (!themeManager) {
             themeManager = new ThemeManager(runningInstance.configMaps)
@@ -1722,7 +1722,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                 }
             },
             senders: senderManager,
-            daemonManager
+            //daemonManager
         }
 
         runningInstance.clusterInfo.senders = senderManager

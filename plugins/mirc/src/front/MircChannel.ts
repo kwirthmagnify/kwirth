@@ -53,13 +53,7 @@ export class MircChannel implements IChannel {
     async initChannel(channelObject: IChannelObject): Promise<boolean> {
         const oldData: IMircData | undefined = channelObject.data as IMircData | undefined
         if (oldData?.client) { oldData.client.stop(); oldData.client = undefined }
-        const userId = channelObject.userName ?? 'user'
-        const key = nickKey(channelObject.clusterName, userId)
-        const nick = localStorage.getItem(key) || (() => { const n = buildNick(channelObject.clusterName, userId); localStorage.setItem(key, n); return n })()
-        localStorage.removeItem('kwirth.mirc.nick')
-        const instanceConfig = new MircInstanceConfig()
-        instanceConfig.nick = nick
-        channelObject.instanceConfig = instanceConfig
+        channelObject.instanceConfig = new MircInstanceConfig()
         channelObject.config = new MircConfig()
         channelObject.data = new MircData()
         return false
@@ -68,7 +62,10 @@ export class MircChannel implements IChannel {
     startChannel(channelObject: IChannelObject): boolean {
         const data: IMircData = channelObject.data
         if (data.client) { data.client.stop(); data.client = undefined }
-        const nick = (channelObject.instanceConfig as MircInstanceConfig).nick
+        localStorage.removeItem('kwirth.mirc.nick')
+        const userId = channelObject.userName ?? 'user'
+        const key = nickKey(channelObject.clusterName, userId)
+        const nick = localStorage.getItem(key) || (() => { const n = buildNick(channelObject.clusterName, userId); localStorage.setItem(key, n); return n })()
         data.nick = nick
         data.client = new MircClient(nick)
         const clusters: IClusterEntry[] = channelObject.clusterUrl ? [{
