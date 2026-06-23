@@ -1552,9 +1552,11 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             if (provider) {
                 let providerInstance = createProviderInstance(registeredProviders.get(provId), localClusterInfo, localKwirthData)
                 if (providerInstance) {
+                    
                     if (providerInstance.configure) {
                         const cfg = await providerManager.getConfig(provId)
                         if (Object.keys(cfg).length > 0) providerInstance.configure(cfg)
+                        else logWarning(ELogComponent.CORE, `Provider '${provId}' has no configuration in ConfigMap — configure() skipped`)
                     }
                     try {
                         await providerInstance!.startProvider()
