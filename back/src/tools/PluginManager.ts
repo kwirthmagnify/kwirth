@@ -291,8 +291,13 @@ export class PluginManager {
     }
 
     async loadAll(registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
+        const devIds = this.getDevIdsFromConfig()
         const index = this.cachedIndex
         for (const meta of index) {
+            if (devIds.has(meta.id)) {
+                logInfo(ELogComponent.CORE, `Plugin '${meta.id}' is a dev plugin — skipping configmap load`)
+                continue
+            }
             try {
                 let backJs: string | undefined
                 if (meta.backStored === false) {
@@ -308,6 +313,16 @@ export class PluginManager {
                 logError(ELogComponent.CORE, `Failed to load plugin '${meta.id}': ${err}`)
             }
         }
+    }
+
+    private getDevIdsFromConfig(): Set<string> {
+        const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
+        if (!fs.existsSync(devConfigPath)) return new Set()
+        try {
+            const raw = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8'))
+            const channelsMap: Record<string, string> = raw.channels ?? raw
+            return new Set(Object.keys(channelsMap).filter(k => typeof channelsMap[k] === 'string'))
+        } catch { return new Set() }
     }
 
     async getFrontJs(id: string): Promise<string | undefined> {
