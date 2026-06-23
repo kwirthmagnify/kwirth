@@ -1556,8 +1556,12 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                         const cfg = await providerManager.getConfig(provId)
                         if (Object.keys(cfg).length > 0) providerInstance.configure(cfg)
                     }
-                    providerInstance!.startProvider()
-                    logInfo(ELogComponent.CORE, `Provider '${provId}' started`)
+                    try {
+                        await providerInstance!.startProvider()
+                        logInfo(ELogComponent.CORE, `Provider '${provId}' started`)
+                    } catch (err) {
+                        logError(ELogComponent.CORE, `Provider '${provId}' failed to start: ${err}`)
+                    }
                     localClusterInfo.providers.push(providerInstance!)
                 }
                 else {

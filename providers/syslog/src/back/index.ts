@@ -1,5 +1,5 @@
 import { IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
-import { Router } from 'express'
+//import { Router } from 'express'
 import dgram from 'dgram'
 import net from 'net'
 import { ISyslogConfig, ISyslogMessage } from '../types/ISyslogMessage'
@@ -8,10 +8,12 @@ import { TcpServer } from './TcpServer'
 
 export class SyslogProvider implements IProvider {
     public readonly id = 'syslog'
-    public readonly providesRouter = true
+    public readonly providesRouter = false
     public readonly requiresApiKeyApi = false
-    public router: Router
-    public routerAlias: string | undefined = 'syslog'
+    public router = undefined
+    public routerAlias = undefined
+    //public router: Router
+    //public routerAlias: string | undefined = 'syslog'
     public apiKeyApi = undefined
 
     private subscribers = new Map<IProviderSubscriber, unknown>()
@@ -22,7 +24,7 @@ export class SyslogProvider implements IProvider {
     private messageCount = 0
 
     constructor(_clusterInfo: unknown, _kwirthData: unknown) {
-        this.router = Router()
+        //this.router = Router()
     }
 
     addSubscriber = async (c: IProviderSubscriber, _data: unknown): Promise<void> => {
