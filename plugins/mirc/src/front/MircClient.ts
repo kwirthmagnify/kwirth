@@ -137,7 +137,7 @@ export class MircClient {
         const conn = this.conns.get(clusterId)
         if (!conn || !conn.open) return
         const key = `${clusterId}::${peer}`
-        const msgs = this.history.get(key) ?? []
+        const msgs = this.history.get(key) ?? this.loadHistory(clusterId, peer)
         const unread = msgs.filter(m => !m.mine && m.state !== 'read').map(m => m.msgId)
         if (unread.length === 0) return
         conn.ws!.send(JSON.stringify({

@@ -108,6 +108,16 @@ class MircChannel implements IChannel {
 
     // ---- registration: cluster channels arrive here via addObject('*all') ----
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, _ns: string, _pod: string, _container: string): Promise<boolean> => {
+        // Purge stale sockets (no refresh in 60 s — covers crashed/HMR-orphaned connections)
+        const threshold = Date.now() - 60000
+        const stale = this.webSockets.filter(s => s.ws !== webSocket && s.lastRefresh < threshold)
+        for (const s of stale) {
+            const nicks = [...new Set(s.instances.map(i => i.nick))]
+            this.webSockets = this.webSockets.filter(x => x !== s)
+            try { s.ws.close() } catch {}
+            for (const n of nicks) if (!this.isOnline(n)) this.broadcastPresence(n, false)
+        }
+
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) { const n = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] }); socket = this.webSockets[n - 1] }
         const nick: string = instanceConfig.data?.nick || accessKeyDeserialize(instanceConfig.accessKey).id || 'anon'

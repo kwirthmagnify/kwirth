@@ -1,17 +1,23 @@
-import { EInstanceConfigScope } from '@kwirthmagnify/kwirth-common'
+import { EInstanceConfigScope, pickAdjective } from '@kwirthmagnify/kwirth-common'
 import { IChannel, IChannelObject, IChannelRequirements, IChannelMessageAction, IContentProps, ISetupProps, EChannelRefreshAction } from '@kwirthmagnify/kwirth-common-front'
 import { MircConfig, MircInstanceConfig } from './MircConfig'
 import { MircData, IMircData } from './MircData'
-import { MircSetup, MircIcon } from './MircSetup'
+import { MircIcon } from './MircSetup'
 import { MircTabContent } from './MircTabContent'
 import { MircClient, IClusterEntry } from './MircClient'
 import { FC } from 'react'
 
-const NICK_KEY = 'kwirth.mirc.nick'
+const nickKey = (clusterName: string, userId: string) => `kwirth.mirc.nick.${clusterName}.${userId}`
+
+const buildNick = (clusterName: string, userId: string): string => {
+    const cluster = clusterName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'cluster'
+    const user = userId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'user'
+    return `${cluster}_${user}_${pickAdjective()}`
+}
 
 export class MircChannel implements IChannel {
     private setupVisible = false
-    SetupDialog: FC<ISetupProps> = MircSetup
+    SetupDialog: FC<ISetupProps> = undefined as any
     TabContent: FC<IContentProps> = MircTabContent
     channelId = 'mirc'
     requirements: IChannelRequirements = {
@@ -23,7 +29,7 @@ export class MircChannel implements IChannel {
         metrics: false,
         notifier: true,
         notifications: true,
-        setup: true,
+        setup: false,
         settings: false,
         palette: false,
         userSettings: false,
@@ -45,18 +51,24 @@ export class MircChannel implements IChannel {
     }
 
     async initChannel(channelObject: IChannelObject): Promise<boolean> {
-        channelObject.instanceConfig = new MircInstanceConfig()
+        const oldData: IMircData | undefined = channelObject.data as IMircData | undefined
+        if (oldData?.client) { oldData.client.stop(); oldData.client = undefined }
+        const userId = channelObject.userName ?? 'user'
+        const key = nickKey(channelObject.clusterName, userId)
+        const nick = localStorage.getItem(key) || (() => { const n = buildNick(channelObject.clusterName, userId); localStorage.setItem(key, n); return n })()
+        localStorage.removeItem('kwirth.mirc.nick')
+        const instanceConfig = new MircInstanceConfig()
+        instanceConfig.nick = nick
+        channelObject.instanceConfig = instanceConfig
         channelObject.config = new MircConfig()
         channelObject.data = new MircData()
-        const data: IMircData = channelObject.data
-        data.nick = (localStorage.getItem(NICK_KEY) || '').trim()
         return false
     }
 
     startChannel(channelObject: IChannelObject): boolean {
         const data: IMircData = channelObject.data
-        const nick = (data.nick || localStorage.getItem(NICK_KEY) || '').trim()
-        if (!nick) return false   // need a nick; Setup dialog will provide it
+        if (data.client) { data.client.stop(); data.client = undefined }
+        const nick = (channelObject.instanceConfig as MircInstanceConfig).nick
         data.nick = nick
         data.client = new MircClient(nick)
         const clusters: IClusterEntry[] = channelObject.clusterUrl ? [{

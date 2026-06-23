@@ -36,14 +36,20 @@ export const MircTabContent: React.FC<IContentProps> = (props: IContentProps) =>
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) })
     useEffect(() => { if (containerRef.current) setContainerTop(containerRef.current.getBoundingClientRect().top) })
 
+    const selectedClusterId = (client && data.selectedClusterName) ? client.clusterIdByName(data.selectedClusterName) : undefined
+    const conversation: IUiMessage[] = (client && selectedClusterId && data.selectedPeer)
+        ? client.getConversation(selectedClusterId, data.selectedPeer) : []
+    const lastIncomingMsgId = conversation.filter(m => !m.mine).at(-1)?.msgId ?? ''
+    useEffect(() => {
+        if (!client || !lastIncomingMsgId || !selectedClusterId || !data.selectedPeer) return
+        client.markRead(selectedClusterId, data.selectedPeer)
+    }, [lastIncomingMsgId])
+
     if (!client || !data.started) {
         return <Box sx={{ p: 2 }}><Typography color='text.secondary'>mIRC not started. Set a nick and start the channel.</Typography></Box>
     }
 
     const roster = client.getRoster()
-    const selectedClusterId = data.selectedClusterName ? client.clusterIdByName(data.selectedClusterName) : undefined
-    const conversation: IUiMessage[] = (selectedClusterId && data.selectedPeer)
-        ? client.getConversation(selectedClusterId, data.selectedPeer) : []
 
     const selectPeer = (nick: string, clusterName: string) => {
         data.selectedPeer = nick

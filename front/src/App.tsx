@@ -809,6 +809,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 container: containers,
                 config: undefined,
                 isDesktop: props.isDesktop,
+                userName: user?.id,
                 data: undefined,
                 instanceConfig: undefined,
                 channelId: newChannel.channelId

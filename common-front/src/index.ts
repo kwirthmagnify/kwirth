@@ -44,6 +44,7 @@ export interface IChannelObject {
     config: any
     data: any
     accessString?: string
+    userName?: string
     isDesktop: boolean
     channelId: string
     frontChannels?: Map<string, TChannelConstructor>
