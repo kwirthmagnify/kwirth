@@ -127,6 +127,7 @@ export const MircTabContent: React.FC<IContentProps> = (props: IContentProps) =>
                         <Divider />
                         <Stack direction='row' spacing={1} alignItems='center' sx={{ p: 1 }}>
                             <TextField fullWidth size='small' placeholder='Type a message' value={draft}
+                                inputProps={{ autoComplete: 'off' }}
                                 onChange={(e) => setDraft(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendDraft() } }} />
                             <IconButton color='primary' onClick={sendDraft} disabled={!draft.trim()}><Send /></IconButton>

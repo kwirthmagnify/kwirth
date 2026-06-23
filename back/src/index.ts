@@ -85,7 +85,7 @@ const fs = require('fs')
 // }
 
 // Expose shared packages as Node globals so plugins can use them without bundling
-;(global as any).__kwirth_back__ = { kwirthCommon: _kwirthCommon, kwirthCommonBack: _kwirthCommonBack, kwirthCommonAi: _kwirthCommonAi, kwirthCommonAiBack: _kwirthCommonAiBack }
+;(global as any).__kwirth_back__ = { kwirthCommon: _kwirthCommon, kwirthCommonBack: _kwirthCommonBack, kwirthCommonAi: _kwirthCommonAi, kwirthCommonAiBack: _kwirthCommonAiBack, express }
 
 const runningEnv = {
   isDesktop: process.env.FORCE==='desktop' || !!(process.versions && (process.versions as any).electron) || !!(globalThis as any).__TAURI__,

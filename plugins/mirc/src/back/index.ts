@@ -61,9 +61,29 @@ class MircChannel implements IChannel {
     endpointRequest(_endpoint: string, _req: any, _res: any, _accessKey?: AccessKey): void {}
     async websocketRequest(_newWebSocket: WebSocket, _instanceId: string, _instanceConfig: IInstanceConfig): Promise<void> {}
 
+    // ---- known nicks (persisted so offline users still appear in the roster) ---
+    private knownNicks: Set<string> = new Set()
+    private knownNicksLoaded = false
+
+    private async ensureKnownNicksLoaded(): Promise<void> {
+        if (this.knownNicksLoaded) return
+        const arr = await this.readJson<string[]>('mirc.known-nicks', [])
+        for (const n of arr) this.knownNicks.add(n)
+        this.knownNicksLoaded = true
+    }
+
+    private async registerKnownNick(nick: string): Promise<void> {
+        await this.ensureKnownNicksLoaded()
+        if (this.knownNicks.has(nick)) return
+        this.knownNicks.add(nick)
+        await this.writeJson('mirc.known-nicks', [...this.knownNicks])
+    }
+
     // ---- storage helpers (mailbox + outbox), keyed by nick --------------------
-    private mailboxKey = (nick: string) => `mirc.mailbox.${nick}`
-    private outboxKey = (nick: string) => `mirc.outbox.${nick}`
+    // ConfigMap names must be RFC 1123 subdomains: replace _ with -
+    private safeKey = (nick: string) => nick.replace(/_/g, '-')
+    private mailboxKey = (nick: string) => `mirc.mailbox.${this.safeKey(nick)}`
+    private outboxKey = (nick: string) => `mirc.outbox.${this.safeKey(nick)}`
 
     private async readJson<T>(key: string, fallback: T): Promise<T> {
         try {
@@ -96,7 +116,7 @@ class MircChannel implements IChannel {
     }
 
     private sendRoster(ws: WebSocket, instance: string): void {
-        const users: IMircUser[] = this.allNicks().map(nick => ({ nick, online: this.isOnline(nick) }))
+        const users: IMircUser[] = [...this.knownNicks].map(nick => ({ nick, online: this.isOnline(nick) }))
         this.send(ws, { ...this.envelope(instance), msgtype: 'mirc-roster-data', users })
     }
     private broadcastPresence(nick: string, online: boolean): void {
@@ -121,6 +141,7 @@ class MircChannel implements IChannel {
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) { const n = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] }); socket = this.webSockets[n - 1] }
         const nick: string = instanceConfig.data?.nick || accessKeyDeserialize(instanceConfig.accessKey).id || 'anon'
+        await this.registerKnownNick(nick)
         const wasOnline = this.isOnline(nick)
         if (!socket.instances.find(i => i.instanceId === instanceConfig.instance)) {
             socket.instances.push({ instanceId: instanceConfig.instance, accessKey: accessKeyDeserialize(instanceConfig.accessKey), nick })
