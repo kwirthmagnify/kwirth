@@ -18,6 +18,7 @@ export class SyslogProvider implements IProvider {
 
     private subscribers = new Map<IProviderSubscriber, unknown>()
     private config: ISyslogConfig = { port: 514, protocol: 'both', tcpFraming: 'non-transparent', relayTargets: [] }
+    private configured = false
     private udpServer: UdpServer | undefined
     private tcpServer: TcpServer | undefined
     private relayUdpSocket: dgram.Socket | undefined
@@ -37,9 +38,11 @@ export class SyslogProvider implements IProvider {
 
     configure = (config: Record<string, unknown>): void => {
         this.config = { ...this.config, ...(config as Partial<ISyslogConfig>) }
+        this.configured = true
     }
 
     startProvider = async (): Promise<void> => {
+        if (!this.configured) throw new Error('syslog provider has no configuration — create the ConfigMap entry before starting')
         const { port, protocol, tcpFraming } = this.config
         const onMessage: TMessageCallback = (msg: ISyslogMessage, raw: Buffer) => {
             this.relay(raw)
