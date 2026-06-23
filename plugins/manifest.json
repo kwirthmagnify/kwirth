@@ -1,5 +1,13 @@
 [
   {
+    "id": "mirc",
+    "version": "0.1.2",
+    "name": "mIRC",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-mirc/-/kwirth-plugin-mirc-0.1.2.tgz",
+    "description": "mIRC channel plugin for Kwirth - cross-cluster direct messaging between connected users, with offline mailbox and WhatsApp-style delivery checks",
+    "icon": "Forum"
+  },
+  {
     "id": "trivy",
     "version": "0.2.14",
     "name": "Trivy",
