@@ -222,7 +222,8 @@
       "PowerShell(npm view @kwirthmagnify/kwirth-theme-matrix version 2>&1)",
       "PowerShell(git -C c:\\\\github\\\\aisdkvercel\\\\kwirth log --oneline -10 -- homepages/matrix/ themes/matrix/)",
       "PowerShell(npm view @kwirthmagnify/kwirth-provider-syslog version 2>&1)",
-      "PowerShell(& 'C:\\\\Users\\\\JULIO~1.FER\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--github-aisdkvercel-kwirth\\\\b31af976-64df-47a8-8539-291e2ee767f4\\\\scratchpad\\\\icon-audit.ps1')"
+      "PowerShell(& 'C:\\\\Users\\\\JULIO~1.FER\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--github-aisdkvercel-kwirth\\\\b31af976-64df-47a8-8539-291e2ee767f4\\\\scratchpad\\\\icon-audit.ps1')",
+      "PowerShell($f = \"$env:TEMP\\\\kwirth-provider-syslog-back.js\"; if \\(Test-Path $f\\) { Remove-Item $f -Force; \"Deleted: $f\" } else { \"Not found: $f\" })"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

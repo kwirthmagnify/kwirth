@@ -126,8 +126,6 @@ export class ProviderManager {
     }
 
     private async fetchJsFromSource(meta: IProviderMeta): Promise<string | undefined> {
-        const cacheFile = path.join(os.tmpdir(), `kwirth-provider-${meta.id}-back.js`)
-        if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
         if (!meta.installedFrom || meta.installedFrom === 'local') {
             logError(ELogComponent.CORE, `Provider '${meta.id}' back.js not stored and has no remote source — cannot recover`)
             return undefined
@@ -139,8 +137,7 @@ export class ProviderManager {
             await this.downloadFile(meta.installedFrom, tmpTgz)
             await tar.x({ file: tmpTgz, cwd: tmpDir })
             const content = fs.readFileSync(path.join(tmpDir, 'back.js'), 'utf-8')
-            fs.writeFileSync(cacheFile, content)
-            logInfo(ELogComponent.CORE, `Provider '${meta.id}' back.js fetched from source and cached`)
+            logInfo(ELogComponent.CORE, `Provider '${meta.id}' back.js fetched from source`)
             return content
         } catch (err) {
             logError(ELogComponent.CORE, `Provider '${meta.id}' failed to fetch back.js from source: ${err}`)
@@ -333,13 +330,9 @@ export class ProviderManager {
         if (dev) {
             try { return fs.readFileSync(path.join(dev.distPath, 'front.js'), 'utf-8') } catch { return undefined }
         }
-        const cacheFile = path.join(os.tmpdir(), `kwirth-provider-${id}-front.js`)
-        if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
         const data = await this.configMaps.read(`kwirth-provider-${id}-front`)
         if (data?.code) {
-            const content = data.compressed ? zlib.gunzipSync(Buffer.from(data.code, 'base64')).toString('utf-8') : data.code
-            fs.writeFileSync(cacheFile, content)
-            return content
+            return data.compressed ? zlib.gunzipSync(Buffer.from(data.code, 'base64')).toString('utf-8') : data.code
         }
         return undefined
     }

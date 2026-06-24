@@ -17,7 +17,7 @@ export class SyslogProvider implements IProvider {
     public apiKeyApi = undefined
 
     private subscribers = new Map<IProviderSubscriber, unknown>()
-    private config: ISyslogConfig = { port: 514, protocol: 'both', tcpFraming: 'non-transparent', relayTargets: [] }
+    private config: ISyslogConfig = { port: 513, protocol: 'both', tcpFraming: 'non-transparent', relayTargets: [] }
     private configured = false
     private udpServer: UdpServer | undefined
     private tcpServer: TcpServer | undefined
