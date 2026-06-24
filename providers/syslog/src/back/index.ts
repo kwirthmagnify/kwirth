@@ -17,12 +17,15 @@ export class SyslogProvider implements IProvider {
     public apiKeyApi = undefined
 
     private subscribers = new Map<IProviderSubscriber, unknown>()
-    private config: ISyslogConfig = { port: 513, protocol: 'both', tcpFraming: 'non-transparent', relayTargets: [] }
+    private config: ISyslogConfig = { port: 513, protocol: 'both', tcpFraming: 'non-transparent', relayTargets: [], maxMessages: 10000, maxParallel: 20 }
     private configured = false
     private udpServer: UdpServer | undefined
     private tcpServer: TcpServer | undefined
     private relayUdpSocket: dgram.Socket | undefined
     private messageCount = 0
+    private queue: Array<{ msg: ISyslogMessage, raw: Buffer }> = []
+    private activeWorkers = 0
+    private discardedCount = 0
 
     constructor(_clusterInfo: unknown, _kwirthData: unknown) {
         //this.router = Router()
@@ -41,14 +44,35 @@ export class SyslogProvider implements IProvider {
         this.configured = true
     }
 
+    private enqueue = (msg: ISyslogMessage, raw: Buffer): void => {
+        if (this.queue.length >= this.config.maxMessages) {
+            this.discardedCount++
+            if (this.discardedCount % 1000 === 0) console.log(`[syslog] ${this.discardedCount} messages discarded (queue full, maxMessages=${this.config.maxMessages})`)
+            return
+        }
+        this.queue.push({ msg, raw })
+        this.processNext()
+    }
+
+    private processNext = (): void => {
+        if (this.activeWorkers >= this.config.maxParallel || this.queue.length === 0) return
+        const item = this.queue.shift()!
+        this.activeWorkers++
+        Promise.resolve().then(() => {
+            this.relay(item.raw)
+            for (const sub of this.subscribers.keys()) sub.processProviderEvent(this.id, item.msg)
+            this.messageCount++
+        }).finally(() => {
+            this.activeWorkers--
+            this.processNext()
+        })
+    }
+
     startProvider = async (): Promise<void> => {
         if (!this.configured) throw new Error('syslog provider has no configuration — create the ConfigMap entry before starting')
         const { port, protocol, tcpFraming } = this.config
         const onMessage: TMessageCallback = (msg: ISyslogMessage, raw: Buffer) => {
-            this.relay(raw)
-            for (const sub of this.subscribers.keys()) sub.processProviderEvent(this.id, msg)
-            this.messageCount++
-            //if (this.messageCount % 100 === 0) console.log(`[syslog] ${this.messageCount} messages received`)
+            this.enqueue(msg, raw)
         }
         if (protocol === 'udp' || protocol === 'both') {
             this.udpServer = new UdpServer(port, onMessage)

@@ -31,4 +31,6 @@ export interface ISyslogConfig {
     protocol: TSyslogProtocol
     tcpFraming: TTcpFraming
     relayTargets: ISyslogRelayTarget[]
+    maxMessages: number
+    maxParallel: number
 }

@@ -20,7 +20,7 @@ const authHeaders = (accessString: string) => ({
 })
 
 const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backendUrl, accessString }) => {
-    const [config, setConfig] = useState<ISyslogConfig>({ port: 514, protocol: 'both', tcpFraming: 'non-transparent', relayTargets: [] })
+    const [config, setConfig] = useState<ISyslogConfig>({ port: 514, protocol: 'both', tcpFraming: 'non-transparent', relayTargets: [], maxMessages: 10000, maxParallel: 20 })
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | undefined>()
@@ -64,7 +64,7 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
     const showTcpFraming = config.protocol === 'tcp' || config.protocol === 'both'
 
     return (
-        <Dialog open maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '560px', height: '560px' } }}>
+        <Dialog open maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '560px', height: '640px' } }}>
             <DialogTitle>Syslog Provider — Configuration</DialogTitle>
             <DialogContent sx={{ pt: '16px !important' }}>
                 {loading
@@ -97,6 +97,16 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
                                     </Select>
                                 </FormControl>
                             )}
+                        </Stack>
+
+                        {/* Limits */}
+                        <Stack direction='row' spacing={2} alignItems='center'>
+                            <TextField size='small' label='Max queued messages' type='number' value={config.maxMessages}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfig(prev => ({ ...prev, maxMessages: parseInt(e.target.value, 10) || 10000 }))}
+                                sx={{ width: 200 }} slotProps={{ htmlInput: { min: 1 } }} />
+                            <TextField size='small' label='Max parallel' type='number' value={config.maxParallel}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfig(prev => ({ ...prev, maxParallel: parseInt(e.target.value, 10) || 20 }))}
+                                sx={{ width: 150 }} slotProps={{ htmlInput: { min: 1 } }} />
                         </Stack>
 
                         <Divider />
