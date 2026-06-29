@@ -239,7 +239,8 @@
       "PowerShell(git -C plugins/montag status --short)",
       "PowerShell(git -C plugins/montag commit -m \"initial commit\")",
       "PowerShell(git -C plugins/montag push -u origin main)",
-      "PowerShell(git -C plugins/montag push -u origin main --force)"
+      "PowerShell(git -C plugins/montag push -u origin main --force)",
+      "PowerShell(git -C plugins/defender status --short 2>&1)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
