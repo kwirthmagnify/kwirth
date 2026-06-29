@@ -76,7 +76,7 @@ export class TrivyProvider implements IProvider {
             onError:  (err: any) => {
                 try {
                     console.error(`[trivy-provider] informer error (${plural}):`, err)
-                    if (err['HTTP-Code'] === '404' || err.statusCode === 404)
+                    if (err['HTTP-Code'] === '404' || err.statusCode === 404 || err.code === 404)
                         console.log(`[trivy-provider] CRD ${plural} not found, informer will not restart`)
                     else {
                         const informer = this.informers.get(plural)

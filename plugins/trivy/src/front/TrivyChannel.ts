@@ -6,7 +6,7 @@ import { TrivyIcon, TrivySetup } from './TrivySetup'
 import { TrivyTabContent } from './TrivyTabContent'
 import { ITrivyData, IAsset, TrivyData } from './TrivyData'
 import { TrivyConfig, TrivyInstanceConfig } from './TrivyConfig'
-import { ITrivyMessageResponse } from './TrivyTypes'
+import { ITrivyMessageResponse } from '../common/TrivyTypes'
 
 export class TrivyChannel implements IChannel {
     private setupVisible = false

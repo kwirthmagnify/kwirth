@@ -7,11 +7,11 @@ import http from 'http'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000
 
-import { INewsItem, INewsMessageResponse } from '../common/NewsTypes'
+import { ENewsFeed, INewsItem, INewsMessageResponse } from '../common/NewsTypes'
 
-const FEEDS: Record<string, { url: string; source: string }> = {
-    kubernetes: { url: 'https://kubernetes.io/feed.xml', source: 'kubernetes.io' },
-    ai: { url: 'https://techcrunch.com/category/artificial-intelligence/feed/', source: 'techcrunch.com' }
+const FEEDS: Record<ENewsFeed, { url: string; source: string }> = {
+    [ENewsFeed.KUBERNETES]: { url: 'https://kubernetes.io/feed.xml', source: 'kubernetes.io' },
+    [ENewsFeed.AI]: { url: 'https://techcrunch.com/category/artificial-intelligence/feed/', source: 'techcrunch.com' }
 }
 
 interface IAsset { podNamespace: string; podName: string; containerName: string }
@@ -19,7 +19,7 @@ interface IAsset { podNamespace: string; podName: string; containerName: string 
 interface IInstance {
     instanceId: string
     accessKey: AccessKey
-    selectedFeeds: string[]
+    selectedFeeds: ENewsFeed[]
     paused: boolean
     seenLinks: Set<string>
     assets: IAsset[]
@@ -81,7 +81,7 @@ class NewsChannel {
             const newInstance: IInstance = {
                 accessKey: accessKeyDeserialize(instanceConfig.accessKey),
                 instanceId: instanceConfig.instance,
-                selectedFeeds: instanceConfig.data?.selectedFeeds ?? Object.keys(FEEDS),
+                selectedFeeds: instanceConfig.data?.selectedFeeds ?? Object.values(ENewsFeed),
                 paused: false,
                 seenLinks: new Set<string>(),
                 assets: []

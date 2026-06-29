@@ -37,3 +37,27 @@ export interface ITrivyInstanceConfig {
     ignoreMedium: boolean
     ignoreLow: boolean
 }
+
+export interface IKnown {
+    name: string
+    namespace: string
+    container: string
+    report: any
+}
+
+export interface IUnknown {
+    name: string
+    namespace: string
+    container: string
+    statusCode: number
+    statusMessage: string
+}
+
+export interface ITrivyProviderEvent {
+    namespace: string
+    podName: string
+    containerName: string
+    plural: string
+    event: 'add' | 'update' | 'delete'
+    report?: any
+}

@@ -7,7 +7,7 @@ import { IAsset, ITrivyData, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, T
 import { TrivyTabContentAssetDetails } from './components/TrivyTabContentAssetDetails'
 import { getTotalIssues, TrivyTabContentAsset } from './components/TrivyTabContentAsset'
 import { MenuOrder } from './components/MenuOrder'
-import { ITrivyInstanceConfig } from './TrivyTypes'
+import { ITrivyInstanceConfig } from '../common/TrivyTypes'
 
 const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const theme = useTheme()

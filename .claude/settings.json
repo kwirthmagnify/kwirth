@@ -223,7 +223,23 @@
       "PowerShell(git -C c:\\\\github\\\\aisdkvercel\\\\kwirth log --oneline -10 -- homepages/matrix/ themes/matrix/)",
       "PowerShell(npm view @kwirthmagnify/kwirth-provider-syslog version 2>&1)",
       "PowerShell(& 'C:\\\\Users\\\\JULIO~1.FER\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--github-aisdkvercel-kwirth\\\\b31af976-64df-47a8-8539-291e2ee767f4\\\\scratchpad\\\\icon-audit.ps1')",
-      "PowerShell($f = \"$env:TEMP\\\\kwirth-provider-syslog-back.js\"; if \\(Test-Path $f\\) { Remove-Item $f -Force; \"Deleted: $f\" } else { \"Not found: $f\" })"
+      "PowerShell($f = \"$env:TEMP\\\\kwirth-provider-syslog-back.js\"; if \\(Test-Path $f\\) { Remove-Item $f -Force; \"Deleted: $f\" } else { \"Not found: $f\" })",
+      "PowerShell(\\(Get-Content \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-ai\\\\dist\\\\back.js\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(head)",
+      "Bash(del \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\montag\\\\src\\\\back\\\\nameGenerator.ts\")",
+      "PowerShell(npm show @kwirthmagnify/kwirth-common version)",
+      "PowerShell(npm show @kwirthmagnify/kwirth-common dist-tags)",
+      "PowerShell(& \"C:/nvm4w/nodejs/node.exe\" \"C:/Users/julio.fernandezvila/.claude/plugins/cache/context-mode/context-mode/1.0.162/cli.bundle.mjs\" upgrade --platform claude-code)",
+      "PowerShell(Get-ChildItem \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\providers\\\\trivy\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName)",
+      "PowerShell(npm show @kwirthmagnify/kwirth-provider-trivy version 2>$null)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\" -File | Select-Object Name; \"---SRC---\"; Get-ChildItem -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\src\" -Recurse -File | ForEach-Object { $_.FullName.Replace\\(\"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\trivy\\\\\",\"\"\\) })",
+      "PowerShell(npm install --prefix \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\defender\" 2>&1)",
+      "Bash(Test-Path plugins/montag/.git)",
+      "PowerShell(head -3)",
+      "PowerShell(git -C plugins/montag status --short)",
+      "PowerShell(git -C plugins/montag commit -m \"initial commit\")",
+      "PowerShell(git -C plugins/montag push -u origin main)",
+      "PowerShell(git -C plugins/montag push -u origin main --force)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
@@ -242,7 +258,9 @@
       "C:\\Users\\julio.fernandezvila\\.claude",
       "c:\\github\\jfvilas\\censor-agent",
       "c:\\github\\jfvilas",
-      "c:\\github\\aisdkvercel\\kwirth\\common\\dist"
+      "c:\\github\\aisdkvercel\\kwirth\\common\\dist",
+      "c:\\github\\aisdkvercel\\kwirth\\plugins\\montag\\.git",
+      "c:\\github\\aisdkvercel\\kwirth\\plugins\\.git"
     ]
   }
 }

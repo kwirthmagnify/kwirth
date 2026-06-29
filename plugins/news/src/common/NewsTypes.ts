@@ -1,5 +1,10 @@
 import { EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow } from "@kwirthmagnify/kwirth-common"
 
+export enum ENewsFeed {
+    KUBERNETES = 'kubernetes',
+    AI = 'ai'
+}
+
 export interface INewsItem {
     title: string
     link: string

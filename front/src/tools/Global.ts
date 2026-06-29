@@ -42,6 +42,7 @@ export const readClusterInfo = async (cluster: Cluster, notify: (channel:string|
         let responseCluster = await fetch(`${cluster.url}/config/cluster`, addGetAuthorization(cluster.accessString))
         if (responseCluster.status===200) {
             cluster.clusterInfo = await responseCluster.json() as IClusterInfo
+            cluster.id = cluster.clusterInfo.id
         }
         else {
             console.log('Get cluster info status code:', responseInfo.status)

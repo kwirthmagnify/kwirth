@@ -1,4 +1,5 @@
-export const feedsAvailable = ['kubernetes', 'ai']
+import { ENewsFeed } from '../common/NewsTypes'
+export { ENewsFeed }
 
 export interface INewsChannelConfig {
     maxItems: number
@@ -9,9 +10,9 @@ export class NewsChannelConfig implements INewsChannelConfig {
 }
 
 export interface INewsInstanceConfig {
-    selectedFeeds: string[]
+    selectedFeeds: ENewsFeed[]
 }
 
 export class NewsInstanceConfig implements INewsInstanceConfig {
-    selectedFeeds = [...feedsAvailable]
+    selectedFeeds = Object.values(ENewsFeed)
 }

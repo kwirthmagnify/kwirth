@@ -5,7 +5,7 @@ import { TrivyConfig, TrivyInstanceConfig } from './TrivyConfig'
 import { VerifiedUser } from '@mui/icons-material'
 import { TrivyOperator } from './TrivyOperator'
 import { ITrivyData } from './TrivyData'
-import { ITrivyConfig, ITrivyInstanceConfig } from './TrivyTypes'
+import { ITrivyConfig, ITrivyInstanceConfig } from '../common/TrivyTypes'
 
 const addGetAuthorization = (accessString: string) => ({ headers: { 'Authorization': 'Bearer ' + accessString } })
 

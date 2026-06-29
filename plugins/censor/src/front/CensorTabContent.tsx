@@ -244,9 +244,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 sx={{ fontSize: '11px', height: 26 }}>
                                 <MenuItem value='' sx={{ fontSize: '12px', fontStyle: 'italic' }}>All configs</MenuItem>
                                 {[...data.runners.keys()].map(rk => (
-                                    <Tooltip key={rk} title={rk} placement='bottom'>
-                                        <MenuItem value={rk} sx={{ fontSize: '12px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{rk}</MenuItem>
-                                    </Tooltip>
+                                    <MenuItem key={rk} value={rk} sx={{ fontSize: '12px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{rk}</MenuItem>
                                 ))}
                             </Select>
                         </FormControl>

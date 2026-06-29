@@ -1,4 +1,4 @@
-import { ITrivyConfig, ITrivyInstanceConfig } from "./TrivyTypes"
+import { ITrivyConfig, ITrivyInstanceConfig } from "../common/TrivyTypes"
 
 class TrivyConfig implements ITrivyConfig { }
 

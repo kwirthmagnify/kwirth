@@ -23,6 +23,7 @@ export interface IPendingWebsocket {
 
 export class ClusterInfo {
     public name: string = ''
+    public id: string = ''
     public nodes: Map<string, INodeInfo> = new Map()
     public pendingWebsocket:IPendingWebsocket[] = []
     public dockerTools!: DockerTools

@@ -12,8 +12,6 @@ export class SyslogProvider implements IProvider {
     public readonly requiresApiKeyApi = false
     public router = undefined
     public routerAlias = undefined
-    //public router: Router
-    //public routerAlias: string | undefined = 'syslog'
     public apiKeyApi = undefined
 
     private subscribers = new Map<IProviderSubscriber, unknown>()
@@ -28,7 +26,6 @@ export class SyslogProvider implements IProvider {
     private discardedCount = 0
 
     constructor(_clusterInfo: unknown, _kwirthData: unknown) {
-        //this.router = Router()
     }
 
     addSubscriber = async (c: IProviderSubscriber, _data: unknown): Promise<void> => {

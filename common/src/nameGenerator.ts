@@ -9,7 +9,8 @@ const SCIENTISTS = [
     'turing', 'lovelace', 'hopper', 'knuth', 'dijkstra', 'shannon', 'neumann', 'babbage', 'boole', 'hamilton',
     'liskov', 'engelbart', 'wozniak', 'ritchie', 'kernighan', 'torvalds', 'stallman', 'euler', 'gauss', 'tesla',
     'curie', 'feynman', 'hawking', 'einstein', 'darwin', 'fermat', 'pascal', 'leibniz', 'church', 'godel',
-    'chomsky', 'diffie', 'hellman', 'rivest', 'shamir', 'vigenere', 'stroustrup', 'gosling', 'kay', 'cerf'
+    'chomsky', 'diffie', 'hellman', 'rivest', 'shamir', 'vigenere', 'stroustrup', 'gosling', 'kay', 'cerf',
+    'wirth', 'galileo', 'davinci'
 ]
 
 const TECH_NOUNS = [

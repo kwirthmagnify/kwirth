@@ -1,5 +1,5 @@
 import net from 'net'
-import { TTcpFraming, ISyslogMessage } from '../types/ISyslogMessage'
+import { TTcpFraming } from '../types/ISyslogMessage'
 import { SyslogParser } from './SyslogParser'
 import { TMessageCallback } from './UdpServer'
 

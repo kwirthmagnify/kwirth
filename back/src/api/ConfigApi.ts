@@ -45,6 +45,7 @@ export class ConfigApi {
                     const nodeNames = nodes.items.map((node:any) => node.metadata.name)
                     res.status(200).json({
                         name: this.clusterInfo.name,
+                        id: this.clusterInfo.id,
                         type: this.clusterInfo.type,
                         flavour: this.clusterInfo.flavour,
                         memory: this.clusterInfo.memory,

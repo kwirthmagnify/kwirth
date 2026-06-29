@@ -133,7 +133,14 @@ export class PluginManager {
     private reloadDevBack(id: string, backPath: string, registeredChannels: Map<string, TChannelConstructor>): void {
         try {
             const resolved = require.resolve(backPath)
-            if (require.cache[resolved]) delete require.cache[resolved]
+            if (require.cache[resolved]) {
+                const mod = require.cache[resolved]
+                if (mod?.parent) {
+                    const idx = mod.parent.children.indexOf(mod)
+                    if (idx >= 0) mod.parent.children.splice(idx, 1)
+                }
+                delete require.cache[resolved]
+            }
             const pluginModule = require(backPath)
             const ChannelClass = pluginModule.default ?? Object.values(pluginModule).find(v => typeof v === 'function')
             if (ChannelClass) {

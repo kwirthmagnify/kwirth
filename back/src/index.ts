@@ -69,9 +69,9 @@ import { PluginApi } from './api/PluginApi'
 import { ProviderManager } from './tools/ProviderManager'
 import { ProviderApi } from './api/ProviderApi'
 import { SenderApi } from './api/SenderApi'
-import { DaemonApi } from './api/DaemonApi'
+//import { DaemonApi } from './api/DaemonApi'
 import { SenderManager } from './tools/SenderManager'
-import { DaemonManager } from './tools/DaemonManager'
+//import { DaemonManager } from './tools/DaemonManager'
 import { ThemeManager } from './tools/ThemeManager'
 import { ThemeApi } from './api/ThemeApi'
 import { HomepageManager } from './tools/HomepageManager'
@@ -271,6 +271,8 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         clusterInfo.execApi = new Exec(clusterInfo.kubeConfig)
         clusterInfo.logApi = new Log(clusterInfo.kubeConfig)
         clusterInfo.apisApi = kubeConfig.makeApiClient(ApisApi)
+        
+        clusterInfo.id = await (await clusterInfo.coreApi.readNamespace({ name:'kube-system'})).metadata?.uid || ''
 
         if (runningEnv.isDesktop || runningEnv.isDocker) {
             // do nothing, since we will use kubeconfig credentials
@@ -1184,6 +1186,12 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         }
                         activeRI.channels.set(id, channelInstance)
                         channelInstance.startChannel()
+                        if ((channelInstance as any).providesRouter && (channelInstance as any).router) {
+                            const alias = (channelInstance as any).routerAlias
+                            const mountPath = alias ? `${envRootPath}/${alias}` : `${envRootPath}/${activeRI.id}/channel/${id}`
+                            expressApp.use(mountPath, (channelInstance as any).router)
+                            logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP router mounted at '${mountPath}'`)
+                        }
                         if (!activeRI.kwirthData.channels.some(c => c.id === id))
                             activeRI.kwirthData.channels.push(channelInstance.getChannelData())
                         const channelData = channelInstance.getChannelData()
@@ -1430,6 +1438,12 @@ const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
                 expressApp.use(`${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`, router)
             }
         }
+        if ((channel as any).providesRouter && (channel as any).router) {
+            const alias = (channel as any).routerAlias
+            const mountPath = alias ? `${envRootPath}/${alias}` : `${envRootPath}/${ri.id}/channel/${channelData.id}`
+            expressApp.use(mountPath, (channel as any).router)
+            logInfo(ELogComponent.CORE, `Channel '${channelData.id}' HTTP router mounted at '${mountPath}'`)
+        }
     }
 }
 
@@ -1493,6 +1507,8 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             pluginManager.onDevPluginReloaded = (id, ChannelClass) => {
                 for (const ri of runningInstances) {
                     if (!ri.channels.has(id)) continue
+                    const oldInstance = ri.channels.get(id)
+                    if (typeof (oldInstance as any).cleanup === 'function') (oldInstance as any).cleanup()
                     const newInstance = createChannelInstance(ChannelClass, ri.clusterInfo, ri.backChannelObject)
                     if (newInstance) {
                         ri.channels.set(id, newInstance)
@@ -1997,7 +2013,7 @@ const startNodeTasks = () => {
     // show heap status every 5 mins
     setInterval ( () => {
         logInfo(ELogComponent.CORE, v8.getHeapStatistics())
-    }, 300000)
+    }, 60000)
 }
 
 const configureForward = (localClusterInfo:ClusterInfo, expressApp:Application) => {

@@ -101,13 +101,15 @@ export const DepecheMode: React.FC<IHomepageProps> = (props) => {
     const [containerHeight, setContainerHeight] = useState(0)
     useEffect(() => {
         const obs = new ResizeObserver(() => {
-            if (!containerRef.current) return
-            const { top } = containerRef.current.getBoundingClientRect()
-            setContainerHeight(window.innerHeight - top)
+            requestAnimationFrame(() => {
+                if (!containerRef.current) return
+                const { top } = containerRef.current.getBoundingClientRect()
+                setContainerHeight(window.innerHeight - top)
+            })
         })
         obs.observe(document.body)
         return () => obs.disconnect()
-    }, [containerRef.current])
+    }, [])
 
     const [clusterMetrics, setClusterMetrics] = useState<Record<string, { cpu: number; memory: number; vcpus: number; totalMemoryBytes: number; pods: number; maxPods: number }>>({})
     const [metricsHistory, setMetricsHistory] = useState<Record<string, { cpu: number[]; mem: number[] }>>({})

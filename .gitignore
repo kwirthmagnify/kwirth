@@ -42,3 +42,6 @@ kwirth-plugin-*-back.js
 
 kwirth-dev.json
 kwirth-bundled.json
+
+# repos independientes
+/plugins/montag/

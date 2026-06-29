@@ -120,7 +120,9 @@ const MetricBar: React.FC<{ label: string; value: number }> = ({ label, value })
     useEffect(() => {
         if (!barRef.current) return
         const obs = new ResizeObserver(() => {
-            if (barRef.current) setCols(Math.max(5, Math.floor(barRef.current.offsetWidth / 6)))
+            requestAnimationFrame(() => {
+                if (barRef.current) setCols(Math.max(5, Math.floor(barRef.current.offsetWidth / 6)))
+            })
         })
         obs.observe(barRef.current)
         return () => obs.disconnect()
@@ -334,13 +336,15 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
 
     useEffect(() => {
         const observer = new ResizeObserver(() => {
-            if (!containerRef.current) return
-            const { top } = containerRef.current.getBoundingClientRect()
-            setContainerHeight(window.innerHeight - top)
+            requestAnimationFrame(() => {
+                if (!containerRef.current) return
+                const { top } = containerRef.current.getBoundingClientRect()
+                setContainerHeight(window.innerHeight - top)
+            })
         })
         observer.observe(document.body)
         return () => observer.disconnect()
-    }, [containerRef.current])
+    }, [])
 
     // per-cluster metrics state
     const [clusterMetrics, setClusterMetrics] = useState<Record<string, { cpu: number; memory: number; vcpus: number; totalMemoryBytes: number; pods: number; maxPods: number }>>({})

@@ -252,15 +252,16 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     useLayoutEffect(() => {
         const observer = new ResizeObserver(() => {
-            if (!magnifyBoxRef.current) return
-            const { top } = magnifyBoxRef.current.getBoundingClientRect()
-            let a = window.innerHeight - top
-            setMagnifyBoxHeight(a)
+            requestAnimationFrame(() => {
+                if (!magnifyBoxRef.current) return
+                const { top } = magnifyBoxRef.current.getBoundingClientRect()
+                setMagnifyBoxHeight(window.innerHeight - top)
+            })
         })
         observer.observe(document.body)
 
         return () => observer.disconnect()
-    }, [magnifyBoxRef.current])
+    }, [])
 
     useEffect(() => {
         props.channelObject.setPalette?.(magnifyData.userPreferences?.palette)

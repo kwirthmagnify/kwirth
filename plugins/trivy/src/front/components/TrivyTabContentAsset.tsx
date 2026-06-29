@@ -3,10 +3,10 @@ import { Avatar, Box, Card, CardContent, CardHeader, CardMedia, Divider, IconBut
 import { MoreVert, Visibility as VisibilityIcon, Replay as ReplayIcon } from '@mui/icons-material'
 import { assetAvatarColor, getAvatarContent } from '../TrivyCommon'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
-import { ITrivyInstanceConfig } from '../TrivyTypes'
+import { ITrivyInstanceConfig } from '../../common/TrivyTypes'
 import { EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { IAsset, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_VULN_PLURAL } from '../TrivyData'
-import { ETrivyCommand, ITrivyMessage } from '../TrivyTypes'
+import { ETrivyCommand, ITrivyMessage } from '../../common/TrivyTypes'
 
 interface ITrivyTabContentAssetProps {
     asset: IAsset

@@ -7,7 +7,7 @@ import { IAsset, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_SBO
 import { TrivyTabContentAssetSbom } from './TrivyTabContentAssetSbom'
 import { TrivyTabContentAssetExposed } from './TrivyTabContentAssetExposed'
 import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
-import { ITrivyInstanceConfig } from '../TrivyTypes'
+import { ITrivyInstanceConfig } from '../../common/TrivyTypes'
 
 interface ITrivyTabContentAssetDetailsProps {
     asset: IAsset

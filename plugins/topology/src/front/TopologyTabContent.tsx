@@ -10,9 +10,10 @@ import {
     PlayArrow, Refresh, Search, Stop, Terminal, Timeline, ZoomIn, ZoomOut,
 } from '@mui/icons-material'
 import {
-    ETopologyNodeKind, ETopologyNodeStatus,
+    ETopologyNodeKind, ETopologyNodeStatus, ETopologyQueryKind,
     ICanvasState, ITopologyData, ITopologyInfoResult, ITopologyNode,
 } from './TopologyData'
+import { ETopoAction, ETopologyMenuAction } from '../common/TopologyTypes'
 import { ITopologyConfig } from './TopologyConfig'
 import {
     EInstanceConfigView,
@@ -85,47 +86,47 @@ const KIND_LEVEL: Record<ETopologyNodeKind, number> = {
 
 // ── Context menu ──────────────────────────────────────────────────────────────
 
-interface ICtxAction { icon: React.ReactNode; label: string; action: string; divider?: boolean }
+interface ICtxAction { icon: React.ReactNode; label: string; action: ETopologyMenuAction; divider?: boolean }
 
 const COMMON_ACTIONS: ICtxAction[] = [
-    { icon: <Timeline fontSize='small'/>,    label: 'View path',    action: 'view-path', divider: true },
-    { icon: <Info fontSize='small'/>,        label: 'View details', action: 'details' },
-    { icon: <ContentCopy fontSize='small'/>, label: 'Copy name',    action: 'copy-name', divider: true },
+    { icon: <Timeline fontSize='small'/>,    label: 'View path',    action: ETopologyMenuAction.VIEW_PATH,  divider: true },
+    { icon: <Info fontSize='small'/>,        label: 'View details', action: ETopologyMenuAction.DETAILS },
+    { icon: <ContentCopy fontSize='small'/>, label: 'Copy name',    action: ETopologyMenuAction.COPY_NAME,  divider: true },
 ]
 
 const KIND_ACTIONS: Partial<Record<ETopologyNodeKind, ICtxAction[]>> = {
     [ETopologyNodeKind.CONTAINER]: [
-        { icon: <Terminal fontSize='small'/>,  label: 'Open shell',  action: 'shell' },
-        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',   action: 'logs', divider: true },
+        { icon: <Terminal fontSize='small'/>,  label: 'Open shell',  action: ETopologyMenuAction.SHELL },
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',   action: ETopologyMenuAction.LOGS,        divider: true },
     ],
     [ETopologyNodeKind.POD]: [
-        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: 'logs' },
-        { icon: <Delete fontSize='small'/>,    label: 'Delete pod',      action: 'delete-pod', divider: true },
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: ETopologyMenuAction.LOGS },
+        { icon: <Delete fontSize='small'/>,    label: 'Delete pod',      action: ETopologyMenuAction.DELETE_POD, divider: true },
     ],
     [ETopologyNodeKind.DEPLOYMENT]: [
-        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: 'logs' },
-        { icon: <PlayArrow fontSize='small'/>, label: 'Scale up (+1)',   action: 'scale-up' },
-        { icon: <Stop fontSize='small'/>,      label: 'Scale to zero',   action: 'scale-zero' },
-        { icon: <Refresh fontSize='small'/>,   label: 'Restart rollout', action: 'restart', divider: true },
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: ETopologyMenuAction.LOGS },
+        { icon: <PlayArrow fontSize='small'/>, label: 'Scale up (+1)',   action: ETopologyMenuAction.SCALE_UP },
+        { icon: <Stop fontSize='small'/>,      label: 'Scale to zero',   action: ETopologyMenuAction.SCALE_ZERO },
+        { icon: <Refresh fontSize='small'/>,   label: 'Restart rollout', action: ETopologyMenuAction.RESTART,    divider: true },
     ],
     [ETopologyNodeKind.STATEFULSET]: [
-        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: 'logs' },
-        { icon: <PlayArrow fontSize='small'/>, label: 'Scale up (+1)',   action: 'scale-up' },
-        { icon: <Stop fontSize='small'/>,      label: 'Scale to zero',   action: 'scale-zero' },
-        { icon: <Refresh fontSize='small'/>,   label: 'Restart rollout', action: 'restart', divider: true },
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: ETopologyMenuAction.LOGS },
+        { icon: <PlayArrow fontSize='small'/>, label: 'Scale up (+1)',   action: ETopologyMenuAction.SCALE_UP },
+        { icon: <Stop fontSize='small'/>,      label: 'Scale to zero',   action: ETopologyMenuAction.SCALE_ZERO },
+        { icon: <Refresh fontSize='small'/>,   label: 'Restart rollout', action: ETopologyMenuAction.RESTART,    divider: true },
     ],
     [ETopologyNodeKind.DAEMONSET]: [
-        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: 'logs' },
-        { icon: <Refresh fontSize='small'/>,   label: 'Restart rollout', action: 'restart', divider: true },
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: ETopologyMenuAction.LOGS },
+        { icon: <Refresh fontSize='small'/>,   label: 'Restart rollout', action: ETopologyMenuAction.RESTART,    divider: true },
     ],
     [ETopologyNodeKind.REPLICASET]: [
-        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: 'logs', divider: true },
+        { icon: <PlayArrow fontSize='small'/>, label: 'View logs',       action: ETopologyMenuAction.LOGS,        divider: true },
     ],
     [ETopologyNodeKind.SERVICE]: [
-        { icon: <Hub fontSize='small'/>, label: 'Show endpoints', action: 'endpoints', divider: true },
+        { icon: <Hub fontSize='small'/>, label: 'Show endpoints', action: ETopologyMenuAction.ENDPOINTS, divider: true },
     ],
     [ETopologyNodeKind.INGRESS]: [
-        { icon: <Info fontSize='small'/>, label: 'Show rules', action: 'ingress-rules', divider: true },
+        { icon: <Info fontSize='small'/>, label: 'Show rules', action: ETopologyMenuAction.INGRESS_RULES, divider: true },
     ],
 }
 
@@ -204,7 +205,7 @@ const InfoResultPanel: React.FC<{ result: ITopologyInfoResult; onClose: () => vo
         <Stack spacing={0.5}>
             <Stack direction='row' alignItems='center' justifyContent='space-between'>
                 <Typography variant='body2' fontWeight={500} sx={{ color: '#fff' }}>
-                    {result.kind === 'endpoints' ? 'Endpoints' : 'Ingress Rules'} — {result.name}
+                    {result.kind === ETopologyQueryKind.ENDPOINTS ? 'Endpoints' : 'Ingress Rules'} — {result.name}
                 </Typography>
                 <IconButton size='small' onClick={onClose} sx={{ color: 'rgba(255,255,255,0.4)', p: 0 }}>
                     <Clear fontSize='small' />
@@ -213,7 +214,7 @@ const InfoResultPanel: React.FC<{ result: ITopologyInfoResult; onClose: () => vo
             <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.4)' }}>{result.namespace}</Typography>
             <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: 0.5 }} />
 
-            {result.kind === 'endpoints' && (result.data as any[]).map((subset: any, si: number) => (
+            {result.kind === ETopologyQueryKind.ENDPOINTS && (result.data as any[]).map((subset: any, si: number) => (
                 <Stack key={si} spacing={0.3}>
                     {(subset.addresses ?? []).map((a: any, ai: number) => (
                         <Stack key={ai} direction='row' justifyContent='space-between' alignItems='center'>
@@ -230,7 +231,7 @@ const InfoResultPanel: React.FC<{ result: ITopologyInfoResult; onClose: () => vo
                 </Stack>
             ))}
 
-            {result.kind === 'ingress-rules' && (result.data as any[]).map((rule: any, ri: number) => (
+            {result.kind === ETopologyQueryKind.INGRESS_RULES && (result.data as any[]).map((rule: any, ri: number) => (
                 <Stack key={ri} spacing={0.3}>
                     <Typography variant='caption' fontWeight={500} sx={{ color: '#fc9' }}>{rule.host}</Typography>
                     {(rule.paths ?? []).map((p: any, pi: number) => (
@@ -960,7 +961,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         setContextMenu(undefined)
         const ws = channelObject.webSocket
 
-        const sendCmd = (topoAction: string, extra: Record<string, string | number | boolean> = {}) => {
+        const sendCmd = (topoAction: ETopoAction, extra: Record<string, string | number | boolean> = {}) => {
             if (!ws) return
             ws.send(JSON.stringify({
                 channel:   'topology',
@@ -979,10 +980,10 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
         }
 
         switch (action) {
-            case 'view-path': applyPathMode(node); break
-            case 'details':   selectedRef.current = node.uid; setSelectedNode(node); break
-            case 'copy-name': navigator.clipboard.writeText(node.name); break
-            case 'shell': {
+            case ETopologyMenuAction.VIEW_PATH:  applyPathMode(node); break
+            case ETopologyMenuAction.DETAILS:    selectedRef.current = node.uid; setSelectedNode(node); break
+            case ETopologyMenuAction.COPY_NAME:  navigator.clipboard.writeText(node.name); break
+            case ETopologyMenuAction.SHELL: {
                 const podNode = node.kind === ETopologyNodeKind.CONTAINER
                     ? Array.from(topologyData.nodes.values()).find(n => node.ownerUids?.includes(n.uid) && n.kind === ETopologyNodeKind.POD)
                     : node
@@ -1012,7 +1013,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 }
                 break
             }
-            case 'logs': {
+            case ETopologyMenuAction.LOGS: {
                 const GROUP_KINDS = new Set([ETopologyNodeKind.DEPLOYMENT, ETopologyNodeKind.STATEFULSET, ETopologyNodeKind.DAEMONSET, ETopologyNodeKind.REPLICASET])
                 if (GROUP_KINDS.has(node.kind)) {
                     const kindPrefix = node.kind.toLowerCase()
@@ -1058,12 +1059,12 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 }
                 break
             }
-            case 'scale-up':      sendCmd('SCALE', { replicas: (node.replicas ?? 0) + 1 }); break
-            case 'scale-zero':    sendCmd('SCALE', { replicas: 0 }); break
-            case 'restart':       sendCmd('RESTART'); break
-            case 'delete-pod':    sendCmd('DELETE_POD'); break
-            case 'endpoints':     console.log('[topology] sending GET_ENDPOINTS', node.name, node.namespace); sendCmd('GET_ENDPOINTS'); break
-            case 'ingress-rules': console.log('[topology] sending GET_INGRESS_RULES', node.name, node.namespace); sendCmd('GET_INGRESS_RULES'); break
+            case ETopologyMenuAction.SCALE_UP:        sendCmd(ETopoAction.SCALE, { replicas: (node.replicas ?? 0) + 1 }); break
+            case ETopologyMenuAction.SCALE_ZERO:      sendCmd(ETopoAction.SCALE, { replicas: 0 }); break
+            case ETopologyMenuAction.RESTART:         sendCmd(ETopoAction.RESTART); break
+            case ETopologyMenuAction.DELETE_POD:      sendCmd(ETopoAction.DELETE_POD); break
+            case ETopologyMenuAction.ENDPOINTS:       console.log('[topology] sending GET_ENDPOINTS', node.name, node.namespace); sendCmd(ETopoAction.GET_ENDPOINTS); break
+            case ETopologyMenuAction.INGRESS_RULES:   console.log('[topology] sending GET_INGRESS_RULES', node.name, node.namespace); sendCmd(ETopoAction.GET_INGRESS_RULES); break
             default:              channelObject.notify?.('topology', ENotifyLevel.INFO, `${action} on ${node.name}`)
         }
     }, [channelObject, applyPathMode])

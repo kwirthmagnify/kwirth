@@ -642,6 +642,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
         let responseCluster = await fetch(`${url}/config/cluster`, addGetAuthorization(myAccessString))
         srcCluster.clusterInfo = await responseCluster.json() as IClusterInfo
+        srcCluster.id = srcCluster.clusterInfo.id
 
         srcCluster.name = srcCluster.kwirthData.clusterName
         srcCluster.url = url

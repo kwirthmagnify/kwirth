@@ -15,7 +15,8 @@ import {
 import { getTopologyExternalHelpContent } from './TopologyMagnify'
 import { TopologyIcon, TopologySetup } from './TopologySetup'
 import { TopologyTabContent } from './TopologyTabContent'
-import { TopologyData, ITopologyData, ITopologyNode, ETopologyNodeKind, ETopologyNodeStatus } from './TopologyData'
+import { TopologyData, ITopologyData, ITopologyNode, ETopologyNodeKind, ETopologyNodeStatus, ETopologyQueryKind } from './TopologyData'
+import { ETopoAction } from '../common/TopologyTypes'
 import { TopologyConfig, TopologyInstanceConfig, ITopologyConfig, ITopologyInstanceConfig } from './TopologyConfig'
 import { IChannel, IChannelObject, IContentProps, ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 
@@ -24,7 +25,7 @@ interface ITopologyWsMessage {
     action?:     EInstanceMessageAction
     flow?:       EInstanceMessageFlow
     instance?:   string
-    topoAction?: 'ADDED' | 'MODIFIED' | 'DELETED' | 'ENDPOINTS_RESULT' | 'INGRESS_RULES_RESULT'
+    topoAction?: ETopoAction
     kind:        ETopologyNodeKind
     uid:         string
     name:        string
@@ -322,12 +323,12 @@ export class TopologyChannel implements IChannel {
 
         switch (msg.type) {
             case EInstanceMessageType.DATA: {
-                const topoAction = msg.topoAction ?? 'ADDED'
+                const topoAction = msg.topoAction ?? ETopoAction.ADDED
 
-                if (topoAction === 'ENDPOINTS_RESULT' || topoAction === 'INGRESS_RULES_RESULT') {
+                if (topoAction === ETopoAction.ENDPOINTS_RESULT || topoAction === ETopoAction.INGRESS_RULES_RESULT) {
                     console.log('[topology] received', topoAction, msg.name, (msg as any).responseData)
                     data.infoResult = {
-                        kind:      topoAction === 'ENDPOINTS_RESULT' ? 'endpoints' : 'ingress-rules',
+                        kind:      topoAction === ETopoAction.ENDPOINTS_RESULT ? ETopologyQueryKind.ENDPOINTS : ETopologyQueryKind.INGRESS_RULES,
                         name:      msg.name,
                         namespace: msg.namespace,
                         data:      msg.responseData,
@@ -338,9 +339,9 @@ export class TopologyChannel implements IChannel {
                 }
 
                 if (!this.isVisible(msg.kind, cfg)) break
-                if (cfg.showOnlyRunning && msg.status !== ETopologyNodeStatus.RUNNING && topoAction !== 'DELETED') break
+                if (cfg.showOnlyRunning && msg.status !== ETopologyNodeStatus.RUNNING && topoAction !== ETopoAction.DELETED) break
 
-                if (msg.kind === ETopologyNodeKind.REPLICASET && topoAction !== 'DELETED' &&
+                if (msg.kind === ETopologyNodeKind.REPLICASET && topoAction !== ETopoAction.DELETED &&
                     (msg.replicas ?? 0) === 0 && (msg.readyReplicas ?? 0) === 0) {
                     if (data.nodes.delete(msg.uid)) {
                         recomputeLayout(data.nodes, cfg.nodeSpacingFactor, cfg.gridColumns)
@@ -350,7 +351,7 @@ export class TopologyChannel implements IChannel {
                     break
                 }
 
-                if (topoAction === 'DELETED') {
+                if (topoAction === ETopoAction.DELETED) {
                     data.nodes.delete(msg.uid)
                     if (msg.kind === ETopologyNodeKind.POD) {
                         const prefix = `${msg.uid}/container/`

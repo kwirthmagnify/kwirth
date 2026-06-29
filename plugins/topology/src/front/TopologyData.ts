@@ -1,5 +1,5 @@
-import { ETopologyNodeKind, ETopologyNodeStatus } from '../common/TopologyTypes'
-export { ETopologyNodeKind, ETopologyNodeStatus }
+import { ETopologyNodeKind, ETopologyNodeStatus, ETopologyQueryKind } from '../common/TopologyTypes'
+export { ETopologyNodeKind, ETopologyNodeStatus, ETopologyQueryKind }
 
 export interface ITopologyEdge {
     targetUid: string
@@ -46,7 +46,7 @@ export interface ICanvasState {
 }
 
 export interface ITopologyInfoResult {
-    kind:      'endpoints' | 'ingress-rules'
+    kind:      ETopologyQueryKind
     name:      string
     namespace: string
     data:      any

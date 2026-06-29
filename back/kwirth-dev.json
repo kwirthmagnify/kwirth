@@ -3,6 +3,8 @@
     "censor": "../daemons/censor/dist"
   },
   "channels": {
+    "trivy": "../plugins/trivy/dist",
+    "montag": "../plugins/montag/dist",
     "censor": "../plugins/censor/dist",
     "pinocchio": "../plugins/pinocchio/dist",
     "mirc": "../plugins/mirc/dist"

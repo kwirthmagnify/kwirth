@@ -37,18 +37,18 @@ const MenuTab: React.FC<IMenuTabProps> = (props:IMenuTabProps) => {
 
     return <Menu anchorEl={props.anchorMenuTab} open={Boolean(props.anchorMenuTab)} onClose={props.onClose}>
         <MenuList dense sx={{width:'40vh'}}>
-            <MenuItem key='subtab' onClick={() => setSubmenuTabOpen(!subMenuTabOpen)} sx={{ml:3}}>Tab<Typography sx={{flexGrow:1}}></Typography>{subMenuTabOpen ? <ExpandLess/> : <ExpandMore/>}</MenuItem>
-            <Collapse in={subMenuTabOpen} timeout="auto" unmountOnExit sx={{ml:5}}>
-                <MenuItem key='tabi' onClick={() => props.optionSelected(MenuTabOption.TabInfo)} disabled={props.selectedTabIndex<0}><Info/>&nbsp;Information</MenuItem>
-                <MenuItem key='tabr' onClick={() => props.optionSelected(MenuTabOption.TabRename)} disabled={props.selectedTabIndex<0}><DriveFileRenameOutline/>&nbsp;Rename</MenuItem>
-                <MenuItem key='tabd' onClick={() => props.optionSelected(MenuTabOption.TabSetDefault)} disabled={props.selectedTabIndex<0} sx={{ml: props.selectedTab?.defaultTab?0:3}}> {props.selectedTab?.defaultTab && <Check/>} Set default tab for workspace</MenuItem>
-                <MenuItem key='tabml' onClick={() => props.optionSelected(MenuTabOption.TabMoveLeft)} disabled={props.selectedTabIndex===0}><KeyboardArrowLeft/>Move to left</MenuItem>
-                <MenuItem key='tabmr' onClick={() => props.optionSelected(MenuTabOption.TabMoveRight)} disabled={props.selectedTabIndex===props.tabs.length-1}><KeyboardArrowRight/>Move to right</MenuItem>
-                <MenuItem key='tabms' onClick={() => props.optionSelected(MenuTabOption.TabMoveFirst)} disabled={props.selectedTabIndex===0}><KeyboardDoubleArrowLeft/>&nbsp;Move to start</MenuItem>
-                <MenuItem key='tabme' onClick={() => props.optionSelected(MenuTabOption.TabMoveLast)} disabled={props.selectedTabIndex===props.tabs.length-1}><KeyboardDoubleArrowRight/>&nbsp;Move to end</MenuItem>
-                <MenuItem key='tabrm' onClick={() => props.optionSelected(MenuTabOption.TabRemove)}><RemoveCircleRounded/>&nbsp;Remove</MenuItem>
-                <MenuItem key='restoreparms' onClick={() => props.optionSelected(MenuTabOption.TabRestoreParameters)}><FactCheck/>&nbsp;Restore tab parameters</MenuItem>
-                <MenuItem key='fullscreen' onClick={() => props.optionSelected(MenuTabOption.FullScreen)}><Fullscreen/>&nbsp;Full screen (Ctrl+Alt+F11)</MenuItem>
+            <MenuItem key='subtab' onClick={() => setSubmenuTabOpen(!subMenuTabOpen)} sx={{pl:3}}>Tab<Typography sx={{flexGrow:1}}></Typography>{subMenuTabOpen ? <ExpandLess/> : <ExpandMore/>}</MenuItem>
+            <Collapse in={subMenuTabOpen} timeout="auto" unmountOnExit>
+                <MenuItem key='tabi' onClick={() => props.optionSelected(MenuTabOption.TabInfo)} disabled={props.selectedTabIndex<0} sx={{pl:5}}><Info/>&nbsp;Information</MenuItem>
+                <MenuItem key='tabr' onClick={() => props.optionSelected(MenuTabOption.TabRename)} disabled={props.selectedTabIndex<0} sx={{pl:5}}><DriveFileRenameOutline/>&nbsp;Rename</MenuItem>
+                <MenuItem key='tabd' onClick={() => props.optionSelected(MenuTabOption.TabSetDefault)} disabled={props.selectedTabIndex<0} sx={{pl: props.selectedTab?.defaultTab?5:8}}> {props.selectedTab?.defaultTab && <Check/>} Set default tab for workspace</MenuItem>
+                <MenuItem key='tabml' onClick={() => props.optionSelected(MenuTabOption.TabMoveLeft)} disabled={props.selectedTabIndex===0} sx={{pl:5}}><KeyboardArrowLeft/>Move to left</MenuItem>
+                <MenuItem key='tabmr' onClick={() => props.optionSelected(MenuTabOption.TabMoveRight)} disabled={props.selectedTabIndex===props.tabs.length-1} sx={{pl:5}}><KeyboardArrowRight/>Move to right</MenuItem>
+                <MenuItem key='tabms' onClick={() => props.optionSelected(MenuTabOption.TabMoveFirst)} disabled={props.selectedTabIndex===0} sx={{pl:5}}><KeyboardDoubleArrowLeft/>&nbsp;Move to start</MenuItem>
+                <MenuItem key='tabme' onClick={() => props.optionSelected(MenuTabOption.TabMoveLast)} disabled={props.selectedTabIndex===props.tabs.length-1} sx={{pl:5}}><KeyboardDoubleArrowRight/>&nbsp;Move to end</MenuItem>
+                <MenuItem key='tabrm' onClick={() => props.optionSelected(MenuTabOption.TabRemove)} sx={{pl:5}}><RemoveCircleRounded/>&nbsp;Remove</MenuItem>
+                <MenuItem key='restoreparms' onClick={() => props.optionSelected(MenuTabOption.TabRestoreParameters)} sx={{pl:5}}><FactCheck/>&nbsp;Restore tab parameters</MenuItem>
+                <MenuItem key='fullscreen' onClick={() => props.optionSelected(MenuTabOption.FullScreen)} sx={{pl:5}}><Fullscreen/>&nbsp;Full screen (Ctrl+Alt+F11)</MenuItem>
             </Collapse>
             
             <MenuItem key='channelstart' onClick={() => props.optionSelected(MenuTabOption.ChannelStart)} disabled={props.selectedTab?.channelStarted}><PlayCircle/>&nbsp;Start</MenuItem>

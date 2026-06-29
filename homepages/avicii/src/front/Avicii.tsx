@@ -88,7 +88,9 @@ const MetricBar: React.FC<{ label: string; value: number }> = ({ label, value })
     useEffect(() => {
         if (!barRef.current) return
         const obs = new ResizeObserver(() => {
-            if (barRef.current) setCols(Math.max(5, Math.floor(barRef.current.offsetWidth / 8) - 1))
+            requestAnimationFrame(() => {
+                if (barRef.current) setCols(Math.max(5, Math.floor(barRef.current.offsetWidth / 8) - 1))
+            })
         })
         obs.observe(barRef.current)
         return () => obs.disconnect()
@@ -149,13 +151,15 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
     const [containerHeight, setContainerHeight] = useState(0)
     useEffect(() => {
         const obs = new ResizeObserver(() => {
-            if (!containerRef.current) return
-            const { top } = containerRef.current.getBoundingClientRect()
-            setContainerHeight(window.innerHeight - top)
+            requestAnimationFrame(() => {
+                if (!containerRef.current) return
+                const { top } = containerRef.current.getBoundingClientRect()
+                setContainerHeight(window.innerHeight - top)
+            })
         })
         obs.observe(document.body)
         return () => obs.disconnect()
-    }, [containerRef.current])
+    }, [])
 
     const [clusterMetrics, setClusterMetrics] = useState<Record<string, { cpu: number; memory: number; vcpus: number; totalMemoryBytes: number; pods: number; maxPods: number }>>({})
     useEffect(() => {

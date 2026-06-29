@@ -108,10 +108,10 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
                         <div style={{ flex:0.9, overflowY: 'auto', overflowX:'hidden'}} >
                             <List sx={{flexGrow:1, mr:2, width:'50vh', overflowY:'auto' }}>
                                 { keys?.filter(k => (showPermanent && k.accessKey.type==='permanent') || (showVolatile && k.accessKey.type==='volatile')).map( (k,index) => 
-                                    <ListItemButton key={index} onClick={() => onKeySelected(k.accessKey)} style={{backgroundColor:(k.accessKey.id===selectedKey?.accessKey.id?'lightgray':'')}}>
+                                    <ListItemButton key={index} selected={k.accessKey.id===selectedKey?.accessKey.id} onClick={() => onKeySelected(k.accessKey)}>
                                         <Stack direction={'column'}>
                                             <Typography>{k.accessKey.id}</Typography>
-                                            <Typography color={'darkgray'} fontSize={12}>{`${k.description}`}<b>{` (expires: ${new Date(k.expire).toDateString()})`}</b></Typography>
+                                            <Typography color='text.secondary' fontSize={12}>{`${k.description}`}<b>{` (expires: ${new Date(k.expire).toDateString()})`}</b></Typography>
                                         </Stack>
                                     </ListItemButton>
                                 )}

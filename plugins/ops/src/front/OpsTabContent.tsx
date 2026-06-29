@@ -34,18 +34,22 @@ const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         if (!opsBoxRef.current) return
         if (opsConfig.launchShell) {
             const observer = new ResizeObserver((entries) => {
-                for (let entry of entries) {
-                    const height = entry.target.parentElement?.clientHeight || entry.contentRect.height
-                    setOpsBoxHeight(height - 16)
-                }
+                requestAnimationFrame(() => {
+                    for (let entry of entries) {
+                        const height = entry.target.parentElement?.clientHeight || entry.contentRect.height
+                        setOpsBoxHeight(height - 16)
+                    }
+                })
             })
             if (opsBoxRef.current.parentElement) observer.observe(opsBoxRef.current.parentElement)
             return () => observer.disconnect()
         } else {
             const observer = new ResizeObserver(() => {
-                if (!opsBoxRef.current) return
-                const { top } = opsBoxRef.current.getBoundingClientRect()
-                setOpsBoxHeight(window.innerHeight - top)
+                requestAnimationFrame(() => {
+                    if (!opsBoxRef.current) return
+                    const { top } = opsBoxRef.current.getBoundingClientRect()
+                    setOpsBoxHeight(window.innerHeight - top)
+                })
             })
             observer.observe(document.body)
             return () => observer.disconnect()

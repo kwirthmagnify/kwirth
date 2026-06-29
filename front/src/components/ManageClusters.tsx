@@ -21,14 +21,11 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     const [msgBox, setMsgBox] =useState(<></>)
     const [refresh, setRefresh] = useState(0)
 
-    const onClusterSelected = (idSelected:string|null) => {
-        let cluster=clusters?.find(k => k.id===idSelected)
-        if (cluster) {
-            setSelectedCluster(cluster)
-            setName(cluster.name)
-            setUrl(cluster.url)
-            setAccessKey(cluster.accessString)
-        }
+    const onClusterSelected = (cluster: Cluster) => {
+        setSelectedCluster(cluster)
+        setName(cluster.name)
+        setUrl(cluster.url)
+        setAccessKey(cluster.accessString)
     }
 
     const onClickSave = async () => {
@@ -37,7 +34,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             selectedCluster.name = name
             selectedCluster.url = url
             selectedCluster.kwirthData = undefined
-            clusters.splice(clusters.findIndex(c => c.id===selectedCluster.id),1)
+            clusters.splice(clusters.indexOf(selectedCluster),1)
             clusters.push(selectedCluster)
             await readClusterInfo(selectedCluster, props.notify)
             setRefresh(Math.random())
@@ -62,11 +59,13 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         try {
             let kwirthOk = false
             setMsgBox (MsgBoxWaitCancel('Test cluster','In order to add cluster to your cluster list we must first ensure we can connect with it and, if so, test if Kwirth is available and, if so, if evaluate Kwirth version for knowing if it is suitable for being connected to this Kwirth server.', setMsgBox))
-            let response = await fetch(`${url}/config/info`, addGetAuthorization(accessKey))
-            let data = await response.json() as KwirthData
+            let kwirthResponse = await fetch(`${url}/config/info`, addGetAuthorization(accessKey))
+            let clusterId = (await (await (await fetch(`${url}/config/cluster`, addGetAuthorization(accessKey))).json())).id
+            let data = await kwirthResponse.json() as KwirthData
             kwirthOk = true
            
             let status = `Name: ${data.clusterName}<br/>`
+            status += `Id: ${clusterId}<br/>`
             status += `Namespace: ${data.namespace}<br/>`
             status += `Deployment: ${data.deployment}<br/>`
             status += `inCluster: ${data.inCluster}<br/>`
@@ -76,9 +75,9 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             status += `Metrics interval: ${data.metricsInterval}`
 
             if (kwirthOk) {
-                let suppChannels  = data.channels.map(c => {
-                    let suppSources  = '['+c.sources.join(',')+']'
-                    return `<b>${c.id}</b>: ${c.routable?'route ':''}${c.pauseable?'pause ':''}${c.modifiable?'modify ':''}${c.reconnectable?'reconnect ':''}${c.metrics?'metrics ':''} ${suppSources}`
+                let suppChannels  = data.channels.map(channel => {
+                    let suppSources  = '['+channel.sources.join(',')+']'
+                    return `<b>${channel.id}</b>: ${channel.routable?'route ':''}${channel.pauseable?'pause ':''}${channel.modifiable?'modify ':''}${channel.reconnectable?'reconnect ':''}${channel.metrics?'metrics ':''} ${suppSources}`
                 }).join('<br/>')
                 setMsgBox(MsgBoxOk('Test cluster',`Connection to cluster and API key have been <font color=green>succesfully tested</font>. This is cluster data: <br/><br/>${status}<br/><br/>And these are supported channels: <br/>${suppChannels}`, setMsgBox))
             }
@@ -109,7 +108,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
 
     const onConfirmDelete= async () => {
         if (selectedCluster) {
-            clusters.splice(clusters?.findIndex(c => c.id===selectedCluster.id)!,1)
+            clusters.splice(clusters.indexOf(selectedCluster),1)
             setName('')
             setUrl('')
             setAccessKey('')
@@ -124,11 +123,14 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                 <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
                     <List sx={{flexGrow:1, mr:2, width:'50vh' }}>
                         { clusters?.map(c => 
-                            <ListItemButton key={c.name+c.id} onClick={() => onClusterSelected(c.id)} style={{backgroundColor:(c.id===selectedCluster?.id?'lightgray':'')}}>
+                            <ListItemButton key={c.url} selected={c===selectedCluster} onClick={() => onClusterSelected(c)}>
                                 <ListItem>
-                                  <Stack direction={'column'}>
-                                      <Typography>{c.name}</Typography>
-                                      {c.kwirthData?.clusterType && <Typography color={'darkgray'} fontSize={12}>{c.kwirthData?.version}<b> ({c.kwirthData?.clusterType})</b></Typography>}
+                                  <Stack direction={'column'} sx={{width:'100%'}}>
+                                      <Stack direction={'row'} justifyContent={'space-between'} alignItems={'baseline'}>
+                                          <Typography>{c.name}</Typography>
+                                          {c.id && <Typography color='text.secondary' fontSize={10}>{c.id}</Typography>}
+                                      </Stack>
+                                      {c.kwirthData?.clusterType && <Typography color='text.secondary' fontSize={12}>{c.kwirthData?.version}<b> ({c.kwirthData?.clusterType})</b></Typography>}
                                   </Stack>
                                 </ListItem>
                             </ListItemButton>
@@ -137,7 +139,8 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                     {
                         <Stack sx={{width:'50vh'}} spacing={1}>
                             <TextField value={name} onChange={(e) => setName(e.target.value)} disabled={selectedCluster?.source} variant='standard' label='Name'></TextField>
-                            <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.source}variant='standard' label='URL'></TextField>
+                            <TextField value={selectedCluster?.id || ''} disabled variant='standard' label='Id'></TextField>
+                            <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.source} variant='standard' label='URL'></TextField>
                             <TextField value={accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.source} variant='standard' label='API Key'></TextField>
                         </Stack>
                     }

@@ -11,6 +11,7 @@ const kwirthGlobalsPlugin = {
             '@mui/icons-material': 'window.__kwirth__.MUI.icons',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-ai': 'window.__kwirth__.kwirthCommonAiFront',
+            '@kwirthmagnify/kwirth-common-ai/front': 'window.__kwirth__.kwirthCommonAiFront',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
             '@codemirror/view': 'window.__kwirth__.codeMirrorView',
             '@codemirror/state': 'window.__kwirth__.codeMirrorState',

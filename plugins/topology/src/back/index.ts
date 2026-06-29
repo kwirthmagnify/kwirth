@@ -11,9 +11,7 @@ import {
     IInstanceMessage,
     ISignalMessage,
 } from '@kwirthmagnify/kwirth-common'
-import { ETopologyNodeKind, ETopologyNodeStatus } from '../common/TopologyTypes'
-
-type TTopoAction = 'ADDED' | 'MODIFIED' | 'DELETED' | 'ENDPOINTS_RESULT' | 'INGRESS_RULES_RESULT'
+import { ETopoAction, ETopologyNodeKind, ETopologyNodeStatus } from '../common/TopologyTypes'
 
 interface ITopologyWsMessage {
     action:   EInstanceMessageAction
@@ -21,7 +19,7 @@ interface ITopologyWsMessage {
     channel:  string
     instance: string
     type:     EInstanceMessageType
-    topoAction?:    TTopoAction
+    topoAction?:    ETopoAction
     kind:           ETopologyNodeKind
     uid:            string
     name:           string
@@ -150,22 +148,22 @@ export class TopologyChannel {
     processProviderEvent(providerId: string, obj: any): void {
         if (providerId !== 'events') return
 
-        const type: TTopoAction = obj.type as TTopoAction
+        const type: ETopoAction = obj.type as ETopoAction
         const resource = obj.obj
 
         if (resource.kind === 'Service') {
-            if (type === 'DELETED') this.serviceCache.delete(resource.metadata?.uid ?? '')
+            if (type === ETopoAction.DELETED) this.serviceCache.delete(resource.metadata?.uid ?? '')
             else if (resource.metadata?.uid) this.serviceCache.set(resource.metadata.uid, resource)
         }
         if (resource.kind === 'PersistentVolumeClaim') {
-            if (type === 'DELETED') this.pvcCache.delete(resource.metadata?.uid ?? '')
+            if (type === ETopoAction.DELETED) this.pvcCache.delete(resource.metadata?.uid ?? '')
             else if (resource.metadata?.uid) this.pvcCache.set(resource.metadata.uid, resource)
         }
 
         const mapped = this.mapResource(resource)
         if (!mapped) return
 
-        if (type !== 'DELETED') {
+        if (type !== ETopoAction.DELETED) {
             const svcList = Array.from(this.serviceCache.values())
             const edges = this.computeEdges(resource, svcList)
             if (edges.length > 0) mapped.edges = edges
@@ -189,27 +187,27 @@ export class TopologyChannel {
         const m = msg as any
         try {
             switch (m.topoAction) {
-                case 'SCALE':
+                case ETopoAction.SCALE:
                     await this.doScale(ws, msg, m.kind, m.namespace, m.name, m.replicas ?? 0)
                     return true
-                case 'RESTART':
+                case ETopoAction.RESTART:
                     await this.doRestart(ws, msg, m.kind, m.namespace, m.name)
                     return true
-                case 'DELETE_POD':
+                case ETopoAction.DELETE_POD:
                     await this.clusterInfo.coreApi.deleteNamespacedPod({ name: m.name, namespace: m.namespace })
                     this.sendSignal(ws, msg, ESignalMessageLevel.INFO, `Pod ${m.name} deleted`)
                     return true
-                case 'GET_ENDPOINTS': {
+                case ETopoAction.GET_ENDPOINTS: {
                     this.backChannelObject.logInfo?.(`[topology] GET_ENDPOINTS ${m.namespace}/${m.name}`)
                     const eps = await this.clusterInfo.coreApi.readNamespacedEndpoints({ name: m.name, namespace: m.namespace })
                     const subsets = (eps.subsets ?? []).map((s: any) => ({
                         addresses: (s.addresses ?? []).map((a: any) => ({ ip: a.ip, node: a.nodeName, pod: a.targetRef?.name })),
                         ports: (s.ports ?? []).map((p: any) => ({ name: p.name, port: p.port, protocol: p.protocol })),
                     }))
-                    this.sendDataResponse(ws, msg, 'ENDPOINTS_RESULT', m.kind, m.uid, m.name, m.namespace, subsets)
+                    this.sendDataResponse(ws, msg, ETopoAction.ENDPOINTS_RESULT, m.kind, m.uid, m.name, m.namespace, subsets)
                     return true
                 }
-                case 'GET_INGRESS_RULES': {
+                case ETopoAction.GET_INGRESS_RULES: {
                     const ing = await this.clusterInfo.networkApi.readNamespacedIngress({ name: m.name, namespace: m.namespace })
                     const rules = (ing.spec?.rules ?? []).map((r: any) => ({
                         host: r.host ?? '*',
@@ -220,7 +218,7 @@ export class TopologyChannel {
                             port: p.backend?.service?.port?.number,
                         })),
                     }))
-                    this.sendDataResponse(ws, msg, 'INGRESS_RULES_RESULT', m.kind, m.uid, m.name, m.namespace, rules)
+                    this.sendDataResponse(ws, msg, ETopoAction.INGRESS_RULES_RESULT, m.kind, m.uid, m.name, m.namespace, rules)
                     return true
                 }
                 default:
@@ -363,17 +361,17 @@ export class TopologyChannel {
         svcList.forEach((s: any) => { if (s.metadata?.uid) this.serviceCache.set(s.metadata.uid, s) })
         pvcList.forEach((p: any) => { if (p.metadata?.uid) this.pvcCache.set(p.metadata.uid, p) })
 
-        svcList.forEach((s: any) => this.emit(ws, inst, this.mapService(s), 'ADDED'))
+        svcList.forEach((s: any) => this.emit(ws, inst, this.mapService(s), ETopoAction.ADDED))
 
-        if (deps.status  === 'fulfilled') (deps.value as any).items.filter((d: any) => this.nsMatch(inst, d.metadata?.namespace)).forEach((d: any) => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
-        if (sts.status   === 'fulfilled') (sts.value as any).items.filter((s: any)  => this.nsMatch(inst, s.metadata?.namespace)).forEach((s: any) => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, svcList) }, 'ADDED'))
-        if (ds.status    === 'fulfilled') (ds.value as any).items.filter((d: any)   => this.nsMatch(inst, d.metadata?.namespace)).forEach((d: any) => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, 'ADDED'))
-        if (rs.status    === 'fulfilled') (rs.value as any).items.filter((r: any)   => this.nsMatch(inst, r.metadata?.namespace)).forEach((r: any) => this.emit(ws, inst, this.mapReplicaSet(r), 'ADDED'))
-        if (jobs.status  === 'fulfilled') (jobs.value as any).items.filter((j: any) => this.nsMatch(inst, j.metadata?.namespace)).forEach((j: any) => this.emit(ws, inst, this.mapJob(j), 'ADDED'))
-        if (crons.status === 'fulfilled') (crons.value as any).items.filter((c: any) => this.nsMatch(inst, c.metadata?.namespace)).forEach((c: any) => this.emit(ws, inst, this.mapCronJob(c), 'ADDED'))
-        if (ings.status  === 'fulfilled') (ings.value as any).items.filter((i: any) => this.nsMatch(inst, i.metadata?.namespace)).forEach((i: any) => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, svcList) }, 'ADDED'))
-        if (pods.status  === 'fulfilled') (pods.value as any).items.filter((p: any) => this.nsMatch(inst, p.metadata?.namespace)).forEach((p: any) => this.emit(ws, inst, this.mapPod(p), 'ADDED'))
-        pvcList.forEach((p: any) => this.emit(ws, inst, this.mapPvc(p), 'ADDED'))
+        if (deps.status  === 'fulfilled') (deps.value as any).items.filter((d: any) => this.nsMatch(inst, d.metadata?.namespace)).forEach((d: any) => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, ETopoAction.ADDED))
+        if (sts.status   === 'fulfilled') (sts.value as any).items.filter((s: any)  => this.nsMatch(inst, s.metadata?.namespace)).forEach((s: any) => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, svcList) }, ETopoAction.ADDED))
+        if (ds.status    === 'fulfilled') (ds.value as any).items.filter((d: any)   => this.nsMatch(inst, d.metadata?.namespace)).forEach((d: any) => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, svcList) }, ETopoAction.ADDED))
+        if (rs.status    === 'fulfilled') (rs.value as any).items.filter((r: any)   => this.nsMatch(inst, r.metadata?.namespace)).forEach((r: any) => this.emit(ws, inst, this.mapReplicaSet(r), ETopoAction.ADDED))
+        if (jobs.status  === 'fulfilled') (jobs.value as any).items.filter((j: any) => this.nsMatch(inst, j.metadata?.namespace)).forEach((j: any) => this.emit(ws, inst, this.mapJob(j), ETopoAction.ADDED))
+        if (crons.status === 'fulfilled') (crons.value as any).items.filter((c: any) => this.nsMatch(inst, c.metadata?.namespace)).forEach((c: any) => this.emit(ws, inst, this.mapCronJob(c), ETopoAction.ADDED))
+        if (ings.status  === 'fulfilled') (ings.value as any).items.filter((i: any) => this.nsMatch(inst, i.metadata?.namespace)).forEach((i: any) => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, svcList) }, ETopoAction.ADDED))
+        if (pods.status  === 'fulfilled') (pods.value as any).items.filter((p: any) => this.nsMatch(inst, p.metadata?.namespace)).forEach((p: any) => this.emit(ws, inst, this.mapPod(p), ETopoAction.ADDED))
+        pvcList.forEach((p: any) => this.emit(ws, inst, this.mapPvc(p), ETopoAction.ADDED))
     }
 
     private async sendFocusedSnapshot(ws: WebSocket, inst: ITopologyInstance): Promise<void> {
@@ -427,16 +425,16 @@ export class TopologyChannel {
         inst.focusedUids = ctx.included
 
         const inc = ctx.included
-        ctx.allSvcs.filter((s: any)  => inc.has(s.metadata?.uid ?? '')).forEach((s: any)  => this.emit(ws, inst, this.mapService(s), 'ADDED'))
-        ctx.allDeps.filter((d: any)  => inc.has(d.metadata?.uid ?? '')).forEach((d: any)  => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, ctx.allSvcs) }, 'ADDED'))
-        ctx.allSts.filter((s: any)   => inc.has(s.metadata?.uid ?? '')).forEach((s: any)  => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, ctx.allSvcs) }, 'ADDED'))
-        ctx.allDs.filter((d: any)    => inc.has(d.metadata?.uid ?? '')).forEach((d: any)  => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, ctx.allSvcs) }, 'ADDED'))
-        ctx.allRs.filter((r: any)    => inc.has(r.metadata?.uid ?? '')).forEach((r: any)  => this.emit(ws, inst, this.mapReplicaSet(r), 'ADDED'))
-        ctx.allJobs.filter((j: any)  => inc.has(j.metadata?.uid ?? '')).forEach((j: any)  => this.emit(ws, inst, this.mapJob(j), 'ADDED'))
-        ctx.allCrons.filter((c: any) => inc.has(c.metadata?.uid ?? '')).forEach((c: any)  => this.emit(ws, inst, this.mapCronJob(c), 'ADDED'))
-        ctx.allIngs.filter((i: any)  => inc.has(i.metadata?.uid ?? '')).forEach((i: any)  => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, ctx.allSvcs) }, 'ADDED'))
-        ctx.allPods.filter((p: any)  => inc.has(p.metadata?.uid ?? '')).forEach((p: any)  => this.emit(ws, inst, this.mapPod(p), 'ADDED'))
-        ctx.allPvcs.filter((p: any)  => inc.has(p.metadata?.uid ?? '')).forEach((p: any)  => this.emit(ws, inst, this.mapPvc(p), 'ADDED'))
+        ctx.allSvcs.filter((s: any)  => inc.has(s.metadata?.uid ?? '')).forEach((s: any)  => this.emit(ws, inst, this.mapService(s), ETopoAction.ADDED))
+        ctx.allDeps.filter((d: any)  => inc.has(d.metadata?.uid ?? '')).forEach((d: any)  => this.emit(ws, inst, { ...this.mapDeployment(d),  edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, ctx.allSvcs) }, ETopoAction.ADDED))
+        ctx.allSts.filter((s: any)   => inc.has(s.metadata?.uid ?? '')).forEach((s: any)  => this.emit(ws, inst, { ...this.mapStatefulSet(s), edges: this.edgesForController(s.spec?.selector?.matchLabels, s.metadata?.namespace, ctx.allSvcs) }, ETopoAction.ADDED))
+        ctx.allDs.filter((d: any)    => inc.has(d.metadata?.uid ?? '')).forEach((d: any)  => this.emit(ws, inst, { ...this.mapDaemonSet(d),   edges: this.edgesForController(d.spec?.selector?.matchLabels, d.metadata?.namespace, ctx.allSvcs) }, ETopoAction.ADDED))
+        ctx.allRs.filter((r: any)    => inc.has(r.metadata?.uid ?? '')).forEach((r: any)  => this.emit(ws, inst, this.mapReplicaSet(r), ETopoAction.ADDED))
+        ctx.allJobs.filter((j: any)  => inc.has(j.metadata?.uid ?? '')).forEach((j: any)  => this.emit(ws, inst, this.mapJob(j), ETopoAction.ADDED))
+        ctx.allCrons.filter((c: any) => inc.has(c.metadata?.uid ?? '')).forEach((c: any)  => this.emit(ws, inst, this.mapCronJob(c), ETopoAction.ADDED))
+        ctx.allIngs.filter((i: any)  => inc.has(i.metadata?.uid ?? '')).forEach((i: any)  => this.emit(ws, inst, { ...this.mapIngress(i), edges: this.edgesForIngress(i, ctx.allSvcs) }, ETopoAction.ADDED))
+        ctx.allPods.filter((p: any)  => inc.has(p.metadata?.uid ?? '')).forEach((p: any)  => this.emit(ws, inst, this.mapPod(p), ETopoAction.ADDED))
+        ctx.allPvcs.filter((p: any)  => inc.has(p.metadata?.uid ?? '')).forEach((p: any)  => this.emit(ws, inst, this.mapPvc(p), ETopoAction.ADDED))
     }
 
     private addPodChain(pod: any, ctx: IFocusContext): void {
@@ -756,7 +754,7 @@ export class TopologyChannel {
         return edges
     }
 
-    private emit(ws: WebSocket, inst: ITopologyInstance, partial: Partial<ITopologyWsMessage>, topoAction: TTopoAction): void {
+    private emit(ws: WebSocket, inst: ITopologyInstance, partial: Partial<ITopologyWsMessage>, topoAction: ETopoAction): void {
         if (inst.paused) return
         const msg: ITopologyWsMessage = {
             action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED,
@@ -780,7 +778,7 @@ export class TopologyChannel {
         catch (err) { this.backChannelObject.logWarning?.(`[topology] sendInstanceConfig error: ${err}`) }
     }
 
-    private sendDataResponse(ws: WebSocket, msg: IInstanceMessage, topoAction: TTopoAction, kind: string, uid: string, name: string, namespace: string, responseData: any): void {
+    private sendDataResponse(ws: WebSocket, msg: IInstanceMessage, topoAction: ETopoAction, kind: string, uid: string, name: string, namespace: string, responseData: any): void {
         const resp = {
             action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.RESPONSE,
             channel: 'topology', instance: msg.instance, type: EInstanceMessageType.DATA,

@@ -97,7 +97,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
                 <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
                     <List sx={{flexGrow:1, mr:3, width:'30vh' }}>
                         { users?.map(u => 
-                        <ListItemButton key={u} onClick={() => onClickUser(u)} style={{backgroundColor:(u===selectedUser?.id?'lightgray':'')}}>
+                        <ListItemButton key={u} selected={u===selectedUser?.id} onClick={() => onClickUser(u)}>
                             <ListItem>{u}</ListItem>
                         </ListItemButton>
                         )}
