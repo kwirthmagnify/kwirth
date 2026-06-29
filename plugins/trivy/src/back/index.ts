@@ -20,6 +20,10 @@ export interface IAsset {
     podNamespace: string
     podName: string
     containerName: string
+    // Nombre del recurso dueño del reporte de Trivy (el workload: ReplicaSet, o el
+    // propio pod si no tiene controlador). Es lo que casa con `resource.name` que
+    // estampa el provider, sin necesidad de prefijos.
+    workloadName: string
 }
 
 export interface IInstance {
@@ -54,18 +58,25 @@ class TrivyChannel {
     getChannelScopeLevel = (scope: string): number => ['', 'trivy$workload', 'trivy$kubernetes', 'cluster'].indexOf(scope)
 
     startChannel = async (): Promise<void> => {
-        this.clusterInfo.addSubscriber('trivy', this, { reportTypes: ALL_PLURALS, assets: [] })
+        // El provider reenvía todos los reportes de estos tipos; el filtrado por
+        // asset concreto lo hace este channel en processProviderEvent.
+        this.clusterInfo.addSubscriber('trivy', this, { reportTypes: ALL_PLURALS })
     }
 
     processProviderEvent(providerId: string, obj: any): void {
         if (providerId !== 'trivy') return
         const pe = obj as ITrivyProviderEvent
+        // El provider manda pe.podName = `resource.name` (el workload dueño del
+        // reporte, p.ej. el ReplicaSet), no el pod real. Casamos por igualdad
+        // exacta contra el workload resuelto del asset. Los config-audit no llevan
+        // contenedor.
+        const isAudit = pe.plural === TRIVY_API_AUDIT_PLURAL
         for (const socket of this.webSockets) {
             for (const instance of socket.instances) {
                 const asset = instance.assets.find(a =>
                     a.podNamespace === pe.namespace &&
-                    a.podName === pe.podName &&
-                    a.containerName === pe.containerName
+                    a.workloadName === pe.podName &&
+                    (isAudit || a.containerName === pe.containerName)
                 )
                 if (!asset) continue
                 const payload: ITrivyMessageResponse = {
@@ -163,7 +174,8 @@ class TrivyChannel {
         }
         const ic = instanceConfig.data
         if (ic) { instance.maxCritical = ic.maxCritical; instance.maxHigh = ic.maxHigh; instance.maxMedium = ic.maxMedium; instance.maxLow = ic.maxLow }
-        const asset: IAsset = { podNamespace, podName, containerName }
+        const workloadName = await this.resolveWorkloadName(podNamespace, podName)
+        const asset: IAsset = { podNamespace, podName, containerName, workloadName }
 
         const trivyProv = (this.clusterInfo as any).providers?.find((p: any) => p.id === 'trivy')
         if (trivyProv?.getReportsForAsset) {
@@ -188,7 +200,6 @@ class TrivyChannel {
             }
         }
         instance.assets.push(asset)
-        await this.updateProviderSubscription()
         return true
     }
 
@@ -196,7 +207,6 @@ class TrivyChannel {
         const socket = this.webSockets.find(s => s.ws === webSocket)
         const instance = socket?.instances.find(i => i.instanceId === instanceConfig.instance)
         if (instance) instance.assets = instance.assets.filter(a => !(a.podNamespace === podNamespace && a.podName === podName && (containerName === '' || a.containerName === containerName)))
-        await this.updateProviderSubscription()
         return true
     }
 
@@ -222,9 +232,6 @@ class TrivyChannel {
         }
         if (!this.webSockets.some(s => s.instances.length > 0)) {
             this.clusterInfo.removeSubscriber('trivy', this)
-        }
-        else {
-            this.updateProviderSubscription()
         }
     }
 
@@ -257,16 +264,6 @@ class TrivyChannel {
         const resources = parseResources(instance.accessKey.resources)
         const requiredLevel = this.getChannelScopeLevel(scope)
         return resources.some((r: any) => r.scopes.split(',').some((sc: string) => this.getChannelScopeLevel(sc) >= requiredLevel))
-    }
-
-    private updateProviderSubscription = async (): Promise<void> => {
-        const trivyProv = (this.clusterInfo as any).providers?.find((p: any) => p.id === 'trivy')
-        const allAssets = this.webSockets.flatMap(s => s.instances.flatMap(i => i.assets.map(a => ({
-            namespace: a.podNamespace,
-            podName: a.podName,
-            containerName: a.containerName
-        }))))
-        await trivyProv?.updateSubscription?.(this, { reportTypes: ALL_PLURALS, assets: allAssets })
     }
 
     removeReport = async (plural: string, trivyMessage: ITrivyMessage): Promise<string | undefined> => {
@@ -303,6 +300,19 @@ class TrivyChannel {
         } catch (err) {
             console.error('[trivy] Cannot get CRD name:', err)
             return undefined
+        }
+    }
+
+    // Resuelve el nombre del workload dueño del pod (= `resource.name` de Trivy):
+    // el controlador (ReplicaSet…) si lo hay, o el propio pod si es un pod suelto.
+    private resolveWorkloadName = async (namespace: string, podName: string): Promise<string> => {
+        try {
+            const podData = await this.clusterInfo.coreApi.readNamespacedPod({ name: podName, namespace })
+            const ctrl = podData.metadata?.ownerReferences?.find((or: any) => or.controller)
+            return ctrl ? ctrl.name : podName
+        } catch (err) {
+            console.error('[trivy] Cannot resolve workload name:', err)
+            return podName
         }
     }
 }

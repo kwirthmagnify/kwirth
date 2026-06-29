@@ -20,8 +20,15 @@ export class TrivyProvider implements IProvider {
     }
 
     addSubscriber = async (c: IProviderSubscriber, data: ITrivySubscriptionData) => {
-        this.subscribers.set(c, data ?? { reportTypes: ALL_PLURALS, assets: [] })
+        const subData = data ?? { reportTypes: ALL_PLURALS }
+        this.subscribers.set(c, subData)
         console.log(`[trivy-provider] subscriber added, total: ${this.subscribers.size}`)
+        // RC-1: sync de estado inicial. El provider es compartido y sus informers
+        // pueden haber entregado ya su LIST inicial a otros suscriptores; uno que
+        // llega tarde se quedaría sin estado. Por eso, en cada alta listamos los
+        // CRD actuales y los despachamos SOLO a este suscriptor. Proceso paralelo
+        // (no se hace await) para no bloquear el alta.
+        this.sendInitialState(c, subData.reportTypes)
     }
 
     removeSubscriber = async (c: IProviderSubscriber) => {
@@ -32,7 +39,7 @@ export class TrivyProvider implements IProvider {
     updateSubscription = async (c: IProviderSubscriber, data: ITrivySubscriptionData) => {
         if (this.subscribers.has(c)) {
             this.subscribers.set(c, data)
-            console.log(`[trivy-provider] subscription updated, assets: ${data.assets.length}`)
+            console.log(`[trivy-provider] subscription updated, reportTypes: ${data.reportTypes.join(',')}`)
         }
     }
 
@@ -88,21 +95,47 @@ export class TrivyProvider implements IProvider {
         return createCrdInformer(this.clusterInfo, TRIVY_API_GROUP, TRIVY_API_VERSION, plural, handlers)
     }
 
-    private processInformerEvent = async (plural: string, event: 'add' | 'update' | 'delete', obj: any) => {
-        const isAudit = plural === TRIVY_API_AUDIT_PLURAL
+    /** Construye el evento del provider a partir del objeto CRD (informer o LIST). */
+    private buildProviderEvent = (plural: string, event: 'add' | 'update' | 'delete', obj: any): ITrivyProviderEvent => {
+        const labels = obj.metadata?.labels ?? {}
+        return {
+            namespace: labels['trivy-operator.resource.namespace'],
+            podName: labels['trivy-operator.resource.name'],
+            containerName: labels['trivy-operator.container.name'],
+            kind: labels['trivy-operator.resource.kind'],
+            plural, event,
+            report: event !== 'delete' ? obj.report : undefined
+        }
+    }
+
+    private processInformerEvent = (plural: string, event: 'add' | 'update' | 'delete', obj: any) => {
+        // Estilo EventsProvider: el provider reenvía el reporte que ya trae el objeto
+        // del informer (sin re-consultar la API) a todo suscriptor cuyo `reportTypes`
+        // incluya este plural. El filtrado por asset concreto lo hace el channel.
+        const providerEvent = this.buildProviderEvent(plural, event, obj)
         for (const [subscriber, subData] of this.subscribers) {
             if (!subData.reportTypes.includes(plural)) continue
-            const asset = subData.assets.find(a =>
-                obj.metadata.labels['trivy-operator.resource.kind'] === 'Pod' &&
-                (isAudit || a.containerName === obj.metadata.labels['trivy-operator.container.name']) &&
-                a.namespace === obj.metadata.labels['trivy-operator.resource.namespace'] &&
-                a.podName.startsWith(obj.metadata.labels['trivy-operator.resource.name'])
-            )
-            if (!asset) continue
-            let report: any = undefined
-            if (event !== 'delete') report = await this.getReport(plural, asset, !isAudit)
-            const providerEvent: ITrivyProviderEvent = { namespace: asset.namespace, podName: asset.podName, containerName: asset.containerName, plural, event, report }
             subscriber.processProviderEvent(this.id, providerEvent)
+        }
+    }
+
+    /**
+     * Sync de estado inicial para un suscriptor recién dado de alta (RC-1): lista
+     * los CRD actuales de los plurals que pidió y le despacha un 'add' por cada uno,
+     * SOLO a él. Es idempotente respecto a los 'add' que el informer pueda entregar
+     * (un reductor por reporte deduplica por id). Tolerante a fallos por plural.
+     */
+    private sendInitialState = async (subscriber: IProviderSubscriber, reportTypes: string[]) => {
+        for (const plural of reportTypes) {
+            try {
+                const res: { items?: any[] } = await this.clusterInfo.crdApi.listCustomObjectForAllNamespaces({ group: TRIVY_API_GROUP, version: TRIVY_API_VERSION, plural })
+                for (const obj of (res.items ?? [])) {
+                    subscriber.processProviderEvent(this.id, this.buildProviderEvent(plural, 'add', obj))
+                }
+            }
+            catch (err) {
+                console.error(`[trivy-provider] initial-state sync error (${plural}):`, err)
+            }
         }
     }
 
