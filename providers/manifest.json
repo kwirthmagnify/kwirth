@@ -64,6 +64,13 @@
   },
   {
     "id": "trivy",
+    "version": "0.1.1",
+    "name": "Trivy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.1.tgz",
+    "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels"
+  },
+  {
+    "id": "trivy",
     "version": "0.1.0",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.0.tgz",

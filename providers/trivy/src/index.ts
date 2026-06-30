@@ -1,7 +1,12 @@
 import { IProvider, IProviderSubscriber, createCrdInformer, ICrdInformerHandlers } from '@kwirthmagnify/kwirth-common-back'
-import { ITrivyAsset, ITrivySubscriptionData, ITrivyProviderEvent, TRIVY_API_VERSION, TRIVY_API_GROUP, TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL } from './TrivyTypes'
+import { ITrivyAsset, ITrivySubscriptionData, ITrivyProviderEvent, ITrivyMeta, ITrivyMetaEvent, ETrivyEventKind, TRIVY_API_VERSION, TRIVY_API_GROUP, TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL } from './TrivyTypes'
 
 const ALL_PLURALS = [TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL]
+
+// Ubicación de la versión de Trivy en el cluster (instalación estándar del trivy-operator).
+const TRIVY_NS = 'trivy-system'
+const TRIVY_CONFIGMAP = 'trivy-operator-trivy-config'
+const TRIVY_OPERATOR_DEPLOY = 'trivy-operator'
 
 export class TrivyProvider implements IProvider {
     public readonly id = 'trivy'
@@ -29,6 +34,11 @@ export class TrivyProvider implements IProvider {
         // CRD actuales y los despachamos SOLO a este suscriptor. Proceso paralelo
         // (no se hace await) para no bloquear el alta.
         this.sendInitialState(c, subData.reportTypes)
+        // Además, entregamos la versión de Trivy del cluster a este suscriptor. Se
+        // lee en cada alta (las suscripciones son infrecuentes) en vez de vigilar el
+        // configmap: la versión cambia 1-2 veces al año y el drift se detecta al
+        // comparar lo recibido con lo guardado en el consumidor.
+        this.sendTrivyMeta(c)
     }
 
     removeSubscriber = async (c: IProviderSubscriber) => {
@@ -137,6 +147,45 @@ export class TrivyProvider implements IProvider {
                 console.error(`[trivy-provider] initial-state sync error (${plural}):`, err)
             }
         }
+    }
+
+    /**
+     * Lee la versión de Trivy del cluster y la empuja como evento "meta" SOLO a este
+     * suscriptor. La versión del scanner (configmap `trivy.tag`) rige el catálogo de
+     * checks; la del operator (tag de su imagen) es metadato. Tolerante a fallos: si
+     * Trivy no está instalado, se entrega un meta vacío.
+     */
+    private sendTrivyMeta = async (subscriber: IProviderSubscriber) => {
+        const meta = await this.readTrivyMeta()
+        const event: ITrivyMetaEvent = { eventKind: ETrivyEventKind.META, meta }
+        subscriber.processProviderEvent(this.id, event)
+    }
+
+    private readTrivyMeta = async (): Promise<ITrivyMeta> => {
+        const meta: ITrivyMeta = {}
+        try {
+            const cm = await this.clusterInfo.coreApi.readNamespacedConfigMap({ name: TRIVY_CONFIGMAP, namespace: TRIVY_NS })
+            meta.trivyVersion = cm.data?.['trivy.tag']
+        }
+        catch (err) {
+            console.warn(`[trivy-provider] no se pudo leer ${TRIVY_CONFIGMAP} (¿Trivy Operator instalado?):`, err instanceof Error ? err.message : err)
+        }
+        try {
+            const dep = await this.clusterInfo.appsApi.readNamespacedDeployment({ name: TRIVY_OPERATOR_DEPLOY, namespace: TRIVY_NS })
+            meta.operatorVersion = this.parseImageTag(dep.spec?.template?.spec?.containers?.[0]?.image)
+        }
+        catch (err) {
+            console.warn('[trivy-provider] no se pudo leer el deployment trivy-operator:', err instanceof Error ? err.message : err)
+        }
+        return meta
+    }
+
+    private parseImageTag = (image: string | undefined): string | undefined => {
+        if (!image) return undefined
+        const lastColon = image.lastIndexOf(':')
+        // evita confundir el ':' del puerto del registro con el del tag
+        if (lastColon < 0 || image.indexOf('/', lastColon) >= 0) return undefined
+        return image.slice(lastColon + 1)
     }
 
     private getCrdName = async (namespace: string, podName: string, containerName?: string): Promise<string | undefined> => {

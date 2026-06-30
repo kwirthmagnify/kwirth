@@ -32,3 +32,26 @@ export interface ITrivyProviderEvent {
     // cluster-wide; los consumidores resourced lo ignoran.
     kind?: string
 }
+
+// ─── Evento "meta": info de la instalación de Trivy (no es un reporte) ────────
+// El provider lo empuja al suscriptor en el estado inicial (ver index.ts). Así el
+// provider es la única fuente de verdad de la versión de Trivy del cluster y los
+// consumidores no re-derivan configmaps/deployments del trivy-operator.
+
+/** Clase de evento que el provider empuja al suscriptor. */
+export enum ETrivyEventKind {
+    REPORT = 'report',   // evento de reporte CRD (por defecto: el report event no lleva eventKind)
+    META = 'meta'        // metadatos de la instalación de Trivy
+}
+
+/** Versión de Trivy del cluster (scanner + operator). */
+export interface ITrivyMeta {
+    trivyVersion?: string      // tag del scanner (configmap trivy.tag) — rige el catálogo de checks
+    operatorVersion?: string   // tag de imagen del trivy-operator — metadato
+}
+
+/** Evento meta: entrega la info de la instalación de Trivy al suscribirse. */
+export interface ITrivyMetaEvent {
+    eventKind: ETrivyEventKind.META
+    meta: ITrivyMeta
+}
