@@ -2132,13 +2132,6 @@ spaces.set('Pod',
                 text: 'Evict',
                 multi: true,
                 permission: true
-            },
-            {
-                name: 'logsearch',
-                icon: <ManageSearch fontSize='small'/>,
-                text: 'Log search',
-                multi: true,
-                permission: true
             }
         ],
         properties: [

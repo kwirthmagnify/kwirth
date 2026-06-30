@@ -773,12 +773,22 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
         // Namespace
         let spcNamespace = spaces.get('Namespace')!
-        ;['log','metrics', 'trivy', 'fileman'].map(channelId =>
-            setLeftItem(spcNamespace,channelId, (p:string[]) => {
-                let f = magnifyData.files.filter(f => p.includes(f.path))
-                launchObjectExternal(channelId, f, EInstanceConfigView.NAMESPACE, undefined, undefined)
-            })
-        )
+        setLeftItem(spcNamespace, 'log', (p:string[]) => {
+            let f = magnifyData.files.filter(f => p.includes(f.path))
+            launchObjectExternal('log', f, EInstanceConfigView.NAMESPACE, undefined, undefined)
+        }, () => props.channelObject.frontChannels?.has('log') ?? false)
+        setLeftItem(spcNamespace, 'metrics', (p:string[]) => {
+            let f = magnifyData.files.filter(f => p.includes(f.path))
+            launchObjectExternal('metrics', f, EInstanceConfigView.NAMESPACE, undefined, undefined)
+        })
+        setLeftItem(spcNamespace, 'fileman', (p:string[]) => {
+            let f = magnifyData.files.filter(f => p.includes(f.path))
+            launchObjectExternal('fileman', f, EInstanceConfigView.NAMESPACE, undefined, undefined)
+        }, () => props.channelObject.frontChannels?.has('fileman') ?? false)
+        setLeftItem(spcNamespace, 'trivy', (p:string[]) => {
+            let f = magnifyData.files.filter(f => p.includes(f.path))
+            launchObjectExternal('trivy', f, EInstanceConfigView.NAMESPACE, undefined, undefined)
+        }, () => props.channelObject.frontChannels?.has('trivy') ?? false)
         setLeftItem(spcNamespace, 'topology', (p:string[]) => {
             let f = magnifyData.files.filter(f => p.includes(f.path))
             launchObjectExternal('topology', f, EInstanceConfigView.NAMESPACE, undefined, undefined)
