@@ -1,16 +1,14 @@
 import type { ICensorInstanceConfig } from '../common/CensorTypes'
-export { ECensorCommand, ERegexOrigin, ICensorSession, ICensorInstanceConfig, ICensorBusinessSource, ICensorSyslogSource, ICensorLogstreamSource } from '../common/CensorTypes'
+export { ECensorCommand, ERegexOrigin, ICensorInstanceConfig, ICensorBusinessSource, ICensorLogstreamSource } from '../common/CensorTypes'
 
 export interface ICensorConfig {
     maxLines: number
-    selectedSessionId?: string | null
     maxLlmInputLines?: number
     maxLlmOutputLines?: number
 }
 
 export class CensorConfig implements ICensorConfig {
     maxLines = 1000
-    selectedSessionId: string | null | undefined = undefined
     maxLlmInputLines = 100
     maxLlmOutputLines = 100
 }
@@ -27,7 +25,6 @@ export class CensorInstanceConfig implements ICensorInstanceConfig {
     temperature = 0.2
     active = false
     businessSources: import('../common/CensorTypes').ICensorBusinessSource[] = []
-    syslogSources: import('../common/CensorTypes').ICensorSyslogSource[] = []
     senderId = ''
     senderConfigName = ''
     mode: 'inference' | 'audit' = 'inference'

@@ -14,7 +14,7 @@ const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     const posInt = (val: string, fallback: number) => { const n = parseInt(val); return isNaN(n) || n < 1 ? fallback : n }
 
     const handleStart = () => {
-        const config: ICensorConfig = { maxLines: initial.maxLines ?? 1000, selectedSessionId: null, maxLlmInputLines, maxLlmOutputLines }
+        const config: ICensorConfig = { maxLines: initial.maxLines ?? 1000, maxLlmInputLines, maxLlmOutputLines }
         props.onChannelSetupClosed(props.channel, { channelId: 'censor', channelConfig: config, channelInstanceConfig: {} }, true, false)
     }
 

@@ -8,8 +8,14 @@ interface ICensorImportExportProps {
     onClose: (imported?: ICensorInstanceConfig[]) => void
 }
 
+// Tab IDs decoupled from render position (never use positional indices)
+enum EImportExportTab {
+    Export = 'export',
+    Import = 'import'
+}
+
 const CensorImportExport: React.FC<ICensorImportExportProps> = ({ configs, onClose }) => {
-    const [tab, setTab] = useState(0)
+    const [tab, setTab] = useState<EImportExportTab>(EImportExportTab.Export)
 
     const [selectedExport, setSelectedExport] = useState<Set<number>>(new Set(configs.map((_, i) => i)))
 
@@ -81,11 +87,11 @@ const CensorImportExport: React.FC<ICensorImportExportProps> = ({ configs, onClo
             <DialogTitle>Import / Export configs</DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 0, overflow: 'hidden' }}>
                 <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: 'divider', px: 2, minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
-                    <Tab label='Export' />
-                    <Tab label='Import' />
+                    <Tab value={EImportExportTab.Export} label='Export' />
+                    <Tab value={EImportExportTab.Import} label='Import' />
                 </Tabs>
 
-                {tab === 0 && (
+                {tab === EImportExportTab.Export && (
                     <Box sx={{ flex: 1, overflowY: 'auto', px: 2, pt: 1 }}>
                         {configs.length === 0
                             ? <Typography variant='caption' color='text.secondary'>No configs to export.</Typography>
@@ -107,7 +113,7 @@ const CensorImportExport: React.FC<ICensorImportExportProps> = ({ configs, onClo
                     </Box>
                 )}
 
-                {tab === 1 && (
+                {tab === EImportExportTab.Import && (
                     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', px: 2, pt: 1, gap: 1, overflow: 'hidden' }}>
                         <input ref={fileInputRef} type='file' accept='.json,application/json' style={{ display: 'none' }} onChange={handleFileUpload} />
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
@@ -145,8 +151,8 @@ const CensorImportExport: React.FC<ICensorImportExportProps> = ({ configs, onClo
                 )}
             </DialogContent>
             <DialogActions>
-                {tab === 0 && <Button variant='contained' onClick={handleExport} disabled={selectedExport.size === 0}>Export</Button>}
-                {tab === 1 && <Button variant='contained' onClick={handleImport} disabled={selectedImport.size === 0}>Import</Button>}
+                {tab === EImportExportTab.Export && <Button variant='contained' onClick={handleExport} disabled={selectedExport.size === 0}>Export</Button>}
+                {tab === EImportExportTab.Import && <Button variant='contained' onClick={handleImport} disabled={selectedImport.size === 0}>Import</Button>}
                 <Button onClick={() => onClose(undefined)} color='inherit'>Cancel</Button>
             </DialogActions>
         </Dialog>

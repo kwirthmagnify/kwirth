@@ -15,40 +15,13 @@ export enum ECensorCommand {
     ANALYZESTART = 'analyzestart',
     ANALYZESTOP = 'analyzestop',
     REGEXDELETE = 'regexdelete',
-    REGEXADD = 'regexadd',
-    SESSIONLIST = 'sessionlist',
-    SESSIONSTART = 'sessionstart',
-    SESSIONSTOP = 'sessionstop',
-    SESSIONCONNECT = 'sessionconnect',
-    SESSIONDISCONNECT = 'sessiondisconnect',
-    REGEXESSAVE = 'regexessave',
-    REGEXESGET = 'regexesget'
-}
-
-export interface ICensorSession {
-    id: string
-    description: string
-    namespace: string
-    group?: string
-    pod?: string
-    container?: string
-    createdAt?: string
-    analyzing?: boolean
+    REGEXADD = 'regexadd'
 }
 
 export interface ICensorBusinessSource {
     space?: string
     type?: string
     businessPath?: string
-    addTimestamp?: boolean
-}
-
-export interface ICensorSyslogSource {
-    sourceIp?: string
-    hostname?: string
-    appName?: string
-    severity?: number
-    filter?: string
     addTimestamp?: boolean
 }
 
@@ -71,7 +44,6 @@ export interface ICensorInstanceConfig {
     active?: boolean
     scope?: 'cluster' | 'resource'
     businessSources?: ICensorBusinessSource[]
-    syslogSources?: ICensorSyslogSource[]
     logstreamEnabled?: boolean
     logstreamAll?: boolean
     logstreamSources?: ICensorLogstreamSource[]

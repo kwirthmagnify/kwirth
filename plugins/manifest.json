@@ -17,6 +17,14 @@
   },
   {
     "id": "censor",
+    "version": "0.2.32",
+    "name": "Censor",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.32.tgz",
+    "description": "Censor plugin for Kwirth - LLM-powered real-time log analysis and sensitive pattern detection",
+    "icon": "ManageSearch"
+  },
+  {
+    "id": "censor",
     "version": "0.2.31",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.31.tgz",

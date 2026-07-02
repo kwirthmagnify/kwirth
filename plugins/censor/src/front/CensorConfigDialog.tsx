@@ -5,7 +5,7 @@ import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import { ICensorData } from './CensorData'
-import { ECensorCommand, ICensorInstanceConfig, ICensorBusinessSource, ICensorSyslogSource, ICensorLogstreamSource } from './CensorConfig'
+import { ECensorCommand, ICensorInstanceConfig, ICensorBusinessSource, ICensorLogstreamSource } from './CensorConfig'
 import { CensorImportExport } from './CensorImportExport'
 import { MsgBoxButtons, MsgBoxYesNo } from './utils'
 
@@ -14,6 +14,15 @@ interface ICensorConfigDialogProps {
     channelObject: IChannelObject
     sendCommand: (command: ECensorCommand, payload?: unknown) => void
     onClose: () => void
+}
+
+// Config dialog tab IDs, decoupled from render position (never use positional indices)
+enum ECensorConfigTab {
+    General = 'general',
+    Prompt = 'prompt',
+    Logstream = 'logstream',
+    Business = 'business',
+    Sender = 'sender'
 }
 
 const migrateBusinessSources = (cfg: ICensorInstanceConfig): ICensorBusinessSource[] => {
@@ -27,7 +36,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
     const [localConfigs, setLocalConfigs] = useState<ICensorInstanceConfig[]>(() => data.configs.map(c => ({ ...c })))
     const [deletedKeys, setDeletedKeys] = useState<string[]>([])
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
-    const [configTab, setConfigTab] = useState(0)
+    const [configTab, setConfigTab] = useState<ECensorConfigTab>(ECensorConfigTab.General)
     const [msgBox, setMsgBox] = useState(<></>)
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
@@ -48,7 +57,6 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
     const [exampleJson, setExampleJson] = useState('{"patterns":["example regex"]}')
     const [exampleJsonError, setExampleJsonError] = useState('')
     const [businessSources, setBusinessSources] = useState<ICensorBusinessSource[]>([])
-    const [syslogSources, setSyslogSources] = useState<ICensorSyslogSource[]>([])
     const [logstreamEnabled, setLogstreamEnabled] = useState(false)
     const [logstreamAll, setLogstreamAll] = useState(false)
     const [logstreamSources, setLogstreamSources] = useState<ICensorLogstreamSource[]>([])
@@ -95,7 +103,6 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
         setExampleJson(cfg.exampleJson ?? '{"patterns":["example regex"]}')
         setExampleJsonError('')
         setBusinessSources(migrateBusinessSources(cfg))
-        setSyslogSources(cfg.syslogSources ?? [])
         setLogstreamEnabled(cfg.logstreamEnabled ?? false)
         setLogstreamAll(cfg.logstreamAll ?? false)
         setLogstreamSources(cfg.logstreamSources ?? [])
@@ -106,7 +113,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
 
     const currentConfig = (): ICensorInstanceConfig => ({
         name: configName, version: configVersion, llmId, system, batchSize, batchMode, batchSizeMin,
-        maxLineLength, batchTimeout, temperature, exampleJson, businessSources, syslogSources,
+        maxLineLength, batchTimeout, temperature, exampleJson, businessSources,
         logstreamEnabled, logstreamAll, logstreamSources, senderId, senderConfigName, active: configActive
     })
 
@@ -120,7 +127,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
         setConfigName(''); setConfigVersion('1'); setLlmId(''); setSystem('')
         setBatchSize(50); setBatchMode('fixed'); setBatchSizeMin(5); setMaxLineLength(0); setBatchTimeout(2)
         setTemperature(0.2); setExampleJson('{"patterns":["example regex"]}'); setExampleJsonError('')
-        setBusinessSources([]); setSyslogSources([])
+        setBusinessSources([])
         setLogstreamEnabled(false); setLogstreamAll(false); setLogstreamSources([])
         setSenderId(''); setSenderConfigName(''); setConfigActive(false)
     }
@@ -228,17 +235,16 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                 <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', pl: 2, pt: 1 }}>
                     <Tabs value={configTab} onChange={(_, v) => setConfigTab(v)} variant='fullWidth'
                         sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
-                        <Tab label='General' />
-                        <Tab label='Prompt' />
-                        <Tab label='Logstream' />
-                        <Tab label='Business' />
-                        <Tab label='Syslog' />
-                        <Tab label='Sender' />
+                        <Tab value={ECensorConfigTab.General} label='General' />
+                        <Tab value={ECensorConfigTab.Prompt} label='Prompt' />
+                        <Tab value={ECensorConfigTab.Logstream} label='Logstream' />
+                        <Tab value={ECensorConfigTab.Business} label='Business' />
+                        <Tab value={ECensorConfigTab.Sender} label='Sender' />
                     </Tabs>
 
                     <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
 
-                        {configTab === 0 && (
+                        {configTab === ECensorConfigTab.General && (
                             <Stack spacing={1.5} sx={{ pt: 1.5 }}>
                                 <Stack direction='row' spacing={2} alignItems='center'>
                                     <TextField label='Name' size='small' value={configName} onChange={e => setConfigName(e.target.value)} sx={{ flex: 1 }} />
@@ -287,7 +293,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                             </Stack>
                         )}
 
-                        {configTab === 1 && (
+                        {configTab === ECensorConfigTab.Prompt && (
                             <Stack spacing={1.5} sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, pt: 1.5 }}>
                                 <TextField label='System prompt (optional)' size='small' multiline value={system}
                                     onChange={e => setSystem(e.target.value)} fullWidth
@@ -305,7 +311,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                             </Stack>
                         )}
 
-                        {configTab === 2 && (
+                        {configTab === ECensorConfigTab.Logstream && (
                             <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                                 <Stack spacing={1} sx={{ pt: 1.5 }}>
                                     <FormControlLabel
@@ -346,7 +352,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                             </Box>
                         )}
 
-                        {configTab === 3 && (
+                        {configTab === ECensorConfigTab.Business && (
                             <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                                 <Stack spacing={1} sx={{ pt: 1.5 }}>
                                     {businessSources.map((src, i) => (
@@ -378,54 +384,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                             </Box>
                         )}
 
-                        {configTab === 4 && (
-                            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                                <Stack spacing={1} sx={{ pt: 1.5 }}>
-                                    {syslogSources.map((src, i) => (
-                                        <Stack key={i} spacing={1}>
-                                            <Stack direction='row' spacing={1} alignItems='center'>
-                                                <TextField label='Source IP' size='small' value={src.sourceIp ?? ''}
-                                                    onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, sourceIp: e.target.value } : s))}
-                                                    sx={{ flex: 1 }} placeholder='any' />
-                                                <TextField label='Hostname' size='small' value={src.hostname ?? ''}
-                                                    onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, hostname: e.target.value } : s))}
-                                                    sx={{ flex: 1 }} placeholder='any' />
-                                                <TextField label='App name' size='small' value={src.appName ?? ''}
-                                                    onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, appName: e.target.value } : s))}
-                                                    sx={{ flex: 1 }} placeholder='any' />
-                                                <FormControl size='small' sx={{ flex: 1 }}>
-                                                    <InputLabel>Max severity</InputLabel>
-                                                    <Select label='Max severity' value={src.severity ?? ''}
-                                                        onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, severity: (e.target.value as unknown as string) === '' ? undefined : Number(e.target.value) } : s))}>
-                                                        <MenuItem value=''><Typography variant='body2' color='text.secondary'>any</Typography></MenuItem>
-                                                        {[['0','emerg'],['1','alert'],['2','crit'],['3','err'],['4','warning'],['5','notice'],['6','info'],['7','debug']].map(([v, n]) => (
-                                                            <MenuItem key={v} value={v}>{v} — {n}</MenuItem>
-                                                        ))}
-                                                    </Select>
-                                                </FormControl>
-                                                <FormControlLabel
-                                                    control={<Switch size='small' checked={src.addTimestamp ?? false}
-                                                        onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, addTimestamp: e.target.checked } : s))} />}
-                                                    label={<Typography variant='caption'>TS</Typography>}
-                                                    sx={{ ml: 0, mr: 0, whiteSpace: 'nowrap' }} />
-                                                <IconButton size='small' onClick={() => setSyslogSources(prev => prev.filter((_, j) => j !== i))}>
-                                                    <DeleteOutlineIcon sx={{ fontSize: 14 }} />
-                                                </IconButton>
-                                            </Stack>
-                                            <TextField label='Filter (regex on raw message)' size='small' value={src.filter ?? ''}
-                                                onChange={e => setSyslogSources(prev => prev.map((s, j) => j === i ? { ...s, filter: e.target.value } : s))}
-                                                fullWidth placeholder='e.g. action:"Accept" or sshd.*Failed (empty = all)' />
-                                        </Stack>
-                                    ))}
-                                    <Button size='small' startIcon={<AddIcon />}
-                                        onClick={() => setSyslogSources(prev => [...prev, { hostname: '', appName: '', addTimestamp: false }])}>
-                                        Add source
-                                    </Button>
-                                </Stack>
-                            </Box>
-                        )}
-
-                        {configTab === 5 && (
+                        {configTab === ECensorConfigTab.Sender && (
                             <Box sx={{ pt: 1.5 }}>
                                 <Stack direction='row' spacing={2} alignItems='center'>
                                     <FormControl size='small' sx={{ flex: 1 }}>

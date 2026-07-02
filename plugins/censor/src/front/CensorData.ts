@@ -1,5 +1,5 @@
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
-import { ICensorInstanceConfig, ICensorSession, ERegexOrigin } from './CensorConfig'
+import { ICensorInstanceConfig, ERegexOrigin } from './CensorConfig'
 
 export { ERegexOrigin }
 
@@ -43,7 +43,6 @@ export interface IRunnerData {
     tokensOut: number
     pendingCount: number
     currentBatchSize?: number
-    syslogCount: number
     llmWarningLines: ICensorWarning[]
     llmInputLines: string[][]
     llmOutputLines: string[]
@@ -66,16 +65,25 @@ export interface ICensorData {
     providersAvailable: string[]
     instanceConfig: ICensorInstanceConfig
     configs: ICensorInstanceConfig[]
-    sessions: ICensorSession[]
-    connectedSessionId: string | null
-    connectedSessionDescription: string | null
     ephemeralSessionName: string | null
-    pendingSessionId: string | null | undefined
     runners: Map<string, IRunnerData>
 }
 
+// Tab IDs decoupled from render position (never use positional indices for MUI Tabs)
+export enum ECensorTab {
+    Objects = 'objects',
+    Regex = 'regex',
+    Logstream = 'logstream',
+    Business = 'business',
+    LlmInput = 'llmInput',
+    LlmResponses = 'llmResponses',
+    Issues = 'issues',
+    LlmErrors = 'llmErrors',
+    Performance = 'performance'
+}
+
 export interface ICensorUiState {
-    tab: number
+    tab: ECensorTab
     regexSort: 'asc' | 'desc' | 'none'
     autoScrolls: { regex: boolean, received: boolean, business: boolean, llmInput: boolean, llmOutput: boolean, warning: boolean, llmError: boolean }
 }
@@ -93,10 +101,6 @@ export class CensorData implements ICensorData {
     providersAvailable: string[] = []
     instanceConfig: ICensorInstanceConfig = { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":["example regex"]}', temperature: 0.2, active: false }
     configs: ICensorInstanceConfig[] = []
-    sessions: ICensorSession[] = []
-    connectedSessionId: string | null = null
-    connectedSessionDescription: string | null = null
     ephemeralSessionName: string | null = null
-    pendingSessionId: string | null | undefined = undefined
     runners: Map<string, IRunnerData> = new Map()
 }

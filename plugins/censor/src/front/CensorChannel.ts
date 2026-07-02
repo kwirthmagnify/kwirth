@@ -3,7 +3,7 @@ import { EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EIn
 import { IChannel, IChannelObject, IContentProps, ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { CensorSetup, CensorIcon } from './CensorSetup'
 import { CensorTabContent } from './CensorTabContent'
-import { CensorConfig, ECensorCommand, ICensorConfig, ICensorInstanceConfig, ICensorSession } from './CensorConfig'
+import { CensorConfig, ECensorCommand, ICensorConfig, ICensorInstanceConfig } from './CensorConfig'
 import { CensorData, ICensorAsset, ICensorData, ICensorRegex, IRunnerData, ERegexOrigin } from './CensorData'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 
@@ -16,7 +16,7 @@ interface ICensorMessage {
     flow: EInstanceMessageFlow
     action: EInstanceMessageAction
     instance: string
-    kind?: 'received' | 'business' | 'syslog' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'configsaved' | 'providers' | 'analyzing' | 'stats' | 'regexstats' | 'assets' | 'tags' | 'sessions' | 'sessionstarted' | 'sessionstopped' | 'sessionconnected' | 'sessiondisconnected'
+    kind?: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'regexstats' | 'assets' | 'tags'
     assets?: ICensorAsset[]
     analyzing?: boolean
     text?: string
@@ -40,15 +40,11 @@ interface ICensorMessage {
     llms?: ILlm[]
     providers?: ILlmProvider[]
     providersAvailable?: string[]
-    sessions?: ICensorSession[]
-    sessionId?: string
     sessionDescription?: string
     regexes?: ICensorRegex[]
     inputLines?: string[]
     timestamp?: string
     runnerKey?: string
-    runnerStats?: Record<string, { processedCount: number, llmCount: number, llmLinesCount: number, totalBytesProcessed: number, tokensIn: number, tokensOut: number, syslogCount: number, pendingCount: number, analyzing: boolean }>
-    runnerRegexes?: Record<string, ICensorRegex[]>
 }
 
 export class CensorChannel implements IChannel {
@@ -89,7 +85,7 @@ export class CensorChannel implements IChannel {
                 data.runners.set(rk, {
                     analyzing: false, regexes: [], processedCount: 0, llmCount: 0, llmLinesCount: 0,
                     totalBytesProcessed: 0, tokensIn: 0, tokensOut: 0, pendingCount: 0,
-                    syslogCount: 0, llmWarningLines: [], llmInputLines: [], llmOutputLines: [],
+                    llmWarningLines: [], llmInputLines: [], llmOutputLines: [],
                     llmErrorLines: [], allTags: []
                 })
             }
@@ -110,10 +106,6 @@ export class CensorChannel implements IChannel {
                 else if (msg.kind === 'business' && msg.text !== undefined) {
                     data.businessLines.push({ text: msg.text, namespace: msg.namespace ?? '', pod: msg.pod ?? '', container: msg.container ?? '', timestamp: msg.timestamp })
                     if (data.businessLines.length > MAX_DISPLAY_LINES) data.businessLines.splice(0, data.businessLines.length - MAX_DISPLAY_LINES)
-                }
-                else if (msg.kind === 'syslog' && msg.runnerKey) {
-                    const rd = ensureRunner(msg.runnerKey)
-                    rd.syslogCount = (rd.syslogCount ?? 0) + 1
                 }
                 else if (msg.kind === 'llminput' && msg.runnerKey) {
                     const newLines: string[] = Array.isArray((msg as any).lines) ? (msg as any).lines : (msg.text !== undefined ? [msg.text] : [])
@@ -151,7 +143,6 @@ export class CensorChannel implements IChannel {
                 else if (msg.kind === 'stats' && msg.runnerKey) {
                     const rd = ensureRunner(msg.runnerKey)
                     if (msg.processedCount !== undefined) rd.processedCount = msg.processedCount
-                    if ((msg as any).syslogCount !== undefined) rd.syslogCount = (msg as any).syslogCount
                     if (msg.llmCount !== undefined) rd.llmCount = msg.llmCount
                     if ((msg as any).llmLinesCount !== undefined) rd.llmLinesCount = (msg as any).llmLinesCount
                     if ((msg as any).totalBytesProcessed !== undefined) rd.totalBytesProcessed = (msg as any).totalBytesProcessed
@@ -170,17 +161,12 @@ export class CensorChannel implements IChannel {
                         }
                     }
                 }
-                else if (msg.kind === 'configsaved') {
-                    data.assets = []
-                    data.runners = new Map()
-                }
                 else if (msg.kind === 'config') {
                     if (msg.llms !== undefined) data.llms = msg.llms
                     if (msg.providers !== undefined) data.providers = msg.providers
                     if (msg.providersAvailable !== undefined) data.providersAvailable = msg.providersAvailable
                     if (msg.instanceConfig) data.instanceConfig = msg.instanceConfig
                     if (msg.configs !== undefined) data.configs = msg.configs
-                    if (msg.sessions !== undefined) data.sessions = msg.sessions
                     if (msg.sessionDescription !== undefined) data.ephemeralSessionName = msg.sessionDescription ?? null
                 }
                 else if (msg.kind === 'providers') {
@@ -197,73 +183,6 @@ export class CensorChannel implements IChannel {
                 else if (msg.kind === 'tags' && msg.tags !== undefined && msg.runnerKey) {
                     const rd = ensureRunner(msg.runnerKey)
                     for (const tag of msg.tags) { if (!rd.allTags.includes(tag)) rd.allTags.push(tag) }
-                }
-                else if (msg.kind === 'sessions' && msg.sessions !== undefined) {
-                    data.sessions = msg.sessions
-                }
-                else if (msg.kind === 'sessionstarted' && msg.sessionId !== undefined) {
-                    data.connectedSessionId = msg.sessionId
-                    data.connectedSessionDescription = msg.sessionDescription ?? null
-                    if (msg.sessions !== undefined) data.sessions = msg.sessions
-                    data.runners = new Map()
-                    data.receivedLines = []
-                    data.businessLines = []
-                    const startedSession = data.sessions.find(s => s.id === msg.sessionId)
-                    data.startTime = startedSession?.createdAt ? new Date(startedSession.createdAt).getTime() : Date.now()
-                    ;(channelObject.config as ICensorConfig).selectedSessionId = msg.sessionId
-                }
-                else if (msg.kind === 'sessionconnected' && msg.sessionId !== undefined) {
-                    data.connectedSessionId = msg.sessionId
-                    data.connectedSessionDescription = msg.sessionDescription ?? null
-                    if (msg.sessions !== undefined) data.sessions = msg.sessions
-                    data.runners = new Map()
-                    data.receivedLines = []
-                    data.businessLines = []
-
-                    // Restore per-runner stats and regexes
-                    if (msg.runnerStats) {
-                        for (const [rk, rs] of Object.entries(msg.runnerStats)) {
-                            const rd = ensureRunner(rk)
-                            rd.processedCount = rs.processedCount
-                            rd.llmCount = rs.llmCount
-                            rd.llmLinesCount = rs.llmLinesCount
-                            rd.totalBytesProcessed = rs.totalBytesProcessed
-                            rd.tokensIn = rs.tokensIn
-                            rd.tokensOut = rs.tokensOut
-                            rd.syslogCount = rs.syslogCount
-                            rd.pendingCount = rs.pendingCount
-                            rd.analyzing = rs.analyzing
-                        }
-                    }
-                    if (msg.runnerRegexes) {
-                        for (const [rk, rxs] of Object.entries(msg.runnerRegexes)) {
-                            const rd = ensureRunner(rk)
-                            for (const r of rxs) {
-                                if (!rd.regexes.some((x: ICensorRegex) => x.pattern === r.pattern)) rd.regexes.push({ ...r, origin: r.origin ?? ERegexOrigin.HYBRID })
-                            }
-                        }
-                    }
-                    const connectedSession = data.sessions.find(s => s.id === msg.sessionId)
-                    data.startTime = connectedSession?.createdAt ? new Date(connectedSession.createdAt).getTime() : Date.now()
-                    ;(channelObject.config as ICensorConfig).selectedSessionId = msg.sessionId
-                }
-                else if (msg.kind === 'sessionstopped') {
-                    if (data.connectedSessionId === msg.sessionId) {
-                        data.connectedSessionId = null
-                        data.connectedSessionDescription = null
-                        const cfg = channelObject.config as ICensorConfig
-                        if (cfg.selectedSessionId === msg.sessionId) cfg.selectedSessionId = null
-                    }
-                    if (msg.sessions !== undefined) data.sessions = msg.sessions
-                }
-                else if (msg.kind === 'sessiondisconnected') {
-                    data.connectedSessionId = null
-                    data.connectedSessionDescription = null
-                    data.startTime = undefined
-                    data.receivedLines = []
-                    data.businessLines = []
-                    data.runners = new Map()
-                    ;(channelObject.config as ICensorConfig).selectedSessionId = null
                 }
                 return { action: EChannelRefreshAction.NONE }
 
@@ -294,18 +213,13 @@ export class CensorChannel implements IChannel {
 
     startChannel(channelObject: IChannelObject): boolean {
         const data: ICensorData = channelObject.data
-        const config: ICensorConfig = channelObject.config
         data.receivedLines = []
         data.businessLines = []
         data.assets = []
         data.paused = false
         data.started = true
         data.startTime = undefined
-        data.sessions = []
         data.runners = new Map()
-        data.connectedSessionId = null
-        data.connectedSessionDescription = null
-        data.pendingSessionId = config.selectedSessionId
         return true
     }
 

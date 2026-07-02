@@ -2,14 +2,11 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Chip, Divider, FormControl, FormControlLabel, IconButton, List, ListItem, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, Tooltip, Typography } from '@mui/material'
 import { Add as AddIcon, ArrowDownward, ArrowUpward, DeleteOutline as DeleteOutlineIcon, DeleteSweep, Download as DownloadIcon, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
 import { cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
-import { MsgBoxButtons, MsgBoxYesNo } from './utils'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { ICensorData, ICensorUiState, IRunnerData } from './CensorData'
+import { ICensorData, ICensorUiState, IRunnerData, ECensorTab } from './CensorData'
 import { ECensorCommand, ERegexOrigin } from './CensorConfig'
 import { CensorConfigDialog } from './CensorConfigDialog'
 import { CensorAddRegexDialog } from './CensorAddRegexDialog'
-import { CensorSessionStart } from './CensorSessionStart'
-import { CensorSessionPicker } from './CensorSessionPicker'
 
 const aggregateRunners = (runners: Map<string, IRunnerData>): IRunnerData => {
     const all = [...runners.values()]
@@ -24,7 +21,6 @@ const aggregateRunners = (runners: Map<string, IRunnerData>): IRunnerData => {
         tokensIn: all.reduce((s, r) => s + r.tokensIn, 0),
         tokensOut: all.reduce((s, r) => s + r.tokensOut, 0),
         pendingCount: all.reduce((s, r) => s + r.pendingCount, 0),
-        syslogCount: all.reduce((s, r) => s + r.syslogCount, 0),
         llmWarningLines: all.flatMap(r => r.llmWarningLines),
         llmInputLines: all.flatMap(r => r.llmInputLines),
         llmOutputLines: all.flatMap(r => r.llmOutputLines),
@@ -34,7 +30,7 @@ const aggregateRunners = (runners: Map<string, IRunnerData>): IRunnerData => {
 }
 
 const _defaultUi = (): ICensorUiState => ({
-    tab: 0, regexSort: 'none',
+    tab: ECensorTab.Objects, regexSort: 'none',
     autoScrolls: { regex: true, received: true, business: true, llmInput: true, llmOutput: true, warning: true, llmError: true }
 })
 const formatPerfValue = (v: number) => v >= 10000 ? `${(v / 1000).toFixed(0)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
@@ -63,8 +59,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
     // Restore UI state from channelObject.data so it survives tab switches
     const _ui = data.uiState
-    const [tab, setTabState] = useState(_ui?.tab ?? 0)
-    const setTab = (v: number) => { setTabState(v); data.uiState = { ...(data.uiState ?? _defaultUi()), tab: v } }
+    const [tab, setTabState] = useState<ECensorTab>(_ui?.tab ?? ECensorTab.Objects)
+    const setTab = (v: ECensorTab) => { setTabState(v); data.uiState = { ...(data.uiState ?? _defaultUi()), tab: v } }
     const perfSamplesRef = useRef<{ ts: number, count: number, tokensIn: number, tokensOut: number, llmLines: number }[]>([])
     const [msgsPerSec, setMsgsPerSec] = useState(0)
     const [msgsPerMin, setMsgsPerMin] = useState(0)
@@ -98,9 +94,6 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     }, [rd?.processedCount, rd?.tokensIn, rd?.tokensOut, rd?.llmLinesCount])
     const [showConfig, setShowConfig] = useState(false)
     const [addRegexState, setAddRegexState] = useState<{ runnerKey?: string, pattern?: string, explanation?: string, lockRunner?: boolean } | null>(null)
-    const [showSessionStart, setShowSessionStart] = useState(false)
-    const [showSessionPicker, setShowSessionPicker] = useState(false)
-    const [msgBox, setMsgBox] = useState(<></>)
     const [activeTagFilters, setActiveTagFilters] = useState<string[]>([])
     const [tagFilterAnd, setTagFilterAnd] = useState(false)
     const [businessAutoScroll, setBusinessAutoScrollState] = useState(_ui?.autoScrolls?.business ?? true)
@@ -143,13 +136,13 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     useEffect(() => {
         if (!contentRef.current) return
         const shouldScroll =
-            (tab === 1 && regexAutoScroll) ||
-            (tab === 2 && receivedAutoScroll) ||
-            (tab === 3 && businessAutoScroll) ||
-            (tab === 5 && llmInputAutoScroll) ||
-            (tab === 6 && llmOutputAutoScroll) ||
-            (tab === 7 && warningAutoScroll) ||
-            (tab === 8 && llmErrorAutoScroll)
+            (tab === ECensorTab.Regex && regexAutoScroll) ||
+            (tab === ECensorTab.Logstream && receivedAutoScroll) ||
+            (tab === ECensorTab.Business && businessAutoScroll) ||
+            (tab === ECensorTab.LlmInput && llmInputAutoScroll) ||
+            (tab === ECensorTab.LlmResponses && llmOutputAutoScroll) ||
+            (tab === ECensorTab.Issues && warningAutoScroll) ||
+            (tab === ECensorTab.LlmErrors && llmErrorAutoScroll)
         if (!shouldScroll) return
         contentRef.current.scrollTop = contentRef.current.scrollHeight
     }, [data.runners.get(selectedRunnerKey)?.regexes.length, data.receivedLines.length, data.runners.get(selectedRunnerKey)?.llmInputLines.length, data.runners.get(selectedRunnerKey)?.llmOutputLines.length, data.runners.get(selectedRunnerKey)?.llmWarningLines.length, data.runners.get(selectedRunnerKey)?.llmErrorLines.length, data.businessLines.length, tab, regexAutoScroll, receivedAutoScroll, llmInputAutoScroll, llmOutputAutoScroll, warningAutoScroll, llmErrorAutoScroll, businessAutoScroll])
@@ -174,55 +167,6 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setShowConfig(true)
     }
 
-    const onSessionStart = (description: string) => {
-        setShowSessionStart(false)
-        const activeConfigs = data.configs.filter(c => c.active)
-        sendCommand(ECensorCommand.SESSIONSTART, { description, activeConfigs })
-    }
-
-    const deleteSession = () => {
-        setMenuAnchor(null)
-        if (!data.connectedSessionId) return
-        const url = props.channelObject.clusterUrl
-        const token = props.channelObject.accessString
-        if (!url || !token) return
-        fetch(`${url}/daemons/instances/${data.connectedSessionId}`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${token}` }
-        })
-        sendCommand(ECensorCommand.SESSIONDISCONNECT)
-    }
-
-    const onConnectSession = (sessionId: string) => {
-        sendCommand(ECensorCommand.SESSIONCONNECT, sessionId)
-        setShowSessionPicker(false)
-    }
-
-    const toggleSessionAnalyze = (sessionId: string, analyzing: boolean) => {
-        const url = props.channelObject.clusterUrl
-        const token = props.channelObject.accessString
-        if (!url || !token) return
-        const session = data.sessions.find(s => s.id === sessionId)
-        if (session) { session.analyzing = analyzing; forceUpdate(n => n + 1) }
-        fetch(`${url}/daemons/instances/${sessionId}/analyze`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ analyzing }) })
-    }
-
-    const onDeleteSession = (sessionId: string) => {
-        const url = props.channelObject.clusterUrl
-        const token = props.channelObject.accessString
-        if (!url || !token) return
-        const isConnected = data.connectedSessionId === sessionId
-        const msg = isConnected
-            ? 'You are currently connected to this session. It will be disconnected and deleted. Are you sure?'
-            : 'Are you sure you want to delete this session?'
-        setMsgBox(MsgBoxYesNo('Delete session', msg, setMsgBox, (btn) => {
-            if (btn !== MsgBoxButtons.Yes) return
-            fetch(`${url}/daemons/instances/${sessionId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
-            setShowSessionPicker(false)
-            if (isConnected) sendCommand(ECensorCommand.SESSIONDISCONNECT)
-        }))
-    }
-
     const panelHeight = `calc(100vh - ${contentTop}px - 16px)`
     return <>
         {data.started &&
@@ -232,12 +176,10 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     <Typography><b>Processed:</b> {rd?.processedCount ?? 0}</Typography>
                     <Typography><b>Pending:</b> {rd?.pendingCount ?? 0}</Typography>
                     <Typography flex={1} />
-                    {(data.runners.size > 0 || !!data.connectedSessionId) && (<>
-                        {data.connectedSessionId
-                            ? <Chip label={data.connectedSessionDescription ?? 'Session'} size='small' color='success' sx={{ maxWidth: 160 }} />
-                            : data.ephemeralSessionName
-                                ? <Chip label={data.ephemeralSessionName} size='small' color='default' sx={{ maxWidth: 160 }} />
-                                : null
+                    {data.runners.size > 0 && (<>
+                        {data.ephemeralSessionName
+                            ? <Chip label={data.ephemeralSessionName} size='small' color='default' sx={{ maxWidth: 160 }} />
+                            : null
                         }
                         <FormControl size='small' sx={{ width: 255, flexShrink: 0 }}>
                             <Select value={selectedRunnerKey} onChange={e => setSelectedRunnerKey(e.target.value)} displayEmpty
@@ -268,7 +210,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         <Switch
                             size='small'
                             checked={(data.instanceConfig?.mode ?? 'inference') === 'audit'}
-                            disabled={!data.ephemeralSessionName || (rd?.analyzing ?? false) || !!data.connectedSessionId}
+                            disabled={!data.ephemeralSessionName || (rd?.analyzing ?? false)}
                             onChange={(e) => {
                                 const newMode = e.target.checked ? 'audit' : 'inference'
                                 data.instanceConfig.mode = newMode
@@ -285,7 +227,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         else data.stopTime = Date.now()
                         sendCommand(isAnalyzing ? ECensorCommand.ANALYZESTOP : ECensorCommand.ANALYZESTART)
                     }} color={(rd?.analyzing ?? false) ? 'error' : 'success'} variant='outlined' size='small'
-                        disabled={!data.ephemeralSessionName || (!(rd?.analyzing ?? false) && !data.configs.filter(c => c.active).some(c => c.logstreamEnabled || (c.businessSources?.length ?? 0) > 0 || (c.syslogSources?.length ?? 0) > 0))}>
+                        disabled={!data.ephemeralSessionName || (!(rd?.analyzing ?? false) && !data.configs.filter(c => c.active).some(c => c.logstreamEnabled || (c.businessSources?.length ?? 0) > 0))}>
                         {(rd?.analyzing ?? false) ? 'Stop' : 'Start'}
                     </Button>
                     <IconButton size='small' onClick={(e) => setMenuAnchor(e.currentTarget)}>
@@ -293,29 +235,25 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     </IconButton>
                     <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
                         <MenuItem onClick={() => { setMenuAnchor(null); openConfig() }} disabled={!data.ephemeralSessionName}>Config</MenuItem>
-                        <MenuItem onClick={() => { setMenuAnchor(null); sendCommand(ECensorCommand.SESSIONLIST); setShowSessionPicker(true) }} disabled={!data.ephemeralSessionName}>Sessions</MenuItem>
-                        <MenuItem onClick={() => { setMenuAnchor(null); setShowSessionStart(true) }} disabled={!data.ephemeralSessionName || !!data.connectedSessionId}>Launch</MenuItem>
-                        <MenuItem onClick={deleteSession} disabled={!data.connectedSessionId}>Delete session</MenuItem>
                     </Menu>
                 </Stack>
             } />
             <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
                 <Tabs value={tab} onChange={(_, v) => setTab(v)} variant='fullWidth'
                     sx={{ borderBottom: 1, borderColor: 'divider', px: 1, minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
-                    <Tab label={`Objects (${data.assets.length})`} />
-                    <Tab label={`Regex (${(rd?.regexes ?? []).length})`} />
-                    <Tab label={`Logstream (${data.receivedLines.length})`} />
-                    <Tab label={`Business (${data.businessLines.length})`} />
-                    <Tab label={`Syslog (${rd?.syslogCount ?? 0})`} />
-                    <Tab label={`LLM Input (${(rd?.llmInputLines ?? []).length})`} />
-                    <Tab label={`LLM Responses (${(rd?.llmOutputLines ?? []).length})`} />
-                    <Tab label={`Issues (${(rd?.llmWarningLines ?? []).length})`} />
-                    <Tab label={`LLM Errors (${(rd?.llmErrorLines ?? []).length})`} />
-                    <Tab label='Performance' />
+                    <Tab value={ECensorTab.Objects} label={`Objects (${data.assets.length})`} />
+                    <Tab value={ECensorTab.Regex} label={`Regex (${(rd?.regexes ?? []).length})`} />
+                    <Tab value={ECensorTab.Logstream} label={`Logstream (${data.receivedLines.length})`} />
+                    <Tab value={ECensorTab.Business} label={`Business (${data.businessLines.length})`} />
+                    <Tab value={ECensorTab.LlmInput} label={`LLM Input (${(rd?.llmInputLines ?? []).length})`} />
+                    <Tab value={ECensorTab.LlmResponses} label={`LLM Responses (${(rd?.llmOutputLines ?? []).length})`} />
+                    <Tab value={ECensorTab.Issues} label={`Issues (${(rd?.llmWarningLines ?? []).length})`} />
+                    <Tab value={ECensorTab.LlmErrors} label={`LLM Errors (${(rd?.llmErrorLines ?? []).length})`} />
+                    <Tab value={ECensorTab.Performance} label='Performance' />
                 </Tabs>
-                {(tab === 1 || tab === 2 || tab === 3 || tab === 5 || tab === 6 || tab === 8) && (
+                {(tab === ECensorTab.Regex || tab === ECensorTab.Logstream || tab === ECensorTab.Business || tab === ECensorTab.LlmInput || tab === ECensorTab.LlmResponses || tab === ECensorTab.LlmErrors) && (
                     <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
-                        {tab === 1 && (
+                        {tab === ECensorTab.Regex && (
                             <>
                             <Tooltip title='Add regex manually'>
                                 <IconButton size='small' onClick={() => setAddRegexState({})}>
@@ -330,7 +268,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             </>
                         )}
                         <Box sx={{ flex: 1 }} />
-                        {tab === 1 && (
+                        {tab === ECensorTab.Regex && (
                             <>
                                 <Tooltip title='Download CSV'>
                                     <IconButton size='small' onClick={() => {
@@ -356,14 +294,14 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 </Tooltip>
                             </>
                         )}
-                        {tab !== 1 && (
+                        {tab !== ECensorTab.Regex && (
                             <Tooltip title='Clear'>
                                 <IconButton size='small' onClick={() => {
-                                    if (tab === 2) { data.receivedLines = []; forceUpdate(n => n + 1) }
-                                    else if (tab === 3) { data.businessLines = []; forceUpdate(n => n + 1) }
-                                    else if (tab === 5) { if (rd) rd.llmInputLines = []; forceUpdate(n => n + 1) }
-                                    else if (tab === 6) { if (rd) rd.llmOutputLines = []; forceUpdate(n => n + 1) }
-                                    else if (tab === 8) { if (rd) rd.llmErrorLines = []; forceUpdate(n => n + 1) }
+                                    if (tab === ECensorTab.Logstream) { data.receivedLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === ECensorTab.Business) { data.businessLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === ECensorTab.LlmInput) { if (rd) rd.llmInputLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === ECensorTab.LlmResponses) { if (rd) rd.llmOutputLines = []; forceUpdate(n => n + 1) }
+                                    else if (tab === ECensorTab.LlmErrors) { if (rd) rd.llmErrorLines = []; forceUpdate(n => n + 1) }
                                 }}>
                                     <DeleteSweep fontSize='small' />
                                 </IconButton>
@@ -371,13 +309,13 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         )}
                         <FormControlLabel
                             control={<Switch size='small'
-                                checked={tab === 1 ? regexAutoScroll : tab === 2 ? receivedAutoScroll : tab === 3 ? businessAutoScroll : tab === 5 ? llmInputAutoScroll : tab === 6 ? llmOutputAutoScroll : llmErrorAutoScroll}
-                                onChange={e => { if (tab === 1) setRegexAutoScroll(e.target.checked); else if (tab === 2) setReceivedAutoScroll(e.target.checked); else if (tab === 3) setBusinessAutoScroll(e.target.checked); else if (tab === 5) setLlmInputAutoScroll(e.target.checked); else if (tab === 6) setLlmOutputAutoScroll(e.target.checked); else setLlmErrorAutoScroll(e.target.checked) }} />}
+                                checked={tab === ECensorTab.Regex ? regexAutoScroll : tab === ECensorTab.Logstream ? receivedAutoScroll : tab === ECensorTab.Business ? businessAutoScroll : tab === ECensorTab.LlmInput ? llmInputAutoScroll : tab === ECensorTab.LlmResponses ? llmOutputAutoScroll : llmErrorAutoScroll}
+                                onChange={e => { if (tab === ECensorTab.Regex) setRegexAutoScroll(e.target.checked); else if (tab === ECensorTab.Logstream) setReceivedAutoScroll(e.target.checked); else if (tab === ECensorTab.Business) setBusinessAutoScroll(e.target.checked); else if (tab === ECensorTab.LlmInput) setLlmInputAutoScroll(e.target.checked); else if (tab === ECensorTab.LlmResponses) setLlmOutputAutoScroll(e.target.checked); else setLlmErrorAutoScroll(e.target.checked) }} />}
                             label={<Typography variant='caption'>Autoscroll</Typography>}
                             sx={{ ml: 0.5, mr: 0 }} />
                     </Box>
                 )}
-                {tab === 7 && (
+                {tab === ECensorTab.Issues && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
                         {(rd?.allTags ?? []).map(tag => (
                             <Chip key={tag} label={tag} size='small'
@@ -426,8 +364,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
                 <Box ref={contentRef} sx={{ overflowY: 'auto', height: panelHeight }}>
 
-                    {/* Tab 0 — Objects being analyzed */}
-                    {tab === 0 && (
+                    {/* Objects being analyzed */}
+                    {tab === ECensorTab.Objects && (
                         data.assets.length === 0
                             ? <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>No objects currently being analyzed.</Typography>
                             : <List dense disablePadding>
@@ -443,8 +381,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             </List>
                     )}
 
-                    {/* Tab 1 — Regex list */}
-                    {tab === 1 && (() => {
+                    {/* Regex list */}
+                    {tab === ECensorTab.Regex && (() => {
                         const regexes = rd?.regexes ?? []
                         return regexes.length === 0
                             ? <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>
@@ -484,8 +422,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             </List>
                     })()}
 
-                    {/* Tab 2 — All received lines */}
-                    {tab === 2 && data.receivedLines.map((line, i) => (
+                    {/* All received lines */}
+                    {tab === ECensorTab.Logstream && data.receivedLines.map((line, i) => (
                         <Box key={i} sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, '&:hover': { bgcolor: 'action.hover' }, px: 0.5, borderRadius: 0.5 }}>
                             <Typography variant='caption' color='text.disabled' sx={{ minWidth: '160px', fontFamily: 'monospace', flexShrink: 0 }}>
                                 {line.pod}/{line.container}
@@ -496,8 +434,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         </Box>
                     ))}
 
-                    {/* Tab 3 — Business events */}
-                    {tab === 3 && data.businessLines.map((line, i) => (
+                    {/* Business events */}
+                    {tab === ECensorTab.Business && data.businessLines.map((line, i) => (
                         <Box key={i} sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, '&:hover': { bgcolor: 'action.hover' }, px: 0.5, borderRadius: 0.5 }}>
                             <Typography variant='caption' color='text.disabled' sx={{ minWidth: '120px', fontFamily: 'monospace', flexShrink: 0 }}>
                                 {line.namespace}/{line.pod}
@@ -513,28 +451,23 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         </Box>
                     ))}
 
-                    {/* Tab 4 — Syslog */}
-                    {tab === 4 && (
-                        <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>No syslog data yet.</Typography>
-                    )}
-
-                    {/* Tab 5 — Lines sent to LLM (one block per call) */}
-                    {tab === 5 && (rd?.llmInputLines ?? []).map((batch, i) => (
+                    {/* Lines sent to LLM (one block per call) */}
+                    {tab === ECensorTab.LlmInput && (rd?.llmInputLines ?? []).map((batch, i) => (
                         <Box key={i} sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '11px' }}>
                             <Typography variant='caption' sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>Call #{i + 1} — {batch.length} lines</Typography>
                             {batch.map((line, j) => <Typography key={j} variant='caption' sx={{ fontFamily: 'monospace', display: 'block', wordBreak: 'break-all' }}>{line}</Typography>)}
                         </Box>
                     ))}
 
-                    {/* Tab 6 — LLM responses */}
-                    {tab === 6 && (rd?.llmOutputLines ?? []).map((out, i) => (
+                    {/* LLM responses */}
+                    {tab === ECensorTab.LlmResponses && (rd?.llmOutputLines ?? []).map((out, i) => (
                         <Box key={i} sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '11px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                             {out}
                         </Box>
                     ))}
 
-                    {/* Tab 7 — Issues */}
-                    {tab === 7 && <>
+                    {/* Issues */}
+                    {tab === ECensorTab.Issues && <>
                         {(rd?.llmWarningLines ?? [])
                             .filter(w => {
                                 if (activeTagFilters.length === 0) return true
@@ -568,8 +501,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         }
                     </>}
 
-                    {/* Tab 8 — LLM Errors */}
-                    {tab === 8 && (rd?.llmErrorLines ?? []).map((e, i) => (
+                    {/* LLM Errors */}
+                    {tab === ECensorTab.LlmErrors && (rd?.llmErrorLines ?? []).map((e, i) => (
                         <Box key={i} sx={{ display: 'flex', flexDirection: 'column', px: 0.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}>
                             <Typography variant='caption' color='text.disabled' sx={{ fontFamily: 'monospace', fontSize: '10px' }}>{e.timestamp}</Typography>
                             <Typography variant='caption' color='error.main' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{e.text}</Typography>
@@ -588,7 +521,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         </Box>
                     ))}
 
-                    {tab === 9 && (() => {
+                    {tab === ECensorTab.Performance && (() => {
                         const selectedLlm = data.llms.find(l => l.id === data.instanceConfig?.llmId)
                         const icpm = selectedLlm?.inputCostPerMillion ?? 0
                         const ocpm = selectedLlm?.outputCostPerMillion ?? 0
@@ -792,23 +725,6 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         {showConfig && (
             <CensorConfigDialog data={data} channelObject={props.channelObject} sendCommand={sendCommand} onClose={() => setShowConfig(false)} />
         )}
-        {showSessionStart && (
-            <CensorSessionStart onConfirm={onSessionStart} onClose={() => setShowSessionStart(false)} />
-        )}
-        {showSessionPicker && (
-            <CensorSessionPicker
-                sessions={data.sessions}
-                connectedSessionId={data.connectedSessionId}
-                ephemeralSessionName={data.ephemeralSessionName}
-                onConnect={onConnectSession}
-                onStart={id => toggleSessionAnalyze(id, true)}
-                onStop={id => toggleSessionAnalyze(id, false)}
-                onDelete={onDeleteSession}
-                onDisconnect={() => { sendCommand(ECensorCommand.SESSIONDISCONNECT); setShowSessionPicker(false) }}
-                onClose={() => setShowSessionPicker(false)}
-            />
-        )}
-        {msgBox}
     </>
 }
 
