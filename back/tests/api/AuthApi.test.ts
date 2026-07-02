@@ -59,7 +59,7 @@ async function startServer() {
                     'bob@example.com': encodeUser(makeUser({ id: 'bob@example.com', idp: 'keycloak' })) }
     const secrets = memSecrets(users)
     const reg = new Map<string, TIdpConnectorConstructor>()
-    const idpManager = new IdpManager(secrets, reg)
+    const idpManager = new IdpManager(secrets, memConfigMaps(), reg)
     idpManager.registerConnector('fake', FakeConnector)
     await idpManager.saveInstance({ id: 'google', connectorId: 'fake', label: 'Login with Google', enabled: true, config: {} })
 

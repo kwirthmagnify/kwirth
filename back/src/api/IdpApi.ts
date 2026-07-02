@@ -31,6 +31,44 @@ export class IdpApi {
             res.status(200).json(this.idpManager.listConnectors())
         })
 
+        // instalar conector desde URL (marketplace / tgz)
+        this.router.post('/connectors/install', async (req: Request, res: Response) => {
+            try {
+                const url = String(req.body?.url || '').trim()
+                if (!url) { res.status(400).json({ error: 'url is required' }); return }
+                const meta = await this.idpManager.install(url)
+                res.status(200).json(meta)
+            }
+            catch (err) {
+                logError(ELogComponent.AUTH, `Error installing IdP connector: ${err}`)
+                res.status(500).json({ error: String(err) })
+            }
+        })
+
+        // instalar conector desde fichero local (tgz subido como octet-stream)
+        this.router.post('/connectors/upload', express.raw({ type: () => true, limit: '15mb' }), async (req: Request, res: Response) => {
+            try {
+                const meta = await this.idpManager.installFromBuffer(req.body as Buffer)
+                res.status(200).json(meta)
+            }
+            catch (err) {
+                logError(ELogComponent.AUTH, `Error uploading IdP connector: ${err}`)
+                res.status(500).json({ error: String(err) })
+            }
+        })
+
+        // desinstalar conector
+        this.router.delete('/connectors/:connectorId', async (req: Request, res: Response) => {
+            try {
+                await this.idpManager.uninstall(req.params.connectorId)
+                res.status(200).json({})
+            }
+            catch (err) {
+                logError(ELogComponent.AUTH, `Error uninstalling IdP connector: ${err}`)
+                res.status(500).json({ error: String(err) })
+            }
+        })
+
         // export / import de la config completa (admin)
         this.router.get('/export', async (_req: Request, res: Response) => {
             res.status(200).json(await this.idpManager.exportConfig())

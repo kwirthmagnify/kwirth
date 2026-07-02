@@ -1154,8 +1154,12 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         let loginApi:LoginApi = new LoginApi(ri.secrets, ri.configMaps, ri.apiKeyApi)
         riRouter.use(`/login`, loginApi.router)
         if (!idpManager) {
-            idpManager = new IdpManager(ri.secrets, registeredIdps)
-            idpManager.loadDevIdps()   // carga el CÓDIGO del conector en dev; la config del IdP se gestiona desde el front (UI)
+            idpManager = new IdpManager(ri.secrets, ri.configMaps, registeredIdps)
+            await idpManager.init()
+            const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
+            if (bundledExtensionsPath) await idpManager.installBundled(bundledExtensionsPath)
+            await idpManager.loadAll()   // conectores instalados en runtime
+            idpManager.loadDevIdps()     // conectores en dev (kwirth-dev.json); la config del IdP se gestiona desde el front (UI)
         }
         let idpApi:IdpApi = new IdpApi(idpManager, apiKeyApi)
         riRouter.use(`/idp`, idpApi.router)

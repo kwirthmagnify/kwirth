@@ -1,10 +1,18 @@
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
+import https from 'https'
+import http from 'http'
+import zlib from 'zlib'
+import tar from 'tar'
 import { ISecrets } from '../ISecrets'
+import { IConfigMaps } from '../IConfigMap'
 import { ELogComponent, logError, logInfo } from '../Logging'
 import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 
 const IDPS_SECRET = 'kwirth-idps'
+const CONNECTORS_INDEX = 'kwirth-idp-connectors-index'
+const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
 // info publica de un tipo de conector (para la UI de gestion)
 interface IIdpConnectorInfo {
@@ -15,6 +23,18 @@ interface IIdpConnectorInfo {
     installed: boolean          // false = bundled/dev registrado en codigo; true = instalado en runtime
 }
 
+// metadatos de un conector INSTALADO (persistidos en configmap; el codigo back.js va aparte)
+interface IIdpConnectorMeta {
+    id: string
+    name: string
+    displayName?: string
+    version: string
+    description?: string
+    website?: string
+    installedFrom?: string
+    backStored?: boolean
+}
+
 /*
     Gestiona los conectores de IdP (registry) y las instancias configuradas.
     - Conectores: bundled (registerConnector en arranque), dev (loadDevIdps) e instalables (EPIC G).
@@ -23,11 +43,13 @@ interface IIdpConnectorInfo {
 */
 export class IdpManager {
     private secrets: ISecrets
+    private configMaps: IConfigMaps
     private registeredIdps: Map<string, TIdpConnectorConstructor>
     private installedConnectorIds = new Set<string>()
 
-    constructor(secrets: ISecrets, registeredIdps: Map<string, TIdpConnectorConstructor>) {
+    constructor(secrets: ISecrets, configMaps: IConfigMaps, registeredIdps: Map<string, TIdpConnectorConstructor>) {
         this.secrets = secrets
+        this.configMaps = configMaps
         this.registeredIdps = registeredIdps
     }
 
@@ -67,6 +89,181 @@ export class IdpManager {
     getConnectorSchema(connectorId: string): IIdpConfigFieldDef[] | undefined {
         const c = this.getConnector(connectorId)
         return c ? c.getConfigSchema() : undefined
+    }
+
+    // ---------------- conectores instalables (tgz), espejo de ProviderManager ----------------
+
+    // carga el índice de conectores instalados (solo marca ids; el código se carga en loadAll)
+    async init(): Promise<void> {
+        const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
+        for (const m of index) this.installedConnectorIds.add(m.id)
+    }
+
+    async listInstalledMeta(): Promise<IIdpConnectorMeta[]> {
+        return (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
+    }
+
+    // instala un conector desde un tgz (URL http(s), file:// o ruta local). El back.js se guarda
+    // comprimido en configmap y se registra en registeredIdps.
+    async install(tarGzUrl: string, installedFrom?: string): Promise<IIdpConnectorMeta> {
+        const tmpTgz = path.join(os.tmpdir(), `kwirth-idp-${Date.now()}.tgz`)
+        let tmpDir = path.join(os.tmpdir(), `kwirth-idp-extract-${Date.now()}`)
+        fs.mkdirSync(tmpDir, { recursive: true })
+        const isLocalPath = tarGzUrl.startsWith('file://') || (!tarGzUrl.startsWith('http://') && !tarGzUrl.startsWith('https://'))
+        try {
+            if (isLocalPath) {
+                const localPath = tarGzUrl.startsWith('file://') ? new URL(tarGzUrl).pathname.replace(/^\/([A-Za-z]:)/, '$1') : tarGzUrl
+                fs.copyFileSync(localPath, tmpTgz)
+            }
+            else {
+                await this.downloadFile(tarGzUrl, tmpTgz)
+            }
+            await tar.x({ file: tmpTgz, cwd: tmpDir })
+
+            let metaPath = path.join(tmpDir, 'package.json')
+            let backPath = path.join(tmpDir, 'back.js')
+            if (!fs.existsSync(metaPath) || !fs.existsSync(backPath)) {
+                // formato npm (carpeta 'package' al nivel superior)
+                tmpDir = path.join(tmpDir, 'package')
+                metaPath = path.join(tmpDir, 'package.json')
+                backPath = path.join(tmpDir, 'back.js')
+                if (!fs.existsSync(metaPath) || !fs.existsSync(backPath)) throw new Error('Invalid connector bundle: missing package.json or back.js')
+            }
+
+            const pkg = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+            const meta: IIdpConnectorMeta = {
+                id: pkg.id ?? pkg.name,
+                name: pkg.name,
+                displayName: pkg.displayName,
+                version: pkg.version,
+                description: pkg.description,
+                website: pkg.website,
+                installedFrom: installedFrom ?? tarGzUrl
+            }
+            if (this.installedConnectorIds.has(meta.id) && !this.registeredIdps.has(meta.id)) {
+                // reinstalación permitida (sobrescribe)
+            }
+            const backJs = fs.readFileSync(backPath, 'utf-8')
+            const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')
+            meta.backStored = backCompressed.length <= CONFIGMAP_SIZE_LIMIT
+            if (!meta.backStored) logError(ELogComponent.AUTH, `IdP connector '${meta.id}' back.js (${Math.round(backCompressed.length / 1024)}KB) exceeds configmap limit`)
+
+            await this.configMaps.write(`kwirth-idp-connector-${meta.id}-meta`, meta)
+            if (meta.backStored) await this.configMaps.write(`kwirth-idp-connector-${meta.id}-back`, { code: backCompressed, compressed: true })
+
+            const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
+            const existing = index.findIndex(m => m.id === meta.id)
+            if (existing >= 0) index[existing] = meta
+            else index.push(meta)
+            await this.configMaps.write(CONNECTORS_INDEX, index)
+            this.installedConnectorIds.add(meta.id)
+
+            this.loadBackConnector(meta.id, backJs)
+            logInfo(ELogComponent.AUTH, `IdP connector '${meta.id}' v${meta.version} installed`)
+            return meta
+        }
+        finally {
+            fs.rmSync(tmpDir, { recursive: true, force: true })
+            if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz)
+        }
+    }
+
+    async installFromBuffer(buffer: Buffer): Promise<IIdpConnectorMeta> {
+        const tmpTgz = path.join(os.tmpdir(), `kwirth-idp-upload-${Date.now()}.tgz`)
+        fs.writeFileSync(tmpTgz, buffer)
+        try {
+            return await this.install(tmpTgz, 'local')
+        }
+        finally {
+            if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz)
+        }
+    }
+
+    // instala conectores bundled desde un directorio de tgz (fetch-bundled.mjs los deja ahí)
+    async installBundled(dir: string): Promise<void> {
+        if (!fs.existsSync(dir)) return
+        for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.tgz'))) {
+            try {
+                await this.install(path.join(dir, file), 'bundled')
+            }
+            catch (err) {
+                logError(ELogComponent.AUTH, `Failed to install bundled IdP connector '${file}': ${err}`)
+            }
+        }
+    }
+
+    async uninstall(connectorId: string): Promise<void> {
+        this.registeredIdps.delete(connectorId)
+        this.installedConnectorIds.delete(connectorId)
+        const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
+        await this.configMaps.write(CONNECTORS_INDEX, index.filter(m => m.id !== connectorId))
+        await this.configMaps.write(`kwirth-idp-connector-${connectorId}-meta`, null)
+        await this.configMaps.write(`kwirth-idp-connector-${connectorId}-back`, null)
+        logInfo(ELogComponent.AUTH, `IdP connector '${connectorId}' uninstalled`)
+    }
+
+    // carga (registra) todos los conectores instalados desde configmap (en arranque)
+    async loadAll(): Promise<void> {
+        const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
+        for (const meta of index) {
+            try {
+                const backData = await this.configMaps.read(`kwirth-idp-connector-${meta.id}-back`)
+                if (backData?.code) {
+                    const backJs = backData.compressed ? zlib.gunzipSync(Buffer.from(backData.code, 'base64')).toString('utf-8') : backData.code
+                    this.loadBackConnector(meta.id, backJs)
+                }
+                else {
+                    logError(ELogComponent.AUTH, `IdP connector '${meta.id}' has no stored back.js — skipping`)
+                }
+            }
+            catch (err) {
+                logError(ELogComponent.AUTH, `Failed to load IdP connector '${meta.id}': ${err}`)
+            }
+        }
+    }
+
+    // evalúa el back.js del conector (que referencia el global __kwirth_back__) y registra su clase
+    private loadBackConnector(connectorId: string, backJs: string): void {
+        try {
+            const { createRequire } = require('module')
+            const localRequire = createRequire(path.join(process.cwd(), 'package.json'))
+            const mod: { exports: Record<string, unknown> } = { exports: {} }
+            const wrap = new Function('module', 'exports', 'require', '__filename', '__dirname', backJs)
+            wrap(mod, mod.exports, localRequire, `kwirth-idp-connector-${connectorId}-back.js`, process.cwd())
+            const Ctor = (mod.exports.default as TIdpConnectorConstructor) ?? Object.values(mod.exports).find(v => typeof v === 'function') as TIdpConnectorConstructor | undefined
+            if (Ctor) {
+                this.registeredIdps.set(connectorId, Ctor)
+                this.installedConnectorIds.add(connectorId)
+                logInfo(ELogComponent.AUTH, `IdP connector '${connectorId}' registered`)
+            }
+            else {
+                logError(ELogComponent.AUTH, `IdP connector '${connectorId}' back.js exports no connector class`)
+            }
+        }
+        catch (err) {
+            logError(ELogComponent.AUTH, `Error loading IdP connector '${connectorId}': ${err}`)
+        }
+    }
+
+    private downloadFile(url: string, destPath: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const protocol = url.startsWith('https') ? https : http
+            const file = fs.createWriteStream(destPath)
+            protocol.get(url, { headers: { 'User-Agent': 'kwirth/1.0' } }, res => {
+                if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                    file.close()
+                    this.downloadFile(res.headers.location, destPath).then(resolve).catch(reject)
+                    return
+                }
+                if (res.statusCode && res.statusCode !== 200) {
+                    file.close()
+                    reject(new Error(`HTTP ${res.statusCode} downloading ${url}`))
+                    return
+                }
+                res.pipe(file)
+                file.on('finish', () => { file.close(); resolve() })
+            }).on('error', err => { file.close(); reject(err) })
+        })
     }
 
     // ---------------- instancias (Secret kwirth-idps) ----------------

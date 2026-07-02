@@ -45,6 +45,9 @@ await esbuild.build({
     outdir: OUT_DIR,
     outbase: TEST_DIR,
     outExtension: { '.js': '.mjs' },
+    // el src bundleado usa require/require.resolve/require.cache (carga dinámica de conectores);
+    // en salida ESM hay que inyectar un require basado en createRequire.
+    banner: { js: "import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);" },
     // Deps de runtime del back externalizadas: esbuild solo bundlea el TS de src/ y los tests.
     external: [
         '@jfvilas/parse-listing', '@kubernetes/client-node',

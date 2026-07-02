@@ -6,6 +6,7 @@ import { IdpApi } from '../../src/api/IdpApi'
 import { IdpManager } from '../../src/tools/idp/IdpManager'
 import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { ISecrets } from '../../src/tools/ISecrets'
+import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { accessKeySerialize } from '@kwirthmagnify/kwirth-common'
 
 class FakeConnector implements IIdpConnector {
@@ -42,7 +43,8 @@ const AUTH = { Authorization: 'Bearer ' + accessKeySerialize(validAccessKey as a
 
 async function startServer() {
     const reg = new Map<string, TIdpConnectorConstructor>()
-    const idpManager = new IdpManager(memSecrets(), reg)
+    const memConfigMaps: IConfigMaps = { read: async (_n, def?) => def, write: (() => {}) as any, writeKey: async () => {}, readAllKeys: async () => ({}) }
+    const idpManager = new IdpManager(memSecrets(), memConfigMaps, reg)
     idpManager.registerConnector('fake', FakeConnector)
     const idpApi = new IdpApi(idpManager, fakeApiKeyApi())
     const app = express()

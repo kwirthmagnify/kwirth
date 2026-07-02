@@ -307,8 +307,9 @@ Formato: *ficheros · qué hace · criterio de aceptación (CA)*.
 - **F1** `generic-oidc` (Keycloak/GitLab) · **F2** `microsoft` · **F3** `github` (OAuth2, `/user/emails`).
 
 ## EPIC G — Conectores instalables + hardening (P1)
-- **G0** Scaffolding top-level `idps/` (build.mjs/watch.mjs por conector, `idps/manifest.json`, `idps/watch-all.mjs`) + `IdpManager.loadDevIdps` (clave `idps` en `kwirth-dev.json`) · espejo de `providers/`.
-- **G1** install/uninstall de conectores (tar.gz vía `npm pack`, como providers) con aviso de seguridad, **solo admin** · **G2** auditoría de logins IdP (`ELogComponent.AUTH`) · **G3** doc de seguridad · **G4** *(opcional)* binding por `sub` (TOFU).
+- **G0** Scaffolding top-level `idps/` (`idps/google/` con build.mjs/watch.mjs, `idps/manifest.json`) + `IdpManager.loadDevIdps` (clave `idps` en `kwirth-dev.json`). ✅ **HECHO**
+- **G1** install/uninstall de conectores (tgz vía URL/upload, `installBundled`, `loadAll` en arranque) · `IdpManager` (índice+meta+back.js comprimido en configmap, espejo de `ProviderManager`) + `IdpApi` (`POST /idp/connectors/install`, `POST /idp/connectors/upload`, `DELETE /idp/connectors/:id`, **admin via validKey**) + montaje `init/loadAll/installBundled` en `index.ts`. Harness ESM con `require` inyectado (banner). ✅ **HECHO** (test install/loadAll/uninstall con tgz real; 44/44).
+- **G2** auditoría de logins IdP (`ELogComponent.AUTH`, ya se loguea OK/rechazos en `AuthApi`) · **G3** doc de seguridad (docs/idp) · **G4** *(opcional)* binding por `sub` (TOFU). ⬜ pendiente
 
 ## EPIC H — Desktop SSO (P2)
 - **H1** flujo loopback/deep-link (electron/tauri).
