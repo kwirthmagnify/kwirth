@@ -75,6 +75,8 @@
 * [Security](/0.5.187/security)
 * [Common tasks](/0.5.187/commontasks)
 * [User management](/0.5.187/usermanagement)
+* [IdP integration](/0.5.187/idp/index)
+  * [Google / Gmail](/0.5.187/idp/google)
 * [Cluster management](/0.5.187/clustermanagement)
 * [API Management](/0.5.187/apimanagement/index)
   * [API Keys](/0.5.187/apimanagement/api-keys)

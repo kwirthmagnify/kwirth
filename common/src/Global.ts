@@ -6,6 +6,7 @@ interface IUser {
     password: string
     accessKey: AccessKey
     resources: string
+    idp?: string        // instanceId del IdP al que esta atado el usuario; vacio/undefined = usuario local kwirth
 }
 
 interface ILoginResponse {

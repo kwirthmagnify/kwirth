@@ -3,7 +3,9 @@ User management is easy and self-explaining.
 
 ![user management](./_media/user-managment.png)
 
-There exist always an user named 'admin', the one you used when first entering Kwirth. This 'User management' tool allows you to create new users and assign them some permissions. There exist no integration with any IAM system... yet.
+There exist always an user named 'admin', the one you used when first entering Kwirth. This 'User management' tool allows you to create new users and assign them some permissions.
+
+Kwirth can also delegate authentication to an external Identity Provider (Single Sign-On). See [IdP integration](/0.5.187/idp/index) for details.
 
 ## Create a user
 If you need users with specific roles and permissions yo can create it very easily:
