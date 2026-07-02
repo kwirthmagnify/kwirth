@@ -71,6 +71,10 @@ import { ProviderApi } from './api/ProviderApi'
 import { SenderApi } from './api/SenderApi'
 //import { DaemonApi } from './api/DaemonApi'
 import { SenderManager } from './tools/SenderManager'
+import { AuthApi } from './api/AuthApi'
+import { IdpApi } from './api/IdpApi'
+import { IdpManager } from './tools/idp/IdpManager'
+import { TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 //import { DaemonManager } from './tools/DaemonManager'
 import { ThemeManager } from './tools/ThemeManager'
 import { ThemeApi } from './api/ThemeApi'
@@ -141,6 +145,10 @@ const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
 registeredProviders.set('business', BusinessProvider)
 registeredProviders.set('metrics', MetricsProvider)
+
+// registry de conectores de IdP (bundled se registran en codigo; dev via loadDevIdps; instalables en EPIC G)
+const registeredIdps = new Map<string, TIdpConnectorConstructor>()
+let idpManager: IdpManager | undefined
 
 // providers instantiated at startup for router-only access (config endpoints), not yet fully started
 const routerOnlyProviders = new Set<string>()
@@ -1145,6 +1153,12 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         riRouter.use(`/user`, userApi.router)
         let loginApi:LoginApi = new LoginApi(ri.secrets, ri.configMaps, ri.apiKeyApi)
         riRouter.use(`/login`, loginApi.router)
+        if (!idpManager) {
+            idpManager = new IdpManager(ri.secrets, registeredIdps)
+            idpManager.loadDevIdps()   // carga el CÓDIGO del conector en dev; la config del IdP se gestiona desde el front (UI)
+        }
+        let idpApi:IdpApi = new IdpApi(idpManager, apiKeyApi)
+        riRouter.use(`/idp`, idpApi.router)
         let manageKwirthApi:ManageKwirthApi = new ManageKwirthApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, apiKeyApi, ri.kwirthData)
         riRouter.use(`/managekwirth`, manageKwirthApi.router)
         let manageCluster:ManageClusterApi = new ManageClusterApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, apiKeyApi)
@@ -2449,9 +2463,16 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
         else
             return res.status(503).send('No active instance available')
     })
-    app.get(`${envRootPath}/core/auth/method`, (req:Request,res:Response) => {
-        return res.status(200).json({ auth: envAuth })
-    })
+    const authApi = new AuthApi(
+        () => idpManager,
+        () => {
+            const activeRI = runningInstances.find(r => r.active)
+            return (activeRI && activeRI.apiKeyApi) ? { secrets: activeRI.secrets, configMaps: activeRI.configMaps, apiKeyApi: activeRI.apiKeyApi } : undefined
+        },
+        envRootPath,
+        envAuth
+    )
+    app.use(`${envRootPath}/core/auth`, authApi.router)
 
     if (envFront) {
         if (!fs.existsSync('./front/index.html')) logError(ELogComponent.CORE, `'index.html' file has not been found on 'front' folder`)

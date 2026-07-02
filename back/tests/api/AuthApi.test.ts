@@ -5,7 +5,7 @@ import http from 'http'
 import type { AddressInfo } from 'net'
 import { AuthApi, IAuthContext } from '../../src/api/AuthApi'
 import { IdpManager } from '../../src/tools/idp/IdpManager'
-import { EIdpConnectorKind, IIdpConnector, IIdpIdentity, TIdpConnectorConstructor } from '../../src/tools/idp/IIdpConnector'
+import { EIdpConnectorKind, IIdpConnector, IIdpIdentity, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { IUser } from '@kwirthmagnify/kwirth-common'
@@ -32,11 +32,12 @@ const makeUser = (over: Partial<IUser>): IUser => ({
 
 // un unico ISecrets que guarda kwirth-users (seed) y kwirth-idps (lo gestiona IdpManager)
 const memSecrets = (usersMap: any): ISecrets => {
-    const store: Record<string, any> = { 'kwirth-users': usersMap }
+    const keys: Record<string, Record<string, any>> = {}
     return {
-        read: async (name: string) => { if (name in store) return store[name]; throw new Error('no such secret') },
-        write: async (name: string, content: any) => { store[name] = content },
-        writeKey: async () => {}, readAllKeys: async () => ({})
+        read: async (name: string) => { if (name === 'kwirth-users') return usersMap; throw new Error('no such secret') },
+        write: async () => {},
+        writeKey: async (name: string, key: string, value: any) => { (keys[name] ||= {}); if (value === null) delete keys[name][key]; else keys[name][key] = value },
+        readAllKeys: async (name: string) => keys[name] ?? {}
     }
 }
 const memConfigMaps = (): IConfigMaps => ({
@@ -63,7 +64,7 @@ async function startServer() {
     await idpManager.saveInstance({ id: 'google', connectorId: 'fake', label: 'Login with Google', enabled: true, config: {} })
 
     const ctx: IAuthContext = { secrets, configMaps: memConfigMaps(), apiKeyApi: { apiKeys: [] } as any }
-    const authApi = new AuthApi(idpManager, () => ctx, '', true)
+    const authApi = new AuthApi(() => idpManager, () => ctx, '', 'kwirth')
 
     const app = express()
     app.use(express.json())
@@ -167,6 +168,37 @@ test('callback con state invalido → ssoerror=state', async () => {
     try {
         const cb = await getRaw(srv.base, `/core/auth/google/callback?state=BOGUS&code=xyz`)
         assert.equal(new URL(cb.location).searchParams.get('ssoerror'), 'state')
+    }
+    finally { await srv.stop() }
+})
+
+const startWithReturn = async (base: string, returnTo: string) => {
+    const r = await getRaw(base, `/core/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`)
+    assert.equal(r.status, 302)
+    return new URL(r.location).searchParams.get('state') as string
+}
+
+test('handoff respeta returnTo de localhost (dev: front en otro origen)', async () => {
+    const srv = await startServer()
+    try {
+        fakeControl.identity = { email: 'alice@example.com', emailVerified: true }
+        const state = await startWithReturn(srv.base, 'http://localhost:3000/')
+        const cb = await getRaw(srv.base, `/core/auth/google/callback?state=${state}&code=xyz`)
+        assert.equal(cb.status, 302)
+        assert.ok(cb.location.startsWith('http://localhost:3000/?sso='), `debe volver al front dev; fue ${cb.location}`)
+    }
+    finally { await srv.stop() }
+})
+
+test('handoff ignora un returnTo no confiable (anti open-redirect) y usa el fallback del back', async () => {
+    const srv = await startServer()
+    try {
+        fakeControl.identity = { email: 'alice@example.com', emailVerified: true }
+        const state = await startWithReturn(srv.base, 'http://evil.example.com/')
+        const cb = await getRaw(srv.base, `/core/auth/google/callback?state=${state}&code=xyz`)
+        assert.equal(cb.status, 302)
+        assert.ok(!cb.location.includes('evil.example.com'), 'no debe redirigir a un origen no confiable')
+        assert.ok(cb.location.includes('/front?sso='), `debe usar el fallback del back; fue ${cb.location}`)
     }
     finally { await srv.stop() }
 })

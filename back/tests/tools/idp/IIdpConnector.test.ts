@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { EIdpConnectorKind } from '../../../src/tools/idp/IIdpConnector'
+import { EIdpConnectorKind } from '@kwirthmagnify/kwirth-common-back'
 
 // Los valores del enum viajan por wire/config (Secret kwirth-idps), asi que se fijan aqui.
 test('EIdpConnectorKind expone los valores de wire esperados', () => {

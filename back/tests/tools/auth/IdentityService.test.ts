@@ -120,6 +120,34 @@ test('createApiKey purga keys caducadas al persistir', async () => {
     assert.ok(written && !written.some(k => k.accessKey.id === 'old'), 'la key caducada no debe persistir')
 })
 
+// ---- writeUsers / readUsers con email (clave K8s válida) ----
+test('writeUsers codifica la clave del Secret como base64url (sin @) y readUsers re-indexa por email', async () => {
+    let store: any = undefined
+    const secrets: ISecrets = {
+        read: async (name: string) => { if (name === 'kwirth-users' && store) return store; throw new Error('no such secret') },
+        write: async (name: string, content: any) => { if (name === 'kwirth-users') store = content },
+        writeKey: async () => {},
+        readAllKeys: async () => ({})
+    }
+    const email = 'jfvilas@gmail.com'
+    const usersMap = { [email]: btoa(JSON.stringify(makeUser({ id: email, idp: 'google' }))) }
+
+    await IdentityService.writeUsers(secrets, usersMap)
+
+    // la clave del data del Secret NO puede contener '@' (regla de K8s); debe ser base64url válida
+    const keys = Object.keys(store)
+    assert.equal(keys.length, 1)
+    assert.ok(!keys[0].includes('@'), 'la clave del Secret no debe contener @')
+    assert.match(keys[0], /^[-._a-zA-Z0-9]+$/)
+
+    // readUsers re-indexa por el id real (email), decodificando el valor
+    const got = await IdentityService.readUsers(secrets)
+    assert.ok(got && got[email], 'readUsers debe devolver el usuario indexado por su email')
+    const user = IdentityService.findUser(got!, email)
+    assert.equal(user?.id, email)
+    assert.equal(user?.idp, 'google')
+})
+
 // ---- okResponse ----
 test('okResponse expone solo id, name y accessKey', () => {
     const user = makeUser({ password: 'secreto' })

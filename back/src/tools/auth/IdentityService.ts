@@ -10,23 +10,45 @@ import { IConfigMaps } from '../IConfigMap'
 */
 export class IdentityService {
 
-    // lee el secret de usuarios (con el fallback histórico 'kwirth.users')
+    // lee el secret de usuarios (con el fallback histórico 'kwirth.users') y lo devuelve
+    // RE-INDEXADO por el id real del usuario (decodificado de cada valor), no por la clave del
+    // Secret. La clave del data de un Secret de K8s no admite '@' (emails), así que se guarda como
+    // base64url(id) (ver writeUsers); aquí deshacemos ese detalle para que los callers usen users[id].
     static readUsers = async (secrets: ISecrets): Promise<{ [username:string]:string } | undefined> => {
-        let users:{ [username:string]:string }
+        let raw:{ [key:string]:string }
         try {
-            users = await secrets.read('kwirth-users')
-            return users
+            raw = await secrets.read('kwirth-users')
         }
         catch (err) {
             try {
-                users = await secrets.read('kwirth.users')
+                raw = await secrets.read('kwirth.users')
             }
             catch (err) {
                 console.log(`*** Cannot read 'kwirth-users' secret on source ***`)
                 return undefined
             }
-            return users
         }
+        if (!raw || typeof raw !== 'object') return undefined
+        const users:{ [username:string]:string } = {}
+        for (const value of Object.values(raw)) {
+            if (typeof value !== 'string') continue
+            try {
+                const u = JSON.parse(atob(value))
+                if (u && u.id) users[u.id] = value
+            }
+            catch (err) { /* valor corrupto: se ignora */ }
+        }
+        return users
+    }
+
+    // persiste el mapa de usuarios en el secret usando base64url(id) como clave del data
+    // (charset válido para claves de Secret de K8s), con el valor = base64(JSON(user)) intacto.
+    static writeUsers = async (secrets: ISecrets, users: { [username:string]:string }): Promise<void> => {
+        const data:{ [key:string]:string } = {}
+        for (const [id, value] of Object.entries(users)) {
+            data[Buffer.from(id, 'utf8').toString('base64url')] = value
+        }
+        await secrets.write('kwirth-users', data)
     }
 
     // localiza y deserializa un usuario por su id (username = email en usuarios IdP)

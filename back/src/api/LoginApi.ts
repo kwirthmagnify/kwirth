@@ -85,7 +85,7 @@ export class LoginApi {
                             if (newApiKey) {
                                 user.accessKey=newApiKey.accessKey
                                 users[req.body.user]=btoa(JSON.stringify(user))
-                                await this.secrets.write('kwirth-users',users)
+                                await IdentityService.writeUsers(this.secrets, users)
                                 res.status(200).json(IdentityService.okResponse(user))
                             }
                             else {

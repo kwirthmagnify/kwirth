@@ -1,18 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { IdpManager } from '../../../src/tools/idp/IdpManager'
-import { EIdpConnectorKind, IIdpConnector, IIdpInstanceConfig, TIdpConnectorConstructor } from '../../../src/tools/idp/IIdpConnector'
+import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { ISecrets } from '../../../src/tools/ISecrets'
-import type { IProviderSchemaField } from '../../../src/tools/ProviderManager'
 
 // ---- fakes ----
 class FakeConnector implements IIdpConnector {
     connectorId = 'fake'
     label = 'Fake IdP'
     kind = EIdpConnectorKind.OIDC
-    getConfigSchema(): IProviderSchemaField[] {
+    getConfigSchema(): IIdpConfigFieldDef[] {
         return [
-            { name: 'clientId', label: 'Client ID', type: 'string', required: true },
+            { name: 'clientId', label: 'Client ID', type: 'text', required: true },
             { name: 'clientSecret', label: 'Secret', type: 'password', required: true }
         ]
     }
@@ -22,12 +21,12 @@ class FakeConnector implements IIdpConnector {
 
 // ISecrets en memoria (kwirth-idps)
 const memSecrets = (): ISecrets => {
-    const store: Record<string, any> = {}
+    const keys: Record<string, Record<string, any>> = {}
     return {
-        read: async (name: string) => { if (name in store) return store[name]; throw new Error('no such secret') },
-        write: async (name: string, content: any) => { store[name] = content },
-        writeKey: async () => {},
-        readAllKeys: async () => ({})
+        read: async () => { throw new Error('no such secret') },
+        write: async () => {},
+        writeKey: async (name: string, key: string, value: any) => { (keys[name] ||= {}); if (value === null) delete keys[name][key]; else keys[name][key] = value },
+        readAllKeys: async (name: string) => keys[name] ?? {}
     }
 }
 

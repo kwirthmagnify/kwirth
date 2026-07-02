@@ -1,0 +1,10 @@
+[
+  {
+    "connectorId": "google",
+    "version": "0.1.0",
+    "name": "Google",
+    "displayName": "Google",
+    "description": "Google / Gmail (OIDC) identity provider connector for Kwirth",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-idp-google/-/kwirth-idp-google-0.1.0.tgz"
+  }
+]

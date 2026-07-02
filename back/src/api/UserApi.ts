@@ -3,28 +3,16 @@ import Semaphore from 'ts-semaphore'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { ISecrets } from '../tools/ISecrets'
+import { IdentityService } from '../tools/auth/IdentityService'
 
 export class UserApi {
     secrets: ISecrets
     static semaphore: Semaphore = new Semaphore(1)
     public router = express.Router()
 
+    // delega en IdentityService: re-indexa por id real y gestiona la codificación base64url de la clave
     readUsersSecret = async (secrets: ISecrets) => {
-        let users:{ [username:string]:string }
-        try {
-            users = await secrets.read('kwirth-users')
-            console.log('users read')
-        }
-        catch (err) {
-            try {
-                users = await secrets.read('kwirth.users')
-            }
-            catch (err) {
-                console.log(`*** Cannot read kwirth users secret on source ***`)
-                return undefined
-            }
-        }
-        return users
+        return IdentityService.readUsers(secrets)
     }
 
     constructor (secrets: ISecrets, apiKeyApi: ApiKeyApi) {
@@ -61,7 +49,7 @@ export class UserApi {
                             return
                         }
                         users[req.body.id]=btoa(JSON.stringify(req.body))
-                        await this.secrets.write('kwirth-users',users)
+                        await IdentityService.writeUsers(this.secrets, users)
                         res.status(200).json()
                     }
                     catch (err) {
@@ -101,7 +89,7 @@ export class UserApi {
                         return
                     }
                     delete users[req.params.user]
-                    await this.secrets.write('kwirth-users',users)
+                    await IdentityService.writeUsers(this.secrets, users)
                     res.status(200).json()
                 });
             }      
@@ -119,7 +107,7 @@ export class UserApi {
                         return
                     }
                     users[req.body.id]=btoa(JSON.stringify(req.body))
-                    await this.secrets.write('kwirth-users',users)
+                    await IdentityService.writeUsers(this.secrets, users)
                     res.status(200).json()
                 }
                 catch (err) {

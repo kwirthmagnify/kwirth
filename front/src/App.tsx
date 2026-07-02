@@ -29,7 +29,7 @@ import { IWorkspace, IWorkspaceSummary } from './model/IWorkspace'
 
 import { SessionContext } from './model/SessionContext'
 import { addGetAuthorization, addDeleteAuthorization, addPostAuthorization } from './tools/AuthorizationManagement'
-import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize } from '@kwirthmagnify/kwirth-common'
+import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse } from '@kwirthmagnify/kwirth-common'
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
@@ -46,6 +46,7 @@ import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
 import { PluginDialog } from './components/PluginDialog'
 import { ProviderDialog } from './components/ProviderDialog'
+import { ManageIdps } from './components/ManageIdps'
 import { SenderDialog } from './components/SenderDialog'
 import { DaemonDialog } from './components/DaemonDialog'
 import { ThemeDialog } from './components/ThemeDialog'
@@ -56,6 +57,7 @@ interface IAppProps {
     backendUrl:string
     isDesktop: boolean
     auth: string
+    authMethods: IAuthMethod[]
 }
 
 const App: React.FC<IAppProps> = (props:IAppProps) => {
@@ -233,6 +235,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showSettingsCluster, setShowSettingsCluster]=useState<boolean>(false)
     const [showPluginDialog, setShowPluginDialog]=useState<boolean>(false)
     const [showProviderDialog, setShowProviderDialog]=useState<boolean>(false)
+    const [showManageIdps, setShowManageIdps]=useState<boolean>(false)
     const [showDaemonDialog, setShowDaemonDialog]=useState<boolean>(false)
     const [showSenderDialog, setShowSenderDialog]=useState<boolean>(false)
     const [showThemeDialog, setShowThemeDialog]=useState<boolean>(false)
@@ -1629,6 +1632,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageHomepages:
                 setShowHomepageDialog(true)
                 break
+            case MenuDrawerOption.ManageIdps:
+                setShowManageIdps(true)
+                break
             case MenuDrawerOption.ExportWorkspaces: {
                 const allNames:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
                 if (allNames.length===0) { showNoWorkspaces(); break }
@@ -1842,6 +1848,35 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
     }
 
+    // SSO handoff: al volver del IdP el back redirige con ?sso=<code> (o ?ssoerror=<motivo>).
+    // Canjeamos el codigo (un solo uso) por el ILoginResponse y arrancamos la sesion.
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const sso = params.get('sso')
+        const ssoerror = params.get('ssoerror')
+        if (!sso && !ssoerror) return
+        window.history.replaceState({}, '', window.location.pathname)   // limpiamos el query param
+        if (ssoerror) {
+            setMsgBox(MsgBoxOkError('Login', `Single Sign-On failed (${ssoerror}).`, setMsgBox))
+            return
+        }
+        (async () => {
+            try {
+                const resp = await fetch(`${props.backendUrl}/core/auth/exchange`, addPostAuthorization('', JSON.stringify({ code: sso })))
+                if (resp.status !== 200) {
+                    setMsgBox(MsgBoxOkError('Login', 'Single Sign-On session could not be established.', setMsgBox))
+                    return
+                }
+                const login = await resp.json() as ILoginResponse
+                const ssoUser:IUser = { id: login.id, name: login.name, password: '', accessKey: login.accessKey, resources: '' }
+                onLoginClosed(ssoUser, false)
+            }
+            catch {
+                setMsgBox(MsgBoxOkError('Login', 'Error contacting Kwirth backend for SSO.', setMsgBox))
+            }
+        })()
+    }, [])
+
     const onContextSelectorLocal = async (name:string, accessKey: AccessKey) => {
         setCurrentWorkspaceName('untitled')
         setCurrentWorkspaceDescription('No description yet')
@@ -1931,7 +1966,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             return (
                 <div style={{ backgroundImage:`url('./turbo-pascal.png')`, backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', width: '100vw', height: '100vh' }} >
                     <SessionContext.Provider value={{ user, accessString: accessString, logged, backendUrl }}>
-                        <Login onClose={onLoginClosed} key={refresh}></Login>
+                        <Login methods={props.authMethods} onClose={onLoginClosed} key={refresh}></Login>
                     </SessionContext.Provider>
                 </div>
             )
@@ -2082,6 +2117,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} /> }
                 { showPluginDialog && <PluginDialog onClose={() => setShowPluginDialog(false)} onPluginLoaded={loadPluginFront} onPluginUnloaded={unloadPluginFront} /> }
                 { showProviderDialog && <ProviderDialog onClose={() => setShowProviderDialog(false)} /> }
+                { showManageIdps && <ManageIdps onClose={() => setShowManageIdps(false)} /> }
                 { showSenderDialog && <SenderDialog onClose={() => setShowSenderDialog(false)} /> }
                 { showDaemonDialog && <DaemonDialog onClose={() => setShowDaemonDialog(false)} /> }
                 { showThemeDialog && <ThemeDialog onClose={() => setShowThemeDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} /> }

@@ -272,32 +272,32 @@ Formato: *ficheros · qué hace · criterio de aceptación (CA)*.
 - **Tn** Cada stream nuevo añade sus tests en `back/tests/**` espejando `src/`.
 
 ## EPIC A — Andamiaje multi-método + tipos (P0)
-- **A1** `IAuthMethod`/`EAuthMethodKind` · `common/src/AuthMethod.ts` + `index.ts` export · **(validar tipo)**.
-- **A2** `IUser.idp?` · `common/src/Global.ts` · **(validar tipo)**.
-- **A3** Front consume `methods[]` · `index.tsx`.
-- **A4** Prop `authMethods` + branch · `App.tsx` · *CA*: login `kwirth` intacto.
-- **A5** Login multi-método (botones) · `Login.tsx`.
+- **A1** `IAuthMethod`/`EAuthMethodKind` · `common/src/AuthMethod.ts` + `index.ts` export. ✅ **HECHO** (common 0.5.18)
+- **A2** `IUser.idp?` · `common/src/Global.ts`. ✅ **HECHO** (common 0.5.18)
+- **A3** Front consume `methods[]` · `index.tsx` (pasa `authMethods={auth.methods}`). ✅ **HECHO**
+- **A4** Prop `authMethods` + handoff `?sso=` (useEffect + `/exchange`) · `App.tsx` · mantiene branch `kubeconfig` en `props.auth`. ✅ **HECHO** (front tsc verde)
+- **A5** Login multi-método: form `kwirth` si hay PASSWORD + botón por método REDIRECT (`backendUrl+startUrl`) · `Login.tsx`. ✅ **HECHO**
 - **A6** Stores memoria · `back/src/tools/auth/TtlStore.ts` (genérico single-use+TTL+clock inyectable; sustituye a los dos ficheros AuthStateStore/HandoffStore). ✅ **HECHO** (4 tests)
 
 ## EPIC B — Infra de extensión IdP (P0)
 - **B0** Refactor `IdentityService` · `back/src/tools/auth/IdentityService.ts`, `LoginApi.ts` · *CA*: `kwirth` idéntico. ✅ **HECHO** (15 tests)
-- **B1** `IIdpConnector` + tipos · `back/src/tools/idp/IIdpConnector.ts`. ✅ **HECHO** (enum test)
+- **B1** `IIdpConnector` + tipos (`EIdpConnectorKind`, `IIdpConfigFieldDef`, `IIdpIdentity`, contexts, `IIdpInstanceConfig`, `TIdpConnectorConstructor`) → **movidos a `common-back/src/IIdpConnector.ts`** (como `ISender`/`IProvider`, para que los conectores-paquete los implementen). **common-back publicado 0.5.16**, reinstalado en back. Back importa de `@kwirthmagnify/kwirth-common-back`; borrado el fichero local. `IIdpConfigFieldDef` reemplaza al `IProviderSchemaField` que usé de atajo. ✅ **HECHO** (40/40 verde)
 - **B2** `IdpManager` (registry bundled+dev, config de instancias en Secret `kwirth-idps`, `loadDevIdps`/`loadDevIdpConfigs`, export/import) · `back/src/tools/idp/IdpManager.ts`. ✅ **HECHO** (8 tests). Install de tgz (instalables/`installBundled`) → **EPIC G**.
-- **B3** `IdpApi` (gestión admin: connectors/instancias/install) · `back/src/api/IdpApi.ts` + montaje `index.ts`.
+- **B3** `IdpApi` (gestión admin: connectors/instancias, export/import, enmascarado de secretos) · `back/src/api/IdpApi.ts`. ✅ **HECHO** (5 tests). Install de tgz → EPIC G. Montaje en `index.ts` → B5.
 - **B4** `AuthApi` core pre-login (`/method`, `/:id/start`, `/:id/callback`, `/exchange`, derivación URL) · `back/src/api/AuthApi.ts`. ✅ **HECHO** (7 tests E2E). Falta el **montaje en `index.ts`** (va con B5).
-- **B5** Registro de conectores bundled en arranque · `index.ts` (managers bootstrap).
+- **B5** Montaje en `index.ts`: `IdpManager` (secrets de la RI) + `loadDevIdps`/`loadDevIdpConfigs` en `setUpRoutes`, `IdpApi` en `/idp`, `AuthApi` (idpManager+context lazy) en `/core/auth` sustituyendo el `/core/auth/method` inline. `/method` devuelve `{auth, methods}` (back-compat). ✅ **HECHO** (tsc verde, 40/40).
 
 ## EPIC C — Conector Google (P0)
-- **C1** dep `openid-client` v5 · `idps/google/package.json` (el conector es artefacto propio; se bundea con esbuild). *(no en `back/package.json`)*
-- **C2** Conector `google` (artefacto `idps/google/`, cargado en dev): schema (clientId, clientSecret[password], scopes, issuer), `buildAuthorizationUrl`, `handleCallback` con validación `id_token` + `email_verified`. Incluye `build.mjs`/`watch.mjs`/`package.json`/`tsconfig.json`.
-- **C3** Gate lookup+binding+emisión en `AuthApi` · *CA*: usuario en lista con IdP correcto entra; fuera → `notfound`; IdP distinto → `idpmismatch`; no verificado → `unverified`.
-- **C4** Handoff front (`?sso=` useEffect) · `App.tsx`.
-- **C5** Dev: `idpConfigs.google` en `back/kwirth-dev.json` (precarga instancia en Secret `kwirth-idps`) para probar E2E antes de la UI · *CA*: arrancando en dev, aparece el botón "Login with Google" sin tocar la UI de gestión.
+- **C1** Lógica OIDC compartida (`openid-client` v5) → **common-back** (`oidc.ts`: `oidcConfigSchema`/`oidcBuildAuthorizationUrl`/`oidcHandleCallback`, funciones, NO herencia). Expuesta por el global `__kwirth_back__.kwirthCommonBack`; los conectores la usan por composición sin bundlear openid-client. **common-back bbp 0.5.17** + reinstalado en back. ✅ **HECHO**
+- **C2** Conector `google` (artefacto `idps/google/`, fino: id/label/kind + issuer default, delega en los helpers OIDC del global). `build.mjs`/`watch.mjs` con el plugin `kwirth-back-globals` (mapea `@kwirthmagnify/*` al global; cero deps de runtime propias). ✅ **HECHO** (build + smoke test vía global OK)
+- **C3** Gate lookup+binding+emisión en `AuthApi` (cubierto por B4/B5, 7 tests E2E con conector fake) · usuario en lista+IdP correcto entra; fuera → `notfound`; IdP distinto → `idpmismatch`; no verificado → `unverified`. ✅
+- **C4** Handoff front (`?sso=` useEffect) · `App.tsx`. ✅ (hecho en A4)
+- **C5** Dev: `idps.google` + `idpConfigs.google` en `back/kwirth-dev.json` (hot-reload del conector + precarga instancia en Secret `kwirth-idps` con `${GOOGLE_CLIENT_ID/SECRET}`). ✅ **HECHO**
 
 ## EPIC D — UI de gestión de IdPs (P0, admin)
-- **D1** `MenuDrawerOption.ManageIdps` + entrada submenú · `MenuDrawer.tsx`, `App.tsx`.
-- **D2** `ManageIdps`/`IdpDialog` (form por schema, enable, install con aviso, export/import) · `front/src/components/...`.
-- **D3** Selector de IdP en alta de usuarios · `ManageUserSecurity.tsx` (A7 integrado aquí).
+- **D1** `MenuDrawerOption.ManageIdps` + entrada en submenú "Manage extensions" (icono Key) + estado/case/render en `App.tsx`. ✅ **HECHO** (front tsc verde)
+- **D2** `ManageIdps` (espejo de `ProviderDialog`: cards + list toggle + filtros + versiones + install URL/fichero + marketplace). **Config lanzada desde la card del conector** (icono Settings, como providers/homepages): 1 instancia por conector (id=connectorId), form schema-driven con enable + campos `password`. Endpoints de install de conectores (`/idp/connectors/*`) son de EPIC G (UI cableada). ✅ **HECHO**
+- **D3** Selector de IdP en alta de usuarios · `ManageUserSecurity.tsx`: Select "IdP" (Local + instancias enabled); si IdP → password disabled y no requerido; guarda `user.idp`. ✅ **HECHO**
 
 ## EPIC E — Setup y pruebas Google (P0)
 - **E1** Doc/setup Google (ya en docs) + alta de instancia `google` desde la UI.

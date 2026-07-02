@@ -3,9 +3,10 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextF
 import { MsgBoxOkError, MsgBoxOkWarning } from '../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addPostAuthorization } from '../tools/AuthorizationManagement'
-import { ILoginResponse, IUser } from '@kwirthmagnify/kwirth-common'
+import { EAuthMethodKind, IAuthMethod, ILoginResponse, IUser } from '@kwirthmagnify/kwirth-common'
 
 interface ILoginProps {
+    methods: IAuthMethod[]
     onClose:(user:IUser|undefined, firstTime:boolean) => void
 }
 
@@ -109,6 +110,16 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
         if (result && result.status === 200) setChangingPassword(true)
     }
 
+    // si no llegan metodos (back antiguo) mantenemos el formulario user/pass por compatibilidad
+    const hasPassword = props.methods.length === 0 || props.methods.some(m => m.kind === EAuthMethodKind.PASSWORD)
+    const redirectMethods = props.methods.filter(m => m.kind === EAuthMethodKind.REDIRECT)
+    const onClickIdp = (method:IAuthMethod) => {
+        if (!method.startUrl) return
+        // el front aporta a dónde volver (su propia URL); el back solo la respeta si es localhost o mismo-origen
+        const returnTo = window.location.origin + window.location.pathname
+        window.location.href = `${backendUrl}${method.startUrl}?returnTo=${encodeURIComponent(returnTo)}`
+    }
+
     const okDisabled = (changingPassword && (newPassword1 !== newPassword2 || newPassword1 === '')) || user === '' || password === ''
 
     return (<>
@@ -117,7 +128,7 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
             <DialogTitle>Enter credentials</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column'}}>
-                    { !changingPassword && <>
+                    { !changingPassword && hasPassword && <>
                         <TextField value={user} onChange={(ev) => setUser(ev.target.value)} variant='standard'label='User' autoFocus></TextField>
                         <TextField value={password} onChange={(ev) => setPassword(ev.target.value)} type='password' variant='standard'label='Password'></TextField>
                     </>}
@@ -126,13 +137,17 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
                         <TextField value={newPassword1} onChange={(ev) => setNewPassword1(ev.target.value)} type='password' variant='standard' label='New Password' autoFocus></TextField>
                         <TextField value={newPassword2} onChange={(ev) => setNewPassword2(ev.target.value)} type='password' variant='standard' label='Repeat New Password'></TextField>
                     </>}
+                    { !changingPassword && redirectMethods.length > 0 && <>
+                        { hasPassword && <Typography variant='caption' sx={{ textAlign:'center', color:'text.secondary' }}>or</Typography> }
+                        { redirectMethods.map(m => <Button key={m.id} variant='outlined' onClick={() => onClickIdp(m)}>{m.label}</Button>) }
+                    </>}
                 </Stack>
             </DialogContent>
             <DialogActions>
                 <Stack direction='row' flex={1} sx={{ml:2, mr:2}}>
-                    <Button onClick={onClickChangePassword} sx={{display:changingPassword?'none':'block'}}>Change Password</Button>
+                    { hasPassword && <Button onClick={onClickChangePassword} sx={{display:changingPassword?'none':'block'}}>Change Password</Button> }
                     <Typography sx={{ flexGrow:1}}></Typography>
-                    <Button onClick={onClickOk} disabled={okDisabled}>OK</Button>
+                    { hasPassword && <Button onClick={onClickOk} disabled={okDisabled}>OK</Button> }
                     {
                         changingPassword && <Button onClick={onClickCancel}>Cancel</Button>
                     }

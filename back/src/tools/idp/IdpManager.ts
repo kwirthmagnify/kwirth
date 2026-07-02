@@ -2,8 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { ISecrets } from '../ISecrets'
 import { ELogComponent, logError, logInfo } from '../Logging'
-import { EIdpConnectorKind, IIdpConnector, IIdpInstanceConfig, TIdpConnectorConstructor } from './IIdpConnector'
-import type { IProviderSchemaField } from '../ProviderManager'
+import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 
 const IDPS_SECRET = 'kwirth-idps'
 
@@ -12,7 +11,7 @@ interface IIdpConnectorInfo {
     connectorId: string
     label: string
     kind: EIdpConnectorKind
-    schema: IProviderSchemaField[]
+    schema: IIdpConfigFieldDef[]
     installed: boolean          // false = bundled/dev registrado en codigo; true = instalado en runtime
 }
 
@@ -65,56 +64,45 @@ export class IdpManager {
         return result
     }
 
-    getConnectorSchema(connectorId: string): IProviderSchemaField[] | undefined {
+    getConnectorSchema(connectorId: string): IIdpConfigFieldDef[] | undefined {
         const c = this.getConnector(connectorId)
         return c ? c.getConfigSchema() : undefined
     }
 
     // ---------------- instancias (Secret kwirth-idps) ----------------
 
+    // el Secret 'kwirth-idps' guarda UNA CLAVE POR INSTANCIA (writeKey/readAllKeys hacen el
+    // base64/JSON por clave; los valores de un Secret de K8s deben ser strings, no objetos).
     private async readRecord(): Promise<Record<string, IIdpInstanceConfig>> {
         try {
-            const rec = await this.secrets.read(IDPS_SECRET)
-            return (rec && typeof rec === 'object') ? rec : {}
+            const rec = await this.secrets.readAllKeys(IDPS_SECRET)
+            return (rec && typeof rec === 'object') ? rec as Record<string, IIdpInstanceConfig> : {}
         }
         catch (err) {
             return {}
         }
     }
 
-    private async writeRecord(rec: Record<string, IIdpInstanceConfig>): Promise<void> {
-        await this.secrets.write(IDPS_SECRET, rec)
-    }
-
     async listInstances(): Promise<IIdpInstanceConfig[]> {
-        const rec = await this.readRecord()
-        return Object.values(rec)
+        return Object.values(await this.readRecord())
     }
 
     async getInstance(id: string): Promise<IIdpInstanceConfig | undefined> {
-        const rec = await this.readRecord()
-        return rec[id]
+        return (await this.readRecord())[id]
     }
 
     async getEnabledInstances(): Promise<IIdpInstanceConfig[]> {
-        const rec = await this.readRecord()
-        return Object.values(rec).filter(i => i.enabled)
+        return Object.values(await this.readRecord()).filter(i => i.enabled)
     }
 
     async saveInstance(instance: IIdpInstanceConfig): Promise<void> {
-        const rec = await this.readRecord()
-        rec[instance.id] = instance
-        await this.writeRecord(rec)
+        await this.secrets.writeKey(IDPS_SECRET, instance.id, instance)
         logInfo(ELogComponent.AUTH, `IdP instance '${instance.id}' (connector '${instance.connectorId}') saved`)
     }
 
     async deleteInstance(id: string): Promise<void> {
-        const rec = await this.readRecord()
-        if (rec[id]) {
-            delete rec[id]
-            await this.writeRecord(rec)
-            logInfo(ELogComponent.AUTH, `IdP instance '${id}' deleted`)
-        }
+        await this.secrets.writeKey(IDPS_SECRET, id, null)
+        logInfo(ELogComponent.AUTH, `IdP instance '${id}' deleted`)
     }
 
     // ---------------- export / import ----------------
@@ -124,7 +112,9 @@ export class IdpManager {
     }
 
     async importConfig(rec: Record<string, IIdpInstanceConfig>): Promise<void> {
-        await this.writeRecord(rec)
+        for (const [id, inst] of Object.entries(rec)) {
+            await this.secrets.writeKey(IDPS_SECRET, id, inst)
+        }
         logInfo(ELogComponent.AUTH, `Imported ${Object.keys(rec).length} IdP instance(s)`)
     }
 
@@ -189,8 +179,13 @@ export class IdpManager {
             const raw = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8'))
             const configs: Record<string, IIdpInstanceConfig> = raw.idpConfigs ?? {}
             for (const [id, cfg] of Object.entries(configs)) {
+                // seed solo-si-no-existe: NO pisar una instancia ya configurada (UI o seed previo)
+                if (await this.getInstance(id)) continue
                 const interpolated = IdpManager.interpolateEnvDeep(cfg) as IIdpInstanceConfig
                 interpolated.id = id
+                // no sembrar instancias sin config real (p.ej. faltan las env vars → todo vacío)
+                const hasValues = Object.values(interpolated.config || {}).some(v => v !== '' && v !== null && v !== undefined)
+                if (!hasValues) continue
                 await this.saveInstance(interpolated)
                 logInfo(ELogComponent.AUTH, `[dev] IdP instance '${id}' preloaded from kwirth-dev.json`)
             }

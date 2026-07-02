@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, List, ListItem, ListItemButton, Stack, TextField, Typography } from '@mui/material'
-import { MsgBoxButtons, MsgBoxYesNo } from '../../tools/MsgBox'
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItem, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
+import { MsgBoxButtons, MsgBoxOkError, MsgBoxYesNo } from '../../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { IUser } from '@kwirthmagnify/kwirth-common'
@@ -21,15 +21,30 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     const [name, setName] = useState<string>('')
     const [password, setPassword] = useState<string>('')
     const [allResources, setAllResources] = useState<string[]>([])
-   
+    const [idp, setIdp] = useState<string>('')
+    const [idps, setIdps] = useState<{id:string, label:string}[]>([])
+
     const getUsers = async () => {
         let response = await fetch(`${backendUrl}/user`, addGetAuthorization(accessString))
         let userList:string[] = await response.json()
         setUsers(userList)
     }
 
+    // instancias de IdP habilitadas, para asignar un usuario a un IdP (binding IUser.idp)
+    const getIdps = async () => {
+        try {
+            let response = await fetch(`${backendUrl}/idp`, addGetAuthorization(accessString))
+            if (response.ok) {
+                let list:{id:string, label:string, enabled:boolean}[] = await response.json()
+                setIdps(list.filter(i => i.enabled).map(i => ({ id: i.id, label: i.label })))
+            }
+        }
+        catch {}
+    }
+
     useEffect( () => {
         getUsers()
+        getIdps()
     },[])
 
     const onClickUser = async (id:string) => {
@@ -39,6 +54,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         setName(user.name||'')
         setPassword(user.password||'')
         setAllResources(user.resources.split(';'))
+        setIdp(user.idp||'')
     }
 
     const onClickCopyPassword = () => {
@@ -46,22 +62,34 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     }
 
     const onClickSave= async () => {
-        let user = { id, name, password, resources: allResources.join(';') }
+        let user = { id, name, password, resources: allResources.join(';'), idp }
         let payload = JSON.stringify(user)
-        if (selectedUser !== undefined) {
-            await fetch(`${backendUrl}/user/${user.id}`, addPutAuthorization(accessString, payload))
+        try {
+            let res
+            if (selectedUser !== undefined) {
+                res = await fetch(`${backendUrl}/user/${user.id}`, addPutAuthorization(accessString, payload))
+            }
+            else {
+                res = await fetch(`${backendUrl}/user`, addPostAuthorization(accessString, payload))
+            }
+            if (!res.ok) {
+                setMsgBox(MsgBoxOkError('User management', `Could not save user (HTTP ${res.status}).`, setMsgBox))
+                return
+            }
         }
-        else {
-            await fetch(`${backendUrl}/user`, addPostAuthorization(accessString, payload))
+        catch (err) {
+            setMsgBox(MsgBoxOkError('User management', `Error saving user: ${err}`, setMsgBox))
+            return
         }
         setSelectedUser(undefined)
         setId('')
         setName('')
         setPassword('')
         setAllResources([])
+        setIdp('')
         getUsers()
     }
-    
+
     const onClickNew= () => {
         setSelectedUser(undefined)
         setId('')
@@ -73,6 +101,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         setName('')
         setPassword(pwd)
         setAllResources([])
+        setIdp('')
     }
 
     const onClickDelete= () => {
@@ -86,6 +115,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
             setName('')
             setPassword('')
             setAllResources([])
+            setIdp('')
             getUsers()
         }
     }
@@ -105,9 +135,16 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
                     
                     <Stack spacing={1} style={{width:'100%'}}>
                         <Stack spacing={1} direction={'row'}>
-                            <TextField value={id} onChange={(e) => setId(e.target.value)} variant='standard' fullWidth label='Id'></TextField>
+                            <TextField value={id} onChange={(e) => setId(e.target.value)} variant='standard' fullWidth label={idp!=='' ? 'Id (email)' : 'Id'}></TextField>
                             <TextField value={name} onChange={(e) => setName(e.target.value)} variant='standard' fullWidth label='Name'></TextField>
-                            <TextField value={password} onChange={(e) => setPassword(e.target.value)} variant='standard' fullWidth label='Password'></TextField>
+                            <TextField value={password} onChange={(e) => setPassword(e.target.value)} type='password' variant='standard' fullWidth label='Password' disabled={idp!==''}></TextField>
+                            <FormControl variant='standard' fullWidth>
+                                <InputLabel>IdP</InputLabel>
+                                <Select value={idp} label='IdP' onChange={(e) => setIdp(e.target.value)}>
+                                    <MenuItem value=''>Local (user/password)</MenuItem>
+                                    { idps.map(i => <MenuItem key={i.id} value={i.id}>{i.label || i.id}</MenuItem>) }
+                                </Select>
+                            </FormControl>
                         </Stack>
 
                         <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)}/>
@@ -117,7 +154,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
             <DialogActions>
                 <Stack direction='row' spacing={1}>
                     <Button onClick={onClickNew}>NEW</Button>
-                    <Button onClick={onClickSave} disabled={id==='' || password===''}>SAVE</Button>
+                    <Button onClick={onClickSave} disabled={id==='' || (idp==='' && password==='')}>SAVE</Button>
                     <Button onClick={onClickCopyPassword} disabled={password===''}>COPY PASSWORD</Button>
                     <Button onClick={onClickDelete} disabled={id==='admin'}>DELETE</Button>
                 </Stack>
