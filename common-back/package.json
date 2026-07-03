@@ -1,9 +1,10 @@
 {
   "name": "@kwirthmagnify/kwirth-common-back",
-  "version": "0.5.18",
+  "version": "0.5.19",
   "description": "Backend interfaces for building Kwirth provider and channel plugins",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "node tests/run.mjs"
   },
   "publishConfig": {
     "access": "public",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/js-yaml": "^4.0.9",
+    "esbuild": "^0.27.2",
     "typescript": "^5.8.3"
   }
 }

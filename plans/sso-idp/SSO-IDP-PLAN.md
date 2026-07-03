@@ -303,16 +303,37 @@ Formato: *ficheros · qué hace · criterio de aceptación (CA)*.
 - **E1** Doc/setup Google (ya en docs) + alta de instancia `google` desde la UI.
 - **E2** E2E: (a) usuario en lista entra con `resources`; (b) fuera de lista rechazado; (c) email no verificado; (d) `state` reusado; (e) `kwirth` sigue OK; (f) config persiste en Secret `kwirth-idps`.
 
-## EPIC F — Más conectores (P1)
-- **F1** `generic-oidc` (Keycloak/GitLab) · **F2** `microsoft` · **F3** `github` (OAuth2, `/user/emails`).
+## EPIC F — Conectores GitLab + GitHub, cloud + on-prem (P1)
+**Decisión (Opción 1 — respeta el modelo de extensiones)**: **1 conector = 1 config única desde su card** (igual que providers: `saveConfig(id)` / `id === connectorId`). Para poder tener **cloud y on-prem del mismo producto a la vez** (dos cards, dos configs) → **4 conectores**: `gitlab-cloud`, `gitlab-onprem`, `github-cloud`, `github-onprem`. No necesita multi-instancia (diferido, EPIC I).
+> **DRY**: los 4 son **wrappers finos sobre helpers de common-back**; la lógica NO se duplica. La diferencia cloud/on-prem es **solo el schema de config** (URL fija vs requerida). El mapper de userinfo de GitHub (`/user`+`/user/emails`) vive **una sola vez** (compartido por los dos github-*).
+
+- **F1** Conectores **`gitlab-cloud`** + **`gitlab-onprem`** (OIDC, core `oidc.ts`). Artefactos `idps/gitlab-cloud/` y `idps/gitlab-onprem/`, ambos finos sobre `oidc.ts` (como `google`). ✅ **HECHO** (build + tsc + smoke; **login `gitlab-onprem` probado E2E contra GitLab self-managed real, a la primera**). Falta bbpm (publicar) cuando toque.
+  - `gitlab-cloud`: issuer **fijo** `https://gitlab.com` (no editable); config = clientId/secret.
+  - `gitlab-onprem`: issuer **requerido** (URL self-managed); config = issuer + clientId/secret.
+  - *MVP/CA*: login GitLab on-prem entra (usuario en lista + `user.idp`=`gitlab-onprem`); gitlab.com entra con `gitlab-cloud`. ✅
+- **F2** Helper **`oauth2.ts`** en **common-back** (infra OAuth2 no-OIDC) + **mapper GitHub compartido**. `oauth2ConfigSchema` / `oauth2BuildAuthorizationUrl` / `oauth2HandleCallback` (state, PKCE opcional, code→token con `Accept: json`; userinfo por callback). `githubIdentityFromToken(apiBaseUrl, token)` (→ `GET /user` + `/user/emails`, email primary **verified**, `sub`=id) compartido por los dos github-*. Expuesto por el global `__kwirth_back__.kwirthCommonBack`. ✅ **HECHO** — **common-back bbp 0.5.19 publicado** + reinstalado en back (exports verificados en runtime). Harness de test propio en common-back (esbuild devDep, no afecta a consumidores: `files:["dist"]`).
+  - *CA*: **11/11** unit tests (dance OAuth2 state/PKCE/error + mapper GitHub primary verified / no verificado / fallback / GHE). Back regresión `tsc` + `npm test` 45/45. ✅
+- **F3** Conectores **`github-cloud`** + **`github-onprem`** (OAuth2, kind `OAUTH2`, core `oauth2.ts` + mapper F2). `scopes` `read:user user:email`. ⬜
+  - `github-cloud`: base/api **fijas** `https://github.com` / `https://api.github.com`; config = clientId/secret.
+  - `github-onprem`: base/api **requeridas** (host GHE + `.../api/v3`); config = baseUrl + apiBaseUrl + clientId/secret.
+  - *MVP/CA*: login github.com entra; email no verificado → `unverified`; GHE entra con `github-onprem`.
+- **F4** Docs setup (registro OAuth app) `docs/idp/gitlab.md` + `docs/idp/github.md` (cloud y on-prem); `kwirth-dev.json` entries; E2E con conector fake OAuth2. ⬜
+
+**Orden sugerido** (cada fase = MVP usable): **F1 → F2 → F3 → F4**. (`microsoft`/`generic-oidc` para más adelante si hacen falta.)
+
+## EPIC I — Multi-instancia por conector (P2, DIFERIDO) — opt-in, no rompe el modelo
+**Motivo del diferido**: el modelo de extensiones es **1 config por extensión instalada** (providers `saveConfig(id)`; IdP `id===connectorId`). Ningún extension tiene "N instancias". Multi-instancia sería divergencia solo-IdP. El caso real (un cloud + un on-prem por producto) se cubre con Opción 1 (EPIC F) sin tocar el modelo.
+- **Base ya lista**: el **back ya es multi-instancia** (id arbitrario; `/method` por instancia `AuthApi.ts:95-97`; `start`/`callback` por `getInstance`; `user.idp`=instanceId). El único bloqueo es la UI.
+- **I1** *(cuando se necesite)* Capability **`multiInstance`** declarada por el conector (schema/manifest). `ManageIdps`: sin flag → singleton (hoy); con flag → sub-lista de instancias con id propio + "añadir instancia". Aditivo, no rompe los conectores singleton. Puede materializarse como conector nuevo (`github-multi`) o encendiendo la flag en `github`. ⬜
 
 ## EPIC G — Conectores instalables + hardening (P1)
 - **G0** Scaffolding top-level `idps/` (`idps/google/` con build.mjs/watch.mjs, `idps/manifest.json`) + `IdpManager.loadDevIdps` (clave `idps` en `kwirth-dev.json`). ✅ **HECHO**
 - **G1** install/uninstall de conectores (tgz vía URL/upload, `installBundled`, `loadAll` en arranque) · `IdpManager` (índice+meta+back.js comprimido en configmap, espejo de `ProviderManager`) + `IdpApi` (`POST /idp/connectors/install`, `POST /idp/connectors/upload`, `DELETE /idp/connectors/:id`, **admin via validKey**) + montaje `init/loadAll/installBundled` en `index.ts`. Harness ESM con `require` inyectado (banner). ✅ **HECHO** (test install/loadAll/uninstall con tgz real; 44/44).
 - **G2** auditoría de logins IdP (`ELogComponent.AUTH`, ya se loguea OK/rechazos en `AuthApi`) · **G3** doc de seguridad (docs/idp) · **G4** *(opcional)* binding por `sub` (TOFU). ⬜ pendiente
 
-## EPIC H — Desktop SSO (P2)
-- **H1** flujo loopback/deep-link (electron/tauri).
+## EPIC H — Desktop SSO (P2) — ❌ DESCARTADO
+La versión desktop se autentica con la **seguridad del kubeconfig**, no necesita el flujo OIDC (loopback/deep-link). SSO por IdP queda como funcionalidad **solo web/server**.
+- ~~**H1** flujo loopback/deep-link (electron/tauri).~~
 
 ## Dependencias
 `A + B0/B1/B2 → B3/B4/B5 → C → D → E`. `F/G` tras `C`. **Fase 1 (Gmail) = A + B + C + D + E.**
