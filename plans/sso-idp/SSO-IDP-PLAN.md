@@ -313,11 +313,13 @@ Formato: *ficheros · qué hace · criterio de aceptación (CA)*.
   - *MVP/CA*: login GitLab on-prem entra (usuario en lista + `user.idp`=`gitlab-onprem`); gitlab.com entra con `gitlab-cloud`. ✅
 - **F2** Helper **`oauth2.ts`** en **common-back** (infra OAuth2 no-OIDC) + **mapper GitHub compartido**. `oauth2ConfigSchema` / `oauth2BuildAuthorizationUrl` / `oauth2HandleCallback` (state, PKCE opcional, code→token con `Accept: json`; userinfo por callback). `githubIdentityFromToken(apiBaseUrl, token)` (→ `GET /user` + `/user/emails`, email primary **verified**, `sub`=id) compartido por los dos github-*. Expuesto por el global `__kwirth_back__.kwirthCommonBack`. ✅ **HECHO** — **common-back bbp 0.5.19 publicado** + reinstalado en back (exports verificados en runtime). Harness de test propio en common-back (esbuild devDep, no afecta a consumidores: `files:["dist"]`).
   - *CA*: **11/11** unit tests (dance OAuth2 state/PKCE/error + mapper GitHub primary verified / no verificado / fallback / GHE). Back regresión `tsc` + `npm test` 45/45. ✅
-- **F3** Conectores **`github-cloud`** + **`github-onprem`** (OAuth2, kind `OAUTH2`, core `oauth2.ts` + mapper F2). `scopes` `read:user user:email`. ⬜
+- **F3** Conectores **`github-cloud`** + **`github-onprem`** (OAuth2, kind `OAUTH2`, core `oauth2.ts` + mapper F2). `scopes` `read:user user:email`. ✅ **HECHO** (build + tsc + smoke: kind oauth2, schemas, cloud→github.com, onprem→`config.baseUrl`, throws sin baseUrl). Falta bbpm (publicar) cuando toque.
   - `github-cloud`: base/api **fijas** `https://github.com` / `https://api.github.com`; config = clientId/secret.
   - `github-onprem`: base/api **requeridas** (host GHE + `.../api/v3`); config = baseUrl + apiBaseUrl + clientId/secret.
   - *MVP/CA*: login github.com entra; email no verificado → `unverified`; GHE entra con `github-onprem`.
-- **F4** Docs setup (registro OAuth app) `docs/idp/gitlab.md` + `docs/idp/github.md` (cloud y on-prem); `kwirth-dev.json` entries; E2E con conector fake OAuth2. ⬜
+- **F4** Docs `docs/0.5.187/idp/gitlab.md` + `github.md` (cloud y on-prem, modelo nuevo: config desde el front, no env vars) + `index.md` modernizado (habilitación por UI + dropdown + lista de providers). `kwirth-dev.json` entries ya añadidas en F1/F3. ✅ **HECHO**.
+  - **E2E fake OAuth2**: NO se añade test nuevo — el flujo de `AuthApi` (start→callback→gate→exchange) es **agnóstico al kind** y ya está cubierto por los 7 E2E de `AuthApi.test.ts` (fake OIDC); la lógica OAuth2/GitHub está cubierta por los **11 unit tests** de common-back; y los conectores por sus smoke tests. Añadir un fake OAuth2 en AuthApi duplicaría cobertura sin ejercitar código nuevo.
+  - ⚠️ **Pendiente aparte**: `docs/0.5.187/idp/google.md` sigue documentando el modelo viejo (env vars `AUTH_GOOGLE_*` / `FRONTURL`). Actualizar a config-desde-front.
 
 **Orden sugerido** (cada fase = MVP usable): **F1 → F2 → F3 → F4**. (`microsoft`/`generic-oidc` para más adelante si hacen falta.)
 

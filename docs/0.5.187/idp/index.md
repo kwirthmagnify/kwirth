@@ -11,7 +11,7 @@ In other words: the IdP tells Kwirth *who* the person is; Kwirth decides *whethe
 
 ## How it looks for the user
 
-The Kwirth login screen shows one button per configured IdP (for example *"Login with Google"*), in addition to the built-in user/password login. The user picks the IdP by clicking its button, authenticates on the IdP, and is redirected back to Kwirth already logged in.
+The Kwirth login screen shows the configured IdPs in addition to the built-in user/password login. With a single IdP it is one button (for example *"Login with Google"*); with several, they are grouped under a *"Log in with..."* dropdown. The user picks the IdP, authenticates on the IdP, and is redirected back to Kwirth already logged in.
 
 The built-in `admin` user and any local user/password accounts keep working as usual. SSO is added *alongside* them, not instead of them.
 
@@ -29,17 +29,20 @@ There is **no auto-provisioning**: users are always created manually by an admin
 
 ## Enabling IdPs
 
-IdPs are enabled through environment variables at deployment time. The `AUTH` variable lists the active authentication methods, and each provider adds its own configuration variables. See the per-provider pages for the exact values.
+IdPs are **extensions** (connectors), managed from the UI — no environment variables or restarts
+needed. As an admin, open **menu → Manage extensions → Identity providers**. There you can install
+connectors and, on each connector card, click **Settings** (⚙️) to enter its configuration
+(client id/secret, and the instance URL for on-prem connectors) and **enable** it. Configuration is
+stored in a single Kubernetes secret (`kwirth-idps`); secrets are write-only and shown masked.
 
-```
-AUTH=kwirth,google
-```
-
-- `kwirth` keeps the built-in user/password login available (recommended, needed for the bootstrap `admin`).
-- Each additional value enables an IdP (for example `google`).
+The built-in `admin` user and any local user/password accounts keep working regardless — SSO is
+added *alongside* them, not instead of them.
 
 ## Supported providers
 
-- [Google / Gmail](/0.5.187/idp/google)
+- [Google / Gmail](/0.5.187/idp/google) — OIDC
+- [GitLab](/0.5.187/idp/gitlab) — OIDC (cloud + self-managed)
+- [GitHub](/0.5.187/idp/github) — OAuth2 (cloud + enterprise server)
 
-More providers (Keycloak, Microsoft Entra ID / Office 365, GitLab, GitHub, ...) will be documented here as they become available.
+More providers (Keycloak, Microsoft Entra ID / Office 365, ...) will be documented here as they
+become available. Connectors are packaged independently, so third parties can ship their own.
