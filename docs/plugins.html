@@ -105,7 +105,18 @@
     .mobile-section-head-row .mobile-section-head { flex: 1; }
     .mobile-chevron { background: none; border: none; border-left: 1px solid var(--border); color: var(--muted); font-size: 0.8rem; padding: 0 18px; cursor: pointer; transition: transform .2s; flex-shrink: 0; }
     .mobile-section.open .mobile-chevron { transform: rotate(-180deg); }
+    footer { background: var(--bg2); border-top: 1px solid var(--border); padding: 48px 40px 24px; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; max-width: 1200px; margin: 0 auto 40px; }
+    .footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .footer-logo span { font-size: 1.1rem; font-weight: 700; color: var(--orange); }
+    .footer-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.6; max-width: 280px; }
+    .footer-col h4 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 14px; }
+    .footer-col a { display: block; color: var(--muted); text-decoration: none; font-size: 0.875rem; margin-bottom: 8px; transition: color .2s; }
+    .footer-col a:hover { color: var(--text); }
+    .footer-bottom { max-width: 1200px; margin: 0 auto; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--muted); }
+    .footer-bottom a { color: var(--muted); text-decoration: none; }
     @media (max-width: 768px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; }
       .container { padding: 80px 20px 60px; }
       nav { padding: 0 16px; }
       .nav-links { display: none !important; }
@@ -294,5 +305,46 @@ document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().t
   menu.addEventListener('click',function(e){if(e.target.tagName==='A'){btn.classList.remove('open');menu.classList.remove('open');btn.setAttribute('aria-expanded','false')}})
 })()
 </script>
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-logo">
+        <img src="_media/favicon.ico" width="20px"/>
+        <span>kwirth</span>
+      </div>
+      <p class="footer-desc">Kubernetes observability platform. Single pod, zero dependencies, infinite possibilities.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <a href="index.html#features">Features</a>
+      <a href="index.html#magnify">Magnify</a>
+      <a href="index.html#install">Installation</a>
+      <a href="plugins.html">Plugins</a>
+      <a href="providers.html">Providers</a>
+      <a href="senders.html">Senders</a>
+      <a href="ui.html">UI</a>
+      <a href="roadmap.html">Roadmap</a>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <a href="getting-started.html">Getting Started</a>
+      <a href="documentation/#/0.5.40/index">Documentation</a>
+      <a href="project.html">Project</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/releases" target="_blank" rel="noopener">Releases</a>
+    </div>
+    <div class="footer-col">
+      <h4>Community</h4>
+      <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/issues" target="_blank" rel="noopener">Issues</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/discussions" target="_blank" rel="noopener">Discussions</a>
+      <a href="https://github.com/kwirthmagnify/kwirth/blob/master/LICENSE" target="_blank" rel="noopener">License (Apache 2.0)</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; 2025 Kwirth Project — Open Source under Apache 2.0</span>
+    <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">github.com/kwirthmagnify/kwirth</a>
+  </div>
+</footer>
 </body>
 </html>
