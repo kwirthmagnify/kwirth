@@ -28,10 +28,10 @@ When a plugin has more than one published version in the catalog, a version drop
 
 #### Dependency requirements
 
-Plugins can declare dependencies on other components. If a plugin requires a specific daemon, sender, provider, or another plugin (at a minimum version), the Plugin Manager displays those requirements as chips under the plugin description:
+Plugins can declare dependencies on other components. If a plugin requires a specific sender, provider, or another plugin (at a minimum version), the Plugin Manager displays those requirements as chips under the plugin description:
 
 ```
-Requires: censor (daemon) ≥0.1.5   kwirth-common-ai (provider) ≥0.5.18
+Requires: kwirth-common-ai (provider) ≥0.5.18
 ```
 
 The **Install** button is automatically disabled when any requirement is not satisfied. Hovering over the disabled button shows a tooltip listing the missing or outdated components. Install the required components first and then return to install this plugin.

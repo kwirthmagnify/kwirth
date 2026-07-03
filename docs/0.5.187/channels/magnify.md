@@ -95,7 +95,6 @@ The Magnify channel has a **User Preferences** panel (accessible from the gear i
   - **Plugins** — install, update, or remove Kwirth plugins
   - **Providers** — configure available data providers
   - **Senders** — manage outbound notification adapters
-  - **Daemons** — manage background headless workers
 
 This means you can manage extensions without leaving the Magnify channel or navigating to the global Kwirth settings menu.
 

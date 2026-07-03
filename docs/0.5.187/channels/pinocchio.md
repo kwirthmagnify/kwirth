@@ -84,7 +84,7 @@ When a trigger fires and the LLM agent is invoked, it has access to the followin
 | `get_namespace_list` | Lists all namespaces |
 | `get_events` | Returns recent Kubernetes events for a namespace |
 
-These tools are provided by the `@kwirthmagnify/kwirth-common-ai` package and are shared with other AI-powered components (such as the Censor daemon). New tools added to the package become available to Pinocchio automatically.
+These tools are provided by the `@kwirthmagnify/kwirth-common-ai` package and are shared with other AI-powered components. New tools added to the package become available to Pinocchio automatically.
 
 ## Use
 

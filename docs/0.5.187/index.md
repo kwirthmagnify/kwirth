@@ -142,11 +142,10 @@ Kwirth is designed to be extended without modifying its core. Three independent 
 | Subsystem | Purpose | Documentation |
 |---|---|---|
 | **[Plugins](plugins)** | New UI panels and Kubernetes observability modes (logs, metrics, events, exec…). Plugins can have both a backend and a frontend component. | [→ Plugins](plugins) |
-| **[Daemons](daemons)** | Headless background workers that run continuously inside Kwirth without requiring a user session or WebSocket connection. Ideal for permanent log analysis, event watching, or data forwarding. | [→ Daemons](daemons) |
 | **[Providers](providers)** | Backend data sources and cluster connectors. A provider can ingest data from non-Kubernetes sources and expose it through the standard Kwirth streaming API. | [→ Providers](providers) |
 | **[Senders](senders)** | Outbound notification adapters. Channels and providers use senders to push alerts and messages to external destinations (email, files, consoles, pipelines…). | [→ Senders](senders) |
 
-All four types follow the same lifecycle: build a self-contained bundle, install it via the management UI or `kwirth-dev.json`, and Kwirth hot-reloads it without a restart.
+All three types follow the same lifecycle: build a self-contained bundle, install it via the management UI or `kwirth-dev.json`, and Kwirth hot-reloads it without a restart.
 
 ## About Kwirth
 

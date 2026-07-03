@@ -18,7 +18,7 @@ The result is a continuously self-improving filter that shows only the log lines
   - **Anomaly and audit analysis** *(audit mode)* — the LLM inspects each batch for suspicious entries, policy violations, and unexpected patterns and surfaces them as actionable findings.
   - **In-process filtering** — once a pattern is learned it is applied locally, so only new batches (when the buffer fills) trigger further LLM calls.
   - **Full transparency** — six views in the tab: received lines, LLM input, LLM output, warnings, errors, and stats (lines processed, LLM calls, tokens in/out, pending count).
-  - **Sessions** — named sessions capture the live stream from a specific container independently, so you can compare filtered vs. unfiltered views or share a session between the plugin and the [Censor daemon](../daemons?id=censor).
+  - **Sessions** — named sessions capture the live stream from a specific container independently, so you can compare filtered vs. unfiltered views.
   - **Sender integration** — configure a sender + config name to forward non-noisy lines (or stats) to an external system (email, Teams, file…).
   - **Business data** — can also ingest events from the [Business provider](../providers?id=business) and apply LLM analysis to them using a dot-notation extraction path.
 
@@ -39,8 +39,6 @@ Before starting Censor, configure at least one LLM in **Settings → Manage LLMs
 | Sender / Config | Optional sender pipeline for forwarding non-noisy lines or audit findings |
 
 Once started, the tab shows all six view panes. Toggle **Analyze** to start/stop the LLM loop at any time without restarting the channel.
-
-?> The headless version of this channel is the **[Censor daemon](../daemons?id=censor)**, which runs the same filtering logic continuously in the background without a browser tab.
 
 ## Operating modes
 

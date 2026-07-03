@@ -26,5 +26,3 @@ The **Censor** plugin intercepts log streams from selected containers and runs t
 The plugin also supports **sessions**: a session captures the live log stream from a specific container into a named session object that can be connected and disconnected independently.
 
 The Censor plugin requires the **events** and **business** providers to be active.
-
-?> The headless version of Censor is available as the [Censor daemon](../../daemons). Use the daemon when you want log filtering without opening a Kwirth tab.

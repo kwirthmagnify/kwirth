@@ -237,7 +237,6 @@
     <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
     <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
     <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
-    <div class="nav-item"><a href="daemons.html">Daemons</a><div class="nav-dropdown"><a href="daemons.html#what-is-a-daemon">What is a daemon?</a><a href="daemons.html#available-daemons">Available daemons</a><a href="daemons.html#daemon-interface">Daemon interface</a><a href="daemons.html#build-your-own-daemon">Build your own</a></div></div>
     <div class="nav-item"><a href="senders.html">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
     <div class="nav-item"><a href="ui.html">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a></div></div>
     <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
@@ -551,10 +550,10 @@
 <!-- EXTENSIBILITY -->
 <section id="plugins">
   <div class="section-tag">Extensibility</div>
-  <h2 class="section-title">Extend with Plugins, Providers, Senders &amp; Daemons</h2>
-  <p class="section-sub">Four independent subsystems let you add new capabilities without modifying core. All are hot-reloadable — no pod restart needed.</p>
+  <h2 class="section-title">Extend with Plugins, Providers &amp; Senders</h2>
+  <p class="section-sub">Three independent subsystems let you add new capabilities without modifying core. All are hot-reloadable — no pod restart needed.</p>
 
-  <div class="plugins-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:40px;">
+  <div class="plugins-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:40px;">
     <a href="plugins.html" style="text-decoration:none;">
       <div class="feature-card" style="height:100%;">
         <div class="feature-icon">&#x1F9E9;</div>
@@ -577,14 +576,6 @@
         <h3>Senders</h3>
         <p style="margin-bottom:12px;">Outbound notification adapters. Push alerts to email, Teams, log files, or complex routing pipelines with filtering and time-window gating.</p>
         <span class="feature-tag tag-security">&#x2192; Learn more</span>
-      </div>
-    </a>
-    <a href="daemons.html" style="text-decoration:none;">
-      <div class="feature-card" style="height:100%;">
-        <div class="feature-icon">&#x2699;&#xFE0F;</div>
-        <h3>Daemons</h3>
-        <p style="margin-bottom:12px;">Headless background workers. Run continuous processing tasks — log filtering, alerting, data forwarding — without any browser session.</p>
-        <span class="feature-tag tag-explorer">&#x2192; Learn more</span>
       </div>
     </a>
   </div>
@@ -628,11 +619,6 @@
     <div class="plugin-card">
       <h4>&#x1F4E4; Teams Sender</h4>
       <p>Post colour-coded message cards to Microsoft Teams via incoming webhook.</p>
-      <span class="plugin-badge">Available</span>
-    </div>
-    <div class="plugin-card">
-      <h4>&#x2699;&#xFE0F; Censor Daemon</h4>
-      <p>Headless log noise filtering — same LLM-powered analysis as the Censor plugin, running 24/7 without a browser tab.</p>
       <span class="plugin-badge">Available</span>
     </div>
   </div>
