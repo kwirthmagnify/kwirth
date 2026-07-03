@@ -4,7 +4,7 @@ import { EAuthMethodKind, IAuthMethod, ILoginResponse } from '@kwirthmagnify/kwi
 import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { ApiKeyApi } from './ApiKeyApi'
-import { IdpManager } from '../tools/idp/IdpManager'
+import { IdpManager } from '../tools/IdpManager'
 import { IdentityService } from '../tools/auth/IdentityService'
 import { TtlStore } from '../tools/auth/TtlStore'
 import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'

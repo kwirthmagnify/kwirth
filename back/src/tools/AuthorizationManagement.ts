@@ -71,6 +71,19 @@ export class AuthorizationManagement {
         return false
     }
     
+    // comprueba si el accessKey del header incluye un scope concreto (p.ej. 'admin') en alguno de sus
+    // resources. Debe usarse DESPUÉS de validKey (que garantiza que el key es válido/no manipulado).
+    public static hasScope = (req:Request, scope:string): boolean => {
+        if (!req.headers.authorization) return false
+        try {
+            const accessKey = accessKeyDeserialize(req.headers.authorization.replaceAll('Bearer ','').trim())
+            return parseResources(accessKey.resources).some(r => r.scopes.split(',').includes(scope))
+        }
+        catch (err) {
+            return false
+        }
+    }
+
     public static getKey = async (req:Request,res:Response, apiKeyApi: ApiKeyApi): Promise<AccessKey|undefined> => {
         if (req.headers.authorization) {
             var receivedAccessString = req.headers.authorization.replaceAll('Bearer ','').trim()

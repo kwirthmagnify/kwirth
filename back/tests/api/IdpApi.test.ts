@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import express from 'express'
 import type { AddressInfo } from 'net'
 import { IdpApi } from '../../src/api/IdpApi'
-import { IdpManager } from '../../src/tools/idp/IdpManager'
+import { IdpManager } from '../../src/tools/IdpManager'
 import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
@@ -34,12 +34,17 @@ const memSecrets = (): ISecrets => {
 }
 
 // apiKeyApi minimo con una key permanent valida (para validKey)
-const validAccessKey = { id: 'testkey', type: 'permanent', resources: 'cluster::::' }
+const validAccessKey = { id: 'testkey', type: 'permanent', resources: 'admin::::' }
+const nonAdminKey = { id: 'nonadmin', type: 'permanent', resources: 'view:default:::' }
 const fakeApiKeyApi = (): any => ({
-    apiKeys: [{ accessKey: validAccessKey, description: 'test', expire: Date.now() + 3600_000, days: 1 }],
+    apiKeys: [
+        { accessKey: validAccessKey, description: 'admin', expire: Date.now() + 3600_000, days: 1 },
+        { accessKey: nonAdminKey, description: 'nonadmin', expire: Date.now() + 3600_000, days: 1 }
+    ],
     masterKey: 'x', isDesktop: true, refreshKeys: async () => {}
 })
 const AUTH = { Authorization: 'Bearer ' + accessKeySerialize(validAccessKey as any) }
+const NONADMIN_AUTH = { Authorization: 'Bearer ' + accessKeySerialize(nonAdminKey as any) }
 
 async function startServer() {
     const reg = new Map<string, TIdpConnectorConstructor>()
@@ -62,6 +67,15 @@ test('sin key → 403', async () => {
     const srv = await startServer()
     try {
         const res = await fetch(`${srv.base}/idp/connectors`)
+        assert.equal(res.status, 403)
+    }
+    finally { await srv.stop() }
+})
+
+test('key válida SIN scope admin → 403', async () => {
+    const srv = await startServer()
+    try {
+        const res = await fetch(`${srv.base}/idp/connectors`, { headers: NONADMIN_AUTH })
         assert.equal(res.status, 403)
     }
     finally { await srv.stop() }

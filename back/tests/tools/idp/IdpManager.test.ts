@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { IdpManager } from '../../../src/tools/idp/IdpManager'
+import { IdpManager } from '../../../src/tools/IdpManager'
 import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { ISecrets } from '../../../src/tools/ISecrets'
 import { IConfigMaps } from '../../../src/tools/IConfigMap'

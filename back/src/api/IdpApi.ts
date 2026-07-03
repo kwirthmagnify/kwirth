@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
-import { IdpManager } from '../tools/idp/IdpManager'
+import { IdpManager } from '../tools/IdpManager'
 import { IIdpInstanceConfig } from '@kwirthmagnify/kwirth-common-back'
 import { ELogComponent, logError } from '../tools/Logging'
 
@@ -23,6 +23,11 @@ export class IdpApi {
 
         this.router.use(async (req: Request, res: Response, next) => {
             if (!(await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
+            // gestión de IdPs es operación administrativa: exige scope 'admin'
+            if (!AuthorizationManagement.hasScope(req, 'admin')) {
+                res.status(403).json({ error: 'admin scope required' })
+                return
+            }
             next()
         })
 

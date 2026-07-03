@@ -48,7 +48,7 @@ import { PluginDialog } from './components/PluginDialog'
 import { ProviderDialog } from './components/ProviderDialog'
 import { ManageIdps } from './components/ManageIdps'
 import { SenderDialog } from './components/SenderDialog'
-import { DaemonDialog } from './components/DaemonDialog'
+// import { DaemonDialog } from './components/DaemonDialog'
 import { ThemeDialog } from './components/ThemeDialog'
 import { HomepageDialog } from './components/HomepageDialog'
 import { IHomepageExtension } from '@kwirthmagnify/kwirth-common-front'
@@ -236,7 +236,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showPluginDialog, setShowPluginDialog]=useState<boolean>(false)
     const [showProviderDialog, setShowProviderDialog]=useState<boolean>(false)
     const [showManageIdps, setShowManageIdps]=useState<boolean>(false)
-    const [showDaemonDialog, setShowDaemonDialog]=useState<boolean>(false)
+    // const [showDaemonDialog, setShowDaemonDialog]=useState<boolean>(false)
     const [showSenderDialog, setShowSenderDialog]=useState<boolean>(false)
     const [showThemeDialog, setShowThemeDialog]=useState<boolean>(false)
     const [showHomepageDialog, setShowHomepageDialog]=useState<boolean>(false)
@@ -837,7 +837,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             if (type === 'plugins') setShowPluginDialog(true)
             else if (type === 'providers') setShowProviderDialog(true)
             else if (type === 'senders') setShowSenderDialog(true)
-            else if (type === 'daemons') setShowDaemonDialog(true)
+            // else if (type === 'daemons') setShowDaemonDialog(true)
             else if (type === 'themes') setShowThemeDialog(true)
             else if (type === 'homepages') setShowHomepageDialog(true)
         }
@@ -1623,9 +1623,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageSenders:
                 setShowSenderDialog(true)
                 break
-            case MenuDrawerOption.ManageDaemons:
-                setShowDaemonDialog(true)
-                break
+            // case MenuDrawerOption.ManageDaemons:
+            //     setShowDaemonDialog(true)
+            //     break
             case MenuDrawerOption.ManageThemes:
                 setShowThemeDialog(true)
                 break
@@ -1760,10 +1760,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         return <>{icon}&nbsp;{name}</>
     }
 
-    const hasClusterScope = () => {
+    const hasAdminScope = () => {
         if (!user) return false
         let resources = parseResources(user.accessKey.resources)
-        return resources.some(r => r.scopes.split(',').includes('cluster'))
+        return resources.some(r => r.scopes.split(',').includes('admin'))
     }
 
     const onHomepageSelectTab = async (tab: ITabSummary): Promise<void> => {
@@ -2012,7 +2012,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { !fullscreenTab &&
                     <Drawer sx={{ flexShrink: 0, '& .MuiDrawer-paper': {mt: '64px'} }} anchor="left" open={menuDrawerOpen} onClose={() => setMenuDrawerOpen(false)}>
                         <Stack direction={'column'}>
-                            <MenuDrawer optionSelected={menuDrawerOptionSelected} uploadSelected={handleUpload} selectedClusterName={selectedClusterName} hasClusterScope={hasClusterScope()}/>
+                            <MenuDrawer optionSelected={menuDrawerOptionSelected} uploadSelected={handleUpload} selectedClusterName={selectedClusterName} hasAdminScope={hasAdminScope()}/>
                         </Stack>
                     </Drawer>
                 }
@@ -2119,7 +2119,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showProviderDialog && <ProviderDialog onClose={() => setShowProviderDialog(false)} /> }
                 { showManageIdps && <ManageIdps onClose={() => setShowManageIdps(false)} /> }
                 { showSenderDialog && <SenderDialog onClose={() => setShowSenderDialog(false)} /> }
-                { showDaemonDialog && <DaemonDialog onClose={() => setShowDaemonDialog(false)} /> }
+                {/* { showDaemonDialog && <DaemonDialog onClose={() => setShowDaemonDialog(false)} /> } */}
                 { showThemeDialog && <ThemeDialog onClose={() => setShowThemeDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} /> }
                 { showHomepageDialog && <HomepageDialog onClose={() => setShowHomepageDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} /> }
                 { showChannelSetup() }

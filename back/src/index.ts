@@ -73,7 +73,7 @@ import { SenderApi } from './api/SenderApi'
 import { SenderManager } from './tools/SenderManager'
 import { AuthApi } from './api/AuthApi'
 import { IdpApi } from './api/IdpApi'
-import { IdpManager } from './tools/idp/IdpManager'
+import { IdpManager } from './tools/IdpManager'
 import { TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 //import { DaemonManager } from './tools/DaemonManager'
 import { ThemeManager } from './tools/ThemeManager'
@@ -313,7 +313,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             if (!users) {
                 logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users secret')
                 users = {
-                    admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXI6Ojo6In0='
+                    admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0='
                 }
                 await secrets.write('kwirth-users', users)
             }
@@ -326,7 +326,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             if (!users) {
                 logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users config map')
                 users = {
-                    admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXI6Ojo6In0='
+                    admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0='
                 }
                 await secrets.write('kwirth-users', users)
             }

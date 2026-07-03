@@ -23,6 +23,7 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
     enum allScopes {
         NONE = 'none',
         API = 'api',
+        ADMIN = 'admin',
         CLUSTER = 'cluster',
         FILTER = 'filter',
         VIEW = 'view',

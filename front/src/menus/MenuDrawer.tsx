@@ -18,7 +18,7 @@ enum MenuDrawerOption {
     ManagePlugins,
     ManageProviders,
     ManageSenders,
-    ManageDaemons,
+    // ManageDaemons,
     ManageThemes,
     ManageHomepages,
     ManageIdps,
@@ -31,7 +31,7 @@ interface IMenuDrawerProps {
     optionSelected: (opt:MenuDrawerOption) => void
     uploadSelected: (a:React.ChangeEvent<HTMLInputElement>) => void
     selectedClusterName?: string
-    hasClusterScope:boolean
+    hasAdminScope:boolean
   }
 
 const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
@@ -73,7 +73,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsCluster)} disabled={props.selectedClusterName===undefined}><Settings/>&nbsp;Cluster Settings</MenuItem>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageCluster)}><Edit/>&nbsp;Manage cluster list</MenuItem>
             <Divider/>
-            { props.hasClusterScope &&
+            { props.hasAdminScope &&
                 <div>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.ApiSecurity)}><Key/>&nbsp;API Security</MenuItem>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.UserSecurity)}><Person />&nbsp;User security</MenuItem>
@@ -86,7 +86,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManagePlugins)}><Extension />&nbsp;Plugins</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageProviders)}><Factory />&nbsp;Providers</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageSenders)}><Send />&nbsp;Senders</MenuItem>
-                            <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageDaemons)}><Extension />&nbsp;Daemons</MenuItem>
+                            {/* <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageDaemons)}><Extension />&nbsp;Daemons</MenuItem> */}
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageThemes)}><Palette />&nbsp;Themes</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageHomepages)}><Home />&nbsp;Homepages</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageIdps)}><Key />&nbsp;Identity providers</MenuItem>

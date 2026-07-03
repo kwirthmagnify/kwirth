@@ -360,4 +360,15 @@ Formato: *ficheros · qué hace · criterio de aceptación (CA)*.
 - MOD `front/src/menus/MenuDrawer.tsx` (D1), `front/src/components/security/ManageUserSecurity.tsx` (D3)
 
 ### NO se tocan
-`AuthorizationManagement.ts`, `AccessKey.ts`, `ApiKey.ts`, `ApiKeyApi.ts`, `UserApi.ts` (persiste `idp` solo), `SessionContext.ts`.
+`AccessKey.ts`, `ApiKey.ts`, `SessionContext.ts`.
+
+---
+
+## 16. Scope `admin` — pendiente de revisar
+Se añadió el scope de usuario **`admin`** (además de `cluster`). El usuario admin lleva **ambos** (`admin,cluster::::`): `admin` para operaciones administrativas y `cluster` porque algunos canales lo requieren.
+
+- **HECHO**:
+  - `AuthorizationManagement.hasScope(req, scope)` — helper que deserializa la AccessKey y comprueba el scope.
+  - `IdpApi` (`/idp/*`) — el middleware exige `hasScope(req,'admin')` tras `validKey` (403 si falta). Cubierto por test.
+  - Front: `App.tsx` `hasClusterScope`→`hasAdminScope` (comprueba `'admin'`); `MenuDrawer` prop+guard renombrados; `ResourceEditor` expone `ADMIN='admin'` en el dropdown de scopes.
+- **PENDIENTE (revisar más adelante)**: exigir también scope `'admin'` en las APIs administrativas `/user` (`UserApi`) y `/key` (`ApiKeyApi`). Hoy solo validan `validKey` (cualquier key válida entra); el front ya oculta el menú a no-admin, pero el back no lo bloquea. Aplicar el mismo patrón `hasScope(req,'admin')` cuando se aborde.
