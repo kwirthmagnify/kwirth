@@ -141,8 +141,14 @@
   <p>Kwirth supports built-in user/password login and, optionally, Single Sign-On through external identity providers. Both can be enabled at the same time — the built-in login is always available for the bootstrap <strong>admin</strong> account.</p>
 
   <h2>Single Sign-On (IdP)</h2>
-  <p>Kwirth can delegate authentication to an external Identity Provider such as Google, GitLab or GitHub (both cloud and self-hosted). The IdP only verifies <em>who</em> the person is; Kwirth still decides <em>whether</em> they can enter and <em>what</em> they can access. A user must already exist in Kwirth and be bound to the IdP they use — there is no auto-provisioning.</p>
-  <p><a href="documentation/#/0.5.187/idp/index">Read the IdP integration guide &#x2192;</a></p>
+  <p>Kwirth can delegate authentication to an external Identity Provider. The IdP only verifies <em>who</em> the person is; Kwirth still decides <em>whether</em> they can enter and <em>what</em> they can access. A user must already exist in Kwirth and be bound to the IdP they use — there is no auto-provisioning.</p>
+  <p><strong>Supported connectors:</strong></p>
+  <div class="stack-list">
+    <div class="stack-item"><span class="name">Google</span><span class="desc">Gmail and Google Workspace accounts.</span></div>
+    <div class="stack-item"><span class="name">GitLab</span><span class="desc">GitLab.com and self-managed (on-prem) instances.</span></div>
+    <div class="stack-item"><span class="name">GitHub</span><span class="desc">GitHub.com and GitHub Enterprise Server.</span></div>
+  </div>
+  <p style="margin-top:16px">Connectors are installable extensions, so more providers (and third-party ones) can be added over time. <a href="documentation/#/0.5.187/idp/index">Read the IdP integration guide &#x2192;</a></p>
 
   <h2>Access control &amp; API keys</h2>
   <p>Authorization is based on access keys that describe scopes and target resources. API keys let you share access between Kwirth instances and external tools, always with an expiration.</p>
