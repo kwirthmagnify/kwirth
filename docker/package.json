@@ -10,14 +10,15 @@
     "start:kubernetes": "cross-env NODE_OPTIONS=\"--expose-gc --heapsnapshot-near-heap-limit=1 --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=k8s nodemon src/index.ts",
     "run:kubernetes": "cross-env NODE_OPTIONS=\"--expose-gc --heapsnapshot-near-heap-limit=1 --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=k8s tsx src/index.ts",
     "start:docker": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=docker nodemon src/index.ts",
-    "start:desktop": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=desktop AUTH=kubeconfig nodemon src/index.ts"
+    "start:desktop": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=desktop AUTH=kubeconfig nodemon src/index.ts",
+    "test": "node tests/run.mjs"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@jfvilas/parse-listing": "^1.0.1",
     "@kubernetes/client-node": "^1.4.0",
-    "@kwirthmagnify/kwirth-common": "^0.5.15",
+    "@kwirthmagnify/kwirth-common": "^0.5.18",
     "@kwirthmagnify/kwirth-common-ai": "^0.5.22",
     "@kwirthmagnify/kwirth-common-back": "^0.5.15",
     "@types/node": "^20.12.13",
