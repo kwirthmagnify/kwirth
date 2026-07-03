@@ -1,10 +1,14 @@
 # Google / Gmail
 
-This page explains how to let users sign in to Kwirth with their **Google** account (Gmail or Google Workspace).
+This page explains how to let users sign in to Kwirth with their **Google** account (Gmail or
+Google Workspace), over OIDC.
 
-Signing in with Google requires two things: registering Kwirth as an application in Google (so Google trusts the sign-in redirects), and telling Kwirth about that application through environment variables. Then you create the users in Kwirth as usual.
+Signing in with Google requires two things: registering Kwirth as an application in Google (so
+Google trusts the sign-in redirects), and configuring that application in Kwirth from the UI.
+Then you create the users in Kwirth as usual.
 
-> You do **not** create user accounts in Google. Users sign in with their own Google accounts. What you register in Google is *your application* (an OAuth client).
+> You do **not** create user accounts in Google. Users sign in with their own Google accounts.
+> What you register in Google is *your application* (an OAuth client).
 
 ## Step 1 — Register Kwirth in Google Cloud Console
 
@@ -16,8 +20,8 @@ Signing in with Google requires two things: registering Kwirth as an application
    - **Application type: Web application**.
    - **Authorized redirect URIs**: add your Kwirth callback URL:
      - `https://<your-kwirth-host>/core/auth/google/callback`
-     - For local development: `http://localhost:3883/core/auth/google/callback`
-     - If Kwirth is served under a sub-path (`ROOTPATH`), include it: `https://<host>/<rootpath>/core/auth/google/callback`
+     - For local development (the redirect points at the backend): `http://localhost:3883/core/auth/google/callback`
+     - If Kwirth is served under a sub-path (`ROOTPATH`), include it.
    - On save, Google gives you a **Client ID** and a **Client Secret**. Keep them for Step 2.
 4. **Scopes**: Kwirth only needs `openid`, `email` and `profile`. These are *non-sensitive* scopes, so Google does **not** require any app verification/review.
 
@@ -28,30 +32,24 @@ Signing in with Google requires two things: registering Kwirth as an application
 
 > Even in Production, being able to *authenticate* with Google does not mean being able to *enter* Kwirth — see [access control](#access-control) below.
 
-## Step 2 — Configure Kwirth
+## Step 2 — Configure the connector in Kwirth
 
-Add the following environment variables to your Kwirth deployment:
+As an admin, open **menu → Manage extensions → Identity providers**, then on the **Google**
+connector card click **Settings** (⚙️):
 
-```
-AUTH=kwirth,google
-AUTH_GOOGLE_LABEL=Login with Google
-AUTH_GOOGLE_ISSUER=https://accounts.google.com
-AUTH_GOOGLE_CLIENTID=xxxxxxxx.apps.googleusercontent.com
-AUTH_GOOGLE_SECRET=your-client-secret
-AUTH_GOOGLE_SCOPES=openid email profile
-FRONTURL=https://<your-kwirth-host>
-```
+- **Client ID**: the value from Step 1.
+- **Client Secret**: the value from Step 1 (write-only, shown masked afterwards).
+- **Scopes**: leave empty to use the default `openid email profile`.
+- Leave **Issuer** empty (defaults to `https://accounts.google.com`).
+- **Enable** the instance and save.
 
-- `AUTH` must include `google` (keep `kwirth` too, so the built-in admin login stays available).
-- `AUTH_GOOGLE_CLIENTID` / `AUTH_GOOGLE_SECRET` are the values from Step 1.
-- `AUTH_GOOGLE_LABEL` is the text shown on the login button.
-- `FRONTURL` is used to redirect the user back to the Kwirth web app after sign-in.
-
-After restarting Kwirth, a **"Login with Google"** button appears on the login screen.
+A **"Login with Google"** entry now appears on the login screen (as its own button, or inside
+the *"Log in with..."* dropdown when several IdPs are enabled). No restart or environment
+variables are needed — the configuration is stored in the `kwirth-idps` secret.
 
 ## Step 3 — Create the users in Kwirth
 
-Google only proves identity; the user must exist in Kwirth. From [User management](/0.5.187/usermanagement) (visible to admins only):
+Google only proves identity; the user must exist in Kwirth. From **User security** (visible to admins only):
 
 1. Click **New**.
 2. Set the **Id** to the user's **email address** (this is how Kwirth matches the Google identity).
