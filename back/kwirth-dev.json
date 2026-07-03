@@ -44,6 +44,8 @@
     ]
   },
   "idps": {
-    "google": "../idps/google/dist"
+    "google": "../idps/google/dist",
+    "gitlab-cloud": "../idps/gitlab-cloud/dist",
+    "gitlab-onprem": "../idps/gitlab-onprem/dist"
   }
 }

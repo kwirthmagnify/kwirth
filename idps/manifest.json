@@ -6,5 +6,21 @@
     "displayName": "Google",
     "description": "Google / Gmail (OIDC) identity provider connector for Kwirth",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-idp-google/-/kwirth-idp-google-0.1.0.tgz"
+  },
+  {
+    "connectorId": "gitlab-cloud",
+    "version": "0.1.0",
+    "name": "GitLab Cloud",
+    "displayName": "GitLab Cloud",
+    "description": "GitLab.com (SaaS, OIDC) identity provider connector for Kwirth",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-idp-gitlab-cloud/-/kwirth-idp-gitlab-cloud-0.1.0.tgz"
+  },
+  {
+    "connectorId": "gitlab-onprem",
+    "version": "0.1.0",
+    "name": "GitLab Self-Managed",
+    "displayName": "GitLab Self-Managed",
+    "description": "GitLab self-managed (on-prem, OIDC) identity provider connector for Kwirth",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-idp-gitlab-onprem/-/kwirth-idp-gitlab-onprem-0.1.0.tgz"
   }
 ]
