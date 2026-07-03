@@ -322,7 +322,14 @@ Formato: *ficheros · qué hace · criterio de aceptación (CA)*.
   - **E2E fake OAuth2**: NO se añade test nuevo — el flujo de `AuthApi` (start→callback→gate→exchange) es **agnóstico al kind** y ya está cubierto por los 7 E2E de `AuthApi.test.ts` (fake OIDC); la lógica OAuth2/GitHub está cubierta por los **11 unit tests** de common-back; y los conectores por sus smoke tests. Añadir un fake OAuth2 en AuthApi duplicaría cobertura sin ejercitar código nuevo.
   - ⚠️ **Pendiente aparte**: `docs/0.5.187/idp/google.md` sigue documentando el modelo viejo (env vars `AUTH_GOOGLE_*` / `FRONTURL`). Actualizar a config-desde-front.
 
-**Orden sugerido** (cada fase = MVP usable): **F1 → F2 → F3 → F4**. (`microsoft`/`generic-oidc` para más adelante si hacen falta.)
+**Orden sugerido** (cada fase = MVP usable): **F1 → F2 → F3 → F4**. ✅ (F1–F4 hechos; 4 conectores publicados 0.1.0).
+
+### Conectores futuros (backlog)
+Los conectores son extensiones instalables → se pueden ir añadiendo sin tocar el core. Candidatos:
+
+- `generic-oidc` (Keycloak, Authentik, Zitadel, cualquier IdP OIDC estándar; casi el `gitlab-onprem` con label genérico).
+- `microsoft` (Entra ID / Office 365, OIDC).
+- `gitea`/`forgejo` (OAuth2, mapper propio).
 
 ## EPIC I — Multi-instancia por conector (P2, DIFERIDO) — opt-in, no rompe el modelo
 **Motivo del diferido**: el modelo de extensiones es **1 config por extensión instalada** (providers `saveConfig(id)`; IdP `id===connectorId`). Ningún extension tiene "N instancias". Multi-instancia sería divergencia solo-IdP. El caso real (un cloud + un on-prem por producto) se cubre con Opción 1 (EPIC F) sin tocar el modelo.
