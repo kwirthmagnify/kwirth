@@ -388,11 +388,14 @@ La versión desktop se autentica con la **seguridad del kubeconfig**, no necesit
 
 ---
 
-## 16. Scope `admin` — pendiente de revisar
+## 16. Scope `admin` — ✅ HECHO
 Se añadió el scope de usuario **`admin`** (además de `cluster`). El usuario admin lleva **ambos** (`admin,cluster::::`): `admin` para operaciones administrativas y `cluster` porque algunos canales lo requieren.
 
-- **HECHO**:
-  - `AuthorizationManagement.hasScope(req, scope)` — helper que deserializa la AccessKey y comprueba el scope.
-  - `IdpApi` (`/idp/*`) — el middleware exige `hasScope(req,'admin')` tras `validKey` (403 si falta). Cubierto por test.
-  - Front: `App.tsx` `hasClusterScope`→`hasAdminScope` (comprueba `'admin'`); `MenuDrawer` prop+guard renombrados; `ResourceEditor` expone `ADMIN='admin'` en el dropdown de scopes.
-- **PENDIENTE (revisar más adelante)**: exigir también scope `'admin'` en las APIs administrativas `/user` (`UserApi`) y `/key` (`ApiKeyApi`). Hoy solo validan `validKey` (cualquier key válida entra); el front ya oculta el menú a no-admin, pero el back no lo bloquea. Aplicar el mismo patrón `hasScope(req,'admin')` cuando se aborde.
+- `AuthorizationManagement.hasScope(req, scope)` — helper que deserializa la AccessKey y comprueba el scope.
+- **`IdpApi` (`/idp/*`)**, **`UserApi` (`/user`)** y **`ApiKeyApi` (`/key`)** — el middleware exige `hasScope(req,'admin')` tras `validKey` (403 si falta). Cubierto por tests (`IdpApi.test.ts`, `UserApi.test.ts`, `ApiKeyApi.test.ts`: no-admin y sin-key → 403, admin → 200).
+- Front: `App.tsx` `hasClusterScope`→`hasAdminScope` (comprueba `'admin'`); `MenuDrawer` prop+guard renombrados; `ResourceEditor` expone `ADMIN='admin'` en el dropdown de scopes.
+
+### Impacto verificado (antes de activar el gate en /user y /key)
+- **El login NO pasa por `/user` ni `/key`**: vive en `LoginApi` (`/login`, `/login/password`) leyendo usuarios vía `IdentityService`; el login por IdP va por `AuthApi`+`IdentityService`. El gate NO afecta al login.
+- Consumidores de `/user`: solo `ManageUserSecurity` (pantalla admin, ya oculta). De `/key`: `ManageApiSecurity` (admin) + `FirstTimeLogin` (POST `/key`, siempre el **admin**, que lleva `admin,cluster` → pasa el gate).
+- **Caveats operativos**: (1) access keys emitidas **antes** de añadir `admin` (sesiones admin abiertas, permanent keys viejas) solo tienen `cluster` → 403 en `/user`/`/key` hasta **re-login/re-emisión**; (2) cualquier integración externa que gestione keys vía `/key` con una key **no-admin** debe pasar a usar una key con `admin`. Las apps tipo Backstage/Kubelog usan las APIs de **datos** (no `/key`), así que no se ven afectadas.

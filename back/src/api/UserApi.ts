@@ -21,6 +21,8 @@ export class UserApi {
         this.router.route('/')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
+                // gestión de usuarios es operación administrativa: exige scope 'admin'
+                if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
                 next()
             })
             .get( (req:Request,res:Response) => {
@@ -62,6 +64,7 @@ export class UserApi {
       this.router.route('/:user')
         .all( async (req:Request,res:Response, next) => {
             if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
+            if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
             next()
         })
         .get( (req:Request,res:Response) => {

@@ -37,6 +37,8 @@ export class ApiKeyApi {
         this.router.route('/')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, this))) return
+                // gestión de API keys es operación administrativa: exige scope 'admin'
+                if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
                 next()
             })
             .get( async (req:Request,res:Response) => {
@@ -128,6 +130,7 @@ export class ApiKeyApi {
         this.router.route('/:key')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req,res, this))) return
+                if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
                 next()
             })
             .get( async (req:Request, res:Response) => {
