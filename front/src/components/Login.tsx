@@ -1,5 +1,6 @@
 import React, { useState, useContext } from 'react'
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography} from '@mui/material'
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Menu, MenuItem, Stack, TextField, Typography} from '@mui/material'
+import { ExpandMore } from '../tools/KwirthIcons'
 import { MsgBoxOkError, MsgBoxOkWarning } from '../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addPostAuthorization } from '../tools/AuthorizationManagement'
@@ -19,6 +20,7 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
     const [password, setPassword] = useState('')
     const [newPassword1, setNewPassword1] = useState('')
     const [newPassword2, setNewPassword2] = useState('')
+    const [idpAnchor, setIdpAnchor] = useState<null | HTMLElement>(null)
 
     const login = async (user:string, password:string, newpassword:string='') => {
         let response = undefined
@@ -139,7 +141,16 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
                     </>}
                     { !changingPassword && redirectMethods.length > 0 && <>
                         { hasPassword && <Typography variant='caption' sx={{ textAlign:'center', color:'text.secondary' }}>or</Typography> }
-                        { redirectMethods.map(m => <Button key={m.id} variant='outlined' onClick={() => onClickIdp(m)}>{m.label}</Button>) }
+                        { redirectMethods.length === 1
+                            ? <Button variant='outlined' onClick={() => onClickIdp(redirectMethods[0])}>{redirectMethods[0].label}</Button>
+                            : <>
+                                <Button variant='outlined' fullWidth endIcon={<ExpandMore/>} onClick={(e) => setIdpAnchor(e.currentTarget)} sx={{ justifyContent: 'space-between' }}>Log in with...</Button>
+                                <Menu anchorEl={idpAnchor} open={Boolean(idpAnchor)} onClose={() => setIdpAnchor(null)}
+                                    PaperProps={{ sx: { minWidth: idpAnchor?.offsetWidth } }}>
+                                    { redirectMethods.map(m => <MenuItem key={m.id} onClick={() => { setIdpAnchor(null); onClickIdp(m) }}>{m.label}</MenuItem>) }
+                                </Menu>
+                            </>
+                        }
                     </>}
                 </Stack>
             </DialogContent>
