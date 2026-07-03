@@ -46,3 +46,9 @@ added *alongside* them, not instead of them.
 
 More providers (Keycloak, Microsoft Entra ID / Office 365, ...) will be documented here as they
 become available. Connectors are packaged independently, so third parties can ship their own.
+
+## Security
+
+For how the SSO flow is protected (PKCE + `state`, back-channel token exchange, single-use
+login handoff, anti open-redirect, secret storage, admin-only management), see the
+[IdP security notes](/0.5.187/idp/security).

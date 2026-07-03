@@ -332,7 +332,9 @@ Formato: *ficheros · qué hace · criterio de aceptación (CA)*.
 ## EPIC G — Conectores instalables + hardening (P1)
 - **G0** Scaffolding top-level `idps/` (`idps/google/` con build.mjs/watch.mjs, `idps/manifest.json`) + `IdpManager.loadDevIdps` (clave `idps` en `kwirth-dev.json`). ✅ **HECHO**
 - **G1** install/uninstall de conectores (tgz vía URL/upload, `installBundled`, `loadAll` en arranque) · `IdpManager` (índice+meta+back.js comprimido en configmap, espejo de `ProviderManager`) + `IdpApi` (`POST /idp/connectors/install`, `POST /idp/connectors/upload`, `DELETE /idp/connectors/:id`, **admin via validKey**) + montaje `init/loadAll/installBundled` en `index.ts`. Harness ESM con `require` inyectado (banner). ✅ **HECHO** (test install/loadAll/uninstall con tgz real; 44/44).
-- **G2** auditoría de logins IdP (`ELogComponent.AUTH`, ya se loguea OK/rechazos en `AuthApi`) · **G3** doc de seguridad (docs/idp) · **G4** *(opcional)* binding por `sub` (TOFU). ⬜ pendiente
+- **G2** auditoría de logins IdP (`ELogComponent.AUTH`, ya se loguea OK/rechazos en `AuthApi`). ✅
+- **G3** doc de seguridad del flujo IdP · `docs/0.5.187/idp/security.md` (PKCE+state, back-channel, handoff single-use TTL, anti open-redirect, secretos `kwirth-idps` write-only, gestión admin-only) + enlazado desde `idp/index.md`. ✅ **HECHO**
+- **G4** *(opcional, DIFERIDO — pedido por el usuario)* binding por `sub` inmutable / TOFU: hoy el binding es email + connectorId; fijar el `sub` del IdP en el primer login endurecería frente a reasignación de email en el IdP. Apuntado como mejora futura. ⬜
 
 ## EPIC H — Desktop SSO (P2) — ❌ DESCARTADO
 La versión desktop se autentica con la **seguridad del kubeconfig**, no necesita el flujo OIDC (loopback/deep-link). SSO por IdP queda como funcionalidad **solo web/server**.
