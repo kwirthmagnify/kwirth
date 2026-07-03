@@ -156,11 +156,11 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
             </DialogContent>
             <DialogActions>
                 <Stack direction='row' flex={1} sx={{ml:2, mr:2}}>
-                    { hasPassword && <Button onClick={onClickChangePassword} sx={{display:changingPassword?'none':'block'}}>Change Password</Button> }
+                    { hasPassword && <Button variant='outlined' onClick={onClickChangePassword} sx={{display:changingPassword?'none':'block'}}>Change Password</Button> }
                     <Typography sx={{ flexGrow:1}}></Typography>
-                    { hasPassword && <Button onClick={onClickOk} disabled={okDisabled}>OK</Button> }
+                    { hasPassword && <Button variant='outlined' onClick={onClickOk} disabled={okDisabled}>OK</Button> }
                     {
-                        changingPassword && <Button onClick={onClickCancel}>Cancel</Button>
+                        changingPassword && <Button variant='outlined' onClick={onClickCancel}>Cancel</Button>
                     }
                 </Stack>
             </DialogActions>
