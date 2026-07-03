@@ -15,6 +15,13 @@ You can enable **both at the same time** (independent connectors).
 
 ## Step 1 — Register Kwirth as an OAuth App in GitHub
 
+> ⚠️ **It must be an *OAuth App*, not a *GitHub App*.** They are different things. A *GitHub
+> App* ignores the OAuth `scope` parameter (it uses per-app permissions instead), so
+> `user:email` is never granted and login fails with `unverified`. You can tell them apart by
+> the **Client ID**: GitHub Apps start with `Iv...` (e.g. `Iv23li...`); OAuth Apps do not.
+> If your consent screen says *"Know which resources you can access"* instead of listing
+> *"Email addresses (read-only)"*, you registered a GitHub App by mistake.
+
 In GitHub, go to **Settings → Developer settings → OAuth Apps → New OAuth App** (or an
 organization-owned OAuth App; on GHE, the same under your enterprise host):
 
