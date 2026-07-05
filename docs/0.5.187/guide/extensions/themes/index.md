@@ -14,12 +14,12 @@ Each theme is a **card** with a description, its **version**, an **Activate** bu
 
 | Theme | Look |
 |---|---|
-| **Avicii** | Dark geometric — warm **gold** accents on black, sharp edges, triangle motifs, Oswald typography. |
-| **SFY** | **Sky-blue** primary on charcoal-dark surfaces, teal-mint secondary, Lato + Montserrat typography. |
-| **Plexus** | Corporate — deep **navy** background with a **coral** accent and Lato typography. |
-| **Post-Punk** | Dark monochrome with **acid-green** accents and monospace typography — post-punk aesthetic. |
-| **Matrix** | Deep black with **green** accents and monospace typography — the Matrix look. |
-| **Depeche Mode** | *Memento Mori* — abyss black, **blood-red** accent, bone parchment text. |
+| **[Avicii](avicii)** | Dark geometric — warm **gold** accents on black, sharp edges, triangle motifs, Oswald typography. |
+| **[SFY](sfy)** | **Sky-blue** primary on charcoal-dark surfaces, teal-mint secondary, Lato + Montserrat typography. |
+| **[Plexus](plexus)** | Corporate — deep **navy** background with a **coral** accent and Lato typography. |
+| **[Post-Punk](post-punk)** | Dark monochrome with **acid-green** accents and monospace typography — post-punk aesthetic. |
+| **[Matrix](matrix)** | Deep black with **green** accents and monospace typography — the Matrix look. |
+| **[Depeche Mode](depeche-mode)** | *Memento Mori* — abyss black, **blood-red** accent, bone parchment text. |
 
 ## Applying a theme
 

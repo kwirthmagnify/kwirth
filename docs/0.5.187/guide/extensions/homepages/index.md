@@ -14,10 +14,14 @@ Each homepage is a **card** with a description, **version**, an **Activate** but
 
 | Homepage | What it shows |
 |---|---|
-| **Clusterized** | Cluster-centric — **one card per cluster** with a status indicator and quick **Magnify** launch. Great for multi-cluster operators. |
-| **Avicii** | Warm **gold-on-black**, triangle motifs, sharp Oswald typography and **live cluster metrics**. |
-| **Matrix** | A Matrix-style **cluster overview** landing page. |
-| **Depeche Mode** | Abyss black / blood-red / bone theme, **ASCII metric bars**, and a *STRANGELOVE* cluster launcher. |
+| **[Clusterized](clusterized)** | Cluster-centric — **one card per cluster** with a status indicator and quick **Magnify** launch. Great for multi-cluster operators. |
+| **[Avicii](avicii)** | Warm **gold-on-black**, triangle motifs, sharp Oswald typography and **live cluster metrics**. |
+| **[Matrix](matrix)** | A Matrix-style **cluster overview** landing page. |
+| **[Depeche Mode](depeche-mode)** | Abyss black / blood-red / bone theme, **ASCII metric bars**, and a *STRANGELOVE* cluster launcher. |
+
+## Configuring a homepage
+
+When you **activate** a homepage, its **setup** may open so you can configure it; afterwards, its **card in the manager shows a ⚙️ gear** you can use to **reconfigure** it at any time (things like refresh interval, endpoints or which clusters to show). **Some homepages have no configuration** — then there's no gear. Use **Deactivate** on the active card to return to Kwirth's default home.
 
 ## Applying a homepage
 
