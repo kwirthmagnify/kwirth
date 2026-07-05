@@ -14,11 +14,11 @@ Each connector is a **card** showing the provider, the **protocol**, a status ba
 
 | Connector | Provider · protocol | For |
 |---|---|---|
-| **Login with Google** | `google` · **OIDC** | Google / Google Workspace accounts. |
-| **Login with GitLab** | `gitlab-cloud` · **OIDC** | GitLab.com (SaaS). |
-| **Login with GitLab** | `gitlab-onprem` · **OIDC** | Self-managed GitLab. |
-| **Login with GitHub** | `github-cloud` · **OAuth2** | GitHub.com (SaaS). |
-| **Login with GitHub** | `github-onprem` · **OAuth2** | GitHub Enterprise Server. |
+| **[Login with Google](google)** | `google` · **OIDC** | Google / Google Workspace accounts. |
+| **[Login with GitLab (cloud)](gitlab-cloud)** | `gitlab-cloud` · **OIDC** | GitLab.com (SaaS). |
+| **[Login with GitLab (self-managed)](gitlab-onprem)** | `gitlab-onprem` · **OIDC** | Self-managed GitLab. |
+| **[Login with GitHub (cloud)](github-cloud)** | `github-cloud` · **OAuth2** | GitHub.com (SaaS). |
+| **[Login with GitHub (Enterprise)](github-onprem)** | `github-onprem` · **OAuth2** | GitHub Enterprise Server. |
 
 ## Configuring & using a connector
 
