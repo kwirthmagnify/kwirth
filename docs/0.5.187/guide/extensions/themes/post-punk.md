@@ -6,6 +6,8 @@
 
 **Post-Punk** is a **dark monochrome** theme with **acid-green** accents and **monospace** typography — a stark, post-punk aesthetic.
 
+![Post-Punk theme applied](../../../_media/guide/theme-post-punk.png)
+
 ## Applying it
 
 Install it if needed (**☰ → Manage extensions → Themes → Available → Post Punk → download**), then **Activate**.
