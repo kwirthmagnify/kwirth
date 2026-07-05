@@ -4,12 +4,29 @@
 
 ## What it shows
 
-The **Matrix** homepage is a **Matrix-style cluster overview** landing page — black background, green accents, monospace — matching the **[Matrix theme](../themes/matrix)**.
+The **Matrix** homepage turns the landing screen into a **Matrix-style cluster overview** — black background, **falling green code**, monospace terminal cards per cluster with live logs, and TOPOLOGY / MAGNIFY shortcuts. Matches the **[Matrix theme](../themes/matrix)**:
 
-## Applying & configuring it
+![Matrix homepage](../../../_media/guide/homepage-matrix.png)
 
-1. **☰ → Manage extensions → Homepages → Matrix → Activate.**
-2. **Configuration:** activating may open a **setup**; once active, its **card in the manager shows a ⚙️ gear** to **reconfigure** it. *(Some homepages have no configuration.)*
+## Configuration
+
+Activating it opens a **matrix setup** dialog:
+
+![Matrix setup](../../../_media/guide/homepage-matrix-config.png)
+
+| Option | What it does |
+|---|---|
+| **Show tabs / workspaces card** | Show the recent tabs & workspaces panel. |
+| **Falling code** | Toggle the animated Matrix "rain". |
+| **Speed** | Rain speed — **slow / normal / fast**. |
+| **Active lines** | How many rain columns animate at once. |
+
+**Save** applies and activates it (deactivating the previous homepage); reconfigure later via the **⚙️ gear** on the home.
+
+## Applying it
+
+1. **☰ → Manage extensions → Homepages** — **Deactivate** the active one, then **Activate** *Matrix*.
+2. Tune its **setup** and **Save**.
 3. **Deactivate** to return to the default home.
 
 ## Notes

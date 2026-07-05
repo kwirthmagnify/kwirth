@@ -4,12 +4,28 @@
 
 ## What it shows
 
-The **Avicii** homepage is an **Avicii-styled** landing dashboard: **warm gold on black**, geometric **triangle motifs**, sharp **Oswald** typography and **live cluster metrics**. A striking overview screen that matches the **[Avicii theme](../themes/avicii)**.
+The **Avicii** homepage is a striking **gold-on-black** landing dashboard with the AVICII watermark, **metric bars**, **resource counters** (vCPUs / RAM / Pods / Nodes) per cluster and an **Explore** shortcut — matching the **[Avicii theme](../themes/avicii)**:
 
-## Applying & configuring it
+![Avicii homepage](../../../_media/guide/homepage-avicii.png)
 
-1. **☰ → Manage extensions → Homepages → Avicii → Activate.**
-2. **Configuration:** activating may open a **setup**; once active, its **card in the manager shows a ⚙️ gear** to **reconfigure** it (e.g. metrics/refresh). *(Some homepages have no configuration.)*
+## Configuration
+
+Activating it opens an **AVICII SETUP** dialog:
+
+![Avicii setup](../../../_media/guide/homepage-avicii-config.png)
+
+| Option | What it does |
+|---|---|
+| **Show metric bars (CPU / MEM / POD)** | Show the animated metric bars. |
+| **Show resource counters (vCPUs / RAM / Pods)** | Show the numeric resource counters. |
+| **Show channel icons** | Show the quick channel-launch icons. |
+
+**Save** applies and activates it (deactivating the previous homepage); reconfigure later via the **⚙️ gear** on the home.
+
+## Applying it
+
+1. **☰ → Manage extensions → Homepages** — **Deactivate** the active one, then **Activate** *Avicii*.
+2. Tune its **setup** and **Save**.
 3. **Deactivate** to return to the default home.
 
 ## Notes
