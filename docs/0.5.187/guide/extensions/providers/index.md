@@ -32,13 +32,13 @@ Add these from **☰ → Manage extensions → Providers**:
 
 | Provider | What it does | Notes / key config |
 |---|---|---|
-| **Tick** | Fires a **heartbeat** every few seconds. | Great for testing channel subscriptions; no real config. |
-| **Validating** | Emits an event whenever the Kubernetes API calls a **Validating webhook** — lets Kwirth observe admission decisions. | Register it as a validating webhook target. |
-| **Kafka** | Connects to one or more **Kafka** broker sets and distributes topic messages to channels using the same **space/type** routing as Business. | Broker list, topics, credentials. |
-| **OpenTelemetry** | Turns Kwirth into an **OTLP/HTTP receiver** — any OTel-instrumented service can push **traces, metrics and logs** straight to Kwirth. | OTLP endpoint/port. |
-| **Syslog** | Receives **syslog** messages and streams them into channels. | Listen protocol/port. |
-| **Trivy** | Watches the **Trivy Operator** CRDs and streams vulnerability / config-audit / secret findings. | Backs the **[Trivy](../plugins/trivy)** channel. |
-| **Sample** | Reference implementation for **provider developers**. | Starting point for custom providers. |
+| **[Tick](tick)** | Fires a **heartbeat** every few seconds. | Great for testing channel subscriptions; no real config. |
+| **[Validating](validating)** | Emits an event whenever the Kubernetes API calls a **Validating webhook** — lets Kwirth observe admission decisions. | Register it as a validating webhook target. |
+| **[Kafka](kafka)** | Connects to one or more **Kafka** broker sets and distributes topic messages to channels using the same **space/type** routing as Business. | Broker list, topics, credentials. |
+| **[OpenTelemetry](otel)** | Turns Kwirth into an **OTLP/HTTP receiver** — any OTel-instrumented service can push **traces, metrics and logs** straight to Kwirth. | OTLP endpoint/port. |
+| **[Syslog](syslog)** | Receives **syslog** messages and streams them into channels. | Listen protocol/port, framing, relay. |
+| **[Trivy](trivy)** | Watches the **Trivy Operator** CRDs and streams vulnerability / config-audit / secret findings. | Backs the **[Trivy](../plugins/trivy)** channel. |
+| **[Sample](sample)** | Reference implementation for **provider developers**. | Starting point for custom providers. |
 
 *(Each provider's exhaustive configuration lives in the reference [Provider reference](../../providers/reference/index).)*
 
