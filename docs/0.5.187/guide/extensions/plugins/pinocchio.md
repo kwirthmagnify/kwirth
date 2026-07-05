@@ -41,6 +41,24 @@ The header shows **Events** (how many entries in the feed) and **Status** (start
 
 Each analysis in the feed lists its **findings**, colour-coded by level (**low / medium / high / critical**). Click a finding for its full detail — **control id & name, category** (privileges, identity, network, filesystem, supply-chain, resources, secrets, …), **confidence, risk score, description, evidence, impact, remediation** and **references**. A summary chip under each analysis shows the **PSS** (current → target), the **score summary** (critical/high/medium/low counts) and the **global risk**; click it for the analysis detail (resource, images, controls passed, next steps). A **Report** button opens the full Markdown write-up.
 
+## AI configuration (Providers & LLMs)
+
+Before Pinocchio can analyse anything it needs an **AI provider** and at least one **LLM**. Both are set from the header **Config** menu, and — importantly — this **AI configuration is shared across every Kwirth plugin that uses AI** (Pinocchio, **[Censor](censor)**, …). Configure a provider/model once and it's available to all of them.
+
+**Config → Provider** registers an **AI provider** and its **API key/token**:
+
+![AI provider configuration](../../../_media/guide/ai-provider-config.png)
+
+Pick the provider (e.g. *google*, *openai*, …), paste its **API Key / Token**, and **Add**. Kwirth loads the provider's available models (here, *google* with *50 models loaded*). The key can later be linked to specific uses. Use the **eye** to reveal the key, and **Import / Export** to move providers as JSON.
+
+**Config → LLM** defines the **models** you'll actually select in triggers and the Playground:
+
+![AI LLM configuration](../../../_media/guide/ai-llm-config.png)
+
+Each LLM entry has an **LLM ID** (the name you pick later), a **Provider**, a **Model**, a **temperature**, and optional **input/output cost per million tokens** (used to compute the cost figures you saw in Censor's performance dashboard). By default it **uses the provider's API key**, or you can enter a **specific key** for that model. Manage entries with **New / Clone / Remove / Add** and **Import / Export**.
+
+> Because this config is shared, an LLM you define here (say `gemini-31-flash-lite`) is the same one Censor offers in its config — set your models up once.
+
 ## The Playground
 
 The **Playground** is where you design and test an analysis before turning it into a trigger. You give it an **event** and a **prompt**, **fire** it against the LLM, and inspect the result:
@@ -65,17 +83,33 @@ Triggers decide **when** Pinocchio runs and **what** it does. Manage them in **C
 
 ![Pinocchio trigger config](../../../_media/guide/channel-pinocchio-triggers.png)
 
-Each trigger has an **ID**, a **type** (**artifact** or **business**), and for artifacts a **Kind** (Pod, Deployment, Service, Ingress, …) and a **K8s Event** (**ADDED / MODIFIED / DELETED**). A trigger holds one or more **versions**, each with:
+### What a trigger matches
+
+Each trigger has an **ID** and a **type**:
+
+- **artifact** — fires on a **Kubernetes object change**. You set the **Kind** (Pod, Deployment, DaemonSet, StatefulSet, ReplicaSet, Job, CronJob, Service, Ingress, HTTPRoute…) and the **K8s Event** that arms it: **ADDED**, **MODIFIED** or **DELETED**. Example: *artifact · Pod · ADDED* runs every time a new Pod appears.
+- **business** — fires on an incoming **business event** (from the Business provider), matched by **space / type**.
+
+### Versions
+
+A trigger holds one or more **versions** — variations you can keep side by side (e.g. a cheap fast model vs. a thorough one) and enable independently. Each version has:
 
 | Field | Meaning |
 |---|---|
-| **Action** | What to do with the verdict: **inform**, **cancel** or **repair**. |
-| **LLM** | Which model to use. |
-| **Steps** | Max agentic steps. |
-| **Tools** / **Auto** | Which tools the agent may use (or let it pick automatically). |
-| **System** / **Prompt** | The system prompt and the analysis prompt (**Jinja** or **artifact** template). |
+| **Enabled** | Whether this version actually runs when the trigger fires. |
+| **Action** | What to do with the verdict: **inform** (post findings only), **cancel** (reject/deny the change) or **repair** (attempt a fix). *cancel/repair act on the cluster — see the note below.* |
+| **LLM** | Which model to use (from your shared [AI configuration](#ai-configuration-providers--llms)). |
+| **Steps** | Maximum **agentic steps** — how many tool-using iterations the model may take before it must conclude. |
+| **Tools** / **Auto** | Which **tools** the agent may call to gather context; **Auto** lets it choose tools by itself. |
+| **Prompt type** | **Jinja** (a templated prompt rendered with the event data) or **artifact** (the raw object is the input). |
+| **System** / **Prompt** | The system prompt and the analysis prompt/template. |
+| **Spaces** | For business triggers, which spaces this version applies to. |
 
-Use **New / Clone / Remove / Add** to manage triggers and their versions.
+Use **New / Clone / Remove / Add** to manage triggers and their versions. The safest workflow is to **prototype in the [Playground](#the-playground)** and **Save** the tuned setup straight into a trigger.
+
+## Configuration import / export
+
+Everything Pinocchio needs — **triggers**, their versions, and the list of **LLMs** — can be moved as JSON via **Config → Import / Export**. Use it to promote a tuned setup from a test cluster to production, to back up your triggers, or to share a rule set with a teammate. *(AI **providers** and **LLMs** have their own Import/Export inside their config dialogs, since they're shared across plugins.)*
 
 ## Admin guide
 

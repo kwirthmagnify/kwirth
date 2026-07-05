@@ -22,17 +22,13 @@ The channels users work with. Most are **plugins** you can install or remove; a 
 - 📰 [News](plugins/news) — RSS news feed reader (demo).
 - 🧪 [Echo](plugins/echo) — reference/demo channel for plugin authors.
 
-## Providers (data sources)
+## [Providers (data sources)](providers/index)
 
-Feed data into channels.
+Feed data into channels. Built-in: **Events**, **Metrics**, **Business**. Installable: **Tick**, **Validating**, **Kafka**, **OpenTelemetry**, **Syslog**, **Trivy**, **Sample**. → **[Providers manual](providers/index)**
 
-- [Tick](providers/tick) · [Events](providers/events) · [Metrics](providers/metrics) · [Kafka](providers/kafka) · [OpenTelemetry](providers/otel) · [Syslog](providers/syslog) · [Sample](providers/sample)
+## [Senders (output destinations)](senders/index)
 
-## Senders (output destinations)
-
-Deliver output to external systems.
-
-- [console](senders/console) · [file](senders/file) · [email-resend](senders/email-resend) · [email-smtp](senders/email-smtp) · [teams](senders/teams) · [tee](senders/tee) · [regex](senders/regex) · [composite](senders/composite) · [timed](senders/timed) · [ratelimit](senders/ratelimit)
+Deliver output to external systems. Delivery: **console**, **file**, **email-smtp**, **email-resend**, **teams**. Pipeline: **tee**, **regex**, **timed**, **ratelimit**, **composite**. → **[Senders manual](senders/index)**
 
 ## Themes (appearance)
 

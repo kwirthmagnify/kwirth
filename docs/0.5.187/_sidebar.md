@@ -46,6 +46,8 @@
       * [Pinocchio](/0.5.187/guide/extensions/plugins/pinocchio)
       * [News](/0.5.187/guide/extensions/plugins/news)
       * [Echo](/0.5.187/guide/extensions/plugins/echo)
+    * [Providers](/0.5.187/guide/extensions/providers/index)
+    * [Senders](/0.5.187/guide/extensions/senders/index)
 * [Installation](/0.5.187/installation)
 * [How it works](/0.5.187/how)
 * [Data streaming](/0.5.187/datastreaming)

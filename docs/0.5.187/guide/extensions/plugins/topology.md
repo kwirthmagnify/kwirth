@@ -54,6 +54,15 @@ Around the canvas:
 | **Kind chips** (e.g. `Pod: 15`, `Service: 10`, `PVC: 1`) | bottom left | Count per kind; **click a chip to show/hide** that kind. |
 | **Namespace chips** | bottom right | **Click to show/hide** each namespace. |
 
+### Filtering with the chips
+
+Two rows of chips let you **declutter** the map without restarting the channel — handy on busy clusters:
+
+- **Kind chips** (bottom-left) — one per resource **kind** present, each showing a **live count** (e.g. `Pod: 15`, `Service: 10`, `PVC: 1`, `Ctr: 17`). They're **colour-matched** to the nodes of that kind. **Click a chip to hide** that kind (it greys out with a strike-through); click again to show it. Hide `Container` or `Pod`, for instance, to see just the higher-level workloads and their wiring.
+- **Namespace chips** (bottom-right) — one per **namespace** in scope (e.g. `kube-system`, `ingress-nginx`, `monitoring`…). **Click to hide/show** a whole namespace. On a cluster-wide map this is the fastest way to focus on the one or two namespaces you care about.
+
+The two sets **combine**: hide the namespaces you don't need, then hide the kinds you don't need, and what remains is exactly the slice you're investigating. Your show/hide choices are **remembered** while the tab is open, and they also drive what the **search** and **path mode** consider.
+
 ## Focusing a resource (path mode)
 
 **Click a node** (or pick it from search) to enter **path mode**: Kwirth highlights the **whole connected subgraph** — everything from the Ingress above it down to the containers/PVCs below — dims everything else, flies the camera in, and shows a **breadcrumb** of the chain at the top. A **node info panel** appears with the resource's details. Click **Exit** (or click empty space) to leave:
