@@ -20,7 +20,7 @@ We cite here some interesting capabilities that are missing today:
   - [HUMAN] ~~`kwirth`, **Dashboards**. Add workspace channel (grafana-like), and implement multi-channel websockets.~~ DONE via Magnify channel!
   - [AI] ~~`kwirth`, **AI capabilities**. Integrate AI-driven insights for log analysis, anomaly detection or artifact analysis.~~ DONE! (via 'pinocchio' and 'censor' channels)
   - `kwirth`, **SSO**, implement Single Sing-On capabilities.
-  - `kwirth`, **IdP**, implement integrations with external Identity Providers (EntraID, AD, Cognito, Keycloak, LDAP...)
+  - [AI] ~~`kwirth`, **IdP**, implement integrations with external Identity Providers (EntraID, AD, Cognito, Keycloak, LDAP...)~~ DONE!
   - `kwirth`, **Standard tokens**, implement JWT support (with scopes that match the VIEW system implemented inside Kwirth)
   - [AI] ~~`magnify`, **Desktop**, create a Tauri compatible build for desktop versions.~~
   - `kwirth`, **Grafana**, develop [Grafana](https://grafana.com/grafana/plugins/) plugins for log streaming and aggregation.
@@ -39,8 +39,8 @@ We cite here some interesting capabilities that are missing today:
   - `magnify`, **Ingress**, we need to add support for new Gateway artifacts, not just let them work as CRD's, 
   - `kwirth`, **Installation**, update Helm to support GatewayAPI
   - `pinocchio`, **Changes to artifacts**, when the channels (thanks to the use of an LLM) suggests modifying an artifact, we need to implement two methods: modify the object (a pod or whatever) via the Kubernetes mutating webhook, or propagate the changes to a repository when the cluster being managed via an IaC platform (ArgoCD, Flux) and a templating or kustomization mechanism (Kustomize, Helm or whatever).
-  - [AI] ~~`kwirth`, **OpenTelemetry Provider**, once the providers subsystem is up and running, we wish to add support for OTel protocol (OTLP) for ingesting telemetry data like logs, traces, metrics, application events... It is important to have a clear view and take an optime decision on how to implement this. We see two ways: add a specific provider and then stream data to current channels (logs, metrics...), or create new channels for exposing OTel data received on the OTel provider. ~~ DONE!
-  - [AI] ~~`kwirth`, **Kafka Provider**, once the providers subsystem is up and running, we wish to add support for receiving events via Kafka protocol. ~~
+  - [AI] ~~`kwirth`, **OpenTelemetry Provider**, once the providers subsystem is up and running, we wish to add support for OTel protocol (OTLP) for ingesting telemetry data like logs, traces, metrics, application events... It is important to have a clear view and take an optime decision on how to implement this. We see two ways: add a specific provider and then stream data to current channels (logs, metrics...), or create new channels for exposing OTel data received on the OTel provider.~~ DONE!
+  - [AI] ~~`kwirth`, **Kafka Provider**, once the providers subsystem is up and running, we wish to add support for receiving events via Kafka protocol.~~ DONE!
   - [AI] ~~`pinocchio`, **versioning**, add governance to trigger/llm configuration by adding versioning (not just enable/disable).~~ DONE!
   - [AI] ~~`pinocchio`, **notifiers**, add notifiers integration, so alerts can be send to subscribers, not just having a log of findings.~~ DONE!
   - `pinocchio`, **scanning**, add more config for exclusions/inclusions (f.i., exclude trivy scans from pinocchio scans). Add pinocchio console management.

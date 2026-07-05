@@ -218,8 +218,10 @@ nav.app-nav a:hover {
 /* ── Tables ──────────────────────────────────────────────────── */
 
 .markdown-section table {
+  display: table;
   border-collapse: collapse;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
