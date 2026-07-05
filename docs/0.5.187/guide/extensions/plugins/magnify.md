@@ -123,11 +123,18 @@ Magnify is a **windowed** tool. Each action opens a **floating window** you mana
 
 ![Magnify floating log window](../../../_media/guide/channel-magnify-windows.png)
 
-## LogSearch
+## Searching: artifacts vs. logs
 
-**LogSearch** searches for text across the logs of **many pods/containers at once**, without opening individual log streams. Open it from the **Log search** button in the Magnify toolbar (the toolbar shows contextual actions like *Log search*, *Search* and *Topology* when you select a scope such as **Cluster → Overview**). Enter a term, pick a scope, and Magnify fans the query out to the backend and returns results **grouped by container**:
+Magnify has **two different full-text searches**, both launched from the **Cluster → Overview** toolbar (the same toolbar that hosts *Kube works* and *Topology*). They look alike but search very different things — it's worth knowing which one you want:
 
-![Magnify LogSearch panel](../../../_media/guide/channel-magnify-logsearch.png)
+- **🔎 Search** — searches across **every Kubernetes artifact** in scope: the objects themselves (their manifests — names, labels, annotations, spec fields, …). Answers *"which **objects** mention X?"*.
+- **🔎 Log search** — searches across the **logs of all pods** in scope (their logstreams), without opening a Log window per pod. Answers *"which **pods logged** X?"*.
+
+### Log search
+
+**Log search** fans a query across the logs of **many pods/containers at once** and returns results **grouped by container** — then click a hit to open that container's [Log](log) window:
+
+![Magnify log search panel](../../../_media/guide/channel-magnify-logsearch.png)
 
 | Option | Default | Notes |
 |---|---|---|
@@ -136,7 +143,23 @@ Magnify is a **windowed** tool. Each action opens a **floating window** you mana
 | **Scope** | all containers in view | Narrow to namespace / group / pod / container. |
 
 - A **Stop** button (red) cancels an in-flight search immediately, on both frontend and backend.
-- Searches are **concurrent** — each gets a unique id, so multiple LogSearch panels run and stop independently. Closing a panel auto-stops its search.
+- Searches are **concurrent** — each gets a unique id, so multiple log-search panels run and stop independently. Closing a panel auto-stops its search.
+
+### Search (artifacts)
+
+**Search** runs over the **artifacts** (Kubernetes object definitions) in scope — from the Cluster Overview it covers the **whole cluster**. Type a term and it lists every matching object; click a result to jump straight to that object's detail. Refine with **Match case**, **Merge** (combine results) and **Include status** (also search the objects' live status, not just their spec). Use it to find, say, every object carrying a given label or referencing a given ConfigMap.
+
+## Kube works — custom actions
+
+The **Cluster → Overview** toolbar has a **Kube works** menu (the 🧰 toolbox at the top-left of the Magnify window). It lists your **custom actions** — one-click operations you define once and reuse:
+
+![Magnify Kube works menu](../../../_media/guide/channel-magnify-kubeworks.png)
+
+A **custom action** launches a **utility/debug pod from a YAML manifest** you provide, optionally doing something **when it's ready** (e.g. dropping you into a shell). Typical examples: an `Ubuntu` or `Alpine` debug box, a `DNS Utils` pod to test cluster DNS, or purpose-built `network-sec` / `siem` / `OTel` helpers. Think of it as a personal library of `kubectl debug`-style shortcuts, right in the overview.
+
+*(A companion **Kwirth works** menu appears when you define **Kwirth-type** custom actions.)*
+
+You create and manage these under **Preferences → Custom actions** (below).
 
 ## User Preferences
 
@@ -147,7 +170,7 @@ Magnify has its **own Preferences** panel (left nav **Preferences**). It's an ac
 | Section | What it holds |
 |---|---|
 | **Display** | **Palette mode** (light/dark) and an **About** shortcut. |
-| **Custom actions** | Define your own **actions** (e.g. *Forward*) with **ADD** / **REMOVE** — custom operations you can trigger on objects. |
+| **Custom actions** | Your library of one-click **[Kube works](#kube-works--custom-actions)** operations. Each has a **Type** (**Kube**), a **Name** (what shows in the menu), a **pod YAML** (the manifest to launch) and an **on-ready** behaviour (what to do once the pod is up — e.g. *nothing*, or open a shell). **Add** / **Remove** them here; they then appear in the **Kube works** menu on the Cluster Overview. |
 | **External content** | **Max messages** kept for embedded external content. |
 | **Data management** | Choose **what Magnify streams and keeps**: toggles **Keep Helm data** and **Keep managed fields**, plus a per-**resource-kind** checklist (Node, Namespace, Pod, Deployment, DaemonSet, ReplicaSet, StatefulSet, Job, CronJob, ConfigMap, Secret, Service, Ingress, PV/PVC, Roles & bindings, metrics, Endpoints, PriorityClass, RuntimeClass, VolumeAttachment, CRDs & instances, CSI objects, ServiceAccount, webhooks, Lease…). Untick a kind to stop streaming it — useful to cut noise/load on big clusters. |
 | **Debug** | Inspect the client: **Files collection** (object cache size), **Metrics names**, **Channel object**, and **Message tracing** (log received messages to console), with **RELOAD** / **SHOW**. |

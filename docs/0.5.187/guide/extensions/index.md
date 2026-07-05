@@ -30,19 +30,17 @@ Feed data into channels. Built-in: **Events**, **Metrics**, **Business**. Instal
 
 Deliver output to external systems. Delivery: **console**, **file**, **email-smtp**, **email-resend**, **teams**. Pipeline: **tee**, **regex**, **timed**, **ratelimit**, **composite**. → **[Senders manual](senders/index)**
 
-## Themes (appearance)
+## [Themes (appearance)](themes/index)
 
-- [Avicii](themes/avicii) · [Depeche Mode](themes/depeche-mode) · [Matrix](themes/matrix) · [Plexus](themes/plexus) · [Post-Punk](themes/post-punk) · [SFY](themes/sfy)
+Restyle the whole UI. Bundled: **Avicii**, **SFY**, **Plexus**, **Post-Punk**, **Matrix**, **Depeche Mode**. → **[Themes manual](themes/index)**
 
-## Identity Providers (SSO connectors)
+## [Identity Providers (SSO connectors)](idps/index)
 
-See also [IdP integration](../admin/07-idp-integration).
+Sign in with an external identity: **Google** (OIDC), **GitLab** (cloud / self-managed, OIDC), **GitHub** (cloud / Enterprise Server, OAuth2). → **[IdP connectors manual](idps/index)** · see also [IdP integration](../admin/07-idp-integration).
 
-- [Google](idps/google) · [GitLab Cloud](idps/gitlab-cloud) · [GitLab Self-Managed](idps/gitlab-onprem) · [GitHub Cloud](idps/github-cloud) · [GitHub Enterprise Server](idps/github-onprem)
+## [Homepages (landing dashboards)](homepages/index)
 
-## Homepages (landing dashboards)
-
-- [Clusterized](homepages/clusterized) · [Avicii](homepages/avicii) · [Depeche Mode](homepages/depeche-mode) · [Matrix](homepages/matrix)
+Swap the home landing dashboard. Bundled: **Clusterized**, **Avicii**, **Matrix**, **Depeche Mode**. → **[Homepages manual](homepages/index)**
 
 ---
 
