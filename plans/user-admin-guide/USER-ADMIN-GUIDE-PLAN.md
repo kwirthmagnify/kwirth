@@ -189,7 +189,7 @@ Ajustar las secciones según la familia. Ojo: **casi todas las extensiones se co
 - [x] **Cap. 3 (User management)**: corregir "un solo admin" → admin es scope, puede haber varios ✅ (caps. 2 y 3).
 - [x] **Cap. 3 (Create a user)**: explicar cómo se **crean/editan los scopes/resources** (editor: Resource List, NEW/SAVE/REMOVE, multi-select scopes, filtros, doble SAVE) ✅.
 - [x] **Cap. 3 (User management)**: usuarios IdP en detalle (campo IdP, sin password, id=email verificado, binding, ejemplo) ✅ + captura `admin-user-idp`.
-- [~] **Parte III (extensiones) + cap. 8 (Extending)**: managers explicados en **cap. 8** ✅ (Installed/Available, Card/List, Settings ⚙, BROWSE, install/uninstall, dev mode, campos/botones). **Pendiente**: detalle por familia en Parte III (Fase 3).
+- [x] **Parte III (extensiones) + cap. 8 (Extending)**: managers explicados en **cap. 8** ✅ (Installed/Available, Card/List, Settings ⚙, BROWSE, install/uninstall, dev mode, campos/botones). Detalle por familia en Parte III ✅ (plugins ×13, providers ×7, senders ×10, themes ×6, IdPs ×5, homepages ×4 — ficha por ítem con capturas).
 
 ## 7ter. Iconos → emoji por extensión (usar en título/meta de cada ficha)
 
