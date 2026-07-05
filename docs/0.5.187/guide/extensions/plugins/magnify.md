@@ -69,6 +69,25 @@ Each list is a rich, live table. For example, **Workload → Pods**:
 - Create objects directly (**+ New pod**, etc.).
 - Everything updates in real time as the cluster changes.
 
+## View options
+
+The **last icon** in the Magnify window's top bar (the ☰ **list** icon, top-right) opens a **View options** menu that controls how the current artifact list/overview is rendered:
+
+![Magnify view options menu](../../../_media/guide/channel-magnify-viewoptions.png)
+
+| Option | What it does |
+|---|---|
+| **Grid** | Show artifacts as a **grid of cards** (icon tiles). |
+| **List** | Show artifacts as a **dense list/table** (the default). |
+| **Status bar** | Toggle the bottom **status bar** (counts / selection summary). |
+| **Check box** | Show a **selection checkbox** on each row, for multi-select. |
+| **Folder tree** | Toggle the left **folder tree** navigation pane. |
+| **Select all** | Select **every** artifact currently listed. |
+| **Select none** | Clear the current selection. |
+| **Invert selection** | Select the unselected and vice-versa. |
+
+Ticks (✓) mark the currently-active view toggles. **Grid/List** are mutually exclusive; **Status bar / Check box / Folder tree** are independent on/off toggles; the three **Select** actions operate on the current list.
+
 ## Acting on objects
 
 Select an object (or several) and an **action toolbar** appears — this is where Magnify **integrates the other channels**:
@@ -147,7 +166,19 @@ Magnify has **two different full-text searches**, both launched from the **Clust
 
 ### Search (artifacts)
 
-**Search** runs over the **artifacts** (Kubernetes object definitions) in scope — from the Cluster Overview it covers the **whole cluster**. Type a term and it lists every matching object; click a result to jump straight to that object's detail. Refine with **Match case**, **Merge** (combine results) and **Include status** (also search the objects' live status, not just their spec). Use it to find, say, every object carrying a given label or referencing a given ConfigMap.
+**Search** runs over the **artifacts** (Kubernetes object definitions) in scope — opened from the **Cluster → Overview** toolbar it covers the **whole cluster** (the window title reads *"Search — All cluster"*). Type at least **3 characters** and it lists every matching object, showing for each hit **which field matched** (a `metadata.labels…`, `annotations…`, spec path, …) and a running **Results** count; click a result to jump straight to that object's detail:
+
+![Magnify artifact search](../../../_media/guide/channel-magnify-search.png)
+
+Refine the query with:
+
+| Option | What it does |
+|---|---|
+| **Include status** | Also search each object's **live status**, not just its spec/manifest. |
+| **Match case** | Make the search **case-sensitive**. |
+| **Merge repeated results** | Collapse multiple field-hits on the **same object** into one entry. |
+
+Use it to find, say, every object carrying a given label or referencing a given ConfigMap.
 
 ## Kube works — custom actions
 
