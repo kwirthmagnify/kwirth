@@ -18,11 +18,11 @@ These deliver a message to a real destination:
 
 | Sender | Delivers to | Key config |
 |---|---|---|
-| **console** | The Kwirth server's **stdout/stderr**. | *(none — great for testing)* |
-| **file** | A **rotating log file** on the server. | File path, rotation. |
-| **email-smtp** | **Email** via an SMTP server. | Host, port, user, password, from, to. |
-| **email-resend** | **Email** via the **Resend** API. | API key, from, to. |
-| **teams** | A **Microsoft Teams** channel. | Incoming webhook URL. |
+| **[console](console)** | The Kwirth server's **stdout/stderr**. | *(none — great for testing)* |
+| **[file](file)** | A **rotating log file** on the server. | File path, rotation. |
+| **[email-smtp](email-smtp)** | **Email** via an SMTP server. | Host, port, encryption, user, password, from, to. |
+| **[email-resend](email-resend)** | **Email** via the **Resend** API. | API key, from, to. |
+| **[teams](teams)** | A **Microsoft Teams** channel. | Incoming webhook URL. |
 
 ## Pipeline senders
 
@@ -30,11 +30,11 @@ These don't deliver on their own — they **compose or shape** the flow, then pa
 
 | Sender | What it does | Key config |
 |---|---|---|
-| **tee** | Fans an incoming message out to **multiple downstream senders** simultaneously. | List of target `sender::config`. |
-| **regex** | **Routes or drops** messages by **ordered regex rules** evaluated against any message field. | Ordered rules + downstream targets. |
-| **timed** | **Routes or drops** messages by **time-of-day windows** and **day-of-week** rules. | Time windows / days + downstream. |
-| **ratelimit** | **Throttles** delivery to a maximum rate to avoid flooding a destination. | Rate/window + downstream sender. |
-| **composite** | Defines a **complete routing pipeline** as an inline tree of **tee / regex / ref** nodes in a single config. | Pipeline tree. |
+| **[tee](tee)** | Fans an incoming message out to **multiple downstream senders** simultaneously. | List of target `sender::config`. |
+| **[regex](regex)** | **Routes or drops** messages by **ordered regex rules** evaluated against any message field. | Ordered rules + downstream targets. |
+| **[timed](timed)** | **Routes or drops** messages by **time-of-day windows** and **day-of-week** rules. | Time windows / days + downstream. |
+| **[ratelimit](ratelimit)** | **Throttles** delivery to a maximum rate to avoid flooding a destination. | Interval + downstream sender. |
+| **[composite](composite)** | Defines a **complete routing pipeline** as an inline tree of **tee / regex / ref** nodes in a single config. | Pipeline tree (JSON). |
 
 *(Each sender's exhaustive field list lives in the reference [Sender reference](../../senders/reference/index).)*
 
