@@ -4,7 +4,7 @@
 
 ## What it does
 
-The **ratelimit** sender is a **pipeline throttle**: it caps how many messages pass through in a given **interval**, protecting a downstream destination from being flooded (e.g. an alert storm hammering Teams or email).
+The **ratelimit** sender is a **pipeline throttle**: it caps how many messages pass through in a given **interval**, protecting a downstream destination from being flooded (e.g. an alert storm hammering Teams or email). Messages **over** the limit aren't lost — they're **queued and delivered in the next time window**.
 
 ## Configuration
 
@@ -19,7 +19,7 @@ Add it from **☰ → Manage extensions → Senders → ratelimit → ⚙️ →
 ## Notes
 
 - Place a `ratelimit` **in front of** a delivery sender (via **[tee](tee)** / **[composite](composite)**) so bursts are smoothed before they reach the destination.
-- Messages over the limit within an interval are dropped — size the interval to your tolerance.
+- Overflow is **queued**, not dropped — it's delivered in the following window, so nothing is lost, just paced.
 
 ---
 

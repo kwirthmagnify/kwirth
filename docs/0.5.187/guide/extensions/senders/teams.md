@@ -12,7 +12,9 @@ The **webhook URL** is a **shared** connection setting (⚙️ gear next to _Con
 
 ![MS Teams per-config form](../../../_media/guide/sender-teams.png)
 
-**Connection (shared):**
+**Connection (shared)** — the **Base configuration** dialog (⚙️ gear next to _Configs_):
+
+![Teams base configuration](../../../_media/guide/sender-conn-teams.png)
 
 | Field | Type | What it does |
 |---|---|---|

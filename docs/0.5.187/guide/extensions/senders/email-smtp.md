@@ -12,7 +12,9 @@ Its fields split in two groups. The **connection** settings are **shared** acros
 
 ![Email SMTP per-config form](../../../_media/guide/sender-email-smtp.png)
 
-**Connection (shared):**
+**Connection (shared)** — the **Base configuration** dialog (⚙️ gear next to _Configs_):
+
+![SMTP base configuration](../../../_media/guide/sender-conn-smtp.png)
 
 | Field | Type | What it does |
 |---|---|---|

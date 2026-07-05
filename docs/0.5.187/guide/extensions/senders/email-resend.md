@@ -12,7 +12,9 @@ The **connection** fields are **shared** across configs (⚙️ gear next to _Co
 
 ![Email Resend per-config form](../../../_media/guide/sender-email-resend.png)
 
-**Connection (shared):**
+**Connection (shared)** — the **Base configuration** dialog (⚙️ gear next to _Configs_):
+
+![Resend base configuration](../../../_media/guide/sender-conn-resend.png)
 
 | Field | Type | What it does |
 |---|---|---|
