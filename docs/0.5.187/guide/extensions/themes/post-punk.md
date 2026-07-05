@@ -1,6 +1,7 @@
 # Post-Punk (theme)
 
-> **Type:** Theme · **Look:** dark monochrome, acid-green
+> **Type:** Theme<br>
+> **Look:** dark monochrome, acid-green
 
 ## What it looks like
 

@@ -1,6 +1,7 @@
 # Trivy (provider)
 
-> **Type:** Provider (installable) · **Package:** `@kwirthmagnify/kwirth-provider-trivy`
+> **Type:** Provider (installable)<br>
+> **Package:** `@kwirthmagnify/kwirth-provider-trivy`
 
 ## What it does
 

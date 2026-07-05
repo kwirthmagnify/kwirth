@@ -1,6 +1,7 @@
 # Depeche Mode (homepage)
 
-> **Type:** Homepage · **Look:** abyss black, blood red, ASCII bars
+> **Type:** Homepage<br>
+> **Look:** abyss black, blood red, ASCII bars
 
 ## What it shows
 

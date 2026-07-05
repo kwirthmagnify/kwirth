@@ -1,6 +1,7 @@
 # Avicii (homepage)
 
-> **Type:** Homepage · **Look:** warm gold, live metrics
+> **Type:** Homepage<br>
+> **Look:** warm gold, live metrics
 
 ## What it shows
 

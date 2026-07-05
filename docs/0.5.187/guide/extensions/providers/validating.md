@@ -1,6 +1,7 @@
 # Validating (provider)
 
-> **Type:** Provider · **Package:** `@kwirthmagnify/kwirth-provider-validating`
+> **Type:** Provider<br>
+> **Package:** `@kwirthmagnify/kwirth-provider-validating`
 
 ## What it does
 

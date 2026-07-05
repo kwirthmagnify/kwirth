@@ -1,6 +1,7 @@
 # Tick (provider)
 
-> **Type:** Provider · **Package:** `@kwirthmagnify/kwirth-provider-tick`
+> **Type:** Provider<br>
+> **Package:** `@kwirthmagnify/kwirth-provider-tick`
 
 ## What it does
 

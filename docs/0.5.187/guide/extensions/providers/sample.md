@@ -1,6 +1,7 @@
 # Sample (provider)
 
-> **Type:** Provider (reference) · **Package:** `@kwirthmagnify/kwirth-provider-sample`
+> **Type:** Provider (reference)<br>
+> **Package:** `@kwirthmagnify/kwirth-provider-sample`
 
 ## What it does
 

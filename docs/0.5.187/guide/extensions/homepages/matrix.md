@@ -1,6 +1,7 @@
 # Matrix (homepage)
 
-> **Type:** Homepage · **Look:** Matrix-style cluster overview
+> **Type:** Homepage<br>
+> **Look:** Matrix-style cluster overview
 
 ## What it shows
 

@@ -1,6 +1,7 @@
 # SFY (theme)
 
-> **Type:** Theme · **Look:** sky-blue on charcoal
+> **Type:** Theme<br>
+> **Look:** sky-blue on charcoal
 
 ## What it looks like
 

@@ -1,6 +1,7 @@
 # email-smtp (sender)
 
-> **Type:** Sender · **Package:** `@kwirthmagnify/kwirth-sender-email-smtp`
+> **Type:** Sender<br>
+> **Package:** `@kwirthmagnify/kwirth-sender-email-smtp`
 
 ## What it does
 

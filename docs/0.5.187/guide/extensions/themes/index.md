@@ -1,6 +1,7 @@
 # Themes (appearance)
 
-> **Type:** Themes · **Managed from:** ☰ → Manage extensions → Themes
+> **Type:** Themes<br>
+> **Managed from:** ☰ → Manage extensions → Themes
 
 ## What a theme is
 

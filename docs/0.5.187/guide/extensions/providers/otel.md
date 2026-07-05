@@ -1,6 +1,7 @@
 # OpenTelemetry (provider)
 
-> **Type:** Provider (installable) · **Package:** `@kwirthmagnify/kwirth-provider-otel`
+> **Type:** Provider (installable)<br>
+> **Package:** `@kwirthmagnify/kwirth-provider-otel`
 
 ## What it does
 

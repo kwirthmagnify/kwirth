@@ -1,6 +1,7 @@
 # Senders (output destinations)
 
-> **Type:** Senders · **Managed from:** ☰ → Manage extensions → Senders
+> **Type:** Senders<br>
+> **Managed from:** ☰ → Manage extensions → Senders
 
 ## What a sender is
 

@@ -1,6 +1,7 @@
 # composite (sender)
 
-> **Type:** Sender (pipeline) · **Package:** `@kwirthmagnify/kwirth-sender-composite`
+> **Type:** Sender (pipeline)<br>
+> **Package:** `@kwirthmagnify/kwirth-sender-composite`
 
 ## What it does
 

@@ -1,6 +1,8 @@
 # GitLab Self-Managed (IdP connector)
 
-> **Type:** Identity provider connector · **Protocol:** OIDC · **Provider id:** `gitlab-onprem`
+> **Type:** Identity provider connector<br>
+> **Protocol:** OIDC<br>
+> **Provider id:** `gitlab-onprem`
 
 ## What it does
 

@@ -1,6 +1,7 @@
 # Providers (data sources)
 
-> **Type:** Providers · **Managed from:** ☰ → Manage extensions → Providers
+> **Type:** Providers<br>
+> **Managed from:** ☰ → Manage extensions → Providers
 
 ## What a provider is
 

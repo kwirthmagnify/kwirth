@@ -1,6 +1,7 @@
 # Syslog (provider)
 
-> **Type:** Provider (installable) · **Package:** `@kwirthmagnify/kwirth-provider-syslog`
+> **Type:** Provider (installable)<br>
+> **Package:** `@kwirthmagnify/kwirth-provider-syslog`
 
 ## What it does
 

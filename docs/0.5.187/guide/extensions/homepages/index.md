@@ -1,6 +1,7 @@
 # Homepages (landing dashboards)
 
-> **Type:** Homepages · **Managed from:** ☰ → Manage extensions → Homepages
+> **Type:** Homepages<br>
+> **Managed from:** ☰ → Manage extensions → Homepages
 
 ## What a homepage is
 

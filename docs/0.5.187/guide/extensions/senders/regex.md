@@ -1,6 +1,7 @@
 # regex (sender)
 
-> **Type:** Sender (pipeline) · **Package:** `@kwirthmagnify/kwirth-sender-regex`
+> **Type:** Sender (pipeline)<br>
+> **Package:** `@kwirthmagnify/kwirth-sender-regex`
 
 ## What it does
 

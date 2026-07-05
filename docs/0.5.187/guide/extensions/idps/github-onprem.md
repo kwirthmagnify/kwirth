@@ -1,6 +1,8 @@
 # GitHub Enterprise Server (IdP connector)
 
-> **Type:** Identity provider connector · **Protocol:** OAuth2 · **Provider id:** `github-onprem`
+> **Type:** Identity provider connector<br>
+> **Protocol:** OAuth2<br>
+> **Provider id:** `github-onprem`
 
 ## What it does
 

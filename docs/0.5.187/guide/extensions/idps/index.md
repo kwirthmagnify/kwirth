@@ -1,6 +1,7 @@
 # Identity Providers (SSO connectors)
 
-> **Type:** Identity providers · **Managed from:** ☰ → Manage extensions → Identity providers
+> **Type:** Identity providers<br>
+> **Managed from:** ☰ → Manage extensions → Identity providers
 
 ## What an IdP connector is
 

@@ -1,6 +1,8 @@
 # Google (IdP connector)
 
-> **Type:** Identity provider connector · **Protocol:** OIDC · **Provider id:** `google`
+> **Type:** Identity provider connector<br>
+> **Protocol:** OIDC<br>
+> **Provider id:** `google`
 
 ## What it does
 

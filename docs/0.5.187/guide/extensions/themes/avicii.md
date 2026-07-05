@@ -1,6 +1,7 @@
 # Avicii (theme)
 
-> **Type:** Theme · **Look:** dark geometric, warm gold
+> **Type:** Theme<br>
+> **Look:** dark geometric, warm gold
 
 ## What it looks like
 

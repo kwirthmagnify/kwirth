@@ -1,6 +1,7 @@
 # console (sender)
 
-> **Type:** Sender · **Package:** `@kwirthmagnify/kwirth-sender-console`
+> **Type:** Sender<br>
+> **Package:** `@kwirthmagnify/kwirth-sender-console`
 
 ## What it does
 

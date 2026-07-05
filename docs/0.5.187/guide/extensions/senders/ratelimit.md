@@ -1,6 +1,7 @@
 # ratelimit (sender)
 
-> **Type:** Sender (pipeline) · **Package:** `@kwirthmagnify/kwirth-sender-ratelimit`
+> **Type:** Sender (pipeline)<br>
+> **Package:** `@kwirthmagnify/kwirth-sender-ratelimit`
 
 ## What it does
 

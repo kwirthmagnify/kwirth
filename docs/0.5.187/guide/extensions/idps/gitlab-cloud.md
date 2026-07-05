@@ -1,6 +1,8 @@
 # GitLab Cloud (IdP connector)
 
-> **Type:** Identity provider connector · **Protocol:** OIDC · **Provider id:** `gitlab-cloud`
+> **Type:** Identity provider connector<br>
+> **Protocol:** OIDC<br>
+> **Provider id:** `gitlab-cloud`
 
 ## What it does
 

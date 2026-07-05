@@ -1,6 +1,7 @@
 # Depeche Mode (theme)
 
-> **Type:** Theme · **Look:** abyss black, blood red, bone
+> **Type:** Theme<br>
+> **Look:** abyss black, blood red, bone
 
 ## What it looks like
 

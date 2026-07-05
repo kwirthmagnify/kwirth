@@ -1,6 +1,7 @@
 # timed (sender)
 
-> **Type:** Sender (pipeline) · **Package:** `@kwirthmagnify/kwirth-sender-timed`
+> **Type:** Sender (pipeline)<br>
+> **Package:** `@kwirthmagnify/kwirth-sender-timed`
 
 ## What it does
 

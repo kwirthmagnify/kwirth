@@ -1,6 +1,7 @@
 # Kafka (provider)
 
-> **Type:** Provider (installable) · **Package:** `@kwirthmagnify/kwirth-provider-kafka`
+> **Type:** Provider (installable)<br>
+> **Package:** `@kwirthmagnify/kwirth-provider-kafka`
 
 ## What it does
 

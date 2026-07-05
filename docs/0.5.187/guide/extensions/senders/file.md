@@ -1,6 +1,7 @@
 # file (sender)
 
-> **Type:** Sender · **Package:** `@kwirthmagnify/kwirth-sender-file`
+> **Type:** Sender<br>
+> **Package:** `@kwirthmagnify/kwirth-sender-file`
 
 ## What it does
 

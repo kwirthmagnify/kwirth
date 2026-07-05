@@ -1,6 +1,7 @@
 # email-resend (sender)
 
-> **Type:** Sender · **Package:** `@kwirthmagnify/kwirth-sender-email-resend`
+> **Type:** Sender<br>
+> **Package:** `@kwirthmagnify/kwirth-sender-email-resend`
 
 ## What it does
 

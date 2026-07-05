@@ -1,6 +1,7 @@
 # Clusterized (homepage)
 
-> **Type:** Homepage · **Look:** one row per cluster
+> **Type:** Homepage<br>
+> **Look:** one row per cluster
 
 ## What it shows
 

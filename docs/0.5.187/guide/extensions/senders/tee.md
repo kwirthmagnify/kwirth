@@ -1,6 +1,7 @@
 # tee (sender)
 
-> **Type:** Sender (pipeline) · **Package:** `@kwirthmagnify/kwirth-sender-tee`
+> **Type:** Sender (pipeline)<br>
+> **Package:** `@kwirthmagnify/kwirth-sender-tee`
 
 ## What it does
 

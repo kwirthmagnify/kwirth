@@ -1,6 +1,7 @@
 # Plexus (theme)
 
-> **Type:** Theme · **Look:** corporate navy + coral
+> **Type:** Theme<br>
+> **Look:** corporate navy + coral
 
 ## What it looks like
 

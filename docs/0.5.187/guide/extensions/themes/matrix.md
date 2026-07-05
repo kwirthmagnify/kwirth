@@ -1,6 +1,7 @@
 # Matrix (theme)
 
-> **Type:** Theme · **Look:** black + green, monospace
+> **Type:** Theme<br>
+> **Look:** black + green, monospace
 
 ## What it looks like
 

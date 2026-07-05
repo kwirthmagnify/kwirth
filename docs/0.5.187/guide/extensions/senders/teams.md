@@ -1,6 +1,7 @@
 # teams (sender)
 
-> **Type:** Sender · **Package:** `@kwirthmagnify/kwirth-sender-teams`
+> **Type:** Sender<br>
+> **Package:** `@kwirthmagnify/kwirth-sender-teams`
 
 ## What it does
 
