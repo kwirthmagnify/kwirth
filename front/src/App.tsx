@@ -1727,7 +1727,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             if (cluster && cluster.kwirthData)  {
                 cluster.kwirthData.metricsInterval = readMetricsInterval
                 let payload = JSON.stringify( { metricsInterval: readMetricsInterval } )
-                fetch (`${cluster.url}/metrics/config`, addPostAuthorization(cluster.accessString, payload))
+                fetch (`${cluster.url}/provider/metrics/config`, addPostAuthorization(cluster.accessString, payload))
             }
         }
     }
@@ -2092,7 +2092,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                     const cluster = clusters.find(c => c.name === clusterName)
                                     if (!cluster) return null
                                     try {
-                                        const res = await fetch(`${cluster.url}/metrics/usage/cluster`, addGetAuthorization(cluster.accessString))
+                                        const res = await fetch(`${cluster.url}/provider/metrics/usage/cluster`, addGetAuthorization(cluster.accessString))
                                         if (!res.ok) return null
                                         const data = await res.json()
                                         return { cpu: data.cpuUsage as number, memory: data.memoryUsage as number, vcpus: data.vcpus as number, totalMemoryBytes: data.memory as number, pods: data.pods as number, maxPods: data.maxPods as number }

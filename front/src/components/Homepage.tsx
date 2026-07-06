@@ -51,7 +51,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
         if (!targetCluster) return;
 
         const i = setInterval((c: Cluster) => {
-            fetch(`${c.url}/metrics/usage/cluster`, addGetAuthorization(c.accessString))
+            fetch(`${c.url}/provider/metrics/usage/cluster`, addGetAuthorization(c.accessString))
                 .then((result) => {
                     if (!result.ok) throw new Error('Error getting cluster usage')
                     return result.json()
