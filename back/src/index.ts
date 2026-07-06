@@ -1216,7 +1216,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         channelInstance.startChannel()
                         if ((channelInstance as any).providesRouter && (channelInstance as any).router) {
                             const alias = (channelInstance as any).routerAlias
-                            const mountPath = alias ? `${envRootPath}/${alias}` : `${envRootPath}/${activeRI.id}/channel/${id}`
+                            const mountPath = alias ? `${envRootPath}/channel/${alias}` : `${envRootPath}/${activeRI.id}/channel/${id}`
                             expressApp.use(mountPath, (channelInstance as any).router)
                             logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP router mounted at '${mountPath}'`)
                         }
@@ -1386,7 +1386,7 @@ const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
         }
         if ((channel as any).providesRouter && (channel as any).router) {
             const alias = (channel as any).routerAlias
-            const mountPath = alias ? `${envRootPath}/${alias}` : `${envRootPath}/${ri.id}/channel/${channelData.id}`
+            const mountPath = alias ? `${envRootPath}/channel/${alias}` : `${envRootPath}/${ri.id}/channel/${channelData.id}`
             expressApp.use(mountPath, (channel as any).router)
             logInfo(ELogComponent.CORE, `Channel '${channelData.id}' HTTP router mounted at '${mountPath}'`)
         }
