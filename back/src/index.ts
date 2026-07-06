@@ -40,6 +40,8 @@ import * as _kwirthCommon from '@kwirthmagnify/kwirth-common'
 import * as _kwirthCommonBack from '@kwirthmagnify/kwirth-common-back'
 import * as _kwirthCommonAi from '@kwirthmagnify/kwirth-common-ai'
 import * as _kwirthCommonAiBack from '@kwirthmagnify/kwirth-common-ai/back'
+import * as _kwirthCommonSql from '@kwirthmagnify/kwirth-common-sql/back'
+import { ISqlServer } from '@kwirthmagnify/kwirth-common-sql'
 import { IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
@@ -89,7 +91,23 @@ const fs = require('fs')
 // }
 
 // Expose shared packages as Node globals so plugins can use them without bundling
-;(global as any).__kwirth_back__ = { kwirthCommon: _kwirthCommon, kwirthCommonBack: _kwirthCommonBack, kwirthCommonAi: _kwirthCommonAi, kwirthCommonAiBack: _kwirthCommonAiBack, express }
+;(global as any).__kwirth_back__ = { kwirthCommon: _kwirthCommon, kwirthCommonBack: _kwirthCommonBack, kwirthCommonAi: _kwirthCommonAi, kwirthCommonAiBack: _kwirthCommonAiBack, kwirthCommonSql: _kwirthCommonSql, express }
+
+// common-sql: servicio de almacenamiento relacional. Se fija la conexión al servidor SQL al arranque
+// (env KWIRTH_SQL_*; override por secret/front -> fase posterior). Es lazy: no conecta hasta que un
+// consumidor llame ensureDb(), así que no falla el arranque aunque el SQL no esté disponible todavía.
+const _sqlServer: ISqlServer = {
+    id: 'default',
+    name: 'default',
+    client: process.env.KWIRTH_SQL_CLIENT || 'pg',
+    host: process.env.KWIRTH_SQL_HOST || 'localhost',
+    port: Number(process.env.KWIRTH_SQL_PORT || 5432),
+    user: process.env.KWIRTH_SQL_USER || 'postgres',
+    password: process.env.KWIRTH_SQL_PASSWORD || '',
+    ssl: process.env.KWIRTH_SQL_SSL === 'true',
+    maintenanceDb: process.env.KWIRTH_SQL_MAINTDB || 'postgres'
+}
+_kwirthCommonSql.configure(_sqlServer)
 
 const runningEnv = {
   isDesktop: process.env.FORCE==='desktop' || !!(process.versions && (process.versions as any).electron) || !!(globalThis as any).__TAURI__,
