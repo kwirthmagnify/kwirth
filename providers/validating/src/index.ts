@@ -9,7 +9,7 @@ export class ValidatingProvider implements IProvider {
     public readonly id = 'validating'
     public readonly providesRouter = true
     public router = express.Router()
-    public routerAlias = undefined
+    public routerAlias = 'validating'
     public readonly requiresApiKeyApi = false
     public apiKeyApi = undefined
 
