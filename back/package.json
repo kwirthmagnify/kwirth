@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc && esbuild dist/index.js --bundle --platform=node --target=node24 --outfile=bundle/bundle.js --external:cpu-features",
+    "build": "tsc && esbuild dist/index.js --bundle --platform=node --target=node24 --outfile=bundle/bundle.js --external:cpu-features --external:better-sqlite3 --external:sqlite3 --external:mysql2 --external:mysql --external:mariadb --external:mariadb/callback --external:tedious --external:oracledb --external:pg-query-stream --external:pg-native",
     "postbuild": "node -e \"const{cpSync}=require('fs');cpSync('kwirth-bundled.json','../docker/kwirth-bundled.json');cpSync('../scripts/fetch-bundled.mjs','../docker/fetch-bundled.mjs');console.log('Bundled extensions files copied to docker context.');\"",
     "start": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" nodemon src/index.ts",
     "start:kubernetes": "cross-env NODE_OPTIONS=\"--expose-gc --heapsnapshot-near-heap-limit=1 --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=k8s nodemon src/index.ts",
