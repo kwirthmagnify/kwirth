@@ -26,3 +26,20 @@ export interface ILlm {
     outputCostPerMillion?: number
     data?: unknown
 }
+
+export const STORAGE_KEY_AGENTS = 'kwirth-ai-agents'
+
+// An AI agent (bot) is config, not code: a row over the existing engine (buildModel + tools + runAgent).
+// Reusable by Agora, pinocchio and defender.
+export interface IAgent {
+    id: string
+    name: string
+    description: string
+    cluster: string
+    llm: string
+    system: string
+    tools: string[]
+    autoTools: boolean
+    steps: number
+    readOnly: boolean
+}

@@ -3,7 +3,8 @@
   "version": "0.5.22",
   "description": "Shared AI/LLM types and utilities for Kwirth AI plugins",
   "scripts": {
-    "build": "del .\\dist\\* /s /q 2>nul & tsc"
+    "build": "del .\\dist\\* /s /q 2>nul & tsc",
+    "test": "node --test tests/agent.test.mjs"
   },
   "publishConfig": {
     "access": "public"

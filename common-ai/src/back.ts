@@ -1,6 +1,6 @@
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common'
-import { ILlm, ILlmModel, ILlmProvider } from './index'
-import { LanguageModel, tool } from 'ai'
+import { ILlm, ILlmModel, ILlmProvider, IAgent } from './index'
+import { LanguageModel, tool, generateText, stepCountIs } from 'ai'
 import { z } from 'zod'
 import { AsyncLocalStorage } from 'async_hooks'
 import { exec } from 'child_process'
@@ -141,9 +141,17 @@ export interface IToolContext {
     trace: (toolName: string, args: Record<string, unknown>) => void
 }
 
+// Effect of a tool: READ (safe, informational) or WRITE (has side effects on the cluster).
+// Dual purpose: hints the LLM, and gates authorization (Agora/readOnly filter out WRITE).
+export enum EToolEffect {
+    READ = 'read',
+    WRITE = 'write'
+}
+
 export interface IToolInfo {
     name: string
     description: string
+    effect: EToolEffect
 }
 
 const toolContextStorage = new AsyncLocalStorage<IToolContext>()
@@ -568,29 +576,90 @@ export const tools = {
 } as const
 
 export const toolInfoList: IToolInfo[] = [
-    { name: 'list_namespaces',           description: 'Lists all namespaces in the cluster with their status and labels.' },
-    { name: 'get_node_data',             description: 'Returns configuration info about all Kubernetes nodes (name, IP). Configuration only — not workload or usage data.' },
-    { name: 'get_cluster_data',          description: 'Returns general cluster info: name, flavour (AKS/EKS/GKE/k3s/k3d), total vCPUs, total memory, node count and readiness status.' },
-    { name: 'get_workload_data',         description: 'Returns all workloads in the cluster: deployments, statefulsets, daemonsets, pods and services. Optionally filter by namespace.' },
-    { name: 'get_space_data',            description: 'Returns all resources in a specific Kubernetes namespace: pods (with restart count), deployments, services, configmap names.' },
-    { name: 'get_service_yaml',          description: 'Returns the full Kubernetes Service manifest (equivalent to kubectl get service -o yaml) for a given namespace and service name.' },
-    { name: 'list_services',             description: 'Lists all Services in the cluster with full details (type, clusterIP, ports, selector). Optionally filter by namespace.' },
-    { name: 'list_ingresses',            description: 'Lists all Ingresses in the cluster (hosts, paths, TLS, backend services). Optionally filter by namespace.' },
-    { name: 'get_ingress_yaml',          description: 'Returns the full Kubernetes Ingress manifest (equivalent to kubectl get ingress -o yaml) for a given namespace and ingress name.' },
-    { name: 'get_cluster_usage',         description: 'Returns current overall cluster resource usage: CPU%, memory%, network Mbps, total vCPUs and total memory GB.' },
-    { name: 'get_node_usage',            description: 'Returns current CPU and memory usage for one node or all nodes from the latest metrics reading.' },
-    { name: 'get_deployment_usage',      description: 'Returns current aggregated CPU and memory usage for all pods belonging to a specific deployment.' },
-    { name: 'get_prev_cluster_usage',    description: 'Returns historical overall cluster usage over the last N metrics readings (CPU%, memory%, network Mbps).' },
-    { name: 'get_prev_node_usage',       description: 'Returns historical CPU and memory usage for one or all nodes over the last N metrics readings.' },
-    { name: 'get_prev_deployment_usage', description: 'Returns historical aggregated CPU and memory usage for a deployment over the last N metrics readings.' },
-    { name: 'get_prev_space_data',       description: 'Returns historical aggregated CPU and memory usage for all pods in a namespace over the last N metrics readings.' },
-    { name: 'add_node',                  description: 'Adds a new agent node to the cluster. For k3d uses `k3d node create`. Cloud providers not yet implemented.' },
-    { name: 'remove_node',               description: 'Removes a node from the cluster (cordon + delete). For k3d uses `k3d node delete`. Cloud providers not yet implemented.' },
-    { name: 'stop_node',                 description: 'Stops a running cluster node: cordons it then stops the container. For k3d uses `k3d node stop`.' },
-    { name: 'start_node',                description: 'Starts a previously stopped cluster node and uncordons it. For k3d uses `k3d node start`.' },
-    { name: 'add_replica',               description: 'Scales up a deployment by adding one replica.' },
-    { name: 'remove_replica',            description: 'Scales down a deployment by removing one replica. Minimum of 1 replica is enforced.' },
-    { name: 'times_two',                 description: 'Multiplies a number by two.' },
-    { name: 'father_of',                 description: 'Returns the name of the father of a person.' },
-    { name: 'get_certificate_info',      description: 'Connects to a hostname via HTTPS and returns TLS certificate details: subject, issuer, validity dates, SANs, fingerprint and whether it is currently valid.' },
+    { name: 'list_namespaces',           effect: EToolEffect.READ,  description: 'Lists all namespaces in the cluster with their status and labels.' },
+    { name: 'get_node_data',             effect: EToolEffect.READ,  description: 'Returns configuration info about all Kubernetes nodes (name, IP). Configuration only — not workload or usage data.' },
+    { name: 'get_cluster_data',          effect: EToolEffect.READ,  description: 'Returns general cluster info: name, flavour (AKS/EKS/GKE/k3s/k3d), total vCPUs, total memory, node count and readiness status.' },
+    { name: 'get_workload_data',         effect: EToolEffect.READ,  description: 'Returns all workloads in the cluster: deployments, statefulsets, daemonsets, pods and services. Optionally filter by namespace.' },
+    { name: 'get_space_data',            effect: EToolEffect.READ,  description: 'Returns all resources in a specific Kubernetes namespace: pods (with restart count), deployments, services, configmap names.' },
+    { name: 'get_service_yaml',          effect: EToolEffect.READ,  description: 'Returns the full Kubernetes Service manifest (equivalent to kubectl get service -o yaml) for a given namespace and service name.' },
+    { name: 'list_services',             effect: EToolEffect.READ,  description: 'Lists all Services in the cluster with full details (type, clusterIP, ports, selector). Optionally filter by namespace.' },
+    { name: 'list_ingresses',            effect: EToolEffect.READ,  description: 'Lists all Ingresses in the cluster (hosts, paths, TLS, backend services). Optionally filter by namespace.' },
+    { name: 'get_ingress_yaml',          effect: EToolEffect.READ,  description: 'Returns the full Kubernetes Ingress manifest (equivalent to kubectl get ingress -o yaml) for a given namespace and ingress name.' },
+    { name: 'get_cluster_usage',         effect: EToolEffect.READ,  description: 'Returns current overall cluster resource usage: CPU%, memory%, network Mbps, total vCPUs and total memory GB.' },
+    { name: 'get_node_usage',            effect: EToolEffect.READ,  description: 'Returns current CPU and memory usage for one node or all nodes from the latest metrics reading.' },
+    { name: 'get_deployment_usage',      effect: EToolEffect.READ,  description: 'Returns current aggregated CPU and memory usage for all pods belonging to a specific deployment.' },
+    { name: 'get_prev_cluster_usage',    effect: EToolEffect.READ,  description: 'Returns historical overall cluster usage over the last N metrics readings (CPU%, memory%, network Mbps).' },
+    { name: 'get_prev_node_usage',       effect: EToolEffect.READ,  description: 'Returns historical CPU and memory usage for one or all nodes over the last N metrics readings.' },
+    { name: 'get_prev_deployment_usage', effect: EToolEffect.READ,  description: 'Returns historical aggregated CPU and memory usage for a deployment over the last N metrics readings.' },
+    { name: 'get_prev_space_data',       effect: EToolEffect.READ,  description: 'Returns historical aggregated CPU and memory usage for all pods in a namespace over the last N metrics readings.' },
+    { name: 'add_node',                  effect: EToolEffect.WRITE, description: 'Adds a new agent node to the cluster. For k3d uses `k3d node create`. Cloud providers not yet implemented.' },
+    { name: 'remove_node',               effect: EToolEffect.WRITE, description: 'Removes a node from the cluster (cordon + delete). For k3d uses `k3d node delete`. Cloud providers not yet implemented.' },
+    { name: 'stop_node',                 effect: EToolEffect.WRITE, description: 'Stops a running cluster node: cordons it then stops the container. For k3d uses `k3d node stop`.' },
+    { name: 'start_node',                effect: EToolEffect.WRITE, description: 'Starts a previously stopped cluster node and uncordons it. For k3d uses `k3d node start`.' },
+    { name: 'add_replica',               effect: EToolEffect.WRITE, description: 'Scales up a deployment by adding one replica.' },
+    { name: 'remove_replica',            effect: EToolEffect.WRITE, description: 'Scales down a deployment by removing one replica. Minimum of 1 replica is enforced.' },
+    { name: 'times_two',                 effect: EToolEffect.READ,  description: 'Multiplies a number by two.' },
+    { name: 'father_of',                 effect: EToolEffect.READ,  description: 'Returns the name of the father of a person.' },
+    { name: 'get_certificate_info',      effect: EToolEffect.READ,  description: 'Connects to a hostname via HTTPS and returns TLS certificate details: subject, issuer, validity dates, SANs, fingerprint and whether it is currently valid.' },
 ]
+
+// ── AGENT ENGINE ─────────────────────────────────────────────────────────────
+
+export interface IAgentRunResult {
+    text: string
+    inputTokens: number
+    outputTokens: number
+    steps: number
+    toolCalls: string[]
+}
+
+// Resolves the tool names an agent may use: autoTools = full catalog, otherwise its own list
+// (intersected with the catalog); readOnly filters out WRITE-effect tools. Pure (no LLM) → unit-testable.
+export const selectAgentToolNames = (agent: IAgent): string[] => {
+    const writeNames = new Set(toolInfoList.filter(t => t.effect === EToolEffect.WRITE).map(t => t.name))
+    const catalogNames = toolInfoList.map(t => t.name)
+    const wanted = agent.autoTools ? catalogNames : agent.tools.filter(n => catalogNames.includes(n))
+    return wanted.filter(n => !(agent.readOnly && writeNames.has(n)))
+}
+
+// Runs an IAgent: resolves its LLM, selects/filters its tools (readOnly drops WRITE-effect tools) and
+// invokes the model within the k8s tool context. Wraps the existing engine (buildModel + generateText +
+// runWithToolContext) — factors the pattern pinocchio does by hand, reusable by Agora/pinocchio/defender.
+// No providerOptions here: pinocchio's are for structured output; a chat/tool agent returns free text.
+export const runAgent = async (
+    agent: IAgent,
+    prompt: string,
+    llms: ILlm[],
+    providers: ILlmProvider[],
+    context: IToolContext
+): Promise<IAgentRunResult> => {
+    const llm = llms.find(l => l.id === agent.llm)
+    if (!llm) throw new Error(`[common-ai] runAgent: llm '${agent.llm}' not found`)
+    const model = buildModel(llm, providers)
+    if (!model) throw new Error(`[common-ai] runAgent: could not build model for llm '${agent.llm}'`)
+
+    const allowed = new Set(selectAgentToolNames(agent))
+    const selectedTools = Object.fromEntries(Object.entries(tools).filter(([n]) => allowed.has(n)))
+
+    const result = await runWithToolContext(context, () => generateText({
+        model,
+        temperature: llm.temperature,
+        stopWhen: stepCountIs(agent.steps || 15),
+        tools: selectedTools,
+        system: agent.system,
+        prompt
+    }))
+
+    const toolCalls: string[] = []
+    for (const step of (result.steps ?? [])) {
+        const s = step as unknown as { toolCalls?: { toolName: string }[] }
+        for (const call of (s.toolCalls ?? [])) toolCalls.push(call.toolName)
+    }
+    return {
+        text: result.text,
+        inputTokens: result.usage?.inputTokens ?? 0,
+        outputTokens: result.usage?.outputTokens ?? 0,
+        steps: result.steps?.length ?? 0,
+        toolCalls
+    }
+}
