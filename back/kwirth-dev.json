@@ -12,7 +12,8 @@
     "kafka": "../providers/kafka/dist",
     "otel": "../providers/otel/dist",
     "syslog": "../providers/syslog/dist",
-    "trivy": "../providers/trivy/dist"
+    "trivy": "../providers/trivy/dist",
+    "business": "../providers/business/dist"
   },
   "senders": {
     "console": "../senders/console/dist",

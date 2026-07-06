@@ -61,7 +61,6 @@ import * as crypto from 'crypto'
 
 import { createProviderInstance, TProviderConstructor } from './providers/IProvider'
 import { EventsProvider } from './providers/events/EventsProvider'
-import { BusinessProvider } from './providers/business/BusinessProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
 
 import { ELogComponent, logError, logInfo, logTrace, logWarning, setLogConfig } from './tools/Logging'
@@ -161,7 +160,6 @@ licenseManager.load()
 
 const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
-registeredProviders.set('business', BusinessProvider)
 registeredProviders.set('metrics', MetricsProvider)
 
 // registry de conectores de IdP (bundled se registran en codigo; dev via loadDevIdps; instalables en EPIC G)
@@ -1214,7 +1212,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                                 }
                             }
                             if (providerInstance && providerInstance.providesRouter && providerInstance.router && !providerInstance.started) {
-                                const provPath = providerInstance.routerAlias ? `/${providerInstance.routerAlias}` : `/${activeRI.id}/provider/${providerInstance.id}`
+                                const provPath = providerInstance.routerAlias ? `/provider/${providerInstance.routerAlias}` : `/${activeRI.id}/provider/${providerInstance.id}`
                                 riRouter.use(provPath, providerInstance.router)
                                 providerInstance.started = true
                                 logInfo(ELogComponent.CORE, `Provider '${provId}' HTTP router registered at '${provPath}'`)
@@ -1388,7 +1386,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     // else
                     //     path = `${envRootPath}/${ri.id}/provider/${provider.id}`
                     if (provider.routerAlias)
-                        path = `/${provider.routerAlias}`
+                        path = `/provider/${provider.routerAlias}`
                     else
                         path = `/${ri.id}/provider/${provider.id}`
                     riRouter.use(path, provider.router)
