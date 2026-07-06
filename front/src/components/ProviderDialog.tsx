@@ -11,7 +11,7 @@ declare global { interface Window { __kwirth_providers__: Record<string, any> } 
 const PROVIDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json'
 
 interface IRequirement {
-    type: 'plugin' | 'daemon' | 'sender' | 'provider'
+    type: 'plugin' | 'sender' | 'provider'
     id: string
     minVersion: string
 }
@@ -175,7 +175,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
             setAvailable(data)
             const neededTypes = new Set(data.flatMap(e => e.requires ?? []).map(r => r.type).filter(t => t !== 'provider'))
             if (neededTypes.size > 0) {
-                const endpoints: Record<string, string> = { plugin: `${backendUrl}/plugins`, daemon: `${backendUrl}/daemons`, sender: `${backendUrl}/senders` }
+                const endpoints: Record<string, string> = { plugin: `${backendUrl}/plugins`, sender: `${backendUrl}/senders` }
                 const results: Record<string, { id: string, version: string }[]> = {}
                 await Promise.all([...neededTypes].map(async t => {
                     try { const r = await fetch(endpoints[t], addGetAuthorization(accessString)); if (r.ok) results[t] = await r.json() } catch {}

@@ -86,7 +86,6 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManagePlugins)}><Extension />&nbsp;Plugins</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageProviders)}><Factory />&nbsp;Providers</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageSenders)}><Send />&nbsp;Senders</MenuItem>
-                            {/* <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageDaemons)}><Extension />&nbsp;Daemons</MenuItem> */}
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageThemes)}><Palette />&nbsp;Themes</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageHomepages)}><Home />&nbsp;Homepages</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageIdps)}><Key />&nbsp;Identity providers</MenuItem>

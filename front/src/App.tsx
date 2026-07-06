@@ -48,7 +48,6 @@ import { PluginDialog } from './components/PluginDialog'
 import { ProviderDialog } from './components/ProviderDialog'
 import { ManageIdps } from './components/ManageIdps'
 import { SenderDialog } from './components/SenderDialog'
-// import { DaemonDialog } from './components/DaemonDialog'
 import { ThemeDialog } from './components/ThemeDialog'
 import { HomepageDialog } from './components/HomepageDialog'
 import { IHomepageExtension } from '@kwirthmagnify/kwirth-common-front'
@@ -522,14 +521,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             (async () => {
                 const MANIFESTS: Record<string, string> = {
                     plugin:   'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/plugins/manifest.json',
-                    daemon:   'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/daemons/manifest.json',
                     sender:   'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/senders/manifest.json',
                     provider: 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json',
                     theme:    'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/themes/manifest.json',
                 }
                 const ENDPOINTS: Record<string, string> = {
                     plugin:   `${backendUrl}/plugins`,
-                    daemon:   `${backendUrl}/daemons`,
                     sender:   `${backendUrl}/senders`,
                     provider: `${backendUrl}/providers`,
                     theme:    `${backendUrl}/themes`,
@@ -2144,7 +2141,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showProviderDialog && <ProviderDialog onClose={() => setShowProviderDialog(false)} /> }
                 { showManageIdps && <ManageIdps onClose={() => setShowManageIdps(false)} /> }
                 { showSenderDialog && <SenderDialog onClose={() => setShowSenderDialog(false)} /> }
-                {/* { showDaemonDialog && <DaemonDialog onClose={() => setShowDaemonDialog(false)} /> } */}
                 { showThemeDialog && <ThemeDialog onClose={() => setShowThemeDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} /> }
                 { showHomepageDialog && <HomepageDialog onClose={() => setShowHomepageDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} /> }
                 { showChannelSetup() }

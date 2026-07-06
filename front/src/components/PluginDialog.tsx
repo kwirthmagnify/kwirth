@@ -10,7 +10,7 @@ import { useKeyboard } from '../tools/useKeyboard'
 const PLUGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/plugins/manifest.json'
 
 interface IRequirement {
-    type: 'plugin' | 'daemon' | 'sender' | 'provider'
+    type: 'plugin' | 'sender' | 'provider'
     id: string
     minVersion: string
 }
@@ -103,7 +103,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
             setAvailable(data)
             const neededTypes = new Set(data.flatMap(e => e.requires ?? []).map(r => r.type).filter(t => t !== 'plugin'))
             if (neededTypes.size > 0) {
-                const endpoints: Record<string, string> = { daemon: `${backendUrl}/daemons`, sender: `${backendUrl}/senders`, provider: `${backendUrl}/providers` }
+                const endpoints: Record<string, string> = { sender: `${backendUrl}/senders`, provider: `${backendUrl}/providers` }
                 const results: Record<string, { id: string, version: string }[]> = {}
                 await Promise.all([...neededTypes].map(async t => {
                     try { const r = await fetch(endpoints[t], addGetAuthorization(accessString)); if (r.ok) results[t] = await r.json() } catch {}

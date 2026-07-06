@@ -1,5 +1,4 @@
 export * from './IChannel'
-export * from './IDaemon'
 export * from './IProvider'
 export * from './ISender'
 export * from './IIdpConnector'

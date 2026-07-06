@@ -25,7 +25,7 @@ interface ISenderFieldDef {
 }
 
 interface IRequirement {
-    type: 'plugin' | 'daemon' | 'sender' | 'provider'
+    type: 'plugin' | 'sender' | 'provider'
     id: string
     minVersion: string
 }
@@ -158,7 +158,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             setAvailable(data)
             const neededTypes = new Set(data.flatMap(e => e.requires ?? []).map(r => r.type).filter(t => t !== 'sender'))
             if (neededTypes.size > 0) {
-                const endpoints: Record<string, string> = { plugin: `${backendUrl}/plugins`, daemon: `${backendUrl}/daemons`, provider: `${backendUrl}/providers` }
+                const endpoints: Record<string, string> = { plugin: `${backendUrl}/plugins`, provider: `${backendUrl}/providers` }
                 const results: Record<string, { id: string, version: string }[]> = {}
                 await Promise.all([...neededTypes].map(async t => {
                     try { const r = await fetch(endpoints[t], addGetAuthorization(accessString)); if (r.ok) results[t] = await r.json() } catch {}

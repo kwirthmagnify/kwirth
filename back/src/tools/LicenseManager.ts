@@ -7,7 +7,7 @@ const LICENSE_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 REPLACE_WITH_YOUR_PUBLIC_KEY
 -----END PUBLIC KEY-----`
 
-type ExtensionType = 'channels' | 'daemons' | 'providers' | 'senders' | 'homepages' | 'themes'
+type ExtensionType = 'channels' | 'providers' | 'senders' | 'homepages' | 'themes'
 
 interface ILicensePayload {
     customerId: string
