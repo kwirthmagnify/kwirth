@@ -1,6 +1,7 @@
 [
   {
     "id": "ratelimit",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-ratelimit",
     "displayName": "Rate Limit",
     "version": "0.1.1",
@@ -9,6 +10,7 @@
   },
   {
     "id": "console",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-console",
     "displayName": "Console",
     "version": "0.1.6",
@@ -17,6 +19,7 @@
   },
   {
     "id": "email-resend",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-resend",
     "displayName": "Email (Resend)",
     "version": "0.1.6",
@@ -26,6 +29,7 @@
   },
   {
     "id": "email-smtp",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-smtp",
     "displayName": "Email (SMTP)",
     "version": "0.1.6",
@@ -34,6 +38,7 @@
   },
   {
     "id": "file",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-file",
     "displayName": "File",
     "version": "0.1.6",
@@ -42,6 +47,7 @@
   },
   {
     "id": "regex",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-regex",
     "displayName": "Regex",
     "version": "0.1.7",
@@ -50,6 +56,7 @@
   },
   {
     "id": "teams",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-teams",
     "displayName": "MS Teams",
     "version": "0.1.7",
@@ -58,6 +65,7 @@
   },
   {
     "id": "tee",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-tee",
     "displayName": "Tee",
     "version": "0.1.6",
@@ -66,6 +74,7 @@
   },
   {
     "id": "timed",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-timed",
     "displayName": "Timed",
     "version": "0.1.7",
@@ -74,6 +83,7 @@
   },
   {
     "id": "ratelimit",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-ratelimit",
     "displayName": "Rate Limit",
     "version": "0.1.0",
@@ -82,6 +92,7 @@
   },
   {
     "id": "composite",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-composite",
     "displayName": "Composite",
     "version": "0.1.7",
@@ -90,6 +101,7 @@
   },
   {
     "id": "composite",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-composite",
     "displayName": "Composite",
     "version": "0.1.6",
@@ -98,6 +110,7 @@
   },
   {
     "id": "console",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-console",
     "displayName": "Console",
     "version": "0.1.5",
@@ -106,6 +119,7 @@
   },
   {
     "id": "email-resend",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-resend",
     "displayName": "Email (Resend)",
     "version": "0.1.5",
@@ -115,6 +129,7 @@
   },
   {
     "id": "email-smtp",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-smtp",
     "displayName": "Email (SMTP)",
     "version": "0.1.5",
@@ -123,6 +138,7 @@
   },
   {
     "id": "file",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-file",
     "displayName": "File",
     "version": "0.1.5",
@@ -131,6 +147,7 @@
   },
   {
     "id": "regex",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-regex",
     "displayName": "Regex",
     "version": "0.1.6",
@@ -139,6 +156,7 @@
   },
   {
     "id": "teams",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-teams",
     "displayName": "MS Teams",
     "version": "0.1.6",
@@ -147,6 +165,7 @@
   },
   {
     "id": "tee",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-tee",
     "displayName": "Tee",
     "version": "0.1.5",
@@ -155,6 +174,7 @@
   },
   {
     "id": "timed",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-timed",
     "displayName": "Timed",
     "version": "0.1.6",
@@ -163,6 +183,7 @@
   },
   {
     "id": "composite",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-composite",
     "displayName": "Composite",
     "version": "0.1.5",
@@ -171,6 +192,7 @@
   },
   {
     "id": "console",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-console",
     "displayName": "Console",
     "version": "0.1.4",
@@ -179,6 +201,7 @@
   },
   {
     "id": "email-resend",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-resend",
     "displayName": "Email (Resend)",
     "version": "0.1.4",
@@ -188,6 +211,7 @@
   },
   {
     "id": "email-smtp",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-smtp",
     "displayName": "Email (SMTP)",
     "version": "0.1.4",
@@ -196,6 +220,7 @@
   },
   {
     "id": "file",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-file",
     "displayName": "File",
     "version": "0.1.4",
@@ -204,6 +229,7 @@
   },
   {
     "id": "regex",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-regex",
     "displayName": "Regex",
     "version": "0.1.5",
@@ -212,6 +238,7 @@
   },
   {
     "id": "teams",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-teams",
     "displayName": "MS Teams",
     "version": "0.1.5",
@@ -220,6 +247,7 @@
   },
   {
     "id": "tee",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-tee",
     "displayName": "Tee",
     "version": "0.1.4",
@@ -228,6 +256,7 @@
   },
   {
     "id": "timed",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-timed",
     "displayName": "Timed",
     "version": "0.1.5",
@@ -236,6 +265,7 @@
   },
   {
     "id": "composite",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-composite",
     "displayName": "Composite",
     "version": "0.1.4",
@@ -244,6 +274,7 @@
   },
   {
     "id": "console",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-console",
     "displayName": "Console",
     "version": "0.1.3",
@@ -252,6 +283,7 @@
   },
   {
     "id": "email-resend",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-resend",
     "displayName": "Email (Resend)",
     "version": "0.1.3",
@@ -261,6 +293,7 @@
   },
   {
     "id": "email-smtp",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-smtp",
     "displayName": "Email (SMTP)",
     "version": "0.1.3",
@@ -269,6 +302,7 @@
   },
   {
     "id": "file",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-file",
     "displayName": "File",
     "version": "0.1.3",
@@ -277,6 +311,7 @@
   },
   {
     "id": "regex",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-regex",
     "displayName": "Regex",
     "version": "0.1.4",
@@ -285,6 +320,7 @@
   },
   {
     "id": "teams",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-teams",
     "displayName": "MS Teams",
     "version": "0.1.4",
@@ -293,6 +329,7 @@
   },
   {
     "id": "tee",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-tee",
     "displayName": "Tee",
     "version": "0.1.3",
@@ -301,6 +338,7 @@
   },
   {
     "id": "timed",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-timed",
     "displayName": "Timed",
     "version": "0.1.4",
@@ -309,6 +347,7 @@
   },
   {
     "id": "console",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-console",
     "displayName": "Console",
     "version": "0.1.2",
@@ -317,6 +356,7 @@
   },
   {
     "id": "file",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-file",
     "displayName": "File",
     "version": "0.1.2",
@@ -325,6 +365,7 @@
   },
   {
     "id": "tee",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-tee",
     "displayName": "Tee",
     "version": "0.1.2",
@@ -333,6 +374,7 @@
   },
   {
     "id": "regex",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-regex",
     "displayName": "Regex",
     "version": "0.1.3",
@@ -341,6 +383,7 @@
   },
   {
     "id": "timed",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-timed",
     "displayName": "Timed",
     "version": "0.1.3",
@@ -349,6 +392,7 @@
   },
   {
     "id": "composite",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-composite",
     "displayName": "Composite",
     "version": "0.1.3",
@@ -357,6 +401,7 @@
   },
   {
     "id": "email-resend",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-resend",
     "displayName": "Email (Resend)",
     "version": "0.1.2",
@@ -366,6 +411,7 @@
   },
   {
     "id": "email-smtp",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-smtp",
     "displayName": "Email (SMTP)",
     "version": "0.1.2",
@@ -374,6 +420,7 @@
   },
   {
     "id": "teams",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-teams",
     "displayName": "MS Teams",
     "version": "0.1.3",
@@ -382,6 +429,7 @@
   },
   {
     "id": "console",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-console",
     "displayName": "Console",
     "version": "0.1.1",
@@ -390,6 +438,7 @@
   },
   {
     "id": "file",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-file",
     "displayName": "File",
     "version": "0.1.1",
@@ -398,6 +447,7 @@
   },
   {
     "id": "tee",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-tee",
     "displayName": "Tee",
     "version": "0.1.1",
@@ -406,6 +456,7 @@
   },
   {
     "id": "regex",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-regex",
     "displayName": "Regex",
     "version": "0.1.2",
@@ -414,6 +465,7 @@
   },
   {
     "id": "timed",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-timed",
     "displayName": "Timed",
     "version": "0.1.2",
@@ -422,6 +474,7 @@
   },
   {
     "id": "composite",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-composite",
     "displayName": "Composite",
     "version": "0.1.2",
@@ -430,6 +483,7 @@
   },
   {
     "id": "email-resend",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-resend",
     "displayName": "Email (Resend)",
     "version": "0.1.1",
@@ -439,6 +493,7 @@
   },
   {
     "id": "email-smtp",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-smtp",
     "displayName": "Email (SMTP)",
     "version": "0.1.1",
@@ -447,6 +502,7 @@
   },
   {
     "id": "teams",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-teams",
     "displayName": "MS Teams",
     "version": "0.1.2",
@@ -455,6 +511,7 @@
   },
   {
     "id": "console",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-console",
     "displayName": "Console",
     "version": "0.1.0",
@@ -463,6 +520,7 @@
   },
   {
     "id": "file",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-file",
     "displayName": "File",
     "version": "0.1.0",
@@ -471,6 +529,7 @@
   },
   {
     "id": "tee",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-tee",
     "displayName": "Tee",
     "version": "0.1.0",
@@ -479,6 +538,7 @@
   },
   {
     "id": "regex",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-regex",
     "displayName": "Regex",
     "version": "0.1.0",
@@ -487,6 +547,7 @@
   },
   {
     "id": "timed",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-timed",
     "displayName": "Timed",
     "version": "0.1.0",
@@ -495,6 +556,7 @@
   },
   {
     "id": "composite",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-composite",
     "displayName": "Composite",
     "version": "0.1.0",
@@ -503,6 +565,7 @@
   },
   {
     "id": "email-resend",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-resend",
     "displayName": "Email (Resend)",
     "version": "0.1.0",
@@ -512,6 +575,7 @@
   },
   {
     "id": "email-smtp",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-email-smtp",
     "displayName": "Email (SMTP)",
     "version": "0.1.0",
@@ -520,6 +584,7 @@
   },
   {
     "id": "teams",
+    "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-teams",
     "displayName": "MS Teams",
     "version": "0.1.0",

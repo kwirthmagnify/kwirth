@@ -29,7 +29,7 @@ import { IWorkspace, IWorkspaceSummary } from './model/IWorkspace'
 
 import { SessionContext } from './model/SessionContext'
 import { addGetAuthorization, addDeleteAuthorization, addPostAuthorization } from './tools/AuthorizationManagement'
-import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse } from '@kwirthmagnify/kwirth-common'
+import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
@@ -847,12 +847,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (newTab.channel.requirements.notifications) newTab.channelObject.notifications = notifications.current
         if (newTab.channel.requirements.palette) newTab.channelObject.setPalette = (palette:string) => setMode(palette as 'light'|'dark')
         if (newTab.channel.requirements.openManager) newTab.channelObject.openManager = (type) => {
-            if (type === 'plugins') setShowPluginDialog(true)
-            else if (type === 'providers') setShowProviderDialog(true)
-            else if (type === 'senders') setShowSenderDialog(true)
-            // else if (type === 'daemons') setShowDaemonDialog(true)
-            else if (type === 'themes') setShowThemeDialog(true)
-            else if (type === 'homepages') setShowHomepageDialog(true)
+            switch (type) {
+                case EExtensionType.PLUGIN:   setShowPluginDialog(true); break
+                case EExtensionType.PROVIDER: setShowProviderDialog(true); break
+                case EExtensionType.SENDER:   setShowSenderDialog(true); break
+                case EExtensionType.THEME:    setShowThemeDialog(true); break
+                case EExtensionType.HOMEPAGE: setShowHomepageDialog(true); break
+            }
         }
         if (newTab.channel.requirements.exit) newTab.channelObject.exit = () => {
             setBackendUrl(props.backendUrl)

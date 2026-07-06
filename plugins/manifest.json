@@ -1,6 +1,7 @@
 [
   {
     "id": "mirc",
+    "type": "plugin",
     "version": "0.1.2",
     "name": "mIRC",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-mirc/-/kwirth-plugin-mirc-0.1.2.tgz",
@@ -9,6 +10,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.14",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.14.tgz",
@@ -17,6 +19,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.32",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.32.tgz",
@@ -25,6 +28,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.31",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.31.tgz",
@@ -40,6 +44,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.12",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.12.tgz",
@@ -55,6 +60,7 @@
   },
   {
     "id": "topology",
+    "type": "plugin",
     "version": "0.2.12",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.12.tgz",
@@ -63,6 +69,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.24",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.24.tgz",
@@ -71,6 +78,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.23",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.23.tgz",
@@ -79,6 +87,7 @@
   },
   {
     "id": "ops",
+    "type": "plugin",
     "version": "0.2.10",
     "name": "Ops",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.10.tgz",
@@ -87,6 +96,7 @@
   },
   {
     "id": "news",
+    "type": "plugin",
     "version": "0.2.10",
     "name": "News",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.10.tgz",
@@ -95,6 +105,7 @@
   },
   {
     "id": "log",
+    "type": "plugin",
     "version": "0.2.11",
     "name": "Log",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.11.tgz",
@@ -103,6 +114,7 @@
   },
   {
     "id": "fileman",
+    "type": "plugin",
     "version": "0.2.11",
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.11.tgz",
@@ -111,6 +123,7 @@
   },
   {
     "id": "alert",
+    "type": "plugin",
     "version": "0.2.12",
     "name": "Alert",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.12.tgz",
@@ -119,6 +132,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.13",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.13.tgz",
@@ -127,6 +141,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.30",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.30.tgz",
@@ -142,6 +157,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.11",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.11.tgz",
@@ -157,6 +173,7 @@
   },
   {
     "id": "topology",
+    "type": "plugin",
     "version": "0.2.11",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.11.tgz",
@@ -165,6 +182,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.22",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.22.tgz",
@@ -173,6 +191,7 @@
   },
   {
     "id": "ops",
+    "type": "plugin",
     "version": "0.2.9",
     "name": "Ops",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.9.tgz",
@@ -181,6 +200,7 @@
   },
   {
     "id": "news",
+    "type": "plugin",
     "version": "0.2.9",
     "name": "News",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.9.tgz",
@@ -189,6 +209,7 @@
   },
   {
     "id": "log",
+    "type": "plugin",
     "version": "0.2.10",
     "name": "Log",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.10.tgz",
@@ -197,6 +218,7 @@
   },
   {
     "id": "fileman",
+    "type": "plugin",
     "version": "0.2.10",
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.10.tgz",
@@ -205,6 +227,7 @@
   },
   {
     "id": "alert",
+    "type": "plugin",
     "version": "0.2.11",
     "name": "Alert",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.11.tgz",
@@ -213,6 +236,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.29",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.29.tgz",
@@ -228,6 +252,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.10",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.10.tgz",
@@ -243,6 +268,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.12",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.12.tgz",
@@ -251,6 +277,7 @@
   },
   {
     "id": "alert",
+    "type": "plugin",
     "version": "0.2.10",
     "name": "Alert",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.10.tgz",
@@ -259,6 +286,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.28",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.28.tgz",
@@ -274,6 +302,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.9",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.9.tgz",
@@ -289,6 +318,7 @@
   },
   {
     "id": "fileman",
+    "type": "plugin",
     "version": "0.2.9",
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.9.tgz",
@@ -297,6 +327,7 @@
   },
   {
     "id": "log",
+    "type": "plugin",
     "version": "0.2.9",
     "name": "Log",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.9.tgz",
@@ -305,6 +336,7 @@
   },
   {
     "id": "news",
+    "type": "plugin",
     "version": "0.2.8",
     "name": "News",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.8.tgz",
@@ -313,6 +345,7 @@
   },
   {
     "id": "ops",
+    "type": "plugin",
     "version": "0.2.8",
     "name": "Ops",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.8.tgz",
@@ -321,6 +354,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.21",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.21.tgz",
@@ -329,6 +363,7 @@
   },
   {
     "id": "topology",
+    "type": "plugin",
     "version": "0.2.10",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.10.tgz",
@@ -337,6 +372,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.11",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.11.tgz",
@@ -345,6 +381,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.27",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.27.tgz",
@@ -360,6 +397,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.26",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.26.tgz",
@@ -375,6 +413,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.8",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.8.tgz",
@@ -390,6 +429,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.10",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.10.tgz",
@@ -398,6 +438,7 @@
   },
   {
     "id": "log",
+    "type": "plugin",
     "version": "0.2.8",
     "name": "Log",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.8.tgz",
@@ -406,6 +447,7 @@
   },
   {
     "id": "alert",
+    "type": "plugin",
     "version": "0.2.9",
     "name": "Alert",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.9.tgz",
@@ -414,6 +456,7 @@
   },
   {
     "id": "ops",
+    "type": "plugin",
     "version": "0.2.7",
     "name": "Ops",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.7.tgz",
@@ -422,6 +465,7 @@
   },
   {
     "id": "fileman",
+    "type": "plugin",
     "version": "0.2.8",
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.8.tgz",
@@ -430,6 +474,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.9",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.9.tgz",
@@ -438,6 +483,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.8",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.8.tgz",
@@ -446,6 +492,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.20",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.20.tgz",
@@ -454,6 +501,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.19",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.19.tgz",
@@ -462,6 +510,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.18",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.18.tgz",
@@ -470,6 +519,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.7",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.7.tgz",
@@ -485,6 +535,7 @@
   },
   {
     "id": "news",
+    "type": "plugin",
     "version": "0.2.7",
     "name": "News",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.7.tgz",
@@ -493,6 +544,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.25",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.25.tgz",
@@ -508,6 +560,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.24",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.24.tgz",
@@ -523,6 +576,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.23",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.23.tgz",
@@ -538,6 +592,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.22",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.22.tgz",
@@ -553,6 +608,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.21",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.21.tgz",
@@ -568,6 +624,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.20",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.20.tgz",
@@ -583,6 +640,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.19",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.19.tgz",
@@ -598,6 +656,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.18",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.18.tgz",
@@ -613,6 +672,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.17",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.17.tgz",
@@ -628,6 +688,7 @@
   },
   {
     "id": "topology",
+    "type": "plugin",
     "version": "0.2.9",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.9.tgz",
@@ -636,6 +697,7 @@
   },
   {
     "id": "topology",
+    "type": "plugin",
     "version": "0.2.8",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.8.tgz",
@@ -644,6 +706,7 @@
   },
   {
     "id": "log",
+    "type": "plugin",
     "version": "0.2.6",
     "name": "Log",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.6.tgz",
@@ -652,6 +715,7 @@
   },
   {
     "id": "alert",
+    "type": "plugin",
     "version": "0.2.7",
     "name": "Alert",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.7.tgz",
@@ -660,6 +724,7 @@
   },
   {
     "id": "ops",
+    "type": "plugin",
     "version": "0.2.6",
     "name": "Ops",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.6.tgz",
@@ -668,6 +733,7 @@
   },
   {
     "id": "fileman",
+    "type": "plugin",
     "version": "0.2.7",
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.7.tgz",
@@ -676,6 +742,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.7",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.7.tgz",
@@ -684,6 +751,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.15",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.15.tgz",
@@ -692,6 +760,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.6",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.6.tgz",
@@ -707,6 +776,7 @@
   },
   {
     "id": "news",
+    "type": "plugin",
     "version": "0.2.6",
     "name": "News",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.6.tgz",
@@ -715,6 +785,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.14",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.14.tgz",
@@ -730,6 +801,7 @@
   },
   {
     "id": "topology",
+    "type": "plugin",
     "version": "0.2.7",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.7.tgz",
@@ -738,6 +810,7 @@
   },
   {
     "id": "log",
+    "type": "plugin",
     "version": "0.2.5",
     "name": "Log",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.5.tgz",
@@ -746,6 +819,7 @@
   },
   {
     "id": "alert",
+    "type": "plugin",
     "version": "0.2.6",
     "name": "Alert",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.6.tgz",
@@ -754,6 +828,7 @@
   },
   {
     "id": "ops",
+    "type": "plugin",
     "version": "0.2.5",
     "name": "Ops",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.5.tgz",
@@ -762,6 +837,7 @@
   },
   {
     "id": "fileman",
+    "type": "plugin",
     "version": "0.2.6",
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.6.tgz",
@@ -770,6 +846,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.6",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.6.tgz",
@@ -778,6 +855,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.13",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.13.tgz",
@@ -786,6 +864,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.12",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.12.tgz",
@@ -794,6 +873,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.5",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.5.tgz",
@@ -809,6 +889,7 @@
   },
   {
     "id": "news",
+    "type": "plugin",
     "version": "0.2.5",
     "name": "News",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.5.tgz",
@@ -817,6 +898,7 @@
   },
   {
     "id": "log",
+    "type": "plugin",
     "version": "0.2.4",
     "name": "Log",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.4.tgz",
@@ -825,6 +907,7 @@
   },
   {
     "id": "log",
+    "type": "plugin",
     "version": "0.2.3",
     "name": "Log",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.3.tgz",
@@ -833,6 +916,7 @@
   },
   {
     "id": "alert",
+    "type": "plugin",
     "version": "0.2.5",
     "name": "Alert",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.5.tgz",
@@ -841,6 +925,7 @@
   },
   {
     "id": "alert",
+    "type": "plugin",
     "version": "0.2.4",
     "name": "Alert",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.4.tgz",
@@ -849,6 +934,7 @@
   },
   {
     "id": "alert",
+    "type": "plugin",
     "version": "0.2.3",
     "name": "Alert",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.3.tgz",
@@ -857,6 +943,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.13",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.13.tgz",
@@ -872,6 +959,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.12",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.12.tgz",
@@ -887,6 +975,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.11",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.11.tgz",
@@ -902,6 +991,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.10",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.10.tgz",
@@ -917,6 +1007,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.9",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.9.tgz",
@@ -932,6 +1023,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.8",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.8.tgz",
@@ -947,6 +1039,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.7",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.7.tgz",
@@ -962,6 +1055,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.6",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.6.tgz",
@@ -977,6 +1071,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.5",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.5.tgz",
@@ -985,6 +1080,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.4",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.4.tgz",
@@ -993,6 +1089,7 @@
   },
   {
     "id": "censor",
+    "type": "plugin",
     "version": "0.2.3",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.3.tgz",
@@ -1001,6 +1098,7 @@
   },
   {
     "id": "ops",
+    "type": "plugin",
     "version": "0.2.4",
     "name": "Ops",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.4.tgz",
@@ -1009,6 +1107,7 @@
   },
   {
     "id": "ops",
+    "type": "plugin",
     "version": "0.2.3",
     "name": "Ops",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.3.tgz",
@@ -1017,6 +1116,7 @@
   },
   {
     "id": "fileman",
+    "type": "plugin",
     "version": "0.2.5",
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.5.tgz",
@@ -1025,6 +1125,7 @@
   },
   {
     "id": "fileman",
+    "type": "plugin",
     "version": "0.2.4",
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.4.tgz",
@@ -1033,6 +1134,7 @@
   },
   {
     "id": "fileman",
+    "type": "plugin",
     "version": "0.2.3",
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.3.tgz",
@@ -1041,6 +1143,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.5",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.5.tgz",
@@ -1049,6 +1152,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.4",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.4.tgz",
@@ -1057,6 +1161,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.3",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.3.tgz",
@@ -1065,6 +1170,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.2",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.2.tgz",
@@ -1073,6 +1179,7 @@
   },
   {
     "id": "trivy",
+    "type": "plugin",
     "version": "0.2.1",
     "name": "Trivy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.1.tgz",
@@ -1081,6 +1188,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.11",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.11.tgz",
@@ -1089,6 +1197,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.10",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.10.tgz",
@@ -1097,6 +1206,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.9",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.9.tgz",
@@ -1105,6 +1215,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.8",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.8.tgz",
@@ -1113,6 +1224,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.7",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.7.tgz",
@@ -1121,6 +1233,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.6",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.6.tgz",
@@ -1129,6 +1242,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.5",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.5.tgz",
@@ -1137,6 +1251,7 @@
   },
   {
     "id": "pinocchio",
+    "type": "plugin",
     "version": "0.2.4",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.4.tgz",
@@ -1145,6 +1260,7 @@
   },
   {
     "id": "topology",
+    "type": "plugin",
     "version": "0.2.6",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.6.tgz",
@@ -1153,6 +1269,7 @@
   },
   {
     "id": "topology",
+    "type": "plugin",
     "version": "0.2.5",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.5.tgz",
@@ -1161,6 +1278,7 @@
   },
   {
     "id": "topology",
+    "type": "plugin",
     "version": "0.2.4",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.4.tgz",
@@ -1169,6 +1287,7 @@
   },
   {
     "id": "topology",
+    "type": "plugin",
     "version": "0.2.3",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.3.tgz",
@@ -1177,6 +1296,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.4",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.4.tgz",
@@ -1192,6 +1312,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.3",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.3.tgz",
@@ -1207,6 +1328,7 @@
   },
   {
     "id": "echo",
+    "type": "plugin",
     "version": "0.2.2",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.2.tgz",
@@ -1215,6 +1337,7 @@
   },
   {
     "id": "news",
+    "type": "plugin",
     "version": "0.2.4",
     "name": "News",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.4.tgz",
@@ -1223,6 +1346,7 @@
   },
   {
     "id": "news",
+    "type": "plugin",
     "version": "0.2.3",
     "name": "News",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.3.tgz",

@@ -1,4 +1,5 @@
 import { IConfigMaps } from './IConfigMap'
+import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { TChannelConstructor } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { LicenseManager } from './LicenseManager'
@@ -366,7 +367,7 @@ export class PluginManager {
         const files = fs.readdirSync(dir).filter(f => f.endsWith('.tgz'))
         for (const file of files) {
             const id = path.basename(file, '.tgz')
-            if (licenseManager && !licenseManager.isExtensionLicensed('channels', id)) {
+            if (licenseManager && !licenseManager.isExtensionLicensed(EExtensionType.PLUGIN, id)) {
                 logInfo(ELogComponent.CORE, `Bundled plugin '${id}' not licensed — skipping`)
                 continue
             }

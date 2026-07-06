@@ -1,6 +1,7 @@
 [
   {
     "id": "sfy",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-sfy",
     "displayName": "SFY",
     "version": "0.1.2",
@@ -10,6 +11,7 @@
   },
   {
     "id": "sfy",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-sfy",
     "displayName": "SFY",
     "version": "0.1.1",
@@ -19,6 +21,7 @@
   },
   {
     "id": "sfy",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-sfy",
     "displayName": "SFY",
     "version": "0.1.0",
@@ -28,6 +31,7 @@
   },
   {
     "id": "plexus",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
     "version": "0.1.2",
@@ -36,6 +40,7 @@
   },
   {
     "id": "plexus",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
     "version": "0.1.1",
@@ -44,6 +49,7 @@
   },
   {
     "id": "plexus",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
     "version": "0.1.0",
@@ -52,6 +58,7 @@
   },
   {
     "id": "post-punk",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-post-punk",
     "displayName": "Post Punk",
     "version": "0.1.1",
@@ -60,6 +67,7 @@
   },
   {
     "id": "post-punk",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-post-punk",
     "displayName": "Post Punk",
     "version": "0.1.0",
@@ -68,6 +76,7 @@
   },
   {
     "id": "avicii",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-avicii",
     "displayName": "Avicii",
     "version": "0.1.1",
@@ -76,6 +85,7 @@
   },
   {
     "id": "matrix",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-matrix",
     "displayName": "Matrix",
     "version": "0.1.1",
@@ -84,6 +94,7 @@
   },
   {
     "id": "depeche-mode",
+    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-depeche-mode",
     "displayName": "Depeche Mode",
     "version": "0.1.1",

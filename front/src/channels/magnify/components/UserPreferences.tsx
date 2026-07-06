@@ -6,6 +6,7 @@ import { IFileObject } from '@jfvilas/react-file-manager'
 import { IChannelObject } from '../../IChannel'
 import { About } from '../../../components/About'
 import { useKeyboard } from '../../../tools/useKeyboard'
+import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 
 interface IUserPreferencesProps {
     channelObject: IChannelObject
@@ -234,13 +235,12 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
             <AccordionDetails>
                 <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
                     {([
-                        { type: 'plugins',   label: 'Plugins',   desc: 'Install, update and remove channel plugins that extend Kwirth with new visualization and analysis capabilities.' },
-                        { type: 'providers', label: 'Providers', desc: 'Configure data source providers that feed events and metrics into your channels from external systems.' },
-                        { type: 'senders',   label: 'Senders',   desc: 'Manage notification senders to forward alerts and reports to Slack, Teams, email and other destinations.' },
-                        { type: 'daemons',   label: 'Daemons',   desc: 'Install and manage background daemons that run headless analysis and monitoring tasks on your cluster.' },
-                        { type: 'themes',    label: 'Themes',    desc: 'Install and activate visual themes to customize the look and feel of Kwirth.' },
-                        { type: 'homepages', label: 'Homepages', desc: 'Install and manage homepage extensions that provide custom cluster overview dashboards.' },
-                    ] as const).map(({ type, label, desc }) => (
+                        { type: EExtensionType.PLUGIN,   label: 'Plugins',   desc: 'Install, update and remove channel plugins that extend Kwirth with new visualization and analysis capabilities.' },
+                        { type: EExtensionType.PROVIDER, label: 'Providers', desc: 'Configure data source providers that feed events and metrics into your channels from external systems.' },
+                        { type: EExtensionType.SENDER,   label: 'Senders',   desc: 'Manage notification senders to forward alerts and reports to Slack, Teams, email and other destinations.' },
+                        { type: EExtensionType.THEME,    label: 'Themes',    desc: 'Install and activate visual themes to customize the look and feel of Kwirth.' },
+                        { type: EExtensionType.HOMEPAGE, label: 'Homepages', desc: 'Install and manage homepage extensions that provide custom cluster overview dashboards.' },
+                    ]).map(({ type, label, desc }) => (
                         <Box key={type} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column', gap: 1 }}>
                             <Typography variant='body2' fontWeight='bold'>{label}</Typography>
                             <Typography variant='caption' color='text.secondary' sx={{ flexGrow: 1 }}>{desc}</Typography>

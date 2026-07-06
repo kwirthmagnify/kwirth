@@ -4,19 +4,20 @@ import * as MuiIcons from '../tools/KwirthIcons'
 import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh, ViewList, ViewModule } from '../tools/KwirthIcons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
-import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
 
 const PLUGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/plugins/manifest.json'
 
 interface IRequirement {
-    type: 'plugin' | 'sender' | 'provider'
+    type: EExtensionType
     id: string
     minVersion: string
 }
 
 interface IPluginManifestEntry {
     id: string
+    type?: EExtensionType    // tipo de extensión de la entrada (marketplace unificado / packs)
     name: string
     displayName: string
     version: string

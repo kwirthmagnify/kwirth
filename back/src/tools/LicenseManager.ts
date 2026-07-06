@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { ELogComponent, logError, logInfo } from './Logging'
 
 // Generate your key pair with: node scripts/generate-license-keys.mjs
@@ -7,11 +8,9 @@ const LICENSE_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 REPLACE_WITH_YOUR_PUBLIC_KEY
 -----END PUBLIC KEY-----`
 
-type ExtensionType = 'channels' | 'providers' | 'senders' | 'homepages' | 'themes'
-
 interface ILicensePayload {
     customerId: string
-    extensions: Partial<Record<ExtensionType, string[]>>
+    extensions: Partial<Record<EExtensionType, string[]>>
     expiry: string
     signature: string
 }
@@ -64,7 +63,7 @@ export class LicenseManager {
         }
     }
 
-    isExtensionLicensed(type: ExtensionType, id: string): boolean {
+    isExtensionLicensed(type: EExtensionType, id: string): boolean {
         if (!this.hasLicense) return true
         if (!this.valid || !this.license) return false
         return this.license.extensions[type]?.includes(id) ?? false
@@ -74,7 +73,7 @@ export class LicenseManager {
         return !this.hasLicense || this.valid
     }
 
-    getPublicInfo(): { customerId: string; extensions: Partial<Record<ExtensionType, string[]>>; expiry: string } | null {
+    getPublicInfo(): { customerId: string; extensions: Partial<Record<EExtensionType, string[]>>; expiry: string } | null {
         if (!this.valid || !this.license) return null
         const { signature: _, ...info } = this.license
         return info

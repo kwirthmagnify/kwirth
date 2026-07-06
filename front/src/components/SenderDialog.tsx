@@ -7,7 +7,7 @@ import {
 import { Add, CheckCircle, ContentCopy, Delete, Download, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule } from '../tools/KwirthIcons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
-import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
 
 const SENDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/senders/manifest.json'
@@ -25,13 +25,14 @@ interface ISenderFieldDef {
 }
 
 interface IRequirement {
-    type: 'plugin' | 'sender' | 'provider'
+    type: EExtensionType
     id: string
     minVersion: string
 }
 
 interface ISenderManifestEntry {
     id: string
+    type?: EExtensionType    // tipo de extensión de la entrada (marketplace unificado / packs)
     name: string
     displayName: string
     version: string

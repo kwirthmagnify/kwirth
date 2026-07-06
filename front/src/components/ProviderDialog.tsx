@@ -4,20 +4,21 @@ import { CheckCircle, Delete, Download, Factory, FolderOpen, Link, OpenInNew, Re
 
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
-import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
 
 declare global { interface Window { __kwirth_providers__: Record<string, any> } }
 const PROVIDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json'
 
 interface IRequirement {
-    type: 'plugin' | 'sender' | 'provider'
+    type: EExtensionType
     id: string
     minVersion: string
 }
 
 interface IProviderManifestEntry {
     id: string
+    type?: EExtensionType    // tipo de extensión de la entrada (marketplace unificado / packs)
     name: string
     displayName?: string
     version: string
