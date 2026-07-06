@@ -102,7 +102,7 @@ await esbuild.build({
 console.log('Built dist/back.js')
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
-const distMeta = {
+const distMeta = { type: 'plugin',
     id: meta.id,
     name: `@kwirthmagnify/kwirth-plugin-${meta.id}`,
     displayName: meta.displayName,

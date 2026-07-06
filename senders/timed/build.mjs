@@ -54,7 +54,7 @@ await esbuild.build({
 console.log('Built dist/front.js')
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
-const distMeta = {
+const distMeta = { type: 'sender',
     id: meta.id,
     name: meta.name,
     displayName: meta.displayName,
