@@ -27,9 +27,9 @@ export interface IOtelSpaceMapping {
  *   }
  *
  * OTel exporters must point to:
- *   http://<kwirth-host>:<port>/otlp/v1/traces
- *   http://<kwirth-host>:<port>/otlp/v1/metrics
- *   http://<kwirth-host>:<port>/otlp/v1/logs
+ *   http://<kwirth-host>:<port>/provider/otlp/v1/traces
+ *   http://<kwirth-host>:<port>/provider/otlp/v1/metrics
+ *   http://<kwirth-host>:<port>/provider/otlp/v1/logs
  *
  * Supported encoding: OTLP/HTTP JSON (Content-Type: application/json).
  * OTLP/HTTP protobuf (application/x-protobuf) is not supported in this version.

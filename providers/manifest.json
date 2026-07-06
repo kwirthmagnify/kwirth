@@ -1,5 +1,12 @@
 [
   {
+    "id": "business",
+    "version": "0.1.0",
+    "name": "Business Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.1.0.tgz",
+    "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types"
+  },
+  {
     "id": "syslog",
     "version": "0.1.20",
     "name": "Syslog",
@@ -110,6 +117,13 @@
     "name": "Tick",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.4.tgz",
     "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers"
+  },
+  {
+    "id": "validating",
+    "version": "0.1.5",
+    "name": "Validating",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.1.5.tgz",
+    "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks"
   },
   {
     "id": "validating",
