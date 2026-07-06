@@ -16,7 +16,7 @@ import { LoginApi } from './api/LoginApi'
 // HTTP server & websockets
 import { WebSocketServer } from 'ws'
 import { ManageKwirthApi } from './api/ManageKwirthApi'
-import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
+import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
 import { ManageClusterApi } from './api/ManageClusterApi'
 import { AuthorizationManagement } from './tools/AuthorizationManagement'
 
@@ -44,6 +44,7 @@ import * as _kwirthCommonAiBack from '@kwirthmagnify/kwirth-common-ai/back'
 import * as _kwirthCommonSql from '@kwirthmagnify/kwirth-common-sql/back'
 import { ISqlServer } from '@kwirthmagnify/kwirth-common-sql'
 import { IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
+import { resolveChannelMode } from './tools/ChannelPlacement'
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 // NewsChannel, PinocchioChannel and FilemanChannel removed — now loaded as plugins
@@ -123,6 +124,7 @@ interface IRunningInstance {
     secrets: ISecrets
     configMaps: IConfigMaps
     channels: Map<string,IChannel>
+    remoteChannels: BackChannelData[]   // single channels not hosted here (announced as remote)
     backChannelObject: IBackChannelObject
     active: boolean
     router: any
@@ -357,6 +359,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             secrets,
             configMaps,
             channels: new Map(),
+            remoteChannels: [],
             backChannelObject: {},
             active: false,
             router: undefined,
@@ -1487,8 +1490,17 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             let channelConstructor = registeredChannels.get(channelId)
             if (channelConstructor) {
                 let channelInstance = createChannelInstance(registeredChannels.get(channelId), localClusterInfo, backChannelObject)
-                if (channelInstance)
-                    runningInstance.channels.set(channelId, channelInstance!)
+                if (channelInstance) {
+                    // 'instances' gate: a 'single' channel is hosted only by the in-cluster Kwirth. Elsewhere
+                    // (desktop/docker) it is announced as remote and NOT started here (avoids split-brain).
+                    if (resolveChannelMode(channelInstance.requirements, localKwirthData.inCluster) === EChannelMode.REMOTE) {
+                        runningInstance.remoteChannels.push({ ...channelInstance.getChannelData(), mode: EChannelMode.REMOTE })
+                        logInfo(ELogComponent.CORE, `Channel '${channelId}' is 'single' and this is not its in-cluster home → announced as remote (not hosted here)`)
+                    }
+                    else {
+                        runningInstance.channels.set(channelId, channelInstance!)
+                    }
+                }
                 else
                     logError(ELogComponent.CORE, `Couldn't create a channel instance for '${channelId}'`)
             }
@@ -1663,10 +1675,12 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         await setKubernetesClusterKwirthRequirements(runningInstance, localKwirthData, runningInstance.clusterInfo, backChannelObject)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
 
-        // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to
-        localKwirthData.channels =  Array.from(runningInstance.channels.keys()).map(k => {
-            return runningInstance.channels.get(k)?.getChannelData()!
-        })
+        // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to.
+        // Hosted channels are announced as LOCAL; 'single' channels not hosted here (see gate) are announced as REMOTE.
+        localKwirthData.channels = [
+            ...Array.from(runningInstance.channels.values()).map(c => ({ ...c.getChannelData(), mode: EChannelMode.LOCAL })),
+            ...runningInstance.remoteChannels,
+        ]
 
         logInfo(ELogComponent.CORE, `Enabled channels for this (kubernetes) run are: ${Array.from(runningInstance.channels.keys()).map(c => `'${c}'`).join(', ')}`)
         logInfo(ELogComponent.CORE, `Enabled providers for this (kubernetes) run are: ${Array.from(runningInstance.clusterInfo.providers).map(p => `'${p.id}'`).join(', ')}`)

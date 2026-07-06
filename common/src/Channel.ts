@@ -12,6 +12,18 @@ enum EClusterType {
     DOCKER = 'docker'
 }
 
+// How many back instances of a channel make sense per cluster.
+enum EChannelInstances {
+    MULTI = 'multi',    // several backs per cluster are valid (default: log, metrics, mirc…)
+    SINGLE = 'single'   // exactly one back per cluster (the old "daemon"); home = in-cluster Kwirth
+}
+
+// Whether a channel's back is hosted by this Kwirth or lives elsewhere (resolved by the front-hub).
+enum EChannelMode {
+    LOCAL = 'local',    // hosted here (current behavior)
+    REMOTE = 'remote'   // not hosted here; find it on the in-cluster Kwirth
+}
+
 interface IEndpointConfig {
     name: string,
     methods: string[]
@@ -30,6 +42,7 @@ interface BackChannelData {
     websocket: boolean  // this channel allows websocket creation (aside from main websocket communication)
     cluster: boolean    // this channel supports cluster-wide invocation (addObject called once with *all)
     resourced: boolean  // this channel supports resource-based invocation (addObject called per selected resource)
+    mode?: EChannelMode  // hosted here (local) or elsewhere (remote); set by the core when announcing channels
 }
 
 interface KwirthData {
@@ -48,6 +61,7 @@ interface KwirthData {
 interface IBackChannelRequirements {
     storage: boolean
     providers: string[]
+    instances?: EChannelInstances   // default MULTI; SINGLE = one back per cluster (home = in-cluster)
 }
 
 interface IBackChannelObject {
@@ -65,4 +79,4 @@ interface IBackChannelObject {
     senders?: ISenderAccess
 }
 
-export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, IBackChannelRequirements, IBackChannelObject }
+export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, EChannelInstances, EChannelMode, IBackChannelRequirements, IBackChannelObject }
