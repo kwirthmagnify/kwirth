@@ -1308,30 +1308,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
 
-        riRouter.get('/events', async (req: Request, res: Response) => {
-            try {
-                const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
-                if (!accessKey) return
-                const limit = Math.min(parseInt(req.query.limit as string) || 25, 100)
-                const result = await ri.clusterInfo.coreApi.listEventForAllNamespaces({ limit: limit * 3 })
-                const events = (result.items ?? [])
-                    .filter(e => e.lastTimestamp)
-                    .sort((a, b) => new Date(b.lastTimestamp!).getTime() - new Date(a.lastTimestamp!).getTime())
-                    .slice(0, limit)
-                    .map(e => ({
-                        time: e.lastTimestamp,
-                        type: e.type,
-                        reason: e.reason,
-                        namespace: e.involvedObject?.namespace,
-                        object: `${e.involvedObject?.kind}/${e.involvedObject?.name}`,
-                        message: e.message,
-                    }))
-                res.json(events)
-            } catch (err) {
-                logError(ELogComponent.CORE, `GET /events error: ${err}`)
-                res.status(500).json([])
-            }
-        })
+        // NOTE: the events pull moved to the events provider router at /provider/events (F2a).
 
         // riRouter.get('/daemons/instances', async (req: Request, res: Response) => {
         //     try {

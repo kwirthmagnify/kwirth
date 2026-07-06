@@ -60,6 +60,22 @@ interface IAppProps {
     authMethods: IAuthMethod[]
 }
 
+// Minimal shape of a raw kube Event as returned by /provider/events (projected to IClusterEvent for homepages).
+interface IRawInvolvedObject {
+    kind?: string
+    name?: string
+    namespace?: string
+}
+interface IRawKubeEvent {
+    type?: string
+    reason?: string
+    message?: string
+    lastTimestamp?: string
+    eventTime?: string
+    firstTimestamp?: string
+    involvedObject?: IRawInvolvedObject
+}
+
 const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [mode, setMode] = useState<PaletteMode>((localStorage.getItem('kwirth.mode') as PaletteMode) || 'light')
     const [activeThemeName, setActiveThemeName] = useState<string | undefined>(undefined)
@@ -2083,9 +2099,18 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                     const cluster = clusters.find(c => c.name === clusterName)
                                     if (!cluster) return []
                                     try {
-                                        const res = await fetch(`${cluster.url}/events?limit=${limit}`, addGetAuthorization(cluster.accessString))
+                                        const res = await fetch(`${cluster.url}/provider/events?limit=${limit}`, addGetAuthorization(cluster.accessString))
                                         if (!res.ok) return []
-                                        return await res.json()
+                                        const items = await res.json() as IRawKubeEvent[]
+                                        // project raw kube events to the summary shape consumed by homepages (IClusterEvent)
+                                        return items.map(e => ({
+                                            time: String(e.lastTimestamp ?? e.eventTime ?? e.firstTimestamp ?? ''),
+                                            type: e.type ?? '',
+                                            reason: e.reason ?? '',
+                                            namespace: e.involvedObject?.namespace,
+                                            object: `${e.involvedObject?.kind ?? ''}/${e.involvedObject?.name ?? ''}`,
+                                            message: e.message ?? '',
+                                        }))
                                     } catch { return [] }
                                 }
                                 const getClusterMetrics = async (clusterName: string) => {

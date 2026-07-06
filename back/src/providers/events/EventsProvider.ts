@@ -1,9 +1,11 @@
-import { Watch } from '@kubernetes/client-node'
+import { Watch, CoreV1Event } from '@kubernetes/client-node'
+import express, { Request, Response } from 'express'
 import { KwirthData } from '@kwirthmagnify/kwirth-common'
 import { IProvider } from '../IProvider'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
+import { AuthorizationManagement } from '../../tools/AuthorizationManagement'
 import { ApiKeyApi } from '../../api/ApiKeyApi'
 
 export interface IEventsSubscriber {
@@ -12,22 +14,79 @@ export interface IEventsSubscriber {
     syncCrdInstances: boolean
 }
 
+// Query for the events pull: all events, or scoped by involvedObject (namespace/kind/name).
+export interface IEventsQuery {
+    namespace?: string
+    kind?: string
+    name?: string
+    limit?: number
+}
+
 export class EventsProvider implements IProvider {
     public readonly id = 'events'
-    public readonly providesRouter = false
-    public router = undefined
-    public routerAlias = undefined
-    readonly requiresApiKeyApi: boolean = false
+    public readonly providesRouter = true
+    public router = express.Router()
+    public routerAlias = 'events'
+    readonly requiresApiKeyApi: boolean = true
     public apiKeyApi: ApiKeyApi|undefined
 
     private resourceWatchers: Map<string, { watch: Watch, stopped: boolean }>
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IEventsSubscriber>
+    private eventsWatchStartTime = 0   // epoch ms when the /api/v1/events watch started (backlog gate)
 
     constructor(clusterInfo: ClusterInfo, kwirthData: KwirthData) {
         this.clusterInfo = clusterInfo
         this.subscribers = new Map()
         this.resourceWatchers = new Map()
+
+        // Pull endpoint at /provider/events: raw kube Events, all or scoped by involvedObject
+        // (?namespace&kind&name). Single source for the UI (homepages project it) and for magnify.
+        this.router.route('/')
+            .all(async (req: Request, res: Response, next) => {
+                if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi!))) return
+                next()
+            })
+            .get(async (req: Request, res: Response) => {
+                try {
+                    const items = await this.getEvents({
+                        namespace: (req.query.namespace as string) || '',
+                        kind: (req.query.kind as string) || '',
+                        name: (req.query.name as string) || '',
+                        limit: Math.min(parseInt(req.query.limit as string) || 0, 500),
+                    })
+                    res.status(200).json(items)
+                }
+                catch (err) {
+                    logError(ELogComponent.PROVIDER, `GET /provider/events error: ${err}`)
+                    res.status(500).json([])
+                }
+            })
+    }
+
+    // Pull of raw kube Events (all, or scoped by involvedObject). Single implementation shared by the
+    // HTTP router (/provider/events) and by in-node consumers (e.g. magnify) to avoid duplicating coreApi calls.
+    getEvents = async (query: IEventsQuery): Promise<CoreV1Event[]> => {
+        const namespace = query.namespace || ''
+        const kind = query.kind || ''
+        const name = query.name || ''
+        const limit = query.limit || 0
+
+        let result
+        if (name && kind) {
+            const fieldSelector = `involvedObject.name=${name},involvedObject.kind=${kind}`
+            result = namespace
+                ? await this.clusterInfo.coreApi.listNamespacedEvent({ namespace, fieldSelector })
+                : await this.clusterInfo.coreApi.listEventForAllNamespaces({ fieldSelector })
+        }
+        else {
+            result = await this.clusterInfo.coreApi.listEventForAllNamespaces(limit > 0 ? { limit: limit * 3 } : {})
+        }
+        let items = (result.items ?? []).sort((a, b) =>
+            new Date(b.eventTime ?? b.lastTimestamp ?? b.firstTimestamp ?? 0).getTime() -
+            new Date(a.eventTime ?? a.lastTimestamp ?? a.firstTimestamp ?? 0).getTime())
+        if (limit > 0) items = items.slice(0, limit)
+        return items
     }
 
     addSubscriber = async (c: IChannel, data: { kinds: string[], syncInstances:boolean}) => {
@@ -111,14 +170,30 @@ export class EventsProvider implements IProvider {
     private handleEvent = (type: string, obj: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
         if (obj.kind === 'CustomResourceDefinition' && type === 'ADDED') this.startCrdInstanceWatcher(obj, subscribersList)
 
-        for (let [channel, subscriber] of subscribersList.entries()) {
-            if (subscriber.kinds.includes(obj.kind) || (subscriber.crdInstances && subscriber.crdInstances.includes(obj.kind)) || subscriber.syncCrdInstances) {
-                channel.processProviderEvent(this.id, { type, obj })
-            }
-        }
+        this.dispatch(type, obj, subscribersList)
 
         if (obj.kind === 'CustomResourceDefinition' && type === 'DELETED') this.stopCrdInstanceWatcher(obj, subscribersList)
 
+    }
+
+    // Delivers the event to subscribers whose filter accepts it. Guard against undefined 'kinds':
+    // e.g. montag subscribes with addSubscriber('events', {}) → kinds ends up undefined.
+    private dispatch = (type: string, obj: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
+        for (let [channel, subscriber] of subscribersList.entries()) {
+            if ((subscriber.kinds && subscriber.kinds.includes(obj.kind)) || (subscriber.crdInstances && subscriber.crdInstances.includes(obj.kind)) || subscriber.syncCrdInstances) {
+                channel.processProviderEvent(this.id, { type, obj })
+            }
+        }
+    }
+
+    // Handler for the /api/v1/events watch (kube log). Discriminator = kind='Event' (forced because
+    // watch items may come without 'kind'). Timestamp gate: kube replays the retention backlog (~1h)
+    // when the watch starts → we don't re-deliver events prior to the watch start.
+    private handleKubeEvent = (type: string, obj: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
+        const ts = obj.lastTimestamp || obj.eventTime || obj.metadata?.creationTimestamp
+        if (ts && new Date(ts).getTime() < this.eventsWatchStartTime) return
+        obj.kind = 'Event'
+        this.dispatch(type, obj, subscribersList)
     }
 
     private startCrdInstanceWatcher = (crd: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
@@ -200,6 +275,11 @@ export class EventsProvider implements IProvider {
             '/apis/apiextensions.k8s.io/v1/customresourcedefinitions'
         ]
         ;[...coreResources, ...apiResources].forEach(path => this.startResourceWatcher(path, this.handleEvent))
+
+        // Kube log (Event objects) → push with kind='Event'; real opt-in: only reaches subscribers
+        // whose 'kinds' includes 'Event'. The timestamp gate avoids re-delivering the retention backlog.
+        this.eventsWatchStartTime = Date.now()
+        this.startResourceWatcher('/api/v1/events', this.handleKubeEvent)
     }
 
     stopProvider = async () => {

@@ -3,7 +3,8 @@ import { ClusterInfo } from '../../model/ClusterInfo'
 import { IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
 import { IChannel } from '../IChannel'
 import { Request, Response } from 'express'
-import { CoreV1EventList, V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
+import { V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
+import { EventsProvider } from '../../providers/events/EventsProvider'
 import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'
 import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
 import { IMetricsClusterUsage } from '../../providers/metrics/IMetricsModel'
@@ -1045,39 +1046,22 @@ class MagnifyChannel implements IChannel {
 
     private getEventsForObject = async (command:string, namespace:string,  objectKind:string, objectName:string, limit:number) => {
         try {
-            let res: CoreV1EventList = {
-                items: []
-            }
+            // Delegate to the events provider (single coreApi implementation) instead of calling coreApi directly.
+            const eventsProvider = this.clusterInfo.providers.find(p => p.id === 'events') as EventsProvider | undefined
+            if (!eventsProvider) return []
             switch(command) {
                 case 'cluster':
-                    res = await this.clusterInfo.coreApi.listEventForAllNamespaces()
-                    break
+                    return await eventsProvider.getEvents({ limit })
                 case 'object':
-                    if (namespace!=='') {
-                        res = await this.clusterInfo.coreApi.listNamespacedEvent( {
-                            namespace: namespace,
-                            fieldSelector: `involvedObject.name=${objectName},involvedObject.kind=${objectKind}`
-                        })
-                    }
-                    else {
-                        res = await this.clusterInfo.coreApi.listEventForAllNamespaces( {
-                            fieldSelector: `involvedObject.name=${objectName},involvedObject.kind=${objectKind}`
-                        })
-                    }
-                    break
-            }
-
-            res.items = res.items.sort( (a:any,b:any) => Date.parse(b.eventTime||b.lastTimestamp||b.firstTimestamp)-Date.parse(a.eventTime||a.lastTimestamp||a.firstTimestamp))
-            if (limit>0) {
-                return res.items.slice(0, limit)
-            }
-            else {
-                return res.items
+                    return await eventsProvider.getEvents({ namespace, kind: objectKind, name: objectName, limit })
+                default:
+                    return []
             }
         }
         catch (err) {
             logError(ELogComponent.CHANNEL, 'Error getting events:')
             logError(ELogComponent.CHANNEL, err)
+            return []
         }
     }
 

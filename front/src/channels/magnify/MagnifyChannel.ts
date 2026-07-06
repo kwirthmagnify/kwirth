@@ -438,6 +438,7 @@ class MagnifyChannel implements IChannel {
         else if (kind==='PodMetrics') this.loadPodMetrics(magnifyData, obj)
         else if (kind==='NodeMetrics') this.loadNodeMetrics(magnifyData, obj)
         else if (kind==='ComponentStatus') this.loadComponentStatus(magnifyData, obj)
+        else if (kind==='Event') { /* kube Events are not resource-tree objects; they are listed via the EVENTS command. Ignore here so we don't hit the default error if the user watches 'Event'. */ }
         else {
             if (!this.loadCustomResourceDefinitionInstance(magnifyData, obj)) {
                 console.log('*** ERR INVALID Kind:', kind)
