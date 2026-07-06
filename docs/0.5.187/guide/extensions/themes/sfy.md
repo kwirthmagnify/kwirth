@@ -9,6 +9,12 @@
 
 ![SFY theme applied](../../../_media/guide/theme-sfy.png)
 
+The accent carries through every channel — here the **[Trivy](../plugins/trivy)** findings board and the **[Ops](../plugins/ops)** terminal channel:
+
+![SFY theme — Trivy channel](../../../_media/guide/theme-sfy-trivy.png)
+
+![SFY theme — Ops channel](../../../_media/guide/theme-sfy-ops.png)
+
 ## Applying it
 
 **☰ → Manage extensions → Themes → SFY → Activate.**

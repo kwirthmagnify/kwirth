@@ -9,6 +9,12 @@
 
 ![Depeche Mode theme applied](../../../_media/guide/theme-depeche-mode.png)
 
+The abyss-black / blood-red look applies to every channel — here the **[Trivy](../plugins/trivy)** findings board and the **[Ops](../plugins/ops)** terminal channel:
+
+![Depeche Mode theme — Trivy channel](../../../_media/guide/theme-depeche-mode-trivy.png)
+
+![Depeche Mode theme — Ops channel](../../../_media/guide/theme-depeche-mode-ops.png)
+
 ## Applying it
 
 Install it if needed (**☰ → Manage extensions → Themes → Available → Depeche Mode → download**), then **Activate**.

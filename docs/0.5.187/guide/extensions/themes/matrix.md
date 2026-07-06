@@ -9,6 +9,12 @@
 
 ![Matrix theme applied](../../../_media/guide/theme-matrix.png)
 
+The green-on-black terminal look applies to every channel — here the **[Trivy](../plugins/trivy)** findings board and the **[Ops](../plugins/ops)** terminal channel:
+
+![Matrix theme — Trivy channel](../../../_media/guide/theme-matrix-trivy.png)
+
+![Matrix theme — Ops channel](../../../_media/guide/theme-matrix-ops.png)
+
 ## Applying it
 
 Install it if needed (**☰ → Manage extensions → Themes → Available → Matrix → download**), then **Activate**.

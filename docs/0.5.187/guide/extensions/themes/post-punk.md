@@ -9,6 +9,12 @@
 
 ![Post-Punk theme applied](../../../_media/guide/theme-post-punk.png)
 
+The acid-green monochrome carries through every channel — here the **[Trivy](../plugins/trivy)** findings board and the **[Ops](../plugins/ops)** terminal channel:
+
+![Post-Punk theme — Trivy channel](../../../_media/guide/theme-post-punk-trivy.png)
+
+![Post-Punk theme — Ops channel](../../../_media/guide/theme-post-punk-ops.png)
+
 ## Applying it
 
 Install it if needed (**☰ → Manage extensions → Themes → Available → Post Punk → download**), then **Activate**.
