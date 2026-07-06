@@ -274,7 +274,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
     const handleFire = async () => {
         setFiring(true)
         try {
-            await fetch(`${props.clusterUrl}/business`, {
+            await fetch(`${props.clusterUrl}/provider/business`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
