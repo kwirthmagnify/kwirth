@@ -1,5 +1,5 @@
 import { FC, ReactNode, useEffect } from 'react'
-import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements, EExtensionType } from '@kwirthmagnify/kwirth-common'
 
 type CloseWithId = (id: string) => void
 type CloseNoId = () => void
@@ -61,7 +61,7 @@ export interface IChannelObject {
     notify?: (channelId: string | undefined, level: ENotifyLevel, message: string) => void
     exit?: () => void
     stopChannel?: () => void
-    openManager?: (type: 'plugins' | 'providers' | 'senders' | 'themes' | 'homepages') => void
+    openManager?: (type: EExtensionType) => void
     metricsList?: Map<string, MetricDefinition>
     isExtensionLicensed?: (type: string, id: string) => boolean
 }
