@@ -1,5 +1,5 @@
-// Test e2e del router HTTP: monta el router del provider en un express efímero y hace POST reales,
-// verificando el contrato (200/400) y que el subscriber recibe el evento con su payload.
+// e2e test of the HTTP router: mounts the provider router on an ephemeral express app and makes real
+// POSTs, verifying the contract (200/400) and that the subscriber receives the event with its payload.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -41,10 +41,10 @@ test('e2e HTTP: POST al router → 200 y el subscriber recibe; body inválido �
         const bad = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ space: 'orders' })   // sin type
+            body: JSON.stringify({ space: 'orders' })   // missing type
         })
         assert.equal(bad.status, 400)
-        assert.equal(sub.received.length, 1)   // no hubo nuevo dispatch
+        assert.equal(sub.received.length, 1)   // no new dispatch happened
     }
     finally {
         await new Promise<void>(resolve => server.close(() => resolve()))

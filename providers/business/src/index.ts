@@ -1,20 +1,20 @@
 import express, { Request, Response } from 'express'
 import { KwirthData, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 
-// ─── Tipos públicos de config (los consumen los channels que se suscriben) ──────
+// ─── Public config types (consumed by the channels that subscribe) ──────────────
 
-// Un espacio lógico al que se suscribe un channel: nombre + lista de tipos admitidos.
-// Un evento solo se entrega si su 'type' está en 'types' (lista vacía = no se entrega nada de ese espacio).
+// A logical space a channel subscribes to: name + list of accepted types.
+// An event is delivered only if its 'type' is in 'types' (empty list = nothing delivered for that space).
 interface IBusinessSpaceConfig {
     name: string
     types: string[]
 }
 
 /**
- * Config que pasa un channel al llamar a addSubscriber().
- * Agrupa los eventos por espacios lógicos (dominios de negocio).
+ * Config passed by a channel when calling addSubscriber().
+ * Groups events by logical spaces (business domains).
  *
- * Ejemplo:
+ * Example:
  *   {
  *     spaces: [
  *       { name: 'orders',   types: ['created', 'shipped'] },
@@ -26,9 +26,9 @@ export interface IBusinessProviderConfig {
     spaces: IBusinessSpaceConfig[]
 }
 
-// ─── Tipos internos ─────────────────────────────────────────────────────────────
+// ─── Internal types ─────────────────────────────────────────────────────────────
 
-// Cuerpo esperado en el POST de ingesta.
+// Body expected in the ingestion POST.
 interface IBusinessEventBody {
     space: string
     type: string
@@ -36,8 +36,8 @@ interface IBusinessEventBody {
 }
 
 /**
- * Evento que el provider entrega a cada subscriber.
- * Mismo shape que consumen censor/pinocchio/montag (cada uno lo castea a su tipo).
+ * Event delivered by the provider to each subscriber.
+ * Same shape consumed by censor/pinocchio/montag (each casts it to its own type).
  */
 export interface IBusinessProviderEvent {
     last: {
@@ -58,7 +58,7 @@ export class BusinessProvider implements IProvider {
     public readonly requiresApiKeyApi = false
     public apiKeyApi = undefined
 
-    // almacén acumulado: espacio -> tipo -> eventos
+    // accumulated store: space -> type -> events
     private data = new Map<string, Map<string, unknown[]>>()
     private subscribers = new Map<IProviderSubscriber, IBusinessProviderConfig>()
 
@@ -78,14 +78,14 @@ export class BusinessProvider implements IProvider {
     }
 
     /*
-        Procesa un evento entrante: lo acumula en el store y hace fan-out a los subscribers
-        interesados en ese espacio/tipo. Devuelve false si el body es inválido (falta space o type).
-        Formato esperado: { space: string, type: string, data: unknown }
+        Processes an incoming event: accumulates it in the store and fans it out to the subscribers
+        interested in that space/type. Returns false if the body is invalid (missing space or type).
+        Expected format: { space: string, type: string, data: unknown }
     */
     ingest = (body: IBusinessEventBody | undefined): boolean => {
         if (!body || !body.space || !body.type) return false
 
-        // almacena el nuevo evento
+        // store the new event
         const space = this.data.get(body.space)
         if (space) {
             const type = space.get(body.type)
@@ -100,7 +100,7 @@ export class BusinessProvider implements IProvider {
             this.data.set(body.space, newSpace)
         }
 
-        // fan-out a los subscribers interesados en ese espacio/tipo
+        // fan-out to subscribers interested in that space/type
         for (const [subscriber, config] of this.subscribers) {
             const subSpace = config.spaces.find(s => s.name === body.space)
             if (subSpace && subSpace.types.includes(body.type)) {

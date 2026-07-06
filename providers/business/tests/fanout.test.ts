@@ -1,5 +1,5 @@
-// Tests unitarios del fan-out del BusinessProvider (sin HTTP): ingesta, filtrado por space/type,
-// contenido exacto del evento entregado, acumulación en el store y ciclo de subscribers.
+// Unit tests for the BusinessProvider fan-out (no HTTP): ingestion, space/type filtering,
+// exact delivered-event content, store accumulation and subscriber lifecycle.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -18,8 +18,8 @@ const newProvider = () => new BusinessProvider(null as any, {} as any)
 test('ingest: body inválido → false', () => {
     const p = newProvider()
     assert.equal(p.ingest(undefined), false)
-    assert.equal(p.ingest({ space: 'orders' } as any), false)   // sin type
-    assert.equal(p.ingest({ type: 'created' } as any), false)   // sin space
+    assert.equal(p.ingest({ space: 'orders' } as any), false)   // missing type
+    assert.equal(p.ingest({ type: 'created' } as any), false)   // missing space
     assert.equal(p.ingest({ space: '', type: 'created' }), false)
     assert.equal(p.ingest({ space: 'orders', type: '' }), false)
 })
@@ -109,5 +109,5 @@ test('stopProvider: limpia subscribers y store', async () => {
     p.ingest({ space: 'orders', type: 'created', data: {} })
     await p.stopProvider()
     p.ingest({ space: 'orders', type: 'created', data: {} })
-    assert.equal(sub.received.length, 1)   // tras stop no llega más
+    assert.equal(sub.received.length, 1)   // nothing more arrives after stop
 })

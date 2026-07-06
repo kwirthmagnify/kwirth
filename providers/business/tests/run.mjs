@@ -1,13 +1,13 @@
-// Runner de tests del provider business.
+// Test runner for the business provider.
 //
-// Bundlea cada tests/**/*.test.ts con esbuild (TS→ESM, externalizando express y los paquetes
-// kwirth) a tests/.out/ y los ejecuta con el runner nativo `node --test`. Sin dependencias de
-// test nuevas: node:test + node:assert/strict.
+// Bundles each tests/**/*.test.ts with esbuild (TS→ESM, externalizing express and the kwirth
+// packages) to tests/.out/ and runs them with the native `node --test` runner. No new test
+// dependencies: node:test + node:assert/strict.
 //
-//   npm test            → ejecuta toda la suite
+//   npm test            → runs the whole suite
 //
-// Los tests importan directamente de ../src (no se duplica código). express va external: el
-// provider lo usa real para construir su Router en el constructor.
+// Tests import directly from ../src (no code duplication). express is external: the provider
+// uses the real one to build its Router in the constructor.
 
 import esbuild from 'esbuild'
 import { readdirSync, mkdirSync, rmSync } from 'fs'
@@ -23,7 +23,7 @@ const entries = readdirSync(TEST_DIR, { recursive: true })
     .map(f => path.join(TEST_DIR, f))
 
 if (entries.length === 0) {
-    console.log('No hay tests (tests/**/*.test.ts).')
+    console.log('No tests (tests/**/*.test.ts).')
     process.exit(0)
 }
 
