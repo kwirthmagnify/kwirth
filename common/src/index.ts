@@ -26,6 +26,7 @@ export * from './ApiKey'
 export * from './AccessKey'
 export * from './Global'
 export * from './AuthMethod'
+export * from './ExtensionType'
 // (daemons eliminados: se retira export * from './Daemon')
 export * from './Version'
 export * from './FrontChannel'
