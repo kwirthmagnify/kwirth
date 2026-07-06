@@ -6,6 +6,7 @@ import { Settings as SettingsIcon, Menu, Person, AccountCircle, Home, Notificati
 
 // model
 import { Cluster, IClusterInfo } from './model/Cluster'
+import { resolveRemoteChannelHost } from './tools/ChannelResolution'
 
 // components
 import { RenameTab } from './components/RenameTab'
@@ -29,7 +30,7 @@ import { IWorkspace, IWorkspaceSummary } from './model/IWorkspace'
 
 import { SessionContext } from './model/SessionContext'
 import { addGetAuthorization, addDeleteAuthorization, addPostAuthorization } from './tools/AuthorizationManagement'
-import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse, EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse, EExtensionType, EChannelMode } from '@kwirthmagnify/kwirth-common'
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
@@ -745,7 +746,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const setUsablechannels = (cluster:Cluster) => {
         if (cluster && cluster.kwirthData) {
             let usableChannels = [...cluster.kwirthData.channels]
-            usableChannels = usableChannels.filter(c => Array.from(frontChannels.keys()).includes(c.id))
+            usableChannels = usableChannels.filter(c => {
+                if (!Array.from(frontChannels.keys()).includes(c.id)) return false
+                // a 'single' channel announced as remote is usable only if another connected cluster hosts it
+                // (same cluster id, mode local). WS routing to that host is wired with Agora (its first consumer).
+                if (c.mode === EChannelMode.REMOTE) return !!resolveRemoteChannelHost(c.id, cluster.clusterInfo?.id ?? '', clusters)
+                return true
+            })
             setBackChannels(usableChannels)
         }
     }
