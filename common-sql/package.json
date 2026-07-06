@@ -1,0 +1,48 @@
+{
+  "name": "@kwirthmagnify/kwirth-common-sql",
+  "version": "0.0.1",
+  "description": "Shared relational storage service (knex) for Kwirth extensions",
+  "scripts": {
+    "build": "del .\\dist\\* /s /q 2>nul & tsc",
+    "test": "node tests/run.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./back": {
+      "types": "./dist/back.d.ts",
+      "require": "./dist/back.js",
+      "default": "./dist/back.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "back": [
+        "dist/back.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "author": "Julio Fernandez",
+  "license": "ISC",
+  "dependencies": {
+    "knex": "^3.1.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.13",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.4.0"
+  }
+}
