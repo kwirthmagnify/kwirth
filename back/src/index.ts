@@ -35,8 +35,9 @@ import { DockerConfigMaps } from './tools/DockerConfigMaps'
 import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject, IUserInfo } from '@kwirthmagnify/kwirth-common'
 import * as _kwirthCommon from '@kwirthmagnify/kwirth-common'
+import { IdentityService } from './tools/auth/IdentityService'
 import * as _kwirthCommonBack from '@kwirthmagnify/kwirth-common-back'
 import * as _kwirthCommonAi from '@kwirthmagnify/kwirth-common-ai'
 import * as _kwirthCommonAiBack from '@kwirthmagnify/kwirth-common-ai/back'
@@ -1754,8 +1755,25 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                     return undefined
                 }
             },
+            // Catálogo SANEADO de usuarios Kwirth para los plugins (subset IUserInfo; nunca password/
+            // accessKey/resources). Decodifica el secret kwirth-users. Read-only, tolerante a fallo.
+            getUsers: async (): Promise<IUserInfo[]> => {
+                try {
+                    const raw = await IdentityService.readUsers(runningInstance.secrets)
+                    if (!raw) return []
+                    const out: IUserInfo[] = []
+                    for (const v of Object.values(raw)) {
+                        try {
+                            const u = JSON.parse(Buffer.from(v, 'base64').toString('utf8'))
+                            if (u && typeof u.id === 'string') out.push({ id: u.id, name: typeof u.name === 'string' && u.name ? u.name : u.id, ...(u.idp ? { idp: u.idp } : {}) })
+                        }
+                        catch { /* entrada corrupta: se ignora */ }
+                    }
+                    return out
+                }
+                catch { return [] }
+            },
             senders: senderManager,
-            //daemonManager
         }
 
         runningInstance.clusterInfo.senders = senderManager

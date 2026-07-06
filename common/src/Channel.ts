@@ -1,5 +1,5 @@
 import { ISenderAccess } from './Sender'
-import { IDaemonManager } from './Daemon'
+import { IUserInfo } from './Global'
 
 //transient
 enum ClusterTypeEnum {
@@ -59,8 +59,10 @@ interface IBackChannelObject {
     logTrace?(message: unknown): void
     logWarning?(message: unknown): void
     logError?(message: unknown): void
+    // Catálogo SANEADO de usuarios Kwirth (subset IUserInfo, sin secretos). Lo provee el core;
+    // los plugins lo consumen (p.ej. resolución de ownership / picker). Read-only.
+    getUsers?(): Promise<IUserInfo[]>
     senders?: ISenderAccess
-    daemonManager?: IDaemonManager
 }
 
 export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, IBackChannelRequirements, IBackChannelObject }

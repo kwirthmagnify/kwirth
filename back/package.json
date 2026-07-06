@@ -18,7 +18,7 @@
   "dependencies": {
     "@jfvilas/parse-listing": "^1.0.1",
     "@kubernetes/client-node": "^1.4.0",
-    "@kwirthmagnify/kwirth-common": "^0.5.18",
+    "@kwirthmagnify/kwirth-common": "^0.5.19",
     "@kwirthmagnify/kwirth-common-ai": "^0.5.22",
     "@kwirthmagnify/kwirth-common-back": "^0.5.19",
     "@kwirthmagnify/kwirth-common-sql": "^0.1.0",

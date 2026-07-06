@@ -15,8 +15,16 @@ interface ILoginResponse {
     accessKey: AccessKey
 }
 
+// Subset SEGURO de IUser expuesto a los plugins/consumidores (nunca password/accessKey/resources).
+// Lo devuelve IBackChannelObject.getUsers(). Suficiente para display y referencia de owner.
+interface IUserInfo {
+    id: string
+    name: string
+    idp?: string
+}
+
 interface IClusterMetricsConfig {
     metricsInterval: number
 }
 
-export { ILoginResponse, IUser, IClusterMetricsConfig }
+export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig }
