@@ -1,0 +1,24 @@
+{
+  "id": "business",
+  "name": "@kwirthmagnify/kwirth-provider-business",
+  "publisher": "@kwirthmagnify",
+  "version": "0.1.0",
+  "displayName": "Business Provider",
+  "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node watch.mjs",
+    "test": "node tests/run.mjs"
+  },
+  "dependencies": {
+    "@kwirthmagnify/kwirth-common-back": "^0.5.19",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.13",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.4.0"
+  }
+}
