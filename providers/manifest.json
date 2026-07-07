@@ -2,6 +2,74 @@
   {
     "id": "business",
     "type": "provider",
+    "version": "0.1.2",
+    "name": "Business Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.1.2.tgz",
+    "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types"
+  },
+  {
+    "id": "kafka",
+    "type": "provider",
+    "version": "0.1.5",
+    "name": "Kafka Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.1.5.tgz",
+    "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces"
+  },
+  {
+    "id": "otel",
+    "type": "provider",
+    "version": "0.1.6",
+    "name": "OpenTelemetry Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-otel/-/kwirth-provider-otel-0.1.6.tgz",
+    "description": "OpenTelemetry provider plugin for Kwirth — receives OTLP/HTTP signals (traces, metrics, logs) and dispatches them grouped by spaces"
+  },
+  {
+    "id": "sample",
+    "type": "provider",
+    "version": "0.1.6",
+    "name": "Sample Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-sample/-/kwirth-provider-sample-0.1.6.tgz",
+    "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event"
+  },
+  {
+    "id": "syslog",
+    "type": "provider",
+    "version": "0.1.21",
+    "name": "Syslog Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.1.21.tgz",
+    "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "id": "tick",
+    "type": "provider",
+    "version": "0.1.5",
+    "name": "Tick Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.5.tgz",
+    "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "id": "validating",
+    "type": "provider",
+    "version": "0.1.7",
+    "name": "Validating Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.1.7.tgz",
+    "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "id": "trivy",
+    "type": "provider",
+    "version": "0.1.2",
+    "name": "Trivy Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.2.tgz",
+    "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "id": "business",
+    "type": "provider",
     "version": "0.1.1",
     "name": "Business Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.1.1.tgz",

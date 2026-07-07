@@ -1,5 +1,85 @@
 [
   {
+    "id": "composite",
+    "type": "sender",
+    "version": "0.1.8",
+    "name": "Composite Sender",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-composite/-/kwirth-sender-composite-0.1.8.tgz",
+    "description": "Composite sender plugin for Kwirth — defines complete routing pipelines as an inline tree of tee, regex and ref nodes in a single config"
+  },
+  {
+    "id": "console",
+    "type": "sender",
+    "version": "0.1.7",
+    "name": "Console Sender",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-console/-/kwirth-sender-console-0.1.7.tgz",
+    "description": "Console sender plugin for Kwirth — writes messages to stdout, with configurable prefix, level and timestamps per named config"
+  },
+  {
+    "id": "email-resend",
+    "type": "sender",
+    "version": "0.1.7",
+    "name": "Email Sender (Resend)",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.7.tgz",
+    "description": "Email sender for Kwirth — sends messages via Resend (resend.dev)"
+  },
+  {
+    "id": "email-smtp",
+    "type": "sender",
+    "version": "0.1.7",
+    "name": "Email Sender (SMTP)",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-smtp/-/kwirth-sender-email-smtp-0.1.7.tgz",
+    "description": "Email sender for Kwirth — sends messages via SMTP with support for auth, no-auth, TLS and plaintext"
+  },
+  {
+    "id": "file",
+    "type": "sender",
+    "version": "0.1.7",
+    "name": "File Sender",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-file/-/kwirth-sender-file-0.1.7.tgz",
+    "description": "File sender plugin for Kwirth — appends messages to a file, with configurable path, format and timestamps per named config"
+  },
+  {
+    "id": "ratelimit",
+    "type": "sender",
+    "version": "0.1.2",
+    "name": "Rate Limit Sender",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-ratelimit/-/kwirth-sender-ratelimit-0.1.2.tgz",
+    "description": "Rate limit filter sender for Kwirth — queues messages exceeding a configurable rate and delivers them in the next time window"
+  },
+  {
+    "id": "regex",
+    "type": "sender",
+    "version": "0.1.8",
+    "name": "Regex Sender",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-regex/-/kwirth-sender-regex-0.1.8.tgz",
+    "description": "Regex sender plugin for Kwirth — routes or drops messages based on ordered regex rules evaluated against any message field"
+  },
+  {
+    "id": "teams",
+    "type": "sender",
+    "version": "0.1.8",
+    "name": "MS Teams Sender",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-teams/-/kwirth-sender-teams-0.1.8.tgz",
+    "description": "MS Teams sender for Kwirth — sends messages via incoming webhook"
+  },
+  {
+    "id": "tee",
+    "type": "sender",
+    "version": "0.1.7",
+    "name": "Tee Sender",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-0.1.7.tgz",
+    "description": "Tee sender plugin for Kwirth — fans out an incoming message to multiple downstream senders simultaneously, acting as an intermediate pipeline node"
+  },
+  {
+    "id": "timed",
+    "type": "sender",
+    "version": "0.1.8",
+    "name": "Timed Sender",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-timed/-/kwirth-sender-timed-0.1.8.tgz",
+    "description": "Timed sender for Kwirth — routes or drops messages based on time-of-day windows and day-of-week rules"
+  },
+  {
     "id": "ratelimit",
     "type": "sender",
     "name": "@kwirthmagnify/kwirth-sender-ratelimit",
