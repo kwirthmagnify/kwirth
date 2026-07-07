@@ -1668,6 +1668,12 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                 }
                 catch { return [] }
             },
+            // Config de instalación del plugin (JSON genérico) desde su ConfigMap (editable en el
+            // plugin manager). El plugin pasa su propio id. Read-only, tolerante a fallo.
+            getPluginConfig: async (pluginId: string): Promise<Record<string, unknown>> => {
+                try { return (await pluginManager?.getConfig(pluginId)) ?? {} }
+                catch { return {} }
+            },
             senders: senderManager,
         }
 

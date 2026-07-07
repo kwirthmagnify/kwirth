@@ -101,5 +101,21 @@ export class PluginApi {
                 res.status(500).json({ error: String(err) })
             }
         })
+
+        // Config de instalación del plugin (JSON genérico). Mismo patrón que ProviderApi.
+        this.router.get('/:id/config', async (req: Request, res: Response) => {
+            if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            res.json(await this.pluginManager.getConfig(req.params.id))
+        })
+
+        this.router.put('/:id/config', async (req: Request, res: Response) => {
+            if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            try {
+                await this.pluginManager.saveConfig(req.params.id, req.body)
+                res.json({ ok: true })
+            } catch (err) {
+                res.status(500).json({ error: String(err) })
+            }
+        })
     }
 }

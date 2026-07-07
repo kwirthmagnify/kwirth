@@ -76,6 +76,9 @@ interface IBackChannelObject {
     // Catálogo SANEADO de usuarios Kwirth (subset IUserInfo, sin secretos). Lo provee el core;
     // los plugins lo consumen (p.ej. resolución de ownership / picker). Read-only.
     getUsers?(): Promise<IUserInfo[]>
+    // Config de instalación del plugin (JSON genérico), por id de plugin. La persiste el core (ConfigMap,
+    // editable desde el plugin manager) y la consume el back del plugin. Read-only. Genérica como providers.
+    getPluginConfig?(pluginId: string): Promise<Record<string, unknown>>
     senders?: ISenderAccess
 }
 

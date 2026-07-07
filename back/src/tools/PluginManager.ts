@@ -289,6 +289,7 @@ export class PluginManager {
         await this.configMaps.write('kwirth-plugins-index', index.filter(p => p.id !== id))
         await this.configMaps.write(`kwirth-plugin-${id}-back`, null)
         await this.configMaps.write(`kwirth-plugin-${id}-front`, null)
+        await this.configMaps.write(`kwirth-plugin-${id}-config`, null)
 
         for (const f of [`kwirth-plugin-${id}-back.js`, `kwirth-plugin-${id}-front.js`]) {
             const p = path.join(os.tmpdir(), f)
@@ -296,6 +297,18 @@ export class PluginManager {
         }
 
         logInfo(ELogComponent.CORE, `Plugin '${id}' uninstalled`)
+    }
+
+    // Configuración de instalación por plugin (JSON genérico), persistida en ConfigMap. La edita el
+    // plugin manager (front) y la consumen el back del plugin (IBackChannelObject.getPluginConfig) y
+    // el front (GET /plugins/:id/config). Mismo patrón que ProviderManager.get/saveConfig.
+    async getConfig(id: string): Promise<Record<string, unknown>> {
+        const data = await this.configMaps.read(`kwirth-plugin-${id}-config`, {})
+        return (data ?? {}) as Record<string, unknown>
+    }
+
+    async saveConfig(id: string, cfg: Record<string, unknown>): Promise<void> {
+        await this.configMaps.write(`kwirth-plugin-${id}-config`, cfg)
     }
 
     async loadAll(registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
