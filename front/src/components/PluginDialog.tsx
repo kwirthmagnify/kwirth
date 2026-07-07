@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import * as MuiIcons from '../tools/KwirthIcons'
-import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh, ViewList, ViewModule } from '../tools/KwirthIcons'
+import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '../tools/KwirthIcons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
@@ -56,6 +56,11 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [installingId, setInstallingId] = useState<string | undefined>()
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
+    // Editor de config de instalación del plugin (JSON genérico) — gear del plugin manager.
+    const [configId, setConfigId] = useState<string | undefined>()
+    const [configText, setConfigText] = useState('')
+    const [configBusy, setConfigBusy] = useState(false)
+    const [configError, setConfigError] = useState<string | undefined>()
     const [error, setError] = useState<string | undefined>()
     const [customUrl, setCustomUrl] = useState('')
     const [installingCustom, setInstallingCustom] = useState(false)
@@ -117,6 +122,37 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         } finally {
             setLoadingManifest(false)
         }
+    }
+
+    const openConfig = async (id: string) => {
+        setConfigError(undefined); setConfigId(id); setConfigText(''); setConfigBusy(true)
+        try {
+            const res = await fetch(`${backendUrl}/plugins/${id}/config`, addGetAuthorization(accessString))
+            const cfg = res.ok ? await res.json() : {}
+            setConfigText(JSON.stringify(cfg ?? {}, null, 2))
+        } catch (e) { setConfigText('{}'); setConfigError(`Failed to load config: ${e}`) }
+        finally { setConfigBusy(false) }
+    }
+    const saveConfig = async () => {
+        let parsed: unknown
+        try { parsed = JSON.parse(configText || '{}') } catch { setConfigError('Invalid JSON'); return }
+        setConfigBusy(true); setConfigError(undefined)
+        try {
+            const res = await fetch(`${backendUrl}/plugins/${configId}/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: accessString ? `Bearer ${accessString}` : '', 'X-Kwirth-App': 'true' }, body: JSON.stringify(parsed) })
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            setConfigId(undefined)
+        } catch (e) { setConfigError(`Failed to save config: ${e}`) }
+        finally { setConfigBusy(false) }
+    }
+    const exportConfig = () => {
+        const blob = new Blob([configText || '{}'], { type: 'application/json' })
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${configId}-config.json`; a.click(); URL.revokeObjectURL(a.href)
+    }
+    const importConfig = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const f = e.target.files?.[0]; e.target.value = ''
+        if (!f) return
+        try { setConfigText(JSON.stringify(JSON.parse(await f.text()), null, 2)); setConfigError(undefined) }
+        catch { setConfigError('Invalid JSON file') }
     }
 
     const isRequirementMet = (req: IRequirement): boolean => {
@@ -329,13 +365,18 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                         website={plugin.website}
                                         source={resolveSource(plugin.installedFrom)}
                                         action={
-                                            <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : plugin.installedFrom === 'bundled' ? 'Bundled plugins cannot be uninstalled' : 'Uninstall'}>
-                                                <span>
-                                                    <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || plugin.installedFrom === 'bundled' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
-                                                        {uninstallingId === plugin.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
-                                                    </IconButton>
-                                                </span>
-                                            </Tooltip>
+                                            <>
+                                                <Tooltip title='Configure'>
+                                                    <span><IconButton size='small' onClick={() => openConfig(plugin.id)}><Settings fontSize='small' /></IconButton></span>
+                                                </Tooltip>
+                                                <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : plugin.installedFrom === 'bundled' ? 'Bundled plugins cannot be uninstalled' : 'Uninstall'}>
+                                                    <span>
+                                                        <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || plugin.installedFrom === 'bundled' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
+                                                            {uninstallingId === plugin.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
+                                            </>
                                         }
                                     />
                                 ))}
@@ -347,6 +388,9 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plugin.displayName || plugin.name}</Typography>
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(plugin.installedFrom)}</Box>
                                         <Chip label={`v${plugin.version}`} size='small' sx={{ minWidth: 72 }} />
+                                        <Tooltip title='Configure'>
+                                            <span><IconButton size='small' onClick={() => openConfig(plugin.id)}><Settings fontSize='small' /></IconButton></span>
+                                        </Tooltip>
                                         <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : plugin.installedFrom === 'bundled' ? 'Bundled plugins cannot be uninstalled' : 'Uninstall'}>
                                             <span>
                                                 <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || plugin.installedFrom === 'bundled' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
@@ -470,6 +514,24 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
             <DialogActions>
                 <Button onClick={props.onClose}>CLOSE</Button>
             </DialogActions>
+            {configId !== undefined && (
+                <Dialog open PaperProps={{ sx: { width: 560, maxWidth: '95vw' } }}>
+                    <DialogTitle>Configure {configId}</DialogTitle>
+                    <DialogContent>
+                        <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>Installation config (JSON) for this plugin — read by the plugin at runtime.</Typography>
+                        <TextField multiline minRows={8} fullWidth value={configText} onChange={e => setConfigText(e.target.value)} disabled={configBusy} slotProps={{ input: { sx: { fontFamily: 'monospace', fontSize: 12 } } }} />
+                        {configError && <Typography variant='caption' color='error' sx={{ display: 'block', mt: 1 }}>{configError}</Typography>}
+                        <Stack direction='row' spacing={1} sx={{ mt: 1 }}>
+                            <Button size='small' onClick={exportConfig}>Export</Button>
+                            <Button size='small' component='label'>Import<input type='file' accept='.json,application/json' hidden onChange={importConfig} /></Button>
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button variant='contained' disabled={configBusy} onClick={saveConfig}>OK</Button>
+                        <Button variant='outlined' color='inherit' onClick={() => setConfigId(undefined)}>Cancel</Button>
+                    </DialogActions>
+                </Dialog>
+            )}
         </Dialog>
     )
 }
