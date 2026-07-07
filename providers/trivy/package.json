@@ -2,7 +2,7 @@
   "id": "trivy",
   "name": "@kwirthmagnify/kwirth-provider-trivy",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "displayName": "Trivy Provider",
   "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
   "website": "https://kwirthmagnify.dev",

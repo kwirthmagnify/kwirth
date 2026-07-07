@@ -2,7 +2,7 @@
   "id": "ratelimit",
   "name": "@kwirthmagnify/kwirth-sender-ratelimit",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "displayName": "Rate Limit Sender",
   "description": "Rate limit filter sender for Kwirth — queues messages exceeding a configurable rate and delivers them in the next time window",
   "type": "module",

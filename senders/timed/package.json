@@ -2,7 +2,7 @@
   "id": "timed",
   "name": "@kwirthmagnify/kwirth-sender-timed",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "displayName": "Timed Sender",
   "description": "Timed sender for Kwirth — routes or drops messages based on time-of-day windows and day-of-week rules",
   "type": "module",
