@@ -25,21 +25,22 @@ interface ISenderFieldDef {
 }
 
 interface IRequirement {
-    type: EExtensionType
+    extensionType: EExtensionType
     id: string
     minVersion: string
 }
 
 interface ISenderManifestEntry {
     id: string
-    type?: EExtensionType    // tipo de extensión de la entrada (marketplace unificado / packs)
+    extensionType?: EExtensionType    // tipo de extensión de la entrada (marketplace unificado / packs)
     name: string
     displayName: string
     version: string
     description: string
     website?: string
     url: string
-    requires?: IRequirement[]
+    requires?: IRequirement[]   // dependencias OBLIGATORIAS: bloquean el install si no están instaladas
+    uses?: IRequirement[]       // dependencias OPCIONALES: si están, el consumidor las usa; si no, funciona sin ellas
 }
 
 interface IInstalledSender {
@@ -157,7 +158,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: ISenderManifestEntry[] = await res.json()
             setAvailable(data)
-            const neededTypes = new Set(data.flatMap(e => e.requires ?? []).map(r => r.type).filter(t => t !== 'sender'))
+            const neededTypes = new Set(data.flatMap(e => [...(e.requires ?? []), ...(e.uses ?? [])]).map(r => r.extensionType).filter(t => t !== 'sender'))
             if (neededTypes.size > 0) {
                 const endpoints: Record<string, string> = { plugin: `${backendUrl}/plugins`, provider: `${backendUrl}/providers` }
                 const results: Record<string, { id: string, version: string }[]> = {}
@@ -174,7 +175,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     }
 
     const isRequirementMet = (req: IRequirement): boolean => {
-        const list = req.type === 'sender' ? installed : (crossInstalled[req.type] ?? [])
+        const list = req.extensionType === 'sender' ? installed : (crossInstalled[req.extensionType] ?? [])
         const found = list.find(x => x.id === req.id)
         return !!found && (found.version === req.minVersion || versionGreaterThan(found.version, req.minVersion))
     }
@@ -696,7 +697,13 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                                                 {entry.requires && entry.requires.length > 0 && (
                                                     <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
                                                         <Typography variant='caption' color='text.disabled'>Requires:</Typography>
-                                                        {entry.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.type[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                                                        {entry.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.extensionType[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                                                    </Stack>
+                                                )}
+                                                {entry.uses && entry.uses.length > 0 && (
+                                                    <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
+                                                        <Typography variant='caption' color='text.disabled'>Uses:</Typography>
+                                                        {entry.uses.map((r, i) => <Chip key={i} label={`${r.id} (${r.extensionType[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18, opacity: isRequirementMet(r) ? 1 : 0.45 }} />)}
                                                     </Stack>
                                                 )}
                                             </Box>
@@ -704,7 +711,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                                         </Stack>
                                         <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
                                             {(() => { const unmet = (entry.requires ?? []).filter(r => !isRequirementMet(r)); return (
-                                                <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                                <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                     <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(entry)}>
                                                         {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
                                                     </IconButton></span>
@@ -731,7 +738,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                                                   </Select>
                                                 : <Chip label={`v${entry.version}`} size='small' sx={{ minWidth: 72 }} />
                                             }
-                                            <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                            <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                 <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(entry)}>
                                                     {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
                                                 </IconButton></span>

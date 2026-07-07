@@ -2,7 +2,7 @@
   "id": "teams",
   "name": "@kwirthmagnify/kwirth-sender-teams",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "displayName": "MS Teams Sender",
   "description": "MS Teams sender for Kwirth — sends messages via incoming webhook",
   "type": "module",

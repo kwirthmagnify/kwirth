@@ -39,6 +39,8 @@ console.log('Built dist/back.js')
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = {
+    type: 'commonjs',
+    extensionType: 'idp',
     id: meta.id,
     name: meta.name,
     displayName: meta.displayName,

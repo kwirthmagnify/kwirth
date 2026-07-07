@@ -1,7 +1,7 @@
 [
   {
+    "extensionType": "theme",
     "id": "sfy",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-sfy",
     "displayName": "SFY",
     "version": "0.1.2",
@@ -10,8 +10,8 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-sfy/-/kwirth-theme-sfy-0.1.2.tgz"
   },
   {
+    "extensionType": "theme",
     "id": "sfy",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-sfy",
     "displayName": "SFY",
     "version": "0.1.1",
@@ -20,8 +20,8 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-sfy/-/kwirth-theme-sfy-0.1.1.tgz"
   },
   {
+    "extensionType": "theme",
     "id": "sfy",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-sfy",
     "displayName": "SFY",
     "version": "0.1.0",
@@ -30,8 +30,8 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-sfy/-/kwirth-theme-sfy-0.1.0.tgz"
   },
   {
+    "extensionType": "theme",
     "id": "plexus",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
     "version": "0.1.2",
@@ -39,8 +39,8 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-plexus/-/kwirth-theme-plexus-0.1.2.tgz"
   },
   {
+    "extensionType": "theme",
     "id": "plexus",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
     "version": "0.1.1",
@@ -48,8 +48,8 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-plexus/-/kwirth-theme-plexus-0.1.1.tgz"
   },
   {
+    "extensionType": "theme",
     "id": "plexus",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
     "version": "0.1.0",
@@ -57,8 +57,8 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-plexus/-/kwirth-theme-plexus-0.1.0.tgz"
   },
   {
+    "extensionType": "theme",
     "id": "post-punk",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-post-punk",
     "displayName": "Post Punk",
     "version": "0.1.1",
@@ -66,8 +66,8 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-post-punk/-/kwirth-theme-post-punk-0.1.1.tgz"
   },
   {
+    "extensionType": "theme",
     "id": "post-punk",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-post-punk",
     "displayName": "Post Punk",
     "version": "0.1.0",
@@ -75,8 +75,8 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-post-punk/-/kwirth-theme-post-punk-0.1.0.tgz"
   },
   {
+    "extensionType": "theme",
     "id": "avicii",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-avicii",
     "displayName": "Avicii",
     "version": "0.1.1",
@@ -84,8 +84,8 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-avicii/-/kwirth-theme-avicii-0.1.1.tgz"
   },
   {
+    "extensionType": "theme",
     "id": "matrix",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-matrix",
     "displayName": "Matrix",
     "version": "0.1.1",
@@ -93,8 +93,8 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-matrix/-/kwirth-theme-matrix-0.1.1.tgz"
   },
   {
+    "extensionType": "theme",
     "id": "depeche-mode",
-    "type": "theme",
     "name": "@kwirthmagnify/kwirth-theme-depeche-mode",
     "displayName": "Depeche Mode",
     "version": "0.1.1",

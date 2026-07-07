@@ -2,7 +2,7 @@
   "id": "email-smtp",
   "name": "@kwirthmagnify/kwirth-sender-email-smtp",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "displayName": "Email Sender (SMTP)",
   "description": "Email sender for Kwirth — sends messages via SMTP with support for auth, no-auth, TLS and plaintext",
   "type": "module",

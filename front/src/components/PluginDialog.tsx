@@ -10,14 +10,14 @@ import { useKeyboard } from '../tools/useKeyboard'
 const PLUGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/plugins/manifest.json'
 
 interface IRequirement {
-    type: EExtensionType
+    extensionType: EExtensionType
     id: string
     minVersion: string
 }
 
 interface IPluginManifestEntry {
     id: string
-    type?: EExtensionType    // tipo de extensión de la entrada (marketplace unificado / packs)
+    extensionType?: EExtensionType    // tipo de extensión de la entrada (marketplace unificado / packs)
     name: string
     displayName: string
     version: string
@@ -25,7 +25,8 @@ interface IPluginManifestEntry {
     icon?: string
     website?: string
     url: string
-    requires?: IRequirement[]
+    requires?: IRequirement[]   // dependencias OBLIGATORIAS: bloquean el install si no están instaladas
+    uses?: IRequirement[]       // dependencias OPCIONALES: si están, el consumidor las usa; si no, funciona sin ellas
 }
 
 interface IInstalledPlugin {
@@ -102,7 +103,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: IPluginManifestEntry[] = await res.json()
             setAvailable(data)
-            const neededTypes = new Set(data.flatMap(e => e.requires ?? []).map(r => r.type).filter(t => t !== 'plugin'))
+            const neededTypes = new Set(data.flatMap(e => [...(e.requires ?? []), ...(e.uses ?? [])]).map(r => r.extensionType).filter(t => t !== 'plugin'))
             if (neededTypes.size > 0) {
                 const endpoints: Record<string, string> = { sender: `${backendUrl}/senders`, provider: `${backendUrl}/providers` }
                 const results: Record<string, { id: string, version: string }[]> = {}
@@ -119,7 +120,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     }
 
     const isRequirementMet = (req: IRequirement): boolean => {
-        const list = req.type === 'plugin' ? installed : (crossInstalled[req.type] ?? [])
+        const list = req.extensionType === 'plugin' ? installed : (crossInstalled[req.extensionType] ?? [])
         const found = list.find(x => x.id === req.id)
         return !!found && (found.version === req.minVersion || versionGreaterThan(found.version, req.minVersion))
     }
@@ -240,7 +241,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.14 : 0.26}) 100%)`
     }
 
-    const PluginCard = ({ icon, name, displayName, version, versions, onVersionChange, description, badge, source, website, action, requires }: { icon?: string; name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; requires?: IRequirement[] }) => (
+    const PluginCard = ({ icon, name, displayName, version, versions, onVersionChange, description, badge, source, website, action, requires, uses }: { icon?: string; name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; requires?: IRequirement[]; uses?: IRequirement[] }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 120, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: pluginGradient(name) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}>{resolveIcon(icon)}</Box>
@@ -260,7 +261,13 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                     {requires && requires.length > 0 && (
                         <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
                             <Typography variant='caption' color='text.disabled'>Requires:</Typography>
-                            {requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.type[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                            {requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.extensionType[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
+                        </Stack>
+                    )}
+                    {uses && uses.length > 0 && (
+                        <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
+                            <Typography variant='caption' color='text.disabled'>Uses:</Typography>
+                            {uses.map((r, i) => <Chip key={i} label={`${r.id} (${r.extensionType[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18, opacity: isRequirementMet(r) ? 1 : 0.45 }} />)}
                         </Stack>
                     )}
                 </Box>
@@ -409,10 +416,11 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                             website={plugin.website}
                                             badge={isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
                                             requires={plugin.requires}
+                                            uses={plugin.uses}
                                             action={(() => {
                                                 const unmet = (plugin.requires ?? []).filter(r => !isRequirementMet(r))
                                                 return (
-                                                    <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                                    <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                         <span>
                                                             <IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => install(plugin)}>
                                                                 {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
@@ -443,7 +451,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                                   </Select>
                                                 : <Chip label={`v${plugin.version}`} size='small' sx={{ minWidth: 72 }} />
                                             }
-                                            <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.type} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
+                                            <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                 <span>
                                                     <IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => install(plugin)}>
                                                         {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}

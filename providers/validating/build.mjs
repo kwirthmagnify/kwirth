@@ -31,7 +31,7 @@ await esbuild.build({
 console.log('Built dist/back.js')
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
-const distMeta = { type: 'provider',
+const distMeta = { type: 'commonjs', extensionType: 'provider',
     id: meta.id,
     name: meta.name,
     displayName: meta.displayName,

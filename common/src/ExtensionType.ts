@@ -9,5 +9,6 @@ export enum EExtensionType {
     PROVIDER = 'provider',
     SENDER = 'sender',
     THEME = 'theme',
-    HOMEPAGE = 'homepage'
+    HOMEPAGE = 'homepage',
+    IDP = 'idp'
 }

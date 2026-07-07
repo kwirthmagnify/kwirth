@@ -2,7 +2,7 @@
   "id": "console",
   "name": "@kwirthmagnify/kwirth-sender-console",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "displayName": "Console Sender",
   "description": "Console sender plugin for Kwirth — writes messages to stdout, with configurable prefix, level and timestamps per named config",
   "type": "module",
