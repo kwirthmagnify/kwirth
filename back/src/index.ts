@@ -1491,9 +1491,10 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             if (channelConstructor) {
                 let channelInstance = createChannelInstance(registeredChannels.get(channelId), localClusterInfo, backChannelObject)
                 if (channelInstance) {
-                    // 'instances' gate: a 'single' channel is hosted only by the in-cluster Kwirth. Elsewhere
-                    // (desktop/docker) it is announced as remote and NOT started here (avoids split-brain).
-                    if (resolveChannelMode(channelInstance.requirements, localKwirthData.inCluster) === EChannelMode.REMOTE) {
+                    // 'instances' gate: a 'single' channel is hosted only by the k8s-mode Kwirth home
+                    // (runningEnv.isK8s = FORCE==='k8s' or running inside a pod). On desktop/docker it is
+                    // announced as remote and NOT started here (avoids split-brain).
+                    if (resolveChannelMode(channelInstance.requirements, runningEnv.isK8s) === EChannelMode.REMOTE) {
                         runningInstance.remoteChannels.push({ ...channelInstance.getChannelData(), mode: EChannelMode.REMOTE })
                         logInfo(ELogComponent.CORE, `Channel '${channelId}' is 'single' and this is not its in-cluster home → announced as remote (not hosted here)`)
                     }
