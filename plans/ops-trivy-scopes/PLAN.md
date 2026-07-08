@@ -1,5 +1,17 @@
 # Plan — ops/trivy declaran sus scopes RBAC (getScopeCatalog)
 
+## ✅ HECHO (2026-07-08)
+- **ops** (0.2.15): `EOpsScope` + `OPS_SCOPES` en `src/common/OpsTypes.ts`; `getScopeCatalog()` en canal
+  back y front; ladder y `checkAssetScope` usan el enum (se corrige el fantasma `ops$xterm` → el real es
+  `ops$shell`). Scopes: `ops$get/execute/shell/restart`.
+- **trivy** (0.2.19): `ETrivyScope` + `TRIVY_SCOPES` en `src/common/TrivyTypes.ts`; `getScopeCatalog()` en
+  back y front; ladder usa el enum. Scopes: `trivy$workload/kubernetes`.
+- **core**: eliminado `LEGACY_PLUGIN_SCOPES` de `back/src/tools/ScopeCatalog.ts` (ahora `/core/scopes` solo
+  built-in + lo que declaran los canales). Back tests 61/0.
+- Publicados a npm + manifest (bbpm). Consumen common 0.5.25 (ya publicado) → sin cascada extra.
+- **DEUDA detectada**: `plugins/manifest.json` tiene entradas DUPLICADAS por id (censor 54, trivy 16, …);
+  el bbpm bumpea solo la entrada canónica (primer bloque). Limpiar los duplicados es tarea aparte.
+
 ## Contexto
 El mecanismo de **scopes declarados por plugin** ya existe (ver `plans/plugin-scopes/PLAN.md`):
 cada canal expone su catálogo vía `IChannel.getScopeCatalog()` (front y back), el core lo agrega en

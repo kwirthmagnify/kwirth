@@ -1,4 +1,18 @@
-import { IInstanceMessage } from "@kwirthmagnify/kwirth-common"
+import { IInstanceMessage, IExtensionScope } from "@kwirthmagnify/kwirth-common"
+
+// ─── Scopes de autorización (RBAC propio de Trivy) ────────────────────────────
+// Namespaced con 'trivy$' (convención del proyecto). Definen la escalera de acceso del canal.
+export enum ETrivyScope {
+    WORKLOAD = 'trivy$workload',        // acceso a reports de workloads (namespaced)
+    KUBERNETES = 'trivy$kubernetes'     // + reports a nivel de cluster (cluster-scoped)
+}
+
+// Catálogo de scopes que Trivy declara (lo expone el canal vía getScopeCatalog() en front y back);
+// pobla el editor de seguridad (User/API) y sirve para validar permisos. Labels/descriptions en inglés.
+export const TRIVY_SCOPES: IExtensionScope[] = [
+    { scope: ETrivyScope.WORKLOAD,   label: 'Trivy · Workload',   description: 'Access workload-scoped reports (vulnerabilities, config audit, secrets)' },
+    { scope: ETrivyScope.KUBERNETES, label: 'Trivy · Kubernetes', description: 'Access cluster-scoped reports (RBAC, infra assessment)' }
+]
 
 export enum ETrivyCommand {
     RESCAN = 'rescan'

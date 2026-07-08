@@ -54,8 +54,9 @@ Toca `common` + `common-front` + `common-back` (tipo nuevo + método en interfac
   common-back 0.5.23; cascada free completa; Defender 0.0.9. **Se conceden `defender$*` desde User/API Security.**
   - Vestigial: `IChannel.getScopeCatalog` del **front** ya no se consume (el front tira del endpoint); se deja
     por simetría con el back. Quitarlo = cascada de common-front → diferido.
-- **F2 ⬜ → movido a su propio plan:** migrar `ops`/`trivy` a declarar sus scopes + retirar
-  `LEGACY_PLUGIN_SCOPES`. Es trabajo de esos plugins, no de scopes/Defender → **`plans/ops-trivy-scopes/PLAN.md`**.
+- **F2 ✅ HECHO (ver `plans/ops-trivy-scopes/PLAN.md`):** `ops` (0.2.15) y `trivy` (0.2.19) declaran sus
+  scopes vía `getScopeCatalog()` (front+back, enums en su `common/`); **retirado `LEGACY_PLUGIN_SCOPES`** del
+  core → `/core/scopes` sólo built-in + canales. Publicados + manifest. Back tests 61/0.
 - **F3 ✅ HECHO (Defender, 0.1.1):** (a) `cluster` fuera del ladder (ya NO es admin); **super-rol =
   `admin`** (Kwirth) al tope, sobre `defender$poladmin`. (b) **D8**: `processDecisionCommand` y
   `processRemediationCommand` gateados por `defender$poledit` (enforce en el back). (c) e2e `09-rbac`

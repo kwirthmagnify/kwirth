@@ -1,8 +1,8 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources } from '@kwirthmagnify/kwirth-common-back'
-import { ETrivyCommand, IKnown, ITrivyMessage, ITrivyMessageResponse, ITrivyProviderEvent } from '../common/TrivyTypes'
+import { ETrivyCommand, ETrivyScope, TRIVY_SCOPES, IKnown, ITrivyMessage, ITrivyMessageResponse, ITrivyProviderEvent } from '../common/TrivyTypes'
 import zlib from 'zlib'
 // @ts-ignore
 import trivyOperatorYamlGz from './trivy-operator-0.30.1.yaml'
@@ -56,7 +56,9 @@ class TrivyChannel {
         websocket: false, cluster: false, resourced: true
     })
 
-    getChannelScopeLevel = (scope: string): number => ['', 'trivy$workload', 'trivy$kubernetes', 'cluster'].indexOf(scope)
+    getChannelScopeLevel = (scope: string): number => ['', ETrivyScope.WORKLOAD, ETrivyScope.KUBERNETES, 'cluster'].indexOf(scope)
+
+    getScopeCatalog = (): IExtensionScope[] => TRIVY_SCOPES   // RBAC: scopes que declara Trivy (validar/gestionar)
 
     startChannel = async (): Promise<void> => {
         // El provider reenvía todos los reportes de estos tipos; el filtrado por

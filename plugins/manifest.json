@@ -76,9 +76,9 @@
   {
     "extensionType": "plugin",
     "id": "ops",
-    "version": "0.2.14",
+    "version": "0.2.15",
     "name": "Ops",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.14.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.15.tgz",
     "description": "Ops channel plugin for Kwirth",
     "icon": "Terminal",
     "website": "https://kwirthmagnify.dev"
@@ -86,9 +86,9 @@
   {
     "extensionType": "plugin",
     "id": "trivy",
-    "version": "0.2.18",
+    "version": "0.2.19",
     "name": "Trivy",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.18.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.19.tgz",
     "description": "Trivy security scanning channel plugin for Kwirth",
     "icon": "VerifiedUser",
     "website": "https://kwirthmagnify.dev"

@@ -1,10 +1,10 @@
-import { IInstanceConfig, InstanceMessageChannelEnum, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, IRouteMessageResponse, AccessKey, accessKeyDeserialize, parseResources, ResourceIdentifier, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EClusterType, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, InstanceMessageChannelEnum, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, IRouteMessageResponse, AccessKey, accessKeyDeserialize, parseResources, ResourceIdentifier, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EClusterType, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { WebSocket as NonNativeWebSocket } from 'ws'
 import { PassThrough, Readable, Writable } from 'stream'
 import { execCommandDescribe } from './GetCommand'
 import { execCommandRestart } from './RestartCommand'
-import { EOpsCommand, IOpsMessage, IOpsMessageResponse } from '../common/OpsTypes'
+import { EOpsCommand, EOpsScope, OPS_SCOPES, IOpsMessage, IOpsMessageResponse } from '../common/OpsTypes'
 
 const checkResource = (resource: ResourceIdentifier, namespace: string, pod: string, container: string): boolean => {
     const match = (pattern: string, value: string) => !pattern || pattern === '*' || pattern === value
@@ -51,8 +51,10 @@ class OpsChannel {
     }
 
     getChannelScopeLevel(scope: string): number {
-        return ['', 'ops$get', 'ops$execute', 'ops$shell', 'ops$restart', 'cluster'].indexOf(scope)
+        return ['', EOpsScope.GET, EOpsScope.EXECUTE, EOpsScope.SHELL, EOpsScope.RESTART, 'cluster'].indexOf(scope)
     }
+
+    getScopeCatalog = (): IExtensionScope[] => OPS_SCOPES   // RBAC: scopes que declara Ops (validar/gestionar)
 
     startChannel = async () => { }
     processProviderEvent(_providerId: string, _obj: any): void { }
@@ -237,11 +239,11 @@ class OpsChannel {
 
         switch (opsMessage.command) {
             case EOpsCommand.DESCRIBE:
-                resp = this.checkAssetScope(instance, instance.assets[0], 'ops$get') ? await execCommandDescribe(this.clusterInfo, opsMessage) : { ...resp, data: 'Insufficient scope for GET' }
+                resp = this.checkAssetScope(instance, instance.assets[0], EOpsScope.GET) ? await execCommandDescribe(this.clusterInfo, opsMessage) : { ...resp, data: 'Insufficient scope for GET' }
                 break
             case EOpsCommand.RESTARTPOD:
             case EOpsCommand.RESTARTNS:
-                resp = this.checkAssetScope(instance, instance.assets[0], 'ops$restart') ? await execCommandRestart(this.clusterInfo, instance, opsMessage) : { ...resp, data: 'Insufficient scope for RESTART' }
+                resp = this.checkAssetScope(instance, instance.assets[0], EOpsScope.RESTART) ? await execCommandRestart(this.clusterInfo, instance, opsMessage) : { ...resp, data: 'Insufficient scope for RESTART' }
                 break
             default:
                 resp.data = `Invalid command for route: '${opsMessage.command}'`
@@ -257,7 +259,7 @@ class OpsChannel {
             case EOpsCommand.DESCRIBE: {
                 let asset = instance.assets.find(a => a.podNamespace === opsMessage.namespace && a.podName === opsMessage.pod && a.containerName === opsMessage.container)
                 if (!asset) { execResponse.data = 'Asset not found'; return execResponse }
-                if (!this.checkAssetScope(instance, asset, 'ops$get')) { execResponse.data = 'Insufficient scope for GET/DESCRIBE'; return execResponse }
+                if (!this.checkAssetScope(instance, asset, EOpsScope.GET)) { execResponse.data = 'Insufficient scope for GET/DESCRIBE'; return execResponse }
                 execResponse = await execCommandDescribe(this.clusterInfo, opsMessage)
                 break
             }
@@ -265,7 +267,7 @@ class OpsChannel {
                 if (!opsMessage.namespace || !opsMessage.pod || !opsMessage.container) { execResponse.data = 'Namespace, pod and container required'; return execResponse }
                 let asset = instance.assets.find(a => a.podNamespace === opsMessage.namespace && a.podName === opsMessage.pod && a.containerName === opsMessage.container)
                 if (!asset) { execResponse.data = 'Asset not found'; return execResponse }
-                if (!this.checkAssetScope(instance, asset, 'ops$restart')) { execResponse.data = 'Insufficient scope to RESTART CONTAINER'; return execResponse }
+                if (!this.checkAssetScope(instance, asset, EOpsScope.RESTART)) { execResponse.data = 'Insufficient scope to RESTART CONTAINER'; return execResponse }
                 try {
                     await this.executeLinuxCommand(webSocket, instance, asset.podNamespace, asset.podName, asset.containerName, opsMessage.id, '/usr/sbin/killall5', EOpsCommand.RESTART)
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, `Container ${asset.podNamespace}/${asset.podName}/${asset.containerName} restarted`)
@@ -277,7 +279,7 @@ class OpsChannel {
             }
             case EOpsCommand.RESTARTNS:
                 for (let asset of instance.assets) {
-                    if (!this.checkAssetScope(instance, asset, 'ops$restart')) { execResponse.data = `No RESTART scope on [${asset.podNamespace}/${asset.podName}/${asset.containerName}]`; return execResponse }
+                    if (!this.checkAssetScope(instance, asset, EOpsScope.RESTART)) { execResponse.data = `No RESTART scope on [${asset.podNamespace}/${asset.podName}/${asset.containerName}]`; return execResponse }
                 }
                 execResponse = await execCommandRestart(this.clusterInfo, instance, opsMessage)
                 break
@@ -285,7 +287,7 @@ class OpsChannel {
                 if (!opsMessage.namespace || !opsMessage.pod) { execResponse.data = 'Namespace and pod required'; return execResponse }
                 let asset = instance.assets.find(a => a.podNamespace === opsMessage.namespace && a.podName === opsMessage.pod)
                 if (!asset) { execResponse.data = 'Asset not found'; return execResponse }
-                if (!this.checkAssetScope(instance, asset, 'ops$restart')) { execResponse.data = 'Insufficient scope to RESTARTPOD'; return execResponse }
+                if (!this.checkAssetScope(instance, asset, EOpsScope.RESTART)) { execResponse.data = 'Insufficient scope to RESTARTPOD'; return execResponse }
                 execResponse = await execCommandRestart(this.clusterInfo, instance, opsMessage)
                 break
             }

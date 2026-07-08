@@ -2,12 +2,13 @@ import React, { FC, ReactNode } from 'react'
 import { Divider, Typography } from '@mui/material'
 import { EChannelRefreshAction, IChannel, IChannelObject, IChannelRequirements, IContentProps, ISetupProps, ENotifyLevel } from '@kwirthmagnify/kwirth-common-front'
 import { IChannelMessageAction } from '@kwirthmagnify/kwirth-common-front'
-import { ISignalMessage, IInstanceConfigResponse, IInstanceConfig, EInstanceMessageFlow, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageChannel, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
+import { ISignalMessage, IInstanceConfigResponse, IInstanceConfig, EInstanceMessageFlow, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageChannel, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigObject, EInstanceConfigView, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { OpsIcon, OpsSetup } from './OpsSetup'
 import { OpsTabContent } from './OpsTabContent'
 import { OpsData, IOpsData, IScopedObject } from './OpsData'
 import { ESwitchKey, IOpsConfig, OpsConfig, OpsInstanceConfig } from './OpsConfig'
 import { EOpsCommand, IOpsMessageResponse, IOpsInstanceConfig } from './OpsTypes'
+import { EOpsScope, OPS_SCOPES } from '../common/OpsTypes'
 
 export class OpsChannel implements IChannel {
     private setupVisible = false
@@ -21,7 +22,8 @@ export class OpsChannel implements IChannel {
         setup: true, settings: false, palette: false, userSettings: false, webSocket: true, backChannels: false
     }
 
-    getScope() { return 'ops$get' }
+    getScope() { return EOpsScope.GET }
+    getScopeCatalog(): IExtensionScope[] { return OPS_SCOPES }   // RBAC: scopes que declara Ops (para el editor de seguridad)
     getChannelIcon(): JSX.Element { return OpsIcon }
     getSetupVisibility(): boolean { return this.setupVisible }
     setSetupVisibility(visibility: boolean): void { this.setupVisible = visibility }

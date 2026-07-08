@@ -1,12 +1,12 @@
 import React, { FC } from 'react'
 import { EChannelRefreshAction, IChannel, IChannelObject, IChannelRequirements, IContentProps, ISetupProps, ENotifyLevel } from '@kwirthmagnify/kwirth-common-front'
 import { IChannelMessageAction } from '@kwirthmagnify/kwirth-common-front'
-import { EInstanceMessageAction, EInstanceMessageType, ISignalMessage, EInstanceMessageFlow, ESignalMessageLevel, IInstanceMessage, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
+import { EInstanceMessageAction, EInstanceMessageType, ISignalMessage, EInstanceMessageFlow, ESignalMessageLevel, IInstanceMessage, EInstanceConfigView, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { TrivyIcon, TrivySetup } from './TrivySetup'
 import { TrivyTabContent } from './TrivyTabContent'
 import { ITrivyData, IAsset, TrivyData } from './TrivyData'
 import { TrivyConfig, TrivyInstanceConfig } from './TrivyConfig'
-import { ITrivyMessageResponse } from '../common/TrivyTypes'
+import { ITrivyMessageResponse, ETrivyScope, TRIVY_SCOPES } from '../common/TrivyTypes'
 
 export class TrivyChannel implements IChannel {
     private setupVisible = false
@@ -20,7 +20,8 @@ export class TrivyChannel implements IChannel {
         setup: true, settings: false, palette: false, userSettings: false, webSocket: true, backChannels: false
     }
 
-    getScope() { return 'trivy$workload' }
+    getScope() { return ETrivyScope.WORKLOAD }
+    getScopeCatalog(): IExtensionScope[] { return TRIVY_SCOPES }   // RBAC: scopes que declara Trivy (para el editor de seguridad)
     getChannelIcon(): JSX.Element { return TrivyIcon }
     getSetupVisibility(): boolean { return this.setupVisible }
     setSetupVisibility(visibility: boolean): void { this.setupVisible = visibility }
