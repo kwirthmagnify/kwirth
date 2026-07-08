@@ -5,7 +5,7 @@ import { buildResource, parseResource, IExtensionScope } from '@kwirthmagnify/kw
 interface IResourceEditorProps {
     resources:string[]
     onUpdate:(resources:string[]) => void
-    pluginScopes?:IExtensionScope[]   // scopes RBAC declarados por los plugins instalados (getScopeCatalog)
+    scopeCatalog?:IExtensionScope[]   // catálogo completo (built-in + plugins) servido por GET /core/scopes
 }
 
 const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorProps) => {
@@ -21,25 +21,6 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
     const [statefulset, setStatefulset] = useState('')
     const [pod, setPod] = useState('')
     const [container, setContainer] = useState('')
-
-    enum allScopes {
-        NONE = 'none',
-        API = 'api',
-        ADMIN = 'admin',
-        CLUSTER = 'cluster',
-        FILTER = 'filter',
-        VIEW = 'view',
-        SNAPSHOT = 'snapshot',
-        STREAM = 'stream',
-        CREATE = 'create',
-        SUBSCRIBE = 'subscribe',
-        OPS_GET = 'ops$get',
-        OPS_EXECUTE = 'ops$execute',
-        OPS_XTERM = 'ops$xterm',
-        OPS_RESTART = 'ops$restart',
-        TRIVY_WORKLOAD = 'trivy$workload',
-        TRIVY_KUBERNETES = 'trivy$kubernetes'
-    }
 
     useEffect(() => {
         setAllResources(props.resources)
@@ -123,13 +104,9 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
         setSelectedResource(res)
     }
 
-    // Opciones de la select = scopes core built-in (+ ops/trivy hardcodeados, se migrarán) + los que
-    // declaran los plugins instalados vía getScopeCatalog (dedup por scope).
-    const builtinScopes: IExtensionScope[] = Object.values(allScopes).map(s => ({ scope: s, label: s, description: '' }))
-    const scopeOptions: IExtensionScope[] = [
-        ...builtinScopes,
-        ...(props.pluginScopes ?? []).filter(ps => !builtinScopes.some(b => b.scope === ps.scope))
-    ]
+    // Opciones de la select = catálogo completo servido por GET /core/scopes (built-in del core + legacy
+    // ops/trivy + scopes declarados por los plugins vía getScopeCatalog). Ya no hay enum en el front.
+    const scopeOptions: IExtensionScope[] = props.scopeCatalog ?? []
     const filteredScopeOptions = scopeFilter.trim()
         ? scopeOptions.filter(o => scopes.includes(o.scope) || (o.scope + ' ' + o.label).toLowerCase().includes(scopeFilter.trim().toLowerCase()))
         : scopeOptions

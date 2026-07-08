@@ -9,7 +9,6 @@ import copy from 'clipboard-copy'
 
 interface IManageUserSecurityProps {
     onClose:() => void
-    pluginScopes?:IExtensionScope[]
 }
 
 const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUserSecurityProps) => {
@@ -24,6 +23,16 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     const [allResources, setAllResources] = useState<string[]>([])
     const [idp, setIdp] = useState<string>('')
     const [idps, setIdps] = useState<{id:string, label:string}[]>([])
+    const [scopeCatalog, setScopeCatalog] = useState<IExtensionScope[]>([])
+
+    // catálogo global de scopes RBAC (built-in + plugins), servido por el core → puebla el editor de recursos
+    const getScopeCatalog = async () => {
+        try {
+            let response = await fetch(`${backendUrl}/core/scopes`, addGetAuthorization(accessString))
+            if (response.ok) setScopeCatalog(await response.json())
+        }
+        catch {}
+    }
 
     const getUsers = async () => {
         let response = await fetch(`${backendUrl}/user`, addGetAuthorization(accessString))
@@ -46,6 +55,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     useEffect( () => {
         getUsers()
         getIdps()
+        getScopeCatalog()
     },[])
 
     const onClickUser = async (id:string) => {
@@ -148,7 +158,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
                             </FormControl>
                         </Stack>
 
-                        <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} pluginScopes={props.pluginScopes}/>
+                        <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} scopeCatalog={scopeCatalog}/>
                     </Stack>
                 </Stack>
             </DialogContent>

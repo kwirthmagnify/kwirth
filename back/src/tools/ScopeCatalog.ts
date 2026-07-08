@@ -21,12 +21,25 @@ export const CORE_BUILTIN_SCOPES: IExtensionScope[] = [
     { scope: 'none',      label: 'none',      description: 'No permission' }
 ]
 
-/** Catálogo completo: built-in del core + los declarados por los canales registrados. Dedup por scope. */
+// TEMPORAL (F2): scopes de plugins que AÚN no declaran getScopeCatalog (ops/trivy). Estaban hardcodeados
+// en el enum del front (ResourceEditor); se mueven aquí para que /core/scopes los siga sirviendo mientras
+// el front deja de tener enum propio. QUITAR cuando ops/trivy declaren su catálogo (getScopeCatalog).
+export const LEGACY_PLUGIN_SCOPES: IExtensionScope[] = [
+    { scope: 'ops$get',          label: 'ops$get',          description: 'Ops: read resources' },
+    { scope: 'ops$execute',      label: 'ops$execute',      description: 'Ops: execute commands' },
+    { scope: 'ops$xterm',        label: 'ops$xterm',        description: 'Ops: interactive terminal' },
+    { scope: 'ops$restart',      label: 'ops$restart',      description: 'Ops: restart workloads' },
+    { scope: 'trivy$workload',   label: 'trivy$workload',   description: 'Trivy: workload-scoped access' },
+    { scope: 'trivy$kubernetes', label: 'trivy$kubernetes', description: 'Trivy: cluster-scoped access' }
+]
+
+/** Catálogo completo: built-in del core + legacy (F2) + los declarados por los canales registrados. Dedup. */
 export const buildScopeCatalog = (registeredChannels: Map<string, TChannelConstructor>): IExtensionScope[] => {
     const seen = new Set<string>()
     const out: IExtensionScope[] = []
     const add = (s: IExtensionScope): void => { if (s?.scope && !seen.has(s.scope)) { seen.add(s.scope); out.push(s) } }
     CORE_BUILTIN_SCOPES.forEach(add)
+    LEGACY_PLUGIN_SCOPES.forEach(add)
     for (const Ctor of registeredChannels.values()) {
         try {
             // instancia throwaway solo para leer el catálogo (dato estático); el constructor de un canal

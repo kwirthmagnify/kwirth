@@ -10,7 +10,6 @@ import copy from 'clipboard-copy'
 
 interface IManageApiSecurityProps {
     onClose:() => void
-    pluginScopes?:IExtensionScope[]
 }
 
 const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSecurityProps) => {
@@ -24,6 +23,7 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
     const [showPermanent, setShowPermanent] = useState<boolean>(true)
     const [showVolatile, setShowVolatile] = useState<boolean>(false)
     const [allResources, setAllResources] = useState<string[]>([])
+    const [scopeCatalog, setScopeCatalog] = useState<IExtensionScope[]>([])
 
     const getKeys = async () => {
         let response = await fetch(`${backendUrl}/key`, addGetAuthorization(accessString))
@@ -31,8 +31,18 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
         setKeys(data)
     }
 
+    // catálogo global de scopes RBAC (built-in + plugins), servido por el core → puebla el editor de recursos
+    const getScopeCatalog = async () => {
+        try {
+            let response = await fetch(`${backendUrl}/core/scopes`, addGetAuthorization(accessString))
+            if (response.ok) setScopeCatalog(await response.json())
+        }
+        catch {}
+    }
+
     useEffect( () => {
         getKeys()
+        getScopeCatalog()
     },[])
 
     const onKeySelected = (kselected:AccessKey|null) => {
@@ -143,7 +153,7 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
                             </FormControl>
                         </Stack>
 
-                        <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} pluginScopes={props.pluginScopes}/>
+                        <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} scopeCatalog={scopeCatalog}/>
                     </Stack>
                 </Box>
             </DialogContent>
