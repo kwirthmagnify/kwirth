@@ -56,9 +56,12 @@ Toca `common` + `common-front` + `common-back` (tipo nuevo + método en interfac
     por simetría con el back. Quitarlo = cascada de common-front → diferido.
 - **F2 ⬜ → movido a su propio plan:** migrar `ops`/`trivy` a declarar sus scopes + retirar
   `LEGACY_PLUGIN_SCOPES`. Es trabajo de esos plugins, no de scopes/Defender → **`plans/ops-trivy-scopes/PLAN.md`**.
-- **F3 ⬜ (Defender):** (a) `cluster` = acceso total por diseño de Kwirth (god) → decidir si Defender-admin
-  debe requerir `defender$poladmin` explícito aun con `cluster`; (b) **RBAC de decisiones (D8)**: hoy
-  `processDecisionCommand` NO comprueba scope → gatear accept/assign/remediation; (c) activar e2e `09-rbac`.
+- **F3 ✅ HECHO (Defender, 0.1.1):** (a) `cluster` fuera del ladder (ya NO es admin); **super-rol =
+  `admin`** (Kwirth) al tope, sobre `defender$poladmin`. (b) **D8**: `processDecisionCommand` y
+  `processRemediationCommand` gateados por `defender$poledit` (enforce en el back). (c) e2e `09-rbac`
+  reescrito al UI actual (⋮ con Help; items admin ocultos a no-admin) — se ejecuta con key no-admin real +
+  `DEFENDER_E2E_NONADMIN=1`. Guía (Permissions) documenta el modelo. Verificado: el user `admin` lleva
+  `cluster,admin` → pasa por el super-rol; un `cluster`-solo (dev) → no-admin.
 
 ## Extra hecho (fuera del plan original)
 - **Homogeneización IdP** `connectorId`→`id`: el id PROPIO del conector pasa a `id` (como el resto de
