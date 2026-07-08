@@ -5,7 +5,6 @@ import {
     EInstanceMessageFlow,
     EInstanceMessageType,
     ESignalMessageLevel,
-    IBackChannelObject,
     IInstanceConfig,
     IInstanceConfigResponse,
     IInstanceMessage,

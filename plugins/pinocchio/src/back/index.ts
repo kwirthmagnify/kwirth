@@ -1,4 +1,5 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS } from '@kwirthmagnify/kwirth-common-ai'
 import { buildModel, loadModels, IToolContext, tools as kwirthTools, toolInfoList, runWithToolContext } from '@kwirthmagnify/kwirth-common-ai/back'

@@ -1,5 +1,4 @@
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common'
-import { IChannel } from '@kwirthmagnify/kwirth-common-back'
+import { IChannel, IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { ClusterInfo } from '../model/ClusterInfo'
 
 export { IChannel }

@@ -1,7 +1,8 @@
 // Standalone backend plugin for the News channel.
 // Adapted from back/src/channels/news/NewsChannel.ts.
 // Does not depend on ClusterInfo or internal logging tools.
-import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import https from 'https'
 import http from 'http'
 

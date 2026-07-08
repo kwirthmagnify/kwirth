@@ -1,3 +1,4 @@
+export * from './IBackChannelObject'
 export * from './IChannel'
 export * from './IProvider'
 export * from './ISender'

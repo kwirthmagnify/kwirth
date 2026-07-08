@@ -1,6 +1,7 @@
 import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'

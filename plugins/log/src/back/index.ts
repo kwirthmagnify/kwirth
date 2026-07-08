@@ -1,4 +1,5 @@
-import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, ESignalMessageLevel, EInstanceMessageType, EClusterType, IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, ESignalMessageLevel, EInstanceMessageType, EClusterType, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { Request, Response } from 'express'

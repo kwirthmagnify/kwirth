@@ -1,6 +1,7 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, EClusterType} from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { V1APIResource, V1APIResourceList } from '@kubernetes/client-node'

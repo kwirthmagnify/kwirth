@@ -1,4 +1,5 @@
-import { IInstanceConfig, InstanceMessageChannelEnum, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, IRouteMessageResponse, AccessKey, accessKeyDeserialize, parseResources, ResourceIdentifier, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EClusterType, IBackChannelObject, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, InstanceMessageChannelEnum, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, IRouteMessageResponse, AccessKey, accessKeyDeserialize, parseResources, ResourceIdentifier, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EClusterType, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { WebSocket as NonNativeWebSocket } from 'ws'
 import { PassThrough, Readable, Writable } from 'stream'
 import { execCommandDescribe } from './GetCommand'

@@ -1,6 +1,3 @@
-import { ISenderAccess } from './Sender'
-import { IUserInfo } from './Global'
-
 //transient
 enum ClusterTypeEnum {
     KUBERNETES = 'kubernetes',
@@ -64,22 +61,4 @@ interface IBackChannelRequirements {
     instances?: EChannelInstances   // default MULTI; SINGLE = one back per cluster (home = in-cluster)
 }
 
-interface IBackChannelObject {
-    writeStorage?(id: string, secret: boolean, data: any): Promise<void>
-    readStorage?(id: string, secret: boolean): Promise<any>
-    writeStorageCommon?(id: string, secret: boolean, data: any): Promise<void>
-    readStorageCommon?(id: string, secret: boolean): Promise<any>
-    logInfo?(message: unknown): void
-    logTrace?(message: unknown): void
-    logWarning?(message: unknown): void
-    logError?(message: unknown): void
-    // Catálogo SANEADO de usuarios Kwirth (subset IUserInfo, sin secretos). Lo provee el core;
-    // los plugins lo consumen (p.ej. resolución de ownership / picker). Read-only.
-    getUsers?(): Promise<IUserInfo[]>
-    // Config de instalación del plugin (JSON genérico), por id de plugin. La persiste el core (ConfigMap,
-    // editable desde el plugin manager) y la consume el back del plugin. Read-only. Genérica como providers.
-    getPluginConfig?(pluginId: string): Promise<Record<string, unknown>>
-    senders?: ISenderAccess
-}
-
-export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, EChannelInstances, EChannelMode, IBackChannelRequirements, IBackChannelObject }
+export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, EChannelInstances, EChannelMode, IBackChannelRequirements }
