@@ -1,9 +1,11 @@
 # Plan — ops/trivy declaran sus scopes RBAC (getScopeCatalog)
 
 ## ✅ HECHO (2026-07-08)
-- **ops** (0.2.15): `EOpsScope` + `OPS_SCOPES` en `src/common/OpsTypes.ts`; `getScopeCatalog()` en canal
-  back y front; ladder y `checkAssetScope` usan el enum (se corrige el fantasma `ops$xterm` → el real es
-  `ops$shell`). Scopes: `ops$get/execute/shell/restart`.
+- **ops** (0.2.16): `EOpsScope` + `OPS_SCOPES` en `src/common/OpsTypes.ts`; `getScopeCatalog()` en canal
+  back y front; ladder y `checkAssetScope` usan el enum. Scopes declarados = **solo los enforced**:
+  `ops$get` (describe/get) y `ops$restart` (restart/restartpod/restartns). Se retiran `ops$execute` y
+  `ops$shell` (estaban en la escalera pero ningún gate los exigía; la shell interactiva no está gateada) y
+  el fantasma `ops$xterm` (nunca existió, solo en el LEGACY del core).
 - **trivy** (0.2.19): `ETrivyScope` + `TRIVY_SCOPES` en `src/common/TrivyTypes.ts`; `getScopeCatalog()` en
   back y front; ladder usa el enum. Scopes: `trivy$workload/kubernetes`.
 - **core**: eliminado `LEGACY_PLUGIN_SCOPES` de `back/src/tools/ScopeCatalog.ts` (ahora `/core/scopes` solo
