@@ -138,6 +138,7 @@ export interface IToolContext {
     nodes: Map<string, any>
     clusterInfo: any
     clusterMetrics: any[]
+    clusterEvents?: any[]   // recent k8s events buffer ({type, obj}), optional for backward compat
     trace: (toolName: string, args: Record<string, unknown>) => void
 }
 
@@ -178,6 +179,29 @@ function mapToJson(data: any): any {
         return obj
     }
     return data
+}
+
+// Compact, LLM-friendly view of one buffered event ({type, obj}): a CoreV1Event (kind='Event') or an
+// object lifecycle change.
+const summarizeClusterEvent = (e: any): Record<string, unknown> => {
+    const o = e?.obj ?? {}
+    if (o.kind === 'Event') {
+        return {
+            kind: 'Event',
+            eventType: o.type,          // Normal | Warning
+            reason: o.reason,
+            message: o.message,
+            involved: o.involvedObject ? { kind: o.involvedObject.kind, name: o.involvedObject.name, namespace: o.involvedObject.namespace } : undefined,
+            count: o.count,
+            lastTimestamp: o.lastTimestamp ?? o.eventTime
+        }
+    }
+    return {
+        changeType: e?.type,            // ADDED | MODIFIED
+        kind: o.kind,
+        name: o.metadata?.name,
+        namespace: o.metadata?.namespace
+    }
 }
 
 export const tools = {
@@ -573,6 +597,42 @@ export const tools = {
         }
     }),
 
+    // ── EVENTS (from the cluster events buffer in ctx().clusterEvents) ──────────
+
+    get_cluster_events: tool({
+        description: 'Returns recent Kubernetes events buffered for this cluster: kube Events (warnings like crashloops/OOM/failed scheduling) and object lifecycle changes. Optionally filter to warnings only or by namespace.',
+        inputSchema: z.object({
+            warningsOnly: z.boolean().optional().describe('Only Warning-type kube Events'),
+            namespace: z.string().optional().describe('Filter by namespace'),
+            limit: z.number().optional().describe('Max events to return (default 50)')
+        }),
+        execute: async ({ warningsOnly, namespace, limit = 50 }) => {
+            ctx().trace('get_cluster_events', { warningsOnly: !!warningsOnly, namespace: namespace ?? '*', limit })
+            let evs = ctx().clusterEvents ?? []
+            if (warningsOnly) evs = evs.filter(e => e?.obj?.kind === 'Event' && e.obj.type === 'Warning')
+            if (namespace) evs = evs.filter(e => (e?.obj?.metadata?.namespace ?? e?.obj?.involvedObject?.namespace) === namespace)
+            return { count: evs.length, events: evs.slice(-limit).map(summarizeClusterEvent) }
+        }
+    }),
+
+    get_object_events: tool({
+        description: 'Returns recent events for a specific Kubernetes object (by namespace and name): its lifecycle changes and related kube Events (via involvedObject).',
+        inputSchema: z.object({
+            namespace: z.string().describe('Namespace of the object'),
+            name: z.string().describe('Name of the object')
+        }),
+        execute: async ({ namespace, name }) => {
+            ctx().trace('get_object_events', { namespace, name })
+            const evs = (ctx().clusterEvents ?? []).filter(e => {
+                const o = e?.obj ?? {}
+                const isObj = o.metadata?.namespace === namespace && o.metadata?.name === name
+                const isInvolved = o.involvedObject?.namespace === namespace && o.involvedObject?.name === name
+                return isObj || isInvolved
+            })
+            return { count: evs.length, events: evs.map(summarizeClusterEvent) }
+        }
+    }),
+
 } as const
 
 export const toolInfoList: IToolInfo[] = [
@@ -601,6 +661,8 @@ export const toolInfoList: IToolInfo[] = [
     { name: 'times_two',                 effect: EToolEffect.READ,  description: 'Multiplies a number by two.' },
     { name: 'father_of',                 effect: EToolEffect.READ,  description: 'Returns the name of the father of a person.' },
     { name: 'get_certificate_info',      effect: EToolEffect.READ,  description: 'Connects to a hostname via HTTPS and returns TLS certificate details: subject, issuer, validity dates, SANs, fingerprint and whether it is currently valid.' },
+    { name: 'get_cluster_events',        effect: EToolEffect.READ,  description: 'Returns recent buffered Kubernetes events for this cluster (warnings + object lifecycle changes); filter by warnings only or namespace.' },
+    { name: 'get_object_events',         effect: EToolEffect.READ,  description: 'Returns recent events for a specific Kubernetes object (namespace + name), including related kube Events.' },
 ]
 
 // ── AGENT ENGINE ─────────────────────────────────────────────────────────────
