@@ -11,7 +11,7 @@ const DEFAULT_SCOPES = 'read:user user:email'
 const trimSlashes = (s: string): string => s.replace(/\/+$/, '')
 
 export default class GithubOnpremConnector implements IIdpConnector {
-    connectorId = 'github-onprem'
+    id = 'github-onprem'
     label = 'Login with GitHub'
     kind = EIdpConnectorKind.OAUTH2
 

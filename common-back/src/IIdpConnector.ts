@@ -49,7 +49,7 @@ export interface IIdpCallbackContext {
 }
 
 export interface IIdpConnector {
-    connectorId: string
+    id: string
     label: string
     kind: EIdpConnectorKind
     getConfigSchema(): IIdpConfigFieldDef[]

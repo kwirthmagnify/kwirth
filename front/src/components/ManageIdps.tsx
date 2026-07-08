@@ -10,9 +10,9 @@ const IDPS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirt
 // tipos de la API (front-local, como hace ProviderDialog con su IProviderSchemaField)
 type IdpFieldType = 'text' | 'number' | 'boolean' | 'password'
 interface IIdpConfigFieldDef { name: string; label: string; type?: IdpFieldType; required?: boolean; options?: string[] }
-interface IIdpConnectorInfo { connectorId: string; label: string; kind: string; schema: IIdpConfigFieldDef[]; installed: boolean }
+interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IIdpConfigFieldDef[]; installed: boolean }
 interface IIdpInstanceConfig { id: string; connectorId: string; label: string; enabled: boolean; config: Record<string, unknown> }
-interface IIdpConnectorManifestEntry { connectorId: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string }
+interface IIdpConnectorManifestEntry { id: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string }
 
 interface IManageIdpsProps {
     onClose: () => void
@@ -74,10 +74,10 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
 
     // ---- config (Settings desde la card) ----
     const openConfig = (c: IIdpConnectorInfo) => {
-        const existing = instanceOf(c.connectorId)
+        const existing = instanceOf(c.id)
         setEditConnector(c)
         setIsNew(!existing)
-        setEditing(existing ? { ...existing, config: { ...existing.config } } : { id: c.connectorId, connectorId: c.connectorId, label: c.label, enabled: false, config: {} })
+        setEditing(existing ? { ...existing, config: { ...existing.config } } : { id: c.id, connectorId: c.id, label: c.label, enabled: false, config: {} })
     }
     const closeConfig = () => { setEditing(undefined); setEditConnector(undefined) }
     const setCfg = (name: string, value: unknown) => setEditing(prev => prev ? { ...prev, config: { ...prev.config, [name]: value } } : prev)
@@ -101,10 +101,10 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
     }
 
     // ---- marketplace (available connectors) ----
-    const grouped: Record<string, IIdpConnectorManifestEntry[]> = available.reduce((acc, e) => { (acc[e.connectorId] ||= []).push(e); return acc }, {} as Record<string, IIdpConnectorManifestEntry[]>)
+    const grouped: Record<string, IIdpConnectorManifestEntry[]> = available.reduce((acc, e) => { (acc[e.id] ||= []).push(e); return acc }, {} as Record<string, IIdpConnectorManifestEntry[]>)
     Object.values(grouped).forEach(g => g.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
     const getSelected = (id: string) => { const g = grouped[id]; const v = selectedVersions[id] ?? g[0].version; return g.find(e => e.version === v) ?? g[0] }
-    const isInstalled = (id: string) => connectors.some(c => c.connectorId === id)
+    const isInstalled = (id: string) => connectors.some(c => c.id === id)
 
     const idpGradient = (name: string) => {
         let hash = 0
@@ -128,7 +128,7 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
 
     // ---- connector install/uninstall (EPIC G endpoints) ----
     const installFromCatalog = async (entry: IIdpConnectorManifestEntry) => {
-        setError(undefined); setInstallingId(entry.connectorId)
+        setError(undefined); setInstallingId(entry.id)
         try {
             const res = await fetch(`${backendUrl}/idp/connectors/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
@@ -159,22 +159,22 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
         finally { setInstallingFile(false); if (fileInputRef.current) fileInputRef.current.value = '' }
     }
     const uninstallConnector = async (c: IIdpConnectorInfo) => {
-        setError(undefined); setUninstallingId(c.connectorId)
+        setError(undefined); setUninstallingId(c.id)
         try {
-            const res = await fetch(`${backendUrl}/idp/connectors/${c.connectorId}`, addDeleteAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/idp/connectors/${c.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
             await load()
         }
-        catch (err) { setError(`Failed to uninstall ${c.connectorId}: ${err}`) }
+        catch (err) { setError(`Failed to uninstall ${c.id}: ${err}`) }
         finally { setUninstallingId(undefined) }
     }
 
-    const shownConnectors = connectors.filter(c => !installedFilter || c.connectorId.includes(installedFilter.toLowerCase()) || c.label.toLowerCase().includes(installedFilter.toLowerCase()))
+    const shownConnectors = connectors.filter(c => !installedFilter || c.id.includes(installedFilter.toLowerCase()) || c.label.toLowerCase().includes(installedFilter.toLowerCase()))
     const availableIds = Object.keys(grouped).filter(id => !availableFilter || id.includes(availableFilter.toLowerCase()) || grouped[id][0].name?.toLowerCase().includes(availableFilter.toLowerCase()))
 
     // estado de configuracion de un conector (para el chip de la card)
     const statusChip = (c: IIdpConnectorInfo) => {
-        const inst = instanceOf(c.connectorId)
+        const inst = instanceOf(c.id)
         if (inst?.enabled) return <Chip label='enabled' color='success' size='small' icon={<CheckCircle />} />
         if (inst) return <Chip label='disabled' size='small' variant='outlined' />
         return <Chip label='not configured' size='small' variant='outlined' color='warning' />
@@ -197,7 +197,7 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                         : viewMode === 'card'
                             ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
                                 { shownConnectors.map(c => (
-                                    <Box key={c.connectorId} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 96, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: idpGradient(c.connectorId) }}>
+                                    <Box key={c.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 96, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: idpGradient(c.id) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Key /></Box>
                                             <Box flex={1} minWidth={0}>
@@ -205,14 +205,14 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{c.label}</Typography>
                                                     {statusChip(c)}
                                                 </Stack>
-                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{c.connectorId} · {c.kind}</Typography>
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{c.id} · {c.kind}</Typography>
                                             </Box>
                                         </Stack>
                                         <Stack direction='row' justifyContent='flex-end' alignItems='center' sx={{ mt: 1 }}>
                                             <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
                                             <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
-                                                <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.connectorId} onClick={() => uninstallConnector(c)}>
-                                                    { uninstallingId === c.connectorId ? <CircularProgress size={16} /> : <Delete fontSize='small' /> }
+                                                <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
+                                                    { uninstallingId === c.id ? <CircularProgress size={16} /> : <Delete fontSize='small' /> }
                                                 </IconButton></span>
                                             </Tooltip>
                                         </Stack>
@@ -221,14 +221,14 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                               </Box>
                             : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
                                 { shownConnectors.map(c => (
-                                    <Box key={c.connectorId} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
+                                    <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Key fontSize='small' sx={{ color: 'text.secondary' }} />
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0 }} noWrap>{c.label}</Typography>
                                         {statusChip(c)}
                                         <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
                                         <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
-                                            <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.connectorId} onClick={() => uninstallConnector(c)}>
-                                                { uninstallingId === c.connectorId ? <CircularProgress size={16} /> : <Delete fontSize='small' /> }
+                                            <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
+                                                { uninstallingId === c.id ? <CircularProgress size={16} /> : <Delete fontSize='small' /> }
                                             </IconButton></span>
                                         </Tooltip>
                                     </Box>

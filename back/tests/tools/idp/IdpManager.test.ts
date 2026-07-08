@@ -11,7 +11,7 @@ import path from 'path'
 
 // ---- fakes ----
 class FakeConnector implements IIdpConnector {
-    connectorId = 'fake'
+    id = 'fake'
     label = 'Fake IdP'
     kind = EIdpConnectorKind.OIDC
     getConfigSchema(): IIdpConfigFieldDef[] {
@@ -66,7 +66,7 @@ test('registerConnector + getConnector instancia el conector', () => {
     const mgr = managerWithFake()
     const c = mgr.getConnector('fake')
     assert.ok(c)
-    assert.equal(c!.connectorId, 'fake')
+    assert.equal(c!.id, 'fake')
     assert.equal(c!.kind, EIdpConnectorKind.OIDC)
 })
 
@@ -79,7 +79,7 @@ test('listConnectors expone label/kind/schema', () => {
     const mgr = managerWithFake()
     const list = mgr.listConnectors()
     assert.equal(list.length, 1)
-    assert.equal(list[0].connectorId, 'fake')
+    assert.equal(list[0].id, 'fake')
     assert.equal(list[0].kind, EIdpConnectorKind.OIDC)
     assert.equal(list[0].schema.length, 2)
     assert.equal(list[0].schema[1].type, 'password')
@@ -127,7 +127,7 @@ test('export/import hace roundtrip del record completo', async () => {
 test('install(tgz) registra el conector, lo lista en el índice, loadAll lo recupera y uninstall lo quita', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-idp-test-'))
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ id: 'installed-fake', name: '@x/installed-fake', displayName: 'Installed Fake', version: '0.0.1', description: 'test connector' }))
-    fs.writeFileSync(path.join(dir, 'back.js'), "class C { constructor(){ this.connectorId='installed-fake'; this.label='Installed Fake'; this.kind='oidc' } getConfigSchema(){ return [] } buildAuthorizationUrl(){ return 'https://x/auth' } async handleCallback(){ return { email:'a@b.com', emailVerified:true } } } module.exports.default = C")
+    fs.writeFileSync(path.join(dir, 'back.js'), "class C { constructor(){ this.id='installed-fake'; this.label='Installed Fake'; this.kind='oidc' } getConfigSchema(){ return [] } buildAuthorizationUrl(){ return 'https://x/auth' } async handleCallback(){ return { email:'a@b.com', emailVerified:true } } } module.exports.default = C")
     const tgz = path.join(dir, 'pkg.tgz')
     await tar.c({ gzip: true, file: tgz, cwd: dir }, ['package.json', 'back.js'])
     const buffer = fs.readFileSync(tgz)
@@ -137,7 +137,7 @@ test('install(tgz) registra el conector, lo lista en el índice, loadAll lo recu
     const meta = await mgr.installFromBuffer(buffer)
     assert.equal(meta.id, 'installed-fake')
     assert.ok(mgr.getConnector('installed-fake'), 'el conector debe quedar registrado tras install')
-    assert.ok(mgr.listConnectors().some(c => c.connectorId === 'installed-fake' && c.installed), 'debe aparecer como installed')
+    assert.ok(mgr.listConnectors().some(c => c.id === 'installed-fake' && c.installed), 'debe aparecer como installed')
     assert.ok((await mgr.listInstalledMeta()).some(m => m.id === 'installed-fake'), 'debe estar en el índice')
 
     // loadAll en un manager nuevo con el mismo configMaps lo recupera

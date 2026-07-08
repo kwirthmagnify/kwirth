@@ -2,7 +2,7 @@
   "id": "news",
   "displayName": "News",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "News channel plugin for Kwirth - displays Kubernetes and AI news feeds",
   "icon": "Newspaper",
   "type": "module",
@@ -11,8 +11,8 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common": "^0.5.22",
-    "@kwirthmagnify/kwirth-common-front": "^0.5.18"
+    "@kwirthmagnify/kwirth-common": "^0.5.24",
+    "@kwirthmagnify/kwirth-common-front": "^0.5.22"
   },
   "devDependencies": {
     "@mui/icons-material": "7.1.2",

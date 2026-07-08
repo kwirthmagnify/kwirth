@@ -16,7 +16,7 @@ const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
 // info publica de un tipo de conector (para la UI de gestion)
 interface IIdpConnectorInfo {
-    connectorId: string
+    id: string
     label: string
     kind: EIdpConnectorKind
     schema: IIdpConfigFieldDef[]
@@ -72,7 +72,7 @@ export class IdpManager {
             try {
                 const c = new Ctor()
                 result.push({
-                    connectorId,
+                    id: connectorId,
                     label: c.label,
                     kind: c.kind,
                     schema: c.getConfigSchema(),

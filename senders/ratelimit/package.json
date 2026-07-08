@@ -2,7 +2,7 @@
   "id": "ratelimit",
   "name": "@kwirthmagnify/kwirth-sender-ratelimit",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "displayName": "Rate Limit Sender",
   "description": "Rate limit filter sender for Kwirth — queues messages exceeding a configurable rate and delivers them in the next time window",
   "type": "module",
@@ -11,7 +11,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.10"
+    "@kwirthmagnify/kwirth-common-back": "^0.5.22"
   },
   "devDependencies": {
     "@mui/icons-material": "^7.1.2",

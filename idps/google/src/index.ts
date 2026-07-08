@@ -8,7 +8,7 @@ import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFiel
 const DEFAULT_ISSUER = 'https://accounts.google.com'
 
 export default class GoogleConnector implements IIdpConnector {
-    connectorId = 'google'
+    id = 'google'
     label = 'Login with Google'
     kind = EIdpConnectorKind.OIDC
 

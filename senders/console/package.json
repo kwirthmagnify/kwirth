@@ -2,7 +2,7 @@
   "id": "console",
   "name": "@kwirthmagnify/kwirth-sender-console",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "displayName": "Console Sender",
   "description": "Console sender plugin for Kwirth — writes messages to stdout, with configurable prefix, level and timestamps per named config",
   "type": "module",
@@ -11,7 +11,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.11"
+    "@kwirthmagnify/kwirth-common-back": "^0.5.22"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",

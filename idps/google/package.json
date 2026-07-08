@@ -2,7 +2,7 @@
   "id": "google",
   "name": "@kwirthmagnify/kwirth-idp-google",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "displayName": "Google",
   "description": "Google / Gmail (OIDC) identity provider connector for Kwirth",
   "type": "module",
@@ -14,7 +14,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.17"
+    "@kwirthmagnify/kwirth-common-back": "^0.5.23"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",

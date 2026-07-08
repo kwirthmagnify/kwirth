@@ -14,7 +14,7 @@ import { IUser } from '@kwirthmagnify/kwirth-common'
 const fakeControl: { identity: IIdpIdentity } = { identity: { email: 'alice@example.com', emailVerified: true } }
 
 class FakeConnector implements IIdpConnector {
-    connectorId = 'fake'
+    id = 'fake'
     label = 'Fake IdP'
     kind = EIdpConnectorKind.OIDC
     getConfigSchema() { return [] }

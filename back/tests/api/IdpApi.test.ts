@@ -10,7 +10,7 @@ import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { accessKeySerialize } from '@kwirthmagnify/kwirth-common'
 
 class FakeConnector implements IIdpConnector {
-    connectorId = 'fake'
+    id = 'fake'
     label = 'Fake IdP'
     kind = EIdpConnectorKind.OIDC
     getConfigSchema(): IIdpConfigFieldDef[] {
@@ -87,7 +87,7 @@ test('GET /connectors lista tipos con schema', async () => {
         const res = await fetch(`${srv.base}/idp/connectors`, j())
         assert.equal(res.status, 200)
         const list = await res.json()
-        assert.equal(list[0].connectorId, 'fake')
+        assert.equal(list[0].id, 'fake')
         assert.ok(list[0].schema.some((f: any) => f.type === 'password'))
     }
     finally { await srv.stop() }

@@ -13,7 +13,7 @@ const API_BASE_URL = 'https://api.github.com'
 const DEFAULT_SCOPES = 'read:user user:email'
 
 export default class GithubCloudConnector implements IIdpConnector {
-    connectorId = 'github-cloud'
+    id = 'github-cloud'
     label = 'Login with GitHub'
     kind = EIdpConnectorKind.OAUTH2
 

@@ -2,68 +2,68 @@
   {
     "extensionType": "provider",
     "id": "business",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "name": "Business Provider",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.1.3.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.1.4.tgz",
     "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types"
   },
   {
     "extensionType": "provider",
     "id": "kafka",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "name": "Kafka Provider",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.1.6.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.1.7.tgz",
     "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces"
   },
   {
     "extensionType": "provider",
     "id": "otel",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "name": "OpenTelemetry Provider",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-otel/-/kwirth-provider-otel-0.1.7.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-otel/-/kwirth-provider-otel-0.1.8.tgz",
     "description": "OpenTelemetry provider plugin for Kwirth — receives OTLP/HTTP signals (traces, metrics, logs) and dispatches them grouped by spaces"
   },
   {
     "extensionType": "provider",
     "id": "sample",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "name": "Sample Provider",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-sample/-/kwirth-provider-sample-0.1.7.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-sample/-/kwirth-provider-sample-0.1.8.tgz",
     "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event"
   },
   {
     "extensionType": "provider",
     "id": "syslog",
-    "version": "0.1.22",
+    "version": "0.1.23",
     "name": "Syslog Provider",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.1.22.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.1.23.tgz",
     "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
     "website": "https://kwirthmagnify.dev"
   },
   {
     "extensionType": "provider",
     "id": "tick",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "name": "Tick Provider",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.6.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.7.tgz",
     "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
     "website": "https://kwirthmagnify.dev"
   },
   {
     "extensionType": "provider",
     "id": "validating",
-    "version": "0.1.8",
+    "version": "0.1.9",
     "name": "Validating Provider",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.1.8.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.1.9.tgz",
     "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks",
     "website": "https://kwirthmagnify.dev"
   },
   {
     "extensionType": "provider",
     "id": "trivy",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "name": "Trivy Provider",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.3.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.4.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
     "website": "https://kwirthmagnify.dev"
   },

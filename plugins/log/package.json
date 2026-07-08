@@ -3,7 +3,7 @@
   "name": "Log",
   "displayName": "Log",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "website": "https://kwirthmagnify.dev",
   "description": "Log stream channel plugin for Kwirth",
   "icon": "Subject",
@@ -13,8 +13,8 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common": "^0.5.22",
-    "@kwirthmagnify/kwirth-common-front": "^0.5.18"
+    "@kwirthmagnify/kwirth-common": "^0.5.24",
+    "@kwirthmagnify/kwirth-common-front": "^0.5.22"
   },
   "devDependencies": {
     "@mui/icons-material": "7.1.2",

@@ -9,7 +9,7 @@ import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFiel
 const ISSUER = 'https://gitlab.com'
 
 export default class GitlabCloudConnector implements IIdpConnector {
-    connectorId = 'gitlab-cloud'
+    id = 'gitlab-cloud'
     label = 'Login with GitLab'
     kind = EIdpConnectorKind.OIDC
 

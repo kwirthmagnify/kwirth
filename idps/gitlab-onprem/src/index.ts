@@ -7,7 +7,7 @@ import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFiel
     Para GitLab.com (SaaS) usa el conector 'gitlab-cloud'.
 */
 export default class GitlabOnpremConnector implements IIdpConnector {
-    connectorId = 'gitlab-onprem'
+    id = 'gitlab-onprem'
     label = 'Login with GitLab'
     kind = EIdpConnectorKind.OIDC
 

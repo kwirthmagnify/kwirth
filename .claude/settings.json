@@ -603,7 +603,14 @@
       "Bash(npx -y -p typescript tsc --noEmit)",
       "Bash(node -e 'const fs=require\\(\"fs\"\\);let p=require\\(\"./package.json\"\\);p.devDependencies=p.devDependencies||{};p.devDependencies.typescript=\"^5.8.3\";fs.writeFileSync\\(\"package.json\",JSON.stringify\\(p,null,2\\)+\"\\\\n\"\\);console.log\\(\"back devDeps.typescript = ^5.8.3\"\\)')",
       "Bash(node -e 'console.log\\(\"typescript instalado:\",require\\(\"typescript/package.json\"\\).version\\)')",
-      "Bash(node -e 'require.resolve\\(\"typescript\",{paths:[\"./node_modules/ts-node\"]}\\);console.log\\(\"ts-node encuentra typescript OK\"\\)')"
+      "Bash(node -e 'require.resolve\\(\"typescript\",{paths:[\"./node_modules/ts-node\"]}\\);console.log\\(\"ts-node encuentra typescript OK\"\\)')",
+      "Bash(node -e 'const s=require\\(\"./plugins/alert/package.json\"\\).scripts;console.log\\(JSON.stringify\\(s,null,2\\)\\)')",
+      "Bash(node -e 'const m=require\\(\"./plugins/manifest.json\"\\);console.log\\(\"tipo:\",Array.isArray\\(m\\)?\"array\":\"object, keys=\"+Object.keys\\(m\\).slice\\(0,5\\)\\);const arr=Array.isArray\\(m\\)?m:\\(m.plugins||m.extensions||Object.values\\(m\\)[0]\\);console.log\\(\"ejemplo entrada:\",JSON.stringify\\(arr[0],null,2\\)\\)')",
+      "Bash(node -e 'try{const p=require\\(\"./plugins/alert/dist/package.json\"\\);console.log\\(\"deps:\",p.dependencies?Object.keys\\(p.dependencies\\):\"NINGUNA\"\\)}catch\\(e\\){console.log\\(\"no dist aún\"\\)}')",
+      "Bash(node -e 'const m=require\\(\"./idps/manifest.json\"\\);console.log\\(\"len:\",Array.isArray\\(m\\)?m.length:\"no-array\"\\);if\\(Array.isArray\\(m\\)&&m[0]\\)console.log\\(\"ejemplo:\",JSON.stringify\\(m[0]\\)\\)')",
+      "Bash(node -e 'const p=require\\(\"./idps/google/dist/package.json\"\\);console.log\\(JSON.stringify\\(p,null,1\\)\\)')",
+      "Bash(node -e 'const fs=require\\(\"fs\"\\);let p=require\\(\"./package.json\"\\);p.version=\"0.5.23\";fs.writeFileSync\\(\"package.json\",JSON.stringify\\(p,null,2\\)+\"\\\\n\"\\);console.log\\(\"common-back ->\",p.version\\)')",
+      "Bash(echo \"commit: $? -> $\\(git log --oneline -1\\)\")"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",
