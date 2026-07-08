@@ -46,15 +46,24 @@ Toca `common` + `common-front` + `common-back` (tipo nuevo + método en interfac
 (tipo en common + cascade) vs. inlinar el tipo en core/Defender para el MVP y promover a common al final.
 
 ## Fases (MVP incremental)
-- **F1 (MVP):** tipo `IExtensionScope` en common; `build.mjs` de **Defender** inyecta `scopes` en su manifest;
-  core lo lee/expone en `IPluginMeta`; `ResourceEditor` añade dinámicamente los scopes de plugins instalados
-  (manteniendo el enum core built-in y, de momento, los `ops$/trivy$` hardcodeados). Resultado: se pueden
-  conceder `defender$*` desde User/API Security con etiquetas. **Entregable usable.**
-- **F2:** migrar `ops` y `trivy` a declarar sus scopes en su manifest; **retirar** los hardcodeados del enum.
-- **F3:** revisar el modelo de Defender: (a) `cluster` = acceso total por diseño de Kwirth (god) → decidir si
-  Defender-admin debe requerir `defender$poladmin` explícito aun con `cluster`; (b) **RBAC de decisiones (D8)**:
-  hoy `processDecisionCommand` NO comprueba scope → gatear accept/assign/remediation por un scope (¿`poledit`?).
-  (c) activar el e2e negativo `09-rbac`.
+- **F1 ✅ HECHO** (runtime vía `IChannel.getScopeCatalog()`, NO manifest): `IExtensionScope` en common;
+  `getScopeCatalog?()` en `IChannel` de common-front y common-back; **Defender** declara `DEFENDER_SCOPES`
+  (front+back). Core back: `ScopeCatalog` (built-in + legacy + canales), `GET /core/scopes` (admin-gated),
+  **validación al guardar** user/API key. Core front: `ResourceEditor` puebla la select desde `/core/scopes`
+  (con buscador), **sin enum propio** (los managers hacen fetch). Publicado: common 0.5.24, common-front 0.5.22,
+  common-back 0.5.23; cascada free completa; Defender 0.0.9. **Se conceden `defender$*` desde User/API Security.**
+  - Vestigial: `IChannel.getScopeCatalog` del **front** ya no se consume (el front tira del endpoint); se deja
+    por simetría con el back. Quitarlo = cascada de common-front → diferido.
+- **F2 ⬜:** migrar `ops` y `trivy` a declarar sus scopes vía `getScopeCatalog` (back) y **retirar**
+  `LEGACY_PLUGIN_SCOPES` de `back/src/tools/ScopeCatalog.ts`.
+- **F3 ⬜ (Defender):** (a) `cluster` = acceso total por diseño de Kwirth (god) → decidir si Defender-admin
+  debe requerir `defender$poladmin` explícito aun con `cluster`; (b) **RBAC de decisiones (D8)**: hoy
+  `processDecisionCommand` NO comprueba scope → gatear accept/assign/remediation; (c) activar e2e `09-rbac`.
+
+## Extra hecho (fuera del plan original)
+- **Homogeneización IdP** `connectorId`→`id`: el id PROPIO del conector pasa a `id` (como el resto de
+  extensiones) en `IIdpConnector`, los 5 conectores, `IIdpConnectorInfo`, `idps/manifest.json` y el front
+  `ManageIdps`; el FK `IIdpInstanceConfig.connectorId` se mantiene. common-back 0.5.23 + idps 0.1.3. Back tests 61/0.
 
 ## Notas / decisiones abiertas
 - Nomenclatura confirmada: **`<plugin>$<scope>`**.
