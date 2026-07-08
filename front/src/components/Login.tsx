@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Menu, MenuItem, Stack, TextField, Typography} from '@mui/material'
-import { ExpandMore } from '../tools/KwirthIcons'
+import { ExpandMore } from '@kwirthmagnify/kwirth-common-front/icons'
 import { MsgBoxOkError, MsgBoxOkWarning } from '../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { addPostAuthorization } from '../tools/AuthorizationManagement'

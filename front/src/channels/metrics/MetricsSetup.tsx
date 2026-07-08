@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react'
 import { Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, ListItemText, MenuItem, Select, Stack, TextField, Tooltip, Typography} from '@mui/material'
 import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { ISetupProps } from '../IChannel'
-import { BarChart } from '../../tools/KwirthIcons'
+import { BarChart } from '@kwirthmagnify/kwirth-common-front/icons'
 import { MetricsInstanceConfig, MetricsConfig } from './MetricsConfig'
 import { EMetricsConfigMode } from './MetricsTypes'
 

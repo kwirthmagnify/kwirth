@@ -4,7 +4,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, Legend,
 import { IMetricViewConfig, METRICSCOLOURS } from './MetricsConfig'
 import { Tooltip as MUITooltip, IconButton } from '@mui/material'
 import { MenuChart, EMenuChartOption, EChartType } from './MenuChart'
-import { MoreVert } from '../../tools/KwirthIcons'
+import { MoreVert } from '@kwirthmagnify/kwirth-common-front/icons'
 import { TreemapNode } from 'recharts/types/util/types'
 import { MetricDefinition } from './MetricsTypes'
 

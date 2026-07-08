@@ -1,5 +1,5 @@
 import { ISetupProps } from '../IChannel'
-import { Search } from '../../tools/KwirthIcons'
+import { Search } from '@kwirthmagnify/kwirth-common-front/icons'
 
 const MagnifyIcon = <Search />
 

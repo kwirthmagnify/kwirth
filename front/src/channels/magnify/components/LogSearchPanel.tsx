@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Checkbox, CircularProgress, Chip, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, InputAdornment, Stack, TextField, Tooltip, Typography } from '@mui/material'
-import { Launch, Search, Stop } from '../../../tools/KwirthIcons'
+import { Launch, Search, Stop } from '@kwirthmagnify/kwirth-common-front/icons'
 import { ResizableDialog, IResizableDialogHandle } from './ResizableDialog'
 import { WindowTitleButtons } from './WindowTitleButtons'
 import { IContentWindow } from '../MagnifyTabContent'

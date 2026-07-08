@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { EditorState } from "@codemirror/state"
 import { yaml } from '@codemirror/lang-yaml'
-import { Edit, EditOff } from '../../../tools/KwirthIcons'
+import { Edit, EditOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { objectEqual, reorderJsonYamlObject } from '../Tools'
 import { search, openSearchPanel, searchKeymap } from '@codemirror/search'
 import { EditorView, keymap } from '@codemirror/view'

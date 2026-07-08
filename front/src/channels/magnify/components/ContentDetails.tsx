@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { DialogTitle, DialogContent, DialogActions, Button, Typography, Stack, Tooltip, IconButton, Box } from '@mui/material'
-import { ContentCopy } from '../../../tools/KwirthIcons'
+import { ContentCopy } from '@kwirthmagnify/kwirth-common-front/icons'
 // @ts-ignore
 import './ResizableDialog.css'
 import { ResizableDialog, IResizableDialogHandle } from './ResizableDialog'

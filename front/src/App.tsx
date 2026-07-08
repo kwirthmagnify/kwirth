@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 
 // material & icons
 import { Alert, AppBar, Box, CircularProgress, createTheme, CssBaseline, Drawer, FormControlLabel, IconButton, PaletteMode, Snackbar, SnackbarCloseReason, Stack, Switch, Tab, Tabs, ThemeProvider, Toolbar, Tooltip, Typography } from '@mui/material'
-import { Settings as SettingsIcon, Menu, Person, AccountCircle, Home, Notifications, NotificationsActive } from './tools/KwirthIcons'
+import { Settings as SettingsIcon, Menu, Person, AccountCircle, Home, Notifications, NotificationsActive } from '@kwirthmagnify/kwirth-common-front/icons'
 
 // model
 import { Cluster, IClusterInfo } from './model/Cluster'

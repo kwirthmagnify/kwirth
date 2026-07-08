@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Collapse, Divider, MenuItem, MenuList } from "@mui/material"
-import { BrowserUpdated, ChevronRight, CreateNewFolderTwoTone, DeleteTwoTone, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpenTwoTone, FolderOpen, Home, ImportExport, Info, Key, Palette, Person, SaveAsTwoTone, SaveTwoTone, Send, Settings } from '../tools/KwirthIcons'
+import { BrowserUpdated, ChevronRight, CreateNewFolderTwoTone, DeleteTwoTone, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpenTwoTone, FolderOpen, Home, ImportExport, Info, Key, Palette, Person, SaveAsTwoTone, SaveTwoTone, Send, Settings } from '@kwirthmagnify/kwirth-common-front/icons'
 
 enum MenuDrawerOption {
     NewWorkspace,

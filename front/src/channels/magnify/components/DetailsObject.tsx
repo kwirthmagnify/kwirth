@@ -1,5 +1,5 @@
 import { IFileObject } from '@jfvilas/react-file-manager'
-import { Https } from '../../../tools/KwirthIcons'
+import { Https } from '@kwirthmagnify/kwirth-common-front/icons'
 import { LinearProgress, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextareaAutosize, TextField, Tooltip, Typography } from '@mui/material'
 import { convertBytesToSize, convertSizeToBytes } from '../Tools'
 import React from 'react'

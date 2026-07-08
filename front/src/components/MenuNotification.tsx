@@ -1,7 +1,7 @@
 
 import React from 'react'
 import { Popover, List, ListItem, ListItemText, IconButton, Typography, Box, Divider, Chip, Button, Stack } from '@mui/material'
-import { Close as CloseIcon, NotificationsOff as NotificationsOffIcon, DeleteSweep } from '../tools/KwirthIcons'
+import { Close as CloseIcon, NotificationsOff as NotificationsOffIcon, DeleteSweep } from '@kwirthmagnify/kwirth-common-front/icons'
 import { ENotifyLevel } from '../tools/Global'
 import { getIconFromKind } from '../tools/Constants-React'
 import { TChannelConstructor } from '../channels/IChannel'

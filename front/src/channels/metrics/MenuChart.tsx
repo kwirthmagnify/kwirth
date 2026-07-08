@@ -1,6 +1,6 @@
 import React from 'react'
 import { Divider, Menu, MenuItem, MenuList } from '@mui/material'
-import { Analytics, AreaChart, BarChart, Delete, DoneAll, ImportExport, Info, LegendToggle, LocalOffer, PieChart, ShowChart, StackedLineChart, ThirtyFps } from '../../tools/KwirthIcons'
+import { Analytics, AreaChart, BarChart, Delete, DoneAll, ImportExport, Info, LegendToggle, LocalOffer, PieChart, ShowChart, StackedLineChart, ThirtyFps } from '@kwirthmagnify/kwirth-common-front/icons'
 
 enum EChartType {
     LineChart='line',
