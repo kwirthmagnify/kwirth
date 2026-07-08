@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { Forum } from '@mui/icons-material'
@@ -46,8 +46,8 @@ export const MircSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={ok} disabled={!nick.trim()}>OK</Button>
-                <Button onClick={cancel}>CANCEL</Button>
+                <Button variant='outlined' onClick={ok} disabled={!nick.trim()}>OK</Button>
+                <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
     )

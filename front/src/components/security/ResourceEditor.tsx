@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { Button, Checkbox, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Stack, TextField, Typography} from '@mui/material'
-import { buildResource, parseResource } from '@kwirthmagnify/kwirth-common'
+import { Button, Checkbox, FormControl, InputLabel, ListSubheader, MenuItem, Select, SelectChangeEvent, Stack, TextField, Tooltip, Typography} from '@mui/material'
+import { buildResource, parseResource, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 
 interface IResourceEditorProps {
     resources:string[]
     onUpdate:(resources:string[]) => void
+    pluginScopes?:IExtensionScope[]   // scopes RBAC declarados por los plugins instalados (getScopeCatalog)
 }
 
 const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorProps) => {
     const [scopes, setScopes] = useState<string[]>([])
+    const [scopeFilter, setScopeFilter] = useState('')
     const [allResources, setAllResources] = useState<string[]>(props.resources)
     const [selectedResource, setSelectedResource] = useState<string>('')
     const [namespace, setNamespace] = useState('')
@@ -121,6 +123,17 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
         setSelectedResource(res)
     }
 
+    // Opciones de la select = scopes core built-in (+ ops/trivy hardcodeados, se migrarán) + los que
+    // declaran los plugins instalados vía getScopeCatalog (dedup por scope).
+    const builtinScopes: IExtensionScope[] = Object.values(allScopes).map(s => ({ scope: s, label: s, description: '' }))
+    const scopeOptions: IExtensionScope[] = [
+        ...builtinScopes,
+        ...(props.pluginScopes ?? []).filter(ps => !builtinScopes.some(b => b.scope === ps.scope))
+    ]
+    const filteredScopeOptions = scopeFilter.trim()
+        ? scopeOptions.filter(o => scopes.includes(o.scope) || (o.scope + ' ' + o.label).toLowerCase().includes(scopeFilter.trim().toLowerCase()))
+        : scopeOptions
+
     return (
         <Stack spacing={1} style={{width:'100%'}}>
             <FormControl variant='standard'>
@@ -139,14 +152,23 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
             <Stack direction={'column'} spacing={1} sx={{paddingLeft:3}}>
                 <FormControl variant='standard'>
                     <InputLabel>Scopes</InputLabel>
-                    <Select value={scopes} multiple onChange={onChangeScopes} renderValue={(s) => s.join(',')}>
-                        { Object.entries(allScopes).map( (kvp:[string,string]) => {
-                            let scope = kvp[1]
-                            return <MenuItem key={scope} value={scope}>
-                                <Checkbox checked={scopes.includes(scope)} />
-                                <Typography>{scope}</Typography>
+                    <Select value={scopes} multiple onChange={onChangeScopes} renderValue={(s) => s.join(',')}
+                        MenuProps={{ autoFocus: false, PaperProps: { style: { maxHeight: 380 } } }}
+                        onClose={() => setScopeFilter('')}>
+                        <ListSubheader sx={{ p: 0, bgcolor: 'background.paper' }}>
+                            <TextField autoFocus fullWidth size='small' variant='standard' placeholder='Filter scopes…'
+                                value={scopeFilter} onChange={(e) => setScopeFilter(e.target.value)}
+                                onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, py: 0.5 }} />
+                        </ListSubheader>
+                        { filteredScopeOptions.map( (opt:IExtensionScope) => (
+                            <MenuItem key={opt.scope} value={opt.scope}>
+                                <Checkbox checked={scopes.includes(opt.scope)} />
+                                { opt.description
+                                    ? <Tooltip title={opt.description} placement='right' arrow><Typography>{opt.label}</Typography></Tooltip>
+                                    : <Typography>{opt.label}</Typography> }
                             </MenuItem>
-                        })}
+                        ))}
+                        { filteredScopeOptions.length === 0 && <MenuItem disabled><Typography variant='caption'>No matches</Typography></MenuItem> }
                     </Select>
                 </FormControl>
                 <TextField value={namespace} onChange={(e) => setNamespace(e.target.value)} variant='standard' label='Namespaces'></TextField>

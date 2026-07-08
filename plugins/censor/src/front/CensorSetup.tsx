@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { FilterList } from '@mui/icons-material'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
@@ -39,7 +39,7 @@ const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button onClick={handleCancel} color='inherit'>Cancel</Button>
+                <Button variant='outlined' onClick={handleCancel} color='inherit'>Cancel</Button>
                 <Button onClick={handleStart} variant='contained'>Start</Button>
             </DialogActions>
         </Dialog>

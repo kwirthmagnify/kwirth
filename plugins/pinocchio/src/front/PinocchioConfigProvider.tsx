@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputAdornment, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { IConfigProvider } from './PinocchioConfig'
 import { objectClone } from './utils'
@@ -68,7 +68,7 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
     return (
         <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '900px', height: '45vh' } }}>
             <DialogTitle>Manage Providers</DialogTitle>
-            <DialogContent style={{ display: 'flex', height: '100%' }}>
+            <DialogContent sx={{ display: 'flex', height: '100%' }}>
 
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '30%' }}>
                     <Box sx={{ flex: 1, overflowY: 'auto' }}>
@@ -83,7 +83,7 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
                                         <Typography sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>
                                             {p.name}
                                         </Typography>
-                                        <Typography color={'darkgray'} fontSize={11}>
+                                        <Typography color={'darkgray'} variant='caption'>
                                             {p.models?.length || 0} models loaded
                                         </Typography>
                                     </Stack>
@@ -93,8 +93,8 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
                     </Box>
                 </Box>
 
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '24px' }}>
-                    <Stack spacing={3} style={{ width: '100%' }}>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', p: 3 }}>
+                    <Stack spacing={3} sx={{ width: '100%' }}>
 
                         <FormControl variant='standard' sx={{ width: '100%'}}>
                             <InputLabel>Provider</InputLabel>
@@ -138,8 +138,8 @@ const PinocchioConfigProvider: React.FC<IPinocchioConfigProviderProps> = (props:
             </DialogContent>
 
             <DialogActions sx={{ p: 2 }}>
-                <Button onClick={() => props.onClose(providers)} color="primary" variant="contained">Save</Button>
-                <Button onClick={() => props.onClose(undefined)} color="inherit">Cancel</Button>
+                <Button variant='outlined' onClick={() => props.onClose(providers)} color="primary" variant="contained">Save</Button>
+                <Button variant='outlined' onClick={() => props.onClose(undefined)} color="inherit">Cancel</Button>
             </DialogActions>
         </Dialog>
     )

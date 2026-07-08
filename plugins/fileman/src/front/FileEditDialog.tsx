@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, useTheme } from '@mui/material'
 import CodeMirror from '@uiw/react-codemirror'
 import { yaml } from '@codemirror/lang-yaml'
@@ -59,7 +59,7 @@ const FileEditDialog: React.FC<IFileEditDialogProps> = (props) => {
                 />
             </DialogContent>
             <DialogActions>
-                <Button onClick={props.onClose}>{props.readOnly || !changed ? 'Close' : 'Cancel'}</Button>
+                <Button variant='outlined' onClick={props.onClose}>{props.readOnly || !changed ? 'Close' : 'Cancel'}</Button>
                 {!props.readOnly && (
                     <Button
                         variant='contained'

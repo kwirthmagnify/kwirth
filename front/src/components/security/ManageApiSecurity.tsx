@@ -2,18 +2,19 @@ import React, { useState, useEffect, useContext } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography} from '@mui/material'
 import { MsgBoxButtons, MsgBoxYesNo } from '../../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
-import { AccessKey, accessKeySerialize, ApiKey } from '@kwirthmagnify/kwirth-common'
+import { AccessKey, accessKeySerialize, ApiKey, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ResourceEditor } from './ResourceEditor'
 import { v4 as uuid } from 'uuid'
-const copy = require('clipboard-copy')
+import copy from 'clipboard-copy'
 
 interface IManageApiSecurityProps {
     onClose:() => void
+    pluginScopes?:IExtensionScope[]
 }
 
 const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSecurityProps) => {
-    const {accessString, backendUrl} = useContext(SessionContext) as SessionContextType;
+    const {accessString, backendUrl} = useContext(SessionContext) as SessionContextType
     const [msgBox, setMsgBox] = useState(<></>)
     const [keys, setKeys] = useState<ApiKey[]>([])
     const [selectedKey, setSelectedKey] = useState<ApiKey>()
@@ -93,39 +94,39 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
     }
 
     return (<>
-        <Dialog open={true} fullWidth maxWidth='md'> {/* PaperProps={{ style: {height: '60vh' }}} */}
+        <Dialog open={true} fullWidth maxWidth='md'>
             <DialogTitle>API Key management</DialogTitle>
-            <DialogContent style={{ display:'flex', height:'100%'}}>
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: 'calc(50% - 8px)'}}>
-                    <Box alignSelf={'center'}>
-                        <Stack flexDirection={'row'} alignItems={'center'}>
-                            <Checkbox checked={showPermanent} onChange={() => setShowPermanent(!showPermanent)}/><Typography>Permanent</Typography>
-                            <Checkbox checked={showVolatile} onChange={() => setShowVolatile(!showVolatile)}/><Typography>Volatile</Typography>
+            <DialogContent sx={{ display: 'flex', height: '100%' }}>
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: 'calc(50% - 8px)' }}>
+                    <Box alignSelf='center'>
+                        <Stack flexDirection='row' alignItems='center'>
+                            <Checkbox checked={showPermanent} onChange={() => setShowPermanent(!showPermanent)} /><Typography variant='body2'>Permanent</Typography>
+                            <Checkbox checked={showVolatile} onChange={() => setShowVolatile(!showVolatile)} /><Typography variant='body2'>Volatile</Typography>
                         </Stack>
                     </Box>
 
                     <Box sx={{ flex: 1, overflowY: 'auto' }}>
-                        <div style={{ flex:0.9, overflowY: 'auto', overflowX:'hidden'}} >
-                            <List sx={{flexGrow:1, mr:2, width:'50vh', overflowY:'auto' }}>
-                                { keys?.filter(k => (showPermanent && k.accessKey.type==='permanent') || (showVolatile && k.accessKey.type==='volatile')).map( (k,index) => 
+                        <div style={{ flex: 0.9, overflowY: 'auto', overflowX: 'hidden' }}>
+                            <List sx={{ flexGrow: 1, mr: 2, width: '50vh', overflowY: 'auto' }}>
+                                { keys?.filter(k => (showPermanent && k.accessKey.type==='permanent') || (showVolatile && k.accessKey.type==='volatile')).map( (k,index) =>
                                     <ListItemButton key={index} selected={k.accessKey.id===selectedKey?.accessKey.id} onClick={() => onKeySelected(k.accessKey)}>
-                                        <Stack direction={'column'}>
-                                            <Typography>{k.accessKey.id}</Typography>
-                                            <Typography color='text.secondary' fontSize={12}>{`${k.description}`}<b>{` (expires: ${new Date(k.expire).toDateString()})`}</b></Typography>
+                                        <Stack direction='column'>
+                                            <Typography variant='body2'>{k.accessKey.id}</Typography>
+                                            <Typography variant='caption' color='text.secondary'>{`${k.description}`}<b>{` (expires: ${new Date(k.expire).toDateString()})`}</b></Typography>
                                         </Stack>
                                     </ListItemButton>
                                 )}
-                            </List>                            
+                            </List>
                         </div>
                     </Box>
                 </Box>
 
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', paddingLeft: '16px'}} >
-                    <Stack spacing={1} style={{width:'100%'}}>
-                        <TextField value={description} onChange={(e) => setDescrition(e.target.value)} variant='standard' label='Description'></TextField>
-                        <Stack direction={'row'} spacing={1}>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', pl: 2 }}>
+                    <Stack spacing={1} sx={{ width: '100%' }}>
+                        <TextField value={description} onChange={(e) => setDescrition(e.target.value)} variant='standard' label='Description' />
+                        <Stack direction='row' spacing={1}>
                             <FormControl variant='standard' fullWidth>
-                                <InputLabel >Lease time (days)</InputLabel>
+                                <InputLabel>Lease time (days)</InputLabel>
                                 <Select value={days} onChange={(e) => setDays(+e.target.value)}>
                                     { [1,2,3,4,7,30,365,36524].map( (value) => {
                                         return <MenuItem key={value} value={value}>{value}</MenuItem>
@@ -142,29 +143,29 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
                             </FormControl>
                         </Stack>
 
-                        <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)}/>
+                        <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} pluginScopes={props.pluginScopes}/>
                     </Stack>
                 </Box>
             </DialogContent>
             <DialogActions>
                 <Stack direction='row' spacing={1}>
-                    <Button onClick={onClickNew}>NEW</Button>
-                    <Button onClick={onClickSave} disabled={
+                    <Button variant='outlined' onClick={onClickNew}>New</Button>
+                    <Button variant='outlined' onClick={onClickSave} disabled={
                         description==='' ||
                         days===0 ||
                         selectedKey?.accessKey.type==='volatile' ||
                         (selectedKey?.accessKey && accessKeySerialize(selectedKey.accessKey) === accessString) ||
                         allResources.length===0
-                        }>SAVE</Button>
-                    <Button onClick={onClickCopy} disabled={ !selectedKey || selectedKey.accessKey.resources.length===0 }>COPY</Button>
-                    <Button onClick={onClickDelete} disabled={
-                        selectedKey===undefined || 
+                        }>Save</Button>
+                    <Button variant='outlined' onClick={onClickCopy} disabled={ !selectedKey || selectedKey.accessKey.resources.length===0 }>Copy</Button>
+                    <Button variant='outlined' onClick={onClickDelete} disabled={
+                        selectedKey===undefined ||
                         accessKeySerialize(selectedKey?.accessKey!)===accessString ||
                         selectedKey.accessKey.type==='volatile'
-                        }>DELETE</Button>
+                        }>Delete</Button>
                 </Stack>
-                <Typography sx={{flexGrow:1}}></Typography>
-                <Button onClick={() => props.onClose()}>CLOSE</Button>
+                <Typography sx={{ flexGrow: 1 }} />
+                <Button variant='outlined' onClick={() => props.onClose()}>Close</Button>
             </DialogActions>
         </Dialog>
         {msgBox}

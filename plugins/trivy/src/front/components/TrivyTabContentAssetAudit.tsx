@@ -16,7 +16,7 @@ const TrivyTabContentAssetAudit: React.FC<ITabContentTrivyAssetAuditProps> = (pr
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Stack direction='row' alignItems='center'>
                     <Typography sx={{ width: '120px' }}>{check.severity}</Typography>
-                    <Typography fontSize={12}>{title}</Typography>
+                    <Typography variant='body2'>{title}</Typography>
                 </Stack>
             </AccordionSummary>
             <AccordionDetails>

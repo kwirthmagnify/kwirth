@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputAdornment, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { IConfigLlm, IConfigProvider, IPinocchioConfig } from './PinocchioConfig'
 import { objectClone } from './utils'
@@ -81,7 +81,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
     return (<>
         <Dialog open={true} PaperProps={{ sx: { width: '80vw', maxWidth: '800px', height: '55vh' } }}>
             <DialogTitle>LLM Config</DialogTitle>
-            <DialogContent style={{ display: 'flex', height: '100%' }}>
+            <DialogContent sx={{ display: 'flex', height: '100%' }}>
 
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '40%' }}>
                     <Box sx={{ flex: 1, overflowY: 'auto', overflowX:'hidden' }}>
@@ -91,7 +91,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                                     <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onLlmSelected(index)}>
                                         <Stack direction={'column'}>
                                             <Typography sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>{llm.id}</Typography>
-                                            <Typography color={'darkgray'} fontSize={12}>{llm.provider}</Typography>
+                                            <Typography color={'darkgray'} variant='caption'>{llm.provider}</Typography>
                                         </Stack>
                                     </ListItemButton>
                                 )
@@ -100,8 +100,8 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                     </Box>
                 </Box>
 
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '16px' }} >
-                    <Stack spacing={2} style={{ width: '100%' }}>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', p: 2 }}>
+                    <Stack spacing={2} sx={{ width: '100%' }}>
                         <Stack direction={'column'} spacing={1}>
                             <TextField value={id} onChange={(e) => setId(e.target.value)} placeholder='Enter LLM id' label='LLM ID' variant='standard' fullWidth/>
                             <FormControl variant='standard' sx={{ width: '100%'}}>
@@ -146,7 +146,7 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
                         <Stack direction={'row'} spacing={1}>
                             <Button variant='outlined' size='small' onClick={onNew}>New</Button>
                             <Typography flex={1} />
-                            <Button color='error' onClick={onRemove} disabled={selectedIndex === null}>remove</Button>
+                            <Button variant='outlined' color='error' onClick={onRemove} disabled={selectedIndex === null}>remove</Button>
                             <Button variant='contained' onClick={onAdd} disabled={!id || !model}>{selectedIndex !== null ? 'update' : 'add'}</Button>
                         </Stack>
                     </Stack>
@@ -154,8 +154,8 @@ const PinocchioConfigLlm: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchi
             </DialogContent>
 
             <DialogActions>
-                <Button onClick={() => props.onClose(config)}>ok</Button>
-                <Button onClick={() => props.onClose(undefined)}>cancel</Button>
+                <Button variant='outlined' onClick={() => props.onClose(config)}>ok</Button>
+                <Button variant='outlined' onClick={() => props.onClose(undefined)}>cancel</Button>
             </DialogActions>
         </Dialog>
     </>)

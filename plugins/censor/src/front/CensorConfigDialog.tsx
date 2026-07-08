@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { Add as AddIcon, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon } from '@mui/icons-material'
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
@@ -203,7 +203,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
     return <>
         <Dialog open={true} PaperProps={{ sx: { width: '92vw', maxWidth: '1200px', height: '82vh' } }}>
             <DialogTitle>Censor config</DialogTitle>
-            <DialogContent style={{ display: 'flex', height: '100%', overflow: 'hidden', padding: '8px 16px' }}>
+            <DialogContent sx={{ display: 'flex', height: '100%', overflow: 'hidden', py: 1, px: 2 }}>
 
                 {/* Left panel — config list */}
                 <Box sx={{ flex: '0 0 230px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pr: 1 }}>
@@ -219,15 +219,15 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                                             </Typography>
                                             {cfg.active && <Chip label='ON' size='small' color='success' sx={{ height: 14, fontSize: 9, px: 0, '& .MuiChip-label': { px: 0.5 } }} />}
                                         </Stack>
-                                        <Typography color='textSecondary' fontSize={10}>v{cfg.version}</Typography>
+                                        <Typography color='textSecondary' variant='caption'>v{cfg.version}</Typography>
                                     </Stack>
                                 </ListItemButton>
                             ))}
                         </List>
                     </Box>
                     <Stack direction='row' spacing={0.5} sx={{ px: 0.5, pt: 0.5, justifyContent: 'center' }}>
-                        <Button size='small' startIcon={<AddIcon />} onClick={onConfigNew} sx={{ fontSize: 11 }}>New</Button>
-                        <Button size='small' color='error' startIcon={<DeleteIcon />} onClick={onDeleteLocal} disabled={selectedIdx === null} sx={{ fontSize: 11 }}>Delete</Button>
+                        <Button variant='outlined' size='small' startIcon={<AddIcon />} onClick={onConfigNew} sx={{ fontSize: 11 }}>New</Button>
+                        <Button variant='outlined' size='small' color='error' startIcon={<DeleteIcon />} onClick={onDeleteLocal} disabled={selectedIdx === null} sx={{ fontSize: 11 }}>Delete</Button>
                     </Stack>
                 </Box>
 
@@ -340,7 +340,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                                                             </IconButton>
                                                         </Stack>
                                                     ))}
-                                                    <Button size='small' startIcon={<AddIcon />}
+                                                    <Button variant='outlined' size='small' startIcon={<AddIcon />}
                                                         onClick={() => setLogstreamSources(prev => [...prev, { namespace: '', podRegex: '', labelSelector: '' }])}>
                                                         Add source
                                                     </Button>
@@ -376,7 +376,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                                             </IconButton>
                                         </Stack>
                                     ))}
-                                    <Button size='small' startIcon={<AddIcon />}
+                                    <Button variant='outlined' size='small' startIcon={<AddIcon />}
                                         onClick={() => setBusinessSources(prev => [...prev, { space: '', type: '', businessPath: '', addTimestamp: false }])}>
                                         Add source
                                     </Button>
@@ -427,7 +427,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleOk} variant='contained' disabled={!llmId || !!exampleJsonError}>OK</Button>
-                <Button onClick={onClose} color='inherit'>Cancel</Button>
+                <Button variant='outlined' onClick={onClose} color='inherit'>Cancel</Button>
             </DialogActions>
         </Dialog>
 

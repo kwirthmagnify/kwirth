@@ -4,9 +4,11 @@ import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { ISecrets } from '../tools/ISecrets'
 import { IdentityService } from '../tools/auth/IdentityService'
+import { unknownScopesIn } from '../tools/ScopeCatalog'
 
 export class UserApi {
     secrets: ISecrets
+    private validScopes?: () => Set<string>   // conjunto de scopes conocidos, para validar al guardar
     static semaphore: Semaphore = new Semaphore(1)
     public router = express.Router()
 
@@ -15,8 +17,9 @@ export class UserApi {
         return IdentityService.readUsers(secrets)
     }
 
-    constructor (secrets: ISecrets, apiKeyApi: ApiKeyApi) {
+    constructor (secrets: ISecrets, apiKeyApi: ApiKeyApi, validScopes?: () => Set<string>) {
         this.secrets=secrets
+        this.validScopes=validScopes
 
         this.router.route('/')
             .all( async (req:Request,res:Response, next) => {
@@ -50,6 +53,8 @@ export class UserApi {
                             res.status(400).json([])
                             return
                         }
+                        const bad = this.validScopes ? unknownScopesIn(req.body?.resources ?? '', this.validScopes()) : []
+                        if (bad.length) { res.status(400).json({ error: `Unknown scopes: ${bad.join(', ')}` }); return }
                         users[req.body.id]=btoa(JSON.stringify(req.body))
                         await IdentityService.writeUsers(this.secrets, users)
                         res.status(200).json()
@@ -109,6 +114,8 @@ export class UserApi {
                         res.status(400).json([])
                         return
                     }
+                    const bad = this.validScopes ? unknownScopesIn(req.body?.resources ?? '', this.validScopes()) : []
+                    if (bad.length) { res.status(400).json({ error: `Unknown scopes: ${bad.join(', ')}` }); return }
                     users[req.body.id]=btoa(JSON.stringify(req.body))
                     await IdentityService.writeUsers(this.secrets, users)
                     res.status(200).json()

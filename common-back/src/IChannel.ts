@@ -1,4 +1,4 @@
-import { BackChannelData, IInstanceConfig, IInstanceMessage, AccessKey, EInstanceMessageAction, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { BackChannelData, IInstanceConfig, IInstanceMessage, AccessKey, EInstanceMessageAction, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { Request, Response } from 'express'
 
 export interface IChannel {
@@ -6,6 +6,8 @@ export interface IChannel {
     readonly requirements: IBackChannelRequirements
     getChannelData(): BackChannelData
     getChannelScopeLevel(scope: string): number
+    // Catálogo de scopes RBAC que declara la extensión (para validar/gestionar permisos). Opcional.
+    getScopeCatalog?(): IExtensionScope[]
 
     startChannel(): Promise<void>
     endpointRequest(endpoint: string, req: Request, res: Response, accessKey?: AccessKey): void

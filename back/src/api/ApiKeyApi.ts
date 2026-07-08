@@ -2,6 +2,7 @@ import express, { Request, Response} from 'express'
 import { AccessKey, accessKeySerialize, accessKeyBuild, ApiKey } from '@kwirthmagnify/kwirth-common'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { IConfigMaps } from '../tools/IConfigMap'
+import { unknownScopesIn } from '../tools/ScopeCatalog'
 import * as crypto from 'crypto'
 
 export class ApiKeyApi {
@@ -10,17 +11,19 @@ export class ApiKeyApi {
     private configMaps: IConfigMaps
     public masterKey: string
     public isDesktop: boolean
+    private validScopes?: () => Set<string>   // conjunto de scopes conocidos, para validar al guardar
 
-    private constructor(configMaps: IConfigMaps, masterKey: string, isDesktop:boolean) {
+    private constructor(configMaps: IConfigMaps, masterKey: string, isDesktop:boolean, validScopes?: () => Set<string>) {
         this.configMaps = configMaps
         this.masterKey = masterKey
         this.isDesktop = isDesktop
+        this.validScopes = validScopes
         this.initializeRoutes()
     }
 
-    public static async create(configMaps: IConfigMaps, masterKey: string, isDesktop: boolean): Promise<ApiKeyApi|undefined> {    
+    public static async create(configMaps: IConfigMaps, masterKey: string, isDesktop: boolean, validScopes?: () => Set<string>): Promise<ApiKeyApi|undefined> {
         try {
-            const instance = new ApiKeyApi(configMaps, masterKey, isDesktop)
+            const instance = new ApiKeyApi(configMaps, masterKey, isDesktop, validScopes)
             const result = await configMaps.read('kwirth.keys', [])
             const cleanKeys = AuthorizationManagement.cleanApiKeys(result)
             instance.apiKeys = cleanKeys
@@ -96,6 +99,9 @@ export class ApiKeyApi {
                     let accessKey:AccessKey = req.body.accessKey as AccessKey
                     let apiKey:ApiKey={ accessKey, description, expire, days }
 
+                    const bad = this.validScopes ? unknownScopesIn(accessKey?.resources ?? '', this.validScopes()) : []
+                    if (bad.length) { res.status(400).json({ error: `Unknown scopes: ${bad.join(', ')}` }); return }
+
                     if (accessKey.type) {
                         if (accessKey.type==='permanent') {
                             let storedKeys=await this.configMaps.read('kwirth.keys',[]) as ApiKey[]
@@ -165,6 +171,8 @@ export class ApiKeyApi {
             .put( async (req:Request, res:Response) => {
                 try {
                     let key=req.body as ApiKey;
+                    const bad = this.validScopes ? unknownScopesIn(key.accessKey?.resources ?? '', this.validScopes()) : []
+                    if (bad.length) { res.status(400).json({ error: `Unknown scopes: ${bad.join(', ')}` }); return }
                     let storedKeys=await this.configMaps.read('kwirth.keys',[]) as ApiKey[]
                     storedKeys = AuthorizationManagement.cleanApiKeys(storedKeys)
                     storedKeys = storedKeys.filter(k => k.accessKey.id!==key.accessKey.id)

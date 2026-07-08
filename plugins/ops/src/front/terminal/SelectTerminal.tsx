@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { Stack, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItemButton, ListItem } from '@mui/material'
 import { IOpsData } from '../OpsData'
 
@@ -47,7 +47,7 @@ const SelectTerminal: React.FC<ISelectTerminalProps> = (props: ISelectTerminalPr
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => props.onSelect(undefined)}>CANCEL</Button>
+                <Button variant='outlined' onClick={() => props.onSelect(undefined)}>CANCEL</Button>
             </DialogActions>
         </Dialog>
     )

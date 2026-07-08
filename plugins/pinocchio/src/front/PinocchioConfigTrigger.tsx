@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, SelectChangeEvent, Stack, Switch, TextField, Typography } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon, ContentCopy as CloneIcon } from '@mui/icons-material'
 import { EK8sEvent, IConfigTrigger, IConfigTriggerVersion, IPinocchioConfig, k8sEventsAvailable, kindsAvailable } from './PinocchioConfig'
@@ -236,7 +236,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
     return (<>
         <Dialog open={true} PaperProps={{ sx: { width: '90vw', maxWidth: '1500px', height: '82vh' } }}>
             <DialogTitle>Trigger Config</DialogTitle>
-            <DialogContent style={{ display: 'flex', height: '100%', overflow: 'hidden', padding: '8px 16px' }}>
+            <DialogContent sx={{ display: 'flex', height: '100%', overflow: 'hidden', py: 1, px: 2 }}>
 
                 {/* ── Left panel ── */}
                 <Box sx={{ flex: '0 0 260px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pr: 1 }}>
@@ -249,7 +249,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
                                 <ListItemButton key={index} selected={selectedTriggerIndex === index} onClick={() => onTriggerSelect(index)} dense sx={{ pr: 0.5 }}>
                                     <Stack direction='column' sx={{ flex: 1, minWidth: 0 }}>
                                         <Typography variant='body2' sx={{ fontWeight: selectedTriggerIndex === index ? 'bold' : 'normal' }}>{t.id}</Typography>
-                                        <Typography color='textSecondary' fontSize={10}>{t.trigger}{t.kind ? ` · ${t.kind}` : ''}</Typography>
+                                        <Typography color='textSecondary' variant='caption'>{t.trigger}{t.kind ? ` · ${t.kind}` : ''}</Typography>
                                     </Stack>
                                     <IconButton size='small' onClick={e => { e.stopPropagation(); onTriggerClone(index) }} sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}><CloneIcon sx={{ fontSize: 14 }} /></IconButton>
                                     <IconButton size='small' color='error' onClick={e => { e.stopPropagation(); onTriggerDelete(index) }} sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}><DeleteIcon sx={{ fontSize: 14 }} /></IconButton>
@@ -356,7 +356,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
                             </Box>
                         </Stack>
 
-                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '8px' }}>
+                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: 1 }}>
                             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                                 <Typography variant='caption' color='text.secondary'>System</Typography>
                                 <textarea value={system} onChange={e => setSystem(e.target.value)} style={{ flex: 1, resize: 'none', boxSizing: 'border-box', padding: '6px', fontFamily: 'monospace', fontSize: 12, minHeight: 0 }} placeholder='System prompt' disabled={selectedTriggerIndex === null} />
@@ -387,8 +387,8 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
             </DialogContent>
 
             <DialogActions>
-                <Button onClick={() => props.onClose(config)}>OK</Button>
-                <Button onClick={() => props.onClose(undefined)}>Cancel</Button>
+                <Button variant='outlined' onClick={() => props.onClose(config)}>OK</Button>
+                <Button variant='outlined' onClick={() => props.onClose(undefined)}>Cancel</Button>
             </DialogActions>
         </Dialog>
         {msgBox}

@@ -14,7 +14,7 @@ const TrivyTabContentAssetSbom: React.FC<ITabContentTrivyAssetSbomProps> = (prop
     return (
         <Accordion sx={{ m: 0.1 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Stack direction='row' alignItems='center'><Typography fontSize={12}>{component.name}</Typography></Stack>
+                <Stack direction='row' alignItems='center'><Typography variant='body2'>{component.name}</Typography></Stack>
             </AccordionSummary>
             <AccordionDetails>
                 <Typography variant='body2'><b>Version: </b>{component.version}</Typography>

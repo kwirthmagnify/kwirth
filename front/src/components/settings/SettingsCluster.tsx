@@ -11,17 +11,17 @@ const SettingsCluster: React.FC<ISettingsClusterProps> = (props:ISettingsCluster
     const [clusterMetricsInterval, setClusterMetricsInterval] = useState(props.clusterMetricsInterval)
 
     return (<>
-        <Dialog open={true} >
+        <Dialog open={true} fullWidth maxWidth='xs' disableRestoreFocus={true}>
             <DialogTitle>Cluster settings</DialogTitle>
-            <DialogContent >
-                <Stack spacing={2} direction={'column'} sx={{width: '40vh' }}>
-                    <Typography>Enter Kwirth cluster configuration for cluster '<b>{props.clusterName}</b>'</Typography>
-                    <TextField value={clusterMetricsInterval} onChange={(e) => setClusterMetricsInterval(+e.target.value)} variant='standard' label='Cluster metrics read interval (seconds)' SelectProps={{native: true}} type='number'></TextField>
+            <DialogContent>
+                <Stack spacing={2} direction='column' sx={{ mt: 1 }}>
+                    <Typography variant='body2'>Enter Kwirth cluster configuration for cluster <b>{props.clusterName}</b></Typography>
+                    <TextField value={clusterMetricsInterval} onChange={(e) => setClusterMetricsInterval(+e.target.value)} variant='standard' label='Cluster metrics read interval (seconds)' SelectProps={{ native: true }} type='number' />
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => props.onClose(clusterMetricsInterval)}>OK</Button>
-                <Button onClick={() => props.onClose(undefined)}>CANCEL</Button>
+                <Button variant='outlined' onClick={() => props.onClose(clusterMetricsInterval)}>OK</Button>
+                <Button variant='outlined' onClick={() => props.onClose(undefined)}>Cancel</Button>
             </DialogActions>
         </Dialog>
     </>)

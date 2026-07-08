@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+﻿import React, { useRef, useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
 import { IConfigTrigger, IPinocchioConfig } from './PinocchioConfig'
 import { useKeyboard as _useKeyboard } from '@kwirthmagnify/kwirth-common-front'
@@ -129,7 +129,7 @@ const PinocchioImportExport: React.FC<IProps> = (props) => {
                 </>}
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => props.onClose()}>Close</Button>
+                <Button variant='outlined' onClick={() => props.onClose()}>Close</Button>
             </DialogActions>
         </Dialog>
     )

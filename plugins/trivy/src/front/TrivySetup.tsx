@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+﻿import React, { useRef, useState } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, Typography } from '@mui/material'
 import { ISetupProps, MsgBoxOk, MsgBoxOkError, MsgBoxWaitCancel } from '@kwirthmagnify/kwirth-common-front'
 import { TrivyConfig, TrivyInstanceConfig } from './TrivyConfig'
@@ -74,14 +74,14 @@ const TrivySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                             <Typography fontSize='10px'>You need to start the channel at least once in order to be able to configure Trivy operator.</Typography>
                         </Stack>
                         <Typography flex={1} />
-                        <Button onClick={() => setShowOperatorManage(true)} disabled={!trivyData.ri}>Manage Trivy</Button>
+                        <Button variant='outlined' onClick={() => setShowOperatorManage(true)} disabled={!trivyData.ri}>Manage Trivy</Button>
                     </Stack>
                 </Stack>
             </DialogContent>
             <DialogActions>
                 <FormControlLabel control={<Checkbox slotProps={{ input: { ref: defaultRef } }} />} label='Set as default' sx={{ width: '100%', ml: '8px' }} />
-                <Button onClick={ok}>OK</Button>
-                <Button onClick={cancel}>CANCEL</Button>
+                <Button variant='outlined' onClick={ok}>OK</Button>
+                <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
         {showOperatorManage && <TrivyOperator onClose={onOperatorManageClosed} clusterUrl={props.channelObject.clusterUrl!} accessString={props.channelObject.accessString!} channelObject={props.channelObject} />}

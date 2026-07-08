@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+﻿import React, { useRef, useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, List, ListItem, Tab, Tabs, TextField, Typography } from '@mui/material'
 import { UploadFile as UploadFileIcon } from '@mui/icons-material'
 import { ICensorInstanceConfig } from './CensorConfig'
@@ -153,7 +153,7 @@ const CensorImportExport: React.FC<ICensorImportExportProps> = ({ configs, onClo
             <DialogActions>
                 {tab === EImportExportTab.Export && <Button variant='contained' onClick={handleExport} disabled={selectedExport.size === 0}>Export</Button>}
                 {tab === EImportExportTab.Import && <Button variant='contained' onClick={handleImport} disabled={selectedImport.size === 0}>Import</Button>}
-                <Button onClick={() => onClose(undefined)} color='inherit'>Cancel</Button>
+                <Button variant='outlined' onClick={() => onClose(undefined)} color='inherit'>Cancel</Button>
             </DialogActions>
         </Dialog>
     )

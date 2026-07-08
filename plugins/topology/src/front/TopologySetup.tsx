@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+﻿import React, { useRef, useState } from 'react'
 import {
     Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
     Divider, FormControlLabel, FormGroup, Slider, Stack, Typography,
@@ -107,7 +107,7 @@ export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 />
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button variant='contained' onClick={ok}>OK</Button>
-                    <Button onClick={cancel}>Cancel</Button>
+                    <Button variant='outlined' onClick={cancel}>Cancel</Button>
                 </Box>
             </DialogActions>
         </Dialog>

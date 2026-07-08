@@ -1,5 +1,5 @@
 import { FC, ReactNode, useEffect } from 'react'
-import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements, EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements, EExtensionType, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 
 type CloseWithId = (id: string) => void
 type CloseNoId = () => void
@@ -92,6 +92,8 @@ export interface IChannel {
     readonly channelId: string
     requirements: IChannelRequirements
     getScope(): string
+    // Catálogo de scopes RBAC que declara la extensión (para poblar el editor de seguridad). Opcional.
+    getScopeCatalog?(): IExtensionScope[]
     getChannelIcon(): JSX.Element
     getSetupVisibility(): boolean
     setSetupVisibility(visibility: boolean): void

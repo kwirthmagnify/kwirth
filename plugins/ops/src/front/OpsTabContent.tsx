@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+﻿import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, IconButton, ListItem, ListItemButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { IOpsData, IScopedObject, OpsData } from './OpsData'
 import { IInstanceConfig, EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
@@ -234,7 +234,7 @@ const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             {opsData.started && !selectedTerminal && (
                 <Stack direction='row' spacing={2} alignItems='stretch' sx={{ flexGrow: 1, minHeight: 0 }}>
                     <Card sx={{ width: '60%', display: 'flex', flexDirection: 'column', maxHeight: '100%' }}>
-                        <CardHeader title={<Stack direction='row' alignItems='center'><Typography fontSize={24}>Objects</Typography><Typography flex={1} /><TextField value={filter} onChange={e => setFilter(e.target.value)} disabled={!opsData.started} variant='standard' placeholder='Filter...' /></Stack>} />
+                        <CardHeader title={<Stack direction='row' alignItems='center'><Typography variant='h6'>Objects</Typography><Typography flex={1} /><TextField value={filter} onChange={e => setFilter(e.target.value)} disabled={!opsData.started} variant='standard' placeholder='Filter...' /></Stack>} />
                         <CardContent sx={{ overflowY: 'auto' }}>
                             {opsData.scopedObjects.filter(so => so.namespace.includes(filter) || so.pod.includes(filter) || so.container.includes(filter)).map((so, index) => (
                                 <ListItem key={index}>
@@ -273,11 +273,11 @@ const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             {opsData.started && opsData.selectedTerminal !== undefined && selectedTerminal && (
                 <Stack sx={{ display: 'flex', flex: 1, flexDirection: 'column', height: '100%', position: 'relative', overflow: 'hidden' }}>
                     <Box>
-                        <Button onClick={() => { setSelectedTerminal(undefined); opsData.selectedTerminal = undefined }} sx={{ borderBottomRightRadius: 0, borderBottomLeftRadius: 0 }}><Home fontSize='small' sx={{ mb: '2px' }} />HOME</Button>
+                        <Button variant='outlined' onClick={() => { setSelectedTerminal(undefined); opsData.selectedTerminal = undefined }} sx={{ borderBottomRightRadius: 0, borderBottomLeftRadius: 0 }}><Home fontSize='small' sx={{ mb: '2px' }} />HOME</Button>
                         {Array.from(opsData.terminalManager.terminals.keys()).map(key => (
                             <Tooltip key={key} title={key}>
-                                <Button onClick={() => { setSelectedTerminal(key); opsData.selectedTerminal = key }} sx={{ background: selectedTerminal === key ? theme.palette.divider : theme.palette.background.default, borderBottomRightRadius: 0, borderBottomLeftRadius: 0 }}>
-                                    {key.split('/')[2]}{opsData.terminalManager.terminals.get(key)!.index > 0 && <Typography fontSize={10} fontWeight='900'>&nbsp;&nbsp;F{opsData.terminalManager.terminals.get(key)?.index}</Typography>}
+                                <Button variant='outlined' onClick={() => { setSelectedTerminal(key); opsData.selectedTerminal = key }} sx={{ background: selectedTerminal === key ? theme.palette.divider : theme.palette.background.default, borderBottomRightRadius: 0, borderBottomLeftRadius: 0 }}>
+                                    {key.split('/')[2]}{opsData.terminalManager.terminals.get(key)!.index > 0 && <Typography sx={{ fontSize: '0.625rem', fontWeight: 900 }}>&nbsp;&nbsp;F{opsData.terminalManager.terminals.get(key)?.index}</Typography>}
                                 </Button>
                             </Tooltip>
                         ))}

@@ -169,8 +169,8 @@ const editorChanged = useRef<boolean>(false)
             </DialogTitle>
 
             <DialogContent>
-                <div ref={containerRef} 
-                    style={{ height: '100%', width: '100%', paddingTop: '2px' }} 
+                <div ref={containerRef}
+                    style={{ height: '100%', width: '100%', paddingTop: '2px' }}
                     onMouseDownCapture={(e) => {
                         const target = e.target as HTMLElement;
                         if (target.closest('.cm-foldGutter')) {

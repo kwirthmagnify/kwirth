@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+﻿import React, { useRef, useState } from 'react'
 import { Avatar, Box, Button, Card, CardContent, Dialog, DialogActions, DialogContent, DialogTitle, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material'
 import { getAvatarContent, TReportType } from '../TrivyCommon'
 import { TrivyTabContentAssetAudit } from './TrivyTabContentAssetAudit'
@@ -89,7 +89,7 @@ const TrivyTabContentAssetDetails: React.FC<ITrivyTabContentAssetDetailsProps> =
                     </Box>
                 </Stack>
             </DialogContent>
-            <DialogActions><Button onClick={() => props.onClose()}>ok</Button></DialogActions>
+            <DialogActions><Button variant='outlined' onClick={() => props.onClose()}>ok</Button></DialogActions>
         </Dialog>
     )
 }

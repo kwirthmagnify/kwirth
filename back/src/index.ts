@@ -19,6 +19,7 @@ import { ManageKwirthApi } from './api/ManageKwirthApi'
 import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
 import { ManageClusterApi } from './api/ManageClusterApi'
 import { AuthorizationManagement } from './tools/AuthorizationManagement'
+import { buildScopeCatalog, validScopeSet } from './tools/ScopeCatalog'
 
 import * as https from 'https'
 import express from 'express'
@@ -1147,7 +1148,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
     try {
         const riRouter = express.Router()
 
-        let result = await ApiKeyApi.create(ri.configMaps, envMasterKey, runningEnv.isDesktop)
+        let result = await ApiKeyApi.create(ri.configMaps, envMasterKey, runningEnv.isDesktop, () => validScopeSet(registeredChannels))
         if (!result) {
             logError(ELogComponent.CORE, 'Could not get apikeyapi setting up routes')
             return false
@@ -1162,8 +1163,14 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         riRouter.use(`/config`, configApi.router)
         let storeApi:StoreApi = new StoreApi(ri.configMaps, apiKeyApi)
         riRouter.use(`/store`, storeApi.router)
-        let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi)
+        let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels))
         riRouter.use(`/user`, userApi.router)
+        // Catálogo global de scopes RBAC (built-in del core + los que declaran los canales): lo consume el
+        // editor de seguridad. Admin-gated. Vive en /core por ser vocabulario transversal (no de user/key).
+        riRouter.get(`/core/scopes`, (req: Request, res: Response) => {
+            if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
+            res.json(buildScopeCatalog(registeredChannels))
+        })
         let loginApi:LoginApi = new LoginApi(ri.secrets, ri.configMaps, ri.apiKeyApi)
         riRouter.use(`/login`, loginApi.router)
         if (!idpManager) {

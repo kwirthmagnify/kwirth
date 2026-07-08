@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent, useEffect, useRef } from 'react'
+﻿import React, { useState, ChangeEvent, useEffect, useRef } from 'react'
 import { Autocomplete, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Select, SelectChangeEvent, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { IAlertConfig, AlertInstanceConfig, AlertConfig } from './AlertConfig'
@@ -95,7 +95,7 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                                 <TextToolTip name={label} help={regexHelp} />
                                 <Stack direction='row' alignItems='baseline'>
                                     <TextField value={val} onChange={(e: ChangeEvent<HTMLInputElement>) => set(e.target.value)} variant='standard' sx={{ flex: 1, minWidth: 0 }} />
-                                    <Button onClick={() => { if (val) { setRegex([...regex, val]); set('') } }} size='small'>Add</Button>
+                                    <Button variant='outlined' onClick={() => { if (val) { setRegex([...regex, val]); set('') } }} size='small'>Add</Button>
                                 </Stack>
                                 <Stack mt={1}>{regex.map((r, i) => <Box key={i}><Chip label={r} variant='outlined' onDelete={() => setRegex(regex.filter(x => x !== r))} size='small' /></Box>)}</Stack>
                             </Stack>
@@ -129,7 +129,7 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                             </Select>
                         </FormControl>
                         {newRuleMode === 'cooldown' && <TextField value={newRuleCooldown} onChange={e => setNewRuleCooldown(e.target.value)} variant='standard' label='Cooldown (s)' type='number' sx={{ width: '100px' }} />}
-                        <Button onClick={() => { if (!newMetric || isNaN(+newThreshold)) return; setMetricRules([...metricRules, { metric: newMetric, operator: newOperator, value: +newThreshold, severity: newRuleSeverity, mode: newRuleMode, cooldown: +newRuleCooldown }]); setNewMetric(null); setNewThreshold('0') }} disabled={!newMetric} size='small'>Add</Button>
+                        <Button variant='outlined' onClick={() => { if (!newMetric || isNaN(+newThreshold)) return; setMetricRules([...metricRules, { metric: newMetric, operator: newOperator, value: +newThreshold, severity: newRuleSeverity, mode: newRuleMode, cooldown: +newRuleCooldown }]); setNewMetric(null); setNewThreshold('0') }} disabled={!newMetric} size='small'>Add</Button>
                     </Stack>
                     <Stack direction='row' flexWrap='wrap' gap={1}>
                         {metricRules.map((rule, i) => <Chip key={i} label={`${rule.metric} ${rule.operator} ${rule.value} [${rule.severity}] ${rule.mode === 'cooldown' ? `${rule.cooldown}s` : rule.mode === 'continuous' ? 'cont' : 'edge'}`} variant='outlined' size='small'
@@ -171,8 +171,8 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
             </DialogContent>
             <DialogActions>
                 <FormControlLabel control={<Checkbox slotProps={{ input: { ref: defaultRef } }} />} label='Set as default' sx={{ width: '100%', ml: '8px' }} />
-                <Button onClick={ok} disabled={!canOk}>OK</Button>
-                <Button onClick={cancel}>CANCEL</Button>
+                <Button variant='outlined' onClick={ok} disabled={!canOk}>OK</Button>
+                <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
     )

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+﻿import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Chip, Divider, FormControl, FormControlLabel, IconButton, List, ListItem, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, Tooltip, Typography } from '@mui/material'
 import { Add as AddIcon, ArrowDownward, ArrowUpward, DeleteOutline as DeleteOutlineIcon, DeleteSweep, Download as DownloadIcon, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
 import { cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'

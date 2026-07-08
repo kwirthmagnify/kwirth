@@ -30,7 +30,7 @@ import { IWorkspace, IWorkspaceSummary } from './model/IWorkspace'
 
 import { SessionContext } from './model/SessionContext'
 import { addGetAuthorization, addDeleteAuthorization, addPostAuthorization } from './tools/AuthorizationManagement'
-import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse, EExtensionType, EChannelMode } from '@kwirthmagnify/kwirth-common'
+import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse, EExtensionType, EChannelMode, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
@@ -201,6 +201,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }), [mode, activeThemeName])
 
     const [frontChannels, setFrontChannels] = useState<Map<string, TChannelConstructor>>(new Map())
+    // Catálogo de scopes RBAC agregado de los canales instalados (getScopeCatalog) → editor de seguridad.
+    const pluginScopes = useMemo<IExtensionScope[]>(() => {
+        const out: IExtensionScope[] = []
+        for (const ctor of frontChannels.values()) {
+            try { out.push(...(createChannelInstance(ctor)?.getScopeCatalog?.() ?? [])) }
+            catch { /* un canal que no declara scopes o falla al instanciar se ignora */ }
+        }
+        return out
+    }, [frontChannels])
     const [licenseInfo, setLicenseInfo] = useState<{ customerId: string; extensions: Record<string, string[]>; expiry: string } | null>(null)
     const [user, setUser] = useState<IUser>()
     const [logged,setLogged] = useState(false)
@@ -2143,8 +2152,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showSelectWorkspace && <SelectWorkspace onSelect={onSelectWorkspaceClosed} values={workspaces} action={selectWorkspaceAction}/> }
                 { workspacePickerMode && <WorkspacePickerDialog title={workspacePickerMode === 'export' ? 'Select workspaces to export' : 'Select workspaces to import'} workspaceNames={workspacePickerNames} onConfirm={onWorkspacePickerConfirm} onCancel={() => setWorkspacePickerMode(null)} /> }
                 { showManageClusters && <ManageClusters onClose={onManageClustersClosed} clusters={clusters} notify={notify}/> }
-                { showApiSecurity && <ManageApiSecurity onClose={() => setShowApiSecurity(false)} /> }
-                { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} /> }
+                { showApiSecurity && <ManageApiSecurity onClose={() => setShowApiSecurity(false)} pluginScopes={pluginScopes} /> }
+                { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} pluginScopes={pluginScopes} /> }
                 { showPluginDialog && <PluginDialog onClose={() => setShowPluginDialog(false)} onPluginLoaded={loadPluginFront} onPluginUnloaded={unloadPluginFront} /> }
                 { showProviderDialog && <ProviderDialog onClose={() => setShowProviderDialog(false)} /> }
                 { showManageIdps && <ManageIdps onClose={() => setShowManageIdps(false)} /> }

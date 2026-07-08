@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
 import { IPinocchioData } from './PinocchioData'
 import { Info } from '@mui/icons-material'
@@ -313,9 +313,9 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 <Stack direction={'row'} alignItems={'center'}>
                     <Typography marginRight={'32px'}><b>Events:</b> {pinocchioData.content.length}</Typography>
                     <Typography marginRight={'32px'} flex={1}><Info fontSize='small' sx={{marginBottom:'2px'}} /><b>&nbsp;Status:</b> {pinocchioData.paused?'paused':pinocchioData.started?'started':'stopped'}</Typography>
-                    <Button onClick={() => setShowClearDialog(true)}>Clear</Button>
-                    <Button onClick={() => { playgroundStartIndex.current = pinocchioData.content.length; setShowPlayground(true) }}>Playground</Button>
-                    <Button onClick={(event) => setAnchorMenu(event.currentTarget)}>Config</Button>
+                    <Button variant='outlined' onClick={() => setShowClearDialog(true)}>Clear</Button>
+                    <Button variant='outlined' onClick={() => { playgroundStartIndex.current = pinocchioData.content.length; setShowPlayground(true) }}>Playground</Button>
+                    <Button variant='outlined' onClick={(event) => setAnchorMenu(event.currentTarget)}>Config</Button>
                 </Stack>}>
             </CardHeader>
                 <CardContent sx={{flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
@@ -340,12 +340,12 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     <Typography variant='body2'><b>Clear back</b> — deletes all analyses stored in the channel. Affects all connected fronts.</Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => {
+                    <Button variant='outlined' onClick={() => {
                         pinocchioData.content = [{ timestamp: Date.now(), text: 'Findings cleared' } as IMessage]
                         forceUpdate(n => n + 1)
                         setShowClearDialog(false)
                     }}>Clear my view</Button>
-                    <Button color='warning' onClick={() => {
+                    <Button variant='outlined' color='warning' onClick={() => {
                         pinocchioData.content = [{ timestamp: Date.now(), text: 'Back analyses cleared' } as IMessage]
                         forceUpdate(n => n + 1)
                         const msg: IPinocchioMessage = {
@@ -362,7 +362,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                         props.channelObject.webSocket?.send(JSON.stringify(msg))
                         setShowClearDialog(false)
                     }}>Clear back</Button>
-                    <Button onClick={() => setShowClearDialog(false)}>Cancel</Button>
+                    <Button variant='outlined' onClick={() => setShowClearDialog(false)}>Cancel</Button>
                 </DialogActions>
             </Dialog>
         )}
@@ -457,7 +457,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setSelectedAnalysis(null)}>Close</Button>
+                    <Button variant='outlined' onClick={() => setSelectedAnalysis(null)}>Close</Button>
                 </DialogActions>
             </Dialog>
         )}
@@ -508,7 +508,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setSelectedFinding(null)}>Close</Button>
+                    <Button variant='outlined' onClick={() => setSelectedFinding(null)}>Close</Button>
                 </DialogActions>
             </Dialog>
         )}
@@ -519,7 +519,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     <MarkdownViewer content={reportContent} />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setReportContent(null)}>Close</Button>
+                    <Button variant='outlined' onClick={() => setReportContent(null)}>Close</Button>
                 </DialogActions>
             </Dialog>
         )}

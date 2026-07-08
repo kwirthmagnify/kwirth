@@ -3,12 +3,13 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl,
 import { MsgBoxButtons, MsgBoxOkError, MsgBoxYesNo } from '../../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
-import { IUser } from '@kwirthmagnify/kwirth-common'
+import { IUser, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { ResourceEditor } from './ResourceEditor'
-const copy = require('clipboard-copy')
+import copy from 'clipboard-copy'
 
 interface IManageUserSecurityProps {
     onClose:() => void
+    pluginScopes?:IExtensionScope[]
 }
 
 const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUserSecurityProps) => {
@@ -125,19 +126,19 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
             <DialogTitle>User management</DialogTitle>
             <DialogContent>
                 <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
-                    <List sx={{flexGrow:1, mr:3, width:'30vh' }}>
-                        { users?.map(u => 
+                    <List sx={{ flexGrow: 1, mr: 3, width: '30vh' }}>
+                        { users?.map(u =>
                         <ListItemButton key={u} selected={u===selectedUser?.id} onClick={() => onClickUser(u)}>
                             <ListItem>{u}</ListItem>
                         </ListItemButton>
                         )}
                     </List>
-                    
-                    <Stack spacing={1} style={{width:'100%'}}>
-                        <Stack spacing={1} direction={'row'}>
-                            <TextField value={id} onChange={(e) => setId(e.target.value)} variant='standard' fullWidth label={idp!=='' ? 'Id (email)' : 'Id'}></TextField>
-                            <TextField value={name} onChange={(e) => setName(e.target.value)} variant='standard' fullWidth label='Name'></TextField>
-                            <TextField value={password} onChange={(e) => setPassword(e.target.value)} type='password' variant='standard' fullWidth label='Password' disabled={idp!==''}></TextField>
+
+                    <Stack spacing={1} sx={{ width: '100%' }}>
+                        <Stack spacing={1} direction='row'>
+                            <TextField value={id} onChange={(e) => setId(e.target.value)} variant='standard' fullWidth label={idp!=='' ? 'Id (email)' : 'Id'} />
+                            <TextField value={name} onChange={(e) => setName(e.target.value)} variant='standard' fullWidth label='Name' />
+                            <TextField value={password} onChange={(e) => setPassword(e.target.value)} type='password' variant='standard' fullWidth label='Password' disabled={idp!==''} />
                             <FormControl variant='standard' fullWidth>
                                 <InputLabel>IdP</InputLabel>
                                 <Select value={idp} label='IdP' onChange={(e) => setIdp(e.target.value)}>
@@ -147,19 +148,19 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
                             </FormControl>
                         </Stack>
 
-                        <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)}/>
+                        <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} pluginScopes={props.pluginScopes}/>
                     </Stack>
                 </Stack>
             </DialogContent>
             <DialogActions>
                 <Stack direction='row' spacing={1}>
-                    <Button onClick={onClickNew}>NEW</Button>
-                    <Button onClick={onClickSave} disabled={id==='' || (idp==='' && password==='')}>SAVE</Button>
-                    <Button onClick={onClickCopyPassword} disabled={password===''}>COPY PASSWORD</Button>
-                    <Button onClick={onClickDelete} disabled={id==='admin'}>DELETE</Button>
+                    <Button variant='outlined' onClick={onClickNew}>New</Button>
+                    <Button variant='outlined' onClick={onClickSave} disabled={id==='' || (idp==='' && password==='')}>Save</Button>
+                    <Button variant='outlined' onClick={onClickCopyPassword} disabled={password===''}>Copy password</Button>
+                    <Button variant='outlined' onClick={onClickDelete} disabled={id==='admin'}>Delete</Button>
                 </Stack>
-                <Typography sx={{flexGrow:1}}></Typography>
-                <Button onClick={() => props.onClose()}>CLOSE</Button>
+                <Typography sx={{ flexGrow: 1 }} />
+                <Button variant='outlined' onClick={() => props.onClose()}>Close</Button>
             </DialogActions>
         </Dialog>
         {msgBox}

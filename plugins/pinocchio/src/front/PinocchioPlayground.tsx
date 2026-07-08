@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+﻿import React, { useRef, useState } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, Menu, MenuItem, Select, Stack, Tab, Tabs, TextareaAutosize, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
 import { ScienceOutlined, Upload, Bolt, FileDownload, FileUpload, CheckCircleOutline, HistoryOutlined, DeleteOutlined } from '@mui/icons-material'
 import { EK8sEvent, EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState, k8sEventsAvailable, kindsAvailable } from './PinocchioConfig'
@@ -400,7 +400,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                                 />
                             </Box>
                         </Stack>
-                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '8px' }}>
+                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: 1 }}>
                             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ flexShrink: 0 }}>
                                     <Typography variant='caption' color='text.secondary'>System</Typography>
@@ -483,14 +483,14 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
             <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <input ref={uploadRef} type='file' accept='.json' style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadConfig(f) }} />
-                    <Button size='small' startIcon={<Upload />} onClick={() => setShowImportDialog(true)}>Import</Button>
-                    <Button size='small' startIcon={<FileDownload />} onClick={openExportDialog}>Export</Button>
-                    <Button size='small' startIcon={<FileUpload />} onClick={() => uploadRef.current?.click()}>Upload</Button>
-                    <Button size='small' startIcon={<FileDownload />} onClick={downloadConfig}>Download</Button>
+                    <Button variant='outlined' size='small' startIcon={<Upload />} onClick={() => setShowImportDialog(true)}>Import</Button>
+                    <Button variant='outlined' size='small' startIcon={<FileDownload />} onClick={openExportDialog}>Export</Button>
+                    <Button variant='outlined' size='small' startIcon={<FileUpload />} onClick={() => uploadRef.current?.click()}>Upload</Button>
+                    <Button variant='outlined' size='small' startIcon={<FileDownload />} onClick={downloadConfig}>Download</Button>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button variant='contained' onClick={() => saveAndClose()}>Save</Button>
-                    <Button onClick={() => props.onClose()}>Cancel</Button>
+                    <Button variant='outlined' onClick={() => props.onClose()}>Cancel</Button>
                 </Box>
             </DialogActions>
 
@@ -560,7 +560,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                         const disabled = exportMode === 'new' ? !exportId.trim() : (!exportTargetTriggerId || !exportVersionId.trim() || versionExists)
                         return <Button variant='contained' onClick={handleExportConfirm} disabled={disabled}>Export</Button>
                     })()}
-                    <Button onClick={() => setShowExportDialog(false)}>Cancel</Button>
+                    <Button variant='outlined' onClick={() => setShowExportDialog(false)}>Cancel</Button>
                 </DialogActions>
             </Dialog>
 
@@ -590,7 +590,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button variant='contained' onClick={confirmImportTrigger} disabled={!pendingImportTriggerId || !pendingImportVersionId}>Import</Button>
-                    <Button onClick={() => { setShowImportDialog(false); setPendingImportTriggerId(''); setPendingImportVersionId('') }}>Cancel</Button>
+                    <Button variant='outlined' onClick={() => { setShowImportDialog(false); setPendingImportTriggerId(''); setPendingImportVersionId('') }}>Cancel</Button>
                 </DialogActions>
             </Dialog>
         </Dialog>

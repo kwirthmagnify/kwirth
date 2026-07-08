@@ -4,7 +4,16 @@
     "montag": "../plugins/montag/dist",
     "pinocchio": "../plugins/pinocchio/dist",
     "mirc": "../plugins/mirc/dist",
-    "defender": "../plugins/defender/dist"
+    "defender": "../plugins/defender/dist",
+    "alert": "../plugins/alert/dist",
+    "censor": "../plugins/censor/dist",
+    "echo": "../plugins/echo/dist",
+    "fileman": "../plugins/fileman/dist",
+    "log": "../plugins/log/dist",
+    "news": "../plugins/news/dist",
+    "ops": "../plugins/ops/dist",
+    "topology": "../plugins/topology/dist",
+    "agora": "../plugins/agora/dist"
   },
   "providers": {
     "tick": "../providers/tick/dist",

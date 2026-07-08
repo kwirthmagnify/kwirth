@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, Stack, TextField } from '@mui/material'
 import { ICensorData, ERegexOrigin } from './CensorData'
 import { ECensorCommand } from './CensorConfig'
@@ -70,7 +70,7 @@ const CensorAddRegexDialog: React.FC<ICensorAddRegexDialogProps> = ({ data, send
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleOk} variant='contained' disabled={!runnerKey || !pattern || !!patternError}>OK</Button>
-                <Button onClick={onClose} color='inherit'>Cancel</Button>
+                <Button variant='outlined' onClick={onClose} color='inherit'>Cancel</Button>
             </DialogActions>
         </Dialog>
     )

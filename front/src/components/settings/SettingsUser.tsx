@@ -18,19 +18,19 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
     }
 
     return (<>
-        <Dialog open={true}>
+        <Dialog open={true} fullWidth maxWidth='xs' disableRestoreFocus={true}>
             <DialogTitle>Settings</DialogTitle>
-            <DialogContent sx={{height:'20vh'}}>
-                <Typography>
-                    Default settings to use when you work with Kwirth.
-                </Typography>
-                <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', mt:2 }}>
-                    <TextField value={keepAliveInterval} onChange={(e) => setKeepAliveInterval(+e.target.value)} variant='standard' label='Keep-alive interval (seconds)' slotProps = { { select: {native: true}}} type='number'></TextField>
+            <DialogContent>
+                <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
+                    <Typography variant='body2'>
+                        Default settings to use when you work with Kwirth.
+                    </Typography>
+                    <TextField value={keepAliveInterval} onChange={(e) => setKeepAliveInterval(+e.target.value)} variant='standard' label='Keep-alive interval (seconds)' slotProps={{ select: { native: true } }} type='number' />
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={ok}>OK</Button>
-                <Button onClick={() => props.onClose(false)}>CANCEL</Button>
+                <Button variant='outlined' onClick={ok}>OK</Button>
+                <Button variant='outlined' onClick={() => props.onClose(false)}>Cancel</Button>
             </DialogActions>
         </Dialog>
     </>)

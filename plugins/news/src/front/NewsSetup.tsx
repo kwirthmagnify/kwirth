@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+﻿import React, { useRef, useState } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, TextField, Typography } from '@mui/material'
 import { Newspaper } from '@mui/icons-material'
 import { ENewsFeed, INewsChannelConfig, INewsInstanceConfig, NewsChannelConfig, NewsInstanceConfig } from './NewsConfig'
@@ -54,8 +54,8 @@ export const NewsSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
             </DialogContent>
             <DialogActions>
                 <FormControlLabel control={<Checkbox slotProps={{ input: { ref: defaultRef } }} />} label='Set as default' sx={{ width: '100%', ml: '8px' }} />
-                <Button onClick={ok}>OK</Button>
-                <Button onClick={cancel}>CANCEL</Button>
+                <Button variant='outlined' onClick={ok}>OK</Button>
+                <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
     )

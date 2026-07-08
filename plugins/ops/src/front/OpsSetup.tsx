@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+﻿import React, { useRef, useState } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Select, Stack, Switch, Typography, Checkbox } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { Terminal } from '@mui/icons-material'
@@ -48,8 +48,8 @@ const OpsSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
             </DialogContent>
             <DialogActions>
                 <FormControlLabel control={<Checkbox slotProps={{ input: { ref: defaultRef } }} />} label='Set as default' sx={{ width: '100%', ml: '8px' }} />
-                <Button onClick={ok}>OK</Button>
-                <Button onClick={cancel}>CANCEL</Button>
+                <Button variant='outlined' onClick={ok}>OK</Button>
+                <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
     )

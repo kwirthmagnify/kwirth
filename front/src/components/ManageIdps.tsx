@@ -109,10 +109,14 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
     const idpGradient = (name: string) => {
         let hash = 0
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-        const hue = (Math.abs(hash) % 360 + 180) % 360
+        const hue = (Math.abs(hash) % 360 + 300) % 360
         const dark = theme.palette.mode === 'dark'
-        const dots = `radial-gradient(circle, hsla(${hue}, 60%, 70%, ${dark ? 0.06 : 0.18}) 1px, transparent 1px)`
-        return `${dots} 0 0 / 10px 10px, linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.14 : 0.26}) 100%)`
+        const op = dark ? 0.07 : 0.20
+        const diamonds = [
+            `repeating-linear-gradient(45deg, hsla(${hue}, 65%, 70%, ${op}) 0px, hsla(${hue}, 65%, 70%, ${op}) 1px, transparent 1px, transparent 8px)`,
+            `repeating-linear-gradient(-45deg, hsla(${hue}, 65%, 70%, ${op}) 0px, hsla(${hue}, 65%, 70%, ${op}) 1px, transparent 1px, transparent 8px)`,
+        ].join(', ')
+        return `${diamonds}, linear-gradient(315deg, hsla(${hue}, 70%, 55%, ${dark ? 0.06 : 0.10}) 0%, hsla(${hue}, 50%, 40%, ${dark ? 0.12 : 0.22}) 100%)`
     }
 
     const ViewToggle = () => (

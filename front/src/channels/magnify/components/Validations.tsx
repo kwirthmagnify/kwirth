@@ -288,8 +288,8 @@ const showBadge = (issues:IIssue[], icon:JSX.Element, onNavigate:(dest:string)=>
             <Stack direction={'column'} alignItems={'center'}>
                 {icon}
                 <Stack direction={'row'}>
-                    <Typography fontSize={10} color={errors>0?'red':'gray'}>{errors}&nbsp;&nbsp;</Typography>
-                    <Typography fontSize={10} color={warnings>0?'orange':errors>0?'gray':'orange'}>{issues.filter(i => i.level === ENotifyLevel.WARNING).length}</Typography>
+                    <Typography variant='caption' color={errors>0?'red':'gray'}>{errors}&nbsp;&nbsp;</Typography>
+                    <Typography variant='caption' color={warnings>0?'orange':errors>0?'gray':'orange'}>{issues.filter(i => i.level === ENotifyLevel.WARNING).length}</Typography>
                 </Stack>
             </Stack>
         </Button>
