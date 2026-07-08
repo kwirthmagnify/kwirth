@@ -9,8 +9,8 @@
 - **core**: eliminado `LEGACY_PLUGIN_SCOPES` de `back/src/tools/ScopeCatalog.ts` (ahora `/core/scopes` solo
   built-in + lo que declaran los canales). Back tests 61/0.
 - Publicados a npm + manifest (bbpm). Consumen common 0.5.25 (ya publicado) → sin cascada extra.
-- **DEUDA detectada**: `plugins/manifest.json` tiene entradas DUPLICADAS por id (censor 54, trivy 16, …);
-  el bbpm bumpea solo la entrada canónica (primer bloque). Limpiar los duplicados es tarea aparte.
+- Nota manifest: `plugins/manifest.json` lista VARIAS versiones por id (histórico instalable, NO duplicados);
+  el bbpm bumpea la entrada canónica (primer bloque, la "latest"), como el patrón del último commit de marketplace.
 
 ## Contexto
 El mecanismo de **scopes declarados por plugin** ya existe (ver `plans/plugin-scopes/PLAN.md`):
