@@ -1,14 +1,27 @@
 import React, { useState } from 'react'
-import { Box, Button, Checkbox, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Stack, SxProps, Typography } from '@mui/material'
+import { Box, Button, Checkbox, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Stack, SxProps, Tooltip, Typography } from '@mui/material'
 import { clusterColor } from '../tools/clusterColor'
 import { Cluster } from '../model/Cluster'
 import { MsgBoxOkError } from '../tools/MsgBox'
 
 import { addGetAuthorization } from '../tools/AuthorizationManagement'
-import { BackChannelData, EClusterType, EInstanceConfigView, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
+import { BackChannelData, EChannelMode, EClusterType, EInstanceConfigView, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
 import { ITabObject } from '../model/ITabObject'
 import { getIconFromKind } from '../tools/Constants-React'
 import { TChannelConstructor } from '../channels/IChannel'
+import { resolveRemoteChannelHost } from '../tools/ChannelResolution'
+
+// Indicador de canal remoto en el desplegable: 'R' en círculo. Verde = operativo (su Kwirth in-cluster
+// está conectado y se puede delegar); gris = no operativo (no hay host conectado, el ADD solo avisará).
+const RemoteBadge: React.FC<{ operative: boolean }> = ({ operative }) => (
+    <Tooltip title={operative
+        ? 'Remote channel — hosted by this cluster\'s in-cluster Kwirth (connected)'
+        : 'Remote channel — its in-cluster Kwirth is not connected; connect it to use this channel'}>
+        <Box component='span' sx={{ ml: 0.75, width: 16, height: 16, borderRadius: '50%',
+            bgcolor: operative ? 'success.main' : 'grey.500', color: '#fff',
+            fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>R</Box>
+    </Tooltip>
+)
 
 interface IResourceSelected {
     channelId: string
@@ -417,7 +430,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                         if (!v) return undefined
                         const cls = props.frontChannels?.get(v as string)
                         const icon = cls ? React.cloneElement(new cls().getChannelIcon(), { sx: { fontSize: 14, verticalAlign: 'middle', mr: 0.5 } }) : null
-                        return <>{icon}<span>{v as string}</span></>
+                        const cd = props.backChannels.find(x => x.id === v)
+                        return <>{icon}<span>{v as string}</span>{cd?.mode === EChannelMode.REMOTE && <RemoteBadge operative={!!resolveRemoteChannelHost(cd.id, cluster.clusterInfo?.id ?? '', props.clusters)} />}</>
                     }}
                 >
                     { props.backChannels.map(c => {
@@ -428,6 +442,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                                 <Stack direction='row' alignItems='center'>
                                     {icon}
                                     <span>{c.id}</span>
+                                    {c.mode === EChannelMode.REMOTE && <RemoteBadge operative={!!resolveRemoteChannelHost(c.id, cluster.clusterInfo?.id ?? '', props.clusters)} />}
                                 </Stack>
                             </MenuItem>
                         )

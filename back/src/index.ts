@@ -1197,6 +1197,17 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                 try {
                     const channelInstance = createChannelInstance(ChannelClass, activeRI.clusterInfo, activeRI.backChannelObject)
                     if (channelInstance) {
+                        // 'instances' gate (same as startup in prepareRunningInstance): a 'single' channel is
+                        // hosted only by the k8s-mode Kwirth home. On desktop/docker it is announced as REMOTE
+                        // and NOT started here — avoids self-hosting (e.g. Agora, which needs in-cluster storage).
+                        const installMode = resolveChannelMode(channelInstance.requirements, runningEnv.isK8s)
+                        if (installMode === EChannelMode.REMOTE) {
+                            const remoteData = { ...channelInstance.getChannelData(), mode: EChannelMode.REMOTE }
+                            if (!activeRI.remoteChannels.some(c => c.id === id)) activeRI.remoteChannels.push(remoteData)
+                            if (!activeRI.kwirthData.channels.some(c => c.id === id)) activeRI.kwirthData.channels.push(remoteData)
+                            logInfo(ELogComponent.CORE, `Plugin channel '${id}' is 'single' and this is not its in-cluster home → announced as remote (not hosted here)`)
+                            return
+                        }
                         for (const provId of channelInstance.requirements.providers) {
                             let providerInstance = activeRI.clusterInfo.providers.find(p => p.id === provId)
                             if (!providerInstance) {
@@ -1232,7 +1243,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP router mounted at '${mountPath}'`)
                         }
                         if (!activeRI.kwirthData.channels.some(c => c.id === id))
-                            activeRI.kwirthData.channels.push(channelInstance.getChannelData())
+                            activeRI.kwirthData.channels.push({ ...channelInstance.getChannelData(), mode: EChannelMode.LOCAL })
                         const channelData = channelInstance.getChannelData()
                         for (const endpoint of channelData.endpoints) {
                             const router = express.Router()
