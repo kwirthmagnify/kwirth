@@ -4,9 +4,9 @@
     "id": "clusterized",
     "name": "@kwirthmagnify/kwirth-homepage-clusterized",
     "displayName": "Clusterized",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "description": "Cluster-centric homepage for Kwirth — one card per cluster with status indicator and quick Magnify access.",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-clusterized/-/kwirth-homepage-clusterized-0.1.5.tgz"
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-clusterized/-/kwirth-homepage-clusterized-0.1.6.tgz"
   },
   {
     "extensionType": "homepage",
@@ -49,9 +49,9 @@
     "id": "matrix",
     "name": "@kwirthmagnify/kwirth-homepage-matrix",
     "displayName": "Matrix",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "description": "Matrix-style cluster overview homepage for Kwirth.",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-matrix/-/kwirth-homepage-matrix-0.1.5.tgz"
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-matrix/-/kwirth-homepage-matrix-0.1.6.tgz"
   },
   {
     "extensionType": "homepage",
@@ -94,9 +94,9 @@
     "id": "avicii",
     "name": "@kwirthmagnify/kwirth-homepage-avicii",
     "displayName": "Avicii",
-    "version": "0.1.8",
+    "version": "0.1.9",
     "description": "Avicii-inspired homepage — warm gold on black, geometric triangle motifs, sharp Oswald typography, and live cluster metrics.",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-avicii/-/kwirth-homepage-avicii-0.1.8.tgz"
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-avicii/-/kwirth-homepage-avicii-0.1.9.tgz"
   },
   {
     "extensionType": "homepage",
@@ -166,8 +166,8 @@
     "id": "depeche-mode",
     "name": "@kwirthmagnify/kwirth-homepage-depeche-mode",
     "displayName": "Depeche Mode",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Depeche Mode homepage — abyss black, blood red accents, bone text, condensed bold typography, ASCII metric charts and STRANGELOVE cluster launch.",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-depeche-mode/-/kwirth-homepage-depeche-mode-0.1.1.tgz"
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-depeche-mode/-/kwirth-homepage-depeche-mode-0.1.2.tgz"
   }
 ]

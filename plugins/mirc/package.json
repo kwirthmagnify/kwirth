@@ -2,7 +2,7 @@
   "id": "mirc",
   "displayName": "mIRC",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "mIRC channel plugin for Kwirth - cross-cluster direct messaging between connected users, with offline mailbox and WhatsApp-style delivery checks",
   "icon": "Forum",
   "type": "module",
@@ -13,7 +13,7 @@
   "dependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.24",
     "@kwirthmagnify/kwirth-common-back": "^0.5.22",
-    "@kwirthmagnify/kwirth-common-front": "^0.5.22"
+    "@kwirthmagnify/kwirth-common-front": "^0.5.25"
   },
   "devDependencies": {
     "@mui/icons-material": "7.1.2",

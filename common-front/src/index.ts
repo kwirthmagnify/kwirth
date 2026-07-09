@@ -115,6 +115,8 @@ export { MarkdownViewer } from './MarkdownViewer'
 export { MiniGauge } from './MiniGauge'
 export type { IMiniGaugeProps } from './MiniGauge'
 export { MsgBoxButtons, MsgBoxOk, MsgBoxOkWarning, MsgBoxOkError, MsgBoxOkCancel, MsgBoxYesNo, MsgBoxYesNoCancel, MsgBoxWait, MsgBoxWaitCancel } from './MsgBox'
+export { UserPicker } from './UserPicker'
+export type { IUserPickerProps } from './UserPicker'
 
 export interface ITabSummary {
     name: string
