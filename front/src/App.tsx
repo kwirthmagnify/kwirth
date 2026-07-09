@@ -748,9 +748,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             let usableChannels = [...cluster.kwirthData.channels]
             usableChannels = usableChannels.filter(c => {
                 if (!Array.from(frontChannels.keys()).includes(c.id)) return false
-                // a 'single' channel announced as remote is usable only if another connected cluster hosts it
-                // (same cluster id, mode local). WS routing to that host is wired with Agora (its first consumer).
-                if (c.mode === EChannelMode.REMOTE) return !!resolveRemoteChannelHost(c.id, cluster.clusterInfo?.id ?? '', clusters)
+                // 'single' channels announced as remote are shown too (Agora & co.). If no in-cluster Kwirth
+                // hosts it, the ADD handler explains how to connect it; WS routing to the host is set in
+                // populateTabObject (its first consumer is Agora).
                 return true
             })
             setBackChannels(usableChannels)
@@ -775,6 +775,16 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         let cluster = clusters.find(c => c.name===selection.clusterName)
         if (!cluster || !user) {
             setMsgBox(MsgBoxOkError('Kwirth',`Cluster established at tab configuration ${selection.clusterName} does not exist.`, setMsgBox))
+            return
+        }
+
+        // A 'single' channel announced REMOTE here is hosted by the in-cluster Kwirth of this cluster. If
+        // that Kwirth is not connected, we cannot delegate — tell the user the situation and how to fix it.
+        const channelData = cluster.kwirthData?.channels?.find(ch => ch.id === selection.channelId)
+        if (channelData?.mode === EChannelMode.REMOTE && !resolveRemoteChannelHost(selection.channelId, cluster.clusterInfo?.id ?? '', clusters)) {
+            setMsgBox(MsgBoxOkError('Channel runs in-cluster',
+                `'${selection.channelId}' runs on the in-cluster Kwirth of cluster '${cluster.name}', which is not connected here. Connect that Kwirth (Manage clusters) to use this channel from this app.`,
+                setMsgBox))
             return
         }
 
@@ -844,9 +854,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             headerEl: undefined
         }
 
-        if (newTab.channel.requirements.clusterUrl) newTab.channelObject.clusterUrl = cluster.url
+        // For a 'single' channel announced REMOTE here, delegate to the in-cluster Kwirth that hosts it:
+        // the WS (clusterUrl) + credential (accessString) point to that host, not the local (e.g. desktop) back.
+        // Non-remote channels keep the selected cluster (host is undefined → falls back). clusterInfo/clusterName
+        // stay the target cluster (same id).
+        const channelMode = cluster.kwirthData?.channels?.find(ch => ch.id === channelId)?.mode
+        const host = channelMode === EChannelMode.REMOTE ? resolveRemoteChannelHost(channelId, cluster.clusterInfo?.id ?? '', clusters) : undefined
+        if (newTab.channel.requirements.clusterUrl) newTab.channelObject.clusterUrl = host?.url ?? cluster.url
         if (newTab.channel.requirements.clusterInfo) newTab.channelObject.clusterInfo = cluster.clusterInfo
-        if (newTab.channel.requirements.accessString) newTab.channelObject.accessString = cluster?.accessString
+        if (newTab.channel.requirements.accessString) newTab.channelObject.accessString = host?.accessString ?? cluster?.accessString
         if (newTab.channel.requirements.metrics) newTab.channelObject.metricsList = cluster.metricsList
         if (newTab.channel.requirements.frontChannels) newTab.channelObject.frontChannels = frontChannels
         if (newTab.channel.requirements.backChannels) newTab.channelObject.backChannels = backChannels
