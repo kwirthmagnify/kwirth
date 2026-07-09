@@ -221,8 +221,6 @@
       "PowerShell(Copy-Item -Path \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\common-front\\\\dist\\\\MiniGauge.d.ts\" -Destination \"c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\censor\\\\node_modules\\\\@kwirthmagnify\\\\kwirth-common-front\\\\dist\\\\MiniGauge.d.ts\" -Force)",
       "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\homepages\\\\avicii\\\\src -Recurse | Where-Object { -not $_.PSIsContainer })",
       "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\homepages\\\\clusterized\\\\src -Recurse | Where-Object { -not $_.PSIsContainer } | Select-Object Name, FullName)",
-      "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor\\\\src -Recurse | Where-Object { -not $_.PSIsContainer } | Select-Object FullName)",
-      "PowerShell(Get-ChildItem c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\daemons\\\\censor | Where-Object { -not $_.PSIsContainer } | Select-Object Name)",
       "PowerShell(node --check tools/create-kwirth-theme.mjs 2>&1)",
       "PowerShell(node --check tools/create-kwirth-homepage.mjs 2>&1)",
       "Bash(xargs grep -l \"available\\\\|Available\\\\|install\\\\|Install\")",
@@ -675,7 +673,9 @@
       "Bash(echo \"AGORA=$?\")",
       "Bash(git commit -m ' *)",
       "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('back/kwirth-bundled.json','utf8'\\)\\); JSON.parse\\(require\\('fs'\\).readFileSync\\('.claude/settings.json','utf8'\\)\\); console.log\\('bundled + settings JSON válidos'\\)\")",
-      "Bash(git commit -q -m 'chore: retire the '\\\\''daemon'\\\\'' extension category \\(1/2/3/6\\) *)"
+      "Bash(git commit -q -m 'chore: retire the '\\\\''daemon'\\\\'' extension category \\(1/2/3/6\\) *)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('.claude/settings.json','utf8'\\)\\); console.log\\('settings.json válido'\\)\")",
+      "Bash(git commit -q -m 'chore: scrub remaining '\\\\''daemon'\\\\'' wording \\(4/5 + stale settings paths\\) *)"
     ],
     "additionalDirectories": [
       "c:\\github\\aisdkvercel\\kwirth\\senders\\tee",

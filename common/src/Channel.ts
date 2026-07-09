@@ -12,7 +12,7 @@ enum EClusterType {
 // How many back instances of a channel make sense per cluster.
 enum EChannelInstances {
     MULTI = 'multi',    // several backs per cluster are valid (default: log, metrics, mirc…)
-    SINGLE = 'single'   // exactly one back per cluster (the old "daemon"); home = in-cluster Kwirth
+    SINGLE = 'single'   // exactly one back per cluster; home = in-cluster Kwirth
 }
 
 // Whether a channel's back is hosted by this Kwirth or lives elsewhere (resolved by the front-hub).

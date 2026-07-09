@@ -7,7 +7,7 @@ import { ECensorCommand, ERegexOrigin, ICensorInstanceConfig } from '../common/C
 
 const PROVIDERS_AVAILABLE = ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek']
 
-// ── Motor de análisis (portado desde el daemon censor) ───────────────────────
+// ── Motor de análisis (autónomo, dentro del channel back) ────────────────────
 const BATCH_SIZE = 50
 const MAX_LINE_BUFFER = 25000
 
@@ -150,7 +150,7 @@ interface IInstance {
     ephemeralDescription?: string
     _configReady?: Promise<void>
     _startupPromise?: Promise<void>
-    // self-contained engine state (portado desde IDaemonInstance)
+    // self-contained engine state (per-instance)
     runners: Map<string, IConfigRunner>
     scope?: 'cluster' | 'resource'
     pendingReceivedLines: { text: string; namespace: string; pod: string; container: string }[]
@@ -391,7 +391,7 @@ export class CensorChannel {
         return false
     }
 
-    // ── Motor autónomo: helpers (portados desde el daemon) ───────────────────────
+    // ── Motor autónomo: helpers ──────────────────────────────────────────────────
 
     private effectiveBatchSize(runner: IConfigRunner): number {
         const max = runner.cfg.batchSize ?? BATCH_SIZE
@@ -399,7 +399,7 @@ export class CensorChannel {
         return runner.currentBatchSize ?? max
     }
 
-    // Envío directo al WebSocket de la instancia (reemplaza broadcast+forwardDaemonEvent).
+    // Envío directo al WebSocket de la instancia.
     // Localiza el socket vía connections para respetar reconexiones (updateConnection).
     private sendEvent(instance: IInstance, kind: ICensorMessage['kind'], data: Record<string, unknown>): void {
         const socket = this.connections.find(s => s.instances.includes(instance))
@@ -897,7 +897,7 @@ export class CensorChannel {
         for (const cfg of allActive) this.createOrUpdateRunner(instance, cfg, llmList)
     }
 
-    // Seed runners for this instance from the active configs (replaces the old ephemeral daemon auto-start)
+    // Seed runners for this instance from the active configs (ephemeral: only while the WS is open)
     private seedRunners = async (webSocket: WebSocket, instance: IInstance, activeConfigsOverride?: ICensorInstanceConfig[]): Promise<void> => {
         let allActive: ICensorInstanceConfig[]
         if (activeConfigsOverride !== undefined) {
@@ -985,7 +985,7 @@ export class CensorChannel {
         const isClusterMode = ns === '*all' && pod === '*all' && container === '*all'
         instance.scope = (isClusterMode || instance.instanceConfig.view === EInstanceConfigView.CLUSTER) ? 'cluster' : 'resource'
 
-        // Seed runners once (replaces the old ephemeral daemon auto-start)
+        // Seed runners once (ephemeral: only while the WS is open)
         if (instance.runners.size === 0) {
             if (!instance._startupPromise) {
                 instance._startupPromise = this.seedRunners(webSocket, instance)
