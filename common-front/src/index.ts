@@ -117,6 +117,8 @@ export type { IMiniGaugeProps } from './MiniGauge'
 export { MsgBoxButtons, MsgBoxOk, MsgBoxOkWarning, MsgBoxOkError, MsgBoxOkCancel, MsgBoxYesNo, MsgBoxYesNoCancel, MsgBoxWait, MsgBoxWaitCancel } from './MsgBox'
 export { UserPicker } from './UserPicker'
 export type { IUserPickerProps } from './UserPicker'
+export { HelpButton } from './HelpButton'
+export type { IHelpButtonProps } from './HelpButton'
 
 export interface ITabSummary {
     name: string

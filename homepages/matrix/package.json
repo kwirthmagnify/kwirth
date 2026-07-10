@@ -3,7 +3,7 @@
   "name": "@kwirthmagnify/kwirth-homepage-matrix",
   "displayName": "Matrix",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Matrix-style cluster overview homepage for Kwirth",
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
     "watch": "node watch.mjs"
   },
   "devDependencies": {
-    "@kwirthmagnify/kwirth-common-front": "^0.5.25",
+    "@kwirthmagnify/kwirth-common-front": "^0.5.26",
     "@mui/icons-material": "7.1.2",
     "@mui/material": "7.1.2",
     "@types/react": "^18.3.0",

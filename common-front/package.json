@@ -1,6 +1,6 @@
 {
   "name": "@kwirthmagnify/kwirth-common-front",
-  "version": "0.5.25",
+  "version": "0.5.26",
   "description": "Frontend channel interfaces for Kwirth plugins and channels",
   "scripts": {
     "build": "del .\\dist\\* /s /q && tsc"
