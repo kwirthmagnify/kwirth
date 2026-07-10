@@ -17,7 +17,10 @@ export interface IHelpButtonProps {
 const HelpButton: React.FC<IHelpButtonProps> = ({ docsUrl, section }) => {
     const open = (): void => {
         const base = (docsUrl || DEFAULT_DOCS_URL).replace(/\/+$/, '')
-        window.open(`${base}/#/${section}`, '_blank', 'noopener,noreferrer')
+        // Popup del navegador (ventana aparte, no pestaña): las features de tamaño fuerzan el popup.
+        // Nombre estable → clics sucesivos reusan la misma ventana (navega a la nueva sección).
+        const w = window.open(`${base}/#/${section}`, 'kwirth-guide', 'popup=yes,width=1024,height=860,scrollbars=yes,resizable=yes')
+        if (w) { w.opener = null; w.focus() }   // opener=null = seguridad (equiv. noopener, que aquí forzaría pestaña)
     }
     return (
         <Tooltip arrow title='Open the guide for this section'>
