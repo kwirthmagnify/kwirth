@@ -906,7 +906,9 @@ const processChannelCommand = async (webSocket: WebSocket, instanceMessage: IIns
                 }
                 else {
                     logInfo(ELogComponent.CORE, `Instance '${instanceMessage.instance}' and flow ${instanceMessage.flow} not found for command`)
-                    logInfo(ELogComponent.CORE, instanceMessage)
+                    const redacted: any = { ...instanceMessage }
+                    if (redacted.accessKey) redacted.accessKey = `${redacted.accessKey.substring(0, 8)}...`
+                    logInfo(ELogComponent.CORE, redacted)
                     sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, `Instance '${instanceMessage.instance}' has not been found for command`)
                 }
             }   
@@ -1480,6 +1482,11 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     const newInstance = createChannelInstance(ChannelClass, ri.clusterInfo, ri.backChannelObject)
                     if (newInstance) {
                         ri.channels.set(id, newInstance)
+                        // Re-run startChannel so the fresh instance re-subscribes to providers (events/metrics),
+                        // re-arms its timers and reloads its config — otherwise a hot-reload leaves the new
+                        // instance handling sockets but deaf to cluster events until a full core restart. Safe
+                        // now that channels implement cleanup() to drop the OLD subscription first (no dupes).
+                        newInstance.startChannel().catch(err => logError(ELogComponent.CORE, `[dev] Plugin '${id}' startChannel after reload failed: ${err}`))
                         logInfo(ELogComponent.CORE, `[dev] Plugin '${id}' channel instance replaced in running instance`)
                     }
                 }
@@ -2057,7 +2064,23 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
         logInfo(ELogComponent.CORE, 'Creating HTTP server...')
         httpServer = http.createServer(expressApp)
         logInfo(ELogComponent.CORE, 'Creating WS server...')
-        wsServer = new WebSocketServer({ server: httpServer, skipUTF8Validation:true  })
+        // perMessageDeflate: comprime los mensajes grandes del WS (p.ej. snapshots de findings de Defender
+        // que pueden pesar MB). El navegador negocia la extensión automáticamente (front sin cambios).
+        // `threshold` evita comprimir los mensajes pequeños de control; los ajustes de contexto/concurrencia
+        // son los recomendados por `ws` para no fragmentar memoria con varias conexiones.
+        wsServer = new WebSocketServer({
+            server: httpServer,
+            skipUTF8Validation: true,
+            perMessageDeflate: {
+                threshold: 1024,                    // solo comprime payloads > 1KB
+                serverNoContextTakeover: true,      // libera el contexto zlib entre mensajes (menos memoria)
+                clientNoContextTakeover: true,
+                serverMaxWindowBits: 10,
+                concurrencyLimit: 10,               // límite de operaciones zlib concurrentes
+                zlibDeflateOptions: { chunkSize: 1024, memLevel: 7, level: 3 },
+                zlibInflateOptions: { chunkSize: 10 * 1024 }
+            }
+        })
 
         wsServer.on('connection', (webSocket:WebSocket, req:IncomingMessage) => {
             const ipHeader = req.headers['x-forwarded-for']
