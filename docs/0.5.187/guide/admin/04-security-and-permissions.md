@@ -51,6 +51,8 @@ When you edit a resource, **Scopes** is a **searchable selector** (filter box + 
 | `ops$restart` | Ops: **restart / delete** workloads. |
 | `trivy$workload` | Trivy: access **workload-scoped** reports (vulnerabilities, config audit, secrets). |
 | `trivy$kubernetes` | Trivy: access **cluster-scoped** reports (RBAC, infra assessment). |
+| `fileman$read` | Fileman: **browse / view / download** files. |
+| `fileman$write` | Fileman: everything read can do **plus** edit, upload, create, rename, move/copy, delete. |
 | `none` | Placeholder — no capability. |
 
 > **Plugins can add their own scopes.** The list above is the **core** catalog plus the Ops/Trivy channel scopes, but the Scopes selector is **populated at runtime** from every installed channel/plugin (`ops$…`, `trivy$…`, and any a plugin declares). So after installing a new channel you may see **extra scopes** appear here automatically. There is **no** `ops$xterm` / `ops$execute` scope — opening a shell or running a command in [Ops](../extensions/plugins/ops) is not behind its own scope in the current version.

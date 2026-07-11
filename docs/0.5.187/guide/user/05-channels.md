@@ -83,7 +83,7 @@ These are the channels you may find in the **Channel** dropdown. Which ones appe
 | **Censor** | LLM-assisted noise filtering for logs. | [Censor](../extensions/plugins/censor) |
 | **Pinocchio** | AI/LLM features on top of your observability data. | [Pinocchio](../extensions/plugins/pinocchio) |
 
-> The catalog above lists the channels most users work with. Depending on your installation you may also see specialised channels such as **defender**, **mirc** or **montag** — all documented in [Part III](../extensions/index).
+> The catalog above lists the channels most users work with. Depending on your installation you may also see **mIRC**, **News** and **Echo** — all documented in [Part III](../extensions/index). Some deployments add **commercial** channels (e.g. **Defender**, **Montag**); those are covered separately, not in this open-source guide.
 
 ---
 

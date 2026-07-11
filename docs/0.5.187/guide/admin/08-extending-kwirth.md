@@ -34,14 +34,14 @@ Every family uses the same manager UI, so once you learn one you know them all:
 | **Installed *(family)*** | The extensions currently installed. Each card shows the **name**, **version** badge, a short **description**, and its **source** — an npm/registry URL, or a **`dev`** badge for one loaded in local development mode. |
 | **Filter** | Narrow the list by name. |
 | **Card / List view** | Toggle between card grid and compact list. |
-| **Per-item icons** | **Open website** (extension homepage), **Settings ⚙** (configure it — for families that have config, like providers/senders/IdPs), and **delete/uninstall** (🗑). |
+| **Per-item icons** | **Open website** (extension homepage), **Settings ⚙** (configure it — providers/senders/IdPs open a typed form; **plugins** open a generic **JSON installation-config editor**), and **delete/uninstall** (🗑). |
 | **Install *(family)*** | Add a new one: paste a package **URL** and download it, or **BROWSE…** for a local package file. |
 | **Available *(family)*** | A browsable catalog of extensions you can install with one click. |
 
 ## Install, configure, remove
 
 1. **Install** — from **Available** click an item, or paste its URL / **BROWSE…** a file under **Install**.
-2. **Configure** — for extensions that need settings (providers, senders, identity providers), click **⚙ Settings** on the card, fill the fields, and **enable** it. Configuration (including secrets, shown masked) is stored in Kubernetes secrets/configmaps.
+2. **Configure** — click **⚙ Settings** on the card. Providers, senders and identity providers show a **typed form** (fill the fields and **enable** it); **plugins** open a **JSON installation-config editor** for that plugin's install-time config. Configuration (including secrets, shown masked) is stored in Kubernetes secrets/configmaps.
 3. **Enable / disable** — many extensions have an enabled toggle in their settings; disabled ones stay installed but inactive.
 4. **Remove** — click the delete icon on the card.
 

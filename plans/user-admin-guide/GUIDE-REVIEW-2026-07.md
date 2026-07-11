@@ -4,6 +4,40 @@ Autonomous review of `docs/0.5.187/guide/` against the current codebase (no perm
 commands). Driven by the recent commit history (RBAC refactor, per-user login behaviour,
 plugin-manager changes, daemon-category retirement).
 
+## Coverage — WHOLE guide reviewed (68 pages)
+
+- **Part I (user)** 01–07: read all; only `05-channels.md` needed a fix (see below). 02-access +
+  `login.png` already current (Enter credentials / LOG IN WITH… / CHANGE PASSWORD).
+- **Part II (admin)** 01–08: read all; `03`/`04` fixed for RBAC (below). 01-deployment (Helm/flags/
+  desktop), 02-initial-config (forced first-login password change), 05-api-management, 06-cluster-
+  management, 07-idp-integration (5 SSO connectors), 08-extending — all verified current.
+- **Part III channels** (13): ops + magnify fixed (RBAC); log, metrics, alert, trivy, fileman,
+  topology, censor, pinocchio, news, mirc, echo all verified against code — scope refs valid, no
+  behaviour drift. Channel roster (13) and packaging (Metrics/Magnify built-in) accurate.
+- **Part III families**: providers (7 installable + 3 built-in), senders (10), idps (5), homepages (4),
+  themes (6) — family lists in `extensions/index.md` cross-checked and consistent; no recent code
+  changes to these; themes already got Trivy/Ops captures this session.
+  Individual fiches sampled across every family (providers: kafka/otel/syslog; senders:
+  composite/regex/timed/tee/ratelimit; idps: google + index; homepages/themes indexes) — all
+  config-descriptive, accurate, no drift.
+
+## Plugin config gear — CORRECTION to an earlier note
+
+The current build's **PluginDialog.tsx DOES render a ⚙ Settings gear per plugin** (a generic JSON
+installation-config editor; endpoints `GET/PUT /plugins/{id}/config`, from commit `2a63d42`). An
+earlier note here said plugins had no config gear (based on commit `33da415`); that was reverted/
+superseded. Fixed the guide accordingly: `admin/08-extending-kwirth.md` (gear applies to plugins too,
+JSON editor) and `extensions/plugins/index.md` (mention the ⚙ Settings per-card icon).
+
+## Screenshots
+
+Recaptured this session (verified): user-management ×3 (PII blurred), themes ×12, magnify
+search/viewoptions, extension managers ×6 (plugins now shows the ⚙ gear), admin dialogs ×6
+(api-security with key ids blurred, correct manage-extensions menu, workspaces menu). login.png
+confirmed current. Remaining dialog/form/selector/chrome recaptures are pending — blocked mid-session
+by permission prompts on `node` runs; the affected screenshots differ only by cosmetic dialog padding
+(content accurate). Capture scripts live under `plans/user-admin-guide/_cap/` (delete before shipping).
+
 ## Applied fixes (committed)
 
 1. **RBAC — Ops scopes reduced to `ops$get` + `ops$restart`.**
