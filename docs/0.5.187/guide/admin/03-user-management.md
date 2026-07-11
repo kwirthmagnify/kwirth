@@ -16,6 +16,9 @@ The dialog has two areas: the **list of users** on the left, and the **editor** 
 | **Name** | A display name, for your reference. |
 | **Password** | The login password (local users). Left unused for IdP-bound users. |
 | **IdP** | If set, the user authenticates through that **Identity Provider** instead of a password (see [IdP integration](07-idp-integration)). |
+| **Auto-start channel** | If set, the named channel (e.g. `magnify`, `ops`) is launched automatically in **fullscreen mode** immediately after the user logs in. Leave empty to disable. |
+| **Enabled channels** | Comma-separated list of channel IDs the user is allowed to open (e.g. `magnify,ops`). Leave empty to allow **all** channels. |
+| **Can exit fullscreen** | When unchecked, the user cannot leave fullscreen mode once it starts — useful for kiosk-style deployments. Checked by default. |
 
 ## Create a user
 
@@ -30,7 +33,7 @@ The dialog has two areas: the **list of users** on the left, and the **editor** 
 5. Repeat step 4 for as many resources as you need.
 6. Click **SAVE** (bottom-left) to persist the user.
 
-Other buttons: **COPY PASSWORD** (copy the user's password to share it), **REMOVE** (remove the selected resource), **DELETE** (delete the selected user), **CLOSE**.
+The **bottom-left buttons** act on the **whole user**: **NEW** (start a new user), **SAVE** (persist the user and all its resources), **COPY PASSWORD** (copy the user's password to share it), **DELETE** (delete the selected user — disabled for the built-in `admin`). **CLOSE** is on the far right. *(The **NEW / SAVE / REMOVE** buttons on the **right**, inside the resource editor, act on a single **resource** — not the user; see below.)*
 
 ## Working with resources and scopes
 
@@ -41,7 +44,7 @@ The controls, top to bottom:
 | Control | What it does |
 |---|---|
 | **Resource List** | Dropdown listing the resources already added to this user. Selecting one **loads it into the fields below** so you can review or edit it. |
-| **Scopes** | A **multi-select checklist** of the actions to allow (see picture below). You must tick **at least one** scope. |
+| **Scopes** | A **searchable multi-select** of the actions to allow (see picture below). Open it to get a **filter box** and a checkbox per scope; hover a scope for a **tooltip describing it**. You must tick **at least one** scope. |
 | **Namespaces / Deployments / ReplicaSets / ReplicationControllers / DaemonSets / StatefulSets / Pods / Containers** | The **object filters**. Each takes a comma-separated list of names or regexes; **blank means "all"**. |
 | **NEW** (right) | Clears the fields to start a **brand-new** resource. |
 | **SAVE** (right) | Adds the current resource to the list — or, if you loaded one from *Resource List*, **updates** it. Disabled until at least one scope is selected. |
@@ -49,7 +52,11 @@ The controls, top to bottom:
 
 Picking scopes:
 
-![Scopes checklist](../../_media/guide/admin-scopes.png)
+![Scopes selector](../../_media/guide/admin-scopes.png)
+
+Open the **Scopes** field and you get a **filter box** at the top — start typing to narrow a long catalog — over a **checkbox list**. Tick every action this resource should allow. Each scope shows a readable **label**, and hovering it reveals a **tooltip with its description**, so you don't have to memorize the raw scope ids.
+
+> **The scope catalog is dynamic.** The list isn't hard-coded in the front end — the Kwirth core **serves it at runtime** (built-in scopes like `cluster`, `admin`, `api`, `view`, `filter`, `stream`, plus the classic `ops$…` / `trivy$…` actions). **Installed plugins can contribute their own RBAC scopes**, so after installing a channel/plugin you may see **new scopes appear here automatically** — no upgrade of Kwirth needed. What each scope means is detailed in [Security & permissions](04-security-and-permissions).
 
 ### Create a scope/resource
 
@@ -104,6 +111,33 @@ To let `alice@example.com` sign in with Google:
 Alice can now click *"Login with Google"* on the login screen; once Google verifies her, Kwirth lets her in with the permissions you assigned.
 
 > The prerequisite is the connector: the **IdP** dropdown only offers providers that are installed **and enabled** in [Manage extensions → Identity providers](07-idp-integration). If Google isn't in the list, enable it there first.
+
+## Login behaviour settings
+
+These three fields control what happens when the user logs in:
+
+### Auto-start channel
+
+Set this to a channel ID (e.g. `magnify`, `ops`, `trivy`) to have Kwirth open that channel **automatically in fullscreen** as soon as the user authenticates. This is useful for operators who always work in one channel and do not need the full Kwirth UI.
+
+- The channel ID must match one of the installed channels.
+- If the channel is not available (not installed, or not in the user's **Enabled channels** list), the auto-start is silently skipped.
+
+### Enabled channels
+
+Leave empty to let the user open **any** installed channel. Fill in a comma-separated list to **restrict** them to only those channels:
+
+```
+magnify,ops
+```
+
+Channels not in the list will not appear in the **Add** menu for that user.
+
+### Can exit fullscreen
+
+Uncheck this to prevent the user from leaving fullscreen mode. Combined with **Auto-start channel**, this creates a **kiosk mode**: the user logs in and is immediately locked to one channel view with no way to navigate away.
+
+> **Tip — kiosk setup:** set **Auto-start channel** = `magnify`, uncheck **Can exit fullscreen**, and assign only the `stream` scope to the user. They will see the log stream from the moment they log in, with no access to the rest of the UI.
 
 ## Worked example — a read-only user for one namespace
 

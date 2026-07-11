@@ -45,7 +45,8 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
             name: response.name,
             password: '',
             accessKey: response.accessKey,
-            resources: ''
+            resources: '',
+            startChannel: response.startChannel
         }
         props.onClose(user, firstTime)
     }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItem, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
+import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { MsgBoxButtons, MsgBoxOkError, MsgBoxYesNo } from '../../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
@@ -22,6 +22,9 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     const [password, setPassword] = useState<string>('')
     const [allResources, setAllResources] = useState<string[]>([])
     const [idp, setIdp] = useState<string>('')
+    const [startChannel, setStartChannel] = useState<string>('')
+    const [exitFullScreen, setExitFullScreen] = useState<boolean>(true)
+    const [enabledChannels, setEnabledChannels] = useState<string>('')
     const [idps, setIdps] = useState<{id:string, label:string}[]>([])
     const [scopeCatalog, setScopeCatalog] = useState<IExtensionScope[]>([])
 
@@ -66,6 +69,9 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         setPassword(user.password||'')
         setAllResources(user.resources.split(';'))
         setIdp(user.idp||'')
+        setStartChannel(user.startChannel||'')
+        setExitFullScreen(user.exitFullScreen !== false)
+        setEnabledChannels(user.enabledChannels?.join(',') || '')
     }
 
     const onClickCopyPassword = () => {
@@ -73,7 +79,16 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     }
 
     const onClickSave= async () => {
-        let user = { id, name, password, resources: allResources.join(';'), idp }
+        let user = {
+            id,
+            name,
+            password,
+            resources: allResources.join(';'),
+            idp,
+            startChannel: startChannel || undefined,
+            exitFullScreen,
+            enabledChannels: enabledChannels ? enabledChannels.split(',').map(s => s.trim()).filter(Boolean) : undefined
+        }
         let payload = JSON.stringify(user)
         try {
             let res
@@ -98,6 +113,9 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         setPassword('')
         setAllResources([])
         setIdp('')
+        setStartChannel('')
+        setExitFullScreen(true)
+        setEnabledChannels('')
         getUsers()
     }
 
@@ -113,6 +131,9 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         setPassword(pwd)
         setAllResources([])
         setIdp('')
+        setStartChannel('')
+        setExitFullScreen(true)
+        setEnabledChannels('')
     }
 
     const onClickDelete= () => {
@@ -127,6 +148,9 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
             setPassword('')
             setAllResources([])
             setIdp('')
+            setStartChannel('')
+            setExitFullScreen(true)
+            setEnabledChannels('')
             getUsers()
         }
     }
@@ -156,6 +180,11 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
                                     { idps.map(i => <MenuItem key={i.id} value={i.id}>{i.label || i.id}</MenuItem>) }
                                 </Select>
                             </FormControl>
+                        </Stack>
+                        <Stack direction='row' spacing={2} alignItems='center'>
+                            <TextField value={startChannel} onChange={(e) => setStartChannel(e.target.value)} variant='standard' label='Auto-start channel' placeholder='e.g. magnify' sx={{ width: '30%' }} />
+                            <TextField value={enabledChannels} onChange={(e) => setEnabledChannels(e.target.value)} variant='standard' label='Enabled channels' placeholder='e.g. magnify,ops (empty = all)' sx={{ width: '30%' }} />
+                            <FormControlLabel control={<Checkbox checked={exitFullScreen} onChange={(e) => setExitFullScreen(e.target.checked)} />} label='Can exit fullscreen' />
                         </Stack>
 
                         <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} scopeCatalog={scopeCatalog}/>

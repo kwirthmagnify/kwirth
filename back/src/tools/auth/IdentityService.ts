@@ -89,7 +89,8 @@ export class IdentityService {
         let response:ILoginResponse = {
             id: user.id,
             name: user.name,
-            accessKey: user.accessKey
+            accessKey: user.accessKey,
+            startChannel: user.startChannel
         }
         return response
     }

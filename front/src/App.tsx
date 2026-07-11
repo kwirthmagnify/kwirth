@@ -223,6 +223,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [channelMessageAction, setChannelMessageAction] = useState<IChannelMessageAction>({action: EChannelRefreshAction.NONE})
 
     const userSettingsRef = useRef<Settings>(new Settings())
+    const autoStartedRef = useRef<boolean>(false)
+    const [autoStartPending, setAutoStartPending] = useState<boolean>(false)
 
     const [backChannels, setBackChannels] = useState<BackChannelData[]>([])
     const backChannelsRef = useRef(backChannels)
@@ -580,6 +582,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         let c = clusters.find(c => c.source)
         if (c) onChangeCluster(c.name)
     }, [clusters])
+
+    useEffect( () => {
+        if (!logged || !user?.startChannel || clusters.length === 0 || autoStartedRef.current) return
+        autoStartedRef.current = true
+        setAutoStartPending(false)
+        const srcCluster = clusters.find(c => c.source)
+        if (!srcCluster || !frontChannels.has(user.startChannel)) return
+        populateTabObject(user, user.startChannel, user.startChannel, srcCluster, EInstanceConfigView.CLUSTER, '', '', '', '', true, true, { config: undefined, instanceConfig: undefined })
+    }, [clusters, user])
 
     useEffect(() => {
         tabs.current.forEach(tab => {
@@ -1893,6 +1904,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     const onLoginClosed = (user:IUser|undefined, firstTime:boolean) => {
         if (user) {
+            autoStartedRef.current = false
+            if (user.startChannel) setAutoStartPending(true)
             setLogged(true)
             setFirstLogin(firstTime)
             setUser(user)
@@ -1932,7 +1945,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     return
                 }
                 const login = await resp.json() as ILoginResponse
-                const ssoUser:IUser = { id: login.id, name: login.name, password: '', accessKey: login.accessKey, resources: '' }
+                const ssoUser:IUser = { id: login.id, name: login.name, password: '', accessKey: login.accessKey, resources: '', startChannel: login.startChannel }
                 onLoginClosed(ssoUser, false)
             }
             catch {
@@ -2040,7 +2053,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
-            {logged && !themeReady && (
+            {logged && (!themeReady || autoStartPending) && (
                 <Box sx={{ position: 'fixed', inset: 0, zIndex: 9999, bgcolor: mode === 'dark' ? '#121212' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <CircularProgress />
                 </Box>
