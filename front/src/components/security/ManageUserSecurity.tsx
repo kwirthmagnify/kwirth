@@ -144,7 +144,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
                         )}
                     </List>
 
-                    <Stack spacing={1} sx={{ width: '100%' }}>
+                    <Stack spacing={1} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
                         <Stack spacing={1} direction='row'>
                             <TextField value={id} onChange={(e) => setId(e.target.value)} variant='standard' fullWidth label={idp!=='' ? 'Id (email)' : 'Id'} />
                             <TextField value={name} onChange={(e) => setName(e.target.value)} variant='standard' fullWidth label='Name' />

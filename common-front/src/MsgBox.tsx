@@ -31,8 +31,8 @@ const MsgBoxShow = (title:string, message:string|JSX.Element, onClose:Dispatch<S
             <DialogTitle>
                 {title}
             </DialogTitle>
-            <DialogContent>
-                <Stack sx={{mt:2}} direction='row' alignItems={'center'}>
+            <DialogContent >
+                <Stack direction='row' alignItems={'center'}>
                     {icon}
                     <Box sx={{width:'12px'}}/>
                     { typeof(message)==='string' ?
@@ -58,8 +58,8 @@ const MsgBoxWaitShow = (title:string, message:string|JSX.Element, onClose:Dispat
             <DialogTitle>
                 {title}
             </DialogTitle>
-            <DialogContent>
-                <Stack direction={'row'} alignItems={'center'} alignContent={'center'} sx={{m:2}}>
+            <DialogContent >
+                <Stack direction={'row'} alignItems={'center'} alignContent={'center'} sx={{mx:2, mb:2}}>
                     <Box>
                         <CircularProgress size={50} />
                     </Box>

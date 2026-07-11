@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useKeyboard } from '../tools/useKeyboard'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, List, ListItem, ListItemButton, Stack, TextField, Typography} from '@mui/material'
 import { Cluster } from '../model/Cluster'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxWaitCancel, MsgBoxYesNo } from '../tools/MsgBox'
@@ -20,6 +21,8 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     const [accessKey, setAccessKey] = useState<string>('')
     const [msgBox, setMsgBox] =useState(<></>)
     const [refresh, setRefresh] = useState(0)
+
+    useKeyboard(() => props.onClose(clusters))
 
     const onClusterSelected = (cluster: Cluster) => {
         setSelectedCluster(cluster)

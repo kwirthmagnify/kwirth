@@ -149,6 +149,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             MuiDialogContent: {
                 styleOverrides: {
                     root: ({ theme }) => ({
+                        '.MuiDialogTitle-root + &': {
+                            paddingTop: theme.spacing(2),
+                        },
                         '&.MuiDialogContent-dividers': {
                             borderColor: theme.palette.divider,
                         }
@@ -767,7 +770,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const startSocket = (tab:ITabObject, cluster:Cluster, fn: () => void) => {
-        tab.ws = new WebSocket(cluster.url)
+        // A REMOTE (single, delegated) channel had its in-cluster host resolved into channelObject.clusterUrl by
+        // populateTabObject; the framework socket must open there, not to the local cluster. Non-remote channels
+        // leave clusterUrl = cluster.url (or unset) → same as before.
+        tab.ws = new WebSocket(tab.channelObject?.clusterUrl ?? cluster.url)
         tab.ws.onopen = fn
     }
 
@@ -831,6 +837,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             name: name,
             ws: undefined,
             keepAliveRef: undefined,
+            reconnectRef: undefined,
             defaultTab: false,
             channel: newChannel,
             channelObject: {
@@ -1148,6 +1155,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         console.log('Reconnected, will reconfigure socket')
         let tab = tabs.current.find(tab => tab.ws === wsEvent.target)
         if (!tab || !tab.channelObject) return
+        tab.reconnectRef = undefined   // the retry interval succeeded and was cleared above
 
         let instanceConfig:IInstanceConfig = {
             channel: tab.channel.channelId,
@@ -1166,10 +1174,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
         if (wsEvent.target) {
             tab.ws = wsEvent.target
+            // Refresh the socket handle: it was only set on the first connect (see startSocket, l.945), so
+            // channels that send through channelObject.webSocket would otherwise hold the dead socket.
+            if (tab.channel.requirements.webSocket) tab.channelObject.webSocket = tab.ws
             tab.ws!.onerror = (event) => socketDisconnect(event)
             tab.ws!.onmessage = (event) => wsOnMessage(event)
             tab.ws!.onclose = (event) => socketDisconnect(event)
             tab.ws!.send(JSON.stringify(instanceConfig))
+            // Let the channel resync after reconnecting (re-open room, re-subscribe…), mirroring socketDisconnected.
+            if (tab.channel.socketReconnect(tab.channelObject)) setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
         }
         else {
             console.log('Target not set on reconnect')
@@ -1202,6 +1215,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             }
             setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
 
+            if (tab.reconnectRef) clearInterval(tab.reconnectRef)   // never stack retry loops
             let selfId = setInterval( (url, tab) => {
                 console.log(`Trying to reconnect using ${url} and ${tab.channelObject.instanceId}`)
                 try {
@@ -1210,7 +1224,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     ws.onopen = (event) => socketReconnect(event, selfId)
                 }
                 catch  {}
-            }, 10000, cluster.url, tab)
+            }, 10000, tab.channelObject.clusterUrl ?? cluster.url, tab)   // reconnect to the delegated host too
+            tab.reconnectRef = selfId   // track it so removeTab can stop retrying when the tab closes
         }
         else {
             console.log(`Channel ${tab.channel.channelId} does not support reconnect.`)
@@ -1235,7 +1250,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 action: EInstanceMessageAction.START,
                 flow: EInstanceMessageFlow.REQUEST,
                 instance: '',
-                accessKey: cluster.accessString,
+                // Use the delegated host credential for REMOTE channels (populateTabObject stamped it into
+                // channelObject.accessString); non-remote keeps the local cluster key. Must match clusterUrl.
+                accessKey: tab.channelObject.accessString ?? cluster.accessString,
                 scope: InstanceConfigScopeEnum.NONE,
                 view: tab.channelObject.view,
                 namespace: tab.channelObject.namespace,
@@ -1299,7 +1316,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             action: EInstanceMessageAction.STOP,
             flow: EInstanceMessageFlow.REQUEST,
             instance: tab.channelObject.instanceId,
-            accessKey: cluster.accessString,
+            accessKey: tab.channelObject.accessString ?? cluster.accessString,   // delegated host credential for REMOTE
             view: tab.channelObject.view,
             scope: InstanceConfigScopeEnum.NONE,
             namespace: '',
@@ -1362,6 +1379,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             tab.ws.onclose = null
         }
         clearInterval(tab.keepAliveRef)
+        if (tab.reconnectRef) clearInterval(tab.reconnectRef)   // stop any in-flight reconnect retry loop
         if (tab.channelObject) stopTabChannel(tab)
     }
 
@@ -1472,6 +1490,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 defaultTab: tab.defaultTab,
                 ws: undefined,
                 keepAliveRef: undefined,
+                reconnectRef: undefined,
                 channel: tab.channel,
                 channelObject: JSON.parse(JSON.stringify(tab.channelObject)),
                 channelStarted: tab.channelStarted,
@@ -1606,12 +1625,20 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const menuDrawerOptionSelected = async (option:MenuDrawerOption) => {
         setMenuDrawerOpen(false)
         switch(option) {
-            case MenuDrawerOption.NewWorkspace:
-                clearTabs()
-                setCurrentWorkspaceName('untitled')
-                setCurrentWorkspaceDescription('No description yet')
-                selectedTab.current = undefined
+            case MenuDrawerOption.NewWorkspace: {
+                const doNew = () => {
+                    clearTabs()
+                    setCurrentWorkspaceName('untitled')
+                    setCurrentWorkspaceDescription('No description yet')
+                    selectedTab.current = undefined
+                }
+                const hasStarted = tabs.current.some(t => t.channelStarted)
+                if (hasStarted)
+                    setMsgBox(MsgBoxYesNo('New workspace', 'Some tabs are still running. Creating a new workspace will stop and remove all current tabs. Continue?', setMsgBox, (b: MsgBoxButtons) => b === MsgBoxButtons.Yes ? doNew() : {}))
+                else
+                    doNew()
                 break
+            }
             case MenuDrawerOption.SaveWorkspace:
                 if (currentWorkspaceName !== '' && currentWorkspaceName !== 'untitled')
                     saveWorkspace(currentWorkspaceName, currentWorkspaceDescription)

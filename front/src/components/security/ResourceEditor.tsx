@@ -112,7 +112,7 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
         : scopeOptions
 
     return (
-        <Stack spacing={1} style={{width:'100%'}}>
+        <Stack spacing={1} style={{width:'100%', minWidth: 0, overflow: 'hidden'}}>
             <FormControl variant='standard'>
                 <InputLabel>Resource List</InputLabel>
                 <Select value={selectedResource} onChange={onChangeResource}>
@@ -129,7 +129,7 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
             <Stack direction={'column'} spacing={1} sx={{paddingLeft:3}}>
                 <FormControl variant='standard'>
                     <InputLabel>Scopes</InputLabel>
-                    <Select value={scopes} multiple onChange={onChangeScopes} renderValue={(s) => s.join(',')}
+                    <Select value={scopes} multiple onChange={onChangeScopes} renderValue={(s) => { const v = s.join(','); return v.length > 60 ? v.substring(0, 60) + '…' : v }}
                         MenuProps={{ autoFocus: false, PaperProps: { style: { maxHeight: 380 } } }}
                         onClose={() => setScopeFilter('')}>
                         <ListSubheader sx={{ p: 0, bgcolor: 'background.paper' }}>

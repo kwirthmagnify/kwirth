@@ -19,9 +19,10 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
     const [selectedKey, setSelectedKey] = useState<ApiKey>()
     const [description, setDescrition] = useState<string>('')
     const [days, setDays] = useState(0)
-    const [keyType, setKeyType] = useState('volatile')
+    const [keyType, setKeyType] = useState('permanent')
     const [showPermanent, setShowPermanent] = useState<boolean>(true)
     const [showVolatile, setShowVolatile] = useState<boolean>(false)
+    const [filterText, setFilterText] = useState<string>('')
     const [allResources, setAllResources] = useState<string[]>([])
     const [scopeCatalog, setScopeCatalog] = useState<IExtensionScope[]>([])
 
@@ -45,12 +46,13 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
         getScopeCatalog()
     },[])
 
-    const onKeySelected = (kselected:AccessKey|null) => {
+    const onKeySelected = (kselected:AccessKey) => {
         var key = keys?.find(k => k.accessKey===kselected)
         if (key) {
             setSelectedKey(key)
             setDescrition(key.description)
             setDays(key.days)
+            setKeyType(key.accessKey.type)
             setAllResources(key.accessKey.resources.split(';'))
         }
     }
@@ -63,11 +65,10 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
         let resources = allResources.join(';')
         let payload
         if (selectedKey) {
-            selectedKey.accessKey.type=keyType
-            selectedKey.accessKey.resources=resources
-            let apiKey:ApiKey = { accessKey: selectedKey.accessKey, description, expire: Date.now() + days*24*60*60*1000, days }
+            let accessKey:AccessKey = { ...selectedKey.accessKey, type: keyType, resources }
+            let apiKey:ApiKey = { accessKey, description, expire: Date.now() + days*24*60*60*1000, days }
             payload = JSON.stringify(apiKey)
-            await fetch(`${backendUrl}/key/${selectedKey?.accessKey.id}`, addPutAuthorization(accessString, payload))
+            await fetch(`${backendUrl}/key/${selectedKey.accessKey.id}`, addPutAuthorization(accessString, payload))
         }
         else {
             let accessKey:AccessKey = { type: keyType, resources, id: uuid() }
@@ -75,8 +76,9 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
             payload = JSON.stringify(apiKey)
             await fetch(`${backendUrl}/key`, addPostAuthorization(accessString, payload))
         }
+        setSelectedKey(undefined)
         setDescrition('')
-        setDays(30)
+        setDays(0)
         setAllResources([])
         await getKeys()
     }
@@ -104,21 +106,24 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
     }
 
     return (<>
-        <Dialog open={true} fullWidth maxWidth='md'>
+        <Dialog open={true} fullWidth maxWidth={false} PaperProps={{ sx: { height: '75vh', maxWidth: '1080px', width: '100%' } }}>
             <DialogTitle>API Key management</DialogTitle>
             <DialogContent sx={{ display: 'flex', height: '100%' }}>
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: 'calc(50% - 8px)' }}>
-                    <Box alignSelf='center'>
-                        <Stack flexDirection='row' alignItems='center'>
+                    <Stack flexDirection='row' alignItems='center' sx={{ width: '100%', pr: 2 }}>
+                        <TextField value={filterText} onChange={(e) => setFilterText(e.target.value)} variant='standard' label='Filter' size='small' sx={{ flexGrow: 1 }} />
+                        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, ml: 1 }}>
                             <Checkbox checked={showPermanent} onChange={() => setShowPermanent(!showPermanent)} /><Typography variant='body2'>Permanent</Typography>
                             <Checkbox checked={showVolatile} onChange={() => setShowVolatile(!showVolatile)} /><Typography variant='body2'>Volatile</Typography>
-                        </Stack>
-                    </Box>
+                        </Box>
+                    </Stack>
 
-                    <Box sx={{ flex: 1, overflowY: 'auto' }}>
-                        <div style={{ flex: 0.9, overflowY: 'auto', overflowX: 'hidden' }}>
-                            <List sx={{ flexGrow: 1, mr: 2, width: '50vh', overflowY: 'auto' }}>
-                                { keys?.filter(k => (showPermanent && k.accessKey.type==='permanent') || (showVolatile && k.accessKey.type==='volatile')).map( (k,index) =>
+                    <Box sx={{ flex: 1, overflowY: 'auto', pr: 2 }}>
+                        <List sx={{ width: '100%', overflowY: 'auto' }}>
+                                { keys?.filter(k =>
+                                    ((showPermanent && k.accessKey.type==='permanent') || (showVolatile && k.accessKey.type==='volatile')) &&
+                                    (filterText==='' || k.description.toLowerCase().includes(filterText.toLowerCase()) || k.accessKey.id.toLowerCase().includes(filterText.toLowerCase()))
+                                ).map( (k,index) =>
                                     <ListItemButton key={index} selected={k.accessKey.id===selectedKey?.accessKey.id} onClick={() => onKeySelected(k.accessKey)}>
                                         <Stack direction='column'>
                                             <Typography variant='body2'>{k.accessKey.id}</Typography>
@@ -127,19 +132,18 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
                                     </ListItemButton>
                                 )}
                             </List>
-                        </div>
                     </Box>
                 </Box>
 
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', pl: 2 }}>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', pl: 4 }}>
                     <Stack spacing={1} sx={{ width: '100%' }}>
                         <TextField value={description} onChange={(e) => setDescrition(e.target.value)} variant='standard' label='Description' />
                         <Stack direction='row' spacing={1}>
                             <FormControl variant='standard' fullWidth>
                                 <InputLabel>Lease time (days)</InputLabel>
                                 <Select value={days} onChange={(e) => setDays(+e.target.value)}>
-                                    { [1,2,3,4,7,30,365,36524].map( (value) => {
-                                        return <MenuItem key={value} value={value}>{value}</MenuItem>
+                                    { [0,1,2,3,4,7,30,365,36524].map( (value) => {
+                                        return <MenuItem key={value} value={value} disabled={value===0}>{value}</MenuItem>
                                     })}
                                 </Select>
                             </FormControl>

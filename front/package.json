@@ -17,7 +17,7 @@
     "@jfvilas/react-file-manager": "^1.5.5",
     "@kwirthmagnify/kwirth-common": "^0.5.24",
     "@kwirthmagnify/kwirth-common-ai": "^0.5.22",
-    "@kwirthmagnify/kwirth-common-front": "^0.5.28",
+    "@kwirthmagnify/kwirth-common-front": "^0.5.30",
     "@mui/icons-material": "^7.1.2",
     "@mui/material": "^7.1.2",
     "@mui/x-date-pickers": "^8.5.3",

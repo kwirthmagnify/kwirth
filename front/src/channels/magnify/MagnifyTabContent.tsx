@@ -1364,6 +1364,9 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
+    if (!magnifyData.started)
+        return <Box sx={{ p: 2 }}><Typography color='text.secondary'>Magnify not started. Start the channel (tab settings ⚙ → Start) to explore your cluster.</Typography></Box>
+
     return <>
         { magnifyData.started &&
             <Box ref={magnifyBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', flexGrow:1, height: `${magnifyBoxHeight}px`, ml:1, mr:1, mt:1 }}>
