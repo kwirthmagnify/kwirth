@@ -21,6 +21,7 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
     const [newPassword1, setNewPassword1] = useState('')
     const [newPassword2, setNewPassword2] = useState('')
     const [idpAnchor, setIdpAnchor] = useState<null | HTMLElement>(null)
+    const [redirecting, setRedirecting] = useState(false)
 
     const login = async (user:string, password:string, newpassword:string='') => {
         let response = undefined
@@ -120,6 +121,8 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
     const redirectMethods = props.methods.filter(m => m.kind === EAuthMethodKind.REDIRECT)
     const onClickIdp = (method:IAuthMethod) => {
         if (!method.startUrl) return
+        // el redirect al IdP tarda unos ms; deshabilitamos los botones para que no se puedan pulsar mientras tanto
+        setRedirecting(true)
         // el front aporta a dónde volver (su propia URL); el back solo la respeta si es localhost o mismo-origen
         const returnTo = window.location.origin + window.location.pathname
         window.location.href = `${backendUrl}${method.startUrl}?returnTo=${encodeURIComponent(returnTo)}`
@@ -129,28 +132,28 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
 
     return (<>
         <Dialog open={true} disableRestoreFocus={true} fullWidth maxWidth={'xs'}
-            onKeyDown={e => { if (e.key === 'Enter' && !okDisabled) onClickOk() }}>
+            onKeyDown={e => { if (e.key === 'Enter' && !okDisabled && !redirecting) onClickOk() }}>
             <DialogTitle>Enter credentials</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column'}}>
                     { !changingPassword && hasPassword && <>
-                        <TextField value={user} onChange={(ev) => setUser(ev.target.value)} variant='standard'label='User' autoFocus></TextField>
-                        <TextField value={password} onChange={(ev) => setPassword(ev.target.value)} type='password' variant='standard'label='Password'></TextField>
+                        <TextField value={user} onChange={(ev) => setUser(ev.target.value)} disabled={redirecting} variant='standard'label='User' autoFocus></TextField>
+                        <TextField value={password} onChange={(ev) => setPassword(ev.target.value)} type='password' disabled={redirecting} variant='standard'label='Password'></TextField>
                     </>}
                     { changingPassword && <>
                         <Typography>Your login has been succesful, you can now change your password.</Typography>
-                        <TextField value={newPassword1} onChange={(ev) => setNewPassword1(ev.target.value)} type='password' variant='standard' label='New Password' autoFocus></TextField>
-                        <TextField value={newPassword2} onChange={(ev) => setNewPassword2(ev.target.value)} type='password' variant='standard' label='Repeat New Password'></TextField>
+                        <TextField value={newPassword1} onChange={(ev) => setNewPassword1(ev.target.value)} type='password' disabled={redirecting} variant='standard' label='New Password' autoFocus></TextField>
+                        <TextField value={newPassword2} onChange={(ev) => setNewPassword2(ev.target.value)} type='password' disabled={redirecting} variant='standard' label='Repeat New Password'></TextField>
                     </>}
                     { !changingPassword && redirectMethods.length > 0 && <>
                         { hasPassword && <Typography variant='caption' sx={{ textAlign:'center', color:'text.secondary' }}>or</Typography> }
                         { redirectMethods.length === 1
-                            ? <Button variant='outlined' onClick={() => onClickIdp(redirectMethods[0])}>{redirectMethods[0].label}</Button>
+                            ? <Button variant='outlined' disabled={redirecting} onClick={() => onClickIdp(redirectMethods[0])}>{redirectMethods[0].label}</Button>
                             : <>
-                                <Button variant='outlined' fullWidth endIcon={<ExpandMore/>} onClick={(e) => setIdpAnchor(e.currentTarget)} sx={{ justifyContent: 'space-between' }}>Log in with...</Button>
+                                <Button variant='outlined' fullWidth disabled={redirecting} endIcon={<ExpandMore/>} onClick={(e) => setIdpAnchor(e.currentTarget)} sx={{ justifyContent: 'space-between' }}>Log in with...</Button>
                                 <Menu anchorEl={idpAnchor} open={Boolean(idpAnchor)} onClose={() => setIdpAnchor(null)}
                                     PaperProps={{ sx: { minWidth: idpAnchor?.offsetWidth } }}>
-                                    { redirectMethods.map(m => <MenuItem key={m.id} onClick={() => { setIdpAnchor(null); onClickIdp(m) }}>{m.label}</MenuItem>) }
+                                    { redirectMethods.map(m => <MenuItem key={m.id} disabled={redirecting} onClick={() => { setIdpAnchor(null); onClickIdp(m) }}>{m.label}</MenuItem>) }
                                 </Menu>
                             </>
                         }
@@ -159,9 +162,9 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
             </DialogContent>
             <DialogActions>
                 <Stack direction='row' flex={1} sx={{ml:2, mr:2}}>
-                    { hasPassword && <Button variant='outlined' onClick={onClickChangePassword} disabled={user === '' || password === ''} sx={{display:changingPassword?'none':'block'}}>Change Password</Button> }
+                    { hasPassword && <Button variant='outlined' onClick={onClickChangePassword} disabled={user === '' || password === '' || redirecting} sx={{display:changingPassword?'none':'block'}}>Change Password</Button> }
                     <Typography sx={{ flexGrow:1}}></Typography>
-                    { hasPassword && <Button variant='outlined' onClick={onClickOk} disabled={okDisabled}>OK</Button> }
+                    { hasPassword && <Button variant='outlined' onClick={onClickOk} disabled={okDisabled || redirecting}>OK</Button> }
                     {
                         changingPassword && <Button variant='outlined' onClick={onClickCancel}>Cancel</Button>
                     }
