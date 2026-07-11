@@ -224,6 +224,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     const userSettingsRef = useRef<Settings>(new Settings())
     const autoStartedRef = useRef<boolean>(false)
+    const canExitFullscreenRef = useRef<boolean>(true)
     const [autoStartPending, setAutoStartPending] = useState<boolean>(false)
     const [ssoExchangePending, setSsoExchangePending] = useState<boolean>(() => !!new URLSearchParams(window.location.search).get('sso'))
 
@@ -463,8 +464,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 event.stopPropagation()
                 event.preventDefault()
                 setFullscreenTab( (prev) => {
-                    if (prev!==undefined) 
+                    if (prev!==undefined) {
+                        if (!canExitFullscreenRef.current) return prev
                         return undefined
+                    }
                     else {
                         if (selectedTab.current && selectedTab.current.channelStarted) return selectedTab.current
                     }
@@ -1909,6 +1912,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const onLoginClosed = (user:IUser|undefined, firstTime:boolean) => {
         if (user) {
             autoStartedRef.current = false
+            canExitFullscreenRef.current = user.exitFullScreen !== false
             if (user.startChannel) setAutoStartPending(true)
             setLogged(true)
             setFirstLogin(firstTime)
@@ -1950,7 +1954,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     return
                 }
                 const login = await resp.json() as ILoginResponse
-                const ssoUser:IUser = { id: login.id, name: login.name, password: '', accessKey: login.accessKey, resources: '', startChannel: login.startChannel }
+                const ssoUser:IUser = { id: login.id, name: login.name, password: '', accessKey: login.accessKey, resources: '', startChannel: login.startChannel, exitFullScreen: login.exitFullScreen, enabledChannels: login.enabledChannels }
                 setSsoExchangePending(false)
                 onLoginClosed(ssoUser, false)
             }

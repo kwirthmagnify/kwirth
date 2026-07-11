@@ -90,7 +90,9 @@ export class IdentityService {
             id: user.id,
             name: user.name,
             accessKey: user.accessKey,
-            startChannel: user.startChannel
+            startChannel: user.startChannel,
+            exitFullScreen: user.exitFullScreen,
+            enabledChannels: user.enabledChannels
         }
         return response
     }

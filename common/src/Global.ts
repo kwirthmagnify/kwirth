@@ -17,6 +17,8 @@ interface ILoginResponse {
     name: string
     accessKey: AccessKey
     startChannel?: string
+    exitFullScreen?: boolean
+    enabledChannels?: string[]
 }
 
 // Subset SEGURO de IUser expuesto a los plugins/consumidores (nunca password/accessKey/resources).

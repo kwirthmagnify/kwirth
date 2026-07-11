@@ -46,7 +46,9 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
             password: '',
             accessKey: response.accessKey,
             resources: '',
-            startChannel: response.startChannel
+            startChannel: response.startChannel,
+            exitFullScreen: response.exitFullScreen,
+            enabledChannels: response.enabledChannels
         }
         props.onClose(user, firstTime)
     }
