@@ -225,6 +225,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const userSettingsRef = useRef<Settings>(new Settings())
     const autoStartedRef = useRef<boolean>(false)
     const [autoStartPending, setAutoStartPending] = useState<boolean>(false)
+    const [ssoExchangePending, setSsoExchangePending] = useState<boolean>(() => !!new URLSearchParams(window.location.search).get('sso'))
 
     const [backChannels, setBackChannels] = useState<BackChannelData[]>([])
     const backChannelsRef = useRef(backChannels)
@@ -586,10 +587,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     useEffect( () => {
         if (!logged || !user?.startChannel || clusters.length === 0 || autoStartedRef.current) return
         autoStartedRef.current = true
-        setAutoStartPending(false)
         const srcCluster = clusters.find(c => c.source)
-        if (!srcCluster || !frontChannels.has(user.startChannel)) return
+        if (!srcCluster || !frontChannels.has(user.startChannel)) {
+            setAutoStartPending(false)
+            return
+        }
         populateTabObject(user, user.startChannel, user.startChannel, srcCluster, EInstanceConfigView.CLUSTER, '', '', '', '', true, true, { config: undefined, instanceConfig: undefined })
+            .then(() => setAutoStartPending(false))
     }, [clusters, user])
 
     useEffect(() => {
@@ -1941,14 +1945,17 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             try {
                 const resp = await fetch(`${props.backendUrl}/core/auth/exchange`, addPostAuthorization('', JSON.stringify({ code: sso })))
                 if (resp.status !== 200) {
+                    setSsoExchangePending(false)
                     setMsgBox(MsgBoxOkError('Login', 'Single Sign-On session could not be established.', setMsgBox))
                     return
                 }
                 const login = await resp.json() as ILoginResponse
                 const ssoUser:IUser = { id: login.id, name: login.name, password: '', accessKey: login.accessKey, resources: '', startChannel: login.startChannel }
+                setSsoExchangePending(false)
                 onLoginClosed(ssoUser, false)
             }
             catch {
+                setSsoExchangePending(false)
                 setMsgBox(MsgBoxOkError('Login', 'Error contacting Kwirth backend for SSO.', setMsgBox))
             }
         })()
@@ -2040,6 +2047,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             </div>
         }
         else {
+            if (ssoExchangePending) {
+                return (
+                    <Box sx={{ position: 'fixed', inset: 0, bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CircularProgress />
+                    </Box>
+                )
+            }
             return (
                 <div style={{ backgroundImage:`url('./turbo-pascal.png')`, backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', width: '100vw', height: '100vh' }} >
                     <SessionContext.Provider value={{ user, accessString: accessString, logged, backendUrl }}>
@@ -2149,7 +2163,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     { selectedTab.current &&
                         <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow:1, height:'100%', minHeight:0 }}>
                             { anchorMenuTab && <MenuTab onClose={() => setAnchorMenuTab(null)} optionSelected={menuTabOptionSelected} anchorMenuTab={anchorMenuTab} tabs={tabs.current} selectedTab={selectedTab.current} selectedTabIndex={selectedTab.current? tabs.current.indexOf(selectedTab.current) : -1} backChannels={backChannels}/>}
-                            <TabContent key={selectedTab.current?.name} channel={selectedTab.current?.channel} channelObject={selectedTab.current?.channelObject} />
+                            <TabContent key={selectedTab.current?.name} channel={selectedTab.current?.channel} channelObject={selectedTab.current?.channelObject ? { ...selectedTab.current.channelObject, isFullscreen: fullscreenTab !== undefined } : undefined} />
                         </Box>
                     }
                     { !selectedTab.current &&

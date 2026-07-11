@@ -46,6 +46,7 @@ export interface IChannelObject {
     accessString?: string
     userName?: string
     isDesktop: boolean
+    isFullscreen?: boolean
     channelId: string
     frontChannels?: Map<string, TChannelConstructor>
     notifications?: any[]
