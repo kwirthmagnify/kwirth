@@ -151,6 +151,6 @@ Create a user who may only *watch* logs and metrics in the `production` namespac
    - **SAVE** the resource.
 3. **SAVE** the user.
 
-Alice can now open Log/Metrics channels scoped to `production`, but cannot operate workloads or reach other namespaces. To let her also open shells, you would add the `ops$xterm` scope; to make her an administrator, you would add the `admin` scope — both explained next.
+Alice can now open Log/Metrics channels scoped to `production`, but cannot operate workloads or reach other namespaces. To let her also **restart/delete** workloads you would add the `ops$restart` scope; to make her an administrator, you would add the `admin` scope — both explained next.
 
 Next: [Security & permissions →](04-security-and-permissions)

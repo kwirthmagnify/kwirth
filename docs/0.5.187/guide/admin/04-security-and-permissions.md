@@ -32,28 +32,28 @@ So a resource with **Namespaces = `production`** and everything else blank means
 
 ## The scopes
 
-When you edit a resource, **Scopes** is a checklist:
+When you edit a resource, **Scopes** is a **searchable selector** (filter box + checkbox per scope, with a tooltip describing each):
 
-![Scopes checklist](../../_media/guide/admin-scopes.png)
+![Scopes selector](../../_media/guide/admin-scopes.png)
 
 | Scope | Grants |
 |---|---|
 | `admin` | **Administrative access** — manage users, API keys and identity providers (unlocks the security menus). |
-| `cluster` | **Cluster-wide** access; required by some channels to work at the cluster level. |
-| `api` | Use of the **API Security** features (issuing / holding API keys). |
-| `view` | **View** data from a channel. |
-| `stream` | Receive a **live stream** of data. |
-| `snapshot` | Get an **instant snapshot** (no continuous streaming). |
-| `filter` | Apply **filtering** on the stream. |
-| `create` | **Create** things a channel supports (e.g. alerts). |
+| `cluster` | **Full access** — effectively admin-level; can do everything. Some channels also require it to operate at the cluster level (e.g. mutating actions in Topology/Magnify). |
+| `api` | Create **API keys** (the API Security features). |
+| `view` | **View** data from a channel (logs). |
+| `filter` | View data with **filtering** applied. |
+| `stream` | Receive a **live stream** of data from instances. |
+| `snapshot` | Read a **point-in-time snapshot** (no continuous streaming). |
+| `create` | **Create** instances a channel supports (e.g. alerts). |
 | `subscribe` | **Subscribe** to a channel's output (e.g. alerts). |
 | `ops$get` | Ops: **read/inspect** resources. |
-| `ops$execute` | Ops: **execute** a command. |
-| `ops$xterm` | Ops: open an **interactive terminal (shell)**. |
-| `ops$restart` | Ops: **restart** workloads. |
-| `trivy$workload` | Trivy: scan **workloads**. |
-| `trivy$kubernetes` | Trivy: scan **Kubernetes / cluster** objects. |
+| `ops$restart` | Ops: **restart / delete** workloads. |
+| `trivy$workload` | Trivy: access **workload-scoped** reports (vulnerabilities, config audit, secrets). |
+| `trivy$kubernetes` | Trivy: access **cluster-scoped** reports (RBAC, infra assessment). |
 | `none` | Placeholder — no capability. |
+
+> **Plugins can add their own scopes.** The list above is the **core** catalog plus the Ops/Trivy channel scopes, but the Scopes selector is **populated at runtime** from every installed channel/plugin (`ops$…`, `trivy$…`, and any a plugin declares). So after installing a new channel you may see **extra scopes** appear here automatically. There is **no** `ops$xterm` / `ops$execute` scope — opening a shell or running a command in [Ops](../extensions/plugins/ops) is not behind its own scope in the current version.
 
 > **The `admin` scope is powerful.** It grants the whole security surface (users, keys, IdPs). Give it only to real administrators. The built-in `admin` account already carries it (plus `cluster`).
 
@@ -74,8 +74,8 @@ Start from *what the person needs to do*, pick the **matching scopes**, then **n
 
 **C) An operator for one app**
 
-- **Scopes** `ops$get`, `ops$xterm`, `ops$restart` · **Namespaces** `payments` · **Deployments** `checkout` · rest blank.
-- Can inspect, open a shell into, and restart the `checkout` Deployment in `payments` — and nothing else.
+- **Scopes** `ops$get`, `ops$restart` · **Namespaces** `payments` · **Deployments** `checkout` · rest blank.
+- Can inspect and restart the `checkout` Deployment in `payments` — and nothing else. *(Opening a shell isn't a separate scope; anyone who can reach the Ops channel on these objects can use the terminal.)*
 
 **D) A security auditor**
 

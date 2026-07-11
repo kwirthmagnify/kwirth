@@ -221,7 +221,7 @@ The **desktop** app is built for local work like Lens/K9s/Headlamp: instead of c
 ## Admin guide
 
 - **Built-in:** ships with the core; enable/disable at deploy (Helm `channelMagnify`, External `--channelmagnify`). Nothing to install in *Manage extensions*.
-- **Permissions:** because Magnify can do *everything*, it honours the full scope model — browsing needs read/streaming scopes; editing/deleting/restarting and shells require the matching scopes (e.g. `ops$xterm`, `ops$restart`) on the target objects. Grant Magnify power deliberately (see [Security & permissions](../../admin/04-security-and-permissions)).
+- **Permissions:** because Magnify can do *everything*, it honours the full scope model — browsing needs read/streaming scopes; restarting/deleting needs `ops$restart`, and cluster-level mutations need `cluster` on the target objects. Grant Magnify power deliberately (see [Security & permissions](../../admin/04-security-and-permissions)).
 - **Trivy Operator:** Magnify can deploy the Trivy Operator to a cluster that doesn't have it, enabling vulnerability scans.
 
 ## Notes

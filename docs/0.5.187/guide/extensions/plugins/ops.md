@@ -115,11 +115,11 @@ With **KeepAlive** on, sessions survive idle time and you can **reconnect** to t
   | Action | Required scope |
   |---|---|
   | Object info / view (GET, DESCRIBE, LIST) | `ops$get` |
-  | Execute a command | `ops$execute` |
-  | Open a shell (terminal) | `ops$xterm` |
   | Restart container / pod / namespace, delete | `ops$restart` |
 
-  For example, a read-only operator gets `ops$get`; a support engineer who may open shells but not restart gets `ops$get` + `ops$xterm`.
+  For example, a read-only operator gets `ops$get`; add `ops$restart` for someone who may also restart or delete workloads.
+
+  > **Shells & command execution** are **not** behind their own scope in the current version — there is no `ops$xterm` / `ops$execute`. Any user who can open an Ops tab can use the terminal; the two enforced scopes are `ops$get` (inspect) and `ops$restart` (restart/delete). Gate who can reach Ops at all with the object filters and the channel's streaming scopes.
 
 ## Notes
 
