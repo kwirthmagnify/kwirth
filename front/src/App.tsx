@@ -215,6 +215,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [msgBox, setMsgBox] =useState(<></>)
 
     const [clusters, setClusters] = useState<Cluster[]>([])
+    const clustersRef = useRef<Cluster[]>([])
     const [selectedClusterName, setSelectedClusterName] = useState<string>()
 
     const tabs = useRef<ITabObject[]>([])
@@ -583,6 +584,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     },[logged, backendUrl])
 
     useEffect( () => {
+        clustersRef.current = clusters
+        const summary = clusters.map(c => ({ name: c.name, source: !!c.source }))
+        tabs.current.forEach(tab => {
+            if (tab.channel.requirements.clusterManagement) tab.channelObject.clusters = summary
+        })
         let c = clusters.find(c => c.source)
         if (c) onChangeCluster(c.name)
     }, [clusters])
@@ -901,6 +907,27 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 case EExtensionType.SENDER:   setShowSenderDialog(true); break
                 case EExtensionType.THEME:    setShowThemeDialog(true); break
                 case EExtensionType.HOMEPAGE: setShowHomepageDialog(true); break
+            }
+        }
+        if (newTab.channel.requirements.clusterManagement) {
+            newTab.channelObject.clusters = clustersRef.current.map(c => ({ name: c.name, source: !!c.source }))
+            newTab.channelObject.selectedClusterName = selectedClusterName
+            newTab.channelObject.openClusterManager = () => setShowManageClusters(true)
+            newTab.channelObject.selectCluster = (clusterName: string) => {
+                const target = clustersRef.current.find(c => c.name === clusterName)
+                if (!target || !user) return
+                const tabName = newTab.name
+                const channelId = newTab.channel.channelId
+                const view = newTab.channelObject.view
+                const namespace = newTab.channelObject.namespace
+                const group = newTab.channelObject.group
+                const pod = newTab.channelObject.pod
+                const container = newTab.channelObject.container
+                const wasStarted = newTab.channelStarted
+                const cfg = { config: newTab.channelObject.config, instanceConfig: newTab.channelObject.instanceConfig }
+                removeTab(newTab)
+                tabs.current = tabs.current.filter(t => t !== newTab)
+                populateTabObject(user, tabName, channelId, target, view, namespace, group, pod, container, wasStarted, fullscreen, cfg)
             }
         }
         if (newTab.channel.requirements.exit) newTab.channelObject.exit = () => {

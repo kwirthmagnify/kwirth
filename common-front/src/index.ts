@@ -32,6 +32,11 @@ export type { EInstanceConfigView, IChannelMessageAction, IChannelSettings, ICha
 
 export type TChannelConstructor = (new () => IChannel) | undefined
 
+export interface IClusterSummary {
+    name: string
+    source: boolean
+}
+
 export interface IChannelObject {
     clusterName: string
     view: EInstanceConfigView
@@ -48,6 +53,10 @@ export interface IChannelObject {
     isDesktop: boolean
     isFullscreen?: boolean
     channelId: string
+    clusters?: IClusterSummary[]
+    selectedClusterName?: string
+    selectCluster?: (clusterName: string) => void
+    openClusterManager?: () => void
     frontChannels?: Map<string, TChannelConstructor>
     notifications?: any[]
     webSocket?: WebSocket

@@ -18,6 +18,14 @@ test('autoTools exposes the full catalog', () => {
     assert.equal(selectAgentToolNames(agent({ autoTools: true })).length, toolInfoList.length)
 })
 
+test('config-inspection tools are in the catalog as READ (configmap/secret change detection)', () => {
+    const byName = new Map(toolInfoList.map(t => [t.name, t]))
+    for (const n of ['get_configmap', 'get_secret', 'get_workload_config_refs']) {
+        assert.ok(byName.has(n), `${n} should be in the catalog`)
+        assert.equal(byName.get(n).effect, EToolEffect.READ, `${n} must be READ (never mutates)`)
+    }
+})
+
 test('readOnly filters out every WRITE tool', () => {
     const names = selectAgentToolNames(agent({ autoTools: true, readOnly: true }))
     for (const w of writeNames) assert.equal(names.includes(w), false)

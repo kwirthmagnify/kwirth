@@ -139,7 +139,7 @@ pub fn run() {
             };
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                let port = find_free_port(3883);
+                let port = find_free_port(3884);
                 println!("Kwirth Desktop: backend port = {}, resource_dir = {:?}", port, resource_dir);
 
                 let sidecar = handle

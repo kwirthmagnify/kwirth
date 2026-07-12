@@ -63,7 +63,16 @@
       "Bash(echo *)",
       "Bash(mkdir *)",
       "Bash(cd *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(cp c:/github/aisdkvercel/kwirth/plans/user-admin-guide/_cap/setups.mjs \"/c/Users/JULIO~1.FER/AppData/Local/Temp/claude/c--github-aisdkvercel-kwirth/e1b34b45-e60b-45cb-8f74-17ac67ea9213/scratchpad/setups.mjs\" && echo copied)",
+      "PowerShell($conns = Get-NetTCPConnection -LocalPort 4051 -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { $conns | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { $p = Get-Process -Id $_ -ErrorAction SilentlyContinue; Write-Output \"Killing PID $_ \\($\\($p.ProcessName\\)\\)\"; Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } else { Write-Output \"Nothing listening on 4051\" })",
+      "PowerShell(Start-Sleep -Milliseconds 500; try { $r = Invoke-WebRequest -Uri http://localhost:4051/ -TimeoutSec 3 -UseBasicParsing; Write-Output \"STILL UP: $\\($r.StatusCode\\)\" } catch { Write-Output \"PORT 4051 CLOSED \\(guide server stopped\\)\" })",
+      "Bash(npx playwright *)",
+      "PowerShell(& c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\agora\\\\node_modules\\\\.bin\\\\tsc.cmd --noEmit -p c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\agora\\\\tsconfig.json 2>&1 | Select-String -Pattern \"Divider|error\"; Write-Output \"exit=$LASTEXITCODE\")"
+    ],
+    "defaultMode": "dontAsk",
+    "additionalDirectories": [
+      "C:\\Users\\JULIO~1.FER\\AppData\\Local\\Temp\\claude\\c--github-aisdkvercel-kwirth\\e1b34b45-e60b-45cb-8f74-17ac67ea9213\\scratchpad"
     ]
   }
 }

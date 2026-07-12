@@ -8,5 +8,3 @@
 Para explorar código, analizar logs o procesar outputs grandes, usa siempre 
 las herramientas MCP de context-mode (ctx_batch_execute, ctx_execute_file, ctx_search)
 en lugar de Bash o Read para análisis.
-
-Tambien existe un conjunto de herramietnas proporcionadas por rtk, si no hay una herramietna de context-mode que te valga, trata de usar rtk, y si no puedes usa tus propias herrramientas.

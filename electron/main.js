@@ -115,7 +115,7 @@ async function createMainWindow() {
 			show: false
 		})
 
-		portfinder.basePort = 3883
+		portfinder.basePort = 3884
 		const port = await portfinder.getPortPromise()
 		try {
 			process.env.PORT = String(port)

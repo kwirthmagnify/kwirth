@@ -15,6 +15,13 @@ const buildNick = (clusterName: string, userId: string): string => {
     return `${cluster}_${user}_${pickAdjective()}`
 }
 
+// Nick is resolved in initChannel (before the core sends START) so it travels in instanceConfig.data.nick.
+const resolveNick = (channelObject: IChannelObject): string => {
+    const userId = channelObject.userName ?? 'user'
+    const key = nickKey(channelObject.clusterName, userId)
+    return localStorage.getItem(key) || (() => { const n = buildNick(channelObject.clusterName, userId); localStorage.setItem(key, n); return n })()
+}
+
 export class MircChannel implements IChannel {
     private setupVisible = false
     SetupDialog: FC<ISetupProps> = undefined as any
@@ -33,7 +40,7 @@ export class MircChannel implements IChannel {
         settings: false,
         palette: false,
         userSettings: false,
-        webSocket: false,   // MircClient manages its own sockets to every cluster
+        webSocket: true,    // own cluster uses the framework tab socket (keepalive + reconnect); remotes get extra sockets
         backChannels: false,
     }
 
@@ -44,37 +51,40 @@ export class MircChannel implements IChannel {
     getSetupVisibility(): boolean { return this.setupVisible }
     setSetupVisibility(visibility: boolean): void { this.setupVisible = visibility }
 
-    // MircClient drives the UI directly (it subscribes via onChange), so the core
-    // tab ws is not the data path. Nothing to do here.
-    processChannelMessage(_channelObject: IChannelObject, _wsEvent: MessageEvent): IChannelMessageAction {
+    // Inbound frames from the framework socket (own cluster) are fed to the client; it emits its own onChange.
+    processChannelMessage(channelObject: IChannelObject, wsEvent: MessageEvent): IChannelMessageAction {
+        const data = channelObject.data as IMircData | undefined
+        data?.client?.handleFrameworkMessage(wsEvent)
         return { action: EChannelRefreshAction.NONE }
     }
 
     async initChannel(channelObject: IChannelObject): Promise<boolean> {
         const oldData: IMircData | undefined = channelObject.data as IMircData | undefined
         if (oldData?.client) { oldData.client.stop(); oldData.client = undefined }
-        channelObject.instanceConfig = new MircInstanceConfig()
+        localStorage.removeItem('kwirth.mirc.nick')
+        const nick = resolveNick(channelObject)
+        // Put the nick in instanceConfig so the core START (instanceConfig.data) carries it to the back.
+        const ic = new MircInstanceConfig(); ic.nick = nick
+        channelObject.instanceConfig = ic
         channelObject.config = new MircConfig()
-        channelObject.data = new MircData()
+        const data = new MircData(); data.nick = nick
+        channelObject.data = data
         return false
     }
 
     startChannel(channelObject: IChannelObject): boolean {
         const data: IMircData = channelObject.data
         if (data.client) { data.client.stop(); data.client = undefined }
-        localStorage.removeItem('kwirth.mirc.nick')
-        const userId = channelObject.userName ?? 'user'
-        const key = nickKey(channelObject.clusterName, userId)
-        const nick = localStorage.getItem(key) || (() => { const n = buildNick(channelObject.clusterName, userId); localStorage.setItem(key, n); return n })()
-        data.nick = nick
-        data.client = new MircClient(nick)
+        const nick = data.nick   // resolved in initChannel (so the core START already carried it)
+        data.client = new MircClient(nick, channelObject)
+        const localId = channelObject.clusterName
         const clusters: IClusterEntry[] = channelObject.clusterUrl ? [{
             id: channelObject.clusterName,
             name: channelObject.clusterName,
             url: channelObject.clusterUrl,
             accessString: channelObject.accessString || ''
         }] : []
-        data.client.start(clusters)
+        data.client.start(clusters, localId)
         data.started = true
         return true
     }
@@ -90,6 +100,13 @@ export class MircChannel implements IChannel {
         return true
     }
 
-    socketDisconnected(_channelObject: IChannelObject): boolean { return false }
-    socketReconnect(_channelObject: IChannelObject): boolean { return false }
+    socketDisconnected(channelObject: IChannelObject): boolean {
+        (channelObject.data as IMircData | undefined)?.client?.markLocalDisconnected()
+        return false
+    }
+
+    socketReconnect(channelObject: IChannelObject): boolean {
+        (channelObject.data as IMircData | undefined)?.client?.resyncLocal()
+        return false
+    }
 }

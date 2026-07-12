@@ -31,7 +31,7 @@ tauri-build.cmd
 Aviso: la primera vez que ejecutes el build, Cargo descarga y compila Tauri y todas sus dependencias (~200 crates). Tarda entre 5 y 15 minutos. Las builds siguientes son mucho más rápidas.
 
 # Launch with log
-set PORT=3883
+set PORT=3884
 set AUTH=kubeconfig
 set NODE_ENV=production
 set ANSILOG=false

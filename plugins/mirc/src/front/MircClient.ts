@@ -1,18 +1,15 @@
 import { IMircMessageRecord, IMircUser, TMircState } from '../common/MircTypes'
+import type { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
 
 // ============================================================================
-// MircClient — the front-hub engine.
+// MircClient — the front engine (single- and multi-cluster).
 //
-// One front talks to ALL the mirc backs the user can reach. We read the cluster
-// list the core already persists in localStorage ('remoteClusters', each with
-// url + accessString) and open one websocket per cluster. Presence, messages,
-// receipts and the double-check all flow over these sockets. Conversation
-// history is cached locally (localStorage); the back's mailbox handles offline
-// delivery (recovered on connect via the flush the back performs).
-//
-// NOTE (integration point to verify against the live front): we couple to the
-// core's 'remoteClusters' localStorage key. If the core also opens a tab ws to
-// one cluster, that is a harmless duplicate registration.
+// The user's OWN cluster (the tab's cluster) uses the framework tab socket
+// (channelObject.webSocket): the core opens it, keeps it alive and reconnects
+// it. OTHER clusters (multi-cluster reach) are served by extra sockets MircClient
+// opens itself. Presence, messages, receipts and the double-check flow over
+// these sockets. Conversation history is cached locally (localStorage); the
+// back's mailbox handles offline delivery (recovered on connect).
 // ============================================================================
 
 export interface IClusterEntry { id: string; name: string; url: string; accessString: string; enabled?: boolean }
@@ -21,7 +18,8 @@ export interface IClusterEntry { id: string; name: string; url: string; accessSt
 // acked by the server (clock icon); once acked, `state` drives the checks.
 export interface IUiMessage extends IMircMessageRecord { cluster: string; mine: boolean; pending?: boolean }
 
-interface IConn { entry: IClusterEntry; ws?: WebSocket; instance: string; open: boolean }
+// owned=false → the local cluster served by the framework tab socket (do not open/close it here).
+interface IConn { entry: IClusterEntry; ws?: WebSocket; instance: string; open: boolean; owned: boolean }
 
 type Listener = () => void
 
@@ -32,34 +30,59 @@ const histKey = (cluster: string, peer: string) => `kwirth.mirc.history.${cluste
 
 export class MircClient {
     nick: string
+    private channelObject?: IChannelObject             // framework socket (local cluster) lives here
+    private localClusterId?: string                    // the cluster served by the framework tab socket
     private conns: Map<string, IConn> = new Map()      // by cluster id
     private rosterByCluster: Map<string, IMircUser[]> = new Map()
     private history: Map<string, IUiMessage[]> = new Map()  // key = `${cluster}::${peer}`
     private listeners: Listener[] = []
 
-    constructor(nick: string) { this.nick = nick }
+    constructor(nick: string, channelObject?: IChannelObject) { this.nick = nick; this.channelObject = channelObject }
 
     onChange(fn: Listener) { this.listeners.push(fn) }
     private emit() { for (const l of this.listeners) l() }
 
     // ---- lifecycle ----------------------------------------------------------
-    start(clusters: IClusterEntry[]) {
+    // localClusterId: the tab's cluster → served by the framework socket (no own ws). The rest open their own.
+    start(clusters: IClusterEntry[], localClusterId?: string) {
+        this.localClusterId = localClusterId
         for (const e of clusters) {
-            if (!e.url || !e.accessString) continue
-            this.openCluster(e)
+            if (e.id === localClusterId) {
+                // Own cluster: reuse the framework tab socket (core keepalive + reconnect). START already sent by core.
+                this.conns.set(e.id, { entry: e, ws: undefined, instance: '', open: true, owned: false })
+            }
+            else {
+                if (!e.url || !e.accessString) continue
+                this.openCluster(e)   // remote cluster: mirc opens its own socket
+            }
         }
         this.emit()
     }
 
     stop() {
-        for (const c of this.conns.values()) { try { c.ws?.close() } catch {} }
+        for (const c of this.conns.values()) { if (c.owned) { try { c.ws?.close() } catch {} } }   // never close the framework socket
         this.conns.clear()
         this.rosterByCluster.clear()
         this.emit()
     }
 
+    // Live socket for a conn: the framework socket for the local cluster (re-read each time so reconnects are
+    // picked up), the own ws for remote clusters.
+    private wsOf(conn: IConn): WebSocket | undefined {
+        return conn.owned ? conn.ws : this.channelObject?.webSocket
+    }
+
+    // Inbound frame from the framework socket (local cluster), fed by MircChannel.processChannelMessage.
+    handleFrameworkMessage(ev: MessageEvent): void {
+        if (this.localClusterId) this.onMessage(this.localClusterId, ev)
+    }
+
+    // Framework socket dropped / reconnected (local cluster). The back keeps our instance (reconnectable).
+    markLocalDisconnected(): void { const c = this.localClusterId && this.conns.get(this.localClusterId); if (c) c.open = false; this.emit() }
+    resyncLocal(): void { const c = this.localClusterId && this.conns.get(this.localClusterId); if (c) c.open = true; this.emit() }
+
     private openCluster(entry: IClusterEntry) {
-        const conn: IConn = { entry, instance: '', open: false }
+        const conn: IConn = { entry, instance: '', open: false, owned: true }
         this.conns.set(entry.id, conn)
         try {
             const ws = new WebSocket(entry.url)
@@ -89,6 +112,8 @@ export class MircClient {
         // START / RESPONSE carries our assigned instanceId
         if (msg.type === 'signal' && msg.action === 'start' && msg.flow === 'response') {
             if (conn) { conn.instance = msg.instance; conn.open = true }
+            // Local cluster: mirror the instance to channelObject so the core keepalive/reconnect track it.
+            if (clusterId === this.localClusterId && this.channelObject) this.channelObject.instanceId = msg.instance
             this.emit(); return
         }
 
@@ -122,11 +147,13 @@ export class MircClient {
     send(clusterId: string, to: string, body: string) {
         const conn = this.conns.get(clusterId)
         if (!conn || !conn.open) return
+        const ws = this.wsOf(conn)
+        if (!ws) return
         const msgId = genId()
         const ts = new Date().toISOString()   // optimistic local ts, replaced by server ts on ack
         // optimistic echo so the message shows immediately with a clock
         this.appendHistory(clusterId, to, { msgId, from: this.nick, to, ts, body, state: 'sent', cluster: clusterId, mine: true, pending: true })
-        conn.ws!.send(JSON.stringify({
+        ws.send(JSON.stringify({
             channel: 'mirc', instance: conn.instance, action: 'command', flow: 'request', type: 'data',
             accessKey: conn.entry.accessString, msgtype: 'mirc-send', msgId, to, body
         }))
@@ -136,11 +163,13 @@ export class MircClient {
     markRead(clusterId: string, peer: string) {
         const conn = this.conns.get(clusterId)
         if (!conn || !conn.open) return
+        const ws = this.wsOf(conn)
+        if (!ws) return
         const key = `${clusterId}::${peer}`
         const msgs = this.history.get(key) ?? this.loadHistory(clusterId, peer)
         const unread = msgs.filter(m => !m.mine && m.state !== 'read').map(m => m.msgId)
         if (unread.length === 0) return
-        conn.ws!.send(JSON.stringify({
+        ws.send(JSON.stringify({
             channel: 'mirc', instance: conn.instance, action: 'command', flow: 'request', type: 'data',
             accessKey: conn.entry.accessString, msgtype: 'mirc-read', peer, msgIds: unread
         }))

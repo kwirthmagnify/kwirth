@@ -19,7 +19,7 @@ We cite here some interesting capabilities that are missing today:
   - [HUMAN] ~~`kwirth`, **Terminal**. Add xterm support (with dedicated websocket) for implementing real shell sessions (not just TTY in HTML).~~ DONE via Ops channel!
   - [HUMAN] ~~`kwirth`, **Dashboards**. Add workspace channel (grafana-like), and implement multi-channel websockets.~~ DONE via Magnify channel!
   - [AI] ~~`kwirth`, **AI capabilities**. Integrate AI-driven insights for log analysis, anomaly detection or artifact analysis.~~ DONE! (via 'pinocchio' and 'censor' channels)
-  - `kwirth`, **SSO**, implement Single Sing-On capabilities.
+  - [AI] ~~`kwirth`, **SSO**, implement Single Sing-On capabilities.~~ DONE!
   - [AI] ~~`kwirth`, **IdP**, implement integrations with external Identity Providers (EntraID, AD, Cognito, Keycloak, LDAP...)~~ DONE!
   - `kwirth`, **Standard tokens**, implement JWT support (with scopes that match the VIEW system implemented inside Kwirth)
   - [AI] ~~`magnify`, **Desktop**, create a Tauri compatible build for desktop versions.~~

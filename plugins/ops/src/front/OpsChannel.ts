@@ -17,9 +17,20 @@ export class OpsChannel implements IChannel {
     channelId = 'ops'
 
     requirements: IChannelRequirements = {
-        accessString: true, clusterUrl: true, clusterInfo: false, exit: false,
-        frontChannels: false, metrics: false, notifier: true, notifications: true,
-        setup: true, settings: false, palette: false, userSettings: false, webSocket: true, backChannels: false
+        accessString: true,
+        clusterUrl: true,
+        clusterInfo: false,
+        exit: false,
+        frontChannels: false,
+        metrics: false,
+        notifier: true,
+        notifications: true,
+        setup: true,
+        settings: false,
+        palette: false,
+        userSettings: false,
+        webSocket: true,
+        backChannels: false
     }
 
     getScope() { return EOpsScope.GET }

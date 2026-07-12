@@ -5,6 +5,7 @@ interface ITabObject {
     name: string
     ws: WebSocket|undefined
     keepAliveRef: NodeJS.Timer|undefined
+    reconnectRef: NodeJS.Timer|undefined
     defaultTab: boolean
     channel: IChannel
     channelObject: IChannelObject

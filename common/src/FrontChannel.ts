@@ -23,7 +23,7 @@ interface IChannelSettings {
 }
 
 interface IChannelRequirements {
-    setup: boolean
+    setup: boolean              // Show setup dialog (if channel requires user setup)
     settings: boolean
     frontChannels: boolean
     metrics: boolean
@@ -31,13 +31,14 @@ interface IChannelRequirements {
     notifications: boolean
     clusterUrl: boolean
     clusterInfo: boolean
-    accessString: boolean
-    webSocket: boolean
+    accessString: boolean       // if channel wants to send data to back channel, probably will need the access string
+    webSocket: boolean          // if channel requires using the websocket for sending data to backend, this must be true
     userSettings: boolean
     palette: boolean
-    exit: boolean
+    exit: boolean               // if channel wants to allow user to exit kwirth
     backChannels: boolean
     openManager?: boolean
+    clusterManagement?: boolean
 }
 
 export { ENotifyLevel, EChannelRefreshAction }
