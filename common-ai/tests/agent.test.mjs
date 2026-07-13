@@ -26,6 +26,14 @@ test('config-inspection tools are in the catalog as READ (configmap/secret chang
     }
 })
 
+test('restart_deployment and delete_pod are in the catalog as WRITE (mutating)', () => {
+    const byName = new Map(toolInfoList.map(t => [t.name, t]))
+    for (const n of ['restart_deployment', 'delete_pod']) {
+        assert.ok(byName.has(n), `${n} should be in the catalog`)
+        assert.equal(byName.get(n).effect, EToolEffect.WRITE, `${n} must be WRITE (mutates the cluster)`)
+    }
+})
+
 test('readOnly filters out every WRITE tool', () => {
     const names = selectAgentToolNames(agent({ autoTools: true, readOnly: true }))
     for (const w of writeNames) assert.equal(names.includes(w), false)

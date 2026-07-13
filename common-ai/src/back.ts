@@ -625,6 +625,37 @@ export const tools = {
         }
     }),
 
+    restart_deployment: tool({
+        description: 'Rollout-restarts a deployment (equivalent to `kubectl rollout restart`): recreates its pods gracefully, respecting the rolling-update strategy, by stamping the kubectl.kubernetes.io/restartedAt annotation on the pod template. Restarts a workload WITHOUT changing its spec — recover stuck/crashing pods or pick up a changed ConfigMap/Secret. Preferred over delete_pod for a whole workload.',
+        inputSchema: z.object({ namespace: z.string().describe('Namespace of the deployment'), name: z.string().describe('Name of the deployment') }),
+        execute: async ({ namespace, name }) => {
+            ctx().trace('restart_deployment', { namespace, name })
+            try {
+                const c = ctx().clusterInfo
+                const d = await c.appsApi.readNamespacedDeployment({ name, namespace })
+                const restartedAt = new Date().toISOString()
+                // Merge (not replace) the existing template annotations, then `add` the whole map: `add` on an
+                // existing path replaces it and on a missing path creates it, so it is safe whether or not the
+                // pod template already had annotations.
+                const annotations = { ...(d.spec?.template?.metadata?.annotations ?? {}), 'kubectl.kubernetes.io/restartedAt': restartedAt }
+                await c.appsApi.patchNamespacedDeployment({ name, namespace, body: [{ op: 'add', path: '/spec/template/metadata/annotations', value: annotations }] })
+                return { success: true, message: `Deployment ${namespace}/${name} rollout-restarted at ${restartedAt}` }
+            } catch (err: any) { return { success: false, error: err.message ?? String(err) } }
+        }
+    }),
+
+    delete_pod: tool({
+        description: 'Deletes a single pod (equivalent to `kubectl delete pod`). Its controller (Deployment/StatefulSet/DaemonSet) recreates it — a surgical way to restart ONE stuck or misbehaving pod. Does not respect a rolling update; for a whole workload prefer restart_deployment.',
+        inputSchema: z.object({ namespace: z.string().describe('Namespace of the pod'), name: z.string().describe('Name of the pod') }),
+        execute: async ({ namespace, name }) => {
+            ctx().trace('delete_pod', { namespace, name })
+            try {
+                await ctx().clusterInfo.coreApi.deleteNamespacedPod({ name, namespace })
+                return { success: true, message: `Pod ${namespace}/${name} deleted; its controller will recreate it` }
+            } catch (err: any) { return { success: false, error: err.message ?? String(err) } }
+        }
+    }),
+
     // ── MISC ─────────────────────────────────────────────────────────────────
 
     times_two: tool({
@@ -944,6 +975,8 @@ export const toolInfoList: IToolInfo[] = [
     { name: 'start_node',                effect: EToolEffect.WRITE, description: 'Starts a previously stopped cluster node and uncordons it. For k3d uses `k3d node start`.' },
     { name: 'add_replica',               effect: EToolEffect.WRITE, description: 'Scales up a deployment by adding one replica.' },
     { name: 'remove_replica',            effect: EToolEffect.WRITE, description: 'Scales down a deployment by removing one replica. Minimum of 1 replica is enforced.' },
+    { name: 'restart_deployment',        effect: EToolEffect.WRITE, description: 'Rollout-restarts a deployment (recreates its pods gracefully via the restartedAt annotation, respecting the rolling update) — restart a workload without changing its spec.' },
+    { name: 'delete_pod',                effect: EToolEffect.WRITE, description: 'Deletes a single pod; its controller recreates it. Surgical restart of one stuck pod (no rolling update — prefer restart_deployment for a whole workload).' },
     { name: 'times_two',                 effect: EToolEffect.READ,  description: 'Multiplies a number by two.' },
     { name: 'father_of',                 effect: EToolEffect.READ,  description: 'Returns the name of the father of a person.' },
     { name: 'get_certificate_info',      effect: EToolEffect.READ,  description: 'Connects to a hostname via HTTPS and returns TLS certificate details: subject, issuer, validity dates, SANs, fingerprint and whether it is currently valid.' },
