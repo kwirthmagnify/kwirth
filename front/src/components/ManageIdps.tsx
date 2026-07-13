@@ -219,7 +219,7 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
         <Tooltip title={website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
 
     return (<>
-        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '60vw', maxWidth: '60vw', height: '78vh' } }}>
+        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
             <DialogTitleHelp section='guide/admin/07-idp-integration?id=enabling-an-idp'><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Key fontSize='small' />Identity providers</Box></DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
@@ -233,7 +233,7 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                     { connectors.length === 0
                         ? <Typography variant='body2' color='text.secondary'>No connectors installed. Install one below or enable a bundled/dev connector.</Typography>
                         : viewMode === 'card'
-                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                                 { shownConnectors.map(c => (
                                     <Box key={c.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: idpGradient(c.id) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
@@ -299,7 +299,7 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                     </Stack>
                     { availableIds.length === 0 && !loadingManifest
                         ? <Typography variant='body2' color='text.secondary'>No connectors available in the catalog.</Typography>
-                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+                        : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                             { availableIds.map(id => {
                                 const group = grouped[id]
                                 const entry = getSelected(id)

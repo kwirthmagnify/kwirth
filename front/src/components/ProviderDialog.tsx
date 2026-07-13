@@ -301,7 +301,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
 
     return (
         <>
-        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '60vw', maxWidth: '60vw', height: '78vh' } }}>
+        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
             <DialogTitleHelp section='guide/extensions/providers/index?id=managing-configuring-providers'><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Factory fontSize='small' />Manage providers</Box></DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
@@ -314,7 +314,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                     {installed.length === 0
                         ? <Typography variant='body2' color='text.secondary'>No providers installed.</Typography>
                         : viewMode === 'card'
-                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                                 {installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name || '').toLowerCase().includes(installedFilter.toLowerCase())).map(provider => (
                                     <Box key={provider.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: providerGradient(provider.name) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
@@ -417,7 +417,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
 
                     {filteredIds.length > 0 && (
                         viewMode === 'card'
-                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                                 {filteredIds.map(id => {
                                     const group = groupedAvailable[id]
                                     const provider = getSelectedProvider(id)
