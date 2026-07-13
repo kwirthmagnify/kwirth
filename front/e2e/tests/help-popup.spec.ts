@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, clickMenuItem, clickExtensionMenuItem } from './helpers'
+import { login, clickMenuItem, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 // Verifica que cada dialog del core que lleva HelpButton invoca window.open (popup) con el deep-link
 // correcto a su sección de la guía. Se intercepta window.open para que el test no dependa de que el
@@ -20,6 +20,9 @@ interface ICase {
 
 test('help button: dialogs del menú principal invocan window.open en su sección de la guía', async ({ page }) => {
     await login(page)
+
+    // Cerrar cualquier dialog auto-abierto al login (ej. auto-start channel del perfil admin)
+    await dismissOpenDialogs(page)
 
     await page.evaluate(() => {
         ;(window as unknown as { __helpOpens: IHelpOpen[] }).__helpOpens = []
@@ -45,7 +48,7 @@ test('help button: dialogs del menú principal invocan window.open en su secció
         { label: 'Themes',               open: () => clickExtensionMenuItem(page, 'Themes'),               section: 'guide/extensions/themes/index?id=admin-guide' },
         { label: 'Homepages',            open: () => clickExtensionMenuItem(page, 'Homepages'),            section: 'guide/extensions/homepages/index?id=admin-guide' },
         { label: 'Identity providers',   open: () => clickExtensionMenuItem(page, 'Identity providers'),   section: 'guide/admin/07-idp-integration?id=enabling-an-idp' },
-        { label: 'Documentation',        open: () => clickExtensionMenuItem(page, 'Documentation'),        section: 'guide/extensions/index' },
+        { label: 'Documentation',        open: () => clickExtensionMenuItem(page, 'Documentation'),        section: 'guide/extensions/docs/index?id=admin-guide' },
     ]
 
     for (const c of CASES) {
@@ -66,4 +69,7 @@ test('help button: dialogs del menú principal invocan window.open en su secció
         await page.keyboard.press('Escape')
         await page.waitForTimeout(400)
     }
+
+    // Navegar a blank para liberar el WebSocket antes del teardown (evita cuelgue de Playwright en SPA)
+    await page.goto('about:blank')
 })

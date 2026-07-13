@@ -2113,7 +2113,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { !fullscreenTab &&
                     <AppBar position='sticky' elevation={0} sx={{ zIndex: 1300, height:'64px'}}>
                     <Toolbar>
-                        <IconButton size='large' edge='start' color='inherit' sx={{ mr: 1 }} onClick={() => setMenuDrawerOpen(prev => !prev)}><Menu /></IconButton>
+                        <IconButton size='large' edge='start' color='inherit' aria-label='menu' sx={{ mr: 1 }} onClick={() => setMenuDrawerOpen(prev => !prev)}><Menu /></IconButton>
                         <Typography sx={{ ml:1,flexGrow: 1 }}>Kwirth - {clusters.find(c => c.name === selectedClusterName)?.clusterInfo?.name}</Typography>
                         {/* <Tooltip title={<div style={{textAlign:'center'}}>{currentWorkspaceName}<br/><br/>{currentWorkspaceDescription}</div>} sx={{ mr:2}} slotProps={{popper: {modifiers: [{name: 'offset', options: {offset: [0, -12]}}]}}}>
                             <Typography variant='h6' component='div' sx={{mr:2, cursor:'default'}}>{currentWorkspaceName}</Typography>

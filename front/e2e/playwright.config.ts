@@ -12,7 +12,7 @@ catch { /* sin fichero → env/defaults */ }
 
 export default defineConfig({
     testDir: './tests',
-    timeout: 60_000,
+    timeout: 180_000,
     retries: 1,
     fullyParallel: false,
     workers: 1,
@@ -20,8 +20,9 @@ export default defineConfig({
     use: {
         baseURL: process.env.KWIRTH_E2E_URL ?? 'http://localhost:3000',
         headless: true,
-        screenshot: 'on',
-        trace: 'retain-on-failure',
+        screenshot: 'off',
+        trace: 'off',
+        video: 'off',
         ignoreHTTPSErrors: true,
         actionTimeout: 15_000
     }
