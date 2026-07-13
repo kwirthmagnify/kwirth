@@ -4,6 +4,8 @@ export const TRIVY_API_VULN_PLURAL = 'vulnerabilityreports'
 export const TRIVY_API_AUDIT_PLURAL = 'configauditreports'
 export const TRIVY_API_SBOM_PLURAL = 'sbomreports'
 export const TRIVY_API_EXPOSED_PLURAL = 'exposedsecretreports'
+export const TRIVY_API_RBAC_PLURAL = 'rbacassessmentreports'                // namespaced (Role/RoleBinding)
+export const TRIVY_API_CLUSTER_RBAC_PLURAL = 'clusterrbacassessmentreports'  // cluster-scoped (ClusterRole/binding)
 
 export interface ITrivyAsset {
     namespace: string

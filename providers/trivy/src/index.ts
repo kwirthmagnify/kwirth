@@ -1,7 +1,7 @@
 import { IProvider, IProviderSubscriber, createCrdInformer, ICrdInformerHandlers } from '@kwirthmagnify/kwirth-common-back'
-import { ITrivyAsset, ITrivySubscriptionData, ITrivyProviderEvent, ITrivyMeta, ITrivyMetaEvent, ETrivyEventKind, TRIVY_API_VERSION, TRIVY_API_GROUP, TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL } from './TrivyTypes'
+import { ITrivyAsset, ITrivySubscriptionData, ITrivyProviderEvent, ITrivyMeta, ITrivyMetaEvent, ETrivyEventKind, TRIVY_API_VERSION, TRIVY_API_GROUP, TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_RBAC_PLURAL, TRIVY_API_CLUSTER_RBAC_PLURAL } from './TrivyTypes'
 
-const ALL_PLURALS = [TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL]
+const ALL_PLURALS = [TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_RBAC_PLURAL, TRIVY_API_CLUSTER_RBAC_PLURAL]
 
 // Ubicación de la versión de Trivy en el cluster (instalación estándar del trivy-operator).
 const TRIVY_NS = 'trivy-system'
