@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 /**
- * Downloads bundled extensions declared in back/kwirth-bundled.json.
+ * Downloads (or copies) bundled extensions declared in back/kwirth-bundled.json.
+ * URL entries are downloaded via HTTP/HTTPS.
+ * Local path entries (relative, or not starting with http) are resolved relative
+ * to the manifest file's directory and copied into the output directory.
+ *
  * Usage: node scripts/fetch-bundled.mjs <manifest-path> <output-dir>
  * Example (Electron):  node scripts/fetch-bundled.mjs ../back/kwirth-bundled.json electron/bundled
  * Example (Tauri):     node scripts/fetch-bundled.mjs ../back/kwirth-bundled.json tauri/resources/bundled
  * Example (Docker):    node scripts/fetch-bundled.mjs kwirth-bundled.json /usr/kwirth/bundled
  */
 
-import { createWriteStream, mkdirSync, existsSync, writeFileSync } from 'fs'
+import { createWriteStream, mkdirSync, existsSync, writeFileSync, copyFileSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { fileURLToPath } from 'url'
 import { dirname, join, resolve } from 'path'
@@ -16,6 +20,7 @@ import http from 'http'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const manifestPath = resolve(process.argv[2] ?? join(__dirname, '..', 'back', 'kwirth-bundled.json'))
+const manifestDir = dirname(manifestPath)
 const outputDir = resolve(process.argv[3] ?? 'bundled')
 
 const EXTENSION_TYPES = ['plugins', 'providers', 'senders', 'homepages', 'themes', 'idps', 'docs']
@@ -64,13 +69,33 @@ for (const type of EXTENSION_TYPES) {
             console.log(`[bundled] ${type}/${id} already exists — skipping.`)
             continue
         }
-        console.log(`[bundled] Downloading ${type}/${id} ...`)
-        try {
-            await downloadFile(url, destPath)
-            console.log(`[bundled] ${filename} downloaded.`)
-        } catch (err) {
-            console.error(`[bundled] ERROR downloading ${type}/${id}: ${err.message}`)
-            process.exit(1)
+        const isRemote = url.startsWith('http://') || url.startsWith('https://')
+        if (isRemote) {
+            console.log(`[bundled] Downloading ${type}/${id} ...`)
+            try {
+                await downloadFile(url, destPath)
+                console.log(`[bundled] ${filename} downloaded.`)
+            }
+            catch (err) {
+                console.error(`[bundled] ERROR downloading ${type}/${id}: ${err.message}`)
+                process.exit(1)
+            }
+        }
+        else {
+            const localSrc = resolve(manifestDir, url)
+            if (!existsSync(localSrc)) {
+                console.error(`[bundled] ERROR: local bundle for ${type}/${id} not found at ${localSrc}`)
+                process.exit(1)
+            }
+            console.log(`[bundled] Copying ${type}/${id} from local path ...`)
+            try {
+                copyFileSync(localSrc, destPath)
+                console.log(`[bundled] ${filename} copied.`)
+            }
+            catch (err) {
+                console.error(`[bundled] ERROR copying ${type}/${id}: ${err.message}`)
+                process.exit(1)
+            }
         }
     }
 }

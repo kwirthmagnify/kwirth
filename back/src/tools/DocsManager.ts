@@ -145,7 +145,8 @@ export class DocsManager {
             catch {}
 
             const existing = bundleId && bundleTargetType ? this.cachedIndex.find(d => d.targetType === bundleTargetType && d.id === bundleId) : undefined
-            if (existing && bundleVersion && existing.version === bundleVersion) {
+            const destDir = path.join(this.docsPath, bundleTargetType ?? '', bundleId ?? '')
+            if (existing && bundleVersion && existing.version === bundleVersion && fs.existsSync(destDir)) {
                 logInfo(ELogComponent.CORE, `Bundled docs '${bundleTargetType}/${bundleId}' v${bundleVersion} up to date — skipping`)
                 continue
             }

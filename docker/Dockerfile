@@ -12,13 +12,14 @@ RUN npm install
 COPY ./bundle ./dist
 
 # Bundled extensions: run 'node build-image.mjs' (in this folder) to prepare context and build.
+# kwirth-bundled.json is the single source of truth; local-path entries (e.g. docs/kwirth) are
+# resolved relative to the manifest and copied by fetch-bundled.mjs.
 COPY kwirth-bundled.json ./
 COPY fetch-bundled.mjs ./
+COPY bundle/docs ./bundle/docs/
 RUN node fetch-bundled.mjs kwirth-bundled.json /usr/kwirth/bundled \
-    && rm kwirth-bundled.json fetch-bundled.mjs
-
-# Copy docs bundles generated at build time (always produced by back/ postbuild)
-COPY bundle/docs/*.tgz /usr/kwirth/bundled/
+    && rm kwirth-bundled.json fetch-bundled.mjs \
+    && rm -rf bundle/
 
 WORKDIR /usr/kwirth/dist
 
