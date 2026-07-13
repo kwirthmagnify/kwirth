@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Key, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, Delete, Download, FolderOpen, Key, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from './DialogTitleHelp'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -206,17 +206,17 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
         if (inst) return <Chip label='disabled' size='small' variant='outlined' />
         return <Chip label='not configured' size='small' variant='outlined' color='warning' />
     }
-    // origen del conector (dev/bundled/local/instalado-por-URL), como el resolveSource de ProviderDialog
-    const sourceChip = (c: IIdpConnectorInfo) => {
-        const from = c.installedFrom
+    // origen del conector (dev/bundled/local/instalado-por-URL), calcado del resolveSource de ProviderDialog
+    const resolveSource = (from?: string): React.ReactElement | null => {
+        if (!from) return null
         if (from === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
         if (from === 'bundled') return <Chip label='bundled' size='small' variant='outlined' />
-        if (from === 'local') return <Chip label='local' size='small' variant='outlined' />
-        if (from) return <Chip label='installed' size='small' variant='outlined' color='info' />
-        return null
+        if (from === 'local') return <Typography variant='caption' color='text.secondary'>Local file</Typography>
+        const short = from.length > 40 ? from.slice(0, 37) + '…' : from
+        return <Tooltip title={from}><Typography variant='caption' color='text.secondary'><Link fontSize='inherit' sx={{ verticalAlign: 'middle', mr: 0.3 }} />{short}</Typography></Tooltip>
     }
     const websiteButton = (website?: string) =>
-        <Tooltip title={website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
+        <Tooltip title={website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
 
     return (<>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '60vw', maxWidth: '60vw', height: '78vh' } }}>
@@ -239,16 +239,17 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Key /></Box>
                                             <Box flex={1} minWidth={0}>
-                                                <Stack direction='row' alignItems='center' spacing={0.5}>
+                                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{c.label}</Typography>
-                                                    {sourceChip(c)}
                                                     {statusChip(c)}
+                                                    {c.version && <Chip label={`v${c.version}`} size='small' sx={{ minWidth: 72 }} />}
                                                 </Stack>
-                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{c.id} · {c.kind}{c.version ? ` · v${c.version}` : ''}</Typography>
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{c.id} · {c.kind}</Typography>
                                             </Box>
-                                        </Stack>
-                                        <Stack direction='row' justifyContent='flex-end' alignItems='center' sx={{ mt: 1 }}>
                                             {websiteButton(c.website)}
+                                        </Stack>
+                                        <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
+                                            <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(c.installedFrom)}</Box>
                                             <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
                                             <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
                                                 <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
@@ -263,10 +264,10 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                                 { shownConnectors.map(c => (
                                     <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Key fontSize='small' sx={{ color: 'text.secondary' }} />
-                                        <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0 }} noWrap>{c.label}{c.version ? ` · v${c.version}` : ''}</Typography>
-                                        {sourceChip(c)}
+                                        <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0 }} noWrap>{c.label}</Typography>
                                         {statusChip(c)}
-                                        {websiteButton(c.website)}
+                                        <Box sx={{ flexShrink: 0 }}>{resolveSource(c.installedFrom)}</Box>
+                                        {c.version && <Chip label={`v${c.version}`} size='small' sx={{ minWidth: 72 }} />}
                                         <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
                                         <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
                                             <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
