@@ -1,5 +1,5 @@
 {
-  "channels": {
+  "plugins": {
   },
   "providers": {
   },
@@ -8,5 +8,9 @@
   "homepages": {
   },
   "themes": {
+  },
+  "idps": {
+  },
+  "docs": {
   }
 }

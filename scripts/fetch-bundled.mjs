@@ -18,7 +18,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const manifestPath = resolve(process.argv[2] ?? join(__dirname, '..', 'back', 'kwirth-bundled.json'))
 const outputDir = resolve(process.argv[3] ?? 'bundled')
 
-const EXTENSION_TYPES = ['channels', 'providers', 'senders', 'homepages', 'themes']
+const EXTENSION_TYPES = ['plugins', 'providers', 'senders', 'homepages', 'themes', 'idps', 'docs']
 
 const downloadFile = (url, destPath) => new Promise((res, rej) => {
     const protocol = url.startsWith('https') ? https : http

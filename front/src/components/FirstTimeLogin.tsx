@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography} from '@mui/material'
+import { DialogTitleHelp } from './DialogTitleHelp'
+import { Button, Dialog, DialogActions, DialogContent, Typography} from '@mui/material'
 import { AccessKey, accessKeySerialize, ApiKey } from '@kwirthmagnify/kwirth-common'
 import { addPostAuthorization } from '../tools/AuthorizationManagement'
 import { MsgBoxOk } from '../tools/MsgBox'
@@ -32,7 +33,7 @@ const FirstTimeLogin: React.FC<IFirstTimeLoginProps> = (props:IFirstTimeLoginPro
 
     return (<>
         <Dialog open={true} disableRestoreFocus={true} fullWidth maxWidth={'md'}>
-            <DialogTitle>First time here...</DialogTitle>
+            <DialogTitleHelp section='guide/user/02-access?id=logging-in-with-a-local-account'>First time here...</DialogTitleHelp>
             <DialogContent>
                 <Typography>
                     It seems that this is your first time here. If you are installing Kwirth just for use with <b>Backstage</b> Kubelog,

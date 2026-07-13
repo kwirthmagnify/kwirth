@@ -1,4 +1,5 @@
-import { Stack, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItemButton, ListItem } from '@mui/material'
+import { Stack, Button, Dialog, DialogActions, DialogContent, Typography, List, ListItemButton, ListItem } from '@mui/material'
+import { DialogTitleHelp } from '../DialogTitleHelp'
 
 interface ISelectWorkspaceProps {
     onSelect:(action:string, a?:string) => {},
@@ -14,9 +15,7 @@ interface IValue {
 const SelectWorkspace: React.FC<ISelectWorkspaceProps> = (props:ISelectWorkspaceProps) => {
    return (
         <Dialog open={true}>
-            <DialogTitle>
-                Select workspace
-            </DialogTitle>
+            <DialogTitleHelp section='guide/user/06-workspaces?id=reopening-a-workspace'>Select workspace</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' sx={{width:'50vh'}}>
                     <Typography>{

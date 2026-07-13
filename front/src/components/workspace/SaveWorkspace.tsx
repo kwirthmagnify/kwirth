@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Stack, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material'
+import { Stack, Button, Dialog, DialogActions, DialogContent, TextField } from '@mui/material'
+import { DialogTitleHelp } from '../DialogTitleHelp'
 
 interface ISaveWorkspaceProps {
     onClose:(name?:string, description?:string) => void
@@ -19,9 +20,7 @@ const SaveWorkspace: React.FC<ISaveWorkspaceProps> = (props:ISaveWorkspaceProps)
 
     return (
         <Dialog open={true} disableRestoreFocus={true}>
-            <DialogTitle>
-                Save workspace as...
-            </DialogTitle>
+            <DialogTitleHelp section='guide/user/06-workspaces?id=saving-your-work'>Save workspace as...</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{width:'40vh'}}>
                     <TextField value={newname} onChange={(e) => setNewname(e.target.value)} variant='standard' label='New name' autoFocus ></TextField>

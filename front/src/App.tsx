@@ -51,6 +51,7 @@ import { ManageIdps } from './components/ManageIdps'
 import { SenderDialog } from './components/SenderDialog'
 import { ThemeDialog } from './components/ThemeDialog'
 import { HomepageDialog } from './components/HomepageDialog'
+import { DocsDialog } from './components/DocsDialog'
 import { IHomepageExtension } from '@kwirthmagnify/kwirth-common-front'
 
 interface IAppProps {
@@ -264,6 +265,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showSenderDialog, setShowSenderDialog]=useState<boolean>(false)
     const [showThemeDialog, setShowThemeDialog]=useState<boolean>(false)
     const [showHomepageDialog, setShowHomepageDialog]=useState<boolean>(false)
+    const [showDocsDialog, setShowDocsDialog]=useState<boolean>(false)
     const [activeHomepageId, setActiveHomepageId]=useState<string|undefined>(undefined)
     const [homepageConfig, setHomepageConfig]=useState<Record<string, any>>({})
     const homepageIdMounted = useRef(false)
@@ -907,6 +909,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 case EExtensionType.SENDER:   setShowSenderDialog(true); break
                 case EExtensionType.THEME:    setShowThemeDialog(true); break
                 case EExtensionType.HOMEPAGE: setShowHomepageDialog(true); break
+                case EExtensionType.DOCS:     setShowDocsDialog(true); break
             }
         }
         if (newTab.channel.requirements.clusterManagement) {
@@ -1744,6 +1747,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageIdps:
                 setShowManageIdps(true)
                 break
+            case MenuDrawerOption.ManageDocs:
+                setShowDocsDialog(true)
+                break
             case MenuDrawerOption.ExportWorkspaces: {
                 const allNames:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
                 if (allNames.length===0) { showNoWorkspaces(); break }
@@ -2252,6 +2258,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showSenderDialog && <SenderDialog onClose={() => setShowSenderDialog(false)} /> }
                 { showThemeDialog && <ThemeDialog onClose={() => setShowThemeDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} /> }
                 { showHomepageDialog && <HomepageDialog onClose={() => setShowHomepageDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} /> }
+                { showDocsDialog && <DocsDialog onClose={() => setShowDocsDialog(false)} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }

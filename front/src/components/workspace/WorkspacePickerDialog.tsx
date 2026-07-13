@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, Stack, Typography } from '@mui/material'
+import { Button, Checkbox, Dialog, DialogActions, DialogContent, Divider, FormControlLabel, Stack, Typography } from '@mui/material'
+import { DialogTitleHelp } from '../DialogTitleHelp'
 
 interface IWorkspacePickerDialogProps {
     title: string
@@ -19,7 +20,7 @@ const WorkspacePickerDialog: React.FC<IWorkspacePickerDialogProps> = ({ title, w
 
     return (
         <Dialog open maxWidth='xs' fullWidth>
-            <DialogTitle>{title}</DialogTitle>
+            <DialogTitleHelp section='guide/user/06-workspaces?id=the-workspaces-menu'>{title}</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={0.5}>
                     <FormControlLabel

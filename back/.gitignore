@@ -12,6 +12,8 @@ tests/.out/
 # production
 /dist
 /node_modules
+/docsify
+/bundle/docs
 
 # misc
 .DS_Store

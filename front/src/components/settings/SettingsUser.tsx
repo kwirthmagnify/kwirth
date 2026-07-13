@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material'
+import { Button, Dialog, DialogActions, DialogContent, Stack, TextField, Typography } from '@mui/material'
+import { DialogTitleHelp } from '../DialogTitleHelp'
 import { Settings } from '../../model/Settings'
 
 interface ISettingsUserProps {
@@ -19,7 +20,7 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='xs' disableRestoreFocus={true}>
-            <DialogTitle>Settings</DialogTitle>
+            <DialogTitleHelp section='guide/admin/02-initial-config?id=user-settings-personal'>Settings</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
                     <Typography variant='body2'>

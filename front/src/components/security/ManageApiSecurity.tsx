@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography} from '@mui/material'
+import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, FormControl, InputLabel, List, ListItemButton, MenuItem, Select, Stack, TextField, Typography} from '@mui/material'
 import { MsgBoxButtons, MsgBoxYesNo } from '../../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
+import { DialogTitleHelp } from '../DialogTitleHelp'
 import { AccessKey, accessKeySerialize, ApiKey, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ResourceEditor } from './ResourceEditor'
@@ -107,7 +108,7 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
 
     return (<>
         <Dialog open={true} fullWidth maxWidth={false} PaperProps={{ sx: { height: '75vh', maxWidth: '1080px', width: '100%' } }}>
-            <DialogTitle>API Key management</DialogTitle>
+            <DialogTitleHelp section='guide/admin/05-api-management?id=create-an-api-key'>API Key management</DialogTitleHelp>
             <DialogContent sx={{ display: 'flex', height: '100%' }}>
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: 'calc(50% - 8px)' }}>
                     <Stack flexDirection='row' alignItems='center' sx={{ width: '100%', pr: 2 }}>

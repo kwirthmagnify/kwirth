@@ -42,6 +42,10 @@ Sign in with an external identity: **Google** (OIDC), **GitLab** (cloud / self-m
 
 Swap the home landing dashboard. Bundled: **Clusterized**, **Avicii**, **Matrix**, **Depeche Mode**. → **[Homepages manual](homepages/index)**
 
+## [Documentation packages](docs/index)
+
+Self-contained docsify sites served directly by Kwirth. The `core/kwirth` package (this guide) ships bundled. Additional packages can be installed from a URL, a local file or the registry. → **[Documentation packages manual](docs/index)**
+
 ---
 
 > **Paid extensions** (e.g. Defender, Montag and pro IdP connectors) are not covered here; they will be documented in a separate **marketplace** section.

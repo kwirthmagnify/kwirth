@@ -77,17 +77,9 @@ export class PluginManager {
         if (!fs.existsSync(devConfigPath)) return
         try {
             const raw = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8'))
-            // Support both legacy flat format { id: path } and new nested format { channels: { id: path }, providers: { id: path } }
-            const channelsMap: Record<string, string> = raw.channels ?? raw
-            if (raw.channels === undefined && typeof raw === 'object') {
-                // flat format: filter out any non-string values (e.g. nested 'providers' object)
-                for (const [id, distPath] of Object.entries(channelsMap)) {
-                    if (typeof distPath === 'string') this.registerDevPlugin(id, distPath, registeredChannels)
-                }
-            } else {
-                for (const [id, distPath] of Object.entries(channelsMap)) {
-                    this.registerDevPlugin(id, distPath, registeredChannels)
-                }
+            const pluginsMap: Record<string, string> = raw.plugins ?? {}
+            for (const [id, distPath] of Object.entries(pluginsMap)) {
+                this.registerDevPlugin(id, distPath, registeredChannels)
             }
         } catch (err) {
             logError(ELogComponent.CORE, `Failed to load kwirth-dev.json: ${err}`)
@@ -341,8 +333,8 @@ export class PluginManager {
         if (!fs.existsSync(devConfigPath)) return new Set()
         try {
             const raw = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8'))
-            const channelsMap: Record<string, string> = raw.channels ?? raw
-            return new Set(Object.keys(channelsMap).filter(k => typeof channelsMap[k] === 'string'))
+            const pluginsMap: Record<string, string> = raw.plugins ?? {}
+            return new Set(Object.keys(pluginsMap).filter(k => typeof pluginsMap[k] === 'string'))
         } catch { return new Set() }
     }
 

@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Backdrop, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, List, ListItemButton, Stack, Tab, Tabs, TextField, Tooltip, Typography} from '@mui/material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
+import { DialogTitleHelp } from './DialogTitleHelp'
 import { Delete, Edit } from '@kwirthmagnify/kwirth-common-front/icons'
 import { AccessKey } from '@kwirthmagnify/kwirth-common'
 
@@ -167,7 +168,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
 
     return (<>
         <Dialog open={true} disableRestoreFocus={true}>
-            <DialogTitle>Select cluster</DialogTitle>
+            <DialogTitleHelp section='guide/user/04-selecting-resources?id=step-1-cluster'>Select cluster</DialogTitleHelp>
             <DialogContent sx={{height:350, width:550}}>
                 <Tabs value={selectedTab} onChange={(_event, index) => setSelectedTab(index)} centered>
                     <Tab key='local' value={0} label='Local (Kubeconfig)'/>

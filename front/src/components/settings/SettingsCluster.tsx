@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material'
+import { Button, Dialog, DialogActions, DialogContent, Stack, TextField, Typography } from '@mui/material'
+import { DialogTitleHelp } from '../DialogTitleHelp'
 
 interface ISettingsClusterProps {
     onClose:(interval?:number) => void
@@ -12,7 +13,7 @@ const SettingsCluster: React.FC<ISettingsClusterProps> = (props:ISettingsCluster
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='xs' disableRestoreFocus={true}>
-            <DialogTitle>Cluster settings</DialogTitle>
+            <DialogTitleHelp section='guide/admin/02-initial-config?id=cluster-settings'>Cluster settings</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={2} direction='column' sx={{ mt: 1 }}>
                     <Typography variant='body2'>Enter Kwirth cluster configuration for cluster <b>{props.clusterName}</b></Typography>

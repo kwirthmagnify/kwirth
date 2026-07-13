@@ -1,0 +1,13 @@
+{
+  "name": "kwirth-front-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Isolated Playwright e2e for Kwirth core front. Not part of the app build/deps.",
+  "scripts": {
+    "test": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

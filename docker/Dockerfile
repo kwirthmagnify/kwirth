@@ -17,6 +17,9 @@ COPY fetch-bundled.mjs ./
 RUN node fetch-bundled.mjs kwirth-bundled.json /usr/kwirth/bundled \
     && rm kwirth-bundled.json fetch-bundled.mjs
 
+# Copy docs bundles generated at build time (always produced by back/ postbuild)
+COPY bundle/docs/*.tgz /usr/kwirth/bundled/
+
 WORKDIR /usr/kwirth/dist
 
 ENV BUNDLED_EXTENSIONS_PATH=/usr/kwirth/bundled
