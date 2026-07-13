@@ -24,6 +24,7 @@ interface IIdpConnectorInfo {
     version?: string
     installedFrom?: string      // 'dev' | 'bundled' | 'local' | URL de origen
     website?: string
+    description?: string
 }
 
 // metadatos de un conector INSTALADO (persistidos en configmap; el codigo back.js va aparte)
@@ -50,7 +51,7 @@ export class IdpManager {
     private registeredIdps: Map<string, TIdpConnectorConstructor>
     private installedConnectorIds = new Set<string>()
     // meta por conector (version/origen/website) para la UI, cruzada en listConnectors; poblada en init/install/loadDevIdps
-    private connectorMeta = new Map<string, { version?: string, installedFrom?: string, website?: string }>()
+    private connectorMeta = new Map<string, { version?: string, installedFrom?: string, website?: string, description?: string }>()
 
     constructor(secrets: ISecrets, configMaps: IConfigMaps, registeredIdps: Map<string, TIdpConnectorConstructor>) {
         this.secrets = secrets
@@ -85,7 +86,8 @@ export class IdpManager {
                     installed: this.installedConnectorIds.has(connectorId),
                     version: m?.version,
                     installedFrom: m?.installedFrom,
-                    website: m?.website
+                    website: m?.website,
+                    description: m?.description
                 })
             }
             catch (err) {
@@ -107,7 +109,7 @@ export class IdpManager {
         const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
         for (const m of index) {
             this.installedConnectorIds.add(m.id)
-            this.connectorMeta.set(m.id, { version: m.version, installedFrom: m.installedFrom, website: m.website })
+            this.connectorMeta.set(m.id, { version: m.version, installedFrom: m.installedFrom, website: m.website, description: m.description })
         }
     }
 
@@ -169,7 +171,7 @@ export class IdpManager {
             else index.push(meta)
             await this.configMaps.write(CONNECTORS_INDEX, index)
             this.installedConnectorIds.add(meta.id)
-            this.connectorMeta.set(meta.id, { version: meta.version, installedFrom: meta.installedFrom, website: meta.website })
+            this.connectorMeta.set(meta.id, { version: meta.version, installedFrom: meta.installedFrom, website: meta.website, description: meta.description })
 
             this.loadBackConnector(meta.id, backJs)
             logInfo(ELogComponent.AUTH, `IdP connector '${meta.id}' v${meta.version} installed`)
@@ -359,7 +361,7 @@ export class IdpManager {
                 this.reloadDevConnector(id, path.join(abs, 'back.js'))
                 try {
                     const pkg = JSON.parse(fs.readFileSync(path.join(abs, 'package.json'), 'utf-8'))
-                    this.connectorMeta.set(id, { version: pkg.version, website: pkg.website, installedFrom: 'dev' })
+                    this.connectorMeta.set(id, { version: pkg.version, website: pkg.website, description: pkg.description, installedFrom: 'dev' })
                 }
                 catch { this.connectorMeta.set(id, { installedFrom: 'dev' }) }
             }

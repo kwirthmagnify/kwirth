@@ -11,7 +11,7 @@ const IDPS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirt
 // tipos de la API (front-local, como hace ProviderDialog con su IProviderSchemaField)
 type IdpFieldType = 'text' | 'number' | 'boolean' | 'password'
 interface IIdpConfigFieldDef { name: string; label: string; type?: IdpFieldType; required?: boolean; options?: string[] }
-interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IIdpConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; website?: string }
+interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IIdpConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; website?: string; description?: string }
 interface IIdpInstanceConfig { id: string; connectorId: string; label: string; enabled: boolean; config: Record<string, unknown> }
 interface IIdpConnectorManifestEntry { id: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string }
 
@@ -241,21 +241,23 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{c.label}</Typography>
-                                                    {statusChip(c)}
                                                     {c.version && <Chip label={`v${c.version}`} size='small' sx={{ minWidth: 72 }} />}
                                                 </Stack>
-                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{c.id} · {c.kind}</Typography>
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{c.description || `${c.id} · ${c.kind}`}</Typography>
                                             </Box>
                                             {websiteButton(c.website)}
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(c.installedFrom)}</Box>
-                                            <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
-                                            <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
-                                                <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
-                                                    { uninstallingId === c.id ? <CircularProgress size={16} /> : <Delete fontSize='small' /> }
-                                                </IconButton></span>
-                                            </Tooltip>
+                                            <Stack direction='row' spacing={0.5} alignItems='center'>
+                                                {statusChip(c)}
+                                                <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
+                                                <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
+                                                    <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
+                                                        { uninstallingId === c.id ? <CircularProgress size={16} /> : <Delete fontSize='small' /> }
+                                                    </IconButton></span>
+                                                </Tooltip>
+                                            </Stack>
                                         </Stack>
                                     </Box>
                                 )) }
@@ -265,9 +267,9 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                                     <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Key fontSize='small' sx={{ color: 'text.secondary' }} />
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0 }} noWrap>{c.label}</Typography>
-                                        {statusChip(c)}
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(c.installedFrom)}</Box>
                                         {c.version && <Chip label={`v${c.version}`} size='small' sx={{ minWidth: 72 }} />}
+                                        {statusChip(c)}
                                         <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
                                         <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
                                             <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
