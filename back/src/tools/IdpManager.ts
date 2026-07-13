@@ -21,6 +21,9 @@ interface IIdpConnectorInfo {
     kind: EIdpConnectorKind
     schema: IIdpConfigFieldDef[]
     installed: boolean          // false = bundled/dev registrado en codigo; true = instalado en runtime
+    version?: string
+    installedFrom?: string      // 'dev' | 'bundled' | 'local' | URL de origen
+    website?: string
 }
 
 // metadatos de un conector INSTALADO (persistidos en configmap; el codigo back.js va aparte)
@@ -46,6 +49,8 @@ export class IdpManager {
     private configMaps: IConfigMaps
     private registeredIdps: Map<string, TIdpConnectorConstructor>
     private installedConnectorIds = new Set<string>()
+    // meta por conector (version/origen/website) para la UI, cruzada en listConnectors; poblada en init/install/loadDevIdps
+    private connectorMeta = new Map<string, { version?: string, installedFrom?: string, website?: string }>()
 
     constructor(secrets: ISecrets, configMaps: IConfigMaps, registeredIdps: Map<string, TIdpConnectorConstructor>) {
         this.secrets = secrets
@@ -71,12 +76,16 @@ export class IdpManager {
         for (const [connectorId, Ctor] of this.registeredIdps) {
             try {
                 const c = new Ctor()
+                const m = this.connectorMeta.get(connectorId)
                 result.push({
                     id: connectorId,
                     label: c.label,
                     kind: c.kind,
                     schema: c.getConfigSchema(),
-                    installed: this.installedConnectorIds.has(connectorId)
+                    installed: this.installedConnectorIds.has(connectorId),
+                    version: m?.version,
+                    installedFrom: m?.installedFrom,
+                    website: m?.website
                 })
             }
             catch (err) {
@@ -96,7 +105,10 @@ export class IdpManager {
     // carga el índice de conectores instalados (solo marca ids; el código se carga en loadAll)
     async init(): Promise<void> {
         const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
-        for (const m of index) this.installedConnectorIds.add(m.id)
+        for (const m of index) {
+            this.installedConnectorIds.add(m.id)
+            this.connectorMeta.set(m.id, { version: m.version, installedFrom: m.installedFrom, website: m.website })
+        }
     }
 
     async listInstalledMeta(): Promise<IIdpConnectorMeta[]> {
@@ -157,6 +169,7 @@ export class IdpManager {
             else index.push(meta)
             await this.configMaps.write(CONNECTORS_INDEX, index)
             this.installedConnectorIds.add(meta.id)
+            this.connectorMeta.set(meta.id, { version: meta.version, installedFrom: meta.installedFrom, website: meta.website })
 
             this.loadBackConnector(meta.id, backJs)
             logInfo(ELogComponent.AUTH, `IdP connector '${meta.id}' v${meta.version} installed`)
@@ -195,6 +208,7 @@ export class IdpManager {
     async uninstall(connectorId: string): Promise<void> {
         this.registeredIdps.delete(connectorId)
         this.installedConnectorIds.delete(connectorId)
+        this.connectorMeta.delete(connectorId)
         const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
         await this.configMaps.write(CONNECTORS_INDEX, index.filter(m => m.id !== connectorId))
         await this.configMaps.write(`kwirth-idp-connector-${connectorId}-meta`, null)
@@ -341,7 +355,13 @@ export class IdpManager {
             const raw = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8'))
             const idpsMap: Record<string, string> = raw.idps ?? {}
             for (const [id, distPath] of Object.entries(idpsMap)) {
-                this.reloadDevConnector(id, path.join(path.resolve(distPath), 'back.js'))
+                const abs = path.resolve(distPath)
+                this.reloadDevConnector(id, path.join(abs, 'back.js'))
+                try {
+                    const pkg = JSON.parse(fs.readFileSync(path.join(abs, 'package.json'), 'utf-8'))
+                    this.connectorMeta.set(id, { version: pkg.version, website: pkg.website, installedFrom: 'dev' })
+                }
+                catch { this.connectorMeta.set(id, { installedFrom: 'dev' }) }
             }
         }
         catch (err) {

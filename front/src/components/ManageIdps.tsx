@@ -11,7 +11,7 @@ const IDPS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirt
 // tipos de la API (front-local, como hace ProviderDialog con su IProviderSchemaField)
 type IdpFieldType = 'text' | 'number' | 'boolean' | 'password'
 interface IIdpConfigFieldDef { name: string; label: string; type?: IdpFieldType; required?: boolean; options?: string[] }
-interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IIdpConfigFieldDef[]; installed: boolean }
+interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IIdpConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; website?: string }
 interface IIdpInstanceConfig { id: string; connectorId: string; label: string; enabled: boolean; config: Record<string, unknown> }
 interface IIdpConnectorManifestEntry { id: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string }
 
@@ -206,6 +206,17 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
         if (inst) return <Chip label='disabled' size='small' variant='outlined' />
         return <Chip label='not configured' size='small' variant='outlined' color='warning' />
     }
+    // origen del conector (dev/bundled/local/instalado-por-URL), como el resolveSource de ProviderDialog
+    const sourceChip = (c: IIdpConnectorInfo) => {
+        const from = c.installedFrom
+        if (from === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
+        if (from === 'bundled') return <Chip label='bundled' size='small' variant='outlined' />
+        if (from === 'local') return <Chip label='local' size='small' variant='outlined' />
+        if (from) return <Chip label='installed' size='small' variant='outlined' color='info' />
+        return null
+    }
+    const websiteButton = (website?: string) =>
+        <Tooltip title={website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
 
     return (<>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '60vw', maxWidth: '60vw', height: '78vh' } }}>
@@ -230,12 +241,14 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{c.label}</Typography>
+                                                    {sourceChip(c)}
                                                     {statusChip(c)}
                                                 </Stack>
-                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{c.id} · {c.kind}</Typography>
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{c.id} · {c.kind}{c.version ? ` · v${c.version}` : ''}</Typography>
                                             </Box>
                                         </Stack>
                                         <Stack direction='row' justifyContent='flex-end' alignItems='center' sx={{ mt: 1 }}>
+                                            {websiteButton(c.website)}
                                             <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
                                             <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
                                                 <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
@@ -250,8 +263,10 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                                 { shownConnectors.map(c => (
                                     <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Key fontSize='small' sx={{ color: 'text.secondary' }} />
-                                        <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0 }} noWrap>{c.label}</Typography>
+                                        <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0 }} noWrap>{c.label}{c.version ? ` · v${c.version}` : ''}</Typography>
+                                        {sourceChip(c)}
                                         {statusChip(c)}
+                                        {websiteButton(c.website)}
                                         <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
                                         <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
                                             <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
