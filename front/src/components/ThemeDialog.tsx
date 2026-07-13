@@ -230,13 +230,13 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
                 </Box>
-                {website &&
-                    <Tooltip title='Open theme website'>
-                        <IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(website, '_blank', 'noopener')}>
+                <Tooltip title={website ? 'Open theme website' : 'No website available'}>
+                    <span>
+                        <IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}>
                             <OpenInNew fontSize='small' />
                         </IconButton>
-                    </Tooltip>
-                }
+                    </span>
+                </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>

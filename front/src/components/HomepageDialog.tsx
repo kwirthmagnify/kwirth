@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Home, Link, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, Delete, Download, FolderOpen, Home, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from './DialogTitleHelp'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
@@ -232,7 +232,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
         return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.14 : 0.26}) 100%)`
     }
 
-    const HomepageCard = ({ id, displayName, version, versions, onVersionChange, description, badge, source, action }: { id: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; action: React.ReactNode }) => (
+    const HomepageCard = ({ id, displayName, version, versions, onVersionChange, description, badge, source, website, action }: { id: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: homepageGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Home /></Box>
@@ -250,6 +250,13 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
                 </Box>
+                <Tooltip title={website ? 'Open homepage website' : 'No website available'}>
+                    <span>
+                        <IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}>
+                            <OpenInNew fontSize='small' />
+                        </IconButton>
+                    </span>
+                </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
@@ -302,6 +309,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                         description={hp.description}
                                         badge={isActive(hp.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} /> : undefined}
                                         source={resolveSource(hp.installedFrom)}
+                                        website={hp.website}
                                         action={
                                             <Stack direction='row' alignItems='center' spacing={0.5}>
                                                 {isActive(hp.id)
@@ -419,6 +427,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                             versions={versions}
                                             onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [id]: v }))}
                                             description={t.description}
+                                            website={t.website}
                                             badge={isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
                                             action={
                                                 <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>

@@ -235,7 +235,7 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                         : viewMode === 'card'
                             ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
                                 { shownConnectors.map(c => (
-                                    <Box key={c.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 96, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: idpGradient(c.id) }}>
+                                    <Box key={c.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: idpGradient(c.id) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Key /></Box>
                                             <Box flex={1} minWidth={0}>
@@ -303,7 +303,7 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                                 const entry = getSelected(id)
                                 const versions = group.map(e => e.version)
                                 return (
-                                    <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 96, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: idpGradient(entry.name) }}>
+                                    <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: idpGradient(entry.name) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Key /></Box>
                                             <Box flex={1} minWidth={0}>

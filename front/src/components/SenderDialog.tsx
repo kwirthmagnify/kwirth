@@ -539,22 +539,22 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{sender.displayName || sender.id}</Typography>
-                        {sender.configNames.length > 0 && <Chip label={`${sender.configNames.length} config${sender.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' />}
                         <Chip label={`v${sender.version}`} size='small' sx={{ minWidth: 72 }} />
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{sender.description}</Typography>
                 </Box>
-                {sender.website &&
-                    <Tooltip title='Open website'>
-                        <IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(sender.website, '_blank', 'noopener')}>
+                <Tooltip title={sender.website ? 'Open website' : 'No website available'}>
+                    <span>
+                        <IconButton size='small' sx={{ mr: -0.5 }} disabled={!sender.website} onClick={() => window.open(sender.website!, '_blank', 'noopener')}>
                             <OpenInNew fontSize='small' />
                         </IconButton>
-                    </Tooltip>
-                }
+                    </span>
+                </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(sender.installedFrom)}</Box>
-                <Stack direction='row' spacing={0.5}>
+                <Stack direction='row' spacing={0.5} alignItems='center'>
+                    {sender.configNames.length > 0 && <Chip label={`${sender.configNames.length} config${sender.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' />}
                     <Tooltip title='Configure'>
                         <IconButton size='small' color='primary' onClick={() => expandSender(sender.id)}>
                             <Settings fontSize='small' />
@@ -708,7 +708,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                                                     </Stack>
                                                 )}
                                             </Box>
-                                            {entry.website && <Tooltip title='Open website'><IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(entry.website, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></Tooltip>}
+                                            <Tooltip title={entry.website ? 'Open website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
                                         </Stack>
                                         <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
                                             {(() => { const unmet = (entry.requires ?? []).filter(r => !isRequirementMet(r)); return (

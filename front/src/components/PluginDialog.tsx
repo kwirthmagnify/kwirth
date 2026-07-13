@@ -279,7 +279,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     }
 
     const PluginCard = ({ icon, name, displayName, version, versions, onVersionChange, description, badge, source, website, action, requires, uses }: { icon?: string; name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; requires?: IRequirement[]; uses?: IRequirement[] }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 120, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: pluginGradient(name) }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: pluginGradient(name) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}>{resolveIcon(icon)}</Box>
                 <Box flex={1} minWidth={0}>
@@ -308,13 +308,13 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                         </Stack>
                     )}
                 </Box>
-                {website &&
-                    <Tooltip title='Open plugin website'>
-                        <IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(website, '_blank', 'noopener')}>
+                <Tooltip title={website ? 'Open plugin website' : 'No website available'}>
+                    <span>
+                        <IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}>
                             <OpenInNew fontSize='small' />
                         </IconButton>
-                    </Tooltip>
-                }
+                    </span>
+                </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>

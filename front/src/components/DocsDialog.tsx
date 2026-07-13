@@ -202,7 +202,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
     }
 
     const DocsCard = ({ id, name, version, description, source, website, action }: { id: string; name: string; version: string; description: string; source?: React.ReactNode; website?: string; action: React.ReactNode }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 110, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: docsGradient(id) }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: docsGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Description /></Box>
                 <Box flex={1} minWidth={0}>
@@ -212,13 +212,13 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
                 </Box>
-                {website &&
-                    <Tooltip title='Open website'>
-                        <IconButton size='small' sx={{ mr: -0.5 }} onClick={() => window.open(website, '_blank', 'noopener')}>
+                <Tooltip title={website ? 'Open website' : 'No website available'}>
+                    <span>
+                        <IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}>
                             <OpenInNew fontSize='small' />
                         </IconButton>
-                    </Tooltip>
-                }
+                    </span>
+                </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
