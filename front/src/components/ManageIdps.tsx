@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Key, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, Delete, Download, FolderOpen, Key, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from './DialogTitleHelp'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -41,6 +41,7 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
 
     // instancia en edicion (config lanzada desde la card del conector)
     const [editing, setEditing] = useState<IIdpInstanceConfig | undefined>(undefined)
+    const [revealed, setRevealed] = useState<Record<string, boolean>>({})
     const [editConnector, setEditConnector] = useState<IIdpConnectorInfo | undefined>(undefined)
     const [isNew, setIsNew] = useState(false)
     const [savingConfig, setSavingConfig] = useState(false)
@@ -78,10 +79,27 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
         const existing = instanceOf(c.id)
         setEditConnector(c)
         setIsNew(!existing)
+        setRevealed({})
         setEditing(existing ? { ...existing, config: { ...existing.config } } : { id: c.id, connectorId: c.id, label: c.label, enabled: false, config: {} })
     }
-    const closeConfig = () => { setEditing(undefined); setEditConnector(undefined) }
+    const closeConfig = () => { setEditing(undefined); setEditConnector(undefined); setRevealed({}) }
     const setCfg = (name: string, value: unknown) => setEditing(prev => prev ? { ...prev, config: { ...prev.config, [name]: value } } : prev)
+    // muestra/oculta un campo secreto; al revelar trae el valor real (sin enmascarar) del export (admin-only)
+    const toggleReveal = async (name: string) => {
+        if (revealed[name]) { setRevealed(prev => ({ ...prev, [name]: false })); return }
+        if (editing && !isNew) {
+            try {
+                const res = await fetch(`${backendUrl}/idp/export`, addGetAuthorization(accessString))
+                if (res.ok) {
+                    const all = await res.json()
+                    const real = all?.[editing.id]?.config?.[name]
+                    if (real !== undefined) setCfg(name, real)
+                }
+            }
+            catch { /* si el export falla, se muestra el valor actual del campo */ }
+        }
+        setRevealed(prev => ({ ...prev, [name]: true }))
+    }
     const saveConfig = async () => {
         if (!editing) return
         setSavingConfig(true)
@@ -98,7 +116,15 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
     const renderConfigField = (field: IIdpConfigFieldDef) => {
         const val = editing?.config[field.name]
         if (field.type === 'boolean') return <FormControlLabel key={field.name} control={<Switch checked={!!val} onChange={e => setCfg(field.name, e.target.checked)} />} label={field.label} />
-        return <TextField key={field.name} size='small' fullWidth label={field.label} type={field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : 'text'} value={val ?? ''} required={field.required} onChange={e => setCfg(field.name, field.type === 'number' ? Number(e.target.value) : e.target.value)} />
+        const isSecret = field.type === 'password'
+        const inputType = field.type === 'number' ? 'number' : (isSecret && !revealed[field.name]) ? 'password' : 'text'
+        return <TextField key={field.name} size='small' fullWidth label={field.label} type={inputType} value={val ?? ''} required={field.required}
+            onChange={e => setCfg(field.name, field.type === 'number' ? Number(e.target.value) : e.target.value)}
+            slotProps={isSecret ? { input: { endAdornment: (
+                <IconButton size='small' edge='end' onClick={() => toggleReveal(field.name)} title={revealed[field.name] ? 'Hide' : 'Show'}>
+                    { revealed[field.name] ? <VisibilityOff fontSize='small'/> : <Visibility fontSize='small'/> }
+                </IconButton>
+            ) } } : undefined} />
     }
 
     // ---- marketplace (available connectors) ----
