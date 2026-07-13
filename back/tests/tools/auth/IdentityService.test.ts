@@ -149,9 +149,9 @@ test('writeUsers codifica la clave del Secret como base64url (sin @) y readUsers
 })
 
 // ---- okResponse ----
-test('okResponse expone solo id, name y accessKey', () => {
+test('okResponse expone id, name, accessKey y prefs de UI (nunca password)', () => {
     const user = makeUser({ password: 'secreto' })
     const resp = IdentityService.okResponse(user)
-    assert.deepEqual(Object.keys(resp).sort(), ['accessKey', 'id', 'name'])
+    assert.deepEqual(Object.keys(resp).sort(), ['accessKey', 'enabledChannels', 'exitFullScreen', 'id', 'name', 'startChannel'])
     assert.equal((resp as any).password, undefined)
 })
