@@ -4,7 +4,7 @@
     "montag": "../plugins/montag/dist",
     "pinocchio": "../plugins/pinocchio/dist",
     "mirc": "../plugins/mirc/dist",
-    "defender": "../plugins/defender/dist",
+    "excubitor": "../plugins/excubitor/dist",
     "alert": "../plugins/alert/dist",
     "censor": "../plugins/censor/dist",
     "echo": "../plugins/echo/dist",
@@ -62,7 +62,7 @@
   },
   "docs": {
     "kwirth": "bundle/docs/kwirth.tgz",
-    "defender": "../plugins/defender/docs/defender.tgz",
+    "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
     "agora": "../plugins/agora/docs/agora.tgz",
     "montag": "../plugins/montag/docs/montag.tgz"
   }

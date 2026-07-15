@@ -535,6 +535,52 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         addWindow(win)
     }
 
+    const launchAddResources = () => {
+        let winId = 'add-resources-' + uuid()
+        let placeholder = '# Paste one or more Kubernetes resources here.\n# Separate multiple resources with a line containing only:\n#   ---\n'
+        let win:IContentWindow = {
+            id: winId,
+            class: 'ContentEdit',
+            visible: true,
+            atTop: false,
+            atFront: true,
+            title: 'Add resources',
+            isMaximized: false,
+            x: 100,
+            y: 50,
+            width: 800,
+            height: 600,
+            data: {
+                isInitialized: false,
+                allowEdit: true,
+                onOk: (code: string): void => {
+                    let docs: string[] = []
+                    try {
+                        yamlParser.loadAll(code, (doc:any) => { if (doc) docs.push(yamlParser.dump(doc, { indent: 2 })) })
+                    }
+                    catch (err:any) {
+                        props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.ERROR, 'Invalid YAML: ' + (err?.message ?? err))
+                        return   // keep the window open so the user can fix the YAML
+                    }
+                    if (docs.length === 0) {
+                        props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.WARNING, 'No resources found in the provided YAML')
+                        return
+                    }
+                    sendCommand(EMagnifyCommand.APPLY, docs)
+                    onWindowClose(winId)
+                },
+                code: placeholder,
+                oldCode: undefined
+            } satisfies IContentEditData,
+            onWindowChange: onWindowChange,
+            onTop: onWindowTop,
+            onMinimize: onWindowMinimize,
+            onClose: onWindowClose,
+            selectedFiles: []
+        }
+        addWindow(win)
+    }
+
     const launchObjectDelete = (p:string[]) => {
         let f = magnifyData.files.filter(x => p.includes(x.path))
         if (f.length>0) {
@@ -717,7 +763,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     // Sync cluster-type plugins into classClusterOverview left bar on every render
     {
-        const STATIC_CLUSTER_ITEMS = new Set(['search', 'logsearch'])
+        const STATIC_CLUSTER_ITEMS = new Set(['search', 'logsearch', 'add'])
         const spcClusterOverview = spaces.get('classClusterOverview')!
         const clusterPluginIds = Array.from(props.channelObject.frontChannels?.keys() ?? []).filter(id => {
             if (id === 'magnify') return false
@@ -759,6 +805,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         () => magnifyData.userPreferences?.customActions && magnifyData.userPreferences.customActions.filter(ca => ca.type==='kwirth').length>0 )
     setLeftItem(spcClassOverview, 'kubeworks', (p:string[], currentTarget:Element) => setMenuKubeWorksAnchorParent(currentTarget) )
     setLeftItem(spaces.get('classClusterOverview')!, 'logsearch', () => launchLogSearch(undefined, undefined, 'Cluster'))
+    setLeftItem(spaces.get('classClusterOverview')!, 'add', () => launchAddResources())
 
     // cluster actions
     const setClusterActions = () => {

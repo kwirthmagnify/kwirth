@@ -7,7 +7,6 @@ import { IContentWindow } from '../MagnifyTabContent'
 import { IMagnifyData, ILogSearchResult, EMagnifyCommand } from '../MagnifyData'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
-import { useKeyboard } from '../../../tools/useKeyboard'
 import { v4 as uuid } from 'uuid'
 // @ts-ignore
 import './ResizableDialog.css'
@@ -36,8 +35,6 @@ const LogSearchPanel: React.FC<ILogSearchPanelProps> = (props) => {
     const [tailLines, setTailLines] = useState(100)
     const [isMaximized, setIsMaximized] = useState(false)
     const [currentSearchId, setCurrentSearchId] = useState<string | null>(null)
-
-    useKeyboard(props.onClose, props.id)
 
     const { magnifyData } = props
     const searching = !magnifyData.logSearchDone
@@ -134,7 +131,7 @@ const LogSearchPanel: React.FC<ILogSearchPanelProps> = (props) => {
                     <TextField
                         size='small' fullWidth placeholder='Search in logs…'
                         value={query} onChange={e => setQuery(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
+                        onKeyDown={e => { if (e.key === 'Enter') handleSearch(); if (e.key==='Escape') props.onClose(props.id) }}
                         slotProps={{ input: { endAdornment: (
                             <InputAdornment position='end'>
                                 <IconButton size='small' onClick={handleSearch} disabled={searching || !query.trim()}>

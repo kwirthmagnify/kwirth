@@ -3,7 +3,7 @@ import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogConte
 import * as MuiIcons from '@kwirthmagnify/kwirth-common-front/icons'
 import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { DialogTitleHelp } from './DialogTitleHelp'
+import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
@@ -342,7 +342,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
 
     return (
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins'>Manage plugins</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins' docsUrl={backendUrl + '/docs/core/kwirth'}>Manage plugins</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 

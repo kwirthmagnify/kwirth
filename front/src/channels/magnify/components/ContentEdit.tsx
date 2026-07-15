@@ -149,10 +149,15 @@ const editorChanged = useRef<boolean>(false)
     const updateEditorValue= (newCode:any) => {
         contentEditData.code = newCode
         setCode(newCode)
-        let oldJson = yamlParser.load(contentEditData.oldCode)
-        let newJson = yamlParser.load(newCode)
-        let status=objectEqual(newJson, oldJson)
-        editorChanged.current = !status
+        try {
+            let oldJson = yamlParser.load(contentEditData.oldCode)
+            let newJson = yamlParser.load(newCode)
+            editorChanged.current = !objectEqual(newJson, oldJson)
+        }
+        catch {
+            // multi-document (---) or not-yet-valid YAML: fall back to a textual comparison
+            editorChanged.current = (newCode ?? '') !== (contentEditData.oldCode ?? '')
+        }
     }
 
     return (<>
@@ -186,7 +191,6 @@ const editorChanged = useRef<boolean>(false)
                 >
                     <CodeMirror value={code}
                         onChange={updateEditorValue}
-                        //theme={'none'}
                         theme={editorTheme}
                         onUpdate={(viewUpdate) => { if (viewUpdate.view) editorViewRef.current = viewUpdate.view }}
                         extensions={[

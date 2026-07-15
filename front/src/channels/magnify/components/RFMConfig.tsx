@@ -457,6 +457,12 @@ spaces.set('classClusterOverview',
                 text: 'Log search',
                 permission: true
             },
+            {
+                name: 'add',
+                icon: <Add fontSize='small'/>,
+                text: 'Add',
+                permission: true
+            },
         ]
     }
 )

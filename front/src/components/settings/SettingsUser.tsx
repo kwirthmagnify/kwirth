@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useContext } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, Stack, TextField, Typography } from '@mui/material'
-import { DialogTitleHelp } from '../DialogTitleHelp'
+import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { Settings } from '../../model/Settings'
+import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
 interface ISettingsUserProps {
     onClose:(ok:boolean) => void
@@ -10,6 +11,7 @@ interface ISettingsUserProps {
 
 const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) => {
     const [keepAliveInterval, setKeepAliveInterval] = useState<number>(props.settings? props.settings.keepAliveInterval : 60)
+    const { backendUrl } = useContext(SessionContext) as SessionContextType
 
     const ok = () =>{
         if (props.settings) {
@@ -20,7 +22,7 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='xs' disableRestoreFocus={true}>
-            <DialogTitleHelp section='guide/admin/02-initial-config?id=user-settings-personal'>Settings</DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/02-initial-config?id=user-settings-personal' docsUrl={backendUrl + '/docs/core/kwirth'}>Settings</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
                     <Typography variant='body2'>

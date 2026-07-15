@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useContext } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, Stack, TextField, Typography } from '@mui/material'
-import { DialogTitleHelp } from '../DialogTitleHelp'
+import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
 interface ISettingsClusterProps {
     onClose:(interval?:number) => void
@@ -10,10 +11,11 @@ interface ISettingsClusterProps {
 
 const SettingsCluster: React.FC<ISettingsClusterProps> = (props:ISettingsClusterProps) => {
     const [clusterMetricsInterval, setClusterMetricsInterval] = useState(props.clusterMetricsInterval)
+    const { backendUrl } = useContext(SessionContext) as SessionContextType
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='xs' disableRestoreFocus={true}>
-            <DialogTitleHelp section='guide/admin/02-initial-config?id=cluster-settings'>Cluster settings</DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/02-initial-config?id=cluster-settings' docsUrl={backendUrl + '/docs/core/kwirth'}>Cluster settings</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={2} direction='column' sx={{ mt: 1 }}>
                     <Typography variant='body2'>Enter Kwirth cluster configuration for cluster <b>{props.clusterName}</b></Typography>

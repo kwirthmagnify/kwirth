@@ -68,7 +68,13 @@
       "PowerShell($conns = Get-NetTCPConnection -LocalPort 4051 -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { $conns | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { $p = Get-Process -Id $_ -ErrorAction SilentlyContinue; Write-Output \"Killing PID $_ \\($\\($p.ProcessName\\)\\)\"; Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } else { Write-Output \"Nothing listening on 4051\" })",
       "PowerShell(Start-Sleep -Milliseconds 500; try { $r = Invoke-WebRequest -Uri http://localhost:4051/ -TimeoutSec 3 -UseBasicParsing; Write-Output \"STILL UP: $\\($r.StatusCode\\)\" } catch { Write-Output \"PORT 4051 CLOSED \\(guide server stopped\\)\" })",
       "Bash(npx playwright *)",
-      "PowerShell(& c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\agora\\\\node_modules\\\\.bin\\\\tsc.cmd --noEmit -p c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\agora\\\\tsconfig.json 2>&1 | Select-String -Pattern \"Divider|error\"; Write-Output \"exit=$LASTEXITCODE\")"
+      "PowerShell(& c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\agora\\\\node_modules\\\\.bin\\\\tsc.cmd --noEmit -p c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\agora\\\\tsconfig.json 2>&1 | Select-String -Pattern \"Divider|error\"; Write-Output \"exit=$LASTEXITCODE\")",
+      "Bash(kubectl apply *)",
+      "Bash(kubectl get *)",
+      "Bash(xargs grep -ln \"createInformer\\\\|makeInformer\")",
+      "Bash(kubectl delete *)",
+      "Bash(git commit -m '@ *)",
+      "Bash(git tag *)"
     ],
     "defaultMode": "dontAsk",
     "additionalDirectories": [

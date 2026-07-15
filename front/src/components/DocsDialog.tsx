@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, CircularProgress, Chip, Dialog, DialogActions, DialogContent, Divider, IconButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Delete, Description, Download, FolderOpen, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { DialogTitleHelp } from './DialogTitleHelp'
+import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { useKeyboard } from '../tools/useKeyboard'
 
@@ -247,7 +247,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
 
     return (
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/docs/index?id=admin-guide'>Manage documentation</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/docs/index?id=admin-guide' docsUrl={backendUrl + '/docs/core/kwirth'}>Manage documentation</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 

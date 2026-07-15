@@ -59,7 +59,7 @@ const MsgBoxWaitShow = (title:string, message:string|JSX.Element, onClose:Dispat
                 {title}
             </DialogTitle>
             <DialogContent >
-                <Stack direction={'row'} alignItems={'center'} alignContent={'center'} sx={{mx:2, mb:2}}>
+                <Stack direction={'row'} alignItems={'center'} alignContent={'center'} sx={{mx:2}}>
                     <Box>
                         <CircularProgress size={50} />
                     </Box>

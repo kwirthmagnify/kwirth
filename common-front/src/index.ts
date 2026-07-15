@@ -129,6 +129,8 @@ export { UserPicker } from './UserPicker'
 export type { IUserPickerProps } from './UserPicker'
 export { HelpButton } from './HelpButton'
 export type { IHelpButtonProps } from './HelpButton'
+export { DialogTitleHelp } from './DialogTitleHelp'
+export type { IDialogTitleHelpProps } from './DialogTitleHelp'
 
 export interface ITabSummary {
     name: string

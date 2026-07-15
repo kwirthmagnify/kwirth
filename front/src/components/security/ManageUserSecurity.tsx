@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { MsgBoxButtons, MsgBoxOkError, MsgBoxYesNo } from '../../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
-import { DialogTitleHelp } from '../DialogTitleHelp'
+import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { IUser, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { ResourceEditor } from './ResourceEditor'
@@ -158,7 +158,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='md'>
-            <DialogTitleHelp section='guide/admin/03-user-management?id=user-fields'>User management</DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/03-user-management?id=user-fields' docsUrl={backendUrl + '/docs/core/kwirth'}>User management</DialogTitleHelp>
             <DialogContent>
                 <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
                     <List sx={{ flexGrow: 1, mr: 3, width: '30vh' }}>

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { Accordion, AccordionActions, AccordionDetails, AccordionSummary, Box, Button, Checkbox, FormControlLabel, MenuItem, Select, SelectChangeEvent, Stack, TextareaAutosize, TextField, Typography } from '@mui/material'
+import { Accordion, AccordionActions, AccordionDetails, AccordionSummary, Box, Button, Checkbox, FormControlLabel, MenuItem, Select, Stack, Switch, TextareaAutosize, TextField, Typography } from '@mui/material'
 import { ExpandMore } from '@kwirthmagnify/kwirth-common-front/icons'
 import { allKinds, IKind, MagnifyUserPreferences } from './MagnifyUserPreferences'
 import { IFileObject } from '@jfvilas/react-file-manager'
@@ -83,12 +83,6 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
         setDataChanged(true)
     }
 
-    const onChangePalette = (event: SelectChangeEvent) => {
-        setPalette(event.target.value)
-        props.channelObject.setPalette?.(event.target.value)
-        setDisplayChanged(true)
-    }
-
     const removeCustomAction = (index:number) => {
         customActions.splice(index,1)
         setCustomActions([...customActions])
@@ -103,10 +97,8 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
                 <Stack direction='column' spacing={0.5}>
                     <Stack direction='row' alignItems='center'>
                         <Typography variant='body2' sx={{ flexGrow: 1 }}>Palette mode</Typography>
-                        <Select value={palette} onChange={onChangePalette} variant='standard' sx={{ width: 100 }}>
-                            <MenuItem value='light'>Light</MenuItem>
-                            <MenuItem value='dark'>Dark</MenuItem>
-                        </Select>
+                        <Typography variant='body2' color='text.secondary' sx={{ mr: 1 }}>{palette === 'dark' ? 'Dark' : 'Light'}</Typography>
+                        <Switch size='small' checked={palette === 'dark'} onChange={(e) => { const v = e.target.checked ? 'dark' : 'light'; setPalette(v); props.channelObject.setPalette?.(v); setDisplayChanged(true) }} />
                     </Stack>
                     <Stack direction='row' alignItems='center'>
                         <Typography variant='body2' sx={{ flexGrow: 1 }}>About Kwirth</Typography>
@@ -238,8 +230,7 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
                         { type: EExtensionType.PLUGIN,   label: 'Plugins',   desc: 'Install, update and remove channel plugins that extend Kwirth with new visualization and analysis capabilities.' },
                         { type: EExtensionType.PROVIDER, label: 'Providers', desc: 'Configure data source providers that feed events and metrics into your channels from external systems.' },
                         { type: EExtensionType.SENDER,   label: 'Senders',   desc: 'Manage notification senders to forward alerts and reports to Slack, Teams, email and other destinations.' },
-                        { type: EExtensionType.THEME,    label: 'Themes',    desc: 'Install and activate visual themes to customize the look and feel of Kwirth.' },
-                        { type: EExtensionType.HOMEPAGE, label: 'Homepages', desc: 'Install and manage homepage extensions that provide custom cluster overview dashboards.' },
+                        { type: EExtensionType.THEME,    label: 'Themes',    desc: 'Install and activate visual themes to customize the look and feel of Kwirth.' }
                     ]).map(({ type, label, desc }) => (
                         <Box key={type} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column', gap: 1 }}>
                             <Typography variant='body2' fontWeight='bold'>{label}</Typography>

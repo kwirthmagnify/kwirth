@@ -2200,7 +2200,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     { selectedTab.current &&
                         <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow:1, height:'100%', minHeight:0 }}>
                             { anchorMenuTab && <MenuTab onClose={() => setAnchorMenuTab(null)} optionSelected={menuTabOptionSelected} anchorMenuTab={anchorMenuTab} tabs={tabs.current} selectedTab={selectedTab.current} selectedTabIndex={selectedTab.current? tabs.current.indexOf(selectedTab.current) : -1} backChannels={backChannels}/>}
-                            <TabContent key={selectedTab.current?.name} channel={selectedTab.current?.channel} channelObject={selectedTab.current?.channelObject ? { ...selectedTab.current.channelObject, isFullscreen: fullscreenTab !== undefined } : undefined} />
+                            <TabContent key={selectedTab.current?.name} channel={selectedTab.current?.channel} channelObject={(() => {
+                                // Mutate isFullscreen onto the LIVE channelObject and pass that reference (do NOT spread
+                                // into a copy): webSocket is assigned later on the original object (on socket connect), and
+                                // channels that wire handlers once — e.g. magnify's create/edit/delete — would otherwise
+                                // capture a stale copy whose webSocket is undefined.
+                                const co = selectedTab.current?.channelObject
+                                if (co) co.isFullscreen = fullscreenTab !== undefined
+                                return co
+                            })()} />
                         </Box>
                     }
                     { !selectedTab.current &&
