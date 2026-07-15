@@ -83,6 +83,8 @@ import { ThemeManager } from './tools/ThemeManager'
 import { ThemeApi } from './api/ThemeApi'
 import { HomepageManager } from './tools/HomepageManager'
 import { HomepageApi } from './api/HomepageApi'
+import { LoginManager } from './tools/LoginManager'
+import { LoginExtensionApi } from './api/LoginExtensionApi'
 import { DocsManager } from './tools/DocsManager'
 import { DocsApi } from './api/DocsApi'
 const fs = require('fs')
@@ -159,6 +161,7 @@ let providerManager: ProviderManager | undefined
 let senderManager: SenderManager | undefined
 let themeManager: ThemeManager | undefined
 let homepageManager: HomepageManager | undefined
+let loginManager: LoginManager | undefined
 let docsManager: DocsManager | undefined
 const licenseManager = new LicenseManager()
 licenseManager.load()
@@ -1311,6 +1314,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let homepageApi = new HomepageApi(homepageManager, apiKeyApi)
             riRouter.use(`/homepages`, homepageApi.router)
         }
+        if (loginManager) {
+            let loginExtensionApi = new LoginExtensionApi(loginManager, apiKeyApi)
+            riRouter.use(`/logins`, loginExtensionApi.router)
+        }
         if (docsManager) {
             const docsifyPath = process.env.KWIRTH_DOCSIFY_PATH || path.join(process.cwd(), 'docsify')
             let docsApi = new DocsApi(docsManager, apiKeyApi, docsifyPath)
@@ -1633,6 +1640,14 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             homepageManager = new HomepageManager(runningInstance.configMaps)
             await homepageManager.init()
             homepageManager.loadDevHomepages()
+        }
+
+        if (!loginManager) {
+            loginManager = new LoginManager(runningInstance.configMaps)
+            await loginManager.init()
+            const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
+            if (bundledExtensionsPath) await loginManager.installBundled(bundledExtensionsPath)
+            loginManager.loadDevLogins()
         }
 
         if (!docsManager) {

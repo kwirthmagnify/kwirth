@@ -145,3 +145,4 @@ export { default as NotificationsOff } from '@mui/icons-material/NotificationsOf
 export { default as Palette } from '@mui/icons-material/Palette'
 export { default as ViewList } from '@mui/icons-material/ViewList'
 export { default as ViewModule } from '@mui/icons-material/ViewModule'
+export { default as LockPerson } from '@mui/icons-material/LockPerson'

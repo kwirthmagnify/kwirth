@@ -1,0 +1,9 @@
+{
+    "name": "@kwirthmagnify/login-magnify",
+    "id": "magnify",
+    "displayName": "Magnify",
+    "version": "0.1.0",
+    "description": "Custom login page for Magnify channel",
+    "targetType": "login",
+    "website": "https://github.com/kwirthmagnify/kwirth"
+}

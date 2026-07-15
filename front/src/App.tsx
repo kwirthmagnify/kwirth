@@ -52,6 +52,8 @@ import { SenderDialog } from './components/SenderDialog'
 import { ThemeDialog } from './components/ThemeDialog'
 import { HomepageDialog } from './components/HomepageDialog'
 import { DocsDialog } from './components/DocsDialog'
+import { LoginDialog } from './components/LoginDialog'
+import { LoginExtensionPage } from './components/LoginExtensionPage'
 import { IHomepageExtension } from '@kwirthmagnify/kwirth-common-front'
 
 interface IAppProps {
@@ -266,6 +268,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showThemeDialog, setShowThemeDialog]=useState<boolean>(false)
     const [showHomepageDialog, setShowHomepageDialog]=useState<boolean>(false)
     const [showDocsDialog, setShowDocsDialog]=useState<boolean>(false)
+    const [showLoginDialog, setShowLoginDialog]=useState<boolean>(false)
+    const [loginExtError, setLoginExtError]=useState<string|undefined>(undefined)
     const [activeHomepageId, setActiveHomepageId]=useState<string|undefined>(undefined)
     const [homepageConfig, setHomepageConfig]=useState<Record<string, any>>({})
     const homepageIdMounted = useRef(false)
@@ -1750,6 +1754,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageDocs:
                 setShowDocsDialog(true)
                 break
+            case MenuDrawerOption.ManageLogins:
+                setShowLoginDialog(true)
+                break
             case MenuDrawerOption.ExportWorkspaces: {
                 const allNames:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
                 if (allNames.length===0) { showNoWorkspaces(); break }
@@ -1973,7 +1980,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const sso = params.get('sso')
         const ssoerror = params.get('ssoerror')
         if (!sso && !ssoerror) return
-        window.history.replaceState({}, '', window.location.pathname)   // limpiamos el query param
+        const loginExt = params.get('loginExt')
+        params.delete('sso')
+        params.delete('ssoerror')
+        const remaining = params.toString()
+        window.history.replaceState({}, '', window.location.pathname + (remaining ? '?' + remaining : ''))
         if (ssoerror) {
             setMsgBox(MsgBoxOkError('Login', `Single Sign-On failed (${ssoerror}).`, setMsgBox))
             return
@@ -1988,6 +1999,22 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
                 const login = await resp.json() as ILoginResponse
                 const ssoUser:IUser = { id: login.id, name: login.name, password: '', accessKey: login.accessKey, resources: '', startChannel: login.startChannel, exitFullScreen: login.exitFullScreen, enabledChannels: login.enabledChannels }
+                if (loginExt) {
+                    try {
+                        const cfgResp = await fetch(`${props.backendUrl}/logins/${loginExt}/config`)
+                        if (cfgResp.ok) {
+                            const cfg = await cfgResp.json()
+                            const requiredChannel = cfg.startChannel as string | undefined
+                            if (requiredChannel && ssoUser.enabledChannels != null && !ssoUser.enabledChannels.includes(requiredChannel)) {
+                                setSsoExchangePending(false)
+                                setLoginExtError(`Your account does not have access to the '${requiredChannel}' channel.`)
+                                return
+                            }
+                            if (requiredChannel) ssoUser.startChannel = requiredChannel
+                        }
+                    }
+                    catch {}
+                }
                 setSsoExchangePending(false)
                 onLoginClosed(ssoUser, false)
             }
@@ -2091,10 +2118,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     </Box>
                 )
             }
+            const loginSlug = new URLSearchParams(window.location.search).get('loginExt') ?? undefined
             return (
                 <div style={{ backgroundImage:`url('./turbo-pascal.png')`, backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', width: '100vw', height: '100vh' }} >
                     <SessionContext.Provider value={{ user, accessString: accessString, logged, backendUrl }}>
-                        <Login methods={props.authMethods} onClose={onLoginClosed} key={refresh}></Login>
+                        {loginSlug
+                            ? <LoginExtensionPage slug={loginSlug} backendUrl={backendUrl} methods={props.authMethods} initialError={loginExtError} onClose={onLoginClosed} />
+                            : <Login methods={props.authMethods} onClose={onLoginClosed} key={refresh} />
+                        }
                     </SessionContext.Provider>
                 </div>
             )
@@ -2267,6 +2298,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showThemeDialog && <ThemeDialog onClose={() => setShowThemeDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} /> }
                 { showHomepageDialog && <HomepageDialog onClose={() => setShowHomepageDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} /> }
                 { showDocsDialog && <DocsDialog onClose={() => setShowDocsDialog(false)} /> }
+                { showLoginDialog && <LoginDialog onClose={() => setShowLoginDialog(false)} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }

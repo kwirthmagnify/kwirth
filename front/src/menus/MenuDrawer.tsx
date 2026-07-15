@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Collapse, Divider, MenuItem, MenuList } from "@mui/material"
-import { BrowserUpdated, ChevronRight, CreateNewFolderTwoTone, DeleteTwoTone, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpenTwoTone, FolderOpen, Home, ImportExport, Info, Key, Palette, Person, SaveAsTwoTone, SaveTwoTone, Send, Settings } from '@kwirthmagnify/kwirth-common-front/icons'
+import { BrowserUpdated, ChevronRight, CreateNewFolderTwoTone, DeleteTwoTone, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpenTwoTone, FolderOpen, Home, ImportExport, Info, Key, LockPerson, Palette, Person, SaveAsTwoTone, SaveTwoTone, Send, Settings } from '@kwirthmagnify/kwirth-common-front/icons'
 
 enum MenuDrawerOption {
     NewWorkspace,
@@ -23,6 +23,7 @@ enum MenuDrawerOption {
     ManageHomepages,
     ManageIdps,
     ManageDocs,
+    ManageLogins,
     UpdateKwirth,
     About,
     Exit
@@ -91,6 +92,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageHomepages)}><Home />&nbsp;Homepages</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageIdps)}><Key />&nbsp;Identity providers</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageDocs)}><Description />&nbsp;Documentation</MenuItem>
+                            <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageLogins)}><LockPerson />&nbsp;Login extensions</MenuItem>
                         </MenuList>
                     </Collapse>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.UpdateKwirth)}><BrowserUpdated />&nbsp;Update Kwirth</MenuItem>

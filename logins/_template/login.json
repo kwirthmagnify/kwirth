@@ -1,0 +1,21 @@
+{
+    "top": "50%",
+    "left": "50%",
+    "width": "320px",
+    "height": "",
+    "pageBackground": "#1a1a2e",
+    "dialogBackground": "rgba(0,0,0,0.55)",
+    "textColor": "#ffffff",
+    "title": "Login",
+    "userLabel": "User",
+    "passwordLabel": "Password",
+    "newPasswordLabel": "New password",
+    "repeatPasswordLabel": "Repeat new password",
+    "changePasswordMessage": "Your login has been successful, you can now change your password.",
+    "changePasswordButton": "Change password",
+    "okButton": "Login",
+    "orSeparator": "or",
+    "idpButton": "Log in with {provider}",
+    "startChannel": "",
+    "allowedIdps": []
+}

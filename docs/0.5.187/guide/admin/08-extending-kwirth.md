@@ -12,6 +12,7 @@ Almost everything in Kwirth is an **extension**. Channels, data sources, alert d
 | **Themes** | Visual **appearance** of the UI. | [Themes](../extensions/index) |
 | **Homepages** | Custom **landing dashboards**. | [Homepages](../extensions/index) |
 | **Identity providers** | **SSO connectors** (Google, GitLab, GitHub). | [IdPs](../extensions/index) — see also [IdP integration](07-idp-integration) |
+| **Login extensions** | Custom **branded login pages** with per-extension channel enforcement. | [Login extensions](../extensions/logins/index) |
 | **Documentation** | **Docsify sites** served by Kwirth itself (this guide is one). | [Documentation packages](../extensions/docs/index) |
 
 Each **individual** extension has its own user + admin manual in [Part III](../extensions/index).

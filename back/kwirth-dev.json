@@ -35,6 +35,10 @@
     "timed": "../senders/timed/dist",
     "teams": "../senders/teams/dist"
   },
+  "logins": {
+    "magnify": "../logins/magnify/dist/magnify.tgz",
+    "excubitor": "../plugins/excubitor/login/dist/excubitor.tgz"
+  },
   "homepages": {
     "clusterized": "../homepages/clusterized/dist",
     "matrix": "../homepages/matrix/dist",

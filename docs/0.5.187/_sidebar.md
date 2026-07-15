@@ -83,6 +83,7 @@
       * [Avicii](/0.5.187/guide/extensions/homepages/avicii)
       * [Matrix](/0.5.187/guide/extensions/homepages/matrix)
       * [Depeche Mode](/0.5.187/guide/extensions/homepages/depeche-mode)
+    * [Login extensions](/0.5.187/guide/extensions/logins/index)
 * [Installation](/0.5.187/installation)
 * [How it works](/0.5.187/how)
 * [Data streaming](/0.5.187/datastreaming)

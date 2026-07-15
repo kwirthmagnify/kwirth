@@ -23,7 +23,7 @@ const manifestPath = resolve(process.argv[2] ?? join(__dirname, '..', 'back', 'k
 const manifestDir = dirname(manifestPath)
 const outputDir = resolve(process.argv[3] ?? 'bundled')
 
-const EXTENSION_TYPES = ['plugins', 'providers', 'senders', 'homepages', 'themes', 'idps', 'docs']
+const EXTENSION_TYPES = ['plugins', 'providers', 'senders', 'homepages', 'logins', 'themes', 'idps', 'docs']
 
 const downloadFile = (url, destPath) => new Promise((res, rej) => {
     const protocol = url.startsWith('https') ? https : http
