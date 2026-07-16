@@ -270,6 +270,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showDocsDialog, setShowDocsDialog]=useState<boolean>(false)
     const [showLoginDialog, setShowLoginDialog]=useState<boolean>(false)
     const [loginExtError, setLoginExtError]=useState<string|undefined>(undefined)
+    const [loginExtSlug, setLoginExtSlug]=useState<string|undefined>(() => new URLSearchParams(window.location.search).get('loginExt') ?? undefined)
     const [activeHomepageId, setActiveHomepageId]=useState<string|undefined>(undefined)
     const [homepageConfig, setHomepageConfig]=useState<Record<string, any>>({})
     const homepageIdMounted = useRef(false)
@@ -1003,9 +1004,18 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setKeepAlive(newTab)
             if (newTab.channel.requirements.webSocket) newTab.channelObject.webSocket = newTab.ws
             if (newTab && (newTab.channelStarted || start)) {
+                // *********************************************************************************************
+                // *** REVISAR IMPACTO EN OTROS CANALES Y ENTORNOS DE EJECUCIÓN ANTES DE DAR POR BUENO.    ***
+                // *** Guardamos contra settings.config/instanceConfig === undefined para NO machacar lo    ***
+                // *** que initChannel dejó. Sin esto, el auto-start con start=true (p.ej. enforcement de   ***
+                // *** login / fullscreen) pasa settings={config:undefined} y pisa el config a undefined,   ***
+                // *** rompiendo canales cuyo startChannel lee config (montag: config.selectedSessionId).   ***
+                // *** Antes esto era incondicional: `channelObject.config = settings.config`.              ***
+                // *** PENDIENTE verificar: tab normal, desktop/ELECTRON, in-cluster, remote, restore tabs. ***
+                // *********************************************************************************************
                 if (settings) {
-                    newTab.channelObject.config = settings.config
-                    newTab.channelObject.instanceConfig = settings.instanceConfig
+                    if (settings.config !== undefined) newTab.channelObject.config = settings.config
+                    if (settings.instanceConfig !== undefined) newTab.channelObject.instanceConfig = settings.instanceConfig
                 }
                 startTabChannel(newTab, cluster)
                 setChannelMessageAction({action : EChannelRefreshAction.REFRESH})  // we force rendering
@@ -2005,7 +2015,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         if (cfgResp.ok) {
                             const cfg = await cfgResp.json()
                             const requiredChannel = cfg.startChannel as string | undefined
-                            if (requiredChannel && ssoUser.enabledChannels != null && !ssoUser.enabledChannels.includes(requiredChannel)) {
+                            const isAdmin = parseResources(ssoUser.accessKey.resources).some(r => r.scopes.split(',').includes('admin'))
+                            if (requiredChannel && !isAdmin && ssoUser.enabledChannels != null && ssoUser.enabledChannels.length > 0 && !ssoUser.enabledChannels.includes(requiredChannel)) {
                                 setSsoExchangePending(false)
                                 setLoginExtError(`Your account does not have access to the '${requiredChannel}' channel.`)
                                 return
@@ -2118,12 +2129,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     </Box>
                 )
             }
-            const loginSlug = new URLSearchParams(window.location.search).get('loginExt') ?? undefined
             return (
                 <div style={{ backgroundImage:`url('./turbo-pascal.png')`, backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', width: '100vw', height: '100vh' }} >
                     <SessionContext.Provider value={{ user, accessString: accessString, logged, backendUrl }}>
-                        {loginSlug
-                            ? <LoginExtensionPage slug={loginSlug} backendUrl={backendUrl} methods={props.authMethods} initialError={loginExtError} onClose={onLoginClosed} />
+                        {loginExtSlug
+                            ? <LoginExtensionPage slug={loginExtSlug} backendUrl={backendUrl} methods={props.authMethods} initialError={loginExtError} onClose={onLoginClosed} onNotFound={() => { const p = new URLSearchParams(window.location.search); p.delete('loginExt'); window.history.replaceState({}, '', window.location.pathname + (p.toString() ? '?' + p.toString() : '')); setLoginExtSlug(undefined) }} />
                             : <Login methods={props.authMethods} onClose={onLoginClosed} key={refresh} />
                         }
                     </SessionContext.Provider>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Box, Button, CircularProgress, Menu, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { ExpandMore } from '@kwirthmagnify/kwirth-common-front/icons'
 import { addPostAuthorization } from '../tools/AuthorizationManagement'
-import { EAuthMethodKind, IAuthMethod, ILoginResponse, IUser } from '@kwirthmagnify/kwirth-common'
+import { EAuthMethodKind, IAuthMethod, ILoginResponse, IUser, parseResources } from '@kwirthmagnify/kwirth-common'
 
 interface ILoginExtensionPageProps {
     slug: string
@@ -10,6 +10,7 @@ interface ILoginExtensionPageProps {
     methods: IAuthMethod[]
     initialError?: string
     onClose: (user: IUser | undefined, firstTime: boolean) => void
+    onNotFound?: () => void
 }
 
 interface ILoginConfig {
@@ -58,12 +59,12 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
             let cfg: ILoginConfig | undefined
             try {
                 const cfgRes = await fetch(`${props.backendUrl}/logins/${props.slug}/config`)
-                if (!cfgRes.ok) { props.onClose(undefined, false); return }
+                if (!cfgRes.ok) { props.onNotFound?.(); return }
                 cfg = await cfgRes.json()
                 setConfig(cfg!)
             }
             catch {
-                props.onClose(undefined, false)
+                props.onNotFound?.()
                 return
             }
             if (cfg?.hasBackground) {
@@ -99,7 +100,8 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
                     const loginData = await res.json()
                     const u = buildUser(loginData)
                     const requiredChannel = config?.startChannel
-                    if (requiredChannel && u.enabledChannels != null && !u.enabledChannels.includes(requiredChannel)) {
+                    const isAdmin = parseResources(u.accessKey.resources).some(r => r.scopes.split(',').includes('admin'))
+                    if (requiredChannel && !isAdmin && u.enabledChannels != null && u.enabledChannels.length > 0 && !u.enabledChannels.includes(requiredChannel)) {
                         setError(`Your account does not have access to the '${requiredChannel}' channel required by this login page.`)
                         break
                     }
@@ -156,7 +158,7 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
 
     if (loading) {
         return (
-            <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <CircularProgress />
             </Box>
         )

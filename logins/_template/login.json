@@ -15,7 +15,7 @@
     "changePasswordButton": "Change password",
     "okButton": "Login",
     "orSeparator": "or",
-    "idpButton": "Log in with {provider}",
+    "idpButton": "Log in with...",
     "startChannel": "",
     "allowedIdps": []
 }
