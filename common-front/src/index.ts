@@ -37,6 +37,16 @@ export interface IClusterSummary {
     source: boolean
 }
 
+// Endpoint completo de un cluster conocido (name + url + accessString), para que un canal pueda abrir
+// conexiones a OTROS clusters (federación multi-cluster). Lo expone el core vía IChannelObject.getClusters()
+// cuando el canal declara requirements.clusterManagement. El front ya guarda estos datos (manage clusters).
+export interface IClusterEndpoint {
+    name: string
+    url: string
+    accessString: string
+    source: boolean
+}
+
 export interface IChannelObject {
     clusterName: string
     view: EInstanceConfigView
@@ -57,6 +67,7 @@ export interface IChannelObject {
     selectedClusterName?: string
     selectCluster?: (clusterName: string) => void
     openClusterManager?: () => void
+    getClusters?: () => IClusterEndpoint[]   // lista de clusters con endpoint (url+accessString) para federación multi-cluster
     frontChannels?: Map<string, TChannelConstructor>
     notifications?: any[]
     webSocket?: WebSocket

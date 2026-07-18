@@ -594,7 +594,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         clustersRef.current = clusters
         const summary = clusters.map(c => ({ name: c.name, source: !!c.source }))
         tabs.current.forEach(tab => {
-            if (tab.channel.requirements.clusterManagement) tab.channelObject.clusters = summary
+            if (tab.channel.requirements.clusterManagement) {
+                tab.channelObject.clusters = summary
+                tab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, source: !!c.source }))
+            }
         })
         let c = clusters.find(c => c.source)
         if (c) onChangeCluster(c.name)
@@ -919,6 +922,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
         if (newTab.channel.requirements.clusterManagement) {
             newTab.channelObject.clusters = clustersRef.current.map(c => ({ name: c.name, source: !!c.source }))
+            newTab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, source: !!c.source }))
             newTab.channelObject.selectedClusterName = selectedClusterName
             newTab.channelObject.openClusterManager = () => setShowManageClusters(true)
             newTab.channelObject.selectCluster = (clusterName: string) => {
