@@ -1,5 +1,5 @@
 import React from 'react'
-import { Autocomplete, TextField, Chip } from '@mui/material'
+import { Autocomplete, TextField } from '@mui/material'
 import { IUserInfo } from '@kwirthmagnify/kwirth-common'
 
 // Selector reutilizable de usuario Kwirth. Consume el catálogo de usuarios (IUserInfo, el subset seguro
@@ -33,9 +33,11 @@ const UserPicker: React.FC<IUserPickerProps> = ({ users, value, onChange, label 
             isOptionEqualToValue={(a, b) => a.id === b.id}
             onChange={(_e, u) => onChange(u?.id)}
             renderOption={(props, u) => (
-                <li {...props} key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ flex: 1 }}>{u.name}</span>
-                    {u.idp && <Chip label={u.idp} size="small" variant="outlined" sx={{ height: 18, fontSize: 10 }} />}
+                <li {...props} key={u.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
+                    <span>{u.name}</span>
+                    {(u.id !== u.name || u.idp) && (
+                        <span style={{ fontSize: 11, opacity: 0.6 }}>{[u.id !== u.name ? u.id : undefined, u.idp].filter(Boolean).join(' · ')}</span>
+                    )}
                 </li>
             )}
             renderInput={p => <TextField {...p} label={label} />}
