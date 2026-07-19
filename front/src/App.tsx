@@ -54,7 +54,7 @@ import { HomepageDialog } from './components/HomepageDialog'
 import { DocsDialog } from './components/DocsDialog'
 import { LoginDialog } from './components/LoginDialog'
 import { LoginExtensionPage } from './components/LoginExtensionPage'
-import { IHomepageExtension } from '@kwirthmagnify/kwirth-common-front'
+import { IHomepageExtension, ERemoteConnState } from '@kwirthmagnify/kwirth-common-front'
 
 interface IAppProps {
     backendUrl:string
@@ -594,10 +594,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         clustersRef.current = clusters
         const summary = clusters.map(c => ({ name: c.name, source: !!c.source }))
         tabs.current.forEach(tab => {
-            if (tab.channel.requirements.clusterManagement) {
-                tab.channelObject.clusters = summary
-                tab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, source: !!c.source }))
-            }
+            if (tab.channel.requirements.clusterManagement) tab.channelObject.clusters = summary
+            if (tab.channel.requirements.multiCluster) tab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, source: !!c.source, id: c.id }))
         })
         let c = clusters.find(c => c.source)
         if (c) onChangeCluster(c.name)
@@ -920,9 +918,60 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 case EExtensionType.DOCS:     setShowDocsDialog(true); break
             }
         }
+        if (newTab.channel.requirements.multiCluster) {
+            newTab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, source: !!c.source, id: c.id }))
+            // Federación multi-cluster: abre un WS por cluster (por nombre), lo arranca (START con SU accessKey) y
+            // entrega mensajes por onMessage(uid). Gestiona reconexión (backoff 10s, START fresco → snapshot nuevo
+            // → el canal re-mergea). El WS crudo NO se expone; el canal usa send(uid)/close(). Sin id → DOWN + aviso.
+            newTab.channelObject.openRemoteChannels = (clusterNames: string[], instanceConfig: any, handlers) => {
+                interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval> }
+                const conns: IRemoteConn[] = []
+                const connect = (endpoint: Cluster, conn: IRemoteConn) => {
+                    let ws: WebSocket
+                    try { ws = new WebSocket(endpoint.url) }
+                    catch { return }
+                    conn.ws = ws
+                    ws.onopen = () => {
+                        if (conn.retry) { clearInterval(conn.retry); conn.retry = undefined }
+                        ws.send(JSON.stringify({ ...instanceConfig, action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.SIGNAL, instance: '', accessKey: endpoint.accessString }))
+                        handlers.onState(conn.clusterId, ERemoteConnState.CONNECTED)
+                    }
+                    ws.onmessage = (ev) => { try { handlers.onMessage(conn.clusterId, JSON.parse(ev.data)) } catch { /* no-JSON: ignora */ } }
+                    ws.onclose = () => {
+                        if (conn.closed || conn.retry) return
+                        handlers.onState(conn.clusterId, ERemoteConnState.RECONNECTING)
+                        conn.retry = setInterval(() => { if (!conn.closed) connect(endpoint, conn) }, 10000)
+                    }
+                    ws.onerror = () => { try { ws.close() } catch { /* noop */ } }
+                }
+                for (const name of clusterNames) {
+                    const ep = clustersRef.current.find(c => c.name === name)
+                    const conn: IRemoteConn = { clusterId: ep?.id || name, closed: false }
+                    if (!ep || !ep.id) {
+                        handlers.onState(conn.clusterId, ERemoteConnState.DOWN)
+                        notify(undefined, ENotifyLevel.WARNING, `Cluster '${name}' has no id or is unreachable; excluded from the landscape view`)
+                        continue
+                    }
+                    conns.push(conn)
+                    connect(ep, conn)
+                }
+                return {
+                    send: (clusterId: string, msg: any) => {
+                        const c = conns.find(x => x.clusterId === clusterId)
+                        if (c?.ws && c.ws.readyState === WebSocket.OPEN) c.ws.send(JSON.stringify(msg))
+                    },
+                    close: () => {
+                        for (const c of conns) {
+                            c.closed = true
+                            if (c.retry) { clearInterval(c.retry); c.retry = undefined }
+                            if (c.ws) { c.ws.onclose = null; c.ws.onerror = null; c.ws.onmessage = null; try { c.ws.close() } catch { /* noop */ } }
+                        }
+                    }
+                }
+            }
+        }
         if (newTab.channel.requirements.clusterManagement) {
             newTab.channelObject.clusters = clustersRef.current.map(c => ({ name: c.name, source: !!c.source }))
-            newTab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, source: !!c.source }))
             newTab.channelObject.selectedClusterName = selectedClusterName
             newTab.channelObject.openClusterManager = () => setShowManageClusters(true)
             newTab.channelObject.selectCluster = (clusterName: string) => {

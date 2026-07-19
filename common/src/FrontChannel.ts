@@ -39,6 +39,7 @@ interface IChannelRequirements {
     backChannels: boolean
     openManager?: boolean
     clusterManagement?: boolean
+    multiCluster?: boolean       // channel federates across clusters → core wires getClusters() + openRemoteChannels()
 }
 
 export { ENotifyLevel, EChannelRefreshAction }

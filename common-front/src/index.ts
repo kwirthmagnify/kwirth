@@ -45,6 +45,26 @@ export interface IClusterEndpoint {
     url: string
     accessString: string
     source: boolean
+    id: string                 // uid del cluster (kube-system uid); '' si aún no resuelto (readClusterInfo pendiente)
+}
+
+// Estado de una conexión remota gestionada por el core (federación multi-cluster). Nunca string literals.
+export enum ERemoteConnState {
+    CONNECTED = 'connected',
+    RECONNECTING = 'reconnecting',
+    DOWN = 'down'
+}
+
+// Callbacks que el canal registra para consumir las conexiones remotas (keyed por uid de cluster).
+export interface IRemoteChannelHandlers {
+    onMessage: (clusterId: string, msg: any) => void
+    onState: (clusterId: string, state: ERemoteConnState) => void
+}
+
+// Handle gestionado que devuelve openRemoteChannels: el WS crudo NO se expone (se reemplaza en reconexión).
+export interface IRemoteChannelHandle {
+    send: (clusterId: string, msg: any) => void   // enruta al WS vivo del cluster
+    close: () => void                             // cierra todas las conexiones + detiene reintentos
 }
 
 export interface IChannelObject {
@@ -68,6 +88,9 @@ export interface IChannelObject {
     selectCluster?: (clusterName: string) => void
     openClusterManager?: () => void
     getClusters?: () => IClusterEndpoint[]   // lista de clusters con endpoint (url+accessString) para federación multi-cluster
+    // Abre una conexión de canal a cada cluster (por nombre), ya arrancada; el core gestiona handshake +
+    // reconexión (el canal solo recibe onMessage/onState). Gated por requirements.clusterManagement.
+    openRemoteChannels?: (clusterNames: string[], instanceConfig: any, handlers: IRemoteChannelHandlers) => IRemoteChannelHandle
     frontChannels?: Map<string, TChannelConstructor>
     notifications?: any[]
     webSocket?: WebSocket
