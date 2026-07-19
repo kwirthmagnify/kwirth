@@ -35,9 +35,7 @@ const UserPicker: React.FC<IUserPickerProps> = ({ users, value, onChange, label 
             renderOption={(props, u) => (
                 <li {...props} key={u.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
                     <span>{u.name}</span>
-                    {(u.id !== u.name || u.idp) && (
-                        <span style={{ fontSize: 11, opacity: 0.6 }}>{[u.id !== u.name ? u.id : undefined, u.idp].filter(Boolean).join(' · ')}</span>
-                    )}
+                    <span style={{ fontSize: 11, opacity: 0.6 }}>{[u.id, u.idp].filter(Boolean).join(' · ')}</span>
                 </li>
             )}
             renderInput={p => <TextField {...p} label={label} />}
