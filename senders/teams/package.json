@@ -2,7 +2,7 @@
   "id": "teams",
   "name": "@kwirthmagnify/kwirth-sender-teams",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.10",
+  "version": "0.1.12",
   "displayName": "MS Teams Sender",
   "description": "MS Teams sender for Kwirth — sends messages via incoming webhook",
   "type": "module",
@@ -11,7 +11,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.22"
+    "@kwirthmagnify/kwirth-common-back": "^0.5.25"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",

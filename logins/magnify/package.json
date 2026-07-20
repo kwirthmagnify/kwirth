@@ -2,8 +2,12 @@
     "name": "@kwirthmagnify/login-magnify",
     "id": "magnify",
     "displayName": "Magnify",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Custom login page for Magnify channel",
     "targetType": "login",
-    "website": "https://github.com/kwirthmagnify/kwirth"
+    "website": "https://github.com/kwirthmagnify/kwirth",
+    "scripts": {
+        "build": "node build.mjs",
+        "watch": "node watch.mjs"
+    }
 }

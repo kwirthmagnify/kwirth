@@ -2,7 +2,7 @@
   "id": "kafka",
   "name": "@kwirthmagnify/kwirth-provider-kafka",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.7",
+  "version": "0.1.9",
   "displayName": "Kafka Provider",
   "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces",
   "type": "module",
@@ -11,7 +11,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.22",
+    "@kwirthmagnify/kwirth-common-back": "^0.5.25",
     "kafkajs": "^2.2.4"
   },
   "devDependencies": {

@@ -1,0 +1,12 @@
+[
+  {
+    "extensionType": "login",
+    "id": "magnify",
+    "version": "0.1.1",
+    "name": "Magnify",
+    "displayName": "Magnify",
+    "description": "Custom login page for Magnify channel",
+    "website": "https://github.com/kwirthmagnify/kwirth",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/login-magnify/-/login-magnify-0.1.1.tgz"
+  }
+]

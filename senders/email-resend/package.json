@@ -2,7 +2,7 @@
   "id": "email-resend",
   "name": "@kwirthmagnify/kwirth-sender-email-resend",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.9",
+  "version": "0.1.11",
   "displayName": "Email Sender (Resend)",
   "description": "Email sender for Kwirth — sends messages via Resend (resend.dev)",
   "type": "module",
@@ -11,7 +11,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.22",
+    "@kwirthmagnify/kwirth-common-back": "^0.5.25",
     "resend": "^4.0.0"
   },
   "devDependencies": {

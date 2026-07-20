@@ -2,7 +2,7 @@
   "id": "post-punk",
   "name": "@kwirthmagnify/kwirth-theme-post-punk",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "displayName": "Post Punk",
   "description": "Dark monochrome theme with acid-green accents and monospace typography, inspired by the post-punk aesthetic.",
   "type": "module",

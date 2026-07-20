@@ -2,7 +2,7 @@
   "id": "tick",
   "name": "@kwirthmagnify/kwirth-provider-tick",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.7",
+  "version": "0.1.9",
   "displayName": "Tick Provider",
   "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
   "website": "https://kwirthmagnify.dev",
@@ -12,7 +12,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.22"
+    "@kwirthmagnify/kwirth-common-back": "^0.5.25"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",

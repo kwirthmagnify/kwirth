@@ -2,7 +2,7 @@
   "id": "trivy",
   "name": "@kwirthmagnify/kwirth-provider-trivy",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.5",
+  "version": "0.1.7",
   "displayName": "Trivy Provider",
   "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
   "website": "https://kwirthmagnify.dev",
@@ -12,7 +12,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.22"
+    "@kwirthmagnify/kwirth-common-back": "^0.5.25"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",

@@ -100,5 +100,60 @@
     "version": "0.1.1",
     "description": "Depeche Mode Memento Mori theme — abyss black, blood red accent, bone parchment, condensed bold typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-depeche-mode/-/kwirth-theme-depeche-mode-0.1.1.tgz"
+  },
+  {
+    "extensionType": "theme",
+    "id": "sfy",
+    "name": "@kwirthmagnify/kwirth-theme-sfy",
+    "displayName": "SFY",
+    "version": "0.1.3",
+    "description": "SFY-inspired theme — sky blue primary, charcoal dark surfaces, teal-mint secondary, Lato + Montserrat typography.",
+    "website": "https://sfy.com",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-sfy/-/kwirth-theme-sfy-0.1.3.tgz"
+  },
+  {
+    "extensionType": "theme",
+    "id": "plexus",
+    "name": "@kwirthmagnify/kwirth-theme-plexus",
+    "displayName": "Plexus",
+    "version": "0.1.3",
+    "description": "Plexus corporate theme — deep navy background with coral accent and Lato typography.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-plexus/-/kwirth-theme-plexus-0.1.3.tgz"
+  },
+  {
+    "extensionType": "theme",
+    "id": "post-punk",
+    "name": "@kwirthmagnify/kwirth-theme-post-punk",
+    "displayName": "Post Punk",
+    "version": "0.1.2",
+    "description": "Dark monochrome theme with acid-green accents and monospace typography, inspired by the post-punk aesthetic.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-post-punk/-/kwirth-theme-post-punk-0.1.2.tgz"
+  },
+  {
+    "extensionType": "theme",
+    "id": "avicii",
+    "name": "@kwirthmagnify/kwirth-theme-avicii",
+    "displayName": "Avicii",
+    "version": "0.1.2",
+    "description": "Avicii-inspired theme — warm gold on deep black, geometric triangle motifs, sharp Oswald typography.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-avicii/-/kwirth-theme-avicii-0.1.2.tgz"
+  },
+  {
+    "extensionType": "theme",
+    "id": "matrix",
+    "name": "@kwirthmagnify/kwirth-theme-matrix",
+    "displayName": "Matrix",
+    "version": "0.1.2",
+    "description": "Matrix-style theme — deep black background with neon green accents and monospace typography.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-matrix/-/kwirth-theme-matrix-0.1.2.tgz"
+  },
+  {
+    "extensionType": "theme",
+    "id": "depeche-mode",
+    "name": "@kwirthmagnify/kwirth-theme-depeche-mode",
+    "displayName": "Depeche Mode",
+    "version": "0.1.2",
+    "description": "Depeche Mode Memento Mori theme — abyss black, blood red accent, bone parchment, condensed bold typography.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-depeche-mode/-/kwirth-theme-depeche-mode-0.1.2.tgz"
   }
 ]

@@ -169,5 +169,41 @@
     "version": "0.1.3",
     "description": "Depeche Mode homepage — abyss black, blood red accents, bone text, condensed bold typography, ASCII metric charts and STRANGELOVE cluster launch.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-depeche-mode/-/kwirth-homepage-depeche-mode-0.1.3.tgz"
+  },
+  {
+    "extensionType": "homepage",
+    "id": "clusterized",
+    "name": "@kwirthmagnify/kwirth-homepage-clusterized",
+    "displayName": "Clusterized",
+    "version": "0.1.9",
+    "description": "Cluster-centric homepage for Kwirth — one card per cluster with status indicator and quick Magnify access.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-clusterized/-/kwirth-homepage-clusterized-0.1.9.tgz"
+  },
+  {
+    "extensionType": "homepage",
+    "id": "matrix",
+    "name": "@kwirthmagnify/kwirth-homepage-matrix",
+    "displayName": "Matrix",
+    "version": "0.1.9",
+    "description": "Matrix-style cluster overview homepage for Kwirth.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-matrix/-/kwirth-homepage-matrix-0.1.9.tgz"
+  },
+  {
+    "extensionType": "homepage",
+    "id": "avicii",
+    "name": "@kwirthmagnify/kwirth-homepage-avicii",
+    "displayName": "Avicii",
+    "version": "0.1.12",
+    "description": "Avicii-inspired homepage — warm gold on black, geometric triangle motifs, sharp Oswald typography, and live cluster metrics.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-avicii/-/kwirth-homepage-avicii-0.1.12.tgz"
+  },
+  {
+    "extensionType": "homepage",
+    "id": "depeche-mode",
+    "name": "@kwirthmagnify/kwirth-homepage-depeche-mode",
+    "displayName": "Depeche Mode",
+    "version": "0.1.5",
+    "description": "Depeche Mode homepage — abyss black, blood red accents, bone text, condensed bold typography, ASCII metric charts and STRANGELOVE cluster launch.",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-depeche-mode/-/kwirth-homepage-depeche-mode-0.1.5.tgz"
   }
 ]
