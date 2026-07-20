@@ -47,7 +47,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
     }
 
     useEffect(() => {
-        const targetCluster = props.cluster || props.clusters.find(x => x.source);
+        const targetCluster = props.cluster || props.clusters.find(x => x.home);
         if (!targetCluster) return;
 
         const i = setInterval((c: Cluster) => {

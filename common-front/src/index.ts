@@ -34,7 +34,7 @@ export type TChannelConstructor = (new () => IChannel) | undefined
 
 export interface IClusterSummary {
     name: string
-    source: boolean
+    home: boolean          // el cluster desde el que se lanzó Kwirth (antes 'source')
 }
 
 // Endpoint completo de un cluster conocido (name + url + accessString), para que un canal pueda abrir
@@ -44,7 +44,7 @@ export interface IClusterEndpoint {
     name: string
     url: string
     accessString: string
-    source: boolean
+    home: boolean              // el cluster desde el que se lanzó Kwirth (antes 'source')
     id: string                 // uid del cluster (kube-system uid); '' si aún no resuelto (readClusterInfo pendiente)
 }
 

@@ -144,10 +144,10 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                     </List>
                     {
                         <Stack sx={{width:'50vh'}} spacing={1}>
-                            <TextField value={name} onChange={(e) => setName(e.target.value)} disabled={selectedCluster?.source} variant='standard' label='Name'></TextField>
+                            <TextField value={name} onChange={(e) => setName(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='Name'></TextField>
                             <TextField value={selectedCluster?.id || ''} disabled variant='standard' label='Id'></TextField>
-                            <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.source} variant='standard' label='URL'></TextField>
-                            <TextField value={accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.source} variant='standard' label='API Key'></TextField>
+                            <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='URL'></TextField>
+                            <TextField value={accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='API Key'></TextField>
                         </Stack>
                     }
                 </Stack>
@@ -155,9 +155,9 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             <DialogActions>
               <Stack direction='row' spacing={1}>
                 <Button onClick={onClickNew}>NEW</Button>
-                <Button onClick={onClickSave} disabled={selectedCluster?.source || name==='' || url==='' || accessKey==='' }>SAVE</Button>
+                <Button onClick={onClickSave} disabled={selectedCluster?.home || name==='' || url==='' || accessKey==='' }>SAVE</Button>
                 <Button onClick={onClickTest} disabled={!url || !url.toLocaleLowerCase().startsWith('http') || !accessKey}>TEST</Button>
-                <Button onClick={onClickDelete} disabled={selectedCluster===undefined || selectedCluster?.source}>DELETE</Button>
+                <Button onClick={onClickDelete} disabled={selectedCluster===undefined || selectedCluster?.home}>DELETE</Button>
               </Stack>
               <Typography sx={{flexGrow:1}}></Typography>
               <Button onClick={() => props.onClose(clusters)}>CLOSE</Button>

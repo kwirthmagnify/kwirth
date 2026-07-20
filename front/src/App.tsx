@@ -592,19 +592,19 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     useEffect( () => {
         clustersRef.current = clusters
-        const summary = clusters.map(c => ({ name: c.name, source: !!c.source }))
+        const summary = clusters.map(c => ({ name: c.name, home: !!c.home }))
         tabs.current.forEach(tab => {
             if (tab.channel.requirements.clusterManagement) tab.channelObject.clusters = summary
-            if (tab.channel.requirements.multiCluster) tab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, source: !!c.source, id: c.id }))
+            if (tab.channel.requirements.multiCluster) tab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, home: !!c.home, id: c.id }))
         })
-        let c = clusters.find(c => c.source)
+        let c = clusters.find(c => c.home)
         if (c) onChangeCluster(c.name)
     }, [clusters])
 
     useEffect( () => {
         if (!logged || !user?.startChannel || clusters.length === 0 || autoStartedRef.current) return
         autoStartedRef.current = true
-        const srcCluster = clusters.find(c => c.source)
+        const srcCluster = clusters.find(c => c.home)
         if (!srcCluster || !frontChannels.has(user.startChannel)) {
             setAutoStartPending(false)
             return
@@ -699,7 +699,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         srcCluster.name = srcCluster.kwirthData.clusterName
         srcCluster.url = url
         srcCluster.accessString = myAccessString
-        srcCluster.source = true
+        srcCluster.home = true
         srcCluster.enabled = true
         let srcMetricsRequired = Array.from(srcCluster.kwirthData.channels).reduce( (prev, current) => { return prev || current.metrics}, false)
         if (srcMetricsRequired) getMetricsNames(srcCluster)
@@ -919,7 +919,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             }
         }
         if (newTab.channel.requirements.multiCluster) {
-            newTab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, source: !!c.source, id: c.id }))
+            newTab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, home: !!c.home, id: c.id }))
             // Federación multi-cluster: abre un WS por cluster (por nombre), lo arranca (START con SU accessKey) y
             // entrega mensajes por onMessage(uid). Gestiona reconexión (backoff 10s, START fresco → snapshot nuevo
             // → el canal re-mergea). El WS crudo NO se expone; el canal usa send(uid)/close(). Sin id → DOWN + aviso.
@@ -971,7 +971,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             }
         }
         if (newTab.channel.requirements.clusterManagement) {
-            newTab.channelObject.clusters = clustersRef.current.map(c => ({ name: c.name, source: !!c.source }))
+            newTab.channelObject.clusters = clustersRef.current.map(c => ({ name: c.name, home: !!c.home }))
             newTab.channelObject.selectedClusterName = selectedClusterName
             newTab.channelObject.openClusterManager = () => setShowManageClusters(true)
             newTab.channelObject.selectCluster = (clusterName: string) => {
@@ -1925,7 +1925,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
  
     const onManageClustersClosed = (cc:Cluster[]) => {
         setShowManageClusters(false)
-        let otherClusters = cc.filter (c => !c.source)
+        let otherClusters = cc.filter (c => !c.home)
         let payload=JSON.stringify(otherClusters)
         fetch (`${backendUrl}/store/${user?.id}/clusters/list`, addPostAuthorization(accessString, payload))
         setClusters([...cc])

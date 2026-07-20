@@ -28,7 +28,7 @@ export const readClusterInfo = async (cluster: Cluster, notify: (channel:string|
         if (responseInfo.status===200) {
             cluster.kwirthData = await responseInfo.json() as KwirthData
             // accessString, name & url are set in clustersList, we don't overwrite them here
-            cluster.source = false
+            cluster.home = false
             cluster.enabled = true
             if (cluster.kwirthData) {
                 let metricsRequired = Array.from(cluster.kwirthData.channels).reduce( (prev, current) => { return prev || current.metrics}, false)

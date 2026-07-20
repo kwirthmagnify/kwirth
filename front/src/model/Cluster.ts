@@ -7,7 +7,7 @@ export class Cluster {
     public enabled: boolean = true
     public url: string = ''
     public accessString: string = ''
-    public source: boolean|undefined = false
+    public home: boolean|undefined = false
     public inCluster: boolean = false
     public metricsList: Map<string,MetricDefinition> = new Map()  //+++ review if needs to be moved to metrics channel
     public kwirthData?: KwirthData
