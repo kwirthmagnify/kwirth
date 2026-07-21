@@ -583,7 +583,7 @@ async function setIngressClassAsDefault (networkApi: NetworkingV1Api, name:strin
         console.log(`✅ IngressClass "${name}" set as default.`)
     }
     catch (err) {
-        console.error('Error al pathing igress class IngressClass:', err)
+        console.error('Error setting default IngressClass:', err)
     }        
 }
 
@@ -628,7 +628,7 @@ async function imageDelete(appsApi: AppsV1Api, imageName: string) {
                                 export CONTAINER_RUNTIME_ENDPOINT="unix://$S"
                                 export IMAGE_SERVICE_ENDPOINT="unix://$S"
                                 echo "Socket detected in $S. Removing ${safeImageName}..."
-                                /usr/local/bin/crictl rmi "${safeImageName}" || echo "La imagen no existe en este nodo."
+                                /usr/local/bin/crictl rmi "${safeImageName}" || echo "Image not found on this node."
                             else
                                 echo "ERROR: Runtime socket not found in /host-run nor /host-var-run"
                                 exit 1

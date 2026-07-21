@@ -211,7 +211,7 @@ class IdentityService {
 - `IdpApi` (gestión, admin): `riRouter.use('/idp', idpApi.router)` (~`index.ts:1146`).
 - `IdpManager` creado en el bootstrap de managers (junto a Provider/Sender managers): `loadDevIdps` (dev), `installBundled` (bundled), `loadAll` (installable). `registeredIdps` se puebla por esas 3 vías. La infra (`AuthApi`/`IdpApi`/`IdpManager`/`IIdpConnector`/`IdentityService`) va compilada en `back/src`.
 
-## 10. Setup externo (Google) — ver docs/0.5.187/idp/google.md
+## 10. Setup externo (Google) — ver docs/0.5.287/idp/google.md
 Registrar OAuth client (Web application), consent screen External, redirect URI `https://<host>[/rootpath]/core/auth/google/callback` (+ localhost dev), scopes `openid email profile` (no sensibles → sin verificación), test users. `client_id`/`client_secret` se meten **desde el front** (no env).
 
 ## 11. Config
@@ -318,9 +318,9 @@ Formato: *ficheros · qué hace · criterio de aceptación (CA)*.
   - `github-cloud`: base/api **fijas** `https://github.com` / `https://api.github.com`; config = clientId/secret.
   - `github-onprem`: base/api **requeridas** (host GHE + `.../api/v3`); config = baseUrl + apiBaseUrl + clientId/secret.
   - *MVP/CA*: login github.com entra; email no verificado → `unverified`; GHE entra con `github-onprem`.
-- **F4** Docs `docs/0.5.187/idp/gitlab.md` + `github.md` (cloud y on-prem, modelo nuevo: config desde el front, no env vars) + `index.md` modernizado (habilitación por UI + dropdown + lista de providers). `kwirth-dev.json` entries ya añadidas en F1/F3. ✅ **HECHO**.
+- **F4** Docs `docs/0.5.287/idp/gitlab.md` + `github.md` (cloud y on-prem, modelo nuevo: config desde el front, no env vars) + `index.md` modernizado (habilitación por UI + dropdown + lista de providers). `kwirth-dev.json` entries ya añadidas en F1/F3. ✅ **HECHO**.
   - **E2E fake OAuth2**: NO se añade test nuevo — el flujo de `AuthApi` (start→callback→gate→exchange) es **agnóstico al kind** y ya está cubierto por los 7 E2E de `AuthApi.test.ts` (fake OIDC); la lógica OAuth2/GitHub está cubierta por los **11 unit tests** de common-back; y los conectores por sus smoke tests. Añadir un fake OAuth2 en AuthApi duplicaría cobertura sin ejercitar código nuevo.
-  - ⚠️ **Pendiente aparte**: `docs/0.5.187/idp/google.md` sigue documentando el modelo viejo (env vars `AUTH_GOOGLE_*` / `FRONTURL`). Actualizar a config-desde-front.
+  - ⚠️ **Pendiente aparte**: `docs/0.5.287/idp/google.md` sigue documentando el modelo viejo (env vars `AUTH_GOOGLE_*` / `FRONTURL`). Actualizar a config-desde-front.
 
 **Orden sugerido** (cada fase = MVP usable): **F1 → F2 → F3 → F4**. ✅ (F1–F4 hechos; 4 conectores publicados 0.1.0).
 
@@ -340,7 +340,7 @@ Los conectores son extensiones instalables → se pueden ir añadiendo sin tocar
 - **G0** Scaffolding top-level `idps/` (`idps/google/` con build.mjs/watch.mjs, `idps/manifest.json`) + `IdpManager.loadDevIdps` (clave `idps` en `kwirth-dev.json`). ✅ **HECHO**
 - **G1** install/uninstall de conectores (tgz vía URL/upload, `installBundled`, `loadAll` en arranque) · `IdpManager` (índice+meta+back.js comprimido en configmap, espejo de `ProviderManager`) + `IdpApi` (`POST /idp/connectors/install`, `POST /idp/connectors/upload`, `DELETE /idp/connectors/:id`, **admin via validKey**) + montaje `init/loadAll/installBundled` en `index.ts`. Harness ESM con `require` inyectado (banner). ✅ **HECHO** (test install/loadAll/uninstall con tgz real; 44/44).
 - **G2** auditoría de logins IdP (`ELogComponent.AUTH`, ya se loguea OK/rechazos en `AuthApi`). ✅
-- **G3** doc de seguridad del flujo IdP · `docs/0.5.187/idp/security.md` (PKCE+state, back-channel, handoff single-use TTL, anti open-redirect, secretos `kwirth-idps` write-only, gestión admin-only) + enlazado desde `idp/index.md`. ✅ **HECHO**
+- **G3** doc de seguridad del flujo IdP · `docs/0.5.287/idp/security.md` (PKCE+state, back-channel, handoff single-use TTL, anti open-redirect, secretos `kwirth-idps` write-only, gestión admin-only) + enlazado desde `idp/index.md`. ✅ **HECHO**
 - **G4** *(opcional, DIFERIDO — pedido por el usuario)* binding por `sub` inmutable / TOFU: hoy el binding es email + connectorId; fijar el `sub` del IdP en el primer login endurecería frente a reasignación de email en el IdP. Apuntado como mejora futura. ⬜
 
 ## EPIC H — Desktop SSO (P2) — ❌ DESCARTADO

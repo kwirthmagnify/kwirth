@@ -1,6 +1,6 @@
 # Guide review — code-vs-docs consistency pass (2026-07)
 
-Autonomous review of `docs/0.5.187/guide/` against the current codebase (no permission-requiring
+Autonomous review of `docs/0.5.287/guide/` against the current codebase (no permission-requiring
 commands). Driven by the recent commit history (RBAC refactor, per-user login behaviour,
 plugin-manager changes, daemon-category retirement).
 
@@ -74,9 +74,9 @@ by permission prompts on `node` runs; the affected screenshots differ only by co
 
 ## Noted for the user (NOT changed — outside the `guide/` tree or needs a decision)
 
-- **"daemon" wording lingers in the OLD reference docs**, not in the guide: `docs/0.5.187/channels/*`,
-  `docs/0.5.187/plugins/reference/*`, `docs/0.5.187/developing/back.md`, `docs/0.5.187/apimanagement/*`,
-  `docs/0.5.187/commontasks.md`. The code retired the *daemon* extension category (commits `e63a2a3`,
+- **"daemon" wording lingers in the OLD reference docs**, not in the guide: `docs/0.5.287/channels/*`,
+  `docs/0.5.287/plugins/reference/*`, `docs/0.5.287/developing/back.md`, `docs/0.5.287/apimanagement/*`,
+  `docs/0.5.287/commontasks.md`. The code retired the *daemon* extension category (commits `e63a2a3`,
   `608a447`, `8c4ff7c`). The `guide/` tree is clean. Decide whether the reference docs should be scrubbed too.
 - **Low priority — screenshots possibly affected by the "dialog padding" cosmetic change** (`b7b75a6`):
   `admin-api-security.png` and the About dialog capture. Functionally still correct; recapture only if

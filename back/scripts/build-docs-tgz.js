@@ -41,7 +41,7 @@ async function main() {
     let sidebarContent = existsSync(sidebarSrc) ? readFileSync(sidebarSrc, 'utf-8') : ''
     // Remove the version-selector <center> block (multi-line)
     sidebarContent = sidebarContent.replace(/<center>[\s\S]*?<\/center>\s*/m, '')
-    // Replace /version/ prefix in links: (/0.5.187/foo) → (/foo)
+    // Replace /version/ prefix in links: (/0.5.287/foo) → (/foo)
     sidebarContent = sidebarContent.replace(new RegExp(`/${version}/`, 'g'), '/')
 
     const indexHtml = `<!DOCTYPE html>

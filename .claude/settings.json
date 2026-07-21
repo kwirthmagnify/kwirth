@@ -55,9 +55,7 @@
       "Bash(git -C c:/github/aisdkvercel/kwirth status --short -- front/src/components/security front/src/components/Login.tsx)",
       "Bash(git -C c:/github/aisdkvercel/kwirth ls-files --others --exclude-standard -- front/src/components)",
       "Bash(git -C c:/github/aisdkvercel/kwirth log -3 --stat --oneline)",
-      "Bash(rm -f c:/github/aisdkvercel/kwirth/docs/0.5.187/_media/guide/_probe-*.png && echo \"probes removed\")",
       "PowerShell(node \"C:\\\\Users\\\\JULIO~1.FER\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--github-aisdkvercel-kwirth\\\\e1b34b45-e60b-45cb-8f74-17ac67ea9213\\\\scratchpad\\\\qa-usermgmt.mjs\")",
-      "Bash(git -C c:/github/aisdkvercel/kwirth add docs/0.5.187/guide/admin/03-user-management.md docs/0.5.187/guide/admin/04-security-and-permissions.md docs/0.5.187/guide/extensions/plugins/ops.md docs/0.5.187/guide/extensions/plugins/magnify.md plans/user-admin-guide/GUIDE-REVIEW-2026-07.md)",
       "Bash(git -C c:/github/aisdkvercel/kwirth commit -q -m \"docs\\(guide\\): sync RBAC scopes with code \\(Ops = get/restart; drop xterm/execute\\)\" -m \"Ops declares only the get and restart scopes now; the xterm and execute scopes were removed \\(shell/exec is not gated by its own scope\\). Updated ch4 scopes table + example C, ch3 shell note, ops.md scopes table, magnify.md permissions; aligned cluster/trivy wording with ScopeCatalog and TrivyTypes; added GUIDE-REVIEW-2026-07 notes.\" -m \"Co-Authored-By: Claude Opus 4.8 \\(1M context\\) <noreply@anthropic.com>\")",
       "Bash(git -C c:/github/aisdkvercel/kwirth push -q origin master)",
       "PowerShell(cd c:\\\\github\\\\aisdkvercel\\\\kwirth\\\\plugins\\\\defender; npm install 2>&1 | Select-Object -Last 3; \"INSTALL=$LASTEXITCODE\"; grep -m1 '\"version\"' node_modules/@kwirthmagnify/kwirth-common-front/package.json)",
@@ -68,7 +66,7 @@
       "Bash(mkdir -p c:/github/aisdkvercel/kwirth/plans/user-admin-guide/_cap && cp \"/c/Users/JULIO~1.FER/AppData/Local/Temp/claude/c--github-aisdkvercel-kwirth/e1b34b45-e60b-45cb-8f74-17ac67ea9213/scratchpad/lib.mjs\" c:/github/aisdkvercel/kwirth/plans/user-admin-guide/_cap/lib.mjs && echo ok)"
     ],
     "additionalDirectories": [
-      "c:\\github\\aisdkvercel\\kwirth\\docs\\0.5.187\\_media\\guide",
+      "c:\\github\\aisdkvercel\\kwirth\\docs\\0.5.287\\_media\\guide",
       "C:\\Users\\JULIO~1.FER\\AppData\\Local\\Temp\\claude\\c--github-aisdkvercel-kwirth\\e1b34b45-e60b-45cb-8f74-17ac67ea9213\\scratchpad"
     ]
   }

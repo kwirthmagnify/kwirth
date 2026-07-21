@@ -2,7 +2,7 @@
 
 > Estado: **borrador para revisión**. No se ha escrito documentación todavía.
 > Entregable: nueva sección **"User & Admin Guide"** dentro de la docu versionada.
-> Idioma del entregable: **inglés** (coherente con el resto de `docs/0.5.187/`).
+> Idioma del entregable: **inglés** (coherente con el resto de `docs/0.5.287/`).
 > Idioma de este plan: español.
 
 ---
@@ -11,7 +11,7 @@
 
 Crear una **guía autocontenida orientada a "cómo se usa y se configura" Kwirth**, para dos audiencias (usuario final y administrador), más **manuales de usuario+admin de cada extensión**. Es intencionadamente **distinta en orientación** a la docu de referencia actual (que es exhaustiva y técnica): la guía es narrativa, por tareas, y **puede duplicar contenido** sin problema.
 
-Vive en `docs/0.5.187/guide/` y se enlaza desde `_sidebar.md`. Se entrega en **4 fases**, parando tras cada una para revisión.
+Vive en `docs/0.5.287/guide/` y se enlaza desde `_sidebar.md`. Se entrega en **4 fases**, parando tras cada una para revisión.
 
 ---
 
@@ -19,7 +19,7 @@ Vive en `docs/0.5.187/guide/` y se enlaza desde `_sidebar.md`. Se entrega en **4
 
 - **Audiencia**: usuarios **y** administradores. Enfoque uso + configuración.
 - **Autocontenida**: orientación distinta a la docu de referencia; se acepta duplicar.
-- **Ubicación**: docu versionada, carpeta nueva `docs/0.5.187/guide/`.
+- **Ubicación**: docu versionada, carpeta nueva `docs/0.5.287/guide/`.
 - **Idioma**: inglés (docs); comentarios/plan en español.
 - **Extensiones (Parte III)**: **ficha detallada usuario+admin por cada item** (**43 items**), agrupadas por tipo/familia, con **todo el detalle de uso y config** y **capturas**. **NO se incluyen**: daemons (se retiran de la docu) ni extensiones **de pago** (`defender`, `montag`, y conectores IdP pro) → esas irán en una futura **sección de marketplace**.
 - **Troceado**: Fase 0 (andamiaje) · Fase 1 (Parte I usuario) · Fase 2 (Parte II admin) · Fase 3 (Parte III extensiones). **Parar tras cada fase.**
@@ -44,7 +44,7 @@ La guía cubre **todas**, incluidas las no documentadas. Para las no documentada
 ## 3. Estructura de ficheros
 
 ```
-docs/0.5.187/guide/
+docs/0.5.287/guide/
   index.md                          # portada + índice completo de la guía
   user/                             # Parte I — Guía de usuario
     01-introduction.md
@@ -73,7 +73,7 @@ docs/0.5.187/guide/
     homepages/{avicii,clusterized,depeche-mode,matrix}.md
 ```
 
-Imágenes: reutilizar las existentes en `docs/0.5.187/_media/` cuando apliquen; las **nuevas capturas las genero yo** (ver §8).
+Imágenes: reutilizar las existentes en `docs/0.5.287/_media/` cuando apliquen; las **nuevas capturas las genero yo** (ver §8).
 
 ---
 
@@ -128,7 +128,7 @@ Ajustar las secciones según la familia. Ojo: **casi todas las extensiones se co
 - Crear `guide/index.md` (portada + TOC completo navegable).
 - Añadir entrada **"User & Admin Guide"** en `_sidebar.md` (al menos el índice; se expande por fase).
 - **MVP**: se puede navegar a la guía y ver su índice.
-- **Checks**: levantar `docs/serve` (o `serve.cmd`), navegar a `#/0.5.187/guide/index`, ver la portada y que el enlace del sidebar funciona. Sin 404 en el índice.
+- **Checks**: levantar `docs/serve` (o `serve.cmd`), navegar a `#/0.5.287/guide/index`, ver la portada y que el enlace del sidebar funciona. Sin 404 en el índice.
 
 ### Fase 1 — Parte I (usuario)
 - Escribir caps. 1–7 de `user/`.
@@ -160,7 +160,7 @@ Ajustar las secciones según la familia. Ojo: **casi todas las extensiones se co
 ## 6. Regresión (no romper lo existente)
 
 - **No tocar** los `.md` de referencia existentes ni las versiones anteriores (`0.5.40`, etc.).
-- Solo se **añade** una sección al `_sidebar.md` de `0.5.187`; no reordenar lo demás.
+- Solo se **añade** una sección al `_sidebar.md` de `0.5.287`; no reordenar lo demás.
 - Reutilizar imágenes de `_media/` sin moverlas ni renombrarlas.
 - El selector de versiones y la navegación existente deben seguir funcionando igual.
 
@@ -168,7 +168,7 @@ Ajustar las secciones según la familia. Ojo: **casi todas las extensiones se co
 
 ## 7. Convenciones de estilo
 
-- Markdown estilo docsify (como el resto de `0.5.187/`): `#`/`##`, tablas, bloques ```; enlaces relativos tipo `(channels/log)`.
+- Markdown estilo docsify (como el resto de `0.5.287/`): `#`/`##`, tablas, bloques ```; enlaces relativos tipo `(channels/log)`.
 - JSON en código: **una propiedad por línea**.
 - Tono directo, por tareas, con "how to". Capturas reales (pedir al usuario las que falten).
 - **Nivel de detalle alto**: explicaciones detalladas, no telegráficas. En **temas delicados** (permisos/scopes, API/access keys, IdP, borrado, seguridad) **añadir ejemplos concretos** (paso a paso, valores de ejemplo, casos).
@@ -201,7 +201,7 @@ Para providers/senders/themes/idps/homepages: usar un emoji representativo del t
 
 - **Yo genero las capturas** con **Playwright** (no hay tool de navegador nativo en el entorno; se instala y se scriptea).
 - **Yo decido qué capturar**: al escribir cada sección identifico la pantalla/estado que la ilustra, la capturo y la enlazo. El usuario revisa al parar cada fase.
-- Los PNG se guardan en `docs/0.5.187/_media/guide/` (subcarpeta nueva para no mezclar con las existentes).
+- Los PNG se guardan en `docs/0.5.287/_media/guide/` (subcarpeta nueva para no mezclar con las existentes).
 - **Modo de captura: dark, sin theme aplicado.** Excepción: las capturas de la sección de **themes** (ahí sí se muestra cada theme).
 - **Margen para animaciones**: antes de CADA screenshot, esperar unos ms (settle delay ~600ms + `waitForTimeout` tras navegaciones/clicks) para que terminen transiciones/animaciones y no salga la UI a medio pintar. Helper `shot()` en `lib.mjs`.
 - **Sesión no persistida en localStorage**: solo `kwirth.mode` vive ahí; el login es en memoria/sessionStorage → cada script hace login. Dark se fuerza con `addInitScript(localStorage.setItem('kwirth.mode','dark'))`.
