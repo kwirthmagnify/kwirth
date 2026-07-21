@@ -15,7 +15,7 @@ According to this structure, the different features that users expect to use wit
 
 Or, for example, since Kwirth 0.3.160 you can receive cluster metrics via a real-time metrics-stream. You can receive information about CPU usage for containers, pods, groups or namespaces. Metrics is another different **channel**. In fact, you can start your Kwirth instance deciding what channels to enable or disable and what other external channels you want to add to your Kwirth instance.
 
-Starting with Kwirth 0.5.187, channels have been fully integrated into the **plugin system**, exactly the way [Backstage plugins](https://backstage.io/plugins) work. Each channel is now a self-contained plugin that can be installed, updated, or removed at runtime without restarting Kwirth.
+Starting with Kwirth 0.5.287, channels have been fully integrated into the **plugin system**, exactly the way [Backstage plugins](https://backstage.io/plugins) work. Each channel is now a self-contained plugin that can be installed, updated, or removed at runtime without restarting Kwirth.
 
 ## What are channels?
 A **channel** is the implementation of a specific feature. For example you can create a channel for receiving info on ConfigMap in such a way that any change to ConfigMaps can be streamed in real-time for somebody to be informed of such changes. Or you can build a channel for exporting log streams in real-time (the original idea behind Kwirth).
@@ -47,7 +47,7 @@ What follows is a zoomed view of Kwirth core.
 ![kwirthcore](./_media/kwirth-kwirth-components.png)
 
 ## Existing channels
-Channel subsystem started in Kwirth 0.3.160. As of 0.5.187, all channels are delivered as **plugins** — two of them (Metrics and Magnify) remain bundled inside Kwirth core, while the rest are independent plugin packages that can be installed on demand.
+Channel subsystem started in Kwirth 0.3.160. As of 0.5.287, all channels are delivered as **plugins** — two of them (Metrics and Magnify) remain bundled inside Kwirth core, while the rest are independent plugin packages that can be installed on demand.
 
 ### Core channels (always available)
 

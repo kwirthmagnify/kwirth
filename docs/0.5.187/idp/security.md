@@ -1,7 +1,7 @@
 # IdP integration — security notes
 
 This page describes how Kwirth protects the Single Sign-On (SSO) flow. For the general
-concepts and per-provider setup see [IdP integration](/0.5.187/idp/index) and the provider
+concepts and per-provider setup see [IdP integration](/0.5.287/idp/index) and the provider
 pages.
 
 ## Authentication vs authorization

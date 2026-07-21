@@ -5,7 +5,7 @@ Kwirth can delegate **user authentication** to an external Identity Provider (Id
 The important idea is the split between **authentication** and **authorization**:
 
 - **Authentication** is done by the IdP. It only proves *"this person really is `someone@example.com`, and we verified it"*.
-- **Authorization** is still done by Kwirth. The person must already exist as a user in Kwirth (see [User management](/0.5.187/usermanagement)) and be bound to that specific IdP, otherwise access is denied.
+- **Authorization** is still done by Kwirth. The person must already exist as a user in Kwirth (see [User management](/0.5.287/usermanagement)) and be bound to that specific IdP, otherwise access is denied.
 
 In other words: the IdP tells Kwirth *who* the person is; Kwirth decides *whether* that person can enter and *what* they can access (through the user's resources).
 
@@ -20,7 +20,7 @@ The built-in `admin` user and any local user/password accounts keep working as u
 For an IdP user to be able to log in, **all** of these must be true:
 
 1. The IdP verifies the identity and reports the email as **verified**.
-2. A Kwirth user exists whose **id is that email** (created from [User management](/0.5.187/usermanagement)).
+2. A Kwirth user exists whose **id is that email** (created from [User management](/0.5.287/usermanagement)).
 3. That Kwirth user is **bound to the IdP** being used (each user is tied to a single IdP).
 
 Because the email alone is not a trustworthy global identifier across arbitrary providers, Kwirth also checks that the user is using *the exact IdP assigned to them*. A verified email coming from a different provider is rejected.
@@ -40,9 +40,9 @@ added *alongside* them, not instead of them.
 
 ## Supported providers
 
-- [Google / Gmail](/0.5.187/idp/google) — OIDC
-- [GitLab](/0.5.187/idp/gitlab) — OIDC (cloud + self-managed)
-- [GitHub](/0.5.187/idp/github) — OAuth2 (cloud + enterprise server)
+- [Google / Gmail](/0.5.287/idp/google) — OIDC
+- [GitLab](/0.5.287/idp/gitlab) — OIDC (cloud + self-managed)
+- [GitHub](/0.5.287/idp/github) — OAuth2 (cloud + enterprise server)
 
 More providers (Keycloak, Microsoft Entra ID / Office 365, ...) will be documented here as they
 become available. Connectors are packaged independently, so third parties can ship their own.
@@ -51,4 +51,4 @@ become available. Connectors are packaged independently, so third parties can sh
 
 For how the SSO flow is protected (PKCE + `state`, back-channel token exchange, single-use
 login handoff, anti open-redirect, secret storage, admin-only management), see the
-[IdP security notes](/0.5.187/idp/security).
+[IdP security notes](/0.5.287/idp/security).

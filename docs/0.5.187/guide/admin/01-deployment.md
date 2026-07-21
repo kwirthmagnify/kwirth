@@ -23,7 +23,7 @@ kwirth:
     channelMetrics: "true"
     channelMagnify: "true"
     rootpath: /kwirth
-  image: kwirthmagnify/kwirth:0.5.187
+  image: kwirthmagnify/kwirth:0.5.287
 ```
 
 ```bash

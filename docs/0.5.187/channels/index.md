@@ -1,5 +1,5 @@
 # Channels
-As of Kwirth version 0.5.187, these are the existing channels:
+As of Kwirth version 0.5.287, these are the existing channels:
 
   - **[Log](channels/log)**. Real time log streaming from different source objects (a container, a pod, a namespace or a custom mix of any of them).
   - **[Metrics](channels/metrics)**. Real-time metrics (CPU, memory, I/O, bandwidth...) on a set of objects.

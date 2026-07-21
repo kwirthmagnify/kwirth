@@ -67,4 +67,4 @@ For a Google user to actually log in, all of the following must hold:
 
 So the whole universe of Google accounts can *authenticate*, but only the users you explicitly created (bound to Google) can *enter* Kwirth. A verified email arriving from a different provider than the one assigned to the user is rejected.
 
-See [IdP integration](/0.5.187/idp/index) for the general concepts.
+See [IdP integration](/0.5.287/idp/index) for the general concepts.

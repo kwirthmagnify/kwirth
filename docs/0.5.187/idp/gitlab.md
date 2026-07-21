@@ -72,4 +72,4 @@ For a GitLab user to actually log in, all of the following must hold:
 So any GitLab account can *authenticate*, but only the users you explicitly created (bound to
 the right connector) can *enter* Kwirth.
 
-See [IdP integration](/0.5.187/idp/index) for the general concepts.
+See [IdP integration](/0.5.287/idp/index) for the general concepts.

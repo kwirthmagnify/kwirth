@@ -1,7 +1,7 @@
 # Change log
 Although not too exhaustive, this page contains some detail on what has been done on each version.
 
-## 0.5.187
+## 0.5.287
 Minor but powerful features:
 
   - Pinocchio is now running working with several LLM's through [AI-SDK from Vercel](https://ai-sdk.dev/docs/introduction). It has been tested with OpenRouter, Gemini and Groq. This very first version just audits Kubernetes objects upon creation, but only for information.
