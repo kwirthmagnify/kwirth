@@ -924,7 +924,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             // entrega mensajes por onMessage(uid). Gestiona reconexión (backoff 10s, START fresco → snapshot nuevo
             // → el canal re-mergea). El WS crudo NO se expone; el canal usa send(uid)/close(). Sin id → DOWN + aviso.
             newTab.channelObject.openRemoteChannels = (clusterNames: string[], instanceConfig: any, handlers) => {
-                interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval> }
+                interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval>; instanceId?: string }
                 const conns: IRemoteConn[] = []
                 const connect = (endpoint: Cluster, conn: IRemoteConn) => {
                     let ws: WebSocket
@@ -936,7 +936,16 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         ws.send(JSON.stringify({ ...instanceConfig, action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.SIGNAL, instance: '', accessKey: endpoint.accessString }))
                         handlers.onState(conn.clusterId, ERemoteConnState.CONNECTED)
                     }
-                    ws.onmessage = (ev) => { try { handlers.onMessage(conn.clusterId, JSON.parse(ev.data)) } catch { /* no-JSON: ignora */ } }
+                    ws.onmessage = (ev) => {
+                        try {
+                            const m = JSON.parse(ev.data)
+                            // El back asigna el instance en la respuesta al START; lo guardamos por conexión para
+                            // poder ENVIAR comandos (accept/assign/remediate) que referencien un instance válido en
+                            // ESE cluster (si no, el back responde "Instance not found for command").
+                            if (m?.action === EInstanceMessageAction.START && m?.flow === EInstanceMessageFlow.RESPONSE && m?.instance) conn.instanceId = m.instance
+                            handlers.onMessage(conn.clusterId, m)
+                        } catch { /* no-JSON: ignora */ }
+                    }
                     ws.onclose = () => {
                         if (conn.closed || conn.retry) return
                         handlers.onState(conn.clusterId, ERemoteConnState.RECONNECTING)
@@ -958,7 +967,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 return {
                     send: (clusterId: string, msg: any) => {
                         const c = conns.find(x => x.clusterId === clusterId)
-                        if (c?.ws && c.ws.readyState === WebSocket.OPEN) c.ws.send(JSON.stringify(msg))
+                        // El comando debe llevar el instance QUE ESTE cluster asignó a su conexión DATA (no el del
+                        // home): el back busca el instance por id y si no coincide descarta el comando.
+                        if (c?.ws && c.ws.readyState === WebSocket.OPEN) c.ws.send(JSON.stringify({ ...msg, instance: c.instanceId ?? msg.instance }))
                     },
                     close: () => {
                         for (const c of conns) {
