@@ -220,7 +220,7 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
 
     return (<>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/admin/07-idp-integration?id=enabling-an-idp' docsUrl={backendUrl + '/docs/core/kwirth'}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Key fontSize='small' />Identity providers</Box></DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/07-idp-integration?id=enabling-an-idp' docsUrl={backendUrl + '/core/docs/core/kwirth'}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Key fontSize='small' />Identity providers</Box></DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 

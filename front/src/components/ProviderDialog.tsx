@@ -104,7 +104,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
 
         const script = document.createElement('script')
         script.id = `kwirth-provider-front-${expandedId}`
-        script.src = `${backendUrl}/providers/${expandedId}/front?t=${Date.now()}`
+        script.src = `${backendUrl}/core/providers/${expandedId}/front?t=${Date.now()}`
         script.crossOrigin = 'anonymous'
         script.onload = () => setFrontLoaded(prev => ({ ...prev, [expandedId]: true }))
         script.onerror = () => setError(`Failed to load UI for provider "${expandedId}"`)
@@ -116,8 +116,8 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         setConfigValues({})
         try {
             const [schemaRes, configRes] = await Promise.all([
-                fetch(`${backendUrl}/providers/${id}/schema`, addGetAuthorization(accessString)),
-                fetch(`${backendUrl}/providers/${id}/config`, addGetAuthorization(accessString))
+                fetch(`${backendUrl}/core/providers/${id}/schema`, addGetAuthorization(accessString)),
+                fetch(`${backendUrl}/core/providers/${id}/config`, addGetAuthorization(accessString))
             ])
             if (schemaRes.ok) setConfigSchema(await schemaRes.json())
             if (configRes.ok) setConfigValues(await configRes.json())
@@ -128,7 +128,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         if (!expandedId) return
         setSavingConfig(true)
         try {
-            const res = await fetch(`${backendUrl}/providers/${expandedId}/config`, {
+            const res = await fetch(`${backendUrl}/core/providers/${expandedId}/config`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: accessString ? `Bearer ${accessString}` : '', 'X-Kwirth-App': 'true' },
                 body: JSON.stringify(configValues)
@@ -160,7 +160,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
 
     const loadInstalled = async () => {
         try {
-            const res = await fetch(`${backendUrl}/providers`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/providers`, addGetAuthorization(accessString))
             const data: IInstalledProvider[] = await res.json()
             setInstalled(data)
         } catch (err) {
@@ -178,7 +178,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
             setAvailable(data)
             const neededTypes = new Set(data.flatMap(e => [...(e.requires ?? []), ...(e.uses ?? [])]).map(r => r.extensionType).filter(t => t !== 'provider'))
             if (neededTypes.size > 0) {
-                const endpoints: Record<string, string> = { plugin: `${backendUrl}/plugins`, sender: `${backendUrl}/senders` }
+                const endpoints: Record<string, string> = { plugin: `${backendUrl}/core/plugins`, sender: `${backendUrl}/core/senders` }
                 const results: Record<string, { id: string, version: string }[]> = {}
                 await Promise.all([...neededTypes].map(async t => {
                     try { const r = await fetch(endpoints[t], addGetAuthorization(accessString)); if (r.ok) results[t] = await r.json() } catch {}
@@ -202,7 +202,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         setError(undefined)
         setInstallingId(provider.id)
         try {
-            const res = await fetch(`${backendUrl}/providers/install`, addPostAuthorization(accessString, JSON.stringify({ url: provider.url })))
+            const res = await fetch(`${backendUrl}/core/providers/install`, addPostAuthorization(accessString, JSON.stringify({ url: provider.url })))
             if (!res.ok) { const body = await res.json(); throw new Error(body.error ?? `HTTP ${res.status}`) }
             await loadInstalled()
         } catch (err) {
@@ -219,7 +219,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         setError(undefined)
         setUninstallingId(provider.id)
         try {
-            const res = await fetch(`${backendUrl}/providers/${provider.id}`, addDeleteAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/providers/${provider.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) { const body = await res.json(); throw new Error(body.error ?? `HTTP ${res.status}`) }
             await loadInstalled()
         } catch (err) {
@@ -235,7 +235,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         setError(undefined)
         setInstallingCustom(true)
         try {
-            const res = await fetch(`${backendUrl}/providers/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
+            const res = await fetch(`${backendUrl}/core/providers/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
             if (!res.ok) { const body = await res.json(); throw new Error(body.error ?? `HTTP ${res.status}`) }
             setCustomUrl('')
             await loadInstalled()
@@ -250,7 +250,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         setError(undefined)
         setInstallingFile(true)
         try {
-            const res = await fetch(`${backendUrl}/providers/upload`, {
+            const res = await fetch(`${backendUrl}/core/providers/upload`, {
                 method: 'POST',
                 headers: { Authorization: accessString ? `Bearer ${accessString}` : '', 'Content-Type': 'application/octet-stream', 'X-Kwirth-App': 'true' },
                 body: file
@@ -302,7 +302,7 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
     return (
         <>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/providers/index?id=managing-configuring-providers' docsUrl={backendUrl + '/docs/core/kwirth'}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Factory fontSize='small' />Manage providers</Box></DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/providers/index?id=managing-configuring-providers' docsUrl={backendUrl + '/core/docs/core/kwirth'}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Factory fontSize='small' />Manage providers</Box></DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 

@@ -334,8 +334,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (existing) existing.remove()
         const script = document.createElement('script')
         script.id = `kwirth-plugin-${id}`
-        //script.src = `${props.backendUrl}/plugins/${id}/front?t=${Date.now()}`
-        script.src = `${backendUrl}/plugins/${id}/front?t=${Date.now()}`
+        //script.src = `${props.backendUrl}/core/plugins/${id}/front?t=${Date.now()}`
+        script.src = `${backendUrl}/core/plugins/${id}/front?t=${Date.now()}`
         script.onload = () => {
             const PluginChannel = window.__kwirth_plugins__?.[id]
             if (PluginChannel) {
@@ -383,7 +383,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (existing) existing.remove()
         const script = document.createElement('script')
         script.id = `kwirth-theme-${id}`
-        script.src = `${backendUrl}/themes/${id}/front?t=${Date.now()}`
+        script.src = `${backendUrl}/core/themes/${id}/front?t=${Date.now()}`
         if (onload) {
             script.onload = () => { console.log(`[themes] loaded theme front: ${id}`); onload() }
             script.onerror = () => { console.log(`[themes] failed to load theme front: ${id}`); setThemeReady(true) }
@@ -396,7 +396,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (existing) existing.remove()
         const script = document.createElement('script')
         script.id = `kwirth-homepage-${id}`
-        script.src = `${backendUrl}/homepages/${id}/front?t=${Date.now()}`
+        script.src = `${backendUrl}/core/homepages/${id}/front?t=${Date.now()}`
         if (onload) script.onload = onload
         document.head.appendChild(script)
     }
@@ -424,7 +424,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             const devIds: string[] = []
             for (const id of ids) {
                 try {
-                    const res = await fetch(`${backendUrl}/plugins/${id}/version`, { headers: { 'X-Kwirth-App': 'true' } })
+                    const res = await fetch(`${backendUrl}/core/plugins/${id}/version`, { headers: { 'X-Kwirth-App': 'true' } })
                     if (!res.ok) continue
                     const { dev, version } = await res.json()
                     if (dev) { devIds.push(id); pluginVersionsRef.current.set(id, version) }
@@ -434,7 +434,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             intervalId = setInterval(async () => {
                 for (const id of devIds) {
                     try {
-                        const res = await fetch(`${backendUrl}/plugins/${id}/version`, { headers: { 'X-Kwirth-App': 'true' } })
+                        const res = await fetch(`${backendUrl}/core/plugins/${id}/version`, { headers: { 'X-Kwirth-App': 'true' } })
                         if (!res.ok) continue
                         const { version } = await res.json()
                         const prev = pluginVersionsRef.current.get(id)
@@ -498,13 +498,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         readLoggedUserSettings()
 
         // load front.js for already-installed plugins
-        fetch(`${backendUrl}/plugins`, addGetAuthorization(accessString))
+        fetch(`${backendUrl}/core/plugins`, addGetAuthorization(accessString))
             .then(r => r.json())
             .then((plugins: { id: string }[]) => plugins.forEach(p => loadPluginFront(p.id)))
             .catch(err => console.log(`[plugins] failed to load installed plugins: ${err}`))
 
         // load front.js for already-installed themes
-        fetch(`${backendUrl}/themes`, addGetAuthorization(accessString))
+        fetch(`${backendUrl}/core/themes`, addGetAuthorization(accessString))
             .then(r => r.json())
             .then((themes: { id: string }[]) => {
                 const savedTheme = localStorage.getItem('kwirth.theme')
@@ -522,7 +522,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             .catch(err => { console.log(`[themes] failed to load installed themes: ${err}`); setThemeReady(true) })
 
         // load front.js for already-installed homepages, restoring active homepage from localStorage
-        fetch(`${backendUrl}/homepages`, addGetAuthorization(accessString))
+        fetch(`${backendUrl}/core/homepages`, addGetAuthorization(accessString))
             .then(r => r.json())
             .then((homepages: { id: string }[]) => {
                 const savedHomepage = localStorage.getItem('kwirth.homepage')
@@ -544,10 +544,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     theme:    'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/themes/manifest.json',
                 }
                 const ENDPOINTS: Record<string, string> = {
-                    plugin:   `${backendUrl}/plugins`,
-                    sender:   `${backendUrl}/senders`,
-                    provider: `${backendUrl}/providers`,
-                    theme:    `${backendUrl}/themes`,
+                    plugin:   `${backendUrl}/core/plugins`,
+                    sender:   `${backendUrl}/core/senders`,
+                    provider: `${backendUrl}/core/providers`,
+                    theme:    `${backendUrl}/core/themes`,
                 }
                 try {
                     const types = Object.keys(MANIFESTS)
@@ -2036,7 +2036,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setCurrentWorkspaceName('untitled')
             setCurrentWorkspaceDescription('No description yet')
             clearTabs()
-            fetch(`${backendUrl}/license`, addGetAuthorization(as))
+            fetch(`${backendUrl}/core/license`, addGetAuthorization(as))
                 .then(r => r.ok ? r.json() : null)
                 .then(data => { if (data && data.customerId) setLicenseInfo(data) })
                 .catch(() => {})
@@ -2075,7 +2075,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 const ssoUser:IUser = { id: login.id, name: login.name, password: '', accessKey: login.accessKey, resources: '', startChannel: login.startChannel, exitFullScreen: login.exitFullScreen, enabledChannels: login.enabledChannels }
                 if (loginExt) {
                     try {
-                        const cfgResp = await fetch(`${props.backendUrl}/logins/${loginExt}/config`)
+                        const cfgResp = await fetch(`${props.backendUrl}/core/logins/${loginExt}/config`)
                         if (cfgResp.ok) {
                             const cfg = await cfgResp.json()
                             const requiredChannel = cfg.startChannel as string | undefined

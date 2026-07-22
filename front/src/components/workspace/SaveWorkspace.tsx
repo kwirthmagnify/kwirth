@@ -22,7 +22,7 @@ const SaveWorkspace: React.FC<ISaveWorkspaceProps> = (props:ISaveWorkspaceProps)
 
     return (
         <Dialog open={true} disableRestoreFocus={true}>
-            <DialogTitleHelp section='guide/user/06-workspaces?id=saving-your-work' docsUrl={backendUrl + '/docs/core/kwirth'}>Save workspace as...</DialogTitleHelp>
+            <DialogTitleHelp section='guide/user/06-workspaces?id=saving-your-work' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Save workspace as...</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{width:'40vh'}}>
                     <TextField value={newname} onChange={(e) => setNewname(e.target.value)} variant='standard' label='New name' autoFocus ></TextField>

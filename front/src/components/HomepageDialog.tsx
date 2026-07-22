@@ -101,7 +101,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
 
     const loadInstalled = async () => {
         try {
-            const res = await fetch(`${backendUrl}/homepages`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/homepages`, addGetAuthorization(accessString))
             const data: IInstalledHomepage[] = await res.json()
             setInstalled(data)
         } catch (err) {
@@ -128,7 +128,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
         setError(undefined)
         setInstallingId(hp.id)
         try {
-            const res = await fetch(`${backendUrl}/homepages/install`, addPostAuthorization(accessString, JSON.stringify({ url: hp.url })))
+            const res = await fetch(`${backendUrl}/core/homepages/install`, addPostAuthorization(accessString, JSON.stringify({ url: hp.url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -146,7 +146,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
         setError(undefined)
         setUninstallingId(hp.id)
         try {
-            const res = await fetch(`${backendUrl}/homepages/${hp.id}`, addDeleteAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/homepages/${hp.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -167,7 +167,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
         setError(undefined)
         setInstallingCustom(true)
         try {
-            const res = await fetch(`${backendUrl}/homepages/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
+            const res = await fetch(`${backendUrl}/core/homepages/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -187,7 +187,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
         setError(undefined)
         setInstallingFile(true)
         try {
-            const res = await fetch(`${backendUrl}/homepages/upload`, {
+            const res = await fetch(`${backendUrl}/core/homepages/upload`, {
                 method: 'POST',
                 headers: {
                     Authorization: accessString ? `Bearer ${accessString}` : '',
@@ -286,7 +286,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
     return (
         <>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/homepages/index?id=admin-guide' docsUrl={backendUrl + '/docs/core/kwirth'}>Manage homepages</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/homepages/index?id=admin-guide' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Manage homepages</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 

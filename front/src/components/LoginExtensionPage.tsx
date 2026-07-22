@@ -58,7 +58,7 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
         const load = async () => {
             let cfg: ILoginConfig | undefined
             try {
-                const cfgRes = await fetch(`${props.backendUrl}/logins/${props.slug}/config`)
+                const cfgRes = await fetch(`${props.backendUrl}/core/logins/${props.slug}/config`)
                 if (!cfgRes.ok) { props.onNotFound?.(); return }
                 cfg = await cfgRes.json()
                 setConfig(cfg!)
@@ -69,7 +69,7 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
             }
             if (cfg?.hasBackground) {
                 try {
-                    const bgRes = await fetch(`${props.backendUrl}/logins/${props.slug}/background`)
+                    const bgRes = await fetch(`${props.backendUrl}/core/logins/${props.slug}/background`)
                     if (bgRes.ok) setBackgroundUrl(URL.createObjectURL(await bgRes.blob()))
                 }
                 catch {}

@@ -67,7 +67,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
 
     const loadInstalled = async () => {
         try {
-            const res = await fetch(`${backendUrl}/docs`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/docs`, addGetAuthorization(accessString))
             const data: IDocsMeta[] = await res.json()
             setInstalled(data)
         }
@@ -94,7 +94,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
     }
 
     const openDocs = (targetType: string, id: string) => {
-        window.open(`${backendUrl}/docs/${targetType}/${id}/`, '_blank', 'noopener')
+        window.open(`${backendUrl}/core/docs/${targetType}/${id}/`, '_blank', 'noopener')
     }
 
     const installFromUrl = async () => {
@@ -103,7 +103,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
         setError(undefined)
         setInstallingCustom(true)
         try {
-            const res = await fetch(`${backendUrl}/docs/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
+            const res = await fetch(`${backendUrl}/core/docs/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -123,7 +123,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/docs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
+            const res = await fetch(`${backendUrl}/core/docs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -142,7 +142,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
         setError(undefined)
         setInstallingFile(true)
         try {
-            const res = await fetch(`${backendUrl}/docs/upload`, {
+            const res = await fetch(`${backendUrl}/core/docs/upload`, {
                 method: 'POST',
                 headers: {
                     Authorization: accessString ? `Bearer ${accessString}` : '',
@@ -170,7 +170,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
         setError(undefined)
         setUninstallingId(doc.id)
         try {
-            const res = await fetch(`${backendUrl}/docs/${doc.targetType}/${doc.id}`, addDeleteAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/docs/${doc.targetType}/${doc.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -247,7 +247,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
 
     return (
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/docs/index?id=admin-guide' docsUrl={backendUrl + '/docs/core/kwirth'}>Manage documentation</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/docs/index?id=admin-guide' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Manage documentation</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 

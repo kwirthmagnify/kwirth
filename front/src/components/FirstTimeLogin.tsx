@@ -33,7 +33,7 @@ const FirstTimeLogin: React.FC<IFirstTimeLoginProps> = (props:IFirstTimeLoginPro
 
     return (<>
         <Dialog open={true} disableRestoreFocus={true} fullWidth maxWidth={'md'}>
-            <DialogTitleHelp section='guide/user/02-access?id=logging-in-with-a-local-account' docsUrl={backendUrl + '/docs/core/kwirth'}>First time here...</DialogTitleHelp>
+            <DialogTitleHelp section='guide/user/02-access?id=logging-in-with-a-local-account' docsUrl={backendUrl + '/core/docs/core/kwirth'}>First time here...</DialogTitleHelp>
             <DialogContent>
                 <Typography>
                     It seems that this is your first time here. If you are installing Kwirth just for use with <b>Backstage</b> Kubelog,

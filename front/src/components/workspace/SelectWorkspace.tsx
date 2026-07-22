@@ -18,7 +18,7 @@ const SelectWorkspace: React.FC<ISelectWorkspaceProps> = (props:ISelectWorkspace
     const { backendUrl } = useContext(SessionContext) as SessionContextType
     return (
         <Dialog open={true}>
-            <DialogTitleHelp section='guide/user/06-workspaces?id=reopening-a-workspace' docsUrl={backendUrl + '/docs/core/kwirth'}>Select workspace</DialogTitleHelp>
+            <DialogTitleHelp section='guide/user/06-workspaces?id=reopening-a-workspace' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Select workspace</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' sx={{width:'50vh'}}>
                     <Typography>{

@@ -22,7 +22,7 @@ const WorkspacePickerDialog: React.FC<IWorkspacePickerDialogProps> = ({ title, w
 
     return (
         <Dialog open maxWidth='xs' fullWidth>
-            <DialogTitleHelp section='guide/user/06-workspaces?id=the-workspaces-menu' docsUrl={backendUrl + '/docs/core/kwirth'}>{title}</DialogTitleHelp>
+            <DialogTitleHelp section='guide/user/06-workspaces?id=the-workspaces-menu' docsUrl={backendUrl + '/core/docs/core/kwirth'}>{title}</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={0.5}>
                     <FormControlLabel

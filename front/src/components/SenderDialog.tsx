@@ -135,7 +135,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             return
         }
         const script = document.createElement('script')
-        script.src = `${backendUrl}/senders/${expandedId}/front`
+        script.src = `${backendUrl}/core/senders/${expandedId}/front`
         script.crossOrigin = 'anonymous'
         script.onload = () => setFrontLoaded(prev => ({ ...prev, [expandedId]: true }))
         script.onerror = () => setError(`Failed to load UI for sender "${expandedId}"`)
@@ -144,7 +144,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
     const loadInstalled = async () => {
         try {
-            const res = await fetch(`${backendUrl}/senders`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/senders`, addGetAuthorization(accessString))
             const data: IInstalledSender[] = await res.json()
             setInstalled(data)
         } catch (err) {
@@ -161,7 +161,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             setAvailable(data)
             const neededTypes = new Set(data.flatMap(e => [...(e.requires ?? []), ...(e.uses ?? [])]).map(r => r.extensionType).filter(t => t !== 'sender'))
             if (neededTypes.size > 0) {
-                const endpoints: Record<string, string> = { plugin: `${backendUrl}/plugins`, provider: `${backendUrl}/providers` }
+                const endpoints: Record<string, string> = { plugin: `${backendUrl}/core/plugins`, provider: `${backendUrl}/core/providers` }
                 const results: Record<string, { id: string, version: string }[]> = {}
                 await Promise.all([...neededTypes].map(async t => {
                     try { const r = await fetch(endpoints[t], addGetAuthorization(accessString)); if (r.ok) results[t] = await r.json() } catch {}
@@ -187,8 +187,8 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         setLoadingConfigs(true)
         try {
             const [configsRes, schemaRes] = await Promise.all([
-                fetch(`${backendUrl}/senders/${id}/configs`, addGetAuthorization(accessString)),
-                fetch(`${backendUrl}/senders/${id}/schema`, addGetAuthorization(accessString)),
+                fetch(`${backendUrl}/core/senders/${id}/configs`, addGetAuthorization(accessString)),
+                fetch(`${backendUrl}/core/senders/${id}/schema`, addGetAuthorization(accessString)),
             ])
             if (!configsRes.ok) throw new Error(`HTTP ${configsRes.status}`)
             const storedData = await configsRes.json()
@@ -219,7 +219,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/senders/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
+            const res = await fetch(`${backendUrl}/core/senders/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             await loadInstalled()
         } catch (err) {
@@ -235,7 +235,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         setError(undefined)
         setInstallingCustom(true)
         try {
-            const res = await fetch(`${backendUrl}/senders/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
+            const res = await fetch(`${backendUrl}/core/senders/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             setCustomUrl('')
             await loadInstalled()
@@ -250,7 +250,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         setError(undefined)
         setInstallingFile(true)
         try {
-            const res = await fetch(`${backendUrl}/senders/upload`, {
+            const res = await fetch(`${backendUrl}/core/senders/upload`, {
                 method: 'POST',
                 headers: { Authorization: accessString ? `Bearer ${accessString}` : '', 'Content-Type': 'application/octet-stream', 'X-Kwirth-App': 'true' },
                 body: file
@@ -269,7 +269,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         setError(undefined)
         setUninstallingId(sender.id)
         try {
-            const res = await fetch(`${backendUrl}/senders/${sender.id}`, addDeleteAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/senders/${sender.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             if (expandedId === sender.id) setExpandedId(undefined)
             await loadInstalled()
@@ -284,7 +284,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         if (!expandedId) return
         setDeletingName(configName)
         try {
-            const res = await fetch(`${backendUrl}/senders/${expandedId}/configs/${encodeURIComponent(configName)}`, addDeleteAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/senders/${expandedId}/configs/${encodeURIComponent(configName)}`, addDeleteAuthorization(accessString))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             setConfigs(prev => prev.filter(c => c.name !== configName))
             await loadInstalled()
@@ -302,10 +302,10 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         try {
             const payload = buildPayload(expandedId, formValues)
             const newName = payload.name as string
-            const res = await fetch(`${backendUrl}/senders/${expandedId}/configs`, addPostAuthorization(accessString, JSON.stringify(payload)))
+            const res = await fetch(`${backendUrl}/core/senders/${expandedId}/configs`, addPostAuthorization(accessString, JSON.stringify(payload)))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             if (originalEditingName && originalEditingName !== newName) {
-                await fetch(`${backendUrl}/senders/${expandedId}/configs/${encodeURIComponent(originalEditingName)}`, addDeleteAuthorization(accessString))
+                await fetch(`${backendUrl}/core/senders/${expandedId}/configs/${encodeURIComponent(originalEditingName)}`, addDeleteAuthorization(accessString))
             }
             setEditingName(newName)
             setOriginalEditingName(newName)
@@ -364,7 +364,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         try {
             const common = buildBasePayload()
             const storedConfig = { ...common, configs }
-            const res = await fetch(`${backendUrl}/senders/${expandedId}/configs`, addPutAuthorization(accessString, JSON.stringify(storedConfig)))
+            const res = await fetch(`${backendUrl}/core/senders/${expandedId}/configs`, addPutAuthorization(accessString, JSON.stringify(storedConfig)))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             await reloadConfigs(expandedId)
             await loadInstalled()
@@ -385,7 +385,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
     const exportAll = async () => {
         try {
-            const res = await fetch(`${backendUrl}/senders/export`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/senders/export`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             triggerDownload(await res.json(), 'kwirth-sender-configs.json')
         } catch (err) { setError(`Export failed: ${err}`) }
@@ -393,7 +393,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
     const importAll = async (file: File) => {
         try {
-            const res = await fetch(`${backendUrl}/senders/import`, addPostAuthorization(accessString, await file.text()))
+            const res = await fetch(`${backendUrl}/core/senders/import`, addPostAuthorization(accessString, await file.text()))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             const { count } = await res.json()
             await loadInstalled()
@@ -427,7 +427,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             const selectedConfigs = configImportData.configs.filter(c => configImportSelected.has(c.name))
             const hasBase = configImportIncludeBase && Object.keys(configImportData.base).length > 0
             if (hasBase) {
-                const currentRes = await fetch(`${backendUrl}/senders/${expandedId}/configs`, addGetAuthorization(accessString))
+                const currentRes = await fetch(`${backendUrl}/core/senders/${expandedId}/configs`, addGetAuthorization(accessString))
                 if (currentRes.ok) {
                     const current = await currentRes.json()
                     const existingConfigs: ConfigValues[] = Array.isArray(current) ? current : (current.configs ?? [])
@@ -435,11 +435,11 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                         ...existingConfigs.filter((e: ConfigValues) => !selectedConfigs.some(i => i.name === e.name)),
                         ...selectedConfigs
                     ]
-                    await fetch(`${backendUrl}/senders/${expandedId}/configs`, addPutAuthorization(accessString, JSON.stringify({ ...configImportData.base, configs: mergedConfigs })))
+                    await fetch(`${backendUrl}/core/senders/${expandedId}/configs`, addPutAuthorization(accessString, JSON.stringify({ ...configImportData.base, configs: mergedConfigs })))
                 }
             } else {
                 for (const cfg of selectedConfigs) {
-                    await fetch(`${backendUrl}/senders/${expandedId}/configs`, addPostAuthorization(accessString, JSON.stringify(cfg)))
+                    await fetch(`${backendUrl}/core/senders/${expandedId}/configs`, addPostAuthorization(accessString, JSON.stringify(cfg)))
                 }
             }
             await reloadConfigs(expandedId)
@@ -580,7 +580,7 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     return (
         <>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/docs/core/kwirth'}>Manage senders</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Manage senders</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 

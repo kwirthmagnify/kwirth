@@ -22,7 +22,7 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='xs' disableRestoreFocus={true}>
-            <DialogTitleHelp section='guide/admin/02-initial-config?id=user-settings-personal' docsUrl={backendUrl + '/docs/core/kwirth'}>Settings</DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/02-initial-config?id=user-settings-personal' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Settings</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
                     <Typography variant='body2'>

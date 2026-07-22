@@ -1296,32 +1296,32 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                 logInfo(ELogComponent.CORE, `Plugin channel '${id}' removed from active instance`)
             }
             let pluginApi = new PluginApi(pluginManager, registeredChannels, apiKeyApi, { onPluginInstalled, onPluginUninstalled })
-            riRouter.use(`/plugins`, pluginApi.router)
+            riRouter.use(`/core/plugins`, pluginApi.router)
         }
         if (providerManager) {
             let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi)
-            riRouter.use(`/providers`, providerApi.router)
+            riRouter.use(`/core/providers`, providerApi.router)
         }
         if (senderManager) {
             let senderApi = new SenderApi(senderManager, apiKeyApi)
-            riRouter.use(`/senders`, senderApi.router)
+            riRouter.use(`/core/senders`, senderApi.router)
         }
         if (themeManager) {
             let themeApi = new ThemeApi(themeManager, apiKeyApi)
-            riRouter.use(`/themes`, themeApi.router)
+            riRouter.use(`/core/themes`, themeApi.router)
         }
         if (homepageManager) {
             let homepageApi = new HomepageApi(homepageManager, apiKeyApi)
-            riRouter.use(`/homepages`, homepageApi.router)
+            riRouter.use(`/core/homepages`, homepageApi.router)
         }
         if (loginManager) {
             let loginExtensionApi = new LoginExtensionApi(loginManager, apiKeyApi)
-            riRouter.use(`/logins`, loginExtensionApi.router)
+            riRouter.use(`/core/logins`, loginExtensionApi.router)
         }
         if (docsManager) {
             const docsifyPath = process.env.KWIRTH_DOCSIFY_PATH || path.join(process.cwd(), 'docsify')
             let docsApi = new DocsApi(docsManager, apiKeyApi, docsifyPath)
-            riRouter.use(`/docs`, docsApi.router)
+            riRouter.use(`/core/docs`, docsApi.router)
         }
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
@@ -2476,7 +2476,7 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
         app.get(`/healthz`, (_req:Request,res:Response) => { res.status(200).send() })
     }
 
-    app.get(`${envRootPath}/license`, (_req:Request, res:Response) => { res.json(licenseManager.getPublicInfo() ?? {}) })
+    app.get(`${envRootPath}/core/license`, (_req:Request, res:Response) => { res.json(licenseManager.getPublicInfo() ?? {}) })
 
     //const fs = require('fs')
     fs.readdir('.', (err:any, folderFiles:any) => {

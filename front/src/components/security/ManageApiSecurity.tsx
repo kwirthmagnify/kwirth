@@ -108,7 +108,7 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
 
     return (<>
         <Dialog open={true} fullWidth maxWidth={false} PaperProps={{ sx: { height: '75vh', maxWidth: '1080px', width: '100%' } }}>
-            <DialogTitleHelp section='guide/admin/05-api-management?id=create-an-api-key' docsUrl={backendUrl + '/docs/core/kwirth'}>API Key management</DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/05-api-management?id=create-an-api-key' docsUrl={backendUrl + '/core/docs/core/kwirth'}>API Key management</DialogTitleHelp>
             <DialogContent sx={{ display: 'flex', height: '100%' }}>
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: 'calc(50% - 8px)' }}>
                     <Stack flexDirection='row' alignItems='center' sx={{ width: '100%', pr: 2 }}>

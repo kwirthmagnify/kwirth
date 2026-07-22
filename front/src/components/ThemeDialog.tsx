@@ -79,7 +79,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
 
     const loadInstalled = async () => {
         try {
-            const res = await fetch(`${backendUrl}/themes`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/themes`, addGetAuthorization(accessString))
             const data: IInstalledTheme[] = await res.json()
             setInstalled(data)
         } catch (err) {
@@ -106,7 +106,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
         setError(undefined)
         setInstallingId(theme.id)
         try {
-            const res = await fetch(`${backendUrl}/themes/install`, addPostAuthorization(accessString, JSON.stringify({ url: theme.url })))
+            const res = await fetch(`${backendUrl}/core/themes/install`, addPostAuthorization(accessString, JSON.stringify({ url: theme.url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -124,7 +124,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
         setError(undefined)
         setUninstallingId(t.id)
         try {
-            const res = await fetch(`${backendUrl}/themes/${t.id}`, addDeleteAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/themes/${t.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -144,7 +144,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
         setError(undefined)
         setInstallingCustom(true)
         try {
-            const res = await fetch(`${backendUrl}/themes/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
+            const res = await fetch(`${backendUrl}/core/themes/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -164,7 +164,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
         setError(undefined)
         setInstallingFile(true)
         try {
-            const res = await fetch(`${backendUrl}/themes/upload`, {
+            const res = await fetch(`${backendUrl}/core/themes/upload`, {
                 method: 'POST',
                 headers: {
                     Authorization: accessString ? `Bearer ${accessString}` : '',
@@ -264,7 +264,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
 
     return (
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/themes/index?id=admin-guide' docsUrl={backendUrl + '/docs/core/kwirth'}>Manage themes</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/themes/index?id=admin-guide' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Manage themes</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
@@ -286,7 +286,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
                                         description={t.description}
                                         website={t.website}
                                         source={resolveSource(t.installedFrom)}
-                                        previewUrl={t.hasPreview ? `${backendUrl}/themes/${t.id}/preview` : undefined}
+                                        previewUrl={t.hasPreview ? `${backendUrl}/core/themes/${t.id}/preview` : undefined}
                                         badge={isActive(t.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} /> : undefined}
                                         action={
                                             <Stack direction='row' alignItems='center' spacing={0.5}>

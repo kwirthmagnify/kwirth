@@ -158,7 +158,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='md'>
-            <DialogTitleHelp section='guide/admin/03-user-management?id=user-fields' docsUrl={backendUrl + '/docs/core/kwirth'}>User management</DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/03-user-management?id=user-fields' docsUrl={backendUrl + '/core/docs/core/kwirth'}>User management</DialogTitleHelp>
             <DialogContent>
                 <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
                     <List sx={{ flexGrow: 1, mr: 3, width: '30vh' }}>

@@ -15,7 +15,7 @@ const SettingsCluster: React.FC<ISettingsClusterProps> = (props:ISettingsCluster
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='xs' disableRestoreFocus={true}>
-            <DialogTitleHelp section='guide/admin/02-initial-config?id=cluster-settings' docsUrl={backendUrl + '/docs/core/kwirth'}>Cluster settings</DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/02-initial-config?id=cluster-settings' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Cluster settings</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={2} direction='column' sx={{ mt: 1 }}>
                     <Typography variant='body2'>Enter Kwirth cluster configuration for cluster <b>{props.clusterName}</b></Typography>

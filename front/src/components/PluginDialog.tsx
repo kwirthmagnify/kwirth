@@ -93,7 +93,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
 
     const loadInstalled = async () => {
         try {
-            const res = await fetch(`${backendUrl}/plugins`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/plugins`, addGetAuthorization(accessString))
             const data: IInstalledPlugin[] = await res.json()
             setInstalled(data)
         } catch (err) {
@@ -111,7 +111,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
             setAvailable(data)
             const neededTypes = new Set(data.flatMap(e => [...(e.requires ?? []), ...(e.uses ?? [])]).map(r => r.extensionType).filter(t => t !== 'plugin'))
             if (neededTypes.size > 0) {
-                const endpoints: Record<string, string> = { sender: `${backendUrl}/senders`, provider: `${backendUrl}/providers` }
+                const endpoints: Record<string, string> = { sender: `${backendUrl}/core/senders`, provider: `${backendUrl}/core/providers` }
                 const results: Record<string, { id: string, version: string }[]> = {}
                 await Promise.all([...neededTypes].map(async t => {
                     try { const r = await fetch(endpoints[t], addGetAuthorization(accessString)); if (r.ok) results[t] = await r.json() } catch {}
@@ -128,7 +128,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     const openConfig = async (id: string) => {
         setConfigError(undefined); setConfigId(id); setConfigText(''); setConfigBusy(true)
         try {
-            const res = await fetch(`${backendUrl}/plugins/${id}/config`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/plugins/${id}/config`, addGetAuthorization(accessString))
             const cfg = res.ok ? await res.json() : {}
             setConfigText(JSON.stringify(cfg ?? {}, null, 2))
         } catch (e) { setConfigText('{}'); setConfigError(`Failed to load config: ${e}`) }
@@ -139,7 +139,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         try { parsed = JSON.parse(configText || '{}') } catch { setConfigError('Invalid JSON'); return }
         setConfigBusy(true); setConfigError(undefined)
         try {
-            const res = await fetch(`${backendUrl}/plugins/${configId}/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: accessString ? `Bearer ${accessString}` : '', 'X-Kwirth-App': 'true' }, body: JSON.stringify(parsed) })
+            const res = await fetch(`${backendUrl}/core/plugins/${configId}/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: accessString ? `Bearer ${accessString}` : '', 'X-Kwirth-App': 'true' }, body: JSON.stringify(parsed) })
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             setConfigId(undefined)
         } catch (e) { setConfigError(`Failed to save config: ${e}`) }
@@ -166,7 +166,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         setError(undefined)
         setInstallingId(plugin.id)
         try {
-            const res = await fetch(`${backendUrl}/plugins/install`, addPostAuthorization(accessString, JSON.stringify({ url: plugin.url })))
+            const res = await fetch(`${backendUrl}/core/plugins/install`, addPostAuthorization(accessString, JSON.stringify({ url: plugin.url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -184,7 +184,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         setError(undefined)
         setUninstallingId(plugin.id)
         try {
-            const res = await fetch(`${backendUrl}/plugins/${plugin.id}`, addDeleteAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/plugins/${plugin.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -204,7 +204,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         setError(undefined)
         setInstallingCustom(true)
         try {
-            const res = await fetch(`${backendUrl}/plugins/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
+            const res = await fetch(`${backendUrl}/core/plugins/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -224,7 +224,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
         setError(undefined)
         setInstallingFile(true)
         try {
-            const res = await fetch(`${backendUrl}/plugins/upload`, {
+            const res = await fetch(`${backendUrl}/core/plugins/upload`, {
                 method: 'POST',
                 headers: {
                     Authorization: accessString ? `Bearer ${accessString}` : '',
@@ -342,7 +342,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
 
     return (
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins' docsUrl={backendUrl + '/docs/core/kwirth'}>Manage plugins</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Manage plugins</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 

@@ -85,7 +85,7 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
 
     const loadInstalled = async () => {
         try {
-            const res = await fetch(`${backendUrl}/logins`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/logins`, addGetAuthorization(accessString))
             const data: IInstalledLogin[] = await res.json()
             setInstalled(data)
         }
@@ -115,7 +115,7 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/logins/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
+            const res = await fetch(`${backendUrl}/core/logins/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -134,7 +134,7 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         setError(undefined)
         setUninstallingId(login.id)
         try {
-            const res = await fetch(`${backendUrl}/logins/${login.id}`, addDeleteAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/logins/${login.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -155,7 +155,7 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         setError(undefined)
         setInstallingCustom(true)
         try {
-            const res = await fetch(`${backendUrl}/logins/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
+            const res = await fetch(`${backendUrl}/core/logins/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -175,7 +175,7 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         setError(undefined)
         setInstallingFile(true)
         try {
-            const res = await fetch(`${backendUrl}/logins/upload`, {
+            const res = await fetch(`${backendUrl}/core/logins/upload`, {
                 method: 'POST',
                 headers: {
                     Authorization: accessString ? `Bearer ${accessString}` : '',
