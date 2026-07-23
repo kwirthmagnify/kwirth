@@ -74,11 +74,13 @@
       "Bash(xargs grep -ln \"createInformer\\\\|makeInformer\")",
       "Bash(kubectl delete *)",
       "Bash(git commit -m '@ *)",
-      "Bash(git tag *)"
+      "Bash(git tag *)",
+      "Bash(cd /c/github/aisdkvercel/kwirth/plugins/excubitor/e2e *)"
     ],
     "defaultMode": "dontAsk",
     "additionalDirectories": [
-      "C:\\Users\\JULIO~1.FER\\AppData\\Local\\Temp\\claude\\c--github-aisdkvercel-kwirth\\e1b34b45-e60b-45cb-8f74-17ac67ea9213\\scratchpad"
+      "C:\\Users\\JULIO~1.FER\\AppData\\Local\\Temp\\claude\\c--github-aisdkvercel-kwirth\\e1b34b45-e60b-45cb-8f74-17ac67ea9213\\scratchpad",
+      "C:\\Users\\JULIO~1.FER\\AppData\\Local\\Temp\\claude\\c--github-aisdkvercel-kwirth\\a08e7022-2529-4752-ba75-e62d5ff9e53a\\scratchpad"
     ]
   }
 }

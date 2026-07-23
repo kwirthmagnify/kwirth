@@ -5,6 +5,9 @@ import { IHomepageProps, IClusterEvent } from '@kwirthmagnify/kwirth-common-fron
 
 const DM_FONT = "'Barlow Condensed', 'Oswald', 'Impact', 'Franklin Gothic Medium', 'Arial Narrow', sans-serif"
 
+const DM_SONGS = ['Photographic','Shame','Somebody','Stripped','Strangelove','Nothing','Pimpf','Halo','Condemnation','Home','Useless','Freestate','Lovetheme','Freelove','Precious','Wrong','Jezebel','Heaven','Broken','Scum']
+const DM_SONGS_SHUFFLED = [...DM_SONGS].sort(() => Math.random() - 0.5)
+
 const POLL_MS      = 10000
 const EVENTS_LIMIT = 25
 const HISTORY_MAX  = 20
@@ -245,7 +248,7 @@ export const DepecheMode: React.FC<IHomepageProps> = (props) => {
                                                 startIcon={magnifyIcon}
                                                 onClick={() => launchMagnify(cluster.name)}
                                                 sx={{ ...dmBtnSx, flexShrink: 0 }}>
-                                                STRANGELOVE
+                                                {DM_SONGS_SHUFFLED[idx % DM_SONGS_SHUFFLED.length].toUpperCase()}
                                             </Button>
                                         </Stack>
 

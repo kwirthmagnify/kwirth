@@ -42,7 +42,7 @@
     "agora": "../plugins/agora/login/dist/agora.tgz"
   },
   "homepages": {
-    "clusterized": "../homepages/clusterized/dist",
+    "depeche-mode": "../homepages/depeche-mode/dist",
     "matrix": "../homepages/matrix/dist",
     "avicii": "../homepages/avicii/dist"
   },
