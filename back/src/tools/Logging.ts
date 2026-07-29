@@ -34,9 +34,12 @@ const logGeneric = (
     const timestamp = new Date().toLocaleTimeString(undefined, { hour12: false})
     const label = level.toUpperCase()
     
-    const formattedMessage = typeof message === 'object' 
-        ? `\n${JSON.stringify(message, null, 2)}` 
-        : message
+    // Un Error serializa a `{}` con JSON.stringify (message/stack son no-enumerables) → mostrar su stack/message.
+    const formattedMessage = message instanceof Error
+        ? `\n${message.stack ?? message.message}`
+        : typeof message === 'object'
+            ? `\n${JSON.stringify(message, null, 2)}`
+            : message
 
     const output = `${ansiLog? colors.gray : ''}[${timestamp}]${ansiLog? colors.reset : ''} ` +
                    `${ansiLog? colors.component : ''}[${component}]${ansiLog? colors.reset : ''} ` +
