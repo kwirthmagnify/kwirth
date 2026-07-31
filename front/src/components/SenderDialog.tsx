@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import {
     Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
-    DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem,
+    DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography, useTheme
 } from '@mui/material'
-import { Add, CheckCircle, ContentCopy, Delete, Download, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Add, CheckCircle, ContentCopy, Delete, Download, FileDownload, FileUpload, FolderOpen, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -471,6 +471,10 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
 
     // ─── Config form fields ────────────────────────────────────────────────────
 
+    // Campos de secreto (type=password): redactados por defecto + toggle de ojo (revelar/ocultar) por nombre de campo.
+    const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
+    const toggleSecret = (name: string) => setRevealedSecrets(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
+
     const renderField = (f: ISenderFieldDef, values: ConfigValues, onChange: (name: string, val: unknown) => void, isEditing = false) => {
         const value = values[f.name] ?? (f.type === 'boolean' ? false : '')
 
@@ -522,13 +526,22 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
             )
         }
 
+        const isPassword = f.type === 'password'
+        const revealed = revealedSecrets.has(f.name)
         return (
             <TextField key={f.name} size='small' fullWidth
                 label={`${f.label}${f.required ? ' *' : ''}`}
-                type={f.type === 'number' ? 'number' : f.type === 'password' ? 'password' : 'text'}
-                autoComplete={f.type === 'password' ? 'new-password' : 'off'}
+                type={f.type === 'number' ? 'number' : (isPassword && !revealed) ? 'password' : 'text'}
+                autoComplete={isPassword ? 'new-password' : 'off'}
                 value={value}
-                onChange={e => onChange(f.name, e.target.value)} />
+                onChange={e => onChange(f.name, e.target.value)}
+                InputProps={isPassword ? { endAdornment: (
+                    <InputAdornment position='end'>
+                        <IconButton size='small' edge='end' aria-label={revealed ? 'Hide' : 'Show'} onClick={() => toggleSecret(f.name)}>
+                            {revealed ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' />}
+                        </IconButton>
+                    </InputAdornment>
+                ) } : undefined} />
         )
     }
 
@@ -842,10 +855,10 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                                 </Box>
                                 <Stack direction='row' justifyContent='flex-end' alignItems='center' spacing={1}>
                                     {error && <Typography variant='caption' color='error' sx={{ flex: 1 }}>{error}</Typography>}
-                                    <Button size='small' onClick={() => { setShowAddForm(false); setEditingName(undefined); setFormValues({}) }}>Cancel</Button>
                                     <Button size='small' variant='contained' disabled={saving || !isFormValid(expandedId)} onClick={saveConfig}>
                                         {saving ? <CircularProgress size={14} /> : editingName ? 'Update' : 'Add'}
                                     </Button>
+                                    <Button size='small' onClick={() => { setShowAddForm(false); setEditingName(undefined); setFormValues({}) }}>Cancel</Button>
                                 </Stack>
                             </>
                             : <Box sx={{ m: 'auto', color: 'text.disabled' }}>
