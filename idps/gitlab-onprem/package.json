@@ -2,7 +2,7 @@
   "id": "gitlab-onprem",
   "name": "@kwirthmagnify/kwirth-idp-gitlab-onprem",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "displayName": "GitLab Self-Managed",
   "description": "GitLab self-managed (on-prem, OIDC) identity provider connector for Kwirth",
   "type": "module",
@@ -20,5 +20,7 @@
     "@types/node": "^20.12.13",
     "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
 }

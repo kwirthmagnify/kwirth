@@ -48,6 +48,8 @@ const distMeta = {
     description: meta.description,
     ...(meta.website ? { website: meta.website } : {}),
     ...(meta.publishConfig ? { publishConfig: meta.publishConfig } : {}),
+    requiresRestart: meta.requiresRestart ?? false,
+    requiresExtension: meta.requiresExtension ?? [],
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')

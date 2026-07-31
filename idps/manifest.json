@@ -2,6 +2,46 @@
   {
     "extensionType": "idp",
     "id": "github-cloud",
+    "version": "0.1.6",
+    "name": "GitHub Cloud",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-idp-github-cloud/-/kwirth-idp-github-cloud-0.1.6.tgz",
+    "description": "GitHub.com (SaaS, OAuth2) identity provider connector for Kwirth"
+  },
+  {
+    "extensionType": "idp",
+    "id": "github-onprem",
+    "version": "0.1.6",
+    "name": "GitHub Enterprise Server",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-idp-github-onprem/-/kwirth-idp-github-onprem-0.1.6.tgz",
+    "description": "GitHub Enterprise Server (on-prem, OAuth2) identity provider connector for Kwirth"
+  },
+  {
+    "extensionType": "idp",
+    "id": "gitlab-cloud",
+    "version": "0.1.6",
+    "name": "GitLab Cloud",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-idp-gitlab-cloud/-/kwirth-idp-gitlab-cloud-0.1.6.tgz",
+    "description": "GitLab.com (SaaS, OIDC) identity provider connector for Kwirth"
+  },
+  {
+    "extensionType": "idp",
+    "id": "gitlab-onprem",
+    "version": "0.1.6",
+    "name": "GitLab Self-Managed",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-idp-gitlab-onprem/-/kwirth-idp-gitlab-onprem-0.1.6.tgz",
+    "description": "GitLab self-managed (on-prem, OIDC) identity provider connector for Kwirth"
+  },
+  {
+    "extensionType": "idp",
+    "id": "google",
+    "version": "0.1.6",
+    "name": "Google",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-idp-google/-/kwirth-idp-google-0.1.6.tgz",
+    "description": "Google / Gmail (OIDC) identity provider connector for Kwirth"
+  },
+  {
+    "extensionType": "idp",
+    "id": "github-cloud",
     "version": "0.1.3",
     "name": "GitHub Cloud",
     "displayName": "GitHub Cloud",
