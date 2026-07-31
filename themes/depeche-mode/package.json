@@ -2,7 +2,7 @@
   "id": "depeche-mode",
   "name": "@kwirthmagnify/kwirth-theme-depeche-mode",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "displayName": "Depeche Mode",
   "description": "Depeche Mode Memento Mori theme — abyss black, blood red accent, bone parchment, condensed bold typography.",
   "type": "module",
@@ -14,5 +14,7 @@
     "@types/node": "^20.12.13",
     "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
 }

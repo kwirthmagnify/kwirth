@@ -12,7 +12,7 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
     version: meta.version,
     description: meta.description,
     ...(meta.website ? { website: meta.website } : {})
-}, null, 2))
+, requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? [] }, null, 2))
 
 if (fs.existsSync('preview.png')) {
     fs.copyFileSync('preview.png', path.join('dist', 'preview.png'))
