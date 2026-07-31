@@ -18,6 +18,7 @@ export interface IPackMeta {
     website?: string
     installedFrom?: string
     extensions: IPackExtensionRef[]
+    requiresRestart?: boolean
 }
 
 export class PackManager {

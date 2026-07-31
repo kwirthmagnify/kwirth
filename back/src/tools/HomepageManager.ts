@@ -18,6 +18,8 @@ export interface IHomepageMeta {
     installedFrom?: string
     frontStored?: boolean
     hasPreview?: boolean
+    requiresRestart?: boolean
+    requiresExtension?: string[]
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -143,6 +145,8 @@ export class HomepageManager {
                 displayName: pkg.displayName ?? pkg.id ?? pkg.name.split('/').pop(),
                 version: pkg.version,
                 description: pkg.description ?? '',
+                requiresRestart: pkg.requiresRestart ?? false,
+                requiresExtension: pkg.requiresExtension ?? [],
                 website: pkg.website,
                 installedFrom: installedFrom ?? tarGzUrl
             }

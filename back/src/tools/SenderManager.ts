@@ -19,6 +19,8 @@ export interface ISenderMeta {
     installedFrom?: string
     backStored?: boolean
     frontStored?: boolean
+    requiresRestart?: boolean
+    requiresExtension?: string[]
 }
 
 export { ISenderConfig, ISenderMessage }
@@ -307,6 +309,8 @@ export class SenderManager implements ISenderAccess {
                 throw new Error(`Sender '${meta.id}' is already installed`)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
+            meta.requiresRestart = meta.requiresRestart ?? false
+            meta.requiresExtension = meta.requiresExtension ?? []
             const backJs = fs.readFileSync(backPath, 'utf-8')
 
             const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')

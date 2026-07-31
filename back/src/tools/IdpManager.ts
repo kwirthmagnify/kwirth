@@ -37,6 +37,8 @@ interface IIdpConnectorMeta {
     website?: string
     installedFrom?: string
     backStored?: boolean
+    requiresRestart?: boolean
+    requiresExtension?: string[]
 }
 
 /*
@@ -152,7 +154,9 @@ export class IdpManager {
                 version: pkg.version,
                 description: pkg.description,
                 website: pkg.website,
-                installedFrom: installedFrom ?? tarGzUrl
+                installedFrom: installedFrom ?? tarGzUrl,
+                requiresRestart: pkg.requiresRestart ?? false,
+                requiresExtension: pkg.requiresExtension ?? []
             }
             if (this.installedConnectorIds.has(meta.id) && !this.registeredIdps.has(meta.id)) {
                 // reinstalación permitida (sobrescribe)

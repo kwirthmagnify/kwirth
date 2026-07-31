@@ -15,6 +15,8 @@ export interface ILoginMeta {
     description: string
     website?: string
     installedFrom?: string
+    requiresRestart?: boolean
+    requiresExtension?: string[]
 }
 
 export interface ILoginConfig {
@@ -99,7 +101,9 @@ export class LoginManager {
                 version: pkg.version,
                 description: pkg.description ?? '',
                 website: pkg.website,
-                installedFrom: installedFrom ?? tarGzUrl
+                installedFrom: installedFrom ?? tarGzUrl,
+                requiresRestart: pkg.requiresRestart ?? false,
+                requiresExtension: pkg.requiresExtension ?? []
             }
 
             const existing = this.cachedIndex.find(m => m.id === meta.id)

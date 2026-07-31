@@ -13,6 +13,7 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { ELogComponent, logError, logInfo } from '../tools/Logging'
 import { TChannelConstructor } from '../channels/IChannel'
 import { TProviderConstructor } from '../providers/IProvider'
+import { validateExtensionDeps, IInstalledIndex } from '../tools/ExtensionDeps'
 import tar from 'tar'
 import fs from 'fs'
 import os from 'os'
@@ -53,6 +54,21 @@ export class PackApi {
                 file.on('finish', () => file.close(() => resolve()))
             }).on('error', err => { fs.unlink(dest, () => {}); reject(err) })
         })
+    }
+
+    private async readPkgFromMemberTgz(tgzPath: string): Promise<Record<string, unknown>> {
+        const peekDir = path.join(os.tmpdir(), `kwirth-pack-peek-${Date.now()}`)
+        fs.mkdirSync(peekDir, { recursive: true })
+        try {
+            await tar.x({ file: tgzPath, cwd: peekDir, filter: (p: string) => p.endsWith('package.json') })
+            const candidates = [path.join(peekDir, 'package.json'), path.join(peekDir, 'package', 'package.json')]
+            const found = candidates.find(p => fs.existsSync(p))
+            if (!found) return {}
+            return JSON.parse(fs.readFileSync(found, 'utf-8'))
+        }
+        finally {
+            fs.rmSync(peekDir, { recursive: true, force: true })
+        }
     }
 
     private async installFromTgz(tgzPath: string, installedFrom: string): Promise<IPackMeta> {
@@ -106,8 +122,30 @@ export class PackApi {
                 if (exists) throw new Error(`Cannot install pack: extension '${ext.extensionType}:${ext.id}' is already installed`)
             }
 
-            // install each member
+            // validate requiresExtension for all members before installing any
             const baseDir = fs.existsSync(path.join(extractDir, 'package')) ? path.join(extractDir, 'package') : extractDir
+            const installedIndex: IInstalledIndex = {
+                plugin:   installedPlugins.map(p => ({ id: p.id, version: p.version })),
+                provider: installedProviders.map(p => ({ id: p.id, version: p.version })),
+                sender:   installedSenders.map(p => ({ id: p.id, version: p.version })),
+                theme:    installedThemes.map(p => ({ id: p.id, version: p.version })),
+                homepage: installedHomepages.map(p => ({ id: p.id, version: p.version })),
+                idp:      installedIdps.map(p => ({ id: p.id, version: p.version })),
+                login:    installedLogins.map(p => ({ id: p.id, version: p.version }))
+            }
+            const allDepErrors: string[] = []
+            let packRequiresRestart = false
+            for (const ext of extensions) {
+                const memberTgzPath = path.join(baseDir, ext.tgz)
+                if (!fs.existsSync(memberTgzPath)) continue
+                const memberPkg = await this.readPkgFromMemberTgz(memberTgzPath)
+                if (memberPkg.requiresRestart) packRequiresRestart = true
+                const depErrors = validateExtensionDeps((memberPkg.requiresExtension as string[] | undefined) ?? [], installedIndex)
+                if (depErrors.length) allDepErrors.push(...depErrors.map(e => `[${ext.extensionType}:${ext.id}] ${e}`))
+            }
+            if (allDepErrors.length) throw new Error(`Pack '${packId}' has unmet dependencies:\n${allDepErrors.join('\n')}`)
+
+            // install each member
             const packInstalledFrom = `pack:${packId}`
             for (const ext of extensions) {
                 const memberTgzPath = path.join(baseDir, ext.tgz)
@@ -138,7 +176,8 @@ export class PackApi {
                 description: pkg.description ?? '',
                 website: pkg.website,
                 installedFrom,
-                extensions
+                extensions,
+                requiresRestart: packRequiresRestart
             }
             await packManager.savePack(meta)
             return meta

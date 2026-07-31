@@ -29,6 +29,8 @@ export interface IProviderMeta {
     hasFront?: boolean
     frontStored?: boolean
     hasSchema?: boolean
+    requiresRestart?: boolean
+    requiresExtension?: string[]
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -198,6 +200,8 @@ export class ProviderManager {
                 throw new Error(`Provider '${meta.id}' is already installed`)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
+            meta.requiresRestart = meta.requiresRestart ?? false
+            meta.requiresExtension = meta.requiresExtension ?? []
             const backJs = fs.readFileSync(backPath, 'utf-8')
 
             const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')

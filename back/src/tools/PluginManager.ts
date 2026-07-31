@@ -21,6 +21,8 @@ export interface IPluginMeta {
     installedFrom?: string
     backStored?: boolean
     frontStored?: boolean
+    requiresRestart?: boolean
+    requiresExtension?: string[]
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -228,6 +230,8 @@ export class PluginManager {
                 throw new Error(`Plugin '${meta.id}' is already installed`)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
+            meta.requiresRestart = meta.requiresRestart ?? false
+            meta.requiresExtension = meta.requiresExtension ?? []
             const backJs = fs.readFileSync(backPath, 'utf-8')
             const frontJs = fs.readFileSync(frontPath, 'utf-8')
 

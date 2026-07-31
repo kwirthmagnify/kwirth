@@ -18,6 +18,8 @@ export interface IThemeMeta {
     installedFrom?: string
     frontStored?: boolean
     hasPreview?: boolean
+    requiresRestart?: boolean
+    requiresExtension?: string[]
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -144,7 +146,9 @@ export class ThemeManager {
                 version: pkg.version,
                 description: pkg.description ?? '',
                 website: pkg.website,
-                installedFrom: installedFrom ?? tarGzUrl
+                installedFrom: installedFrom ?? tarGzUrl,
+                requiresRestart: pkg.requiresRestart ?? false,
+                requiresExtension: pkg.requiresExtension ?? []
             }
 
             if (this.installedIds.includes(meta.id))
