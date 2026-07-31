@@ -3,7 +3,7 @@
   "name": "Censor",
   "displayName": "Censor",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.39",
+  "version": "0.2.40",
   "website": "https://kwirthmagnify.dev",
   "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
   "icon": "FilterList",
@@ -27,5 +27,9 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": [
+    "provider:business:0.1.6"
+  ]
 }

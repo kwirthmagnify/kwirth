@@ -2,6 +2,141 @@
   {
     "extensionType": "plugin",
     "id": "alert",
+    "version": "0.2.20",
+    "name": "Alert",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.20.tgz",
+    "description": "Alert channel plugin for Kwirth — regex and metric-based alerting",
+    "icon": "Warning",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "censor",
+    "version": "0.2.40",
+    "name": "Censor",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.40.tgz",
+    "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
+    "icon": "FilterList",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "minVersion": "0.1.6",
+        "id": "business"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "echo",
+    "version": "0.2.20",
+    "name": "Echo",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.20.tgz",
+    "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
+    "icon": "Science",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "minVersion": "0.1.10",
+        "id": "otel"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "fileman",
+    "version": "0.2.19",
+    "name": "Fileman",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.19.tgz",
+    "description": "File Manager channel plugin for Kwirth",
+    "icon": "FolderCopyTwoTone",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "log",
+    "version": "0.2.19",
+    "name": "Log",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.19.tgz",
+    "description": "Log stream channel plugin for Kwirth",
+    "icon": "Subject",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "mirc",
+    "version": "0.1.10",
+    "name": "mIRC",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-mirc/-/kwirth-plugin-mirc-0.1.10.tgz",
+    "description": "mIRC channel plugin for Kwirth - cross-cluster direct messaging between connected users, with offline mailbox and WhatsApp-style delivery checks",
+    "icon": "Forum"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "news",
+    "version": "0.2.18",
+    "name": "News",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.18.tgz",
+    "description": "News channel plugin for Kwirth - displays Kubernetes and AI news feeds",
+    "icon": "Newspaper"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "ops",
+    "version": "0.2.20",
+    "name": "Ops",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.20.tgz",
+    "description": "Ops channel plugin for Kwirth",
+    "icon": "Terminal",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "pinocchio",
+    "version": "0.2.30",
+    "name": "Pinocchio",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.30.tgz",
+    "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
+    "icon": "AutoFixHigh",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "minVersion": "0.1.6",
+        "id": "business"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "topology",
+    "version": "0.2.18",
+    "name": "Topology",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.18.tgz",
+    "description": "Topology channel plugin for Kwirth - 3D visualization of Kubernetes cluster topology",
+    "icon": "AccountTree",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "trivy",
+    "version": "0.2.23",
+    "name": "Trivy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.23.tgz",
+    "description": "Trivy security scanning channel plugin for Kwirth",
+    "icon": "VerifiedUser",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "minVersion": "0.1.7",
+        "id": "trivy"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "alert",
     "version": "0.2.18",
     "name": "Alert",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.18.tgz",

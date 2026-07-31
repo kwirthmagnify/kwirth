@@ -2,7 +2,7 @@
   "id": "echo",
   "displayName": "Echo",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
   "icon": "Science",
   "type": "module",
@@ -24,5 +24,9 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": [
+    "provider:otel:0.1.10"
+  ]
 }

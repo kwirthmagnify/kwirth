@@ -3,7 +3,7 @@
   "name": "Ops",
   "displayName": "Ops",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "website": "https://kwirthmagnify.dev",
   "description": "Ops channel plugin for Kwirth",
   "icon": "Terminal",
@@ -32,5 +32,7 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
 }

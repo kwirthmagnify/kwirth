@@ -109,6 +109,8 @@ const distMeta = { type: 'commonjs', extensionType: 'plugin',
     description: meta.description,
     icon: meta.icon,
     ...(meta.website ? { website: meta.website } : {}),
+    requiresRestart: meta.requiresRestart ?? false,
+    requiresExtension: meta.requiresExtension ?? [],
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')

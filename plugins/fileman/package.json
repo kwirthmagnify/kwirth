@@ -3,7 +3,7 @@
   "name": "Fileman",
   "displayName": "Fileman",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "website": "https://kwirthmagnify.dev",
   "description": "File Manager channel plugin for Kwirth",
   "icon": "FolderCopyTwoTone",
@@ -37,5 +37,7 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
 }
