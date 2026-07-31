@@ -45,6 +45,7 @@ const distMeta = {
     id: meta.id,
     name: meta.name,
     displayName: meta.displayName,
+    extensionType: 'homepage',
     version: meta.version,
     description: meta.description,
     ...(meta.website ? { website: meta.website } : {})

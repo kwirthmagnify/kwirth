@@ -198,6 +198,8 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
             return <Chip label='dev' size='small' variant='outlined' color='warning' />
         if (installedFrom === 'local')
             return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
+        if (installedFrom.startsWith('pack:'))
+            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
         if (installedFrom.includes('github.com/kwirthmagnify'))
             return <Chip icon={<Palette />} label='Kwirth' size='small' variant='outlined' color='primary' />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
@@ -294,9 +296,9 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
                                                     ? <Button size='small' variant='outlined' onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>
                                                     : <Button size='small' variant='contained' onClick={() => props.onActivate(t.id)}>ACTIVATE</Button>
                                                 }
-                                                <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : 'Uninstall'}>
+                                                <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : t.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
                                                     <span>
-                                                        <IconButton size='small' color='error' disabled={t.installedFrom === 'dev' || uninstallingId === t.id} onClick={() => uninstall(t)}>
+                                                        <IconButton size='small' color='error' disabled={t.installedFrom === 'dev' || t.installedFrom?.startsWith('pack:') || uninstallingId === t.id} onClick={() => uninstall(t)}>
                                                             {uninstallingId === t.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                         </IconButton>
                                                     </span>
@@ -321,9 +323,9 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
                                             : <Button size='small' variant='contained' onClick={() => props.onActivate(t.id)}>ACTIVATE</Button>}
                                     </Box>,
                                     <Box key={`${t.id}-del`} sx={{ py: 1 }}>
-                                        <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : 'Uninstall'}>
+                                        <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : t.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
                                             <span>
-                                                <IconButton size='small' color='error' disabled={t.installedFrom === 'dev' || uninstallingId === t.id} onClick={() => uninstall(t)}>
+                                                <IconButton size='small' color='error' disabled={t.installedFrom === 'dev' || t.installedFrom?.startsWith('pack:') || uninstallingId === t.id} onClick={() => uninstall(t)}>
                                                     {uninstallingId === t.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                 </IconButton>
                                             </span>

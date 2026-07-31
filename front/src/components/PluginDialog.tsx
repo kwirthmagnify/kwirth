@@ -259,6 +259,8 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
             return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
         if (installedFrom === 'bundled')
             return <Chip label='bundled' size='small' variant='outlined' color='secondary' />
+        if (installedFrom.startsWith('pack:'))
+            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
         if (installedFrom.includes('github.com/kwirthmagnify'))
             return <Chip icon={<Extension />} label='Kwirth' size='small' variant='outlined' color='primary' />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
@@ -370,9 +372,9 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                                 <Tooltip title='Configure'>
                                                     <span><IconButton size='small' onClick={() => openConfig(plugin.id)}><Settings fontSize='small' /></IconButton></span>
                                                 </Tooltip>
-                                                <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : plugin.installedFrom === 'bundled' ? 'Bundled plugins cannot be uninstalled' : 'Uninstall'}>
+                                                <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : plugin.installedFrom === 'bundled' ? 'Bundled plugins cannot be uninstalled' : plugin.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
                                                     <span>
-                                                        <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || plugin.installedFrom === 'bundled' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
+                                                        <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || plugin.installedFrom === 'bundled' || plugin.installedFrom?.startsWith('pack:') || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
                                                             {uninstallingId === plugin.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                         </IconButton>
                                                     </span>
@@ -392,9 +394,9 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                                         <Tooltip title='Configure'>
                                             <span><IconButton size='small' onClick={() => openConfig(plugin.id)}><Settings fontSize='small' /></IconButton></span>
                                         </Tooltip>
-                                        <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : plugin.installedFrom === 'bundled' ? 'Bundled plugins cannot be uninstalled' : 'Uninstall'}>
+                                        <Tooltip title={plugin.installedFrom === 'dev' ? 'Dev plugins cannot be uninstalled' : plugin.installedFrom === 'bundled' ? 'Bundled plugins cannot be uninstalled' : plugin.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
                                             <span>
-                                                <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || plugin.installedFrom === 'bundled' || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
+                                                <IconButton size='small' color='error' disabled={plugin.installedFrom === 'dev' || plugin.installedFrom === 'bundled' || plugin.installedFrom?.startsWith('pack:') || uninstallingId === plugin.id} onClick={() => uninstall(plugin)}>
                                                     {uninstallingId === plugin.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                 </IconButton>
                                             </span>

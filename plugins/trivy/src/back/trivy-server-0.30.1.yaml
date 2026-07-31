@@ -1,0 +1,33 @@
+#
+#  to use trivy server you need to update trivy config (trivy-operator-trivy-config config map)
+#    trivy.serverURL: http://trivy-server.trivy-system:4954
+#    trivy.mode: ClientServer
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trivy-server
+  namespace: trivy-system
+  labels: { app: trivy-server }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: trivy-server } }
+  template:
+    metadata: { labels: { app: trivy-server } }
+    spec:
+      containers:
+        - name: trivy-server
+          image: mirror.gcr.io/aquasec/trivy:0.69.3   # el mismo que usa el operator (del ConfigMap)
+          args: ["server", "--listen", "0.0.0.0:4954"]
+          ports: [{ containerPort: 4954 }]
+          volumeMounts: [{ name: cache, mountPath: /root/.cache/trivy }]
+      volumes: [{ name: cache, emptyDir: {} }]   # DB cacheada mientras viva el pod
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trivy-server
+  namespace: trivy-system
+spec:
+  selector: { app: trivy-server }
+  ports: [{ port: 4954, targetPort: 4954 }]

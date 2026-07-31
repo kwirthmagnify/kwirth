@@ -235,7 +235,7 @@
     <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
     <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
     <div class="nav-item"><a href="senders.html">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
-    <div class="nav-item"><a href="ui.html" class="active">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a></div></div>
+    <div class="nav-item"><a href="ui.html" class="active">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a><a href="ui.html#packs">Packs</a></div></div>
     <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
     <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
     <a href="documentation/#/0.5.40/index">Documentation</a>
@@ -568,6 +568,51 @@
       <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;"><code style="font-family:var(--mono);color:var(--teal);">isExtensionLicensed(type, id)</code> — check whether a specific extension is licensed for this instance</div>
     </div>
   </div>
+</section>
+
+<!-- PACKS SECTION -->
+<section id="packs">
+  <div class="section-tag">Packs</div>
+  <h2 class="section-title">Extension bundles</h2>
+  <p class="section-sub">A <strong>pack</strong> is a single <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">.tgz</code> archive that bundles multiple extensions of any type — plugins, themes, homepages, providers, senders, IdP connectors, or login extensions. Install one pack, get all its members at once, with a single click.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin:32px 0;">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;">
+      <div style="font-size:1.6rem;margin-bottom:12px;">📦</div>
+      <div style="font-weight:700;margin-bottom:8px;">Bundle anything</div>
+      <div style="font-size:0.85rem;color:var(--muted);line-height:1.6;">Mix plugins, themes, homepages, providers, senders and login extensions in a single archive. One install, everything ready.</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;">
+      <div style="font-size:1.6rem;margin-bottom:12px;">🔒</div>
+      <div style="font-weight:700;margin-bottom:8px;">Atomic ownership</div>
+      <div style="font-size:0.85rem;color:var(--muted);line-height:1.6;">Members installed via a pack show a <code style="font-family:var(--mono);font-size:0.85em;color:var(--teal)">via pack</code> badge and cannot be uninstalled individually — remove the pack to remove them all.</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;">
+      <div style="font-size:1.6rem;margin-bottom:12px;">⚡</div>
+      <div style="font-weight:700;margin-bottom:8px;">Hot-loaded</div>
+      <div style="font-size:0.85rem;color:var(--muted);line-height:1.6;">Themes, homepages and plugins in the pack are activated in the browser immediately after install — no page reload required.</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;font-weight:700;margin:40px 0 16px;">Creating a pack</h3>
+  <p style="color:var(--muted);margin-bottom:16px;">Use the <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">create-pack.mjs</code> script at the root of the repository. Pass <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">--include type:name</code> to build an extension from source and bundle it automatically:</p>
+
+  <div style="background:var(--code-bg,#0e1117);border:1px solid var(--border);border-radius:10px;padding:20px 24px;overflow-x:auto;margin-bottom:24px;">
+    <pre style="margin:0;font-size:0.85rem;line-height:1.7;font-family:var(--mono)"><span style="color:#8b949e"># Build from source and bundle in one command</span>
+node packs/create-pack.mjs dark-ops \
+  --include theme:post-punk \
+  --include homepage:matrix \
+  --include plugin:ops \
+  --name <span style="color:#a5d6ff">"Dark Ops"</span> --version <span style="color:#a5d6ff">"1.0.0"</span>
+
+<span style="color:#8b949e"># Or use pre-built .tgz files directly</span>
+node packs/create-pack.mjs my-pack \
+  ./dist/my-plugin-1.0.0.tgz \
+  ./dist/my-theme-1.0.0.tgz \
+  --name <span style="color:#a5d6ff">"My Pack"</span></pre>
+  </div>
+
+  <p style="color:var(--muted);font-size:0.9rem;line-height:1.6;">The script produces a <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">&lt;id&gt;-&lt;version&gt;.pack.tgz</code> containing the member tgzs plus a <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">pack.json</code> manifest and a <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">package.json</code> with <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">extensionType: "pack"</code>. Upload the result through <strong>☰ → Manage extensions → Packs</strong>.</p>
 </section>
 
 <!-- FOOTER -->

@@ -210,6 +210,8 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
     const resolveSource = (from?: string): React.ReactElement | null => {
         if (!from) return null
         if (from === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
+        if (from.startsWith('pack:'))
+            return <Tooltip title={`Installed by pack '${from.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
         if (from === 'bundled') return <Chip label='bundled' size='small' variant='outlined' />
         if (from === 'local') return <Typography variant='caption' color='text.secondary'>Local file</Typography>
         const short = from.length > 40 ? from.slice(0, 37) + '…' : from
@@ -252,8 +254,8 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
                                             <Stack direction='row' spacing={0.5} alignItems='center'>
                                                 {statusChip(c)}
                                                 <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
-                                                <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
-                                                    <span><IconButton size='small' color='error' disabled={!c.installed || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
+                                                <Tooltip title={!c.installed ? 'Bundled/dev connector (cannot be uninstalled)' : c.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
+                                                    <span><IconButton size='small' color='error' disabled={!c.installed || c.installedFrom?.startsWith('pack:') || uninstallingId === c.id} onClick={() => uninstallConnector(c)}>
                                                         { uninstallingId === c.id ? <CircularProgress size={16} /> : <Delete fontSize='small' /> }
                                                     </IconButton></span>
                                                 </Tooltip>

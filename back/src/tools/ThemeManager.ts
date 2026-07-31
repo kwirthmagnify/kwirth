@@ -192,8 +192,19 @@ export class ThemeManager {
 
     async uninstall(id: string): Promise<void> {
         if (this.isDevTheme(id)) throw new Error(`Theme '${id}' is a dev theme and cannot be uninstalled`)
-        this.installedIds = this.installedIds.filter(i => i !== id)
         const index = (await this.configMaps.read('kwirth-themes-index', []) as IThemeMeta[]) || []
+        const meta = index.find(t => t.id === id)
+        if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Theme '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
+        await this._doUninstall(id, index)
+    }
+
+    async uninstallFromPack(id: string): Promise<void> {
+        const index = (await this.configMaps.read('kwirth-themes-index', []) as IThemeMeta[]) || []
+        await this._doUninstall(id, index)
+    }
+
+    private async _doUninstall(id: string, index: IThemeMeta[]): Promise<void> {
+        this.installedIds = this.installedIds.filter(i => i !== id)
         await this.configMaps.write('kwirth-themes-index', index.filter(t => t.id !== id))
         await this.configMaps.write(`kwirth-theme-${id}`, null)
         await this.configMaps.write(`kwirth-theme-${id}-preview`, null)

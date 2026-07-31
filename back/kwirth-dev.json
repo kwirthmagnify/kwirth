@@ -42,9 +42,6 @@
     "agora": "../plugins/agora/login/dist/agora.tgz"
   },
   "homepages": {
-    "depeche-mode": "../homepages/depeche-mode/dist",
-    "matrix": "../homepages/matrix/dist",
-    "avicii": "../homepages/avicii/dist"
   },
   "themes": {
   },

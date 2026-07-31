@@ -50,6 +50,10 @@ Replace the standard login dialog with a **custom-branded login page** tied to a
 
 Self-contained docsify sites served directly by Kwirth. The `core/kwirth` package (this guide) ships bundled. Additional packages can be installed from a URL, a local file or the registry. → **[Documentation packages manual](docs/index)**
 
+## [Packs (extension bundles)](packs/index)
+
+A single `.tgz` that bundles multiple extensions of any type. Install one pack, get all its members at once. Members installed via a pack cannot be uninstalled individually — uninstall the pack to remove them all. → **[Packs manual](packs/index)**
+
 ---
 
-> **Paid extensions** (e.g. Defender, Montag and pro IdP connectors) are not covered here; they will be documented in a separate **marketplace** section.
+> **Paid extensions** (e.g. Excubitor, Montag and pro IdP connectors) are not covered here; they will be documented in a separate **marketplace** section.

@@ -208,6 +208,16 @@ export class IdpManager {
     }
 
     async uninstall(connectorId: string): Promise<void> {
+        const meta = this.connectorMeta.get(connectorId)
+        if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`IdP connector '${connectorId}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
+        await this._doUninstall(connectorId)
+    }
+
+    async uninstallFromPack(connectorId: string): Promise<void> {
+        await this._doUninstall(connectorId)
+    }
+
+    private async _doUninstall(connectorId: string): Promise<void> {
         this.registeredIdps.delete(connectorId)
         this.installedConnectorIds.delete(connectorId)
         this.connectorMeta.delete(connectorId)

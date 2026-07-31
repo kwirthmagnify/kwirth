@@ -219,6 +219,8 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
         if (!installedFrom) return null
         if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
         if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
+        if (installedFrom.startsWith('pack:'))
+            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
         if (installedFrom.includes('github.com/kwirthmagnify')) return <Chip icon={<Home />} label='Kwirth' size='small' variant='outlined' color='primary' />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
         return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
@@ -323,9 +325,9 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                                         </IconButton>
                                                     </Tooltip>
                                                 )}
-                                                <Tooltip title={hp.installedFrom === 'dev' ? 'Dev homepages cannot be uninstalled' : 'Uninstall'}>
+                                                <Tooltip title={hp.installedFrom === 'dev' ? 'Dev homepages cannot be uninstalled' : hp.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
                                                     <span>
-                                                        <IconButton size='small' color='error' disabled={hp.installedFrom === 'dev' || uninstallingId === hp.id} onClick={() => uninstall(hp)}>
+                                                        <IconButton size='small' color='error' disabled={hp.installedFrom === 'dev' || hp.installedFrom?.startsWith('pack:') || uninstallingId === hp.id} onClick={() => uninstall(hp)}>
                                                             {uninstallingId === hp.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                         </IconButton>
                                                     </span>
@@ -361,9 +363,9 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                                         </Stack>
                                     </Box>,
                                     <Box key={`${hp.id}-del`} sx={{ py: 1 }}>
-                                        <Tooltip title={hp.installedFrom === 'dev' ? 'Dev homepages cannot be uninstalled' : 'Uninstall'}>
+                                        <Tooltip title={hp.installedFrom === 'dev' ? 'Dev homepages cannot be uninstalled' : hp.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
                                             <span>
-                                                <IconButton size='small' color='error' disabled={hp.installedFrom === 'dev' || uninstallingId === hp.id} onClick={() => uninstall(hp)}>
+                                                <IconButton size='small' color='error' disabled={hp.installedFrom === 'dev' || hp.installedFrom?.startsWith('pack:') || uninstallingId === hp.id} onClick={() => uninstall(hp)}>
                                                     {uninstallingId === hp.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                 </IconButton>
                                             </span>

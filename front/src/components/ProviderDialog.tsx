@@ -269,6 +269,8 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
         if (!installedFrom) return null
         if (installedFrom === 'local') return <Typography variant='caption' color='text.secondary'>Local file</Typography>
         if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
+        if (installedFrom.startsWith('pack:'))
+            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
         return <Tooltip title={installedFrom}><Typography variant='caption' color='text.secondary'><Link fontSize='inherit' sx={{ verticalAlign: 'middle', mr: 0.3 }} />{short}</Typography></Tooltip>
     }
@@ -343,9 +345,9 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                                     </IconButton>
                                                 </span>
                                             </Tooltip>
-                                            <Tooltip title={provider.installedFrom === 'dev' ? 'Dev providers cannot be uninstalled' : 'Uninstall'}>
+                                            <Tooltip title={provider.installedFrom === 'dev' ? 'Dev providers cannot be uninstalled' : provider.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
                                                 <span>
-                                                    <IconButton size='small' color='error' disabled={provider.installedFrom === 'dev' || uninstallingId === provider.id} onClick={() => uninstall(provider)}>
+                                                    <IconButton size='small' color='error' disabled={provider.installedFrom === 'dev' || provider.installedFrom?.startsWith('pack:') || uninstallingId === provider.id} onClick={() => uninstall(provider)}>
                                                         {uninstallingId === provider.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                     </IconButton>
                                                 </span>
@@ -366,9 +368,9 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
                                                 <Settings fontSize='small' />
                                             </IconButton>
                                         </Tooltip>
-                                        <Tooltip title={provider.installedFrom === 'dev' ? 'Dev providers cannot be uninstalled' : 'Uninstall'}>
+                                        <Tooltip title={provider.installedFrom === 'dev' ? 'Dev providers cannot be uninstalled' : provider.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
                                             <span>
-                                                <IconButton size='small' color='error' disabled={provider.installedFrom === 'dev' || uninstallingId === provider.id} onClick={() => uninstall(provider)}>
+                                                <IconButton size='small' color='error' disabled={provider.installedFrom === 'dev' || provider.installedFrom?.startsWith('pack:') || uninstallingId === provider.id} onClick={() => uninstall(provider)}>
                                                     {uninstallingId === provider.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                 </IconButton>
                                             </span>

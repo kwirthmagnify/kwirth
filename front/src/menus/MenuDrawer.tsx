@@ -24,6 +24,7 @@ enum MenuDrawerOption {
     ManageIdps,
     ManageDocs,
     ManageLogins,
+    ManagePacks,
     UpdateKwirth,
     About,
     Exit
@@ -93,6 +94,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageIdps)}><Key />&nbsp;Identity providers</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageDocs)}><Description />&nbsp;Documentation</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageLogins)}><LockPerson />&nbsp;Login extensions</MenuItem>
+                            <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManagePacks)}><Extension />&nbsp;Packs</MenuItem>
                         </MenuList>
                     </Collapse>
                     <MenuItem onClick={() => optionSelected(MenuDrawerOption.UpdateKwirth)}><BrowserUpdated />&nbsp;Update Kwirth</MenuItem>

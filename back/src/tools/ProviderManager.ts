@@ -258,12 +258,23 @@ export class ProviderManager {
 
     async uninstall(id: string, registeredProviders: Map<string, TProviderConstructor>): Promise<void> {
         if (this.isDevProvider(id)) throw new Error(`Provider '${id}' is a dev provider and cannot be uninstalled`)
+        const index = (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || []
+        const meta = index.find(p => p.id === id)
+        if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Provider '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
+        await this._doUninstall(id, registeredProviders, index)
+    }
+
+    async uninstallFromPack(id: string, registeredProviders: Map<string, TProviderConstructor>): Promise<void> {
+        const index = (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || []
+        await this._doUninstall(id, registeredProviders, index)
+    }
+
+    private async _doUninstall(id: string, registeredProviders: Map<string, TProviderConstructor>, index: IProviderMeta[]): Promise<void> {
         const dev = this.devProviders.get(id)
         if (dev) fs.unwatchFile(path.join(dev.distPath, 'back.js'))
         registeredProviders.delete(id)
         this.installedIds = this.installedIds.filter(i => i !== id)
 
-        const index = (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || []
         await this.configMaps.write('kwirth-providers-index', index.filter(p => p.id !== id))
         await this.configMaps.write(`kwirth-provider-${id}-meta`, null)
         await this.configMaps.write(`kwirth-provider-${id}-back`, null)

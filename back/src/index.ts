@@ -87,6 +87,8 @@ import { LoginManager } from './tools/LoginManager'
 import { LoginExtensionApi } from './api/LoginExtensionApi'
 import { DocsManager } from './tools/DocsManager'
 import { DocsApi } from './api/DocsApi'
+import { PackManager } from './tools/PackManager'
+import { PackApi } from './api/PackApi'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -162,6 +164,7 @@ let senderManager: SenderManager | undefined
 let themeManager: ThemeManager | undefined
 let homepageManager: HomepageManager | undefined
 let loginManager: LoginManager | undefined
+let packManager: PackManager | undefined
 let docsManager: DocsManager | undefined
 const licenseManager = new LicenseManager()
 licenseManager.load()
@@ -1318,6 +1321,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let loginExtensionApi = new LoginExtensionApi(loginManager, apiKeyApi)
             riRouter.use(`/core/logins`, loginExtensionApi.router)
         }
+        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager) {
+            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, apiKeyApi, registeredChannels, registeredProviders })
+            riRouter.use(`/core/packs`, packApi.router)
+        }
         if (docsManager) {
             const docsifyPath = process.env.KWIRTH_DOCSIFY_PATH || path.join(process.cwd(), 'docsify')
             let docsApi = new DocsApi(docsManager, apiKeyApi, docsifyPath)
@@ -1648,6 +1655,10 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
             if (bundledExtensionsPath) await loginManager.installBundled(bundledExtensionsPath)
             loginManager.loadDevLogins()
+        }
+
+        if (!packManager) {
+            packManager = new PackManager(runningInstance.configMaps)
         }
 
         if (!docsManager) {

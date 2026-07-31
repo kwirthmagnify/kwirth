@@ -275,6 +275,16 @@ export class PluginManager {
         const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
         const meta = index.find(p => p.id === id)
         if (meta?.installedFrom === 'bundled') throw new Error(`Plugin '${id}' is bundled and cannot be uninstalled`)
+        if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Plugin '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
+        await this._doUninstall(id, registeredChannels, index)
+    }
+
+    async uninstallFromPack(id: string, registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
+        const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
+        await this._doUninstall(id, registeredChannels, index)
+    }
+
+    private async _doUninstall(id: string, registeredChannels: Map<string, TChannelConstructor>, index: IPluginMeta[]): Promise<void> {
         registeredChannels.delete(id)
         this.installedIds = this.installedIds.filter(i => i !== id)
 

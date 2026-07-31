@@ -12,5 +12,6 @@ export enum EExtensionType {
     HOMEPAGE = 'homepage',
     IDP = 'idp',
     DOCS = 'docs',
-    LOGIN = 'login'
+    LOGIN = 'login',
+    PACK = 'pack'
 }

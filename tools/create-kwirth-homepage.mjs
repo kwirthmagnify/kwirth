@@ -36,6 +36,7 @@ write('package.json', `{
     "id": "${id}",
     "name": "@kwirthmagnify/kwirth-homepage-${id}",
     "displayName": "${displayName}",
+    "extensionType": "homepage",
     "publisher": "@kwirthmagnify",
     "version": "0.1.0",
     "description": "${description}",${websiteLine}
@@ -122,6 +123,7 @@ const distMeta = {
     id: meta.id,
     name: meta.name,
     displayName: meta.displayName,
+    extensionType: 'homepage',
     version: meta.version,
     description: meta.description,
     ...(meta.website ? { website: meta.website } : {})

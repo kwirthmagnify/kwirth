@@ -463,6 +463,8 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         if (!installedFrom) return null
         if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
         if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
+        if (installedFrom.startsWith('pack:'))
+            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
         return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
     }
@@ -560,9 +562,9 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                             <Settings fontSize='small' />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title={sender.installedFrom === 'dev' ? 'Dev senders cannot be uninstalled' : 'Uninstall'}>
+                    <Tooltip title={sender.installedFrom === 'dev' ? 'Dev senders cannot be uninstalled' : sender.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
                         <span>
-                            <IconButton size='small' color='error' disabled={sender.installedFrom === 'dev' || uninstallingId === sender.id} onClick={() => uninstall(sender)}>
+                            <IconButton size='small' color='error' disabled={sender.installedFrom === 'dev' || sender.installedFrom?.startsWith('pack:') || uninstallingId === sender.id} onClick={() => uninstall(sender)}>
                                 {uninstallingId === sender.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                             </IconButton>
                         </span>

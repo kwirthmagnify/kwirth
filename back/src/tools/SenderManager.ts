@@ -357,6 +357,16 @@ export class SenderManager implements ISenderAccess {
 
     async uninstall(id: string): Promise<void> {
         if (this.isDevSender(id)) throw new Error(`Sender '${id}' is a dev sender and cannot be uninstalled`)
+        const meta = this.installedMetas.get(id)
+        if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Sender '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
+        await this._doUninstall(id)
+    }
+
+    async uninstallFromPack(id: string): Promise<void> {
+        await this._doUninstall(id)
+    }
+
+    private async _doUninstall(id: string): Promise<void> {
         this.instances.delete(id)
         this.registeredSenders.delete(id)
         this.installedIds = this.installedIds.filter(i => i !== id)

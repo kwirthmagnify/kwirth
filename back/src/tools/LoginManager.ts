@@ -213,6 +213,17 @@ export class LoginManager {
     async uninstall(id: string): Promise<void> {
         if (this.isDevLogin(id)) throw new Error(`Login extension '${id}' is a dev login and cannot be uninstalled`)
         const index = (await this.configMaps.read('kwirth-logins-index', []) as ILoginMeta[]) || []
+        const meta = index.find(m => m.id === id)
+        if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Login extension '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
+        await this._doUninstall(id, index)
+    }
+
+    async uninstallFromPack(id: string): Promise<void> {
+        const index = (await this.configMaps.read('kwirth-logins-index', []) as ILoginMeta[]) || []
+        await this._doUninstall(id, index)
+    }
+
+    private async _doUninstall(id: string, index: ILoginMeta[]): Promise<void> {
         await this.configMaps.write('kwirth-logins-index', index.filter(m => m.id !== id))
         await this.configMaps.write(`kwirth-login-${id}`, null)
         this.cachedIndex = this.cachedIndex.filter(m => m.id !== id)

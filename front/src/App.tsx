@@ -53,6 +53,7 @@ import { ThemeDialog } from './components/ThemeDialog'
 import { HomepageDialog } from './components/HomepageDialog'
 import { DocsDialog } from './components/DocsDialog'
 import { LoginDialog } from './components/LoginDialog'
+import { PackDialog } from './components/PackDialog'
 import { LoginExtensionPage } from './components/LoginExtensionPage'
 import { IHomepageExtension, ERemoteConnState } from '@kwirthmagnify/kwirth-common-front'
 
@@ -269,6 +270,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showHomepageDialog, setShowHomepageDialog]=useState<boolean>(false)
     const [showDocsDialog, setShowDocsDialog]=useState<boolean>(false)
     const [showLoginDialog, setShowLoginDialog]=useState<boolean>(false)
+    const [showPackDialog, setShowPackDialog]=useState<boolean>(false)
     const [loginExtError, setLoginExtError]=useState<string|undefined>(undefined)
     const [loginExtSlug, setLoginExtSlug]=useState<string|undefined>(() => new URLSearchParams(window.location.search).get('loginExt') ?? undefined)
     const [activeHomepageId, setActiveHomepageId]=useState<string|undefined>(undefined)
@@ -1831,6 +1833,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageLogins:
                 setShowLoginDialog(true)
                 break
+            case MenuDrawerOption.ManagePacks:
+                setShowPackDialog(true)
+                break
             case MenuDrawerOption.ExportWorkspaces: {
                 const allNames:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
                 if (allNames.length===0) { showNoWorkspaces(); break }
@@ -2373,6 +2378,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showHomepageDialog && <HomepageDialog onClose={() => setShowHomepageDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} /> }
                 { showDocsDialog && <DocsDialog onClose={() => setShowDocsDialog(false)} /> }
                 { showLoginDialog && <LoginDialog onClose={() => setShowLoginDialog(false)} /> }
+                { showPackDialog && <PackDialog onClose={() => setShowPackDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }

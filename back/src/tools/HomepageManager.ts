@@ -192,8 +192,19 @@ export class HomepageManager {
 
     async uninstall(id: string): Promise<void> {
         if (this.isDevHomepage(id)) throw new Error(`Homepage '${id}' is a dev homepage and cannot be uninstalled`)
-        this.installedIds = this.installedIds.filter(i => i !== id)
         const index = (await this.configMaps.read('kwirth-homepages-index', []) as IHomepageMeta[]) || []
+        const meta = index.find(t => t.id === id)
+        if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Homepage '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
+        await this._doUninstall(id, index)
+    }
+
+    async uninstallFromPack(id: string): Promise<void> {
+        const index = (await this.configMaps.read('kwirth-homepages-index', []) as IHomepageMeta[]) || []
+        await this._doUninstall(id, index)
+    }
+
+    private async _doUninstall(id: string, index: IHomepageMeta[]): Promise<void> {
+        this.installedIds = this.installedIds.filter(i => i !== id)
         await this.configMaps.write('kwirth-homepages-index', index.filter(t => t.id !== id))
         await this.configMaps.write(`kwirth-homepage-${id}`, null)
         await this.configMaps.write(`kwirth-homepage-${id}-preview`, null)

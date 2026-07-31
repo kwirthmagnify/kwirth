@@ -14,6 +14,7 @@ Almost everything in Kwirth is an **extension**. Channels, data sources, alert d
 | **Identity providers** | **SSO connectors** (Google, GitLab, GitHub). | [IdPs](../extensions/index) — see also [IdP integration](07-idp-integration) |
 | **Login extensions** | Custom **branded login pages** with per-extension channel enforcement. | [Login extensions](../extensions/logins/index) |
 | **Documentation** | **Docsify sites** served by Kwirth itself (this guide is one). | [Documentation packages](../extensions/docs/index) |
+| **Packs** | **Bundles** of multiple extensions installed in one shot. Members cannot be removed individually. | [Packs](../extensions/packs/index) |
 
 Each **individual** extension has its own user + admin manual in [Part III](../extensions/index).
 
@@ -50,6 +51,8 @@ Every family uses the same manager UI, so once you learn one you know them all:
 > **Channels are plugins.** Installing a plugin is exactly how you add or remove the channels users see in the [resource selector](../user/04-selecting-resources). Install the Log plugin and the **Log** channel appears; remove it and it's gone.
 
 > **`dev` mode.** Extensions shown with a **`dev`** badge are being loaded from a local development build rather than a published package — useful while authoring an extension.
+
+> **Pack-owned extensions.** Extensions installed via a pack show a **`via pack`** badge and have their uninstall button disabled. To remove them, uninstall the parent pack from **☰ → Manage extensions → Packs**.
 
 ## Developing your own
 
