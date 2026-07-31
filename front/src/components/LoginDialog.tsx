@@ -28,10 +28,12 @@ interface IInstalledLogin {
     description: string
     website?: string
     installedFrom?: string
+    requiresRestart?: boolean
 }
 
 interface ILoginDialogProps {
     onClose: () => void
+    onRestartRequired?: () => void
 }
 
 const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
@@ -120,7 +122,9 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
+            const meta: IInstalledLogin = await res.json()
             await loadInstalled()
+            if (meta.requiresRestart) props.onRestartRequired?.()
         }
         catch (err) {
             setError(`Failed to install ${entry.name}: ${err}`)
@@ -160,7 +164,9 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
+            const meta: IInstalledLogin = await res.json()
             await loadInstalled()
+            if (meta.requiresRestart) props.onRestartRequired?.()
             setCustomUrl('')
         }
         catch (err) {
@@ -188,7 +194,9 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
+            const meta: IInstalledLogin = await res.json()
             await loadInstalled()
+            if (meta.requiresRestart) props.onRestartRequired?.()
         }
         catch (err) {
             setError(`Failed to install login extension: ${err}`)

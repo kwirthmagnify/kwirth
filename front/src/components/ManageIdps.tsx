@@ -14,9 +14,11 @@ interface IIdpConfigFieldDef { name: string; label: string; type?: IdpFieldType;
 interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IIdpConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; website?: string; description?: string }
 interface IIdpInstanceConfig { id: string; connectorId: string; label: string; enabled: boolean; config: Record<string, unknown> }
 interface IIdpConnectorManifestEntry { id: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string }
+interface IIdpInstallResult { requiresRestart?: boolean }
 
 interface IManageIdpsProps {
     onClose: () => void
+    onRestartRequired?: () => void
 }
 
 const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
@@ -159,7 +161,9 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
         try {
             const res = await fetch(`${backendUrl}/idp/connectors/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
+            const meta: IIdpInstallResult = await res.json()
             await load()
+            if (meta.requiresRestart) props.onRestartRequired?.()
         }
         catch (err) { setError(`Failed to install ${entry.name}: ${err}`) }
         finally { setInstallingId(undefined) }
@@ -170,7 +174,9 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
         try {
             const res = await fetch(`${backendUrl}/idp/connectors/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
+            const meta: IIdpInstallResult = await res.json()
             setCustomUrl(''); await load()
+            if (meta.requiresRestart) props.onRestartRequired?.()
         }
         catch (err) { setError(`Failed to install connector: ${err}`) }
         finally { setInstallingCustom(false) }
@@ -180,7 +186,9 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
         try {
             const res = await fetch(`${backendUrl}/idp/connectors/upload`, { method: 'POST', headers: { Authorization: accessString ? `Bearer ${accessString}` : '', 'Content-Type': 'application/octet-stream', 'X-Kwirth-App': 'true' }, body: file })
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
+            const meta: IIdpInstallResult = await res.json()
             await load()
+            if (meta.requiresRestart) props.onRestartRequired?.()
         }
         catch (err) { setError(`Failed to install connector: ${err}`) }
         finally { setInstallingFile(false); if (fileInputRef.current) fileInputRef.current.value = '' }

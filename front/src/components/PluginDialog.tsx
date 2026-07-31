@@ -39,12 +39,14 @@ interface IInstalledPlugin {
     icon?: string
     website?: string
     installedFrom?: string
+    requiresRestart?: boolean
 }
 
 interface IPluginDialogProps {
     onClose: () => void
     onPluginLoaded: (id: string) => void
     onPluginUnloaded: (id: string) => void
+    onRestartRequired?: () => void
 }
 
 const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) => {
@@ -171,8 +173,10 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
+            const meta: IInstalledPlugin = await res.json()
             await loadInstalled()
-            props.onPluginLoaded(plugin.id)
+            props.onPluginLoaded(meta.id)
+            if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
             setError(`Failed to install ${plugin.name}: ${err}`)
         } finally {
@@ -212,6 +216,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
             const meta: IInstalledPlugin = await res.json()
             await loadInstalled()
             props.onPluginLoaded(meta.id)
+            if (meta.requiresRestart) props.onRestartRequired?.()
             setCustomUrl('')
         } catch (err) {
             setError(`Failed to install plugin: ${err}`)
@@ -240,6 +245,7 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
             const meta: IInstalledPlugin = await res.json()
             await loadInstalled()
             props.onPluginLoaded(meta.id)
+            if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
             setError(`Failed to install plugin: ${err}`)
         } finally {

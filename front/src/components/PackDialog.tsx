@@ -34,6 +34,7 @@ interface IInstalledPack {
     website?: string
     installedFrom?: string
     extensions: IPackExtensionRef[]
+    requiresRestart?: boolean
 }
 
 interface IPackDialogProps {
@@ -44,6 +45,7 @@ interface IPackDialogProps {
     onThemeUnload: (id: string) => void
     onHomepageLoad: (id: string) => void
     onHomepageUnload: (id: string) => void
+    onRestartRequired?: () => void
 }
 
 const PackDialog: React.FC<IPackDialogProps> = (props: IPackDialogProps) => {
@@ -151,6 +153,7 @@ const PackDialog: React.FC<IPackDialogProps> = (props: IPackDialogProps) => {
             const meta: IInstalledPack = await res.json()
             await loadInstalled()
             loadPackFrontAssets(meta)
+            if (meta.requiresRestart) props.onRestartRequired?.()
         }
         catch (err) {
             setError(`Failed to install pack ${entry.displayName}: ${err}`)
@@ -194,6 +197,7 @@ const PackDialog: React.FC<IPackDialogProps> = (props: IPackDialogProps) => {
             const meta: IInstalledPack = await res.json()
             await loadInstalled()
             loadPackFrontAssets(meta)
+            if (meta.requiresRestart) props.onRestartRequired?.()
             setCustomUrl('')
         }
         catch (err) {
@@ -224,6 +228,7 @@ const PackDialog: React.FC<IPackDialogProps> = (props: IPackDialogProps) => {
             const meta: IInstalledPack = await res.json()
             await loadInstalled()
             loadPackFrontAssets(meta)
+            if (meta.requiresRestart) props.onRestartRequired?.()
         }
         catch (err) {
             setError(`Failed to install pack: ${err}`)

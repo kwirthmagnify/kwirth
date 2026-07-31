@@ -29,6 +29,7 @@ interface IInstalledHomepage {
     website?: string
     installedFrom?: string
     hasPreview?: boolean
+    requiresRestart?: boolean
 }
 
 interface IHomepageDialogProps {
@@ -37,6 +38,7 @@ interface IHomepageDialogProps {
     onActivate: (id: string | undefined, config: Record<string, any>) => void
     onHomepageLoad: (id: string) => void
     onHomepageUnload: (id: string) => void
+    onRestartRequired?: () => void
 }
 
 const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogProps) => {
@@ -133,8 +135,10 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
+            const meta: IInstalledHomepage = await res.json()
             await loadInstalled()
-            props.onHomepageLoad(hp.id)
+            props.onHomepageLoad(meta.id)
+            if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
             setError(`Failed to install ${hp.name}: ${err}`)
         } finally {
@@ -175,6 +179,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
             const meta: IInstalledHomepage = await res.json()
             await loadInstalled()
             props.onHomepageLoad(meta.id)
+            if (meta.requiresRestart) props.onRestartRequired?.()
             setCustomUrl('')
         } catch (err) {
             setError(`Failed to install homepage: ${err}`)
@@ -203,6 +208,7 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
             const meta: IInstalledHomepage = await res.json()
             await loadInstalled()
             props.onHomepageLoad(meta.id)
+            if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
             setError(`Failed to install homepage: ${err}`)
         } finally {

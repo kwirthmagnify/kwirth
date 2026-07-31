@@ -54,6 +54,7 @@ interface IInstalledSender {
     installedFrom?: string
     configNames: string[]
     hasFront?: boolean
+    requiresRestart?: boolean
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,6 +64,7 @@ type ConfigValues = Record<string, any>
 
 interface ISenderDialogProps {
     onClose: () => void
+    onRestartRequired?: () => void
 }
 
 const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) => {
@@ -221,7 +223,9 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         try {
             const res = await fetch(`${backendUrl}/core/senders/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
+            const meta: IInstalledSender = await res.json()
             await loadInstalled()
+            if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
             setError(`Failed to install ${entry.displayName}: ${err}`)
         } finally {
@@ -237,8 +241,10 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
         try {
             const res = await fetch(`${backendUrl}/core/senders/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
+            const meta: IInstalledSender = await res.json()
             setCustomUrl('')
             await loadInstalled()
+            if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
             setError(`Failed to install sender: ${err}`)
         } finally {
@@ -256,7 +262,9 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
                 body: file
             })
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
+            const meta: IInstalledSender = await res.json()
             await loadInstalled()
+            if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
             setError(`Failed to install sender: ${err}`)
         } finally {

@@ -29,6 +29,7 @@ interface IInstalledTheme {
     website?: string
     installedFrom?: string
     hasPreview?: boolean
+    requiresRestart?: boolean
 }
 
 interface IThemeDialogProps {
@@ -37,6 +38,7 @@ interface IThemeDialogProps {
     onActivate: (name: string | undefined) => void
     onThemeLoad: (id: string) => void
     onThemeUnload: (id: string) => void
+    onRestartRequired?: () => void
 }
 
 const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
@@ -111,8 +113,10 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
+            const meta: IInstalledTheme = await res.json()
             await loadInstalled()
-            props.onThemeLoad(theme.id)
+            props.onThemeLoad(meta.id)
+            if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
             setError(`Failed to install ${theme.name}: ${err}`)
         } finally {
@@ -152,6 +156,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
             const meta: IInstalledTheme = await res.json()
             await loadInstalled()
             props.onThemeLoad(meta.id)
+            if (meta.requiresRestart) props.onRestartRequired?.()
             setCustomUrl('')
         } catch (err) {
             setError(`Failed to install theme: ${err}`)
@@ -180,6 +185,7 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
             const meta: IInstalledTheme = await res.json()
             await loadInstalled()
             props.onThemeLoad(meta.id)
+            if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
             setError(`Failed to install theme: ${err}`)
         } finally {
