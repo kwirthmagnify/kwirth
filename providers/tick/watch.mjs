@@ -9,7 +9,7 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
     id: meta.id, name: meta.name, displayName: meta.displayName,
     version: meta.version, description: meta.description,
     ...(meta.website ? { website: meta.website } : {}),
-}, null, 2))
+    requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? [] }, null, 2))
 
 const ctx = await esbuild.context({
     entryPoints: ['src/index.ts'],

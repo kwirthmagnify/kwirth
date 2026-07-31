@@ -2,7 +2,7 @@
   "id": "business",
   "name": "@kwirthmagnify/kwirth-provider-business",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "displayName": "Business Provider",
   "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types",
   "type": "module",
@@ -20,5 +20,7 @@
     "@types/node": "^20.12.13",
     "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
 }

@@ -2,7 +2,7 @@
   "id": "syslog",
   "name": "@kwirthmagnify/kwirth-provider-syslog",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "displayName": "Syslog Provider",
   "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
   "website": "https://kwirthmagnify.dev",
@@ -22,5 +22,7 @@
     "@mui/icons-material": "^7.1.2",
     "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
 }
