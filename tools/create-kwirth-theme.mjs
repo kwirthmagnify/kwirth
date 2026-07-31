@@ -39,6 +39,8 @@ write('package.json', `{
     "displayName": "${displayName}",
     "extensionType": "theme",
     "description": "${description}",${websiteLine}
+    "requiresRestart": false,
+    "requiresExtension": [],
     "type": "module",
     "scripts": {
         "build": "node build.mjs",
@@ -93,7 +95,9 @@ const distMeta = {
     extensionType: 'theme',
     version: meta.version,
     description: meta.description,
-    ...(meta.website ? { website: meta.website } : {})
+    ...(meta.website ? { website: meta.website } : {}),
+    requiresRestart: meta.requiresRestart ?? false,
+    requiresExtension: meta.requiresExtension ?? [],
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
@@ -122,7 +126,8 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
     displayName: meta.displayName,
     version: meta.version,
     description: meta.description,
-    ...(meta.website ? { website: meta.website } : {})
+    ...(meta.website ? { website: meta.website } : {}),
+    requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? []
 }, null, 2))
 
 if (fs.existsSync('preview.png')) {

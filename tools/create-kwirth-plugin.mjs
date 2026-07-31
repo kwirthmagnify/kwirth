@@ -45,6 +45,8 @@ write('package.json', `{
     "version": "1.0.0",
     "description": "${description}",
     "icon": "${icon}",${websiteLine}
+    "requiresRestart": false,
+    "requiresExtension": [],
     "type": "module",
     "scripts": {
         "build": "node build.mjs",
@@ -151,6 +153,8 @@ const distMeta = {
     description: meta.description,
     icon: meta.icon,
     ...(meta.website ? { website: meta.website } : {}),
+    requiresRestart: meta.requiresRestart ?? false,
+    requiresExtension: meta.requiresExtension ?? [],
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
@@ -209,7 +213,8 @@ const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
     id: meta.id, name: \`@kwirthmagnify/kwirth-plugin-\${meta.id}\`, displayName: meta.displayName,
     version: meta.version, description: meta.description, icon: meta.icon,
-    ...(meta.website ? { website: meta.website } : {})
+    ...(meta.website ? { website: meta.website } : {}),
+    requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? []
 }, null, 2))
 
 const frontCtx = await esbuild.context({

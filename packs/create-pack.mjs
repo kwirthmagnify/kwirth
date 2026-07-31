@@ -186,7 +186,9 @@ const packPkgJson = {
     version:       opts.version,
     description:   opts.description,
     extensionType: 'pack',
-    ...(opts.website ? { website: opts.website } : {})
+    ...(opts.website ? { website: opts.website } : {}),
+    requiresRestart: false,
+    requiresExtension: [],
 }
 writeFileSync(join(pkgDir, 'package.json'), JSON.stringify(packPkgJson, null, 2))
 
