@@ -1,6 +1,38 @@
 [
   {
     "extensionType": "homepage",
+    "id": "avicii",
+    "version": "0.1.13",
+    "name": "Avicii",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-avicii/-/kwirth-homepage-avicii-0.1.13.tgz",
+    "description": "Avicii-inspired homepage — warm gold on black, geometric triangle motifs, sharp Oswald typography, and live cluster metrics."
+  },
+  {
+    "extensionType": "homepage",
+    "id": "clusterized",
+    "version": "0.1.10",
+    "name": "Clusterized",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-clusterized/-/kwirth-homepage-clusterized-0.1.10.tgz",
+    "description": "Cluster-centric homepage for Kwirth — one card per cluster with status indicator and quick Magnify access"
+  },
+  {
+    "extensionType": "homepage",
+    "id": "depeche-mode",
+    "version": "0.1.6",
+    "name": "Depeche Mode",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-depeche-mode/-/kwirth-homepage-depeche-mode-0.1.6.tgz",
+    "description": "Depeche Mode homepage — abyss black, blood red accents, bone text, condensed bold typography, ASCII metric bars and STRANGELOVE cluster launch."
+  },
+  {
+    "extensionType": "homepage",
+    "id": "matrix",
+    "version": "0.1.10",
+    "name": "Matrix",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-matrix/-/kwirth-homepage-matrix-0.1.10.tgz",
+    "description": "Matrix-style cluster overview homepage for Kwirth"
+  },
+  {
+    "extensionType": "homepage",
     "id": "clusterized",
     "name": "@kwirthmagnify/kwirth-homepage-clusterized",
     "displayName": "Clusterized",
