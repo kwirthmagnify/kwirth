@@ -45,15 +45,15 @@ import { MenuNotification, INotification } from './components/MenuNotification'
 import { ContextSelector } from './components/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
-import { PluginDialog } from './components/PluginDialog'
-import { ProviderDialog } from './components/ProviderDialog'
-import { ManageIdps } from './components/ManageIdps'
-import { SenderDialog } from './components/SenderDialog'
-import { ThemeDialog } from './components/ThemeDialog'
-import { HomepageDialog } from './components/HomepageDialog'
+import { PluginManagerDialog } from './components/PluginManagerDialog'
+import { ProviderManagerDialog } from './components/ProviderManagerDialog'
+import { IdpManagerDialog } from './components/IdpManagerDialog'
+import { SenderManagerDialog } from './components/SenderManagerDialog'
+import { ThemeManagerDialog } from './components/ThemeManagerDialog'
+import { HomepageManagerDialog } from './components/HomepageManagerDialog'
 import { DocsDialog } from './components/DocsDialog'
-import { LoginDialog } from './components/LoginDialog'
-import { PackDialog } from './components/PackDialog'
+import { LoginManagerDialog } from './components/LoginManagerDialog'
+import { PackManagerDialog } from './components/PackManagerDialog'
 import { LoginExtensionPage } from './components/LoginExtensionPage'
 import { IHomepageExtension, ERemoteConnState } from '@kwirthmagnify/kwirth-common-front'
 
@@ -261,16 +261,16 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showUserSecurity, setShowUserSecurity]=useState<boolean>(false)
     const [showSettingsUser, setShowSettingsUser]=useState<boolean>(false)
     const [showSettingsCluster, setShowSettingsCluster]=useState<boolean>(false)
-    const [showPluginDialog, setShowPluginDialog]=useState<boolean>(false)
-    const [showProviderDialog, setShowProviderDialog]=useState<boolean>(false)
-    const [showManageIdps, setShowManageIdps]=useState<boolean>(false)
+    const [showPluginManagerDialog, setShowPluginManagerDialog]=useState<boolean>(false)
+    const [showProviderManagerDialog, setShowProviderManagerDialog]=useState<boolean>(false)
+    const [showIdpManagerDialog, setShowIdpManagerDialog]=useState<boolean>(false)
     // const [showDaemonDialog, setShowDaemonDialog]=useState<boolean>(false)
-    const [showSenderDialog, setShowSenderDialog]=useState<boolean>(false)
-    const [showThemeDialog, setShowThemeDialog]=useState<boolean>(false)
-    const [showHomepageDialog, setShowHomepageDialog]=useState<boolean>(false)
+    const [showSenderManagerDialog, setShowSenderManagerDialog]=useState<boolean>(false)
+    const [showThemeManagerDialog, setShowThemeManagerDialog]=useState<boolean>(false)
+    const [showHomepageManagerDialog, setShowHomepageManagerDialog]=useState<boolean>(false)
     const [showDocsDialog, setShowDocsDialog]=useState<boolean>(false)
-    const [showLoginDialog, setShowLoginDialog]=useState<boolean>(false)
-    const [showPackDialog, setShowPackDialog]=useState<boolean>(false)
+    const [showLoginManagerDialog, setShowLoginManagerDialog]=useState<boolean>(false)
+    const [showPackManagerDialog, setShowPackManagerDialog]=useState<boolean>(false)
     const [loginExtError, setLoginExtError]=useState<string|undefined>(undefined)
     const [loginExtSlug, setLoginExtSlug]=useState<string|undefined>(() => new URLSearchParams(window.location.search).get('loginExt') ?? undefined)
     const [activeHomepageId, setActiveHomepageId]=useState<string|undefined>(undefined)
@@ -912,11 +912,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (newTab.channel.requirements.palette) newTab.channelObject.setPalette = (palette:string) => setMode(palette as 'light'|'dark')
         if (newTab.channel.requirements.openManager) newTab.channelObject.openManager = (type) => {
             switch (type) {
-                case EExtensionType.PLUGIN:   setShowPluginDialog(true); break
-                case EExtensionType.PROVIDER: setShowProviderDialog(true); break
-                case EExtensionType.SENDER:   setShowSenderDialog(true); break
-                case EExtensionType.THEME:    setShowThemeDialog(true); break
-                case EExtensionType.HOMEPAGE: setShowHomepageDialog(true); break
+                case EExtensionType.PLUGIN:   setShowPluginManagerDialog(true); break
+                case EExtensionType.PROVIDER: setShowProviderManagerDialog(true); break
+                case EExtensionType.SENDER:   setShowSenderManagerDialog(true); break
+                case EExtensionType.THEME:    setShowThemeManagerDialog(true); break
+                case EExtensionType.HOMEPAGE: setShowHomepageManagerDialog(true); break
                 case EExtensionType.DOCS:     setShowDocsDialog(true); break
             }
         }
@@ -1807,34 +1807,34 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 setShowUserSecurity(true)
                 break
             case MenuDrawerOption.ManagePlugins:
-                setShowPluginDialog(true)
+                setShowPluginManagerDialog(true)
                 break
             case MenuDrawerOption.ManageProviders:
-                setShowProviderDialog(true)
+                setShowProviderManagerDialog(true)
                 break
             case MenuDrawerOption.ManageSenders:
-                setShowSenderDialog(true)
+                setShowSenderManagerDialog(true)
                 break
             // case MenuDrawerOption.ManageDaemons:
             //     setShowDaemonDialog(true)
             //     break
             case MenuDrawerOption.ManageThemes:
-                setShowThemeDialog(true)
+                setShowThemeManagerDialog(true)
                 break
             case MenuDrawerOption.ManageHomepages:
-                setShowHomepageDialog(true)
+                setShowHomepageManagerDialog(true)
                 break
             case MenuDrawerOption.ManageIdps:
-                setShowManageIdps(true)
+                setShowIdpManagerDialog(true)
                 break
             case MenuDrawerOption.ManageDocs:
                 setShowDocsDialog(true)
                 break
             case MenuDrawerOption.ManageLogins:
-                setShowLoginDialog(true)
+                setShowLoginManagerDialog(true)
                 break
             case MenuDrawerOption.ManagePacks:
-                setShowPackDialog(true)
+                setShowPackManagerDialog(true)
                 break
             case MenuDrawerOption.ExportWorkspaces: {
                 const allNames:string[] = await (await fetch (`${backendUrl}/store/${user?.id}/workspaces`, addGetAuthorization(accessString))).json()
@@ -2370,15 +2370,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showManageClusters && <ManageClusters onClose={onManageClustersClosed} clusters={clusters} notify={notify}/> }
                 { showApiSecurity && <ManageApiSecurity onClose={() => setShowApiSecurity(false)} /> }
                 { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} /> }
-                { showPluginDialog && <PluginDialog onClose={() => setShowPluginDialog(false)} onPluginLoaded={loadPluginFront} onPluginUnloaded={unloadPluginFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showProviderDialog && <ProviderDialog onClose={() => setShowProviderDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showManageIdps && <ManageIdps onClose={() => setShowManageIdps(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showSenderDialog && <SenderDialog onClose={() => setShowSenderDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showThemeDialog && <ThemeDialog onClose={() => setShowThemeDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showHomepageDialog && <HomepageDialog onClose={() => setShowHomepageDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showPluginManagerDialog && <PluginManagerDialog onClose={() => setShowPluginManagerDialog(false)} onPluginLoaded={loadPluginFront} onPluginUnloaded={unloadPluginFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showProviderManagerDialog && <ProviderManagerDialog onClose={() => setShowProviderManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showIdpManagerDialog && <IdpManagerDialog onClose={() => setShowIdpManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showSenderManagerDialog && <SenderManagerDialog onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showThemeManagerDialog && <ThemeManagerDialog onClose={() => setShowThemeManagerDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showHomepageManagerDialog && <HomepageManagerDialog onClose={() => setShowHomepageManagerDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showDocsDialog && <DocsDialog onClose={() => setShowDocsDialog(false)} /> }
-                { showLoginDialog && <LoginDialog onClose={() => setShowLoginDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showPackDialog && <PackDialog onClose={() => setShowPackDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }

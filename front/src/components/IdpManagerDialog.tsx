@@ -16,12 +16,12 @@ interface IIdpInstanceConfig { id: string; connectorId: string; label: string; e
 interface IIdpConnectorManifestEntry { id: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string }
 interface IIdpInstallResult { requiresRestart?: boolean }
 
-interface IManageIdpsProps {
+interface IIdpManagerDialogProps {
     onClose: () => void
     onRestartRequired?: () => void
 }
 
-const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
+const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
 
@@ -369,4 +369,4 @@ const ManageIdps: React.FC<IManageIdpsProps> = (props: IManageIdpsProps) => {
     </>)
 }
 
-export { ManageIdps }
+export { IdpManagerDialog }

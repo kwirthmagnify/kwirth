@@ -32,7 +32,7 @@ interface IInstalledTheme {
     requiresRestart?: boolean
 }
 
-interface IThemeDialogProps {
+interface IThemeManagerDialogProps {
     onClose: () => void
     activeThemeName: string | undefined
     onActivate: (name: string | undefined) => void
@@ -41,7 +41,7 @@ interface IThemeDialogProps {
     onRestartRequired?: () => void
 }
 
-const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
+const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeManagerDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
     useKeyboard(props.onClose)
@@ -458,4 +458,4 @@ const ThemeDialog: React.FC<IThemeDialogProps> = (props: IThemeDialogProps) => {
     )
 }
 
-export { ThemeDialog }
+export { ThemeManagerDialog }

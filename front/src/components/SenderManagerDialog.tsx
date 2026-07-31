@@ -62,12 +62,12 @@ type ConfigValues = Record<string, any>
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-interface ISenderDialogProps {
+interface ISenderManagerDialogProps {
     onClose: () => void
     onRestartRequired?: () => void
 }
 
-const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) => {
+const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISenderManagerDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
     useKeyboard(props.onClose)
@@ -1017,4 +1017,4 @@ const SenderDialog: React.FC<ISenderDialogProps> = (props: ISenderDialogProps) =
     )
 }
 
-export { SenderDialog }
+export { SenderManagerDialog }

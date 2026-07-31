@@ -1,48 +1,60 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Divider, IconButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Chip } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Link, LockPerson, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
 
-const LOGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/logins/manifest.json'
+const PACKS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/packs/manifest.json'
 
-interface ILoginManifestEntry {
+interface IPackManifestEntry {
     id: string
-    name: string
     displayName: string
     version: string
     description: string
     website?: string
     url: string
+    extensionTypes?: string[]
 }
 
-interface IInstalledLogin {
+interface IPackExtensionRef {
+    extensionType: string
     id: string
-    name: string
+    tgz: string
+}
+
+interface IInstalledPack {
+    id: string
     displayName: string
     version: string
     description: string
     website?: string
     installedFrom?: string
+    extensions: IPackExtensionRef[]
     requiresRestart?: boolean
 }
 
-interface ILoginDialogProps {
+interface IPackManagerDialogProps {
     onClose: () => void
+    onPluginLoad: (id: string) => void
+    onPluginUnload: (id: string) => void
+    onThemeLoad: (id: string) => void
+    onThemeUnload: (id: string) => void
+    onHomepageLoad: (id: string) => void
+    onHomepageUnload: (id: string) => void
     onRestartRequired?: () => void
 }
 
-const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
+const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManagerDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
     useKeyboard(props.onClose)
 
-    const [available, setAvailable] = useState<ILoginManifestEntry[]>([])
-    const [installed, setInstalled] = useState<IInstalledLogin[]>([])
+    const [available, setAvailable] = useState<IPackManifestEntry[]>([])
+    const [installed, setInstalled] = useState<IInstalledPack[]>([])
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [installingId, setInstallingId] = useState<string | undefined>()
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
@@ -56,7 +68,7 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const loginGradient = (name: string) => {
+    const packGradient = (name: string) => {
         let hash = 0
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
         const hue = Math.abs(hash) % 360
@@ -67,14 +79,14 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         return `${lines1}, ${lines2}, linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.12 : 0.20}) 100%)`
     }
 
-    const groupedAvailable: Record<string, ILoginManifestEntry[]> = available.reduce((acc, p) => {
+    const groupedAvailable: Record<string, IPackManifestEntry[]> = available.reduce((acc, p) => {
         if (!acc[p.id]) acc[p.id] = []
         acc[p.id].push(p)
         return acc
-    }, {} as Record<string, ILoginManifestEntry[]>)
+    }, {} as Record<string, IPackManifestEntry[]>)
     Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
 
-    const getSelectedEntry = (id: string): ILoginManifestEntry => {
+    const getSelectedEntry = (id: string): IPackManifestEntry => {
         const group = groupedAvailable[id]
         const version = selectedVersions[id] ?? group[0].version
         return group.find(p => p.version === version) ?? group[0]
@@ -87,12 +99,12 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
 
     const loadInstalled = async () => {
         try {
-            const res = await fetch(`${backendUrl}/core/logins`, addGetAuthorization(accessString))
-            const data: IInstalledLogin[] = await res.json()
+            const res = await fetch(`${backendUrl}/core/packs`, addGetAuthorization(accessString))
+            const data: IInstalledPack[] = await res.json()
             setInstalled(data)
         }
         catch (err) {
-            setError(`Failed to load installed logins: ${err}`)
+            setError(`Failed to load installed packs: ${err}`)
         }
     }
 
@@ -100,9 +112,9 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         setError(undefined)
         setLoadingManifest(true)
         try {
-            const res = await fetch(LOGINS_MANIFEST_URL)
+            const res = await fetch(PACKS_MANIFEST_URL)
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
-            const data: ILoginManifestEntry[] = await res.json()
+            const data: IPackManifestEntry[] = await res.json()
             setAvailable(data)
         }
         catch {
@@ -113,40 +125,58 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         }
     }
 
-    const install = async (entry: ILoginManifestEntry) => {
+    const loadPackFrontAssets = (meta: IInstalledPack) => {
+        for (const ext of meta.extensions) {
+            if (ext.extensionType === 'plugin')   props.onPluginLoad(ext.id)
+            if (ext.extensionType === 'theme')    props.onThemeLoad(ext.id)
+            if (ext.extensionType === 'homepage') props.onHomepageLoad(ext.id)
+        }
+    }
+
+    const unloadPackFrontAssets = (meta: IInstalledPack) => {
+        for (const ext of meta.extensions) {
+            if (ext.extensionType === 'plugin')   props.onPluginUnload(ext.id)
+            if (ext.extensionType === 'theme')    props.onThemeUnload(ext.id)
+            if (ext.extensionType === 'homepage') props.onHomepageUnload(ext.id)
+        }
+    }
+
+    const install = async (entry: IPackManifestEntry) => {
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/core/logins/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
+            const res = await fetch(`${backendUrl}/core/packs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
-            const meta: IInstalledLogin = await res.json()
+            const meta: IInstalledPack = await res.json()
             await loadInstalled()
+            loadPackFrontAssets(meta)
             if (meta.requiresRestart) props.onRestartRequired?.()
         }
         catch (err) {
-            setError(`Failed to install ${entry.name}: ${err}`)
+            setError(`Failed to install pack ${entry.displayName}: ${err}`)
         }
         finally {
             setInstallingId(undefined)
         }
     }
 
-    const uninstall = async (login: IInstalledLogin) => {
+    const uninstall = async (pack: IInstalledPack) => {
         setError(undefined)
-        setUninstallingId(login.id)
+        setUninstallingId(pack.id)
         try {
-            const res = await fetch(`${backendUrl}/core/logins/${login.id}`, addDeleteAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/packs/${pack.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
+            unloadPackFrontAssets(pack)
             await loadInstalled()
         }
         catch (err) {
-            setError(`Failed to uninstall ${login.name}: ${err}`)
+            setError(`Failed to uninstall pack ${pack.displayName}: ${err}`)
         }
         finally {
             setUninstallingId(undefined)
@@ -159,18 +189,19 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         setError(undefined)
         setInstallingCustom(true)
         try {
-            const res = await fetch(`${backendUrl}/core/logins/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
+            const res = await fetch(`${backendUrl}/core/packs/install`, addPostAuthorization(accessString, JSON.stringify({ url })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
-            const meta: IInstalledLogin = await res.json()
+            const meta: IInstalledPack = await res.json()
             await loadInstalled()
+            loadPackFrontAssets(meta)
             if (meta.requiresRestart) props.onRestartRequired?.()
             setCustomUrl('')
         }
         catch (err) {
-            setError(`Failed to install login extension: ${err}`)
+            setError(`Failed to install pack: ${err}`)
         }
         finally {
             setInstallingCustom(false)
@@ -181,7 +212,7 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         setError(undefined)
         setInstallingFile(true)
         try {
-            const res = await fetch(`${backendUrl}/core/logins/upload`, {
+            const res = await fetch(`${backendUrl}/core/packs/upload`, {
                 method: 'POST',
                 headers: {
                     Authorization: accessString ? `Bearer ${accessString}` : '',
@@ -194,12 +225,13 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
-            const meta: IInstalledLogin = await res.json()
+            const meta: IInstalledPack = await res.json()
             await loadInstalled()
+            loadPackFrontAssets(meta)
             if (meta.requiresRestart) props.onRestartRequired?.()
         }
         catch (err) {
-            setError(`Failed to install login extension: ${err}`)
+            setError(`Failed to install pack: ${err}`)
         }
         finally {
             setInstallingFile(false)
@@ -207,19 +239,20 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         }
     }
 
-    const isInstalled = (id: string) => installed.some(p => p.id === id && p.installedFrom !== 'dev')
-    const isDevInstalled = (id: string) => installed.some(p => p.id === id && p.installedFrom === 'dev')
+    const isInstalled = (id: string) => installed.some(p => p.id === id)
 
     const resolveSource = (installedFrom?: string): React.ReactElement | null => {
         if (!installedFrom) return null
-        if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
-        if (installedFrom === 'bundled') return <Chip label='bundled' size='small' variant='outlined' color='default' />
         if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
-        if (installedFrom.startsWith('pack:'))
-            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
-        if (installedFrom.includes('github.com/kwirthmagnify')) return <Chip icon={<LockPerson />} label='Kwirth' size='small' variant='outlined' color='primary' />
+        if (installedFrom.includes('github.com/kwirthmagnify')) return <Chip icon={<Extension />} label='Kwirth' size='small' variant='outlined' color='primary' />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
         return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
+    }
+
+    const membersSummary = (extensions: IPackExtensionRef[]) => {
+        const counts: Record<string, number> = {}
+        for (const e of extensions) counts[e.extensionType] = (counts[e.extensionType] ?? 0) + 1
+        return Object.entries(counts).map(([type, n]) => `${n} ${type}${n > 1 ? 's' : ''}`).join(', ')
     }
 
     const ViewToggle = () => (
@@ -237,10 +270,10 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
         </Stack>
     )
 
-    const LoginCard = ({ id, displayName, version, description, badge, source, website, action }: { id: string; displayName: string; version: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: loginGradient(id) }}>
+    const PackCard = ({ id, displayName, version, description, badge, source, website, members, action }: { id: string; displayName: string; version: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; members?: string; action: React.ReactNode }) => (
+        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: packGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
-                <Box sx={{ color: 'text.secondary', mt: 0.25 }}><LockPerson /></Box>
+                <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Extension /></Box>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName}</Typography>
@@ -248,8 +281,9 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
                         <Chip label={`v${version}`} size='small' sx={{ minWidth: 72 }} />
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
+                    {members && <Typography variant='caption' color='text.disabled' display='block'>{members}</Typography>}
                 </Box>
-                <Tooltip title={website ? 'Open login extension website' : 'No website available'}>
+                <Tooltip title={website ? 'Open pack website' : 'No website available'}>
                     <span>
                         <IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}>
                             <OpenInNew fontSize='small' />
@@ -265,38 +299,39 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
     )
 
     const filteredIds = Object.keys(groupedAvailable).filter(id => !filterText || id.includes(filterText.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(filterText.toLowerCase()))
-    const filteredInstalled = installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name).toLowerCase().includes(installedFilter.toLowerCase()))
+    const filteredInstalled = installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || p.displayName.toLowerCase().includes(installedFilter.toLowerCase()))
 
     return (
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/logins/index'>Manage login extensions</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/packs/index'>Manage extension packs</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
                     <Stack direction='row' alignItems='center' spacing={1}>
-                        <Typography variant='subtitle2'>Installed login extensions</Typography>
+                        <Typography variant='subtitle2'>Installed packs</Typography>
                         <TextField size='small' placeholder='Filter…' value={installedFilter} onChange={e => setInstalledFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
                         <ViewToggle />
                     </Stack>
 
                     {installed.length === 0
-                        ? <Typography variant='body2' color='text.secondary'>No login extensions installed. The default Kwirth login page is always available.</Typography>
+                        ? <Typography variant='body2' color='text.secondary'>No packs installed.</Typography>
                         : viewMode === 'card'
                             ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
-                                {filteredInstalled.map(login => (
-                                    <LoginCard
-                                        key={login.id}
-                                        id={login.id}
-                                        displayName={login.displayName || login.name}
-                                        version={login.version}
-                                        description={login.description}
-                                        source={resolveSource(login.installedFrom)}
-                                        website={login.website}
+                                {filteredInstalled.map(pack => (
+                                    <PackCard
+                                        key={pack.id}
+                                        id={pack.id}
+                                        displayName={pack.displayName}
+                                        version={pack.version}
+                                        description={pack.description}
+                                        source={resolveSource(pack.installedFrom)}
+                                        website={pack.website}
+                                        members={membersSummary(pack.extensions)}
                                         action={
-                                            <Tooltip title={login.installedFrom === 'dev' ? 'Dev login extensions cannot be uninstalled' : login.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
+                                            <Tooltip title='Uninstall pack (removes all member extensions)'>
                                                 <span>
-                                                    <IconButton size='small' color='error' disabled={login.installedFrom === 'dev' || login.installedFrom?.startsWith('pack:') || uninstallingId === login.id} onClick={() => uninstall(login)}>
-                                                        {uninstallingId === login.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                    <IconButton size='small' color='error' disabled={uninstallingId === pack.id} onClick={() => uninstall(pack)}>
+                                                        {uninstallingId === pack.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                     </IconButton>
                                                 </span>
                                             </Tooltip>
@@ -305,29 +340,30 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
                                 ))}
                               </Box>
                             : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
-                                {filteredInstalled.flatMap((login, i, arr) => [
-                                    <Box key={`${login.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><LockPerson fontSize='small' /></Box>,
-                                    <Box key={`${login.id}-name`} sx={{ py: 1, minWidth: 0 }}>
-                                        <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{login.displayName || login.name}</Typography>
-                                        <Typography variant='caption' color='text.secondary'>{login.description}</Typography>
+                                {filteredInstalled.flatMap((pack, i, arr) => [
+                                    <Box key={`${pack.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Extension fontSize='small' /></Box>,
+                                    <Box key={`${pack.id}-name`} sx={{ py: 1, minWidth: 0 }}>
+                                        <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pack.displayName}</Typography>
+                                        <Typography variant='caption' color='text.secondary'>{pack.description}</Typography>
+                                        <Typography variant='caption' color='text.disabled' display='block'>{membersSummary(pack.extensions)}</Typography>
                                     </Box>,
-                                    <Box key={`${login.id}-version`} sx={{ py: 1 }}><Chip label={`v${login.version}`} size='small' sx={{ minWidth: 72 }} /></Box>,
-                                    <Box key={`${login.id}-source`} sx={{ py: 1 }}>{resolveSource(login.installedFrom)}</Box>,
-                                    <Box key={`${login.id}-del`} sx={{ py: 1 }}>
-                                        <Tooltip title={login.installedFrom === 'dev' ? 'Dev login extensions cannot be uninstalled' : login.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
+                                    <Box key={`${pack.id}-version`} sx={{ py: 1 }}><Chip label={`v${pack.version}`} size='small' sx={{ minWidth: 72 }} /></Box>,
+                                    <Box key={`${pack.id}-source`} sx={{ py: 1 }}>{resolveSource(pack.installedFrom)}</Box>,
+                                    <Box key={`${pack.id}-del`} sx={{ py: 1 }}>
+                                        <Tooltip title='Uninstall pack (removes all member extensions)'>
                                             <span>
-                                                <IconButton size='small' color='error' disabled={login.installedFrom === 'dev' || login.installedFrom?.startsWith('pack:') || uninstallingId === login.id} onClick={() => uninstall(login)}>
-                                                    {uninstallingId === login.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                <IconButton size='small' color='error' disabled={uninstallingId === pack.id} onClick={() => uninstall(pack)}>
+                                                    {uninstallingId === pack.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
                                                 </IconButton>
                                             </span>
                                         </Tooltip>
                                     </Box>,
-                                    ...(i < arr.length - 1 ? [<Box key={`${login.id}-sep`} sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', mx: -1.5 }} />] : [])
+                                    ...(i < arr.length - 1 ? [<Box key={`${pack.id}-sep`} sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', mx: -1.5 }} />] : [])
                                 ])}
                               </Box>
                     }
 
-                    <Typography variant='subtitle2' sx={{ pt: 1 }}>Install login extension</Typography>
+                    <Typography variant='subtitle2' sx={{ pt: 1 }}>Install pack</Typography>
                     <Stack direction='row' spacing={1} alignItems='center'>
                         <TextField size='small' fullWidth placeholder='https://...' value={customUrl} onChange={e => setCustomUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') installFromUrl() }} />
                         <Tooltip title='Install from URL'>
@@ -351,7 +387,7 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
                     {filteredIds.length > 0 && (
                         <>
                             <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
-                                <Typography variant='subtitle2'>Available login extensions</Typography>
+                                <Typography variant='subtitle2'>Available packs</Typography>
                                 <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
                                 <Tooltip title='Refresh catalog'>
                                     <span>
@@ -366,18 +402,19 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
                                     {filteredIds.map(id => {
                                         const t = getSelectedEntry(id)
                                         return (
-                                            <LoginCard
+                                            <PackCard
                                                 key={id}
                                                 id={id}
-                                                displayName={t.displayName || t.name}
+                                                displayName={t.displayName}
                                                 version={t.version}
                                                 description={t.description}
                                                 website={t.website}
-                                                badge={isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
+                                                members={t.extensionTypes?.join(', ')}
+                                                badge={isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
                                                 action={
-                                                    <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
+                                                    <Tooltip title={isInstalled(id) ? 'Already installed — uninstall first' : 'Install pack'}>
                                                         <span>
-                                                            <IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id} onClick={() => install(t)}>
+                                                            <IconButton size='small' color='primary' disabled={isInstalled(id) || installingId === id} onClick={() => install(t)}>
                                                                 {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
                                                             </IconButton>
                                                         </span>
@@ -391,20 +428,19 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
                                     {filteredIds.flatMap((id, i, arr) => {
                                         const t = getSelectedEntry(id)
                                         return [
-                                            <Box key={`${id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><LockPerson fontSize='small' /></Box>,
+                                            <Box key={`${id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Extension fontSize='small' /></Box>,
                                             <Box key={`${id}-name`} sx={{ py: 1, minWidth: 0 }}>
-                                                <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.displayName || t.name}</Typography>
+                                                <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.displayName}</Typography>
                                                 <Typography variant='caption' color='text.secondary'>{t.description}</Typography>
+                                                {t.extensionTypes && <Typography variant='caption' color='text.disabled' display='block'>{t.extensionTypes.join(', ')}</Typography>}
                                             </Box>,
                                             <Box key={`${id}-status`} sx={{ py: 1 }}>
-                                                {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' />
-                                                : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />
-                                                : null}
+                                                {isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : null}
                                             </Box>,
                                             <Box key={`${id}-install`} sx={{ py: 1 }}>
-                                                <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
+                                                <Tooltip title={isInstalled(id) ? 'Already installed — uninstall first' : 'Install pack'}>
                                                     <span>
-                                                        <IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id} onClick={() => install(t)}>
+                                                        <IconButton size='small' color='primary' disabled={isInstalled(id) || installingId === id} onClick={() => install(t)}>
                                                             {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}
                                                         </IconButton>
                                                     </span>
@@ -428,4 +464,4 @@ const LoginDialog: React.FC<ILoginDialogProps> = (props: ILoginDialogProps) => {
     )
 }
 
-export { LoginDialog }
+export { PackManagerDialog }

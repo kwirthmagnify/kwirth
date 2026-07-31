@@ -42,14 +42,14 @@ interface IInstalledPlugin {
     requiresRestart?: boolean
 }
 
-interface IPluginDialogProps {
+interface IPluginManagerDialogProps {
     onClose: () => void
     onPluginLoaded: (id: string) => void
     onPluginUnloaded: (id: string) => void
     onRestartRequired?: () => void
 }
 
-const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) => {
+const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPluginManagerDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
     useKeyboard(props.onClose)
@@ -545,4 +545,4 @@ const PluginDialog: React.FC<IPluginDialogProps> = (props: IPluginDialogProps) =
     )
 }
 
-export { PluginDialog }
+export { PluginManagerDialog }

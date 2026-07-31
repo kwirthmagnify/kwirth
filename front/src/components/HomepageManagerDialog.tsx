@@ -32,7 +32,7 @@ interface IInstalledHomepage {
     requiresRestart?: boolean
 }
 
-interface IHomepageDialogProps {
+interface IHomepageManagerDialogProps {
     onClose: () => void
     activeHomepageId: string | undefined
     onActivate: (id: string | undefined, config: Record<string, any>) => void
@@ -41,7 +41,7 @@ interface IHomepageDialogProps {
     onRestartRequired?: () => void
 }
 
-const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogProps) => {
+const HomepageManagerDialog: React.FC<IHomepageManagerDialogProps> = (props: IHomepageManagerDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
     useKeyboard(props.onClose)
@@ -511,4 +511,4 @@ const HomepageDialog: React.FC<IHomepageDialogProps> = (props: IHomepageDialogPr
     )
 }
 
-export { HomepageDialog }
+export { HomepageManagerDialog }

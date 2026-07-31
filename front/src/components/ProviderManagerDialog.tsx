@@ -51,12 +51,12 @@ interface IProviderSchemaField {
     default?: string | number | boolean
 }
 
-interface IProviderDialogProps {
+interface IProviderManagerDialogProps {
     onClose: () => void
     onRestartRequired?: () => void
 }
 
-const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogProps) => {
+const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IProviderManagerDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
     useKeyboard(props.onClose)
@@ -552,4 +552,4 @@ const ProviderDialog: React.FC<IProviderDialogProps> = (props: IProviderDialogPr
     )
 }
 
-export { ProviderDialog }
+export { ProviderManagerDialog }
