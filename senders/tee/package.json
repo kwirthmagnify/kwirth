@@ -2,7 +2,7 @@
   "id": "tee",
   "name": "@kwirthmagnify/kwirth-sender-tee",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "displayName": "Tee Sender",
   "description": "Tee sender plugin for Kwirth — fans out an incoming message to multiple downstream senders simultaneously, acting as an intermediate pipeline node",
   "type": "module",
@@ -21,5 +21,7 @@
     "@types/react-dom": "^19.2.3",
     "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
 }

@@ -2,7 +2,7 @@
   "id": "regex",
   "name": "@kwirthmagnify/kwirth-sender-regex",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "displayName": "Regex Sender",
   "description": "Regex sender plugin for Kwirth — routes or drops messages based on ordered regex rules evaluated against any message field",
   "type": "module",
@@ -21,5 +21,7 @@
     "@types/react-dom": "^19.2.3",
     "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
 }

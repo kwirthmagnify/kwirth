@@ -36,7 +36,7 @@ const notifyPlugin = (label) => ({
 
 fs.mkdirSync('dist', { recursive: true })
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
-fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({ id: meta.id, name: meta.name, displayName: meta.displayName, version: meta.version, description: meta.description }, null, 2))
+fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({ id: meta.id, name: meta.name, displayName: meta.displayName, version: meta.version, description: meta.description , requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? [] }, null, 2))
 
 const backCtx = await esbuild.context({
     entryPoints: ['src/back/index.ts'],

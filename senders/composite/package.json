@@ -2,7 +2,7 @@
   "id": "composite",
   "name": "@kwirthmagnify/kwirth-sender-composite",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "displayName": "Composite Sender",
   "description": "Composite sender plugin for Kwirth — defines complete routing pipelines as an inline tree of tee, regex and ref nodes in a single config",
   "type": "module",
@@ -21,5 +21,7 @@
     "@types/react-dom": "^19.2.3",
     "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
 }

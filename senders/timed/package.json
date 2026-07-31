@@ -2,7 +2,7 @@
   "id": "timed",
   "name": "@kwirthmagnify/kwirth-sender-timed",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "displayName": "Timed Sender",
   "description": "Timed sender for Kwirth — routes or drops messages based on time-of-day windows and day-of-week rules",
   "type": "module",
@@ -21,5 +21,7 @@
     "@types/react-dom": "^19.2.3",
     "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
-  }
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
 }
