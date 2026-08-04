@@ -41,7 +41,8 @@ import { Homepage } from './components/Homepage'
 import { DEFAULTLASTTABS, IColors, TABSELECTEDCOLORS, TABUNSELECTEDCOLORS } from './tools/Constants'
 import { createChannelInstance } from './tools/ChannelTools'
 import { clusterColor } from './tools/clusterColor'
-import { MenuNotification, INotification } from './components/MenuNotification'
+import { MenuNotification, INotification } from '@kwirthmagnify/kwirth-common-front'
+import { getIconFromKind } from './tools/Constants-React'
 import { ContextSelector } from './components/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
@@ -2388,7 +2389,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 <Snackbar open={notifySnackbarOpen} autoHideDuration={3000} anchorOrigin={{vertical: 'bottom', horizontal:'center'}} onClose={onNotifySnackbarClose}>
                     <Alert severity={notifySnackbarLevel} variant="filled" onClose={onNotifySnackbarClose} sx={{ width: '100%' }}>{notifySnackbarMessage}</Alert>
                 </Snackbar>
-                { notificationMenuAnchorParent && <MenuNotification anchorParent={notificationMenuAnchorParent} notifications={notifications.current} onRefresh={() => setRefresh(Math.random())} onClose={() => setNotificationMenuAnchorParent(null)} channels={frontChannels} />}
+                { notificationMenuAnchorParent && <MenuNotification anchorParent={notificationMenuAnchorParent} notifications={notifications.current} onRefresh={() => setRefresh(Math.random())} onClose={() => setNotificationMenuAnchorParent(null)} renderIcon={(channelId) => channelId ? (new (frontChannels.get(channelId)!)()).getChannelIcon() : getIconFromKind('IconK8s', 20)} />}
                 { msgBox }
                 { showAbout && <About onClose={() => setShowAbout(false)}/>}
             </SessionContext.Provider>

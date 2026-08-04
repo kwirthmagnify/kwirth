@@ -165,6 +165,8 @@ export { HelpButton } from './HelpButton'
 export type { IHelpButtonProps } from './HelpButton'
 export { DialogTitleHelp } from './DialogTitleHelp'
 export type { IDialogTitleHelpProps } from './DialogTitleHelp'
+export { MenuNotification } from './MenuNotification'
+export type { INotification } from './MenuNotification'
 
 export interface ITabSummary {
     name: string

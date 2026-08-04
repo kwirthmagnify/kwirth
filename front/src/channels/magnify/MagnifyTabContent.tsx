@@ -30,7 +30,8 @@ import { MenuKubeWorks } from './components/MenuKubeWorks'
 import { useTheme } from '@mui/material'
 import { MenuKwirthWorks } from './components/MenuKwirthWorks'
 import { ICustomAction } from './components/UserPreferences'
-import { MenuNotification } from '../../components/MenuNotification'
+import { MenuNotification } from '@kwirthmagnify/kwirth-common-front'
+import { getIconFromKind } from '../../tools/Constants-React'
 import { generateMinimalFromCRD } from './Tools'
 const InputBox: React.FC<{ title?: any; default?: any; message?: any; password?: boolean; width: string; onClose: () => void; onResult?: (result: any) => void }> = (props) => {
     const inputRef = useRef<HTMLInputElement>(null)
@@ -1460,7 +1461,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     menuKwirthWorksAnchorParent && <MenuKwirthWorks onWorkSelected={onMenuKwirthWorksSelected} onClose={() => setMenuKwirthWorksAnchorParent(undefined)} anchorParent={menuKwirthWorksAnchorParent} customActions={magnifyData.userPreferences.customActions}/>
                 }
                 {
-                    notificationMenuAnchorParent && <MenuNotification anchorParent={notificationMenuAnchorParent} notifications={props.channelObject.notifications!} onRefresh={() => setTick((t) => t+1)} onClose={() => setNotificationMenuAnchorParent(undefined)} channels={props.channelObject.frontChannels!}/>
+                    notificationMenuAnchorParent && <MenuNotification anchorParent={notificationMenuAnchorParent} notifications={props.channelObject.notifications!} onRefresh={() => setTick((t) => t+1)} onClose={() => setNotificationMenuAnchorParent(undefined)} renderIcon={(channelId) => channelId ? (new (props.channelObject.frontChannels!.get(channelId)!)()).getChannelIcon() : getIconFromKind('IconK8s', 20)}/>
                 }
                 <Stack direction={'row'} sx={{mt:1}}>
                     {

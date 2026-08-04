@@ -8,7 +8,7 @@ import {
 } from '@kwirthmagnify/kwirth-common-front'
 import { IResourceSelected } from '../components/ResourceSelector'
 import { IClusterInfo } from '../model/Cluster'
-import { INotification } from '../components/MenuNotification'
+import { INotification } from '@kwirthmagnify/kwirth-common-front'
 import { BackChannelData } from '@kwirthmagnify/kwirth-common'
 
 interface IChannelObject extends IChannelObjectBase {
