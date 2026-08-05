@@ -50,9 +50,9 @@ export const NewsTabContent: React.FC<IContentProps> = (props: IContentProps) =>
                     <Chip label={item.source} variant='outlined' size='small' />
                     <Typography variant='caption' color='text.secondary'>{formatDate(item.pubDate)}</Typography>
                 </Stack>
-                <Link href={item.link} target='_blank' rel='noopener' underline='hover'>
+                <a href={item.link} target='_blank' rel='noopener'>
                     <Typography variant='body2' fontWeight='bold'>{item.title}</Typography>
-                </Link>
+                </a>
                 {item.description && (
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{plainText(item.description)}</Typography>
                 )}
