@@ -232,6 +232,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const autoStartedRef = useRef<boolean>(false)
     const canExitFullscreenRef = useRef<boolean>(true)
     const [autoStartPending, setAutoStartPending] = useState<boolean>(false)
+    const [pluginsLoaded, setPluginsLoaded] = useState<boolean>(false)
     const [ssoExchangePending, setSsoExchangePending] = useState<boolean>(() => !!new URLSearchParams(window.location.search).get('sso'))
 
     const [backChannels, setBackChannels] = useState<BackChannelData[]>([])
@@ -332,7 +333,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     const pluginVersionsRef = useRef<Map<string, number>>(new Map())
 
-    const loadPluginFront = (id: string) => {
+    const loadPluginFront = (id: string): Promise<void> => {
+        let done: () => void = () => {}
+        const p = new Promise<void>(r => { done = r })
         const existing = document.getElementById(`kwirth-plugin-${id}`)
         if (existing) existing.remove()
         const script = document.createElement('script')
@@ -360,8 +363,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 setPluginVersion(v => v + 1)
                 setChannelMessageAction({ action: EChannelRefreshAction.REFRESH })
             }
+            done()
         }
+        script.onerror = () => done()
         document.head.appendChild(script)
+        return p
     }
 
     const unloadPluginFront = (id: string) => {
@@ -503,8 +509,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         // load front.js for already-installed plugins
         fetch(`${backendUrl}/core/plugins`, addGetAuthorization(accessString))
             .then(r => r.json())
-            .then((plugins: { id: string }[]) => plugins.forEach(p => loadPluginFront(p.id)))
+            .then((plugins: { id: string }[]) => Promise.all(plugins.map(p => loadPluginFront(p.id))))
             .catch(err => console.log(`[plugins] failed to load installed plugins: ${err}`))
+            .finally(() => setPluginsLoaded(true))
 
         // load front.js for already-installed themes
         fetch(`${backendUrl}/core/themes`, addGetAuthorization(accessString))
@@ -606,15 +613,19 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     useEffect( () => {
         if (!logged || !user?.startChannel || clusters.length === 0 || autoStartedRef.current) return
-        autoStartedRef.current = true
         const srcCluster = clusters.find(c => c.home)
-        if (!srcCluster || !frontChannels.has(user.startChannel)) {
-            setAutoStartPending(false)
+        if (!srcCluster) return   // el cluster home aún no está listo; el effect re-corre al cambiar clusters
+        if (!frontChannels.has(user.startChannel)) {
+            // el channel (p.ej. de un plugin) todavía no está registrado: esperamos a que cargue
+            // (el effect re-corre en cada setFrontChannels). Solo nos rendimos → home cuando la carga
+            // de plugins ya terminó y el channel sigue sin existir (startChannel inválido / sin acceso).
+            if (pluginsLoaded) { autoStartedRef.current = true; setAutoStartPending(false) }
             return
         }
+        autoStartedRef.current = true
         populateTabObject(user, user.startChannel, user.startChannel, srcCluster, EInstanceConfigView.CLUSTER, '', '', '', '', true, true, { config: undefined, instanceConfig: undefined })
             .then(() => setAutoStartPending(false))
-    }, [clusters, user])
+    }, [clusters, user, frontChannels, pluginsLoaded])
 
     useEffect(() => {
         tabs.current.forEach(tab => {
