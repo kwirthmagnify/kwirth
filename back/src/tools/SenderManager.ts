@@ -1,4 +1,4 @@
-import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage, ISenderStoredConfig, TSenderConstructor } from '@kwirthmagnify/kwirth-common-back'
+import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage, ISenderResult, ISenderStoredConfig, TSenderConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import tar from 'tar'
@@ -538,7 +538,7 @@ export class SenderManager implements ISenderAccess {
         return this.configStore.get(senderId)?.get(configName)
     }
 
-    async send(senderId: string, configName: string, message: ISenderMessage): Promise<void> {
+    async send(senderId: string, configName: string, message: ISenderMessage): Promise<ISenderResult | void> {
         const sender = this.getSender(senderId)
         if (!sender) {
             logError(ELogComponent.CORE, `Sender '${senderId}' not found — message dropped`)
@@ -549,7 +549,7 @@ export class SenderManager implements ISenderAccess {
             return
         }
         try {
-            await sender.send(configName, message)
+            return await sender.send(configName, message)
         } catch (err) {
             logError(ELogComponent.CORE, `Sender '${senderId}' send error: ${err}`)
         }

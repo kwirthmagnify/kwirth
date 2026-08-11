@@ -236,12 +236,20 @@ artifact are core/open-source**.
 
 ## Streams / phases (each an MVP; validate before next)
 
-- **W1 · Contracts + enum:** C1/C2/C3 (`ExtensionType`, `common/Webhook.ts`, `common-back/IWebhook.ts`). Builds, no behavior.
-- **W2 · Manager + persistence:** C4 WebhookManager (load bundles, config store, token registry, secrets) + unit tests (token routing, config CRUD, secret roundtrip). No HTTP yet.
-- **W3 · Receiver route (raw body) + delivery:** C6/C7/C8 — mount raw receiver, resolve token, verify/parse, fan-out to subscribers; `IWebhookConsumer`. E2E with a trivial echo webhook artifact + a stub consumer.
-- **W4 · Front API + UX:** C5 WebhookApi + config UI + URL copy/rotate + target picker. QA install/config/url.
-- **W5 · `jira` webhook artifact:** verify(shared-secret header V1) + parse issue events → normalized event. E2E against Jira Cloud via cloudflared (see Excubitor H3b plan §4-5).
-- **W6 · Excubitor H3b integration:** push + `ticket_link` + consume + finding UI. (Tracked in the Excubitor backlog, paid flow.)
+The overall effort is split into 5 streams. **Only the CORE streams (1 and 3) live in this open-source plan**;
+the provider artifacts and the Excubitor integration are **paid** and tracked in the private Excubitor backlog
+(no detail here, per the paid-artifacts rule).
+
+- **Stream 1 · Adapt senders — DONE (published):** `send()` → `Promise<ISenderResult | void>` so a sender can
+  return data to the caller. `common/Sender.ts` (`ISenderResult`), `common-back/ISender.ts`, `SenderManager`.
+  Backward-compatible (`void` still valid); existing senders untouched. Shipped in
+  `@kwirthmagnify/kwirth-common@0.5.33` + `@kwirthmagnify/kwirth-common-back@0.5.26`.
+- **Stream 3 · Webhook system (core):** C1-C9 above — enum, `common/Webhook.ts`, `common-back/IWebhook.ts`,
+  `WebhookManager` (token registry + config + secrets), `WebhookApi` (`/core/webhooks` + url/rotate), raw-body
+  receiver `webhook/<provider>/<token>`, delivery via `subscribe`/`processWebhookEvent`, front config UI.
+  Validated E2E with a trivial echo webhook artifact + a stub consumer.
+- **Streams 2, 4, 5 (paid — private backlog):** provider artifacts (`jira` sender that returns `{issueKey,url}`,
+  `jira` webhook) and the Excubitor assign integration. Detailed in the Excubitor private plan, not here.
 
 ---
 

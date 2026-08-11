@@ -1,6 +1,6 @@
-import { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig } from '@kwirthmagnify/kwirth-common'
+import { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig, ISenderResult } from '@kwirthmagnify/kwirth-common'
 
-export { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig }
+export { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig, ISenderResult }
 
 export type SenderFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json'
 
@@ -28,7 +28,7 @@ export interface ISender {
     getConfigNames(): string[]
     getConfigSchema?(): ISenderFieldDef[]
     getNodeMeta?(): ISenderNodeMeta
-    send(configName: string, message: ISenderMessage): Promise<void>
+    send(configName: string, message: ISenderMessage): Promise<ISenderResult | void>
     evalFilter?(configName: string, message: ISenderMessage, forward: () => Promise<void>): Promise<void>
     startSender(senders: ISenderAccess): Promise<void>
     stopSender(): Promise<void>
