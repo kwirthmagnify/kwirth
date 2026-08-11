@@ -62,12 +62,17 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         getScopeCatalog()
     },[])
 
+    const sha256 = async (s: string): Promise<string> => {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+    }
+
     const onClickUser = async (id:string) => {
         let user:IUser = (await (await fetch(`${backendUrl}/user/${id}`, addGetAuthorization(accessString))).json())
         setId(id)
         setSelectedUser(user)
         setName(user.name||'')
-        setPassword(user.password||'')
+        setPassword('')
         setAllResources(user.resources.split(';'))
         setIdp(user.idp||'')
         setStartChannel(user.startChannel||'')
@@ -83,7 +88,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         let user = {
             id,
             name,
-            password,
+            password: password !== '' ? await sha256(password) : '',
             resources: allResources.join(';'),
             idp,
             startChannel: startChannel || undefined,
@@ -173,7 +178,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
                         <Stack spacing={1} direction='row'>
                             <TextField value={id} onChange={(e) => setId(e.target.value)} variant='standard' fullWidth label={idp!=='' ? 'Id (email)' : 'Id'} />
                             <TextField value={name} onChange={(e) => setName(e.target.value)} variant='standard' fullWidth label='Name' />
-                            <TextField value={password} onChange={(e) => setPassword(e.target.value)} type='password' variant='standard' fullWidth label='Password' disabled={idp!==''} />
+                            <TextField value={password} onChange={(e) => setPassword(e.target.value)} type='password' variant='standard' fullWidth label='Password' disabled={idp!==''} placeholder={selectedUser !== undefined ? 'Leave blank to keep current' : ''} />
                             <FormControl variant='standard' fullWidth>
                                 <InputLabel>IdP</InputLabel>
                                 <Select value={idp} label='IdP' onChange={(e) => setIdp(e.target.value)}>
@@ -195,7 +200,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
             <DialogActions>
                 <Stack direction='row' spacing={1}>
                     <Button variant='outlined' onClick={onClickNew}>New</Button>
-                    <Button variant='outlined' onClick={onClickSave} disabled={id==='' || (idp==='' && password==='')}>Save</Button>
+                    <Button variant='outlined' onClick={onClickSave} disabled={id==='' || (idp==='' && password==='' && selectedUser===undefined)}>Save</Button>
                     <Button variant='outlined' onClick={onClickCopyPassword} disabled={password===''}>Copy password</Button>
                     <Button variant='outlined' onClick={onClickDelete} disabled={id==='admin'}>Delete</Button>
                 </Stack>

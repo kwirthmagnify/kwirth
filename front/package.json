@@ -15,7 +15,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@jfvilas/react-file-manager": "^1.5.6",
-    "@kwirthmagnify/kwirth-common": "^0.5.31",
+    "@kwirthmagnify/kwirth-common": "^0.5.32",
     "@kwirthmagnify/kwirth-common-ai": "^0.5.22",
     "@kwirthmagnify/kwirth-common-front": "^0.5.44",
     "@mui/icons-material": "^7.1.2",

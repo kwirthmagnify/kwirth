@@ -1,10 +1,29 @@
 import express, { Request, Response} from 'express'
 import Semaphore from 'ts-semaphore'
+import bcrypt from 'bcrypt'
+import crypto from 'crypto'
 import { ApiKeyApi } from './ApiKeyApi'
 import { IUser } from '@kwirthmagnify/kwirth-common'
 import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { IdentityService } from '../tools/auth/IdentityService'
+
+const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
+
+// verifica la contraseña entrante (sha256) contra el valor almacenado (plain heredado o bcrypt moderno)
+// devuelve { valid, migrate, firstLogin }
+// migrate=true → el valor almacenado era texto plano; hay que re-hashear y guardar
+// firstLogin=true → admin con contraseña por defecto sin cambiar
+const verifyPassword = async (incoming: string, stored: string, userId: string) => {
+    if (stored.startsWith('$2b$')) {
+        const valid = await bcrypt.compare(incoming, stored)
+        return { valid, migrate: false, firstLogin: false }
+    }
+    // valor heredado en texto plano: el front ya envía sha256, así que comparamos sha256(stored)
+    const valid = sha256(stored) === incoming
+    const firstLogin = valid && userId === 'admin' && stored === 'password'
+    return { valid, migrate: valid, firstLogin }
+}
 
 export class LoginApi {
     secrets: ISecrets
@@ -34,24 +53,29 @@ export class LoginApi {
                 }
                 let user:IUser = JSON.parse(atob(users[req.body.user]))
                 if (user) {
-                    if (req.body.password === user.password) {
-                        if (user.id === 'admin' && user.password === 'password')
-                            res.status(201).send()
-                        else {
-                            let ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress
-                            let newApiKey = await IdentityService.createApiKey(user, ip, this.configMaps, this.apiKeyApi)
-                            if (newApiKey) {
-                                user.accessKey = newApiKey.accessKey
-                                res.status(200).json(IdentityService.okResponse(user))
-                            }
-                            else {
-                                console.log('Error creating api key')
-                                res.status(500).json({})
-                            }
-                        }
+                    const { valid, migrate, firstLogin } = await verifyPassword(req.body.password, user.password, user.id)
+                    if (!valid) {
+                        res.status(401).json({})
+                        return
+                    }
+                    if (firstLogin) {
+                        res.status(201).send()
+                        return
+                    }
+                    if (migrate) {
+                        user.password = await bcrypt.hash(req.body.password, 10)
+                        users[req.body.user] = btoa(JSON.stringify(user))
+                        await IdentityService.writeUsers(this.secrets, users)
+                    }
+                    let ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress
+                    let newApiKey = await IdentityService.createApiKey(user, ip, this.configMaps, this.apiKeyApi)
+                    if (newApiKey) {
+                        user.accessKey = newApiKey.accessKey
+                        res.status(200).json(IdentityService.okResponse(user))
                     }
                     else {
-                        res.status(401).json({})
+                        console.log('Error creating api key')
+                        res.status(500).json({})
                     }
                 }
                 else {
@@ -78,23 +102,23 @@ export class LoginApi {
 
                     let user:IUser = JSON.parse (atob(users[req.body.user]))
                     if (user) {
-                        if (req.body.password===user.password) {
-                            user.password = req.body.newpassword
-                            let ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress
-                            let newApiKey = await IdentityService.createApiKey(user, ip, this.configMaps, this.apiKeyApi)
-                            if (newApiKey) {
-                                user.accessKey=newApiKey.accessKey
-                                users[req.body.user]=btoa(JSON.stringify(user))
-                                await IdentityService.writeUsers(this.secrets, users)
-                                res.status(200).json(IdentityService.okResponse(user))
-                            }
-                            else {
-                                console.log('Error creating api key')
-                                res.status(500).json({})
-                            }
+                        const { valid } = await verifyPassword(req.body.password, user.password, user.id)
+                        if (!valid) {
+                            res.status(401).send()
+                            return
+                        }
+                        user.password = await bcrypt.hash(req.body.newpassword, 10)
+                        let ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress
+                        let newApiKey = await IdentityService.createApiKey(user, ip, this.configMaps, this.apiKeyApi)
+                        if (newApiKey) {
+                            user.accessKey=newApiKey.accessKey
+                            users[req.body.user]=btoa(JSON.stringify(user))
+                            await IdentityService.writeUsers(this.secrets, users)
+                            res.status(200).json(IdentityService.okResponse(user))
                         }
                         else {
-                            res.status(401).send()
+                            console.log('Error creating api key')
+                            res.status(500).json({})
                         }
                     }
                     else {

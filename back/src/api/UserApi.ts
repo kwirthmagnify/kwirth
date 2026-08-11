@@ -1,5 +1,6 @@
 import express, { Request, Response} from 'express'
 import Semaphore from 'ts-semaphore'
+import bcrypt from 'bcrypt'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { ISecrets } from '../tools/ISecrets'
@@ -55,7 +56,8 @@ export class UserApi {
                         }
                         const bad = this.validScopes ? unknownScopesIn(req.body?.resources ?? '', this.validScopes()) : []
                         if (bad.length) { res.status(400).json({ error: `Unknown scopes: ${bad.join(', ')}` }); return }
-                        users[req.body.id]=btoa(JSON.stringify(req.body))
+                        const user = { ...req.body, password: await bcrypt.hash(req.body.password, 10) }
+                        users[user.id] = btoa(JSON.stringify(user))
                         await IdentityService.writeUsers(this.secrets, users)
                         res.status(200).json()
                     }
@@ -80,7 +82,9 @@ export class UserApi {
                         res.status(400).json([])
                         return
                     }
-                    res.status(200).send(atob(users[req.params.user]))
+                    const u = JSON.parse(atob(users[req.params.user]))
+                    delete u.password
+                    res.status(200).json(u)
                 }
                 catch (err) {
                     res.status(500).send()
@@ -116,7 +120,15 @@ export class UserApi {
                     }
                     const bad = this.validScopes ? unknownScopesIn(req.body?.resources ?? '', this.validScopes()) : []
                     if (bad.length) { res.status(400).json({ error: `Unknown scopes: ${bad.join(', ')}` }); return }
-                    users[req.body.id]=btoa(JSON.stringify(req.body))
+                    let password: string
+                    if (req.body.password) {
+                        password = await bcrypt.hash(req.body.password, 10)
+                    }
+                    else {
+                        const existing = JSON.parse(atob(users[req.params.user] ?? users[req.body.id]))
+                        password = existing.password
+                    }
+                    users[req.body.id] = btoa(JSON.stringify({ ...req.body, password }))
                     await IdentityService.writeUsers(this.secrets, users)
                     res.status(200).json()
                 }
