@@ -114,10 +114,15 @@ export interface IWebhookConsumer { processWebhookEvent(event: IWebhookEvent): v
 ```ts
 export interface IWebhook {
     readonly id: string                 // provider id, e.g. 'jira'
-    // Verify authenticity from RAW bytes + headers + the config's stored secret. MUST use raw body (HMAC).
-    verify(rawBody: Buffer, headers: Record<string,string|string[]|undefined>, secret: string | undefined): boolean
+    // Verify authenticity from RAW bytes + headers + the RESOLVED config (incl. secret fields).
+    // AUTH IS ARTIFACT-OWNED: the core is agnostic. Jira compares headers.authorization to config.apiKey;
+    // GitHub computes an HMAC over rawBody with config.hmacSecret; each artifact decides. The core just
+    // hands the raw body + headers + config and trusts the boolean.
+    verify(rawBody: Buffer, headers: Record<string,string|string[]|undefined>, config: IWebhookConfig): boolean
     // Parse raw bytes into the normalized event (after verify passes).
     parse(rawBody: Buffer, headers: Record<string,string|string[]|undefined>): IWebhookEvent | null
+    // The artifact declares its OWN config fields (apiKey, header name, hmac secret, project key…) — the core
+    // renders them generically and stores them; it does not know their meaning.
     getConfigSchema?(): { fields: IWebhookFieldDef[] }   // mirror ISenderFieldDef (text|number|boolean|password|select|json)
     startWebhook?(access: IWebhookAccess): void
     stopWebhook?(): void
@@ -157,8 +162,10 @@ expressApp.use(`${envRootPath}/webhook`, express.raw({ type: '*/*', limit: '1mb'
 ```
 
 `webhookReceiver` (Router): path `/:provider/:token` →
-1. `WebhookManager.resolve(token)` → `{ webhookId, configName, target, secret }` (404 if unknown).
-2. `webhook.verify(req.body /*Buffer*/, req.headers, secret)` → 401 on failure.
+1. `WebhookManager.resolve(token)` → `{ webhookId, configName, target, config }` (404 if unknown).
+2. `webhook.verify(req.body /*Buffer*/, req.headers, config)` → 401 on failure. **The auth scheme (Authorization
+   header, `X-Api-Key`, HMAC…) is NOT a core-general setting — it is config SPECIFIC TO EACH webhook type,
+   declared by the artifact and interpreted only inside its own `verify()`.**
 3. `webhook.parse(req.body, req.headers)` → `IWebhookEvent` (400 if unparseable).
 4. Deliver to every consumer subscribed for `target`: `consumer.processWebhookEvent(event)`.
 5. `200 OK` fast (ack before heavy work; consumers process async).
@@ -246,7 +253,8 @@ artifact are core/open-source**.
   config + consumer, so local delivery suffices. Confirm the manager lives on the same runningInstance as the
   target channel (it does, mirroring SenderManager). Cross-instance delivery = out of scope V1.
 - **RouteRegistry**: `webhook` base path reservation + guaranteeing token uniqueness across configs/providers.
-- **Provider `verify` variance**: Jira Cloud has no built-in HMAC on Automation "Send web request" → V1 uses a
-  shared-secret header; GitHub/Stripe-style HMAC comes with those artifacts later. The type must support both
-  (secret passed to `verify`; artifact decides the scheme).
+- **Provider `verify` variance**: Jira Cloud has no built-in HMAC on Automation "Send web request" → the `jira`
+  artifact uses an **API key in `Authorization`** (compared to its config `apiKey`); GitHub/Stripe-style HMAC
+  comes with those artifacts later. The core supports both **because it does not know the scheme** — it passes
+  the resolved `config` to `verify()` and each webhook type defines its own auth fields + logic.
 - **Token in URL** is a bearer secret → HTTPS mandatory; keep tokens out of logs.
