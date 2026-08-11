@@ -15,6 +15,7 @@ limitations under the License.
 */
 export * from './Channel'
 export * from './Sender'
+export * from './Webhook'
 export * from './InstanceMessage'
 export * from './InstanceConfig'
 

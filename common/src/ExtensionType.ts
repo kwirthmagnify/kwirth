@@ -13,5 +13,6 @@ export enum EExtensionType {
     IDP = 'idp',
     DOCS = 'docs',
     LOGIN = 'login',
-    PACK = 'pack'
+    PACK = 'pack',
+    WEBHOOK = 'webhook'
 }
