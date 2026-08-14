@@ -75,6 +75,8 @@ import { ProviderManager } from './tools/ProviderManager'
 import { ProviderApi } from './api/ProviderApi'
 import { SenderApi } from './api/SenderApi'
 import { SenderManager } from './tools/SenderManager'
+import { WebhookManager } from './tools/WebhookManager'
+import { handleInbound } from './tools/WebhookReceiver'
 import { AuthApi } from './api/AuthApi'
 import { IdpApi } from './api/IdpApi'
 import { IdpManager } from './tools/IdpManager'
@@ -161,6 +163,7 @@ const runningInstances:IRunningInstance[] = []
 let pluginManager: PluginManager | undefined
 let providerManager: ProviderManager | undefined
 let senderManager: SenderManager | undefined
+let webhookManager: WebhookManager | undefined
 let themeManager: ThemeManager | undefined
 let homepageManager: HomepageManager | undefined
 let loginManager: LoginManager | undefined
@@ -1635,6 +1638,14 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             await senderManager.loadPersistedConfigs()
             senderManager.loadDevSenderConfigs()
         }
+        if (!webhookManager) {
+            webhookManager = new WebhookManager(runningInstance.configMaps, `${envRootPath}/webhook`)
+            await webhookManager.init()
+            await webhookManager.loadAll()
+            webhookManager.loadDevWebhooks()
+            await webhookManager.loadPersistedConfigs()
+            webhookManager.loadDevWebhookConfigs()
+        }
 
 
         if (!themeManager) {
@@ -1744,9 +1755,11 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                 catch { return {} }
             },
             senders: senderManager,
+            webhooks: webhookManager,
         }
 
         runningInstance.clusterInfo.senders = senderManager
+        runningInstance.clusterInfo.webhooks = webhookManager
         runningInstance.backChannelObject = backChannelObject
         await setKubernetesClusterKwirthRequirements(runningInstance, localKwirthData, runningInstance.clusterInfo, backChannelObject)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
@@ -2441,6 +2454,17 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
             logError(ELogComponent.CORE, `Unsupported execution environment '${exenv}'. Exiting...`)
             process.exit()
     }
+
+    // Receptor de webhooks (tipo de extensión 'webhook'): cuerpo CRUDO (para verificación de firma del
+    // proveedor) montado ANTES del bodyParser.json global, para que el body no llegue ya parseado.
+    // Ruta: {envRootPath}/webhook/<provider>/<token>. Sin accessKey (auténtica el propio webhook.verify).
+    const webhookRouter = express.Router()
+    webhookRouter.all('/:provider/:token', (req: Request, res: Response) => {
+        handleInbound(webhookManager, req.params.provider, req.params.token, req.body as Buffer, req.headers)
+            .then(r => res.status(r.status).json(r.body ?? { ok: r.status === 200 }))
+            .catch(err => { logError(ELogComponent.CORE, `Webhook receiver error: ${err}`); res.status(500).json({ ok: false }) })
+    })
+    app.use(`${envRootPath}/webhook`, express.raw({ type: '*/*', limit: '1mb' }), webhookRouter)
 
     app.use(bodyParser.json())
     app.use(cors())

@@ -1,4 +1,4 @@
-import { ISenderAccess, IUserInfo } from '@kwirthmagnify/kwirth-common'
+import { ISenderAccess, IWebhookAccess, IUserInfo } from '@kwirthmagnify/kwirth-common'
 
 // Objeto que el CORE inyecta al back de un canal (storage, logging, catálogo de usuarios, config de
 // instalación, senders). Es un contrato del lado BACK, por eso vive en common-back (no en common).
@@ -18,4 +18,7 @@ export interface IBackChannelObject {
     // editable desde el plugin manager) y la consume el back del plugin. Read-only. Genérica como providers.
     getPluginConfig?(pluginId: string): Promise<Record<string, unknown>>
     senders?: ISenderAccess
+    // Ingesta de webhooks (contraparte inbound de senders): el consumidor se suscribe a los eventos
+    // dirigidos a su target vía subscribe(); el core le entrega los ya verificados y parseados.
+    webhooks?: IWebhookAccess
 }
