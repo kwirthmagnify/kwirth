@@ -328,7 +328,6 @@ Formato: *ficheros · qué hace · criterio de aceptación (CA)*.
 Los conectores son extensiones instalables → se pueden ir añadiendo sin tocar el core. Candidatos:
 
 - `generic-oidc` (Keycloak, Authentik, Zitadel, cualquier IdP OIDC estándar; casi el `gitlab-onprem` con label genérico).
-- `microsoft` (Entra ID / Office 365, OIDC).
 - `gitea`/`forgejo` (OAuth2, mapper propio).
 
 ## EPIC I — Multi-instancia por conector (P2, DIFERIDO) — opt-in, no rompe el modelo
