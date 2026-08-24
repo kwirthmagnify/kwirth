@@ -330,6 +330,26 @@ Los conectores son extensiones instalables → se pueden ir añadiendo sin tocar
 - `generic-oidc` (Keycloak, Authentik, Zitadel, cualquier IdP OIDC estándar; casi el `gitlab-onprem` con label genérico).
 - `gitea`/`forgejo` (OAuth2, mapper propio).
 
+## EPIC L — Autenticación LDAP / Active Directory (P1, OSS)
+**Decisión**: conector **`ldap`** genérico configurable (público OSS), sirve para **Windows AD y cualquier LDAP v3** (OpenLDAP, 389DS, FreeIPA…) con defaults orientables a AD.
+
+**⚠️ Es una MODALIDAD de auth nueva (bind directo), NO redirect.** A diferencia de OIDC/OAuth2 (navegador → IdP → callback), LDAP es *bind*: el usuario teclea user+password **en el form de Kwirth** y el back hace el `bind`. Por eso NO encaja en `IIdpConnector` actual (solo `buildAuthorizationUrl`/`handleCallback`) y requiere ampliar el modelo.
+
+- **L1 — common-back: modelo para conectores "direct/password"**. Nuevo `EIdpConnectorKind.LDAP`. Hacer **opcionales** `buildAuthorizationUrl`/`handleCallback` en `IIdpConnector` y añadir opcional `authenticate?(config, username, password): Promise<IIdpIdentity>` (un conector implementa el par redirect **o** `authenticate`, según kind). Helper `ldap.ts` (`ldapAuthenticate`): modos **direct-bind** (plantilla bindDN, p.ej. `{username}@dominio` AD / `uid={username},ou=...,dc=...` OpenLDAP) y **search+bind** (bind con service-account → search por filtro → bind del DN). Usa un cliente LDAP (`ldapts`, pure-JS/TLS) **como dependencia de common-back** expuesta por el global (igual que `openid-client`). **bbp common-back** + reinstalar en back. ⬜
+- **L2 — back AuthApi (flujo password/bind)**. `/method` lista las instancias LDAP como método de **formulario user/pass** (no botón redirect). Nuevo `POST /core/auth/:id/authenticate` {username,password} → resuelve instancia → conector `authenticate` (bind) → **mismo gate** (whitelist + `user.idp===id`; email desde `mail`/UPN, directorio autoritativo → verified) → emite AccessKey (reusa `IdentityService.createApiKey/okResponse`) → responde login (sin handoff/redirect, es POST directo del SPA). Tests con conector LDAP fake. ⬜
+- **L3 — front (Login + LoginExtensionPage)**. Renderizar **form user/pass por instancia LDAP** (con su label) que hace `POST /core/auth/:id/authenticate`, en vez de botón redirect. Integrar con el layout multi-método actual. ⬜
+- **L4 — conector `idps/ldap/`** (fino). kind LDAP. Config: `url` (ldaps://…), `startTls?`, `baseDN`, **modo**: (a) `bindDNTemplate` (direct) o (b) `searchFilter` + `serviceBindDN`+`serviceBindPassword` (search+bind), `usernameAttr` (default AD `sAMAccountName`), `emailAttr` (default `mail`), `tlsRejectUnauthorized?`. Delegado en `ldap.ts`. dev + manifest + README + smoke. ⬜
+- **L5 — docs** `docs/0.5.187/idp/ldap.md` (setup AD y genérico: ldaps, baseDN, filtro/bindDN, service account, atributos; nota TLS) + sidebar + index + sección de seguridad. ⬜
+- **L6 — publicar**: bbp common-back (L1) + bbpm `ldap`. ⬜
+
+**Caveats / seguridad:**
+- **LDAPS/TLS obligatorio** — el password viaja al back de Kwirth (a diferencia de OIDC). Nunca `ldap://` en claro. Certs self-signed de AD → opción `tlsRejectUnauthorized`/CA.
+- **Gate igual**: LDAP verifica la password; Kwirth autoriza por whitelist + binding. El directorio es autoritativo → identidad verificada.
+- La ampliación de `IIdpConnector` (métodos redirect opcionales + `authenticate`) es **retro-compatible**: google/gitlab/github siguen implementando el par redirect.
+- `ldapts` suma ~poco al bundle del back (pure-JS); aceptable.
+
+**Orden:** L1 → L2 → L3 → L4 → L5 → L6.
+
 ## EPIC I — Multi-instancia por conector (P2, DIFERIDO) — opt-in, no rompe el modelo
 **Motivo del diferido**: el modelo de extensiones es **1 config por extensión instalada** (providers `saveConfig(id)`; IdP `id===connectorId`). Ningún extension tiene "N instancias". Multi-instancia sería divergencia solo-IdP. El caso real (un cloud + un on-prem por producto) se cubre con Opción 1 (EPIC F) sin tocar el modelo.
 - **Base ya lista**: el **back ya es multi-instancia** (id arbitrario; `/method` por instancia `AuthApi.ts:95-97`; `start`/`callback` por `getInstance`; `user.idp`=instanceId). El único bloqueo es la UI.
