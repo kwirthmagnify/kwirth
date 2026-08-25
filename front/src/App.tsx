@@ -2236,7 +2236,19 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     <AppBar position='sticky' elevation={0} sx={{ zIndex: 1300, height:'64px'}}>
                     <Toolbar>
                         <IconButton size='large' edge='start' color='inherit' aria-label='menu' sx={{ mr: 1 }} onClick={() => setMenuDrawerOpen(prev => !prev)}><Menu /></IconButton>
-                        <Typography sx={{ ml:1,flexGrow: 1 }}>Kwirth - {clusters.find(c => c.name === selectedClusterName)?.clusterInfo?.name}</Typography>
+                        <Typography component='div' sx={{ ml:1, flexGrow: 1 }}>
+                            Kwirth - {clusters.find(c => c.name === selectedClusterName)?.clusterInfo?.name}
+                            {(() => {
+                                // Show the cluster of the selected tab next to the home cluster, so it is always
+                                // obvious which cluster the active tab talks to. Highlight it when it differs from home.
+                                const tabClusterName = selectedTab.current?.channelObject?.clusterName
+                                if (!tabClusterName) return null
+                                const tabCluster = clusters.find(c => c.name === tabClusterName)
+                                const tabLabel = tabCluster?.clusterInfo?.name ?? tabClusterName
+                                const differsFromHome = tabClusterName !== selectedClusterName
+                                return <Typography component='span' sx={{ ml: 1, ...(differsFromHome ? { fontWeight: 700, color: 'warning.light' } : { opacity: 0.75 }) }}>({tabLabel})</Typography>
+                            })()}
+                        </Typography>
                         {/* <Tooltip title={<div style={{textAlign:'center'}}>{currentWorkspaceName}<br/><br/>{currentWorkspaceDescription}</div>} sx={{ mr:2}} slotProps={{popper: {modifiers: [{name: 'offset', options: {offset: [0, -12]}}]}}}>
                             <Typography variant='h6' component='div' sx={{mr:2, cursor:'default'}}>{currentWorkspaceName}</Typography>
                         </Tooltip> */}
