@@ -2,6 +2,8 @@
 import { Box, Button, Card, CardContent, CardHeader, Chip, Divider, FormControl, FormControlLabel, IconButton, List, ListItem, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, Tooltip, Typography } from '@mui/material'
 import { Add as AddIcon, ArrowDownward, ArrowUpward, DeleteOutline as DeleteOutlineIcon, DeleteSweep, Download as DownloadIcon, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
 import { cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
+import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
+import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { ICensorData, ICensorUiState, IRunnerData, ECensorTab } from './CensorData'
 import { ECensorCommand, ERegexOrigin } from './CensorConfig'
@@ -93,6 +95,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setLlmLinesPerMin(calcRate(60000, true, 'llmLines'))
     }, [rd?.processedCount, rd?.tokensIn, rd?.tokensOut, rd?.llmLinesCount])
     const [showConfig, setShowConfig] = useState(false)
+    const [showConfigLlm, setShowConfigLlm] = useState(false)
+    const [showConfigProvider, setShowConfigProvider] = useState(false)
     const [addRegexState, setAddRegexState] = useState<{ runnerKey?: string, pattern?: string, explanation?: string, lockRunner?: boolean } | null>(null)
     const [activeTagFilters, setActiveTagFilters] = useState<string[]>([])
     const [tagFilterAnd, setTagFilterAnd] = useState(false)
@@ -167,6 +171,20 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setShowConfig(true)
     }
 
+    // LLM/Provider config manage the shared AI catalog. They live in the ⋮ menu (not inside the config
+    // dialog) so their sub-dialogs are not nested under another modal — that nesting tripped MUI's focus
+    // trap and blocked typing in the sub-dialog inputs.
+    const aiConfigLlmClose = (llms: ILlm[] | undefined) => {
+        setShowConfigLlm(false)
+        // Persist the shared llm list; spread the active config so the backend does not blank instance.cfg
+        if (llms) sendCommand(ECensorCommand.CONFIGSET, { ...data.instanceConfig, _llms: llms })
+    }
+
+    const aiConfigProviderClose = (providers: ILlmProvider[] | undefined) => {
+        setShowConfigProvider(false)
+        if (providers) sendCommand(ECensorCommand.PROVIDERSSET, providers)
+    }
+
     const panelHeight = `calc(100vh - ${contentTop}px - 16px)`
     return <>
         {data.started &&
@@ -235,6 +253,9 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     </IconButton>
                     <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
                         <MenuItem onClick={() => { setMenuAnchor(null); openConfig() }} disabled={!data.ephemeralSessionName}>Config</MenuItem>
+                        <Divider />
+                        <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigProvider(true) }} disabled={!data.ephemeralSessionName}>AI Providers</MenuItem>
+                        <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigLlm(true) }} disabled={!data.ephemeralSessionName}>AI Models</MenuItem>
                     </Menu>
                 </Stack>
             } />
@@ -684,7 +705,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 </Stack>
                                 {!selectedLlm?.inputCostPerMillion && (
                                     <Typography variant='caption' color='text.disabled' sx={{ mt: 1, display: 'block' }}>
-                                        Set cost/M tokens in LLM config to see costs
+                                        Set cost/M tokens in AI Models to see costs
                                     </Typography>
                                 )}
                             </Box>
@@ -724,6 +745,12 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         )}
         {showConfig && (
             <CensorConfigDialog data={data} channelObject={props.channelObject} sendCommand={sendCommand} onClose={() => setShowConfig(false)} />
+        )}
+        {showConfigLlm && (
+            <AiConfigLlm llms={data.llms} providers={data.providers} onClose={aiConfigLlmClose} />
+        )}
+        {showConfigProvider && (
+            <AiConfigProvider providers={data.providers} providersAvailable={data.providersAvailable} onClose={aiConfigProviderClose} />
         )}
     </>
 }

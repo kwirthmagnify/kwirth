@@ -2,8 +2,6 @@
 import { Add as AddIcon, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon } from '@mui/icons-material'
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
-import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
-import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import { ICensorData } from './CensorData'
 import { ECensorCommand, ICensorInstanceConfig, ICensorBusinessSource, ICensorLogstreamSource } from './CensorConfig'
 import { CensorImportExport } from './CensorImportExport'
@@ -38,8 +36,6 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
     const [configTab, setConfigTab] = useState<ECensorConfigTab>(ECensorConfigTab.General)
     const [msgBox, setMsgBox] = useState(<></>)
-    const [showConfigLlm, setShowConfigLlm] = useState(false)
-    const [showConfigProvider, setShowConfigProvider] = useState(false)
     const [showImportExport, setShowImportExport] = useState(false)
     const [senderEntries, setSenderEntries] = useState<Array<{ senderId: string; configName: string }>>([])
 
@@ -173,16 +169,6 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
         data.instanceConfig = cfg
         sendCommand(ECensorCommand.CONFIGSET, { ...cfg, _allConfigs: localConfigs })
         onClose()
-    }
-
-    const aiConfigLlmClose = (llms: ILlm[] | undefined) => {
-        setShowConfigLlm(false)
-        if (llms) sendCommand(ECensorCommand.CONFIGSET, { llmId, system, batchSize, exampleJson, _llms: llms })
-    }
-
-    const aiConfigProviderClose = (providers: ILlmProvider[] | undefined) => {
-        setShowConfigProvider(false)
-        if (providers) sendCommand(ECensorCommand.PROVIDERSSET, providers)
     }
 
     const importExportClose = (imported?: ICensorInstanceConfig[]) => {
@@ -413,8 +399,6 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                     </Box>
 
                     <Stack direction='row' spacing={2} alignItems='center' sx={{ pt: 1 }}>
-                        <Button variant='outlined' size='small' onClick={() => setShowConfigLlm(true)}>LLM config</Button>
-                        <Button variant='outlined' size='small' onClick={() => setShowConfigProvider(true)}>Provider config</Button>
                         <Button variant='outlined' size='small' onClick={() => setShowImportExport(true)}>Import/Export</Button>
                         <Box sx={{ flex: 1 }} />
                         <Button variant='contained' size='small'
@@ -431,12 +415,6 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
             </DialogActions>
         </Dialog>
 
-        {showConfigLlm && (
-            <AiConfigLlm llms={data.llms} providers={data.providers} onClose={aiConfigLlmClose} />
-        )}
-        {showConfigProvider && (
-            <AiConfigProvider providers={data.providers} providersAvailable={data.providersAvailable} onClose={aiConfigProviderClose} />
-        )}
         {showImportExport && (
             <CensorImportExport configs={localConfigs} onClose={importExportClose} />
         )}
