@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Collapse, Divider, MenuItem, MenuList } from "@mui/material"
-import { BrowserUpdated, ChevronRight, CreateNewFolderTwoTone, DeleteTwoTone, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpenTwoTone, FolderOpen, FolderZip, Home, ImportExport, Info, Key, LockPerson, Palette, Person, SaveAsTwoTone, SaveTwoTone, Send, Settings } from '@kwirthmagnify/kwirth-common-front/icons'
+import { BrowserUpdated, ChevronRight, CreateNewFolderTwoTone, DeleteTwoTone, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpenTwoTone, FolderOpen, FolderZip, Home, Https, ImportExport, Info, Key, LockPerson, Palette, Person, SaveAsTwoTone, SaveTwoTone, Send, Settings } from '@kwirthmagnify/kwirth-common-front/icons'
 
 enum MenuDrawerOption {
     NewWorkspace,
@@ -18,6 +18,7 @@ enum MenuDrawerOption {
     ManagePlugins,
     ManageProviders,
     ManageSenders,
+    ManageWebhooks,
     // ManageDaemons,
     ManageThemes,
     ManageHomepages,
@@ -89,6 +90,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManagePlugins)}><Extension />&nbsp;Plugins</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageProviders)}><Factory />&nbsp;Providers</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageSenders)}><Send />&nbsp;Senders</MenuItem>
+                            <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageWebhooks)}><Https />&nbsp;Webhooks</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageThemes)}><Palette />&nbsp;Themes</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageHomepages)}><Home />&nbsp;Homepages</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageIdps)}><Key />&nbsp;Identity providers</MenuItem>

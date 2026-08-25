@@ -74,6 +74,7 @@ import { PluginApi } from './api/PluginApi'
 import { ProviderManager } from './tools/ProviderManager'
 import { ProviderApi } from './api/ProviderApi'
 import { SenderApi } from './api/SenderApi'
+import { WebhookApi } from './api/WebhookApi'
 import { SenderManager } from './tools/SenderManager'
 import { WebhookManager } from './tools/WebhookManager'
 import { handleInbound } from './tools/WebhookReceiver'
@@ -1311,6 +1312,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         if (senderManager) {
             let senderApi = new SenderApi(senderManager, apiKeyApi)
             riRouter.use(`/core/senders`, senderApi.router)
+        }
+        if (webhookManager) {
+            let webhookApi = new WebhookApi(webhookManager, apiKeyApi)
+            riRouter.use(`/core/webhooks`, webhookApi.router)
         }
         if (themeManager) {
             let themeApi = new ThemeApi(themeManager, apiKeyApi)

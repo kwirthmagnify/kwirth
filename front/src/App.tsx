@@ -50,6 +50,7 @@ import { PluginManagerDialog } from './components/PluginManagerDialog'
 import { ProviderManagerDialog } from './components/ProviderManagerDialog'
 import { IdpManagerDialog } from './components/IdpManagerDialog'
 import { SenderManagerDialog } from './components/SenderManagerDialog'
+import { WebhookManagerDialog } from './components/WebhookManagerDialog'
 import { ThemeManagerDialog } from './components/ThemeManagerDialog'
 import { HomepageManagerDialog } from './components/HomepageManagerDialog'
 import { DocsDialog } from './components/DocsDialog'
@@ -268,6 +269,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showIdpManagerDialog, setShowIdpManagerDialog]=useState<boolean>(false)
     // const [showDaemonDialog, setShowDaemonDialog]=useState<boolean>(false)
     const [showSenderManagerDialog, setShowSenderManagerDialog]=useState<boolean>(false)
+    const [showWebhookManagerDialog, setShowWebhookManagerDialog]=useState<boolean>(false)
     const [showThemeManagerDialog, setShowThemeManagerDialog]=useState<boolean>(false)
     const [showHomepageManagerDialog, setShowHomepageManagerDialog]=useState<boolean>(false)
     const [showDocsDialog, setShowDocsDialog]=useState<boolean>(false)
@@ -927,6 +929,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 case EExtensionType.PLUGIN:   setShowPluginManagerDialog(true); break
                 case EExtensionType.PROVIDER: setShowProviderManagerDialog(true); break
                 case EExtensionType.SENDER:   setShowSenderManagerDialog(true); break
+                case EExtensionType.WEBHOOK:  setShowWebhookManagerDialog(true); break
                 case EExtensionType.THEME:    setShowThemeManagerDialog(true); break
                 case EExtensionType.HOMEPAGE: setShowHomepageManagerDialog(true); break
                 case EExtensionType.DOCS:     setShowDocsDialog(true); break
@@ -1827,6 +1830,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageSenders:
                 setShowSenderManagerDialog(true)
                 break
+            case MenuDrawerOption.ManageWebhooks:
+                setShowWebhookManagerDialog(true)
+                break
             // case MenuDrawerOption.ManageDaemons:
             //     setShowDaemonDialog(true)
             //     break
@@ -2398,6 +2404,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showProviderManagerDialog && <ProviderManagerDialog onClose={() => setShowProviderManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showIdpManagerDialog && <IdpManagerDialog onClose={() => setShowIdpManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showSenderManagerDialog && <SenderManagerDialog onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showWebhookManagerDialog && <WebhookManagerDialog onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showThemeManagerDialog && <ThemeManagerDialog onClose={() => setShowThemeManagerDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showHomepageManagerDialog && <HomepageManagerDialog onClose={() => setShowHomepageManagerDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showDocsDialog && <DocsDialog onClose={() => setShowDocsDialog(false)} /> }
