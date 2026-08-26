@@ -46,30 +46,14 @@ If the user's `enabledChannels` does not include the required channel, login is 
 
 > Users with `enabledChannels` left empty (i.e. *all channels*) always pass the channel check.
 
-## Anonymous login extension
+## Bundled login extensions
 
-Kwirth ships a built-in **anonymous** login extension for public / demo deployments where users must not see a login form. It works as follows:
-
-1. The user navigates to `/?loginExt=anonymous`.
-2. A full-screen spinner is shown while the extension auto-submits credentials configured by the admin.
-3. On success the configured channel opens directly; on failure an error message replaces the spinner.
-
-### Configuring the Anonymous extension
-
-Open **⚙ Settings** on the `anonymous` card and fill in:
-
-| Field | Description |
+| Extension | Description |
 |---|---|
-| **Auto-login user** *(required)* | Kwirth username used for the automatic login. |
-| **Auto-login password** *(required)* | Password for that user. |
-| **Start channel** | Channel slug to open after login (e.g. `magnify`). Leave blank to land on the home screen. |
-| **Scope** | Resource scope for the channel: `cluster`, `namespace`, `group`, `pod`, or `container`. Defaults to `cluster`. |
-| **Namespace(s)** | Comma-separated namespaces (only relevant for `namespace` / `group` / `pod` / `container` scopes). |
-| **Group(s)** | Comma-separated groups in `type+name` format (e.g. `replica+my-rs`). |
-| **Pod(s)** | Comma-separated pod names. |
-| **Container(s)** | Comma-separated container names. |
+| **[Anonymous](anonymous)** | Auto-login without a form — ideal for public or demo deployments. |
+| **[Magnify](magnify)** | Branded login page for the Magnify channel. |
 
-> **Security note:** the auto-login user should have a minimal, read-only access key scoped only to the resources you intend to expose. Never use an admin account.
+Additional login extensions may be shipped alongside their corresponding plugin (e.g. Excubitor, Montag) and appear in the manager when those plugins are installed.
 
 ## Creating a login extension
 

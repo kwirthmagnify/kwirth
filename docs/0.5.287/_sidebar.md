@@ -84,6 +84,8 @@
       * [Matrix](/0.5.287/guide/extensions/homepages/matrix)
       * [Depeche Mode](/0.5.287/guide/extensions/homepages/depeche-mode)
     * [Login extensions](/0.5.287/guide/extensions/logins/index)
+      * [Anonymous](/0.5.287/guide/extensions/logins/anonymous)
+      * [Magnify](/0.5.287/guide/extensions/logins/magnify)
 * [Installation](/0.5.287/installation)
 * [How it works](/0.5.287/how)
 * [Data streaming](/0.5.287/datastreaming)
