@@ -14,6 +14,9 @@ import * as codeMirrorThemeOneDark from '@codemirror/theme-one-dark'
 import uiwReactCodeMirror from '@uiw/react-codemirror'
 import { FileManager as _rfmFileManager } from '@jfvilas/react-file-manager'
 import * as recharts from 'recharts'
+import * as reactFlow from '@xyflow/react'
+// @ts-ignore - React Flow CSS (no type declarations)
+import '@xyflow/react/dist/style.css'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { SnackbarProvider } from 'notistack'
@@ -23,14 +26,17 @@ import './index.css'
 
 declare global {
     interface Window {
-        __kwirth__: { React: typeof React; MUI: { material: typeof MUIMaterial; icons: typeof MUIIcons }; kwirthCommon: typeof kwirthCommon; kwirthCommonFront: typeof kwirthCommonFront; kwirthCommonAiFront: typeof kwirthCommonAiFront; codeMirrorView: typeof codeMirrorView; codeMirrorState: typeof codeMirrorState; codeMirrorCommands: typeof codeMirrorCommands; codeMirrorSearch: typeof codeMirrorSearch; codeMirrorLanguage: typeof codeMirrorLanguage; codeMirrorLangYaml: typeof codeMirrorLangYaml; codeMirrorThemeOneDark: typeof codeMirrorThemeOneDark; uiwReactCodeMirror: typeof uiwReactCodeMirror; jfvilasReactFileManager: { FileManager: typeof _rfmFileManager }; recharts: typeof recharts }
+        __kwirth__: { React: typeof React; MUI: { material: typeof MUIMaterial; icons: typeof MUIIcons }; kwirthCommon: typeof kwirthCommon; kwirthCommonFront: typeof kwirthCommonFront; kwirthCommonAiFront: typeof kwirthCommonAiFront; codeMirrorView: typeof codeMirrorView; codeMirrorState: typeof codeMirrorState; codeMirrorCommands: typeof codeMirrorCommands; codeMirrorSearch: typeof codeMirrorSearch; codeMirrorLanguage: typeof codeMirrorLanguage; codeMirrorLangYaml: typeof codeMirrorLangYaml; codeMirrorThemeOneDark: typeof codeMirrorThemeOneDark; uiwReactCodeMirror: typeof uiwReactCodeMirror; jfvilasReactFileManager: { FileManager: typeof _rfmFileManager }; recharts: typeof recharts; reactFlow: typeof reactFlow; loadElk: () => Promise<any> }
         __kwirth_plugins__: Record<string, any>
         __kwirth_senders__: Record<string, { ConfigDialog?: React.ComponentType<any>; nodeLabel?: string; nodeDescription?: string; nodeIcon?: string }>
         __kwirth_themes__: Record<string, { displayName: string; getThemeOptions: (mode: 'light' | 'dark') => any }>
         __kwirth_homepages__: Record<string, any>
     }
 }
-window.__kwirth__ = { React, MUI: { material: MUIMaterial, icons: MUIIcons }, kwirthCommon, kwirthCommonFront, kwirthCommonAiFront, codeMirrorView, codeMirrorState, codeMirrorCommands, codeMirrorSearch, codeMirrorLanguage, codeMirrorLangYaml, codeMirrorThemeOneDark, uiwReactCodeMirror, jfvilasReactFileManager: { FileManager: _rfmFileManager }, recharts }
+// elkjs (~1.4MB) is lazy-loaded on first layout computation; webpack code-splits it into its own chunk.
+// @ts-ignore - elk.bundled.js is a JS bundle without type declarations
+const loadElk = () => import('elkjs/lib/elk.bundled.js').then((m: any) => m.default ?? m)
+window.__kwirth__ = { React, MUI: { material: MUIMaterial, icons: MUIIcons }, kwirthCommon, kwirthCommonFront, kwirthCommonAiFront, codeMirrorView, codeMirrorState, codeMirrorCommands, codeMirrorSearch, codeMirrorLanguage, codeMirrorLangYaml, codeMirrorThemeOneDark, uiwReactCodeMirror, jfvilasReactFileManager: { FileManager: _rfmFileManager }, recharts, reactFlow, loadElk }
 window.__kwirth_plugins__ = {}
 window.__kwirth_senders__ = {}
 window.__kwirth_themes__ = {}
