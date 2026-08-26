@@ -37,6 +37,9 @@
     "teams": "../senders/teams/dist",
     "jira": "../senders/jira/dist"
   },
+  "webhooks": {
+    "jira": "../webhooks/jira/dist"
+  },
   "logins": {
     "magnify": "../logins/magnify/dist/magnify.tgz",
     "anonymous": "../logins/anonymous/dist/anonymous.tgz",

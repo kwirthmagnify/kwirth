@@ -50,4 +50,5 @@ kwirth-bundled.json
 /plugins/iter/
 /iria/
 /senders/jira/
+/webhooks/jira/
 /idps/entraid/
