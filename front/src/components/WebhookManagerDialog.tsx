@@ -4,7 +4,7 @@ import {
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography, useTheme
 } from '@mui/material'
-import { Add, CheckCircle, ContentCopy, Delete, Download, FileDownload, FileUpload, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Add, CheckCircle, ContentCopy, Delete, Download, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -110,8 +110,6 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
     const [urlCopied, setUrlCopied] = useState(false)
 
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const webhookFileInputRef = useRef<HTMLInputElement>(null)
-    const configImportFileRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         loadInstalled()
@@ -340,47 +338,6 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
             const v = formValues[f.name]
             return v !== undefined && v !== '' && v !== false
         })
-    }
-
-    const triggerDownload = (data: unknown, filename: string) => {
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url; a.download = filename; a.click()
-        URL.revokeObjectURL(url)
-    }
-
-    const exportAll = async () => {
-        try {
-            const res = await fetch(`${backendUrl}/core/webhooks/export`, addGetAuthorization(accessString))
-            if (!res.ok) throw new Error(`HTTP ${res.status}`)
-            triggerDownload(await res.json(), 'kwirth-webhook-configs.json')
-        } catch (err) { setError(`Export failed: ${err}`) }
-    }
-
-    const importAll = async (file: File) => {
-        try {
-            const res = await fetch(`${backendUrl}/core/webhooks/import`, addPostAuthorization(accessString, await file.text()))
-            if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
-            const { count } = await res.json()
-            await loadInstalled()
-            if (expandedId) await expandWebhook(expandedId)
-            setError(`Imported ${count} config(s)`)
-        } catch (err) { setError(`Import failed: ${err}`) }
-        finally { if (webhookFileInputRef.current) webhookFileInputRef.current.value = '' }
-    }
-
-    const importForWebhook = async (file: File) => {
-        if (!expandedId) return
-        try {
-            const raw = JSON.parse(await file.text())
-            const list: ConfigValues[] = Array.isArray(raw) ? raw : (raw.configs ?? [])
-            const res = await fetch(`${backendUrl}/core/webhooks/${expandedId}/import`, addPostAuthorization(accessString, JSON.stringify(list)))
-            if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
-            await reloadConfigs(expandedId)
-            await loadInstalled()
-        } catch (err) { setError(`Import failed: ${err}`) }
-        finally { if (configImportFileRef.current) configImportFileRef.current.value = '' }
     }
 
     const isInstalled = (id: string) => installed.some(s => s.id === id && s.installedFrom !== 'dev')
@@ -629,17 +586,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                 </Stack>
             </DialogContent>
             {error && <Box sx={{ px: 3, pb: 1 }}><Typography variant='caption' color={error.startsWith('Imported') ? 'success.main' : 'error'}>{error}</Typography></Box>}
-            <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
-                <Stack direction='row' spacing={1}>
-                    <input ref={webhookFileInputRef} type='file' accept='.json' style={{ display: 'none' }}
-                        onChange={e => { const f = e.target.files?.[0]; if (f) importAll(f) }} />
-                    <Tooltip title='Export ALL webhook configs to JSON'>
-                        <Button size='small' startIcon={<FileDownload />} onClick={exportAll}>Export all</Button>
-                    </Tooltip>
-                    <Tooltip title='Import webhook configs from JSON (all webhooks)'>
-                        <Button size='small' startIcon={<FileUpload />} onClick={() => webhookFileInputRef.current?.click()}>Import all</Button>
-                    </Tooltip>
-                </Stack>
+            <DialogActions sx={{ justifyContent: 'flex-end', px: 2 }}>
                 <Button onClick={props.onClose}>Close</Button>
             </DialogActions>
         </Dialog>
@@ -742,22 +689,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                         }
                     </Box>
                 </DialogContent>
-                <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
-                    <Stack direction='row' spacing={1}>
-                        <input ref={configImportFileRef} type='file' accept='.json' style={{ display: 'none' }}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) importForWebhook(f) }} />
-                        <Tooltip title='Export configs to JSON'>
-                            <span>
-                                <Button size='small' startIcon={<FileDownload />} disabled={configs.length === 0}
-                                    onClick={() => triggerDownload(configs, `kwirth-webhook-${expandedId}-configs.json`)}>
-                                    Export
-                                </Button>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title='Import configs from JSON'>
-                            <Button size='small' startIcon={<FileUpload />} onClick={() => configImportFileRef.current?.click()}>Import</Button>
-                        </Tooltip>
-                    </Stack>
+                <DialogActions sx={{ justifyContent: 'flex-end', px: 2 }}>
                     <Button onClick={() => setExpandedId(undefined)}>Close</Button>
                 </DialogActions>
             </Dialog>
