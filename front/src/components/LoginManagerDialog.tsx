@@ -347,7 +347,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                             <Stack direction='row' spacing={0.5}>
                                                 {login.configSchema && login.configSchema.length > 0 && (
                                                     <Tooltip title='Configure'>
-                                                        <IconButton size='small' onClick={() => openConfig(login)}>
+                                                        <IconButton size='small' aria-label='Configure' onClick={() => openConfig(login)}>
                                                             <Settings fontSize='small' />
                                                         </IconButton>
                                                     </Tooltip>

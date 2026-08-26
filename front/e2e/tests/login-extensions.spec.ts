@@ -82,10 +82,10 @@ test('login extensions: anonymous login shows config button', async ({ page }) =
     await expect(dialog).toBeVisible()
 
     // La extensión anonymous debe aparecer en la lista
-    await expect(dialog.getByText('anonymous', { exact: false })).toBeVisible({ timeout: 5000 })
+    await expect(dialog.getByText('Anonymous', { exact: true })).toBeVisible({ timeout: 5000 })
 
-    // Debe haber al menos un botón de settings (⚙)
-    const settingsBtn = dialog.locator('[title="Settings"]').first()
+    // Debe haber al menos un botón de configuración (⚙)
+    const settingsBtn = dialog.getByRole('button', { name: 'Configure' }).first()
     await expect(settingsBtn).toBeVisible()
 
     await page.keyboard.press('Escape')
@@ -102,19 +102,19 @@ test('login extensions: anonymous config dialog has scope select and resource fi
     await expect(dialog).toBeVisible()
 
     // Abre el config dialog de anonymous
-    const settingsBtn = dialog.locator('[title="Settings"]').first()
+    const settingsBtn = dialog.getByRole('button', { name: 'Configure' }).first()
     await settingsBtn.click()
 
-    // Debe aparecer un segundo dialog con "Configure"
-    const configDialog = page.getByRole('dialog').nth(1)
-    await expect(configDialog).toBeVisible({ timeout: 3000 })
+    // El Login Manager se cierra; aparece el config dialog (es el único dialog)
+    const configDialog = page.getByRole('dialog', { name: /configure/i })
+    await expect(configDialog).toBeVisible({ timeout: 5000 })
     await expect(configDialog.getByText(/configure/i)).toBeVisible()
 
     // Campos presentes
     await expect(configDialog.getByLabel(/auto-login user/i)).toBeVisible()
     await expect(configDialog.getByLabel(/auto-login password/i)).toBeVisible()
     await expect(configDialog.getByLabel(/scope/i)).toBeVisible()
-    await expect(configDialog.getByLabel(/namespace/i)).toBeVisible()
+    await expect(configDialog.getByRole('textbox', { name: /namespace/i })).toBeVisible()
 
     // Scope es un select con opciones correctas
     const scopeSelect = configDialog.getByLabel(/scope/i)
