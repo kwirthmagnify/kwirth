@@ -32,8 +32,15 @@ interface ILoginConfig {
     orSeparator?: string
     idpButton?: string
     startChannel?: string
+    startScope?: string
+    startNamespace?: string
+    startGroup?: string
+    startPod?: string
+    startContainer?: string
     allowedIdps?: string[]
     hasBackground?: boolean
+    autoUser?: string
+    autoPassword?: string
 }
 
 const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
@@ -86,6 +93,11 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
         accessKey: login.accessKey,
         resources: '',
         startChannel: config?.startChannel ?? login.startChannel,
+        startView: config?.startScope,
+        startNamespace: config?.startNamespace,
+        startGroup: config?.startGroup,
+        startPod: config?.startPod,
+        startContainer: config?.startContainer,
         exitFullScreen: login.exitFullScreen,
         enabledChannels: login.enabledChannels
     })
@@ -95,11 +107,13 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
         return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
     }
 
-    const doLogin = async () => {
+    const doLogin = async (overrideUser?: string, overridePass?: string) => {
+        const user = overrideUser ?? userName
+        const pass = overridePass ?? password
         setBusy(true)
         setError('')
         try {
-            const res = await fetch(`${props.backendUrl}/login`, addPostAuthorization('', JSON.stringify({ user: userName, password: await sha256(password) })))
+            const res = await fetch(`${props.backendUrl}/login`, addPostAuthorization('', JSON.stringify({ user, password: await sha256(pass) })))
             switch (res.status) {
                 case 200: {
                     const loginData = await res.json()
@@ -161,6 +175,12 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
         window.location.href = `${props.backendUrl}${method.startUrl}?returnTo=${encodeURIComponent(returnTo)}`
     }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        if (loading || !config?.autoUser || !config?.autoPassword) return
+        doLogin(config.autoUser, config.autoPassword)
+    }, [loading])
+
     if (loading) {
         return (
             <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -170,6 +190,15 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
     }
 
     if (!config) return null
+
+    if (config.autoUser) {
+        return (
+            <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'background.default', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                {!error && <CircularProgress />}
+                {error && <Typography color='error'>{error}</Typography>}
+            </Box>
+        )
+    }
 
     const hasPassword = props.methods.length === 0 || props.methods.some(m => m.kind === EAuthMethodKind.PASSWORD)
     const allRedirectMethods = props.methods.filter(m => m.kind === EAuthMethodKind.REDIRECT)
@@ -264,7 +293,7 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
                     )}
                     <Typography sx={{ flexGrow: 1 }} />
                     {hasPassword && !changingPassword && (
-                        <Button variant='outlined' size='small' disabled={!canSubmit} onClick={doLogin} sx={btnSx}>
+                        <Button variant='outlined' size='small' disabled={!canSubmit} onClick={() => doLogin()} sx={btnSx}>
                             {busy ? <CircularProgress size={16} /> : (config.okButton ?? 'Login')}
                         </Button>
                     )}

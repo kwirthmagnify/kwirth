@@ -77,6 +77,18 @@ export class LoginExtensionApi {
             }
         })
 
+        this.router.put('/:id/config', async (req: Request, res: Response) => {
+            if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            try {
+                await this.loginManager.updateConfig(req.params.id, req.body)
+                res.json({ ok: true })
+            }
+            catch (err) {
+                logError(ELogComponent.CORE, `Login extension '${req.params.id}' config update error: ${err}`)
+                res.status(500).json({ error: String(err) })
+            }
+        })
+
         this.router.get('/:id/background', async (req: Request, res: Response) => {
             try {
                 const buf = await this.loginManager.getBackground(req.params.id)

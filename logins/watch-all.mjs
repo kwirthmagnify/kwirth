@@ -5,7 +5,7 @@ import { join, resolve } from 'path'
 const loginsDir = resolve(import.meta.dirname ?? new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
 
 const logins = readdirSync(loginsDir, { withFileTypes: true })
-    .filter(d => d.isDirectory() && existsSync(join(loginsDir, d.name, 'watch.mjs')))
+    .filter(d => d.isDirectory() && existsSync(join(loginsDir, d.name, 'watch.mjs')) && existsSync(join(loginsDir, d.name, 'package.json')))
     .map(d => d.name)
 
 const COLORS = ['\x1b[36m', '\x1b[33m', '\x1b[35m', '\x1b[32m', '\x1b[34m', '\x1b[31m', '\x1b[37m', '\x1b[96m', '\x1b[93m']

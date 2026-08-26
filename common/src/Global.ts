@@ -8,6 +8,11 @@ interface IUser {
     resources: string
     idp?: string           // instanceId del IdP al que esta atado el usuario; vacio/undefined = usuario local kwirth
     startChannel?: string  // canal a arrancar en fullscreen al hacer login
+    startView?: string     // EInstanceConfigView value para el startChannel (default: 'cluster')
+    startNamespace?: string
+    startGroup?: string
+    startPod?: string
+    startContainer?: string
     exitFullScreen?: boolean  // si el usuario puede salir del modo fullscreen
     enabledChannels?: string[]  // lista de canales que el usuario puede lanzar; undefined = todos
 }

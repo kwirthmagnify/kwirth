@@ -625,7 +625,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             return
         }
         autoStartedRef.current = true
-        populateTabObject(user, user.startChannel, user.startChannel, srcCluster, EInstanceConfigView.CLUSTER, '', '', '', '', true, true, { config: undefined, instanceConfig: undefined })
+        populateTabObject(user, user.startChannel, user.startChannel, srcCluster,
+            (user.startView as EInstanceConfigView) ?? EInstanceConfigView.CLUSTER,
+            user.startNamespace ?? '',
+            user.startGroup ?? '',
+            user.startPod ?? '',
+            user.startContainer ?? '',
+            true, true, { config: undefined, instanceConfig: undefined })
             .then(() => setAutoStartPending(false))
     }, [clusters, user, frontChannels, pluginsLoaded])
 

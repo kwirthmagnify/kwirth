@@ -23,6 +23,12 @@ Open **☰ → Manage extensions → Login extensions**:
 - Unlike other extension families, there is **no activate / deactivate** — every installed login extension is immediately accessible via its URL slug.
 - Cards have two actions: **open website** (if the extension declares one) and **🗑 uninstall**.
 
+### Runtime configuration
+
+If an extension declares a `configSchema` in its `package.json`, a **⚙ Settings** button appears on its card. Clicking it opens a configuration dialog where the admin can set the values that the extension needs at runtime (credentials, URLs, scope, etc.) **without touching the extension package**.
+
+Configuration is stored in a dedicated Kubernetes ConfigMap and is applied immediately — no restart required.
+
 ## Install / uninstall
 
 - **Install from URL** — paste the `.tgz` package URL and click **Install**.
@@ -39,6 +45,31 @@ When a login extension declares a `startChannel` in its configuration, Kwirth **
 If the user's `enabledChannels` does not include the required channel, login is **rejected** with a clear error message and the user stays on the login extension page.
 
 > Users with `enabledChannels` left empty (i.e. *all channels*) always pass the channel check.
+
+## Anonymous login extension
+
+Kwirth ships a built-in **anonymous** login extension for public / demo deployments where users must not see a login form. It works as follows:
+
+1. The user navigates to `/?loginExt=anonymous`.
+2. A full-screen spinner is shown while the extension auto-submits credentials configured by the admin.
+3. On success the configured channel opens directly; on failure an error message replaces the spinner.
+
+### Configuring the Anonymous extension
+
+Open **⚙ Settings** on the `anonymous` card and fill in:
+
+| Field | Description |
+|---|---|
+| **Auto-login user** *(required)* | Kwirth username used for the automatic login. |
+| **Auto-login password** *(required)* | Password for that user. |
+| **Start channel** | Channel slug to open after login (e.g. `magnify`). Leave blank to land on the home screen. |
+| **Scope** | Resource scope for the channel: `cluster`, `namespace`, `group`, `pod`, or `container`. Defaults to `cluster`. |
+| **Namespace(s)** | Comma-separated namespaces (only relevant for `namespace` / `group` / `pod` / `container` scopes). |
+| **Group(s)** | Comma-separated groups in `type+name` format (e.g. `replica+my-rs`). |
+| **Pod(s)** | Comma-separated pod names. |
+| **Container(s)** | Comma-separated container names. |
+
+> **Security note:** the auto-login user should have a minimal, read-only access key scoped only to the resources you intend to expose. Never use an admin account.
 
 ## Creating a login extension
 
@@ -62,6 +93,31 @@ Build it with the `build.mjs` script from the `logins/_template` folder.
     "version": "0.1.0",
     "description": "Branded login for My Product",
     "targetType": "login"
+}
+```
+
+### `configSchema` — runtime configuration fields
+
+If your extension requires values that should not be baked into the package (credentials, API keys, runtime parameters), declare a `configSchema` array in `package.json`. The admin fills these values from the **⚙ Settings** dialog in the Login Manager; the values are served via `GET /core/logins/<id>/config` and merged with `login.json` at runtime.
+
+Each entry supports:
+
+| Property | Type | Description |
+|---|---|---|
+| `name` | string | Key name (matches the field in `login.json`). |
+| `label` | string | Human-readable label shown in the dialog. |
+| `type` | `text` \| `password` \| `number` \| `boolean` \| `select` | Field type. `password` adds a visibility toggle. `select` renders a dropdown using the `options` array. |
+| `required` | boolean | Marks the field as required in the dialog. |
+| `options` | string[] | For `type: "select"` — list of valid values. |
+
+Example:
+
+```json
+{
+    "configSchema": [
+        { "name": "apiKey", "label": "API Key", "type": "password", "required": true },
+        { "name": "mode", "label": "Mode", "type": "select", "options": ["read", "write"] }
+    ]
 }
 ```
 

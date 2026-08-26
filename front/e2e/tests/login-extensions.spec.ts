@@ -71,3 +71,74 @@ test('login extensions: wrong credentials show error', async ({ page }) => {
 
     await page.goto('about:blank')
 })
+
+// ── 5. Anonymous login: botón de config (⚙) visible en Login Manager ──────────
+test('login extensions: anonymous login shows config button', async ({ page }) => {
+    await login(page)
+    await dismissOpenDialogs(page)
+    await clickExtensionMenuItem(page, 'Login extensions')
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    // La extensión anonymous debe aparecer en la lista
+    await expect(dialog.getByText('anonymous', { exact: false })).toBeVisible({ timeout: 5000 })
+
+    // Debe haber al menos un botón de settings (⚙)
+    const settingsBtn = dialog.locator('[title="Settings"]').first()
+    await expect(settingsBtn).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await page.goto('about:blank')
+})
+
+// ── 6. Anonymous config dialog: campos correctos y Scope como select ──────────
+test('login extensions: anonymous config dialog has scope select and resource fields', async ({ page }) => {
+    await login(page)
+    await dismissOpenDialogs(page)
+    await clickExtensionMenuItem(page, 'Login extensions')
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    // Abre el config dialog de anonymous
+    const settingsBtn = dialog.locator('[title="Settings"]').first()
+    await settingsBtn.click()
+
+    // Debe aparecer un segundo dialog con "Configure"
+    const configDialog = page.getByRole('dialog').nth(1)
+    await expect(configDialog).toBeVisible({ timeout: 3000 })
+    await expect(configDialog.getByText(/configure/i)).toBeVisible()
+
+    // Campos presentes
+    await expect(configDialog.getByLabel(/auto-login user/i)).toBeVisible()
+    await expect(configDialog.getByLabel(/auto-login password/i)).toBeVisible()
+    await expect(configDialog.getByLabel(/scope/i)).toBeVisible()
+    await expect(configDialog.getByLabel(/namespace/i)).toBeVisible()
+
+    // Scope es un select con opciones correctas
+    const scopeSelect = configDialog.getByLabel(/scope/i)
+    await scopeSelect.click()
+    const listbox = page.getByRole('listbox')
+    await expect(listbox).toBeVisible()
+    await expect(listbox.getByRole('option', { name: 'cluster' })).toBeVisible()
+    await expect(listbox.getByRole('option', { name: 'namespace' })).toBeVisible()
+    await expect(listbox.getByRole('option', { name: 'pod' })).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await page.keyboard.press('Escape')
+    await page.goto('about:blank')
+})
+
+// ── 7. Anonymous login: muestra spinner mientras hace auto-login ───────────────
+test('login extensions: ?loginExt=anonymous shows spinner', async ({ page }) => {
+    await page.goto('/?loginExt=anonymous')
+
+    // Debe mostrar spinner o error (nunca el form de usuario/password)
+    await expect(page.getByRole('progressbar').or(page.getByText(/error|invalid|denied|connect/i))).toBeVisible({ timeout: 5000 })
+
+    // NO debe mostrar campos de user/password (no es un login form)
+    await expect(page.getByLabel(/user/i)).not.toBeVisible()
+
+    await page.goto('about:blank')
+})

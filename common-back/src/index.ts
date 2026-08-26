@@ -1,4 +1,5 @@
 export * from './IBackChannelObject'
+export * from './ILogin'
 export * from './IChannel'
 export * from './IProvider'
 export * from './ISender'

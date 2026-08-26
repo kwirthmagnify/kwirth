@@ -1,0 +1,20 @@
+{
+    "name": "@kwirthmagnify/login-anonymous",
+    "id": "anonymous",
+    "displayName": "Anonymous",
+    "version": "0.1.1",
+    "description": "Auto-login extension for anonymous or demo access — no form shown, credentials configured from admin UI",
+    "targetType": "login",
+    "requiresRestart": false,
+    "requiresExtension": [],
+    "configSchema": [
+        { "name": "autoUser", "label": "Auto-login user", "required": true },
+        { "name": "autoPassword", "label": "Auto-login password", "type": "password", "required": true },
+        { "name": "startChannel", "label": "Start channel (optional)" },
+        { "name": "startScope", "label": "Scope", "type": "select", "options": ["cluster", "namespace", "group", "pod", "container"] },
+        { "name": "startNamespace", "label": "Namespace(s) (comma-separated)" },
+        { "name": "startGroup", "label": "Group(s) (type+name, comma-separated)" },
+        { "name": "startPod", "label": "Pod(s) (comma-separated)" },
+        { "name": "startContainer", "label": "Container(s) (comma-separated)" }
+    ]
+}

@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Divider, IconButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Chip } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Link, LockPerson, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, Delete, Download, FolderOpen, Link, LockPerson, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
-import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
+import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
 
@@ -20,6 +20,14 @@ interface ILoginManifestEntry {
     url: string
 }
 
+interface ILoginFieldDef {
+    name: string
+    label: string
+    type?: 'text' | 'number' | 'boolean' | 'password' | 'select'
+    required?: boolean
+    options?: string[]
+}
+
 interface IInstalledLogin {
     id: string
     name: string
@@ -29,6 +37,7 @@ interface IInstalledLogin {
     website?: string
     installedFrom?: string
     requiresRestart?: boolean
+    configSchema?: ILoginFieldDef[]
 }
 
 interface ILoginManagerDialogProps {
@@ -55,6 +64,10 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const [configLogin, setConfigLogin] = useState<IInstalledLogin | undefined>()
+    const [configValues, setConfigValues] = useState<Record<string, string>>({})
+    const [configSaving, setConfigSaving] = useState(false)
+    const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
 
     const loginGradient = (name: string) => {
         let hash = 0
@@ -207,6 +220,43 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
         }
     }
 
+    const openConfig = async (login: IInstalledLogin) => {
+        setShowSecrets({})
+        try {
+            const res = await fetch(`${backendUrl}/core/logins/${login.id}/config`, addGetAuthorization(accessString))
+            const cfg = res.ok ? await res.json() : {}
+            const vals: Record<string, string> = {}
+            for (const field of login.configSchema ?? []) vals[field.name] = cfg[field.name] ?? ''
+            setConfigValues(vals)
+        }
+        catch {
+            const vals: Record<string, string> = {}
+            for (const field of login.configSchema ?? []) vals[field.name] = ''
+            setConfigValues(vals)
+        }
+        setConfigLogin(login)
+    }
+
+    const saveConfig = async () => {
+        if (!configLogin) return
+        setConfigSaving(true)
+        try {
+            const body: Record<string, unknown> = {}
+            for (const field of configLogin.configSchema ?? []) {
+                const val = configValues[field.name]
+                if (val !== undefined && val !== '') body[field.name] = field.type === 'number' ? Number(val) : val
+            }
+            await fetch(`${backendUrl}/core/logins/${configLogin.id}/config`, addPutAuthorization(accessString, JSON.stringify(body)))
+            setConfigLogin(undefined)
+        }
+        catch (err) {
+            setError(`Failed to save config: ${err}`)
+        }
+        finally {
+            setConfigSaving(false)
+        }
+    }
+
     const isInstalled = (id: string) => installed.some(p => p.id === id && p.installedFrom !== 'dev')
     const isDevInstalled = (id: string) => installed.some(p => p.id === id && p.installedFrom === 'dev')
 
@@ -268,6 +318,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
     const filteredInstalled = installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name).toLowerCase().includes(installedFilter.toLowerCase()))
 
     return (
+        <>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
             <DialogTitleHelp section='guide/extensions/logins/index'>Manage login extensions</DialogTitleHelp>
             <DialogContent>
@@ -293,13 +344,22 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                         source={resolveSource(login.installedFrom)}
                                         website={login.website}
                                         action={
-                                            <Tooltip title={login.installedFrom === 'dev' ? 'Dev login extensions cannot be uninstalled' : login.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
-                                                <span>
-                                                    <IconButton size='small' color='error' disabled={login.installedFrom === 'dev' || login.installedFrom?.startsWith('pack:') || uninstallingId === login.id} onClick={() => uninstall(login)}>
-                                                        {uninstallingId === login.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
-                                                    </IconButton>
-                                                </span>
-                                            </Tooltip>
+                                            <Stack direction='row' spacing={0.5}>
+                                                {login.configSchema && login.configSchema.length > 0 && (
+                                                    <Tooltip title='Configure'>
+                                                        <IconButton size='small' onClick={() => openConfig(login)}>
+                                                            <Settings fontSize='small' />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                )}
+                                                <Tooltip title={login.installedFrom === 'dev' ? 'Dev login extensions cannot be uninstalled' : login.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
+                                                    <span>
+                                                        <IconButton size='small' color='error' disabled={login.installedFrom === 'dev' || login.installedFrom?.startsWith('pack:') || uninstallingId === login.id} onClick={() => uninstall(login)}>
+                                                            {uninstallingId === login.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
+                                            </Stack>
                                         }
                                     />
                                 ))}
@@ -314,13 +374,22 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                     <Box key={`${login.id}-version`} sx={{ py: 1 }}><Chip label={`v${login.version}`} size='small' sx={{ minWidth: 72 }} /></Box>,
                                     <Box key={`${login.id}-source`} sx={{ py: 1 }}>{resolveSource(login.installedFrom)}</Box>,
                                     <Box key={`${login.id}-del`} sx={{ py: 1 }}>
-                                        <Tooltip title={login.installedFrom === 'dev' ? 'Dev login extensions cannot be uninstalled' : login.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
-                                            <span>
-                                                <IconButton size='small' color='error' disabled={login.installedFrom === 'dev' || login.installedFrom?.startsWith('pack:') || uninstallingId === login.id} onClick={() => uninstall(login)}>
-                                                    {uninstallingId === login.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
-                                                </IconButton>
-                                            </span>
-                                        </Tooltip>
+                                        <Stack direction='row' spacing={0.5}>
+                                            {login.configSchema && login.configSchema.length > 0 && (
+                                                <Tooltip title='Configure'>
+                                                    <IconButton size='small' onClick={() => openConfig(login)}>
+                                                        <Settings fontSize='small' />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            )}
+                                            <Tooltip title={login.installedFrom === 'dev' ? 'Dev login extensions cannot be uninstalled' : login.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
+                                                <span>
+                                                    <IconButton size='small' color='error' disabled={login.installedFrom === 'dev' || login.installedFrom?.startsWith('pack:') || uninstallingId === login.id} onClick={() => uninstall(login)}>
+                                                        {uninstallingId === login.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                        </Stack>
                                     </Box>,
                                     ...(i < arr.length - 1 ? [<Box key={`${login.id}-sep`} sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', mx: -1.5 }} />] : [])
                                 ])}
@@ -425,6 +494,67 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                 <Button onClick={props.onClose}>CLOSE</Button>
             </DialogActions>
         </Dialog>
+
+        {configLogin && (
+            <Dialog open={true} maxWidth='xs' fullWidth>
+                <DialogTitle>Configure — {configLogin.displayName || configLogin.name}</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        {(configLogin.configSchema ?? []).map(field => field.type === 'select'
+                            ? (
+                                <TextField
+                                    key={field.name}
+                                    select
+                                    label={field.label}
+                                    value={configValues[field.name] ?? ''}
+                                    onChange={e => setConfigValues(v => ({ ...v, [field.name]: e.target.value }))}
+                                    size='small'
+                                    fullWidth
+                                    required={field.required}
+                                    sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'transparent' } }}
+                                >
+                                    {(field.options ?? []).map(opt => (
+                                        <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                                    ))}
+                                </TextField>
+                            )
+                            : (
+                                <TextField
+                                    key={field.name}
+                                    label={field.label}
+                                    type={field.type === 'password' && !showSecrets[field.name] ? 'password' : 'text'}
+                                    value={configValues[field.name] ?? ''}
+                                    onChange={e => setConfigValues(v => ({ ...v, [field.name]: e.target.value }))}
+                                    size='small'
+                                    fullWidth
+                                    required={field.required}
+                                    sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'transparent' } }}
+                                    slotProps={{
+                                        htmlInput: { autoComplete: 'off' },
+                                        ...(field.type === 'password' ? {
+                                            input: {
+                                                endAdornment: (
+                                                    <IconButton size='small' edge='end' onClick={() => setShowSecrets(s => ({ ...s, [field.name]: !s[field.name] }))} title={showSecrets[field.name] ? 'Hide' : 'Show'}>
+                                                        {showSecrets[field.name] ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' />}
+                                                    </IconButton>
+                                                )
+                                            }
+                                        } : {})
+                                    }}
+                                />
+                            )
+                        )}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={saveConfig} disabled={configSaving}>
+                        {configSaving ? <CircularProgress size={16} /> : 'SAVE'}
+                    </Button>
+                    <Button onClick={() => setConfigLogin(undefined)}>CANCEL</Button>
+                </DialogActions>
+            </Dialog>
+        )}
+        </>
     )
 }
 

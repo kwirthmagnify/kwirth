@@ -1,5 +1,6 @@
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo } from './Logging'
+import { ILoginFieldDef } from '@kwirthmagnify/kwirth-common-back'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -17,6 +18,7 @@ export interface ILoginMeta {
     installedFrom?: string
     requiresRestart?: boolean
     requiresExtension?: string[]
+    configSchema?: ILoginFieldDef[]
 }
 
 export interface ILoginConfig {
@@ -39,6 +41,8 @@ export interface ILoginConfig {
     idpButton?: string
     startChannel?: string
     allowedIdps?: string[]
+    autoUser?: string
+    autoPassword?: string
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -103,7 +107,8 @@ export class LoginManager {
                 website: pkg.website,
                 installedFrom: installedFrom ?? tarGzUrl,
                 requiresRestart: pkg.requiresRestart ?? false,
-                requiresExtension: pkg.requiresExtension ?? []
+                requiresExtension: pkg.requiresExtension ?? [],
+                configSchema: Array.isArray(pkg.configSchema) ? pkg.configSchema : undefined
             }
 
             const existing = this.cachedIndex.find(m => m.id === meta.id)
@@ -257,6 +262,13 @@ export class LoginManager {
         }
         catch {}
         return found
+    }
+
+    async updateConfig(id: string, partial: Partial<ILoginConfig>): Promise<void> {
+        const data = await this.configMaps.read(`kwirth-login-${id}`) as { meta: ILoginMeta; config: ILoginConfig; background?: string } | null
+        if (!data) throw new Error(`Login extension '${id}' not found`)
+        await this.configMaps.write(`kwirth-login-${id}`, { ...data, config: { ...data.config, ...partial } })
+        logInfo(ELogComponent.CORE, `Login extension '${id}' config updated`)
     }
 
     async getBackground(id: string): Promise<Buffer | undefined> {
