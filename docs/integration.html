@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Senders — Kwirth</title>
+  <title>Integration — Kwirth</title>
   <link rel="icon" type="image/x-icon" href="_media/favicon.ico">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,8 +33,6 @@
     .nav-dropdown a:hover { color: var(--text) !important; background: var(--border) !important; }
 
     .container { max-width: 1000px; margin: 0 auto; padding: 100px 40px 80px; }
-    .btn-back { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 0.875rem; margin-bottom: 32px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
-    .btn-back:hover { color: var(--text); border-color: var(--muted); }
 
     .page-hero { margin-bottom: 64px; }
     .section-tag { display: inline-block; background: rgba(163,113,247,.1); border: 1px solid rgba(163,113,247,.25); color: var(--purple); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
@@ -148,22 +146,35 @@
       table { width: max-content; min-width: 100%; }
       h1 { font-size: 1.8rem; }
     }
+
+    /* --- merged from Webhooks --- */
+    code { font-family: var(--mono); font-size: 0.88em; color: var(--teal); }
+    li { margin-bottom: 8px; }
+    .principles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; margin-top: 24px; }
+    .principle-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 22px; }
+    .principle-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; color: var(--orange); }
+    .principle-card p { font-size: 0.85rem; color: var(--muted); margin: 0; }
+    .flow { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; font-family: var(--mono); font-size: 0.82rem; color: var(--muted); line-height: 2; margin-top: 16px; overflow-x: auto; }
+    .flow .hl { color: var(--teal); } .flow .hl2 { color: var(--orange); }
   </style>
 </head>
 <body>
 <nav>
   <a class="nav-logo" href="/">
     <img src="_media/favicon.ico" width="24" height="24" style="display:block"/>
-    <span>Kwirth</span>
+    <span>kwirth</span>
   </a>
   <div class="nav-links">
-    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="/#features">Features</a><a href="/#install">Quick Install</a><a href="/#architecture">Architecture</a><a href="/#plugins">Plugins &amp; Senders</a><a href="/#about">About</a></div></div>
+    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="/#features">Features</a><a href="/#install">Quick Install</a><a href="/#architecture">Architecture</a><a href="/#extensibility">Extensibility</a><a href="/#about">About</a></div></div>
     <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
     <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
     <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
-    <div class="nav-item"><a href="senders.html" class="active">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
-    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
+    <div class="nav-item"><a href="integration.html#senders" class="active">Integration</a><div class="nav-dropdown"><a href="integration.html#senders">Senders</a><a href="integration.html#webhooks">Webhooks</a></div></div>
+    <div class="nav-item"><a href="ui.html">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a></div></div>
     <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
+    <div class="nav-item"><a href="security.html">Security</a><div class="nav-dropdown"><a href="idps.html">Identity providers</a><a href="logins.html">Logins</a><a href="security.html#security-model">Security model</a><a href="security.html#authentication">Authentication</a><a href="security.html#single-sign-on-idp">Single Sign-On</a><a href="security.html#access-control-api-keys">API keys</a><a href="security.html#learn-more">Learn more</a></div></div>
+    <div class="nav-item"><a href="packages.html#packs">Packages</a><div class="nav-dropdown"><a href="packages.html#packs">Packs</a><a href="packages.html#documentation-packages">Documentation packages</a></div></div>
+    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
     <a href="documentation/#/0.5.40/index">Documentation</a>
   </div>
   <div class="nav-spacer"></div>
@@ -173,11 +184,9 @@
 <div class="mobile-menu" id="mobile-menu"></div>
 
 <div class="container">
-  <a class="btn-back" href="/">&#8592; Back to home</a>
-
   <div class="page-hero">
     <div class="section-tag">Notifications</div>
-    <h1>Kwirth <span class="accent">Senders</span></h1>
+    <h1 id="senders">Kwirth <span class="accent">Senders</span></h1>
     <p class="lead">Senders are outbound notification adapters. Channels and providers use them to push alerts to email, log files, consoles, or complex routing pipelines — all without touching core code.</p>
   </div>
 
@@ -195,11 +204,13 @@
         <div class="arch-row"><span class="arch-id">console</span><span class="arch-sep">→</span><span class="arch-dest">stdout / stderr</span></div>
         <div class="arch-row"><span class="arch-id">file</span><span class="arch-sep">→</span><span class="arch-dest">rotating log file</span></div>
         <div class="arch-row"><span class="arch-id">email-smtp</span><span class="arch-sep">→</span><span class="arch-dest">SMTP inbox</span></div>
+        <div class="arch-row"><span class="arch-id">email-resend</span><span class="arch-sep">→</span><span class="arch-dest">Resend API</span></div>
         <div class="arch-row"><span class="arch-id">teams</span><span class="arch-sep">→</span><span class="arch-dest">MS Teams channel (webhook)</span></div>
         <div class="arch-row routing"><span class="arch-id">tee</span><span class="arch-sep">→</span><span class="arch-dest">fans out to multiple senders</span></div>
         <div class="arch-row routing"><span class="arch-id">regex</span><span class="arch-sep">→</span><span class="arch-dest">routes / drops based on pattern rules</span></div>
         <div class="arch-row routing"><span class="arch-id">composite</span><span class="arch-sep">→</span><span class="arch-dest">full visual routing pipeline</span></div>
         <div class="arch-row routing"><span class="arch-id">timed</span><span class="arch-sep">→</span><span class="arch-dest">time-window gating (business hours, etc.)</span></div>
+        <div class="arch-row routing"><span class="arch-id">ratelimit</span><span class="arch-sep">→</span><span class="arch-dest">throttles delivery to a max rate</span></div>
       </div>
     </div>
   </div>
@@ -277,10 +288,17 @@
       <div class="fields"><span>rules[]</span><span>timezone</span><span>defaultAction</span></div>
       <span class="custom-ui">&#x1F3A8; Rule editor UI</span>
     </div>
+    <div class="sender-card routing">
+      <div class="icon">&#x1F6A6;</div>
+      <span class="sender-id">ratelimit</span>
+      <h3>Rate Limit</h3>
+      <p>Throttles delivery to a <strong>maximum rate per interval</strong> so an alert storm can't flood a destination. Messages over the limit are queued and delivered in the next window rather than dropped.</p>
+      <div class="fields"><span>interval</span><span>maxPerInterval</span><span>target</span></div>
+    </div>
   </div>
 
   <h2>The dispatcher pattern</h2>
-  <p>Because senders receive the full <code>ISenderAccess</code> facade at startup, a sender can delegate to other senders. This is how <strong>tee</strong>, <strong>regex</strong>, <strong>composite</strong>, and <strong>timed</strong> work: they each intercept a message and decide which downstream sender (if any) should receive it.</p>
+  <p>Because senders receive the full <code>ISenderAccess</code> facade at startup, a sender can delegate to other senders. This is how <strong>tee</strong>, <strong>regex</strong>, <strong>composite</strong>, <strong>timed</strong>, and <strong>ratelimit</strong> work: they each intercept a message and decide which downstream sender (if any) should receive it.</p>
   <p>You can chain them: a <code>timed</code> sender can forward to a <code>regex</code> sender, which can forward to a <code>tee</code> sender, which fans out to <code>email-smtp</code> and <code>file</code>.</p>
 
   <h2>Managing senders from the UI</h2>
@@ -334,6 +352,35 @@ export default SlackSender</pre></div>
     <a class="btn-primary" href="documentation/#/0.5.287/senders">Sender docs &#x2192;</a>
     <a class="btn-secondary" href="https://github.com/kwirthmagnify/kwirth/tree/master/senders" target="_blank" rel="noopener">Browse sender sources</a>
   </div>
+
+  <h1 id="webhooks" style="margin-top:72px;padding-top:48px;border-top:1px solid var(--border);">Webhooks</h1>
+  <p class="lead">Inbound HTTP integration — the <strong>Integration</strong> extension family that lets external systems call <em>into</em> Kwirth. Where <a href="integration.html#senders">Senders</a> push data <strong>out</strong>, webhooks bring data <strong>in</strong>.</p>
+
+  <h2>What a webhook is</h2>
+  <p>A <strong>webhook</strong> is an <strong>installable extension</strong> that exposes an HTTP endpoint inside Kwirth. An external service (GitHub, an Alertmanager, a CI job, a business app…) <code>POST</code>s a payload to that endpoint, the webhook parses it, and <strong>routes it to a target channel or plugin</strong> — so the rest of Kwirth can observe and react to it in real time.</p>
+
+  <h2>How it works</h2>
+  <div class="flow">
+    external service  <span class="hl2">──POST──▶</span>  <span class="hl">webhook URL (with token)</span>  <span class="hl2">──▶</span>  parse  <span class="hl2">──▶</span>  <span class="hl">target channel / plugin</span>
+  </div>
+  <ul style="margin-top:16px;">
+    <li>Install a webhook extension and create one or more <strong>named configurations</strong>.</li>
+    <li>Each config gets a unique <strong>Webhook URL that carries a secret token</strong> — you paste it into the external service.</li>
+    <li>Every config picks a <strong>target</strong>: one of your installed channels/plugins that will receive the payload.</li>
+    <li>Fields are rendered from the webhook's own <strong>config schema</strong>, so every option is typed — no guesswork.</li>
+  </ul>
+
+  <h2>Security</h2>
+  <p>The inbound URL embeds a <strong>secret token</strong>, so only callers holding that URL can post — and you can <strong>rotate the token</strong> at any time to revoke a leaked URL. Inbound endpoints are part of Kwirth's access-key model; treat the URL as a credential.</p>
+
+  <h2>Managing webhooks</h2>
+  <p>Open <strong>☰ → Manage extensions → Webhooks</strong>. Like every family, you can install from the catalog, from a URL, or by uploading a <code>.tgz</code>; versions are supported. Per webhook you manage its <strong>named configs</strong>, view/rotate each config's <strong>URL + token</strong>, choose the <strong>target</strong>, and export/import configs as JSON.</p>
+  <div class="principles-grid">
+    <div class="principle-card"><h3>&#x1FA9D; Inbound by design</h3><p>External systems initiate the call. The counterpart to outbound Senders.</p></div>
+    <div class="principle-card"><h3>&#x1F517; Tokenised URLs</h3><p>Each config exposes a unique URL with an embedded, rotatable token.</p></div>
+    <div class="principle-card"><h3>&#x1F3AF; Routes to a target</h3><p>Delivers the received payload to a chosen channel or plugin.</p></div>
+    <div class="principle-card"><h3>&#x1F9E9; Installable &amp; versioned</h3><p>Catalog / URL / upload install, schema-driven config, export &amp; import.</p></div>
+  </div>
 </div>
 <script>
 document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')})
@@ -372,21 +419,24 @@ document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().t
       <p class="footer-desc">Kubernetes observability platform. Single pod, zero dependencies, infinite possibilities.</p>
     </div>
     <div class="footer-col">
-      <h4>Product</h4>
-      <a href="index.html#features">Features</a>
-      <a href="index.html#magnify">Magnify</a>
-      <a href="index.html#install">Installation</a>
+      <h4>Extensions</h4>
       <a href="plugins.html">Plugins</a>
       <a href="providers.html">Providers</a>
-      <a href="senders.html">Senders</a>
-      <a href="ui.html">UI</a>
-      <a href="roadmap.html">Roadmap</a>
+      <a href="integration.html#senders">Senders</a>
+      <a href="ui.html">Themes &amp; Homepages</a>
+      <a href="idps.html">Identity providers</a>
+      <a href="logins.html">Logins</a>
+      <a href="integration.html#webhooks">Webhooks</a>
+      <a href="packages.html#packs">Packs</a>
+      <a href="packages.html#documentation-packages">Documentation packages</a>
     </div>
     <div class="footer-col">
       <h4>Resources</h4>
       <a href="getting-started.html">Getting Started</a>
       <a href="documentation/#/0.5.40/index">Documentation</a>
+      <a href="security.html">Security</a>
       <a href="project.html">Project</a>
+      <a href="roadmap.html">Roadmap</a>
       <a href="https://github.com/kwirthmagnify/kwirth/releases" target="_blank" rel="noopener">Releases</a>
     </div>
     <div class="footer-col">
@@ -398,7 +448,7 @@ document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().t
     </div>
   </div>
   <div class="footer-bottom">
-    <span>&copy; 2025 Kwirth Project — Open Source under Apache 2.0</span>
+    <span>&copy; 2026 Kwirth Project — Open Source under Apache 2.0</span>
     <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">github.com/kwirthmagnify/kwirth</a>
   </div>
 </footer>

@@ -227,17 +227,19 @@
 <nav>
   <a class="nav-logo" href="/">
     <img src="_media/favicon.ico" width="24" height="24" style="display:block"/>
-    <span>Kwirth</span>
+    <span>kwirth</span>
   </a>
   <div class="nav-links">
-    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="index.html#features">Features</a><a href="index.html#install">Quick Install</a><a href="index.html#architecture">Architecture</a><a href="index.html#plugins">Plugins &amp; Senders</a><a href="index.html#about">About</a></div></div>
+    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="index.html#features">Features</a><a href="index.html#install">Quick Install</a><a href="index.html#architecture">Architecture</a><a href="index.html#extensibility">Extensibility</a><a href="index.html#about">About</a></div></div>
     <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
     <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
     <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
-    <div class="nav-item"><a href="senders.html">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
-    <div class="nav-item"><a href="ui.html" class="active">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a><a href="ui.html#packs">Packs</a></div></div>
-    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
+    <div class="nav-item"><a href="integration.html#senders">Integration</a><div class="nav-dropdown"><a href="integration.html#senders">Senders</a><a href="integration.html#webhooks">Webhooks</a></div></div>
+    <div class="nav-item"><a href="ui.html" class="active">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a></div></div>
     <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
+    <div class="nav-item"><a href="security.html">Security</a><div class="nav-dropdown"><a href="idps.html">Identity providers</a><a href="logins.html">Logins</a><a href="security.html#security-model">Security model</a><a href="security.html#authentication">Authentication</a><a href="security.html#single-sign-on-idp">Single Sign-On</a><a href="security.html#access-control-api-keys">API keys</a><a href="security.html#learn-more">Learn more</a></div></div>
+    <div class="nav-item"><a href="packages.html#packs">Packages</a><div class="nav-dropdown"><a href="packages.html#packs">Packs</a><a href="packages.html#documentation-packages">Documentation packages</a></div></div>
+    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
     <a href="documentation/#/0.5.40/index">Documentation</a>
   </div>
   <div class="nav-spacer"></div>
@@ -356,11 +358,11 @@
   <div class="homepage-grid">
 
     <div class="homepage-card">
-      <div class="hp-preview preview-basic">
-        <span class="preview-label" style="color:var(--blue);text-shadow:0 0 8px rgba(88,166,255,.5);font-family:monospace;position:relative;z-index:1;">Basic</span>
+      <div class="hp-preview">
+        <img src="assets/img/screenshot-homepage-basic.png" alt="Clusterized homepage" style="width:100%;height:100%;object-fit:cover;object-position:top;">
       </div>
       <div class="hp-info">
-        <div class="hp-name">Basic <span style="font-size:0.7rem;font-weight:400;color:var(--muted);">— default</span></div>
+        <div class="hp-name">Clusterized <span style="font-size:0.7rem;font-weight:400;color:var(--muted);">— default</span></div>
         <div class="hp-desc">The classic Kwirth homepage. Shows a card per connected cluster with sparkline charts for CPU, memory, and network usage, plus last-used and favourite tabs and workspaces.</div>
         <div class="hp-features">
           <div class="hp-feature">CPU / memory / network sparklines (live, last 60 s)</div>
@@ -371,8 +373,8 @@
     </div>
 
     <div class="homepage-card">
-      <div class="hp-preview preview-matrix">
-        <span class="preview-label" style="color:#00ff41;text-shadow:0 0 10px #00ff41;font-family:monospace;font-size:1.1rem;letter-spacing:2px;">MATRIX</span>
+      <div class="hp-preview">
+        <img src="assets/img/screenshot-homepage-matrix.png" alt="Matrix homepage" style="width:100%;height:100%;object-fit:cover;object-position:top;">
       </div>
       <div class="hp-info">
         <div class="hp-name">Matrix</div>
@@ -388,8 +390,8 @@
     </div>
 
     <div class="homepage-card">
-      <div class="hp-preview preview-avicii">
-        <span class="preview-label" style="color:#c9a227;text-shadow:0 0 10px rgba(201,162,39,.6);font-family:'Oswald','Arial Narrow',sans-serif;font-size:1rem;letter-spacing:4px;font-weight:700;">AVICII</span>
+      <div class="hp-preview">
+        <img src="assets/img/screenshot-homepage-avicii.png" alt="Avicii homepage" style="width:100%;height:100%;object-fit:cover;object-position:top;">
       </div>
       <div class="hp-info">
         <div class="hp-name">Avicii</div>
@@ -405,8 +407,8 @@
     </div>
 
     <div class="homepage-card">
-      <div class="hp-preview preview-depeche">
-        <span class="preview-label" style="color:#EDE0D0;text-shadow:0 0 8px rgba(196,48,58,.4);font-family:'Barlow Condensed','Impact',sans-serif;font-size:0.9rem;letter-spacing:5px;font-weight:900;">DEPECHE MODE</span>
+      <div class="hp-preview">
+        <img src="assets/img/screenshot-homepage-depeche-mode.png" alt="Depeche Mode homepage" style="width:100%;height:100%;object-fit:cover;object-position:top;">
       </div>
       <div class="hp-info">
         <div class="hp-name">Depeche Mode</div>
@@ -422,18 +424,6 @@
     </div>
 
   </div>
-
-  <!-- SCREENSHOT: Basic homepage full screen — 2-3 cluster cards with CPU/MEM/NET sparklines and last-used tabs -->
-  <img class="screenshot-actual" src="assets/img/screenshot-homepage-basic.png" alt="Basic homepage with cluster sparklines">
-
-  <!-- SCREENSHOT: Matrix homepage full screen — 2 cluster cards, CPU/MEM/POD bars, minicards, event log, matrix rain canvas -->
-  <img class="screenshot-actual" src="assets/img/screenshot-homepage-matrix.png" alt="Matrix homepage with live event log and utilisation bars">
-
-  <!-- SCREENSHOT: Avicii homepage full screen — cluster cards with gold rhombus bars, mini stat cards, pulsing diamond indicator -->
-  <img class="screenshot-actual" src="assets/img/screenshot-homepage-avicii.png" alt="Avicii homepage with gold rhombus metric bars and mini stat cards">
-
-  <!-- SCREENSHOT: Depeche Mode homepage full screen — cluster cards with ASCII history charts, blood-red accents, dark mode -->
-  <img class="screenshot-actual" src="assets/img/screenshot-homepage-depeche-mode.png" alt="Depeche Mode homepage with ASCII history charts and blood-red accents">
 </section>
 
 <!-- BUILD YOUR OWN: THEME -->
@@ -570,51 +560,6 @@
   </div>
 </section>
 
-<!-- PACKS SECTION -->
-<section id="packs">
-  <div class="section-tag">Packs</div>
-  <h2 class="section-title">Extension bundles</h2>
-  <p class="section-sub">A <strong>pack</strong> is a single <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">.tgz</code> archive that bundles multiple extensions of any type — plugins, themes, homepages, providers, senders, IdP connectors, or login extensions. Install one pack, get all its members at once, with a single click.</p>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin:32px 0;">
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;">
-      <div style="font-size:1.6rem;margin-bottom:12px;">📦</div>
-      <div style="font-weight:700;margin-bottom:8px;">Bundle anything</div>
-      <div style="font-size:0.85rem;color:var(--muted);line-height:1.6;">Mix plugins, themes, homepages, providers, senders and login extensions in a single archive. One install, everything ready.</div>
-    </div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;">
-      <div style="font-size:1.6rem;margin-bottom:12px;">🔒</div>
-      <div style="font-weight:700;margin-bottom:8px;">Atomic ownership</div>
-      <div style="font-size:0.85rem;color:var(--muted);line-height:1.6;">Members installed via a pack show a <code style="font-family:var(--mono);font-size:0.85em;color:var(--teal)">via pack</code> badge and cannot be uninstalled individually — remove the pack to remove them all.</div>
-    </div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;">
-      <div style="font-size:1.6rem;margin-bottom:12px;">⚡</div>
-      <div style="font-weight:700;margin-bottom:8px;">Hot-loaded</div>
-      <div style="font-size:0.85rem;color:var(--muted);line-height:1.6;">Themes, homepages and plugins in the pack are activated in the browser immediately after install — no page reload required.</div>
-    </div>
-  </div>
-
-  <h3 style="font-size:1.1rem;font-weight:700;margin:40px 0 16px;">Creating a pack</h3>
-  <p style="color:var(--muted);margin-bottom:16px;">Use the <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">create-pack.mjs</code> script at the root of the repository. Pass <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">--include type:name</code> to build an extension from source and bundle it automatically:</p>
-
-  <div style="background:var(--code-bg,#0e1117);border:1px solid var(--border);border-radius:10px;padding:20px 24px;overflow-x:auto;margin-bottom:24px;">
-    <pre style="margin:0;font-size:0.85rem;line-height:1.7;font-family:var(--mono)"><span style="color:#8b949e"># Build from source and bundle in one command</span>
-node packs/create-pack.mjs dark-ops \
-  --include theme:post-punk \
-  --include homepage:matrix \
-  --include plugin:ops \
-  --name <span style="color:#a5d6ff">"Dark Ops"</span> --version <span style="color:#a5d6ff">"1.0.0"</span>
-
-<span style="color:#8b949e"># Or use pre-built .tgz files directly</span>
-node packs/create-pack.mjs my-pack \
-  ./dist/my-plugin-1.0.0.tgz \
-  ./dist/my-theme-1.0.0.tgz \
-  --name <span style="color:#a5d6ff">"My Pack"</span></pre>
-  </div>
-
-  <p style="color:var(--muted);font-size:0.9rem;line-height:1.6;">The script produces a <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">&lt;id&gt;-&lt;version&gt;.pack.tgz</code> containing the member tgzs plus a <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">pack.json</code> manifest and a <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">package.json</code> with <code style="font-family:var(--mono);font-size:0.88em;color:var(--teal)">extensionType: "pack"</code>. Upload the result through <strong>☰ → Manage extensions → Packs</strong>.</p>
-</section>
-
 <!-- FOOTER -->
 <footer>
   <div class="footer-grid">
@@ -626,21 +571,24 @@ node packs/create-pack.mjs my-pack \
       <p class="footer-desc">Kubernetes observability platform. Single pod, zero dependencies, infinite possibilities.</p>
     </div>
     <div class="footer-col">
-      <h4>Product</h4>
-      <a href="index.html#features">Features</a>
-      <a href="index.html#magnify">Magnify</a>
-      <a href="index.html#install">Installation</a>
+      <h4>Extensions</h4>
       <a href="plugins.html">Plugins</a>
       <a href="providers.html">Providers</a>
-      <a href="senders.html">Senders</a>
-      <a href="ui.html">UI</a>
-      <a href="roadmap.html">Roadmap</a>
+      <a href="integration.html#senders">Senders</a>
+      <a href="ui.html">Themes &amp; Homepages</a>
+      <a href="idps.html">Identity providers</a>
+      <a href="logins.html">Logins</a>
+      <a href="integration.html#webhooks">Webhooks</a>
+      <a href="packages.html#packs">Packs</a>
+      <a href="packages.html#documentation-packages">Documentation packages</a>
     </div>
     <div class="footer-col">
       <h4>Resources</h4>
       <a href="getting-started.html">Getting Started</a>
       <a href="documentation/#/0.5.40/index">Documentation</a>
+      <a href="security.html">Security</a>
       <a href="project.html">Project</a>
+      <a href="roadmap.html">Roadmap</a>
       <a href="https://github.com/kwirthmagnify/kwirth/releases" target="_blank" rel="noopener">Releases</a>
     </div>
     <div class="footer-col">
@@ -652,7 +600,7 @@ node packs/create-pack.mjs my-pack \
     </div>
   </div>
   <div class="footer-bottom">
-    <span>&copy; 2025 Kwirth Project — Open Source under Apache 2.0</span>
+    <span>&copy; 2026 Kwirth Project — Open Source under Apache 2.0</span>
     <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">github.com/kwirthmagnify/kwirth</a>
   </div>
 </footer>

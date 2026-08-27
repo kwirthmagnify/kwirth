@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
-  <rect width="900" height="500" fill="#0d1117"/>
-  <rect x="0" y="0" width="900" height="36" fill="#161b22"/>
-  <text x="450" y="24" font-family="sans-serif" font-size="12" fill="#e3b341" text-anchor="middle" font-weight="bold">Trivy Security Scanning Channel</text>
-  <text x="450" y="260" font-family="sans-serif" font-size="24" fill="#f0f6fc" text-anchor="middle" font-weight="bold">REPLACE WITH TRIVY CHANNEL SCREENSHOT</text>
-  <text x="450" y="295" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">Vulnerability scanning results per container image</text>
-  <text x="450" y="320" font-family="sans-serif" font-size="12" fill="#58a6ff" text-anchor="middle">Show: asset list with severity bars (Critical/High/Medium/Low), detail drilldown</text>
-</svg>

@@ -33,8 +33,6 @@
     .nav-dropdown a:hover { color: var(--text) !important; background: var(--border) !important; }
 
     .container { max-width: 1000px; margin: 0 auto; padding: 100px 40px 80px; }
-    .btn-back { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 0.875rem; margin-bottom: 32px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
-    .btn-back:hover { color: var(--text); border-color: var(--muted); }
 
     .page-hero { margin-bottom: 64px; }
     .section-tag { display: inline-block; background: rgba(45,212,191,.1); border: 1px solid rgba(45,212,191,.25); color: var(--teal); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
@@ -132,16 +130,19 @@
 <nav>
   <a class="nav-logo" href="/">
     <img src="_media/favicon.ico" width="24" height="24" style="display:block"/>
-    <span>Kwirth</span>
+    <span>kwirth</span>
   </a>
   <div class="nav-links">
-    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="/#features">Features</a><a href="/#install">Quick Install</a><a href="/#architecture">Architecture</a><a href="/#plugins">Plugins &amp; Senders</a><a href="/#about">About</a></div></div>
+    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="/#features">Features</a><a href="/#install">Quick Install</a><a href="/#architecture">Architecture</a><a href="/#extensibility">Extensibility</a><a href="/#about">About</a></div></div>
     <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
     <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
     <div class="nav-item"><a href="providers.html" class="active">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
-    <div class="nav-item"><a href="senders.html">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
-    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Tech Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
+    <div class="nav-item"><a href="integration.html#senders">Integration</a><div class="nav-dropdown"><a href="integration.html#senders">Senders</a><a href="integration.html#webhooks">Webhooks</a></div></div>
+    <div class="nav-item"><a href="ui.html">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a></div></div>
     <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
+    <div class="nav-item"><a href="security.html">Security</a><div class="nav-dropdown"><a href="idps.html">Identity providers</a><a href="logins.html">Logins</a><a href="security.html#security-model">Security model</a><a href="security.html#authentication">Authentication</a><a href="security.html#single-sign-on-idp">Single Sign-On</a><a href="security.html#access-control-api-keys">API keys</a><a href="security.html#learn-more">Learn more</a></div></div>
+    <div class="nav-item"><a href="packages.html#packs">Packages</a><div class="nav-dropdown"><a href="packages.html#packs">Packs</a><a href="packages.html#documentation-packages">Documentation packages</a></div></div>
+    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Tech Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
     <a href="documentation/#/0.5.40/index">Documentation</a>
   </div>
   <div class="nav-spacer"></div>
@@ -151,8 +152,6 @@
 <div class="mobile-menu" id="mobile-menu"></div>
 
 <div class="container">
-  <a class="btn-back" href="/">&#8592; Back to home</a>
-
   <div class="page-hero">
     <div class="section-tag">Data Sources</div>
     <h1>Kwirth <span class="accent">Providers</span></h1>
@@ -185,7 +184,7 @@
       <div class="icon">&#x1F4E3;</div>
       <h3>Events Provider</h3>
       <p>Streams a Kwirth event whenever a Kubernetes cluster event occurs — Pod created, Deployment scaled, node condition changed, and more.</p>
-      <span class="badge badge-available">Available</span>
+      <span class="badge badge-available">Built-in</span>
     </div>
     <div class="card">
       <div class="icon">&#x1F6E1;&#xFE0F;</div>
@@ -197,7 +196,7 @@
       <div class="icon">&#x1F4CA;</div>
       <h3>Metrics Provider</h3>
       <p>Polls the Kubernetes cAdvisor API on a configurable interval and distributes cluster-wide CPU, memory, network, and disk metrics to all subscribing channels.</p>
-      <span class="badge badge-available">Available</span>
+      <span class="badge badge-available">Built-in</span>
     </div>
     <div class="card">
       <div class="icon">&#x1F4E8;</div>
@@ -208,7 +207,19 @@
     <div class="card">
       <div class="icon">&#x1F4E1;</div>
       <h3>OpenTelemetry Provider</h3>
-      <p>Receive OTLP traces, metrics, and logs over gRPC or HTTP. Acts as a lightweight collector endpoint inside your cluster — no Collector sidecar needed.</p>
+      <p>Receive OTLP traces, metrics, and logs over HTTP (OTLP/JSON). Acts as a lightweight collector endpoint inside your cluster — no Collector sidecar needed.</p>
+      <span class="badge badge-available">Available</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F5A5;&#xFE0F;</div>
+      <h3>Syslog Provider</h3>
+      <p>Receives RFC 3164 / RFC 5424 syslog messages over UDP and TCP and streams them into subscribing channels — with optional relaying onward. Ideal for appliances, network gear and legacy apps.</p>
+      <span class="badge badge-available">Available</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F6E1;&#xFE0F;</div>
+      <h3>Trivy Provider</h3>
+      <p>Watches the Trivy Operator CRDs (vulnerability, config-audit and secret reports) and streams the findings into channels — this is what backs the Trivy channel.</p>
       <span class="badge badge-available">Available</span>
     </div>
     <div class="card">
@@ -221,13 +232,7 @@
       <div class="icon">&#x1F4B9;</div>
       <h3>Business Provider</h3>
       <p>Ingests external business data via HTTP POST. Events carry a <code>space</code> and <code>type</code> label; channels subscribe to the combinations they need. Enables AI channels to react to business signals alongside Kubernetes events.</p>
-      <span class="badge badge-available">Available</span>
-    </div>
-    <div class="card">
-      <div class="icon">&#x1F4AC;</div>
-      <h3>Webhook Provider</h3>
-      <p>Expose an HTTP endpoint inside Kwirth that accepts inbound webhook payloads from any external service (GitHub, PagerDuty, Alertmanager, etc.).</p>
-      <span class="badge badge-planned">Planned</span>
+      <span class="badge badge-available">Built-in</span>
     </div>
     <div class="card">
       <div class="icon">&#x1F5C4;&#xFE0F;</div>
@@ -340,21 +345,24 @@ document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().t
       <p class="footer-desc">Kubernetes observability platform. Single pod, zero dependencies, infinite possibilities.</p>
     </div>
     <div class="footer-col">
-      <h4>Product</h4>
-      <a href="index.html#features">Features</a>
-      <a href="index.html#magnify">Magnify</a>
-      <a href="index.html#install">Installation</a>
+      <h4>Extensions</h4>
       <a href="plugins.html">Plugins</a>
       <a href="providers.html">Providers</a>
-      <a href="senders.html">Senders</a>
-      <a href="ui.html">UI</a>
-      <a href="roadmap.html">Roadmap</a>
+      <a href="integration.html#senders">Senders</a>
+      <a href="ui.html">Themes &amp; Homepages</a>
+      <a href="idps.html">Identity providers</a>
+      <a href="logins.html">Logins</a>
+      <a href="integration.html#webhooks">Webhooks</a>
+      <a href="packages.html#packs">Packs</a>
+      <a href="packages.html#documentation-packages">Documentation packages</a>
     </div>
     <div class="footer-col">
       <h4>Resources</h4>
       <a href="getting-started.html">Getting Started</a>
       <a href="documentation/#/0.5.40/index">Documentation</a>
+      <a href="security.html">Security</a>
       <a href="project.html">Project</a>
+      <a href="roadmap.html">Roadmap</a>
       <a href="https://github.com/kwirthmagnify/kwirth/releases" target="_blank" rel="noopener">Releases</a>
     </div>
     <div class="footer-col">
@@ -366,7 +374,7 @@ document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().t
     </div>
   </div>
   <div class="footer-bottom">
-    <span>&copy; 2025 Kwirth Project — Open Source under Apache 2.0</span>
+    <span>&copy; 2026 Kwirth Project — Open Source under Apache 2.0</span>
     <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">github.com/kwirthmagnify/kwirth</a>
   </div>
 </footer>

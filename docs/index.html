@@ -230,18 +230,19 @@
 <nav>
   <a class="nav-logo" href="/">
     <img src="_media/favicon.ico" width="24" height="24" style="display:block"/>
-    <span>Kwirth</span>
+    <span>kwirth</span>
   </a>
   <div class="nav-links">
-    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="#features">Features</a><a href="#install">Quick Install</a><a href="#architecture">Architecture</a><a href="#plugins">Plugins &amp; Senders</a><a href="#about">About</a></div></div>
+    <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="#features">Features</a><a href="#install">Quick Install</a><a href="#architecture">Architecture</a><a href="#extensibility">Extensibility</a><a href="#about">About</a></div></div>
     <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
     <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
     <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
-    <div class="nav-item"><a href="senders.html">Senders</a><div class="nav-dropdown"><a href="senders.html#how-senders-work">How senders work</a><a href="senders.html#built-in-senders">Built-in senders</a><a href="senders.html#the-dispatcher-pattern">Dispatcher pattern</a><a href="senders.html#managing-senders-from-the-ui">Manage from UI</a><a href="senders.html#build-your-own-sender">Build your own</a></div></div>
+    <div class="nav-item"><a href="integration.html#senders">Integration</a><div class="nav-dropdown"><a href="integration.html#senders">Senders</a><a href="integration.html#webhooks">Webhooks</a></div></div>
     <div class="nav-item"><a href="ui.html">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a></div></div>
-    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
     <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
-    <div class="nav-item"><a href="security.html">Security</a><div class="nav-dropdown"><a href="security.html#security-model">Security model</a><a href="security.html#authentication">Authentication</a><a href="security.html#single-sign-on-idp">Single Sign-On</a><a href="security.html#access-control-api-keys">API keys</a><a href="security.html#learn-more">Learn more</a></div></div>
+    <div class="nav-item"><a href="security.html">Security</a><div class="nav-dropdown"><a href="idps.html">Identity providers</a><a href="logins.html">Logins</a><a href="security.html#security-model">Security model</a><a href="security.html#authentication">Authentication</a><a href="security.html#single-sign-on-idp">Single Sign-On</a><a href="security.html#access-control-api-keys">API keys</a><a href="security.html#learn-more">Learn more</a></div></div>
+    <div class="nav-item"><a href="packages.html#packs">Packages</a><div class="nav-dropdown"><a href="packages.html#packs">Packs</a><a href="packages.html#documentation-packages">Documentation packages</a></div></div>
+    <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Technology Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
     <a href="documentation/#/0.5.40/index">Documentation</a>
   </div>
   <div class="nav-spacer"></div>
@@ -543,85 +544,88 @@
 <section id="architecture">
   <div class="section-tag">Architecture</div>
   <h2 class="section-title">Designed for simplicity</h2>
-  <p class="section-sub">Kwirth runs as a single pod. State is stored in Kubernetes ConfigMaps — no external database needed. Each cluster you monitor is added as a connection from the UI.</p>
+  <p class="section-sub">Kwirth runs as a single pod. State lives in Kubernetes — ConfigMaps, Secrets, a PVC, or plain files — with no external database needed. Each cluster you monitor is added as a connection from the UI.</p>
   <img class="arch-img" src="assets/img/architecture.svg" alt="Kwirth Architecture Diagram">
 </section>
 
 <!-- EXTENSIBILITY -->
-<section id="plugins">
+<section id="extensibility">
   <div class="section-tag">Extensibility</div>
-  <h2 class="section-title">Extend with Plugins, Providers &amp; Senders</h2>
-  <p class="section-sub">Three independent subsystems let you add new capabilities without modifying core. All are hot-reloadable — no pod restart needed.</p>
+  <h2 class="section-title">Extend everything — ten families, five groups</h2>
+  <p class="section-sub">Kwirth is extensible top to bottom — channels, data sources, outputs, look &amp; feel, authentication and integrations, plus the packaging and documentation that ship them. Every family is a hot-reloadable package you install, configure and enable from the UI, with no pod restart.</p>
 
-  <div class="plugins-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:40px;">
-    <a href="plugins.html" style="text-decoration:none;">
-      <div class="feature-card" style="height:100%;">
-        <div class="feature-icon">&#x1F9E9;</div>
-        <h3>Plugins</h3>
-        <p style="margin-bottom:12px;">New UI channels and Kubernetes observability modes. Plugins have both a backend and a frontend component, hot-loaded at runtime.</p>
-        <span class="feature-tag tag-core">&#x2192; Learn more</span>
+  <div class="plugins-cards" style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:20px;">
+
+    <!-- DATA -->
+    <div class="feature-card">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:1.5px;color:var(--blue);text-transform:uppercase;margin-bottom:16px;">Data</div>
+      <a href="plugins.html" style="text-decoration:none;display:block;margin-bottom:14px;">
+        <h3 style="color:var(--text);">&#x1F9E9; Plugins <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· channels</span></h3>
+        <p>Log, Metrics, Alert, Ops, Trivy, Magnify, Topology, Fileman, Censor, Pinocchio, mIRC, News, Echo — front + back, hot-loaded.</p>
+      </a>
+      <a href="providers.html" style="text-decoration:none;display:block;">
+        <h3 style="color:var(--text);">&#x1F50C; Providers <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· data sources</span></h3>
+        <p>Events, Metrics, Business (built-in) · Kafka, OpenTelemetry, Syslog, Trivy, Tick, Validating (installable).</p>
+      </a>
+    </div>
+
+    <!-- INTEGRATION -->
+    <div class="feature-card">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:1.5px;color:var(--teal);text-transform:uppercase;margin-bottom:16px;">Integration</div>
+      <a href="integration.html#senders" style="text-decoration:none;display:block;margin-bottom:14px;">
+        <h3 style="color:var(--text);">&#x1F4E4; Senders <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· outbound delivery</span></h3>
+        <p>email (SMTP / Resend), Teams, file, console · pipelines: tee, regex, timed, ratelimit, composite.</p>
+      </a>
+      <a href="integration.html#webhooks" style="text-decoration:none;display:block;">
+        <h3 style="color:var(--text);">&#x1FA9D; Webhooks <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· inbound integration</span></h3>
+        <p style="color:var(--muted);font-size:0.875rem;line-height:1.6;">External systems call into Kwirth over HTTP to push events and trigger flows.</p>
+      </a>
+    </div>
+
+    <!-- UI -->
+    <div class="feature-card">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:1.5px;color:var(--yellow);text-transform:uppercase;margin-bottom:16px;">UI</div>
+      <a href="ui.html#themes" style="text-decoration:none;display:block;margin-bottom:14px;">
+        <h3 style="color:var(--text);">&#x1F3A8; Themes <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· look &amp; feel</span></h3>
+        <p>Repaint the whole shell — Avicii, SFY, Plexus, Post-Punk, Matrix, Depeche Mode.</p>
+      </a>
+      <a href="ui.html#homepages" style="text-decoration:none;display:block;">
+        <h3 style="color:var(--text);">&#x1F3E0; Homepages <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· landing dashboards</span></h3>
+        <p>Swap the landing dashboard — Clusterized, Avicii, Matrix, Depeche Mode.</p>
+      </a>
+    </div>
+
+    <!-- SECURITY -->
+    <div class="feature-card">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:1.5px;color:var(--red);text-transform:uppercase;margin-bottom:16px;">Security</div>
+      <a href="idps.html" style="text-decoration:none;display:block;margin-bottom:14px;">
+        <h3 style="color:var(--text);">&#x1F511; Identity providers <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· SSO</span></h3>
+        <p>Sign in with Google, GitLab or GitHub (OIDC / OAuth2) — installable connectors.</p>
+      </a>
+      <a href="logins.html" style="text-decoration:none;display:block;">
+        <h3 style="color:var(--text);">&#x1F6AA; Logins <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· login methods</span></h3>
+        <p>Pluggable login mechanisms (e.g. anonymous) — each with its own config schema.</p>
+      </a>
+    </div>
+
+    <!-- PACKAGES (transversal — bundles &amp; content, full width) -->
+    <div class="feature-card" style="grid-column:1 / -1;">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:1.5px;color:var(--green);text-transform:uppercase;margin-bottom:16px;">Packages</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;">
+        <a href="packages.html#packs" style="text-decoration:none;display:block;">
+          <h3 style="color:var(--text);">&#x1F4E6; Packs <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· extension bundles</span></h3>
+          <p>One <code>.tgz</code> that bundles many extensions of any type — install a curated set in a single operation.</p>
+        </a>
+        <a href="packages.html#documentation-packages" style="text-decoration:none;display:block;">
+          <h3 style="color:var(--text);">&#x1F4DA; Documentation packages <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· docsify sites</span></h3>
+          <p>Self-contained docsify sites Kwirth serves itself — no external host, no dependencies.</p>
+        </a>
       </div>
-    </a>
-    <a href="providers.html" style="text-decoration:none;">
-      <div class="feature-card" style="height:100%;">
-        <div class="feature-icon">&#x1F50C;</div>
-        <h3>Providers</h3>
-        <p style="margin-bottom:12px;">Backend data sources. Ingest data from Kafka, OpenTelemetry, business systems, or any custom source and feed it into channels and senders.</p>
-        <span class="feature-tag tag-ai">&#x2192; Learn more</span>
-      </div>
-    </a>
-    <a href="senders.html" style="text-decoration:none;">
-      <div class="feature-card" style="height:100%;">
-        <div class="feature-icon">&#x1F4E4;</div>
-        <h3>Senders</h3>
-        <p style="margin-bottom:12px;">Outbound notification adapters. Push alerts to email, Teams, log files, or complex routing pipelines with filtering and time-window gating.</p>
-        <span class="feature-tag tag-security">&#x2192; Learn more</span>
-      </div>
-    </a>
+    </div>
+
   </div>
 
-  <div class="plugins-grid">
-    <div class="plugin-card">
-      <h4>&#x1F9E9; Trivy Plugin</h4>
-      <p>Security vulnerability scanning via Trivy operator integration.</p>
-      <span class="plugin-badge">Available</span>
-    </div>
-    <div class="plugin-card">
-      <h4>&#x1F9E9; Pinocchio Plugin</h4>
-      <p>AI analysis engine — configurable LLM triggers for Kubernetes events and business data.</p>
-      <span class="plugin-badge">Available</span>
-    </div>
-    <div class="plugin-card">
-      <h4>&#x1F9E9; Censor Plugin</h4>
-      <p>LLM-based log noise filter — learns regex patterns automatically from your log stream.</p>
-      <span class="plugin-badge">Available</span>
-    </div>
-    <div class="plugin-card">
-      <h4>&#x1F50C; OpenTelemetry Provider</h4>
-      <p>Ingest OTLP traces, metrics, and logs from any OTel-compatible source.</p>
-      <span class="plugin-badge">Available</span>
-    </div>
-    <div class="plugin-card">
-      <h4>&#x1F50C; Kafka Provider</h4>
-      <p>Stream Kafka topic events into Kwirth channels for unified observability.</p>
-      <span class="plugin-badge">Available</span>
-    </div>
-    <div class="plugin-card">
-      <h4>&#x1F50C; Business Provider</h4>
-      <p>Push external business events into Kwirth via HTTP and react to them from AI channels.</p>
-      <span class="plugin-badge">Available</span>
-    </div>
-    <div class="plugin-card">
-      <h4>&#x1F4E4; email-smtp Sender</h4>
-      <p>Send alerts by email via any SMTP server — TLS, STARTTLS, or plain.</p>
-      <span class="plugin-badge">Available</span>
-    </div>
-    <div class="plugin-card">
-      <h4>&#x1F4E4; Teams Sender</h4>
-      <p>Post colour-coded message cards to Microsoft Teams via incoming webhook.</p>
-      <span class="plugin-badge">Available</span>
-    </div>
-  </div>
+  <p style="text-align:center;color:var(--muted);font-size:0.9rem;margin-top:8px;">Everything ships hot-reloadable and configurable from the UI — install, enable and version each extension without touching core.</p>
 </section>
 
 <!-- UI CUSTOMISATION -->
@@ -652,7 +656,7 @@
         </div>
         <div style="padding:24px 28px;">
           <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:8px;">Pluggable themes</h3>
-          <p style="font-size:0.875rem;color:var(--muted);line-height:1.6;margin-bottom:16px;">Install theme packages to repaint the entire Kwirth shell — palette, typography, component styling — without touching the code. Three themes ship out of the box: <strong style="color:var(--text);">post-punk</strong>, <strong style="color:var(--text);">plexus</strong>, and <strong style="color:var(--text);">SFY</strong>. Switch between them live from the ThemeManager dialog.</p>
+          <p style="font-size:0.875rem;color:var(--muted);line-height:1.6;margin-bottom:16px;">Install theme packages to repaint the entire Kwirth shell — palette, typography, component styling — without touching the code. Six themes ship out of the box: <strong style="color:var(--text);">Avicii</strong>, <strong style="color:var(--text);">SFY</strong>, <strong style="color:var(--text);">Plexus</strong>, <strong style="color:var(--text);">Post-Punk</strong>, <strong style="color:var(--text);">Matrix</strong> and <strong style="color:var(--text);">Depeche Mode</strong>. Switch between them live from the ThemeManager dialog.</p>
           <a href="ui.html#themes" style="display:inline-flex;align-items:center;gap:6px;color:var(--teal);text-decoration:none;font-size:0.85rem;font-weight:600;">Explore themes &#x2192;</a>
         </div>
       </div>
@@ -743,8 +747,13 @@
       <a href="#install">Installation</a>
       <a href="plugins.html">Plugins</a>
       <a href="providers.html">Providers</a>
-      <a href="senders.html">Senders</a>
-      <a href="ui.html">UI</a>
+      <a href="integration.html#senders">Senders</a>
+      <a href="ui.html">Themes &amp; Homepages</a>
+      <a href="idps.html">Identity providers</a>
+      <a href="logins.html">Logins</a>
+      <a href="integration.html#webhooks">Webhooks</a>
+      <a href="packages.html#packs">Packs</a>
+      <a href="packages.html#documentation-packages">Documentation packages</a>
       <a href="roadmap.html">Roadmap</a>
       <a href="security.html">Security</a>
     </div>
@@ -764,7 +773,7 @@
     </div>
   </div>
   <div class="footer-bottom">
-    <span>&copy; 2025 Kwirth Project — Open Source under Apache 2.0</span>
+    <span>&copy; 2026 Kwirth Project — Open Source under Apache 2.0</span>
     <a href="https://github.com/kwirthmagnify/kwirth" target="_blank" rel="noopener">github.com/kwirthmagnify/kwirth</a>
   </div>
 </footer>
