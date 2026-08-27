@@ -45,11 +45,13 @@
     "anonymous": "../logins/anonymous/dist/anonymous.tgz",
     "excubitor": "../plugins/excubitor/login/dist/excubitor.tgz",
     "montag": "../plugins/montag/login/dist/montag.tgz",
-    "agora": "../plugins/agora/login/dist/agora.tgz"
+    "agora": "../plugins/agora/login/dist/agora.tgz",
+    "iter": "../plugins/iter/login/dist/iter.tgz"
   },
   "homepages": {
   },
   "themes": {
+    "iter": "../plugins/iter/theme/dist"
   },
   "senderConfigs": {
     "email-resend": [
