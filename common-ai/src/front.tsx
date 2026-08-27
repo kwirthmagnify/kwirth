@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
     Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
     FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, List, ListItemButton,
@@ -200,6 +200,11 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     const importProvRef = useRef<HTMLInputElement>(null)
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
     const [showPassword, setShowPassword] = useState(false)
+
+    useEffect(() => {
+        setProviders(JSON.parse(JSON.stringify(props.providers)))
+        setSelectedIndex(null)
+    }, [props.providers])
     const [providerName, setProviderName] = useState('')
     const [providerKey, setProviderKey] = useState(props.providersAvailable[0] ?? '')
 

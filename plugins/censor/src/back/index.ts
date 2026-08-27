@@ -1,11 +1,9 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, EInstanceConfigView, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
-import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS } from '@kwirthmagnify/kwirth-common-ai'
+import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
 import { loadModels, buildModel, zodFromExample, generateText, Output } from '@kwirthmagnify/kwirth-common-ai/back'
 import { PassThrough } from 'stream'
 import { ECensorCommand, ERegexOrigin, ICensorInstanceConfig } from '../common/CensorTypes'
-
-const PROVIDERS_AVAILABLE = ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek']
 
 // ── Motor de análisis (autónomo, dentro del channel back) ────────────────────
 const BATCH_SIZE = 50
