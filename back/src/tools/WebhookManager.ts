@@ -37,7 +37,6 @@ interface IDevWebhook {
 export interface IWebhookResolution {
     webhookId: string
     configName: string
-    target: string
     config: IWebhookConfig
 }
 
@@ -55,7 +54,7 @@ export class WebhookManager implements IWebhookAccess {
     // Registro de tokens: token ↔ (webhookId, configName). El token enruta el callback entrante.
     private tokenByConfig = new Map<string, string>()        // `${id}:${name}` → token
     private configByToken = new Map<string, { webhookId: string; configName: string }>()
-    // Consumidores suscritos por target (id del channel/plugin destino).
+    // Consumidores suscritos por webhookId (modelo provider-like: te suscribes a un webhook y recibes SUS eventos).
     private subscribers = new Map<string, Set<IWebhookConsumer>>()
 
     constructor(configMaps: IConfigMaps, urlBase: string = '/webhook') {
@@ -483,36 +482,37 @@ export class WebhookManager implements IWebhookAccess {
         )
     }
 
-    // Resuelve un token entrante → webhook/config/target/config. Undefined si el token no existe.
+    // Resuelve un token entrante → webhook/config. Undefined si el token no existe.
     resolve(token: string): IWebhookResolution | undefined {
         const ref = this.configByToken.get(token)
         if (!ref) return undefined
         const config = this.getConfig(ref.webhookId, ref.configName)
         if (!config) return undefined
-        return { webhookId: ref.webhookId, configName: ref.configName, target: config.target, config }
+        return { webhookId: ref.webhookId, configName: ref.configName, config }
     }
 
     // ── IWebhookAccess (inyectado en consumidores) ────────────────────────────────
 
-    subscribe(target: string, consumer: IWebhookConsumer): void {
-        if (!this.subscribers.has(target)) this.subscribers.set(target, new Set())
-        this.subscribers.get(target)!.add(consumer)
+    // Suscripción por webhookId (modelo provider-like): recibes los eventos de ESE webhook.
+    subscribe(webhookId: string, consumer: IWebhookConsumer): void {
+        if (!this.subscribers.has(webhookId)) this.subscribers.set(webhookId, new Set())
+        this.subscribers.get(webhookId)!.add(consumer)
     }
 
-    unsubscribe(target: string, consumer: IWebhookConsumer): void {
-        this.subscribers.get(target)?.delete(consumer)
+    unsubscribe(webhookId: string, consumer: IWebhookConsumer): void {
+        this.subscribers.get(webhookId)?.delete(consumer)
     }
 
-    // Entrega un evento verificado+parseado a todos los consumidores suscritos al target.
-    deliver(target: string, event: IWebhookEvent): void {
-        const consumers = this.subscribers.get(target)
+    // Entrega un evento verificado+parseado a todos los consumidores suscritos a ese webhook.
+    deliver(webhookId: string, event: IWebhookEvent): void {
+        const consumers = this.subscribers.get(webhookId)
         if (!consumers || consumers.size === 0) {
-            logWarning(ELogComponent.CORE, `Webhook event for target '${target}' has no subscribers — dropped`)
+            logWarning(ELogComponent.CORE, `Webhook '${webhookId}' event has no subscribers — dropped`)
             return
         }
         for (const consumer of consumers) {
             try { consumer.processWebhookEvent(event) } catch (err) {
-                logError(ELogComponent.CORE, `Webhook consumer for target '${target}' threw: ${err}`)
+                logError(ELogComponent.CORE, `Webhook '${webhookId}' consumer threw: ${err}`)
             }
         }
     }

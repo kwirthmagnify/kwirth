@@ -55,10 +55,10 @@ async function setup() {
     const mgr = new WebhookManager(makeConfigMaps(), '/w')
     await mgr.init()
     await mgr.installFromBuffer(makeEchoTgz())
-    mgr.addConfig('echo', { name: 'default', target: 'excubitor', apiKey: 'sekret' })
+    mgr.addConfig('echo', { name: 'default', apiKey: 'sekret' })
     const token = mgr.getUrl('echo', 'default')!.split('/').pop()!
     const seen: IWebhookEvent[] = []
-    mgr.subscribe('excubitor', { processWebhookEvent: (e) => { seen.push(e as IWebhookEvent) } })
+    mgr.subscribe('echo', { processWebhookEvent: (e) => { seen.push(e as IWebhookEvent) } })
     return { mgr, token, seen }
 }
 

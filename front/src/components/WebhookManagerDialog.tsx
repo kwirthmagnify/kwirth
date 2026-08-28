@@ -78,8 +78,6 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
     const [filterText, setFilterText] = useState('')
     const [availableFilter, setAvailableFilter] = useState('')
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
-    // Posibles targets (consumidores): los channels/plugins instalados.
-    const [targets, setTargets] = useState<{ id: string, displayName?: string }[]>([])
 
     const groupedAvailable: Record<string, IWebhookManifestEntry[]> = available.reduce((acc, p) => { if (!acc[p.id]) acc[p.id]=[]; acc[p.id].push(p); return acc }, {} as Record<string, IWebhookManifestEntry[]>)
     Object.values(groupedAvailable).forEach(g => g.sort((a,b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
@@ -113,7 +111,6 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
 
     useEffect(() => {
         loadInstalled()
-        loadTargets()
         fetchManifest()
     }, [])
 
@@ -125,14 +122,6 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
         } catch (err) {
             setError(`Failed to load webhooks: ${err}`)
         }
-    }
-
-    // Targets = channels/plugins instalados (a quién puede entregar el webhook).
-    const loadTargets = async () => {
-        try {
-            const res = await fetch(`${backendUrl}/core/plugins`, addGetAuthorization(accessString))
-            if (res.ok) setTargets(await res.json())
-        } catch { /* opcional */ }
     }
 
     const fetchManifest = async () => {
@@ -320,7 +309,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
     }
 
     const buildPayload = (values: ConfigValues): ConfigValues => {
-        const payload: ConfigValues = { name: values['name'], target: values['target'] }
+        const payload: ConfigValues = { name: values['name'] }
         for (const f of schema.filter(f => !f.common && f.name !== 'name')) {
             const v = values[f.name]
             if (v === undefined || v === '') continue
@@ -333,7 +322,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
     }
 
     const isFormValid = (): boolean => {
-        if (!formValues['name'] || !formValues['target']) return false
+        if (!formValues['name']) return false
         return schema.filter(f => f.required && !f.common && f.name !== 'name').every(f => {
             const v = formValues[f.name]
             return v !== undefined && v !== '' && v !== false
@@ -639,17 +628,6 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                         <TextField size='small' label='Description' fullWidth multiline maxRows={2}
                                             value={formValues['description'] ?? ''}
                                             onChange={e => setFormValues(prev => ({ ...prev, description: e.target.value || undefined }))} />
-                                        {/* Target: consumidor (channel/plugin) que recibe los eventos */}
-                                        <FormControl size='small' fullWidth>
-                                            <InputLabel>Target *</InputLabel>
-                                            <Select label='Target *' value={formValues['target'] ?? ''} displayEmpty
-                                                onChange={e => setFormValues(prev => ({ ...prev, target: e.target.value }))}>
-                                                <MenuItem value=''><em>—</em></MenuItem>
-                                                {targets.map(t => <MenuItem key={t.id} value={t.id}>{t.displayName || t.id}</MenuItem>)}
-                                                {formValues['target'] && !targets.some(t => t.id === formValues['target']) &&
-                                                    <MenuItem value={formValues['target']}>{formValues['target']}</MenuItem>}
-                                            </Select>
-                                        </FormControl>
                                         {schema.filter(f => f.name !== 'name' && !f.common).map(f => renderField(f, formValues, (name, val) => setFormValues(prev => ({ ...prev, [name]: val }))))}
 
                                         {/* URL del webhook (con token) — solo para configs ya guardadas */}

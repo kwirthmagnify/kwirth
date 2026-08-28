@@ -144,7 +144,6 @@ export class WebhookApi {
             try {
                 const config = req.body as IWebhookConfig
                 if (!config?.name) return void res.status(400).json({ error: 'config.name required' })
-                if (!config?.target) return void res.status(400).json({ error: 'config.target required' })
                 const ok = this.webhookManager.addConfig(req.params.id, config)
                 if (!ok) return void res.status(404).json({ error: `Webhook '${req.params.id}' not registered` })
                 logInfo(ELogComponent.CORE, `Webhook '${req.params.id}' config '${config.name}' added via API`)

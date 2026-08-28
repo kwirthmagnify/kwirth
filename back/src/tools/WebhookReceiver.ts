@@ -46,6 +46,6 @@ export const handleInbound = async (
     if (!event) return { status: 400, body: { ok: false } }
 
     // Ack rápido; deliver aísla las excepciones de cada consumidor.
-    manager.deliver(res.target, event)
+    manager.deliver(res.webhookId, event)
     return { status: 200, body: { ok: true } }
 }

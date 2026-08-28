@@ -8,7 +8,7 @@ import { WebhookManager } from '../../src/tools/WebhookManager'
 
 // Tipos locales estructurales (evita importar de common-back, que es CJS y rompe el ESM del test).
 interface IWebhookEvent { provider: string; kind: string; externalId: string; status?: string; receivedAt: string; headers?: Record<string, string>; raw: unknown }
-interface IWebhookConfig { name: string; target: string; [key: string]: unknown }
+interface IWebhookConfig { name: string; [key: string]: unknown }
 
 // ── In-memory IConfigMaps mock ────────────────────────────────────────────────
 // write/read = valores completos por nombre; writeKey/readAllKeys = namespaces con claves.
@@ -51,7 +51,7 @@ function makeTestWebhookTgz(id: string): Buffer {
     return fs.readFileSync(tgz)
 }
 
-const cfg = (over: Partial<IWebhookConfig> = {}): IWebhookConfig => ({ name: 'default', target: 'excubitor', apiKey: 'secret', ...over })
+const cfg = (over: Partial<IWebhookConfig> = {}): IWebhookConfig => ({ name: 'default', apiKey: 'secret', ...over })
 
 // ── Delivery / subscription (no requiere webhook registrado) ──────────────────
 
@@ -115,7 +115,6 @@ test('addConfig mints a routable token; getUrl and resolve are consistent', asyn
     assert.ok(res, 'token should resolve')
     assert.equal(res!.webhookId, 'jira')
     assert.equal(res!.configName, 'prod')
-    assert.equal(res!.target, 'excubitor')
     assert.equal(res!.config.apiKey, 'secret')
 })
 
