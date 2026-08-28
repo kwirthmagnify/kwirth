@@ -2,8 +2,7 @@
 import { Autocomplete, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Select, SelectChangeEvent, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { IAlertConfig, AlertInstanceConfig, AlertConfig } from './AlertConfig'
-import Warning from '@mui/icons-material/Warning'
-import InfoOutlined from '@mui/icons-material/InfoOutlined'
+import { Warning, InfoOutlined } from '@mui/icons-material'
 import { EAlertSeverity, IAlertInstanceConfig, IAlertMetricRule, TAlertMetricOperator, TAlertTriggerMode } from './AlertTypes'
 
 // TextToolTip inlined from core FrontTools

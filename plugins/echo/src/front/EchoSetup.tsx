@@ -2,7 +2,7 @@
 import { Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { IEchoConfig, EchoConfig } from './EchoConfig'
-import Science from '@mui/icons-material/Science'
+import { Science } from '@mui/icons-material'
 import { IEchoInstanceConfig } from './EchoTypes'
 
 export const EchoIcon = <Science />

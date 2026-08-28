@@ -1,6 +1,6 @@
 import React from 'react'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
-import FolderCopyTwoTone from '@mui/icons-material/FolderCopyTwoTone'
+import { FolderCopyTwoTone } from '@mui/icons-material'
 
 const FilemanIcon = <FolderCopyTwoTone />
 

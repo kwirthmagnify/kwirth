@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, Divider, IconButton, Stack, Tooltip, Typography } from '@mui/material'
-import AccountTree from '@mui/icons-material/AccountTree'
+import { AccountTree } from '@mui/icons-material'
 import { IClusterEvent, IHomepageProps, ITabSummary, IWorkspaceSummary } from '@kwirthmagnify/kwirth-common-front'
 
 const MATRIX_GREEN = '#00ff41'

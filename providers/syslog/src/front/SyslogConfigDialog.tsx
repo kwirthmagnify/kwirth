@@ -4,8 +4,7 @@ import {
     DialogTitle, Divider, FormControl, IconButton, InputLabel, MenuItem,
     Select, Stack, TextField, Tooltip, Typography,
 } from '@mui/material'
-import Add from '@mui/icons-material/Add'
-import Delete from '@mui/icons-material/Delete'
+import { Add, Delete } from '@mui/icons-material'
 import type { ISyslogConfig, ISyslogRelayTarget, TSyslogProtocol, TTcpFraming } from '../types/ISyslogMessage'
 
 interface ISyslogConfigDialogProps {

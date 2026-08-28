@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Box, Button, Card, CardContent, IconButton, Stack, Tooltip, Typography, useTheme } from '@mui/material'
-import AccountTree from '@mui/icons-material/AccountTree'
-import SettingsIcon from '@mui/icons-material/Settings'
+import { AccountTree, Settings as SettingsIcon } from '@mui/icons-material'
 import { IHomepageProps, IClusterEvent } from '@kwirthmagnify/kwirth-common-front'
 import { AviciiSetup } from './AviciiSetup'
 

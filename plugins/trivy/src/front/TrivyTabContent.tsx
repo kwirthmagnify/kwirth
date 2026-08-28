@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { Box, Button, Stack, Typography, Slider, TextField, InputAdornment, Card, useTheme } from '@mui/material'
-import SearchIcon from '@mui/icons-material/Search'
+import { Search as SearchIcon } from '@mui/icons-material'
 import { TReportType } from './TrivyCommon'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { IAsset, ITrivyData, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_VULN_PLURAL } from './TrivyData'

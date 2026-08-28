@@ -3,8 +3,7 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormCon
 import { IConfigProvider } from './PinocchioConfig'
 import { objectClone } from './utils'
 import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
-import Visibility from '@mui/icons-material/Visibility'
-import VisibilityOff from '@mui/icons-material/VisibilityOff'
+import { Visibility, VisibilityOff } from '@mui/icons-material'
 
 interface IPinocchioConfigProviderProps {
     providersAvailable: string[]

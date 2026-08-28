@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Card, CardContent, CardHeader, Chip, Link, Stack, Typography } from '@mui/material'
-import Info from '@mui/icons-material/Info'
+import { Info } from '@mui/icons-material'
 import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { INewsData, INewsItem } from './NewsData'
 import { INewsChannelConfig } from './NewsConfig'

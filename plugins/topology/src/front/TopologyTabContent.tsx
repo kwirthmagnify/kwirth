@@ -5,20 +5,10 @@ import {
     ListItemIcon, ListItemText, Menu, MenuItem, Paper, Stack, TextField,
     Tooltip, Typography,
 } from '@mui/material'
-import CenterFocusStrong from '@mui/icons-material/CenterFocusStrong'
-import Clear from '@mui/icons-material/Clear'
-import ContentCopy from '@mui/icons-material/ContentCopy'
-import Delete from '@mui/icons-material/Delete'
-import Hub from '@mui/icons-material/Hub'
-import Info from '@mui/icons-material/Info'
-import PlayArrow from '@mui/icons-material/PlayArrow'
-import Refresh from '@mui/icons-material/Refresh'
-import Search from '@mui/icons-material/Search'
-import Stop from '@mui/icons-material/Stop'
-import Terminal from '@mui/icons-material/Terminal'
-import Timeline from '@mui/icons-material/Timeline'
-import ZoomIn from '@mui/icons-material/ZoomIn'
-import ZoomOut from '@mui/icons-material/ZoomOut'
+import {
+    CenterFocusStrong, Clear, ContentCopy, Delete, Hub, Info,
+    PlayArrow, Refresh, Search, Stop, Terminal, Timeline, ZoomIn, ZoomOut,
+} from '@mui/icons-material'
 import {
     ETopologyNodeKind, ETopologyNodeStatus, ETopologyQueryKind,
     ICanvasState, ITopologyData, ITopologyInfoResult, ITopologyNode,

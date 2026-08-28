@@ -1,8 +1,6 @@
 import React from 'react'
 import { Box, Chip, Tooltip, Typography, useTheme } from '@mui/material'
-import AccountTree from '@mui/icons-material/AccountTree'
-import FilterAlt from '@mui/icons-material/FilterAlt'
-import Send from '@mui/icons-material/Send'
+import { AccountTree, FilterAlt, Send } from '@mui/icons-material'
 import { ICompositeNode } from './types'
 
 interface INodeCardProps {

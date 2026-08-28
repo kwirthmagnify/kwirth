@@ -4,9 +4,8 @@ import {
     DialogTitle, Divider, FormControl, IconButton, InputLabel,
     MenuItem, Select, Stack, TextField, Tooltip, Typography
 } from '@mui/material'
-import ContentCopy from '@mui/icons-material/ContentCopy'
-import Add from '@mui/icons-material/Add'
-import Delete from '@mui/icons-material/Delete'
+import { ContentCopy } from '@mui/icons-material'
+import { Add, Delete } from '@mui/icons-material'
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 

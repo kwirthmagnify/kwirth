@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { ILogLine, ILogData, LogData } from './LogData'
 import { Box, Card, CardContent, CardHeader, InputAdornment, Stack, TextField, Typography, useTheme } from '@mui/material'
 import { IContentProps, cleanANSI } from '@kwirthmagnify/kwirth-common-front'
-import Error from '@mui/icons-material/Error'
-import Warning from '@mui/icons-material/Warning'
+import { Error, Warning } from '@mui/icons-material'
 import { ILogConfig, LogConfig } from './LogConfig'
 
 const LogTabContent: React.FC<IContentProps> = (props: IContentProps) => {

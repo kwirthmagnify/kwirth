@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react'
-import FilterList from '@mui/icons-material/FilterList'
+import { FilterList } from '@mui/icons-material'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { CensorConfig, ICensorConfig } from './CensorConfig'
