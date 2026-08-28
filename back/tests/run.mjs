@@ -53,7 +53,7 @@ await esbuild.build({
         '@jfvilas/parse-listing', '@kubernetes/client-node',
         '@kwirthmagnify/kwirth-common', '@kwirthmagnify/kwirth-common-ai', '@kwirthmagnify/kwirth-common-back',
         'body-parser', 'cookie-parser', 'cors', 'dockerode', 'dotenv', 'express', 'express-fileupload',
-        'http-proxy-middleware', 'request-ip', 'tar', 'ts-semaphore', 'uuid', 'ws', 'cpu-features'
+        'http-proxy-middleware', 'request-ip', 'tar', 'ts-semaphore', 'uuid', 'ws', 'cpu-features', 'bcrypt'
     ],
     loader: { '.ts': 'ts' },
 })

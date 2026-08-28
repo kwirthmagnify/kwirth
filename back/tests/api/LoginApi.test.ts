@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import crypto from 'crypto'
 import express from 'express'
 import type { AddressInfo } from 'net'
 import { LoginApi } from '../../src/api/LoginApi'
@@ -53,11 +54,15 @@ async function startServer(usersMap: any) {
 const post = (base: string, path: string, body: any) =>
     fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 
+// El FRONT envía la contraseña ya como sha256(hex); el verifyPassword del back compara contra eso
+// (sha256(stored) === incoming para el valor plano heredado). Los tests deben mimetizar al front.
+const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
+
 // ---- login ----
 test('POST /login con credenciales validas devuelve 200 y accessKey', async () => {
     const srv = await startServer(encodeUsers([makeUser()]))
     try {
-        const res = await post(srv.base, '/login', { user: 'alice@example.com', password: 'secret' })
+        const res = await post(srv.base, '/login', { user: 'alice@example.com', password: sha256('secret') })
         assert.equal(res.status, 200)
         const body = await res.json()
         assert.equal(body.id, 'alice@example.com')
@@ -71,7 +76,7 @@ test('POST /login con credenciales validas devuelve 200 y accessKey', async () =
 test('POST /login admin/password devuelve 201 (fuerza cambio)', async () => {
     const srv = await startServer(encodeUsers([makeUser({ id: 'admin', name: 'admin', password: 'password' })]))
     try {
-        const res = await post(srv.base, '/login', { user: 'admin', password: 'password' })
+        const res = await post(srv.base, '/login', { user: 'admin', password: sha256('password') })
         assert.equal(res.status, 201)
     }
     finally { await srv.stop() }
@@ -99,7 +104,7 @@ test('POST /login con usuario inexistente devuelve 401', async () => {
 test('POST /login/password con password valida devuelve 200 y nuevo accessKey', async () => {
     const srv = await startServer(encodeUsers([makeUser()]))
     try {
-        const res = await post(srv.base, '/login/password', { user: 'alice@example.com', password: 'secret', newpassword: 'nuevo' })
+        const res = await post(srv.base, '/login/password', { user: 'alice@example.com', password: sha256('secret'), newpassword: sha256('nuevo') })
         assert.equal(res.status, 200)
         const body = await res.json()
         assert.equal(body.id, 'alice@example.com')

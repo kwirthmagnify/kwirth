@@ -1,5 +1,23 @@
 # Webhook Extension Type — Plan
 
+## Status (2026-08-28) — SHIPPED & VALIDATED
+
+The `webhook` extension type is **live and validated end-to-end** (core streams). Published:
+`@kwirthmagnify/kwirth-common@0.5.36`, `@kwirthmagnify/kwirth-common-back@0.5.30`.
+
+- **Streams 1 (senders return) + 3 (webhook system) — DONE.** `EExtensionType.WEBHOOK`, contracts,
+  `WebhookManager` (token registry + persistence), raw-body receiver at `…/webhook/<provider>/<token>`,
+  `WebhookApi` (`/core/webhooks` + url/rotate), `WebhookManagerDialog`. Unit tests (WebhookManager +
+  WebhookReceiver) + a front e2e (`front/e2e/tests/webhooks.spec.ts`) + guide
+  (`docs/…/guide/extensions/webhooks`). Live E2E: Jira Cloud → cloudflared → receiver → verify → parse → 200.
+- **`jira` sender + `jira` webhook — DONE (paid, private repos).**
+- **⚠️ DESIGN CHANGE — consumer-driven (provider-like).** A webhook config has **no `target`**. Delivery is
+  by **subscription to the webhook id** (like `addSubscriber('events'…)` / `processProviderEvent`):
+  `IWebhookAccess.subscribe(webhookId, consumer)` + `deliver(webhookId, event)`. A consumer subscribes at
+  startup and receives that webhook's events; non-subscribers get nothing. The dialog has no target selector.
+- **Stream 5 (Excubitor ticketing integration) — IN PROGRESS** (subscribe to the configured webhook +
+  reflect ticket status on the finding). Tracked in the Excubitor backlog.
+
 ## Overview
 
 New first-class Kwirth extension type **`webhook`**: a reusable **inbound HTTP ingestion** artifact — the
