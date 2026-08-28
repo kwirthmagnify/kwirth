@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Box, Button, Card, CardContent, IconButton, LinearProgress, Stack, Tooltip, Typography } from '@mui/material'
-import { OpenInBrowser, Settings as SettingsIcon } from '@mui/icons-material'
+import OpenInBrowser from '@mui/icons-material/OpenInBrowser'
+import SettingsIcon from '@mui/icons-material/Settings'
 import { IHomepageProps } from '@kwirthmagnify/kwirth-common-front'
 import { ClusterizedSetup } from './ClusterizedSetup'
 

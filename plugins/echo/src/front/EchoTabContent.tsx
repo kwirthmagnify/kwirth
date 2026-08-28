@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Box, Card, CardContent, CardHeader, Stack, Typography } from '@mui/material'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { IEchoData } from './EchoData'
-import { Info } from '@mui/icons-material'
+import Info from '@mui/icons-material/Info'
 import { IEchoInstanceConfig } from './EchoTypes'
 import { IEchoConfig } from './EchoConfig'
 

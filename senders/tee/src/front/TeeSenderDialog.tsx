@@ -4,7 +4,9 @@ import {
     Divider, FormControl, IconButton, InputLabel, List, ListItem, ListItemButton,
     ListItemText, MenuItem, Select, Stack, TextField, Tooltip, Typography
 } from '@mui/material'
-import { Add, ContentCopy, Delete } from '@mui/icons-material'
+import Add from '@mui/icons-material/Add'
+import ContentCopy from '@mui/icons-material/ContentCopy'
+import Delete from '@mui/icons-material/Delete'
 
 function authGet(token: string): RequestInit {
     return { headers: { Authorization: token ? `Bearer ${token}` : '', 'X-Kwirth-App': 'true' } }

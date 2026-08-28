@@ -1,5 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react'
-import { Add as AddIcon, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon } from '@mui/icons-material'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteIcon from '@mui/icons-material/Delete'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
 import { ICensorData } from './CensorData'

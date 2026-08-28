@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Box, IconButton, MenuItem, Select, Stack, Tooltip, Typography } from '@mui/material'
-import { Add, Delete } from '@mui/icons-material'
+import Add from '@mui/icons-material/Add'
+import Delete from '@mui/icons-material/Delete'
 import { IAvailableSender, ICompositeNode } from './types'
 import { addFanoutTarget, createNode, deleteNodeAtPath, getAllNodePaths, getParentPath, getTreeEntries, setNextNode } from './treeUtils'
 import NodeCard from './NodeCard'

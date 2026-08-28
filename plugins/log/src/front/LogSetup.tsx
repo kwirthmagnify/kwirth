@@ -1,7 +1,7 @@
 ﻿import React, { useState, ChangeEvent, useRef } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, FormLabel, Radio, RadioGroup, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
-import { Subject } from '@mui/icons-material'
+import Subject from '@mui/icons-material/Subject'
 import { ILogConfig, LogInstanceConfig, LogConfig } from './LogConfig'
 import { ELogSortOrder, ILogInstanceConfig } from './LogTypes'
 

@@ -3,7 +3,8 @@ import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitl
 import { IConfigLlm, IConfigProvider, IPinocchioConfig } from './PinocchioConfig'
 import { objectClone } from './utils'
 import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
-import { Visibility, VisibilityOff } from '@mui/icons-material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 
 interface IPinocchioLlmConfigProps {
     onClose: (pc: IPinocchioConfig | undefined) => void

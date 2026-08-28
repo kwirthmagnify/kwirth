@@ -1,5 +1,5 @@
 import React from 'react'
-import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { Accordion, AccordionDetails, AccordionSummary, List, ListItem, Stack, Typography } from '@mui/material'
 
 interface ITabContentTrivyAssetAuditProps { check: any }

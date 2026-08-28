@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Avatar, Badge, Box, Chip, Divider, IconButton, List, ListItemButton, ListItemText, Stack, TextField, Typography } from '@mui/material'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
-import { Check, DeleteSweep, DoneAll, Schedule, Send } from '@mui/icons-material'
+import Check from '@mui/icons-material/Check'
+import DeleteSweep from '@mui/icons-material/DeleteSweep'
+import DoneAll from '@mui/icons-material/DoneAll'
+import Schedule from '@mui/icons-material/Schedule'
+import Send from '@mui/icons-material/Send'
 import { IMircData } from './MircData'
 import { IUiMessage } from './MircClient'
 

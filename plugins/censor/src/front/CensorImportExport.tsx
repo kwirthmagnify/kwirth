@@ -1,6 +1,6 @@
 ﻿import React, { useRef, useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, List, ListItem, Tab, Tabs, TextField, Typography } from '@mui/material'
-import { UploadFile as UploadFileIcon } from '@mui/icons-material'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { ICensorInstanceConfig } from './CensorConfig'
 
 interface ICensorImportExportProps {

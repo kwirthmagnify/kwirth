@@ -1,6 +1,6 @@
 ﻿import React, { useRef, useState } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, TextField, Typography } from '@mui/material'
-import { Newspaper } from '@mui/icons-material'
+import Newspaper from '@mui/icons-material/Newspaper'
 import { ENewsFeed, INewsChannelConfig, INewsInstanceConfig, NewsChannelConfig, NewsInstanceConfig } from './NewsConfig'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 

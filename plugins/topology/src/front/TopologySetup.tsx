@@ -3,7 +3,7 @@ import {
     Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
     Divider, FormControlLabel, FormGroup, Slider, Stack, Typography,
 } from '@mui/material'
-import { AccountTree } from '@mui/icons-material'
+import AccountTree from '@mui/icons-material/AccountTree'
 import { TopologyConfig, ITopologyConfig } from './TopologyConfig'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 

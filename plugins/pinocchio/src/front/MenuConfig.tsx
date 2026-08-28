@@ -1,7 +1,10 @@
 import React from 'react'
 import { ListItemIcon, ListItemText, Menu, MenuItem, MenuList } from '@mui/material'
 import { IConfigProvider, IPinocchioConfig } from './PinocchioConfig'
-import { Hub, Memory, Bolt, ImportExport } from '@mui/icons-material'
+import Hub from '@mui/icons-material/Hub'
+import Memory from '@mui/icons-material/Memory'
+import Bolt from '@mui/icons-material/Bolt'
+import ImportExport from '@mui/icons-material/ImportExport'
 
 interface IMenuOrderProps {
     providers:IConfigProvider[]

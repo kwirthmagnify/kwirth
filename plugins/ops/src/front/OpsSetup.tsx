@@ -1,7 +1,7 @@
 ﻿import React, { useRef, useState } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Select, Stack, Switch, Typography, Checkbox } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
-import { Terminal } from '@mui/icons-material'
+import Terminal from '@mui/icons-material/Terminal'
 import { ESwitchKey, IOpsConfig, OpsConfig, OpsInstanceConfig } from './OpsConfig'
 import { IOpsInstanceConfig } from './OpsTypes'
 

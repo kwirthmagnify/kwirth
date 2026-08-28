@@ -3,7 +3,7 @@ import {
     Box, Chip, Divider, FormControl, IconButton, InputLabel,
     MenuItem, Select, Stack, Tooltip, Typography
 } from '@mui/material'
-import { Add } from '@mui/icons-material'
+import Add from '@mui/icons-material/Add'
 import {
     IAvailableSender, ICompositeNode, ICompositeRefNode,
     ICompositeFanoutNode, ICompositeFilterNode

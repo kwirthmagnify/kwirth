@@ -2,7 +2,7 @@
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, Typography } from '@mui/material'
 import { ISetupProps, MsgBoxOk, MsgBoxOkError, MsgBoxWaitCancel } from '@kwirthmagnify/kwirth-common-front'
 import { TrivyConfig, TrivyInstanceConfig } from './TrivyConfig'
-import { VerifiedUser } from '@mui/icons-material'
+import VerifiedUser from '@mui/icons-material/VerifiedUser'
 import { TrivyOperator } from './TrivyOperator'
 import { ITrivyData } from './TrivyData'
 import { ITrivyConfig, ITrivyInstanceConfig } from '../common/TrivyTypes'

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Divider, Menu, MenuItem, MenuList } from '@mui/material'
-import { Check as CheckIcon } from '@mui/icons-material'
+import CheckIcon from '@mui/icons-material/Check'
 
 interface IMenuOrderProps {
     anchorParent: Element

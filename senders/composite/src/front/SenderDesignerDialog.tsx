@@ -4,7 +4,13 @@ import {
     DialogTitle, Divider, FormControlLabel, IconButton, List, ListItem, ListItemButton,
     ListItemText, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
-import { AccountTree, Add, Delete, FileDownload, FileUpload, FilterAlt, Send } from '@mui/icons-material'
+import AccountTree from '@mui/icons-material/AccountTree'
+import Add from '@mui/icons-material/Add'
+import Delete from '@mui/icons-material/Delete'
+import FileDownload from '@mui/icons-material/FileDownload'
+import FileUpload from '@mui/icons-material/FileUpload'
+import FilterAlt from '@mui/icons-material/FilterAlt'
+import Send from '@mui/icons-material/Send'
 import { IAvailableSender, ICompositeNode, IPipelineConfig } from './types'
 import { createNode, nodeAtPath } from './treeUtils'
 import PipelineCanvas from './PipelineCanvas'
