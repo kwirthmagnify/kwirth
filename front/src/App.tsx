@@ -1727,7 +1727,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     containers: t.channelObject.container.split(','),
                     name: t.name
                 }
-                onResourceSelectorAdd(res, autoStart, undefined)
+                onResourceSelectorAdd(res, autoStart, { config: t.channelObject.config, instanceConfig: t.channelObject.instanceConfig })
             }
 
             if (!lastWorkspaces.some(workspace => workspace.name === newWorkspace.name)) {
