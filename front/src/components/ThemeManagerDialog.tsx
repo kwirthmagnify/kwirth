@@ -326,14 +326,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                         previewUrl={t.hasPreview ? `${backendUrl}/core/themes/${t.id}/preview` : undefined}
                                         badge={isActive(t.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} /> : undefined}
                                         action={
-                                            <Stack direction='column' spacing={0.5} alignItems='flex-end'>
-                                                <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : t.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
-                                                    <span>
-                                                        <IconButton size='small' color='error' disabled={t.installedFrom === 'dev' || t.installedFrom?.startsWith('pack:') || uninstallingId === t.id} onClick={() => uninstall(t)}>
-                                                            {uninstallingId === t.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
-                                                        </IconButton>
-                                                    </span>
-                                                </Tooltip>
+                                            <Stack direction='row' alignItems='center' spacing={0.5}>
                                                 {plugins.length > 0 &&
                                                     <Select multiple size='small' displayEmpty value={getAssignedPlugins(t.id)} onChange={e => setPluginAssignments(t.id, e.target.value as string[])}
                                                         renderValue={sel => (sel as string[]).length === 0 ? <em style={{ fontSize: '0.7rem', opacity: 0.5 }}>No plugin</em> : (sel as string[]).join(', ')}
@@ -341,6 +334,13 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                                         {plugins.map(p => <MenuItem key={p.id} value={p.id} sx={{ fontSize: '0.7rem' }}>{p.displayName || p.id}</MenuItem>)}
                                                     </Select>
                                                 }
+                                                <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : t.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
+                                                    <span>
+                                                        <IconButton size='small' color='error' disabled={t.installedFrom === 'dev' || t.installedFrom?.startsWith('pack:') || uninstallingId === t.id} onClick={() => uninstall(t)}>
+                                                            {uninstallingId === t.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
                                             </Stack>
                                         }
                                     />
