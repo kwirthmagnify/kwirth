@@ -86,6 +86,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [mode, setMode] = useState<PaletteMode>((localStorage.getItem('kwirth.mode') as PaletteMode) || 'light')
     const [activeThemeName, setActiveThemeName] = useState<string | undefined>(undefined)
     const [themeAssignments, setThemeAssignments] = useState<Record<string, string>>({})
+    const [themeScriptsVersion, setThemeScriptsVersion] = useState(0)
     const [themeReady, setThemeReady] = useState(() => !localStorage.getItem('kwirth.theme'))
     const theme = useMemo( () => (activeThemeName && window.__kwirth_themes__?.[activeThemeName])
         ? createTheme(window.__kwirth_themes__[activeThemeName].getThemeOptions(mode))
@@ -396,9 +397,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const script = document.createElement('script')
         script.id = `kwirth-theme-${id}`
         script.src = `${backendUrl}/core/themes/${id}/front?t=${Date.now()}`
-        if (onload) {
-            script.onload = () => { console.log(`[themes] loaded theme front: ${id}`); onload() }
-            script.onerror = () => { console.log(`[themes] failed to load theme front: ${id}`); setThemeReady(true) }
+        script.onload = () => {
+            console.log(`[themes] loaded theme front: ${id}`)
+            setThemeScriptsVersion(v => v + 1)
+            if (onload) onload()
+        }
+        script.onerror = () => {
+            console.log(`[themes] failed to load theme front: ${id}`)
+            setThemeReady(true)
         }
         document.head.appendChild(script)
     }
@@ -2361,7 +2367,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                 if (co) co.isFullscreen = fullscreenTab !== undefined
                                 const content = <TabContent key={selectedTab.current?.name} channel={selectedTab.current?.channel} channelObject={co} />
                                 const assignedId = themeAssignments[selectedTab.current?.channel.channelId ?? '']
-                                const assignedThemeFactory = assignedId ? window.__kwirth_themes__?.[assignedId] : undefined
+                                // read themeScriptsVersion so this IIFE re-runs each time a theme script finishes loading
+                                const assignedThemeFactory = assignedId && themeScriptsVersion >= 0 ? window.__kwirth_themes__?.[assignedId] : undefined
                                 if (!assignedThemeFactory) return content
                                 // strip cssVariables so the inner ThemeProvider works via React context only,
                                 // avoiding conflicts with the outer theme's CSS variables on :root

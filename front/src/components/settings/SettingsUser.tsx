@@ -8,6 +8,7 @@ import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 interface IInstalledThemeEntry {
     id: string
     name: string
+    displayName?: string
 }
 
 interface ISettingsUserProps {
@@ -51,7 +52,7 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
                         <InputLabel>Theme</InputLabel>
                         <Select value={selectedTheme} onChange={(e) => setSelectedTheme(e.target.value as string)} label='Theme'>
                             <MenuItem value=''>Default</MenuItem>
-                            {themes.map(t => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
+                            {themes.map(t => <MenuItem key={t.id} value={t.id}>{t.displayName || t.name}</MenuItem>)}
                         </Select>
                     </FormControl>
                 </Stack>
