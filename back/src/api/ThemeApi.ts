@@ -52,6 +52,24 @@ export class ThemeApi {
             }
         })
 
+        this.router.get('/assignments', async (_req: Request, res: Response) => {
+            try {
+                res.json(await this.themeManager.getAssignments())
+            } catch (err) {
+                res.status(500).json({ error: String(err) })
+            }
+        })
+
+        this.router.put('/assignments', async (req: Request, res: Response) => {
+            if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            try {
+                await this.themeManager.setAssignments(req.body)
+                res.json({ ok: true })
+            } catch (err) {
+                res.status(500).json({ error: String(err) })
+            }
+        })
+
         this.router.delete('/:id', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {

@@ -3,7 +3,7 @@ import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogConte
 import { CheckCircle, Delete, Download, FolderOpen, Link, OpenInNew, Palette, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
-import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
+import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
 
@@ -32,10 +32,17 @@ interface IInstalledTheme {
     requiresRestart?: boolean
 }
 
+interface IInstalledPlugin {
+    id: string
+    displayName?: string
+}
+
 interface IThemeManagerDialogProps {
     onClose: () => void
     activeThemeName: string | undefined
     onActivate: (name: string | undefined) => void
+    themeAssignments: Record<string, string>
+    onAssignmentsChange: (a: Record<string, string>) => void
     onThemeLoad: (id: string) => void
     onThemeUnload: (id: string) => void
     onRestartRequired?: () => void
@@ -59,7 +66,25 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
     const [filterText, setFilterText] = useState('')
     const [installedFilter, setInstalledFilter] = useState('')
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
+    const [plugins, setPlugins] = useState<IInstalledPlugin[]>([])
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const getAssignedPlugin = (themeId: string): string =>
+        Object.entries(props.themeAssignments).find(([, tid]) => tid === themeId)?.[0] ?? ''
+
+    const setPluginAssignment = async (themeId: string, pluginId: string) => {
+        const next: Record<string, string> = {}
+        for (const [pid, tid] of Object.entries(props.themeAssignments)) {
+            if (tid !== themeId) next[pid] = tid
+        }
+        if (pluginId) next[pluginId] = themeId
+        try {
+            await fetch(`${backendUrl}/core/themes/assignments`, addPutAuthorization(accessString, JSON.stringify(next)))
+            props.onAssignmentsChange(next)
+        } catch (err) {
+            setError(`Failed to update assignment: ${err}`)
+        }
+    }
 
     const groupedAvailable: Record<string, IThemeManifestEntry[]> = available.reduce((acc, p) => {
         if (!acc[p.id]) acc[p.id] = []
@@ -77,6 +102,10 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
     useEffect(() => {
         loadInstalled()
         fetchManifest()
+        fetch(`${backendUrl}/core/plugins`, addGetAuthorization(accessString))
+            .then(r => r.json())
+            .then((data: IInstalledPlugin[]) => setPlugins(data))
+            .catch(() => {})
     }, [])
 
     const loadInstalled = async () => {
@@ -297,25 +326,34 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                         previewUrl={t.hasPreview ? `${backendUrl}/core/themes/${t.id}/preview` : undefined}
                                         badge={isActive(t.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} /> : undefined}
                                         action={
-                                            <Stack direction='row' alignItems='center' spacing={0.5}>
-                                                {isActive(t.id)
-                                                    ? <Button size='small' variant='outlined' onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>
-                                                    : <Button size='small' variant='contained' onClick={() => props.onActivate(t.id)}>ACTIVATE</Button>
+                                            <Stack direction='column' spacing={0.5} alignItems='flex-end'>
+                                                <Stack direction='row' alignItems='center' spacing={0.5}>
+                                                    {isActive(t.id)
+                                                        ? <Button size='small' variant='outlined' onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>
+                                                        : <Button size='small' variant='contained' onClick={() => props.onActivate(t.id)}>ACTIVATE</Button>
+                                                    }
+                                                    <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : t.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
+                                                        <span>
+                                                            <IconButton size='small' color='error' disabled={t.installedFrom === 'dev' || t.installedFrom?.startsWith('pack:') || uninstallingId === t.id} onClick={() => uninstall(t)}>
+                                                                {uninstallingId === t.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                            </IconButton>
+                                                        </span>
+                                                    </Tooltip>
+                                                </Stack>
+                                                {plugins.length > 0 &&
+                                                    <Select size='small' displayEmpty value={getAssignedPlugin(t.id)} onChange={e => setPluginAssignment(t.id, e.target.value as string)}
+                                                        sx={{ height: 22, fontSize: '0.7rem', minWidth: 110, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                        <MenuItem value='' sx={{ fontSize: '0.7rem' }}>No plugin assignment</MenuItem>
+                                                        {plugins.map(p => <MenuItem key={p.id} value={p.id} sx={{ fontSize: '0.7rem' }}>{p.displayName || p.id}</MenuItem>)}
+                                                    </Select>
                                                 }
-                                                <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : t.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
-                                                    <span>
-                                                        <IconButton size='small' color='error' disabled={t.installedFrom === 'dev' || t.installedFrom?.startsWith('pack:') || uninstallingId === t.id} onClick={() => uninstall(t)}>
-                                                            {uninstallingId === t.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
-                                                        </IconButton>
-                                                    </span>
-                                                </Tooltip>
                                             </Stack>
                                         }
                                     />
                                 ))}
                               </Box>
                             : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden',
-                                         display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto auto',
+                                         display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto auto auto',
                                          columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                 {installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name).toLowerCase().includes(installedFilter.toLowerCase())).flatMap((t, i, arr) => [
                                     <Box key={`${t.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Palette fontSize='small' /></Box>,
@@ -323,6 +361,15 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                     <Box key={`${t.id}-active`} sx={{ py: 1 }}>{isActive(t.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} />}</Box>,
                                     <Box key={`${t.id}-source`} sx={{ py: 1 }}>{resolveSource(t.installedFrom)}</Box>,
                                     <Box key={`${t.id}-ver`} sx={{ py: 1 }}><Chip label={`v${t.version}`} size='small' /></Box>,
+                                    <Box key={`${t.id}-assign`} sx={{ py: 1 }}>
+                                        {plugins.length > 0 &&
+                                            <Select size='small' displayEmpty value={getAssignedPlugin(t.id)} onChange={e => setPluginAssignment(t.id, e.target.value as string)}
+                                                sx={{ height: 22, fontSize: '0.7rem', minWidth: 110, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                <MenuItem value='' sx={{ fontSize: '0.7rem' }}>–</MenuItem>
+                                                {plugins.map(p => <MenuItem key={p.id} value={p.id} sx={{ fontSize: '0.7rem' }}>{p.displayName || p.id}</MenuItem>)}
+                                            </Select>
+                                        }
+                                    </Box>,
                                     <Box key={`${t.id}-btn`} sx={{ py: 1 }}>
                                         {isActive(t.id)
                                             ? <Button size='small' variant='outlined' onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>

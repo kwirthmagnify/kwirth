@@ -256,6 +256,14 @@ export class ThemeManager {
         }
     }
 
+    async getAssignments(): Promise<Record<string, string>> {
+        return ((await this.configMaps.read('kwirth-theme-assignments', {})) as Record<string, string>) || {}
+    }
+
+    async setAssignments(assignments: Record<string, string>): Promise<void> {
+        await this.configMaps.write('kwirth-theme-assignments', assignments)
+    }
+
     private downloadFile(url: string, destPath: string): Promise<void> {
         return new Promise((resolve, reject) => {
             const protocol = url.startsWith('https') ? https : http

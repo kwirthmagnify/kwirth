@@ -85,6 +85,7 @@ interface IRawKubeEvent {
 const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [mode, setMode] = useState<PaletteMode>((localStorage.getItem('kwirth.mode') as PaletteMode) || 'light')
     const [activeThemeName, setActiveThemeName] = useState<string | undefined>(undefined)
+    const [themeAssignments, setThemeAssignments] = useState<Record<string, string>>({})
     const [themeReady, setThemeReady] = useState(() => !localStorage.getItem('kwirth.theme'))
     const theme = useMemo( () => (activeThemeName && window.__kwirth_themes__?.[activeThemeName])
         ? createTheme(window.__kwirth_themes__[activeThemeName].getThemeOptions(mode))
@@ -532,6 +533,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
             })
             .catch(err => { console.log(`[themes] failed to load installed themes: ${err}`); setThemeReady(true) })
+
+        fetch(`${backendUrl}/core/themes/assignments`, addGetAuthorization(accessString))
+            .then(r => r.json())
+            .then((a: Record<string, string>) => setThemeAssignments(a))
+            .catch(() => {})
 
         // load front.js for already-installed homepages, restoring active homepage from localStorage
         fetch(`${backendUrl}/core/homepages`, addGetAuthorization(accessString))
@@ -2346,15 +2352,19 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     { selectedTab.current &&
                         <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow:1, height:'100%', minHeight:0 }}>
                             { anchorMenuTab && <MenuTab onClose={() => setAnchorMenuTab(null)} optionSelected={menuTabOptionSelected} anchorMenuTab={anchorMenuTab} tabs={tabs.current} selectedTab={selectedTab.current} selectedTabIndex={selectedTab.current? tabs.current.indexOf(selectedTab.current) : -1} backChannels={backChannels}/>}
-                            <TabContent key={selectedTab.current?.name} channel={selectedTab.current?.channel} channelObject={(() => {
+                            {(() => {
                                 // Mutate isFullscreen onto the LIVE channelObject and pass that reference (do NOT spread
                                 // into a copy): webSocket is assigned later on the original object (on socket connect), and
                                 // channels that wire handlers once — e.g. magnify's create/edit/delete — would otherwise
                                 // capture a stale copy whose webSocket is undefined.
                                 const co = selectedTab.current?.channelObject
                                 if (co) co.isFullscreen = fullscreenTab !== undefined
-                                return co
-                            })()} />
+                                const content = <TabContent key={selectedTab.current?.name} channel={selectedTab.current?.channel} channelObject={co} />
+                                const assignedId = themeAssignments[selectedTab.current?.channel.channelId ?? '']
+                                const assignedThemeFactory = assignedId ? window.__kwirth_themes__?.[assignedId] : undefined
+                                if (!assignedThemeFactory) return content
+                                return <ThemeProvider theme={createTheme(assignedThemeFactory.getThemeOptions(mode))}>{content}</ThemeProvider>
+                            })()}
                         </Box>
                     }
                     { !selectedTab.current &&
@@ -2411,7 +2421,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showIdpManagerDialog && <IdpManagerDialog onClose={() => setShowIdpManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showSenderManagerDialog && <SenderManagerDialog onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showWebhookManagerDialog && <WebhookManagerDialog onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showThemeManagerDialog && <ThemeManagerDialog onClose={() => setShowThemeManagerDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showThemeManagerDialog && <ThemeManagerDialog onClose={() => setShowThemeManagerDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} themeAssignments={themeAssignments} onAssignmentsChange={setThemeAssignments} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showHomepageManagerDialog && <HomepageManagerDialog onClose={() => setShowHomepageManagerDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showDocsDialog && <DocsDialog onClose={() => setShowDocsDialog(false)} /> }
                 { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
