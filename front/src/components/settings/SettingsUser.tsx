@@ -1,35 +1,21 @@
-import React, { useState, useEffect, useContext } from 'react'
+import React, { useState, useContext } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { Settings } from '../../model/Settings'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
-import { addGetAuthorization } from '../../tools/AuthorizationManagement'
-
-interface IInstalledThemeEntry {
-    id: string
-    name: string
-    displayName?: string
-}
 
 interface ISettingsUserProps {
     onClose:(ok:boolean) => void
     settings:Settings | null
     activeThemeName: string | undefined
     onThemeChange: (name: string | undefined) => void
+    installedThemes: {id: string, name: string, displayName?: string}[]
 }
 
 const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) => {
     const [keepAliveInterval, setKeepAliveInterval] = useState<number>(props.settings? props.settings.keepAliveInterval : 60)
     const [selectedTheme, setSelectedTheme] = useState<string>(props.activeThemeName ?? '')
-    const [themes, setThemes] = useState<IInstalledThemeEntry[]>([])
-    const { backendUrl, accessString } = useContext(SessionContext) as SessionContextType
-
-    useEffect(() => {
-        fetch(`${backendUrl}/core/themes`, addGetAuthorization(accessString))
-            .then(r => r.json())
-            .then((data: IInstalledThemeEntry[]) => setThemes(data))
-            .catch(() => {})
-    }, [backendUrl, accessString])
+    const { backendUrl } = useContext(SessionContext) as SessionContextType
 
     const ok = () =>{
         if (props.settings) {
@@ -52,7 +38,7 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
                         <InputLabel>Theme</InputLabel>
                         <Select value={selectedTheme} onChange={(e) => setSelectedTheme(e.target.value as string)} label='Theme'>
                             <MenuItem value=''>Default</MenuItem>
-                            {themes.map(t => <MenuItem key={t.id} value={t.id}>{t.displayName || t.name}</MenuItem>)}
+                            {props.installedThemes.map(t => <MenuItem key={t.id} value={t.id}>{t.displayName || t.name}</MenuItem>)}
                         </Select>
                     </FormControl>
                 </Stack>

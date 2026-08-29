@@ -87,6 +87,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [activeThemeName, setActiveThemeName] = useState<string | undefined>(undefined)
     const [themeAssignments, setThemeAssignments] = useState<Record<string, string>>({})
     const [themeScriptsVersion, setThemeScriptsVersion] = useState(0)
+    const [installedThemes, setInstalledThemes] = useState<{id: string, name: string, displayName?: string}[]>([])
     const [themeReady, setThemeReady] = useState(() => !localStorage.getItem('kwirth.theme'))
     const theme = useMemo( () => (activeThemeName && window.__kwirth_themes__?.[activeThemeName])
         ? createTheme(window.__kwirth_themes__[activeThemeName].getThemeOptions(mode))
@@ -525,7 +526,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         // load front.js for already-installed themes
         fetch(`${backendUrl}/core/themes`, addGetAuthorization(accessString))
             .then(r => r.json())
-            .then((themes: { id: string }[]) => {
+            .then((themes: { id: string, name: string, displayName?: string }[]) => {
+                setInstalledThemes(themes)
                 const savedTheme = localStorage.getItem('kwirth.theme')
                 console.log(`[themes] installed themes: [${themes.map(t => t.id).join(', ')}], saved theme: ${savedTheme ?? 'none'}`)
                 const activeFound = savedTheme && themes.some(t => t.id === savedTheme)
@@ -2437,7 +2439,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showChannelSetup() }
-                { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} activeThemeName={activeThemeName} onThemeChange={setActiveThemeName} /> }
+                { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} activeThemeName={activeThemeName} onThemeChange={setActiveThemeName} installedThemes={installedThemes} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }
                 
                 { initialMessage !== '' && MsgBoxOk('Kwirth',initialMessage, () => setInitialMessage(''))}
