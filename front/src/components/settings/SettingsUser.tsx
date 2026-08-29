@@ -10,17 +10,22 @@ interface ISettingsUserProps {
     activeThemeName: string | undefined
     onThemeChange: (name: string | undefined) => void
     installedThemes: {id: string, name: string, displayName?: string}[]
+    activeHomepageId: string | undefined
+    onHomepageChange: (id: string | undefined) => void
+    installedHomepages: {id: string, name: string, displayName?: string}[]
 }
 
 const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) => {
     const [keepAliveInterval, setKeepAliveInterval] = useState<number>(props.settings? props.settings.keepAliveInterval : 60)
     const [selectedTheme, setSelectedTheme] = useState<string>(props.activeThemeName ?? '')
+    const [selectedHomepage, setSelectedHomepage] = useState<string>(props.activeHomepageId ?? '')
     const { backendUrl } = useContext(SessionContext) as SessionContextType
 
     const ok = () =>{
         if (props.settings) {
             props.settings.keepAliveInterval = keepAliveInterval
             props.onThemeChange(selectedTheme === '' ? undefined : selectedTheme)
+            props.onHomepageChange(selectedHomepage === '' ? undefined : selectedHomepage)
             props.onClose(true)
         }
     }
@@ -39,6 +44,13 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
                         <Select value={selectedTheme} onChange={(e) => setSelectedTheme(e.target.value as string)} label='Theme'>
                             <MenuItem value=''>Default</MenuItem>
                             {props.installedThemes.map(t => <MenuItem key={t.id} value={t.id}>{t.displayName || t.name}</MenuItem>)}
+                        </Select>
+                    </FormControl>
+                    <FormControl variant='standard'>
+                        <InputLabel>Homepage</InputLabel>
+                        <Select value={selectedHomepage} onChange={(e) => setSelectedHomepage(e.target.value as string)} label='Homepage'>
+                            <MenuItem value=''>None</MenuItem>
+                            {props.installedHomepages.map(h => <MenuItem key={h.id} value={h.id}>{h.displayName || h.name}</MenuItem>)}
                         </Select>
                     </FormControl>
                 </Stack>

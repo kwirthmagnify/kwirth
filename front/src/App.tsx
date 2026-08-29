@@ -88,6 +88,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [themeAssignments, setThemeAssignments] = useState<Record<string, string>>({})
     const [themeScriptsVersion, setThemeScriptsVersion] = useState(0)
     const [installedThemes, setInstalledThemes] = useState<{id: string, name: string, displayName?: string}[]>([])
+    const [installedHomepages, setInstalledHomepages] = useState<{id: string, name: string, displayName?: string}[]>([])
     const [themeReady, setThemeReady] = useState(() => !localStorage.getItem('kwirth.theme'))
     const theme = useMemo( () => (activeThemeName && window.__kwirth_themes__?.[activeThemeName])
         ? createTheme(window.__kwirth_themes__[activeThemeName].getThemeOptions(mode))
@@ -313,6 +314,16 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setHomepageConfig({})
         }
         setActiveHomepageId(id)
+    }
+
+    const onHomepageChangeFromSettings = (id: string | undefined) => {
+        if (!id) {
+            onHomepageActivate(undefined, {})
+        }
+        else {
+            const saved = localStorage.getItem(`kwirth.homepage.config.${id}`)
+            onHomepageActivate(id, saved ? JSON.parse(saved) : {})
+        }
     }
 
     const [initialMessage, setInitialMessage]=useState<string>('')
@@ -550,7 +561,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         // load front.js for already-installed homepages, restoring active homepage from localStorage
         fetch(`${backendUrl}/core/homepages`, addGetAuthorization(accessString))
             .then(r => r.json())
-            .then((homepages: { id: string }[]) => {
+            .then((homepages: { id: string, name: string, displayName?: string }[]) => {
+                setInstalledHomepages(homepages)
                 const savedHomepage = localStorage.getItem('kwirth.homepage')
                 if (savedHomepage && !homepages.some(h => h.id === savedHomepage)) localStorage.removeItem('kwirth.homepage')
                 homepages.forEach(h => {
@@ -2439,7 +2451,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showChannelSetup() }
-                { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} activeThemeName={activeThemeName} onThemeChange={setActiveThemeName} installedThemes={installedThemes} /> }
+                { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} activeThemeName={activeThemeName} onThemeChange={setActiveThemeName} installedThemes={installedThemes} activeHomepageId={activeHomepageId} onHomepageChange={onHomepageChangeFromSettings} installedHomepages={installedHomepages} /> }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }
                 
                 { initialMessage !== '' && MsgBoxOk('Kwirth',initialMessage, () => setInitialMessage(''))}
