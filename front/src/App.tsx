@@ -283,6 +283,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [loginExtSlug, setLoginExtSlug]=useState<string|undefined>(() => new URLSearchParams(window.location.search).get('loginExt') ?? undefined)
     const [activeHomepageId, setActiveHomepageId]=useState<string|undefined>(undefined)
     const [homepageConfig, setHomepageConfig]=useState<Record<string, any>>({})
+    const [homepageSetupId, setHomepageSetupId]=useState<string|undefined>(undefined)
+    const [homepageSetupConfig, setHomepageSetupConfig]=useState<Record<string, any>>({})
     const homepageIdMounted = useRef(false)
     const themeNameMounted = useRef(false)
 
@@ -319,10 +321,17 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const onHomepageChangeFromSettings = (id: string | undefined) => {
         if (!id) {
             onHomepageActivate(undefined, {})
+            return
+        }
+        const ext = (window as any).__kwirth_homepages__?.[id]
+        const saved = localStorage.getItem(`kwirth.homepage.config.${id}`)
+        const config = saved ? JSON.parse(saved) : (ext?.defaultConfig ?? {})
+        if (ext?.SetupDialog) {
+            setHomepageSetupConfig(config)
+            setHomepageSetupId(id)
         }
         else {
-            const saved = localStorage.getItem(`kwirth.homepage.config.${id}`)
-            onHomepageActivate(id, saved ? JSON.parse(saved) : {})
+            onHomepageActivate(id, config)
         }
     }
 
@@ -2452,6 +2461,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} activeThemeName={activeThemeName} onThemeChange={setActiveThemeName} installedThemes={installedThemes} activeHomepageId={activeHomepageId} onHomepageChange={onHomepageChangeFromSettings} installedHomepages={installedHomepages} /> }
+                { homepageSetupId && (() => {
+                    const ext = (window as any).__kwirth_homepages__?.[homepageSetupId]
+                    if (!ext?.SetupDialog) return null
+                    const SetupComp = ext.SetupDialog
+                    return <SetupComp config={homepageSetupConfig} onSave={(cfg: Record<string, any>) => { onHomepageActivate(homepageSetupId, cfg); setHomepageSetupId(undefined) }} onClose={() => setHomepageSetupId(undefined)} />
+                })() }
                 { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }
                 
                 { initialMessage !== '' && MsgBoxOk('Kwirth',initialMessage, () => setInitialMessage(''))}
