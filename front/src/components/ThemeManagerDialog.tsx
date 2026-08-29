@@ -327,19 +327,13 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                         badge={isActive(t.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} /> : undefined}
                                         action={
                                             <Stack direction='column' spacing={0.5} alignItems='flex-end'>
-                                                <Stack direction='row' alignItems='center' spacing={0.5}>
-                                                    {isActive(t.id)
-                                                        ? <Button size='small' variant='outlined' onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>
-                                                        : <Button size='small' variant='contained' onClick={() => props.onActivate(t.id)}>ACTIVATE</Button>
-                                                    }
-                                                    <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : t.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
-                                                        <span>
-                                                            <IconButton size='small' color='error' disabled={t.installedFrom === 'dev' || t.installedFrom?.startsWith('pack:') || uninstallingId === t.id} onClick={() => uninstall(t)}>
-                                                                {uninstallingId === t.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
-                                                            </IconButton>
-                                                        </span>
-                                                    </Tooltip>
-                                                </Stack>
+                                                <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : t.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
+                                                    <span>
+                                                        <IconButton size='small' color='error' disabled={t.installedFrom === 'dev' || t.installedFrom?.startsWith('pack:') || uninstallingId === t.id} onClick={() => uninstall(t)}>
+                                                            {uninstallingId === t.id ? <CircularProgress size={16} /> : <Delete fontSize='small' />}
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
                                                 {plugins.length > 0 &&
                                                     <Select multiple size='small' displayEmpty value={getAssignedPlugins(t.id)} onChange={e => setPluginAssignments(t.id, e.target.value as string[])}
                                                         renderValue={sel => (sel as string[]).length === 0 ? <em style={{ fontSize: '0.7rem', opacity: 0.5 }}>No plugin</em> : (sel as string[]).join(', ')}
@@ -369,11 +363,6 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                                 {plugins.map(p => <MenuItem key={p.id} value={p.id} sx={{ fontSize: '0.7rem' }}>{p.displayName || p.id}</MenuItem>)}
                                             </Select>
                                         }
-                                    </Box>,
-                                    <Box key={`${t.id}-btn`} sx={{ py: 1 }}>
-                                        {isActive(t.id)
-                                            ? <Button size='small' variant='outlined' onClick={() => props.onActivate(undefined)}>DEACTIVATE</Button>
-                                            : <Button size='small' variant='contained' onClick={() => props.onActivate(t.id)}>ACTIVATE</Button>}
                                     </Box>,
                                     <Box key={`${t.id}-del`} sx={{ py: 1 }}>
                                         <Tooltip title={t.installedFrom === 'dev' ? 'Dev themes cannot be uninstalled' : t.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>

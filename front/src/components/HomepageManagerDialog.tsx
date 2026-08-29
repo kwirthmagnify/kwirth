@@ -65,18 +65,7 @@ const HomepageManagerDialog: React.FC<IHomepageManagerDialogProps> = (props: IHo
 
     const getExt = (id: string) => (window as any).__kwirth_homepages__?.[id]
 
-    const handleActivate = (id: string) => {
-        const ext = getExt(id)
-        if (ext?.SetupDialog) {
-            const saved = localStorage.getItem(`kwirth.homepage.config.${id}`)
-            setSetupConfig(saved ? JSON.parse(saved) : (ext.defaultConfig ?? {}))
-            setSetupHomepageId(id)
-        } else {
-            props.onActivate(id, ext?.defaultConfig ?? {})
-        }
-    }
-
-    const openReconfigure = (id: string) => {
+const openReconfigure = (id: string) => {
         const ext = getExt(id)
         const saved = localStorage.getItem(`kwirth.homepage.config.${id}`)
         setSetupConfig(saved ? JSON.parse(saved) : (ext?.defaultConfig ?? {}))
@@ -320,10 +309,6 @@ const HomepageManagerDialog: React.FC<IHomepageManagerDialogProps> = (props: IHo
                                         website={hp.website}
                                         action={
                                             <Stack direction='row' alignItems='center' spacing={0.5}>
-                                                {isActive(hp.id)
-                                                    ? <Button size='small' variant='outlined' sx={{ minWidth: 100 }} onClick={() => props.onActivate(undefined, {})}>DEACTIVATE</Button>
-                                                    : <Button size='small' variant='contained' sx={{ minWidth: 100 }} onClick={() => handleActivate(hp.id)}>ACTIVATE</Button>
-                                                }
                                                 {isActive(hp.id) && getExt(hp.id)?.SetupDialog && (
                                                     <Tooltip title='Configure'>
                                                         <IconButton size='small' onClick={() => openReconfigure(hp.id)}>
@@ -354,19 +339,13 @@ const HomepageManagerDialog: React.FC<IHomepageManagerDialogProps> = (props: IHo
                                     <Box key={`${hp.id}-version`} sx={{ py: 1 }}><Chip label={`v${hp.version}`} size='small' sx={{ minWidth: 72 }} /></Box>,
                                     <Box key={`${hp.id}-source`} sx={{ py: 1 }}>{resolveSource(hp.installedFrom)}</Box>,
                                     <Box key={`${hp.id}-btn`} sx={{ py: 1 }}>
-                                        <Stack direction='row' alignItems='center' spacing={0.5}>
-                                            {isActive(hp.id)
-                                                ? <Button size='small' variant='outlined' sx={{ minWidth: 100 }} onClick={() => props.onActivate(undefined, {})}>DEACTIVATE</Button>
-                                                : <Button size='small' variant='contained' sx={{ minWidth: 100 }} onClick={() => handleActivate(hp.id)}>ACTIVATE</Button>
-                                            }
-                                            {isActive(hp.id) && getExt(hp.id)?.SetupDialog && (
-                                                <Tooltip title='Configure'>
-                                                    <IconButton size='small' onClick={() => openReconfigure(hp.id)}>
-                                                        <Settings fontSize='small' />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            )}
-                                        </Stack>
+                                        {isActive(hp.id) && getExt(hp.id)?.SetupDialog && (
+                                            <Tooltip title='Configure'>
+                                                <IconButton size='small' onClick={() => openReconfigure(hp.id)}>
+                                                    <Settings fontSize='small' />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
                                     </Box>,
                                     <Box key={`${hp.id}-del`} sx={{ py: 1 }}>
                                         <Tooltip title={hp.installedFrom === 'dev' ? 'Dev homepages cannot be uninstalled' : hp.installedFrom?.startsWith('pack:') ? 'Installed via pack — uninstall the pack instead' : 'Uninstall'}>
