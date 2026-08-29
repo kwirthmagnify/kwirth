@@ -2363,7 +2363,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                 const assignedId = themeAssignments[selectedTab.current?.channel.channelId ?? '']
                                 const assignedThemeFactory = assignedId ? window.__kwirth_themes__?.[assignedId] : undefined
                                 if (!assignedThemeFactory) return content
-                                return <ThemeProvider theme={createTheme(assignedThemeFactory.getThemeOptions(mode))}>{content}</ThemeProvider>
+                                // strip cssVariables so the inner ThemeProvider works via React context only,
+                                // avoiding conflicts with the outer theme's CSS variables on :root
+                                const { cssVariables: _cv, ...pluginThemeOpts } = assignedThemeFactory.getThemeOptions(mode)
+                                return <ThemeProvider theme={createTheme(pluginThemeOpts)}>{content}</ThemeProvider>
                             })()}
                         </Box>
                     }

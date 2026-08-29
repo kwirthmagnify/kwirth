@@ -69,15 +69,15 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
     const [plugins, setPlugins] = useState<IInstalledPlugin[]>([])
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const getAssignedPlugin = (themeId: string): string =>
-        Object.entries(props.themeAssignments).find(([, tid]) => tid === themeId)?.[0] ?? ''
+    const getAssignedPlugins = (themeId: string): string[] =>
+        Object.entries(props.themeAssignments).filter(([, tid]) => tid === themeId).map(([pid]) => pid)
 
-    const setPluginAssignment = async (themeId: string, pluginId: string) => {
+    const setPluginAssignments = async (themeId: string, pluginIds: string[]) => {
         const next: Record<string, string> = {}
         for (const [pid, tid] of Object.entries(props.themeAssignments)) {
             if (tid !== themeId) next[pid] = tid
         }
-        if (pluginId) next[pluginId] = themeId
+        for (const pid of pluginIds) next[pid] = themeId
         try {
             await fetch(`${backendUrl}/core/themes/assignments`, addPutAuthorization(accessString, JSON.stringify(next)))
             props.onAssignmentsChange(next)
@@ -341,9 +341,9 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                                     </Tooltip>
                                                 </Stack>
                                                 {plugins.length > 0 &&
-                                                    <Select size='small' displayEmpty value={getAssignedPlugin(t.id)} onChange={e => setPluginAssignment(t.id, e.target.value as string)}
+                                                    <Select multiple size='small' displayEmpty value={getAssignedPlugins(t.id)} onChange={e => setPluginAssignments(t.id, e.target.value as string[])}
+                                                        renderValue={sel => (sel as string[]).length === 0 ? <em style={{ fontSize: '0.7rem', opacity: 0.5 }}>No plugin</em> : (sel as string[]).join(', ')}
                                                         sx={{ height: 22, fontSize: '0.7rem', minWidth: 110, '& .MuiSelect-select': { py: 0, px: 1 } }}>
-                                                        <MenuItem value='' sx={{ fontSize: '0.7rem' }}>No plugin assignment</MenuItem>
                                                         {plugins.map(p => <MenuItem key={p.id} value={p.id} sx={{ fontSize: '0.7rem' }}>{p.displayName || p.id}</MenuItem>)}
                                                     </Select>
                                                 }
@@ -363,9 +363,9 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                     <Box key={`${t.id}-ver`} sx={{ py: 1 }}><Chip label={`v${t.version}`} size='small' /></Box>,
                                     <Box key={`${t.id}-assign`} sx={{ py: 1 }}>
                                         {plugins.length > 0 &&
-                                            <Select size='small' displayEmpty value={getAssignedPlugin(t.id)} onChange={e => setPluginAssignment(t.id, e.target.value as string)}
+                                            <Select multiple size='small' displayEmpty value={getAssignedPlugins(t.id)} onChange={e => setPluginAssignments(t.id, e.target.value as string[])}
+                                                renderValue={sel => (sel as string[]).length === 0 ? <em style={{ fontSize: '0.7rem', opacity: 0.5 }}>–</em> : (sel as string[]).join(', ')}
                                                 sx={{ height: 22, fontSize: '0.7rem', minWidth: 110, '& .MuiSelect-select': { py: 0, px: 1 } }}>
-                                                <MenuItem value='' sx={{ fontSize: '0.7rem' }}>–</MenuItem>
                                                 {plugins.map(p => <MenuItem key={p.id} value={p.id} sx={{ fontSize: '0.7rem' }}>{p.displayName || p.id}</MenuItem>)}
                                             </Select>
                                         }
