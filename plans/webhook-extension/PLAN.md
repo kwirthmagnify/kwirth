@@ -1,9 +1,10 @@
 # Webhook Extension Type — Plan
 
-## Status (2026-08-28) — SHIPPED & VALIDATED
+## Status (2026-08-30) — SHIPPED & VALIDATED (incl. ticketing + strict pair)
 
-The `webhook` extension type is **live and validated end-to-end** (core streams). Published:
-`@kwirthmagnify/kwirth-common@0.5.36`, `@kwirthmagnify/kwirth-common-back@0.5.30`.
+The `webhook` extension type is **live and validated end-to-end**, and the Excubitor ticketing integration
+(stream 5) is complete and validated live (Jira Cloud round-trip). Published:
+`@kwirthmagnify/kwirth-common@0.5.37`, `@kwirthmagnify/kwirth-common-back@0.5.31`.
 
 - **Streams 1 (senders return) + 3 (webhook system) — DONE.** `EExtensionType.WEBHOOK`, contracts,
   `WebhookManager` (token registry + persistence), raw-body receiver at `…/webhook/<provider>/<token>`,
@@ -12,11 +13,20 @@ The `webhook` extension type is **live and validated end-to-end** (core streams)
   (`docs/…/guide/extensions/webhooks`). Live E2E: Jira Cloud → cloudflared → receiver → verify → parse → 200.
 - **`jira` sender + `jira` webhook — DONE (paid, private repos).**
 - **⚠️ DESIGN CHANGE — consumer-driven (provider-like).** A webhook config has **no `target`**. Delivery is
-  by **subscription to the webhook id** (like `addSubscriber('events'…)` / `processProviderEvent`):
-  `IWebhookAccess.subscribe(webhookId, consumer)` + `deliver(webhookId, event)`. A consumer subscribes at
+  by **subscription** (like `addSubscriber('events'…)` / `processProviderEvent`). A consumer subscribes at
   startup and receives that webhook's events; non-subscribers get nothing. The dialog has no target selector.
-- **Stream 5 (Excubitor ticketing integration) — IN PROGRESS** (subscribe to the configured webhook +
-  reflect ticket status on the finding). Tracked in the Excubitor backlog.
+- **⚠️ DESIGN REFINEMENT (0.5.37/0.5.31) — STRICT PAIR (webhookId, configName).** Webhooks are general to all
+  of Kwirth (several configs/consumers of the same type may coexist), so subscription is to a **specific
+  config**, not the whole type: `subscribe(webhookId, configName, consumer)` + `deliver(webhookId, configName,
+  event)`. The receiver **stamps `IWebhookEvent.configName`** (resolved from the URL token); `IWebhook.parse()`
+  returns `Omit<IWebhookEvent,'configName'>` (the artifact doesn't know its config name). Excubitor ticketing
+  now pins `webhookId` **+** `webhookConfigName` (four paired selectors in the Ticketing tab, mirroring
+  sender+config).
+- **Stream 5 (Excubitor ticketing integration) — DONE & VALIDATED.** Assign → create ticket via the sender →
+  `ticket_link` (HOME Postgres) → subscribe to the paired webhook config → reflect status on the finding.
+  Live E2E OK. Bug fixed during QA: `ExcubitorChannel.cleanup()` now unsubscribes from the webhook (hot-reload
+  zombies otherwise received the event with 0 connections). Tracked in the Excubitor backlog (H3b + follow-ups
+  H3b-recon / H3b-assign / H3b-remstate).
 
 ## Overview
 

@@ -25,8 +25,9 @@ export interface IWebhook {
     // LA AUTH LA IMPLEMENTA CADA WEBHOOK: el core es agnóstico. Jira compara headers.authorization con
     // config.apiKey; GitHub calcula un HMAC sobre rawBody con config.hmacSecret; cada artefacto decide.
     verify(rawBody: Buffer, headers: Record<string, string | string[] | undefined>, config: IWebhookConfig): boolean
-    // Parsea el cuerpo crudo en el evento normalizado (tras pasar verify).
-    parse(rawBody: Buffer, headers: Record<string, string | string[] | undefined>): IWebhookEvent | null
+    // Parsea el cuerpo crudo en el evento normalizado (tras pasar verify). El artefacto NO conoce su `configName`
+    // (lo resuelve el core por el token de la URL) → lo omite; el receptor lo estampa antes de entregar.
+    parse(rawBody: Buffer, headers: Record<string, string | string[] | undefined>): Omit<IWebhookEvent, 'configName'> | null
     addConfig(config: IWebhookConfig): void
     removeConfig(name: string): void
     hasConfig(name: string): boolean

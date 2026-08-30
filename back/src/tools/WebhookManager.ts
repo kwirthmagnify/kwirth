@@ -493,21 +493,23 @@ export class WebhookManager implements IWebhookAccess {
 
     // ── IWebhookAccess (inyectado en consumidores) ────────────────────────────────
 
-    // Suscripción por webhookId (modelo provider-like): recibes los eventos de ESE webhook.
-    subscribe(webhookId: string, consumer: IWebhookConsumer): void {
-        if (!this.subscribers.has(webhookId)) this.subscribers.set(webhookId, new Set())
-        this.subscribers.get(webhookId)!.add(consumer)
+    // Suscripción por par estricto (webhookId, configName): recibes SOLO los eventos de ESA config. Los webhooks
+    // son generales de Kwirth (varias configs/consumidores del mismo tipo) → cada consumidor fija su instancia.
+    subscribe(webhookId: string, configName: string, consumer: IWebhookConsumer): void {
+        const key = this.configKey(webhookId, configName)
+        if (!this.subscribers.has(key)) this.subscribers.set(key, new Set())
+        this.subscribers.get(key)!.add(consumer)
     }
 
-    unsubscribe(webhookId: string, consumer: IWebhookConsumer): void {
-        this.subscribers.get(webhookId)?.delete(consumer)
+    unsubscribe(webhookId: string, configName: string, consumer: IWebhookConsumer): void {
+        this.subscribers.get(this.configKey(webhookId, configName))?.delete(consumer)
     }
 
-    // Entrega un evento verificado+parseado a todos los consumidores suscritos a ese webhook.
-    deliver(webhookId: string, event: IWebhookEvent): void {
-        const consumers = this.subscribers.get(webhookId)
+    // Entrega un evento verificado+parseado a los consumidores suscritos a ESA config (par webhookId+configName).
+    deliver(webhookId: string, configName: string, event: IWebhookEvent): void {
+        const consumers = this.subscribers.get(this.configKey(webhookId, configName))
         if (!consumers || consumers.size === 0) {
-            logWarning(ELogComponent.CORE, `Webhook '${webhookId}' event has no subscribers — dropped`)
+            logWarning(ELogComponent.CORE, `Webhook '${webhookId}' config '${configName}' event has no subscribers — dropped`)
             return
         }
         for (const consumer of consumers) {
@@ -517,10 +519,13 @@ export class WebhookManager implements IWebhookAccess {
         }
     }
 
+    // Lista los webhooks INSTALADOS (npm + dev), con sus configs desde el configStore (fuente autoritativa) — NO
+    // desde `instances`, que se pueblan de forma lazy (un webhook sin callbacks aún no está instanciado y no saldría).
     listWebhooks(): Array<{ id: string; configNames: string[] }> {
-        return Array.from(this.instances.entries()).map(([id, webhook]) => ({
+        const ids = new Set<string>([...this.installedIds, ...this.devWebhooks.keys(), ...this.configStore.keys()])
+        return Array.from(ids).map(id => ({
             id,
-            configNames: webhook.getConfigNames(),
+            configNames: Array.from(this.configStore.get(id)?.values() ?? []).map(c => c.name),
         }))
     }
 

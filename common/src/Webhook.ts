@@ -6,6 +6,7 @@
 // Evento normalizado que un webhook entrega a su consumidor. Agnóstico del proveedor.
 export interface IWebhookEvent {
     provider: string                          // id del webhook que lo produjo, p.ej. 'jira'
+    configName: string                        // config concreta (instancia) que recibió el callback (el token de la URL la resuelve)
     kind: string                              // tipo normalizado, p.ej. 'issue.updated' | 'issue.transitioned'
     externalId: string                        // id de la entidad en el proveedor, p.ej. issue key 'SEC-42'
     status?: string                           // estado normalizado si aplica, p.ej. 'Done'
@@ -33,11 +34,13 @@ export interface IWebhookConsumer {
 }
 
 // Handle que el core inyecta en los consumidores (contraparte de ISenderAccess). Modelo provider-like:
-// un consumidor se SUSCRIBE a un webhook por su id (como addSubscriber('events'|'metrics'…)); el core le
-// entrega los eventos de ESE webhook, ya verificados y parseados. El que no se suscribe, no recibe nada.
+// un consumidor se SUSCRIBE a una CONFIG concreta de un webhook (par webhookId+configName); el core le
+// entrega solo los eventos de ESA config, ya verificados y parseados. El que no se suscribe, no recibe nada.
+// La suscripción es por par estricto (no por tipo): los webhooks son generales de Kwirth y puede haber varias
+// configs/consumidores del mismo tipo → cada consumidor fija exactamente la instancia que le corresponde.
 export interface IWebhookAccess {
-    subscribe(webhookId: string, consumer: IWebhookConsumer): void
-    unsubscribe(webhookId: string, consumer: IWebhookConsumer): void
+    subscribe(webhookId: string, configName: string, consumer: IWebhookConsumer): void
+    unsubscribe(webhookId: string, configName: string, consumer: IWebhookConsumer): void
     listWebhooks(): Array<{ id: string; configNames: string[] }>
     getUrl(webhookId: string, configName: string): string | undefined   // URL pública completa (incluye el token)
     rotateToken(webhookId: string, configName: string): string          // nuevo token → nueva URL

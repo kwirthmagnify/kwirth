@@ -7,7 +7,7 @@ import tar from 'tar'
 import { WebhookManager } from '../../src/tools/WebhookManager'
 import { handleInbound } from '../../src/tools/WebhookReceiver'
 
-interface IWebhookEvent { provider: string; kind: string; externalId: string; status?: string; receivedAt: string; raw: unknown }
+interface IWebhookEvent { provider: string; configName: string; kind: string; externalId: string; status?: string; receivedAt: string; raw: unknown }
 
 function makeConfigMaps() {
     const store = new Map<string, unknown>()
@@ -58,7 +58,7 @@ async function setup() {
     mgr.addConfig('echo', { name: 'default', apiKey: 'sekret' })
     const token = mgr.getUrl('echo', 'default')!.split('/').pop()!
     const seen: IWebhookEvent[] = []
-    mgr.subscribe('echo', { processWebhookEvent: (e) => { seen.push(e as IWebhookEvent) } })
+    mgr.subscribe('echo', 'default', { processWebhookEvent: (e) => { seen.push(e as IWebhookEvent) } })
     return { mgr, token, seen }
 }
 
@@ -69,6 +69,7 @@ test('valid callback: verify passes, parse yields event, delivered to the target
     assert.equal(seen.length, 1)
     assert.equal(seen[0].externalId, 'X1')
     assert.equal(seen[0].status, 'Done')
+    assert.equal(seen[0].configName, 'default')   // el receptor estampa la config resuelta por el token
 })
 
 test('bad auth header → 401, no delivery', async () => {

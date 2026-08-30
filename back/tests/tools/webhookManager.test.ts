@@ -7,7 +7,7 @@ import tar from 'tar'
 import { WebhookManager } from '../../src/tools/WebhookManager'
 
 // Tipos locales estructurales (evita importar de common-back, que es CJS y rompe el ESM del test).
-interface IWebhookEvent { provider: string; kind: string; externalId: string; status?: string; receivedAt: string; headers?: Record<string, string>; raw: unknown }
+interface IWebhookEvent { provider: string; configName: string; kind: string; externalId: string; status?: string; receivedAt: string; headers?: Record<string, string>; raw: unknown }
 interface IWebhookConfig { name: string; [key: string]: unknown }
 
 // ── In-memory IConfigMaps mock ────────────────────────────────────────────────
@@ -55,38 +55,55 @@ const cfg = (over: Partial<IWebhookConfig> = {}): IWebhookConfig => ({ name: 'de
 
 // ── Delivery / subscription (no requiere webhook registrado) ──────────────────
 
-test('deliver fans out to subscribers of the target and honors unsubscribe', () => {
+test('deliver fans out to subscribers of the (webhook, config) pair and honors unsubscribe', () => {
     const mgr = new WebhookManager(makeConfigMaps())
     const seenA: IWebhookEvent[] = []
     const seenB: IWebhookEvent[] = []
     const a = { processWebhookEvent: (e: IWebhookEvent) => { seenA.push(e) } }
     const b = { processWebhookEvent: (e: IWebhookEvent) => { seenB.push(e) } }
-    const ev: IWebhookEvent = { provider: 'jira', kind: 'issue.updated', externalId: 'SEC-1', receivedAt: 't', raw: {} }
+    const ev: IWebhookEvent = { provider: 'jira', configName: 'wh1', kind: 'issue.updated', externalId: 'SEC-1', receivedAt: 't', raw: {} }
 
-    mgr.subscribe('excubitor', a)
-    mgr.subscribe('excubitor', b)
-    mgr.deliver('excubitor', ev)
+    mgr.subscribe('excubitor', 'wh1', a)
+    mgr.subscribe('excubitor', 'wh1', b)
+    mgr.deliver('excubitor', 'wh1', ev)
     assert.equal(seenA.length, 1)
     assert.equal(seenB.length, 1)
     assert.equal(seenA[0].externalId, 'SEC-1')
 
-    mgr.unsubscribe('excubitor', a)
-    mgr.deliver('excubitor', ev)
+    mgr.unsubscribe('excubitor', 'wh1', a)
+    mgr.deliver('excubitor', 'wh1', ev)
     assert.equal(seenA.length, 1)   // ya no recibe
     assert.equal(seenB.length, 2)
 })
 
-test('deliver to a target with no subscribers is a no-op (no throw)', () => {
+test('delivery is scoped to the exact config: another config of the same webhook is not notified', () => {
     const mgr = new WebhookManager(makeConfigMaps())
-    assert.doesNotThrow(() => mgr.deliver('nobody', { provider: 'x', kind: 'k', externalId: 'i', receivedAt: 't', raw: {} }))
+    const seenA: IWebhookEvent[] = []
+    const seenB: IWebhookEvent[] = []
+    mgr.subscribe('jira', 'wh1', { processWebhookEvent: (e: IWebhookEvent) => { seenA.push(e) } })
+    mgr.subscribe('jira', 'wh2', { processWebhookEvent: (e: IWebhookEvent) => { seenB.push(e) } })
+
+    mgr.deliver('jira', 'wh1', { provider: 'jira', configName: 'wh1', kind: 'k', externalId: 'A-1', receivedAt: 't', raw: {} })
+    assert.equal(seenA.length, 1, 'wh1 subscriber receives its config event')
+    assert.equal(seenB.length, 0, 'wh2 subscriber must NOT receive wh1 events')
+    assert.equal(seenA[0].configName, 'wh1')
+
+    mgr.deliver('jira', 'wh2', { provider: 'jira', configName: 'wh2', kind: 'k', externalId: 'B-1', receivedAt: 't', raw: {} })
+    assert.equal(seenA.length, 1)
+    assert.equal(seenB.length, 1)
+})
+
+test('deliver to a (webhook, config) with no subscribers is a no-op (no throw)', () => {
+    const mgr = new WebhookManager(makeConfigMaps())
+    assert.doesNotThrow(() => mgr.deliver('nobody', 'none', { provider: 'x', configName: 'none', kind: 'k', externalId: 'i', receivedAt: 't', raw: {} }))
 })
 
 test('a throwing consumer does not break the others', () => {
     const mgr = new WebhookManager(makeConfigMaps())
     const good: IWebhookEvent[] = []
-    mgr.subscribe('t', { processWebhookEvent: () => { throw new Error('boom') } })
-    mgr.subscribe('t', { processWebhookEvent: (e) => { good.push(e) } })
-    mgr.deliver('t', { provider: 'x', kind: 'k', externalId: 'i', receivedAt: 't', raw: {} })
+    mgr.subscribe('t', 'c', { processWebhookEvent: () => { throw new Error('boom') } })
+    mgr.subscribe('t', 'c', { processWebhookEvent: (e) => { good.push(e) } })
+    mgr.deliver('t', 'c', { provider: 'x', configName: 'c', kind: 'k', externalId: 'i', receivedAt: 't', raw: {} })
     assert.equal(good.length, 1)
 })
 
@@ -173,4 +190,11 @@ test('tokens + configs survive a restart (persistence)', async () => {
     assert.ok(res, 'the same token must still resolve after restart')
     assert.equal(res!.configName, 'prod')
     assert.equal(mgr2.getUrl('jira', 'prod'), `/w/jira/${token}`)
+
+    // listWebhooks debe reflejar lo instalado + sus configs SIN instanciación previa (el bug del selector vacío:
+    // tras un restart, si no llegó ningún callback la instancia no existe, pero el selector debe ver jira/prod).
+    const listed = mgr2.listWebhooks()
+    const jira = listed.find(w => w.id === 'jira')
+    assert.ok(jira, 'listWebhooks must include the installed webhook even before any delivery/instantiation')
+    assert.deepEqual(jira!.configNames, ['prod'])
 })

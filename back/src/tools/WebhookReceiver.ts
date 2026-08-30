@@ -36,16 +36,18 @@ export const handleInbound = async (
     }
     if (!verified) return { status: 401, body: { ok: false } }
 
-    let event: IWebhookEvent | null = null
+    let parsed: Omit<IWebhookEvent, 'configName'> | null = null
     try {
-        event = webhook.parse(rawBody, headers)
+        parsed = webhook.parse(rawBody, headers)
     } catch (err) {
         logError(ELogComponent.CORE, `Webhook '${res.webhookId}' parse threw: ${err}`)
         return { status: 400, body: { ok: false } }
     }
-    if (!event) return { status: 400, body: { ok: false } }
+    if (!parsed) return { status: 400, body: { ok: false } }
 
-    // Ack rápido; deliver aísla las excepciones de cada consumidor.
-    manager.deliver(res.webhookId, event)
+    // El receptor estampa el `configName` (lo resuelve el token; el artefacto no lo conoce).
+    const event: IWebhookEvent = { ...parsed, configName: res.configName }
+    // Ack rápido; deliver aísla las excepciones de cada consumidor. Entrega por par estricto (webhookId, configName).
+    manager.deliver(res.webhookId, res.configName, event)
     return { status: 200, body: { ok: true } }
 }
