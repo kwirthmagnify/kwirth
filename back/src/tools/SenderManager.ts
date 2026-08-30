@@ -555,6 +555,19 @@ export class SenderManager implements ISenderAccess {
         }
     }
 
+    // H3b-recon: consulta el estado actual de una entidad externa (p.ej. un ticket) vía el sender. Undefined si
+    // el sender no lo soporta, no existe, no tiene la config, o falla. Contraparte de pull del webhook (push).
+    async fetchStatus(senderId: string, configName: string, externalId: string): Promise<string | undefined> {
+        const sender = this.getSender(senderId)
+        if (!sender || !sender.fetchStatus || !sender.hasConfig(configName)) return undefined
+        try {
+            return await sender.fetchStatus(configName, externalId)
+        } catch (err) {
+            logError(ELogComponent.CORE, `Sender '${senderId}' fetchStatus error: ${err}`)
+            return undefined
+        }
+    }
+
     async stopAll(): Promise<void> {
         for (const [id, instance] of this.instances) {
             try { await instance.stopSender() } catch (err) {

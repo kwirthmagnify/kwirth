@@ -25,6 +25,11 @@ export interface ISenderResult {
 
 export interface ISenderAccess {
     send(senderId: string, configName: string, message: ISenderMessage): Promise<ISenderResult | void>
+    // OPCIONAL: consulta el estado actual de una entidad externa creada por el sender (p.ej. un ticket de
+    // ticketing → su status). Contraparte de pull del webhook (push): permite RECONCILIAR estados perdidos
+    // (core caído / sin suscriptor cuando llegó el callback). Devuelve undefined si el sender no lo soporta,
+    // la config no existe, o no se pudo resolver. Ver plans/webhook-extension/PLAN.md (H3b-recon).
+    fetchStatus?(senderId: string, configName: string, externalId: string): Promise<string | undefined>
     addConfig(senderId: string, config: ISenderConfig): boolean
     listSenders(): Array<{ id: string; configNames: string[] }>
     getConfig(senderId: string, configName: string): ISenderConfig | undefined

@@ -1,10 +1,23 @@
 # Webhook Extension Type — Plan
 
-## Status (2026-08-30) — SHIPPED & VALIDATED (incl. ticketing + strict pair)
+## Status (2026-08-30) — SHIPPED & VALIDATED (webhook + full ticketing block)
 
 The `webhook` extension type is **live and validated end-to-end**, and the Excubitor ticketing integration
-(stream 5) is complete and validated live (Jira Cloud round-trip). Published:
-`@kwirthmagnify/kwirth-common@0.5.37`, `@kwirthmagnify/kwirth-common-back@0.5.31`.
+is complete and validated live (Jira Cloud round-trip), including the H3b follow-ups. Published:
+`@kwirthmagnify/kwirth-common@0.5.38`, `@kwirthmagnify/kwirth-common-back@0.5.32`.
+
+**H3b follow-ups — DONE & VALIDATED (2026-08-30):**
+- **remstate** — configurable *ticket status → remediation state* mapping (`statusMap`), applied on callback
+  under mutex, with the `verified` shield (scanner-only truth). `sender fetchStatus` not involved here.
+- **recon** — `ISender.fetchStatus?` + `SenderManager.fetchStatus`; Excubitor reconciles open tickets on
+  **startup** (recovers callbacks missed while the core was down). Sender `jira` implements `fetchStatus`.
+- **lifecycle** — durable `excubitor_ticket_event` history (id survives) → the finding's *Status* timeline
+  always carries the ticket id; the `ticket_link` is **purged on `verified`**. Idempotent/atomic
+  `updateStatusByIssueKey` kills the duplicate-callback flood.
+- **assign** — *assign a person* and *open a ticket* **decoupled** (one dialog, both optional; same
+  `findingedit` scope): owner-only / ticket-only / both.
+- Paid: `sender/jira@0.1.2`, `webhook/jira@0.1.1`. Plugin `plugin/excubitor@0.1.184`.
+- Also (side task): the fullscreen AppBar shows the **home URL in red** when the socket drops (Iter UX).
 
 - **Streams 1 (senders return) + 3 (webhook system) — DONE.** `EExtensionType.WEBHOOK`, contracts,
   `WebhookManager` (token registry + persistence), raw-body receiver at `…/webhook/<provider>/<token>`,
