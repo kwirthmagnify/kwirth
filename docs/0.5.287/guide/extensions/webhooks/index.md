@@ -11,7 +11,7 @@ The key ideas:
 
 - Each webhook has an **id** (e.g. the provider it understands) and holds one or more **named configurations** — each one gets its **own public URL** with an **opaque token**: `…/webhook/<id>/<token>`.
 - That **token is a capability**: it both routes the callback and authenticates the caller (the URL is unguessable). On top of it, each webhook applies its **own verification** (a shared secret in a header, an HMAC signature…) — the core is auth-agnostic and hands the raw request to the artifact's `verify()`.
-- Delivery is **consumer-driven, like providers**: a webhook doesn't target anyone. A channel/plugin **subscribes** to a webhook by id (the same way it subscribes to a provider's events) and receives its events; **anything that doesn't subscribe receives nothing**.
+- Delivery is **consumer-driven and scoped to a specific config**: a webhook doesn't target anyone. A channel/plugin **subscribes to one of a webhook's configs** — the pair *(webhook id, config name)* — and receives **only that config's** events. Because webhooks are shared across all of Kwirth (several configs, and several consumers, of the same type can coexist), the subscription pins the **exact instance**; anything not subscribed to that config receives nothing. Every delivered event also carries the **config name** it arrived on, so a consumer always knows which instance fired.
 
 ## The public URL (token)
 
@@ -35,7 +35,9 @@ Open **☰ → Manage extensions → Webhooks**. Each installed webhook is a **c
 
 ## Using webhooks from a channel
 
-A channel/plugin consumes a webhook by **subscribing** to it — there is **no destination picker** on the webhook side. At startup the consumer registers for a webhook id; from then on it receives that webhook's verified, parsed events. This mirrors how channels subscribe to a **[provider](../providers)**'s events.
+A channel/plugin consumes a webhook by **subscribing to one of its configs** — there is **no destination picker** on the webhook side. At startup the consumer registers for a **(webhook id, config name)** pair; from then on it receives **only that config's** verified, parsed events, each tagged with the config it arrived on. This mirrors how channels subscribe to a **[provider](../providers)**'s events, but narrowed to the exact instance — so two consumers can each own their own config of the same webhook type without crosstalk.
+
+Concretely, a consumer's settings offer **two paired pickers**: the **webhook type** and then one of **its configs**. This is why a config's name matters beyond the URL — it's the address the consumer subscribes to. (For a worked example, the Excubitor channel wires its ticketing status callback exactly this way: it pins a sender+config to open the ticket and a webhook+config to receive its status.)
 
 ## Admin guide
 
