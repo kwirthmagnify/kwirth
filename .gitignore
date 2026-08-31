@@ -54,4 +54,5 @@ kwirth-bundled.json
 /idps/entraid/
 
 # claude
-/.claude/settings*
+/.claude/settings.json
+/.claude/settings.local.json
