@@ -1,6 +1,6 @@
 import express, { Request, Response} from 'express'
 import Semaphore from 'ts-semaphore'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { ApiKeyApi } from './ApiKeyApi'
 import { IUser } from '@kwirthmagnify/kwirth-common'

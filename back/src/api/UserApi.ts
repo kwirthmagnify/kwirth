@@ -1,6 +1,6 @@
 import express, { Request, Response} from 'express'
 import Semaphore from 'ts-semaphore'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { ISecrets } from '../tools/ISecrets'
