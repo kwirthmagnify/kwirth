@@ -1,6 +1,23 @@
 [
   {
     "extensionType": "plugin",
+    "id": "censor",
+    "version": "0.2.41",
+    "name": "Censor",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.41.tgz",
+    "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
+    "icon": "FilterList",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "minVersion": "0.1.6",
+        "id": "business"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
     "id": "alert",
     "version": "0.2.20",
     "name": "Alert",

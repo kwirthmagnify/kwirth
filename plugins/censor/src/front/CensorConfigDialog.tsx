@@ -399,7 +399,6 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                     </Box>
 
                     <Stack direction='row' spacing={2} alignItems='center' sx={{ pt: 1 }}>
-                        <Button variant='outlined' size='small' onClick={() => setShowImportExport(true)}>Import/Export</Button>
                         <Box sx={{ flex: 1 }} />
                         <Button variant='contained' size='small'
                             disabled={!configName || !configVersion || !!exampleJsonError}
@@ -410,6 +409,8 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                 </Box>
             </DialogContent>
             <DialogActions>
+                <Button variant='outlined' size='small' onClick={() => setShowImportExport(true)}>Import/Export</Button>
+                <Box sx={{ flex: 1 }} />
                 <Button onClick={handleOk} variant='contained' disabled={!llmId || !!exampleJsonError}>OK</Button>
                 <Button variant='outlined' onClick={onClose} color='inherit'>Cancel</Button>
             </DialogActions>

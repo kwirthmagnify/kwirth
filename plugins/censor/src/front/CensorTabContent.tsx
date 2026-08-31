@@ -254,8 +254,8 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
                         <MenuItem onClick={() => { setMenuAnchor(null); openConfig() }} disabled={!data.ephemeralSessionName}>Config</MenuItem>
                         <Divider />
-                        <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigProvider(true) }} disabled={!data.ephemeralSessionName}>AI Providers</MenuItem>
-                        <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigLlm(true) }} disabled={!data.ephemeralSessionName}>AI Models</MenuItem>
+                        <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigProvider(true) }}>AI providers</MenuItem>
+                        <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigLlm(true) }}>AI models</MenuItem>
                     </Menu>
                 </Stack>
             } />
