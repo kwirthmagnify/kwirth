@@ -52,3 +52,6 @@ kwirth-bundled.json
 /senders/jira/
 /webhooks/jira/
 /idps/entraid/
+
+# claude
+/.claude/settings*
