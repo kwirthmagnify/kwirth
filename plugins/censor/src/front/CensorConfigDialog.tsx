@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react'
-import { Add as AddIcon, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon } from '@mui/icons-material'
+import { Add as AddIcon, ContentCopy as ContentCopyIcon, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon } from '@mui/icons-material'
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
 import { ICensorData } from './CensorData'
@@ -144,6 +144,18 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
         })
     }
 
+    const onConfigClone = () => {
+        if (selectedIdx === null) return
+        const src = localConfigs[selectedIdx]
+        const clone: ICensorInstanceConfig = { ...src, name: `${src.name} (copy)`, active: false }
+        setLocalConfigs(prev => {
+            const next = [...prev, clone]
+            setSelectedIdx(next.length - 1)
+            return next
+        })
+        loadConfig(clone)
+    }
+
     const onDeleteLocal = () => {
         if (selectedIdx === null) return
         const cfg = localConfigs[selectedIdx]
@@ -213,6 +225,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                     </Box>
                     <Stack direction='row' spacing={0.5} sx={{ px: 0.5, pt: 0.5, justifyContent: 'center' }}>
                         <Button variant='outlined' size='small' startIcon={<AddIcon />} onClick={onConfigNew} sx={{ fontSize: 11 }}>New</Button>
+                        <Button variant='outlined' size='small' startIcon={<ContentCopyIcon />} onClick={onConfigClone} disabled={selectedIdx === null} sx={{ fontSize: 11 }}>Clone</Button>
                         <Button variant='outlined' size='small' color='error' startIcon={<DeleteIcon />} onClick={onDeleteLocal} disabled={selectedIdx === null} sx={{ fontSize: 11 }}>Delete</Button>
                     </Stack>
                 </Box>

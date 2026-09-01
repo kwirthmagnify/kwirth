@@ -209,21 +209,6 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             </Select>
                         </FormControl>
                     </>)}
-                    { data.instanceConfig.name && (
-                        <Stack direction='column' alignItems='flex-end' spacing={0}>
-                            <Typography variant='caption' color='text.secondary'>
-                                {data.instanceConfig.name} (v{data.instanceConfig.version})
-                            </Typography>
-                            { (() => {
-                                const llm = data.llms.find(l => l.id === data.instanceConfig.llmId)
-                                return llm ? (
-                                    <Typography variant='caption' color='text.disabled' sx={{ fontSize: '10px' }}>
-                                        {llm.provider} / {llm.model}
-                                    </Typography>
-                                ) : null
-                            })() }
-                        </Stack>
-                    )}
                     <Stack direction='column' alignItems='center' spacing={0} sx={{ width: 64 }}>
                         <Switch
                             size='small'

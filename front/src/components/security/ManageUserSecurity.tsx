@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react'
+import { sha256 as sha256js } from 'js-sha256'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { MsgBoxButtons, MsgBoxOkError, MsgBoxYesNo } from '../../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
@@ -62,10 +63,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         getScopeCatalog()
     },[])
 
-    const sha256 = async (s: string): Promise<string> => {
-        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
-        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
-    }
+    const sha256 = (s: string): string => sha256js(s)
 
     const onClickUser = async (id:string) => {
         let user:IUser = (await (await fetch(`${backendUrl}/user/${id}`, addGetAuthorization(accessString))).json())
@@ -88,7 +86,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         let user = {
             id,
             name,
-            password: password !== '' ? await sha256(password) : '',
+            password: password !== '' ? sha256(password) : '',
             resources: allResources.join(';'),
             idp,
             startChannel: startChannel || undefined,

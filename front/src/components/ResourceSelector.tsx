@@ -43,6 +43,7 @@ interface IResourceSelectorProps {
     tabs: ITabObject[]
     sx: SxProps
     frontChannels?: Map<string, TChannelConstructor>
+    enabledChannels?: string[]
 }
 
 interface IController {
@@ -434,7 +435,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                         return <>{icon}<span>{v as string}</span>{cd?.mode === EChannelMode.REMOTE && <RemoteBadge operative={!!resolveRemoteChannelHost(cd.id, cluster.clusterInfo?.id ?? '', props.clusters)} />}</>
                     }}
                 >
-                    { props.backChannels.map(c => {
+                    { props.backChannels.filter(c => !props.enabledChannels?.length || props.enabledChannels.includes(c.id)).map(c => {
                         const cls = props.frontChannels?.get(c.id)
                         const icon = cls ? React.cloneElement(new cls().getChannelIcon(), { sx: { fontSize: 18, mr: 0.5 } }) : null
                         return (

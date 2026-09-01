@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { sha256 as sha256js } from 'js-sha256'
 import { Box, Button, CircularProgress, Menu, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { ExpandMore } from '@kwirthmagnify/kwirth-common-front/icons'
 import { addPostAuthorization } from '../tools/AuthorizationManagement'
@@ -102,10 +103,7 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
         enabledChannels: login.enabledChannels
     })
 
-    const sha256 = async (s: string): Promise<string> => {
-        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
-        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
-    }
+    const sha256 = (s: string): string => sha256js(s)
 
     const doLogin = async (overrideUser?: string, overridePass?: string) => {
         const user = overrideUser ?? userName
@@ -113,7 +111,7 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
         setBusy(true)
         setError('')
         try {
-            const res = await fetch(`${props.backendUrl}/login`, addPostAuthorization('', JSON.stringify({ user, password: await sha256(pass) })))
+            const res = await fetch(`${props.backendUrl}/login`, addPostAuthorization('', JSON.stringify({ user, password: sha256(pass) })))
             switch (res.status) {
                 case 200: {
                     const loginData = await res.json()
@@ -149,7 +147,7 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
             // validate current credentials then enter change-password mode (same as Login.tsx onClickChangePassword)
             setBusy(true)
             try {
-                const res = await fetch(`${props.backendUrl}/login`, addPostAuthorization('', JSON.stringify({ user: userName, password: await sha256(password) })))
+                const res = await fetch(`${props.backendUrl}/login`, addPostAuthorization('', JSON.stringify({ user: userName, password: sha256(password) })))
                 if (res.ok) { setNewPassword1(''); setNewPassword2(''); setChangingPassword(true) }
                 else setError('Invalid credentials.')
             }
@@ -161,7 +159,7 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
         setBusy(true)
         setError('')
         try {
-            const res = await fetch(`${props.backendUrl}/login/password`, addPostAuthorization('', JSON.stringify({ user: userName, password: await sha256(password), newpassword: await sha256(newPassword1) })))
+            const res = await fetch(`${props.backendUrl}/login/password`, addPostAuthorization('', JSON.stringify({ user: userName, password: sha256(password), newpassword: sha256(newPassword1) })))
             if (res.ok) props.onClose(buildUser(await res.json()), false)
             else { setError('Could not change password.'); setChangingPassword(false) }
         }

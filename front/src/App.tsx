@@ -1762,7 +1762,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     containers: t.channelObject.container.split(','),
                     name: t.name
                 }
-                onResourceSelectorAdd(res, autoStart, { config: t.channelObject.config, instanceConfig: t.channelObject.instanceConfig })
+                onResourceSelectorAdd(res, autoStart && t.channelStarted, { config: t.channelObject.config, instanceConfig: t.channelObject.instanceConfig })
             }
 
             if (!lastWorkspaces.some(workspace => workspace.name === newWorkspace.name)) {
@@ -2327,7 +2327,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
 
                 { !fullscreenTab && 
-                    <ResourceSelector clusters={clusters} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected} frontChannels={frontChannels}/>
+                    <ResourceSelector clusters={clusters} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected} frontChannels={frontChannels} enabledChannels={user?.enabledChannels}/>
                 }
                 
                 <Stack direction={'column'} display={'flex'} flexDirection={'column'} sx={{minHeight:0, height:'100%', flexGrow:1}}>

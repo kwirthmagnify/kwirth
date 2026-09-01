@@ -25,7 +25,7 @@ const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     return (
         <Dialog open={true} PaperProps={{ sx: { width: 360, height: 220 } }}>
             <DialogTitle>Censor</DialogTitle>
-            <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1, overflow: 'hidden' }}>
                 <Typography variant='body2' color='text.secondary'>
                     Configure visible line limits.
                 </Typography>
