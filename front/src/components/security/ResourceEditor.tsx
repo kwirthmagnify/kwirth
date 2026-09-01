@@ -79,7 +79,7 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
         if (daemonset.trim()!=='') groups.push (...daemonset.split(',').map(g => 'daemonset+'+g))
         if (statefulset.trim()!=='') groups.push (...statefulset.split(',').map(g => 'statefulset+'+g))
         let resource = buildResource(scopes, namespace.split(','), groups, pod.split(','), container.split(','))
-        console.log(resource)
+
         let rs = allResources.filter(r => r!== selectedResource)
         rs = [...rs, resource]
         setAllResources (rs)
