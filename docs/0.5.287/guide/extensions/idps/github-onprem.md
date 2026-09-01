@@ -22,11 +22,44 @@ Open **☰ → Manage extensions → Identity providers → Login with GitHub (g
 | **API URL** | API base — defaults to `<baseUrl>/api/v3`. |
 | **Client ID** * | The OAuth App **client ID**. |
 | **Client Secret** * | The OAuth App **client secret**. |
-| **Scopes** | OAuth scopes. |
+| **Scopes** | OAuth scopes (leave empty for default `read:user user:email`). |
 
 ## Setup
 
-Register an **OAuth App** in your GitHub Enterprise instance, set Kwirth's **callback URL**, and fill in the base/API URLs + client id/secret. See **[Identity Provider integration](../../admin/07-idp-integration)**.
+### Step 1 — Register Kwirth as an OAuth App in GitHub Enterprise
+
+> ⚠️ It must be an **OAuth App**, not a *GitHub App*. See the [GitHub Cloud](github-cloud) connector notes for the difference.
+
+In your GitHub Enterprise instance, go to **Settings → Developer settings → OAuth Apps → New OAuth App** (or an organization-owned OAuth App):
+
+| GitHub field | Value |
+|---|---|
+| **Application name** | `Kwirth` |
+| **Authorization callback URL** | `https://<your-kwirth-host>/core/auth/github-onprem/callback` |
+
+> The callback URL uses the **provider id** `github-onprem` — this is fixed and is not an admin-assigned identifier.
+>
+> For local development point it at the backend directly:
+> `http://localhost:3883/core/auth/github-onprem/callback`
+
+Register the app and then **generate a Client Secret**. Copy both **Client ID** and **Client Secret**.
+
+> The Kwirth backend exchanges the code for a token and calls the GitHub API server-side, so the machine running the backend must be able to reach your GitHub Enterprise instance (relevant when GHE is behind a VPN).
+
+### Step 2 — Configure the connector in Kwirth
+
+As admin, open **☰ → Manage extensions → Identity providers**, find the **GitHub Enterprise Server** card and click **⚙️ Settings**:
+
+1. **GitHub Enterprise URL**: enter your instance base URL (e.g. `https://github.mycompany.com`).
+2. **API URL**: leave empty to use the default `<baseUrl>/api/v3`, or set it explicitly.
+3. **Client ID**: paste the value from Step 1.
+4. **Client Secret**: paste the secret from Step 1.
+5. **Scopes**: leave empty for the default `read:user user:email`.
+6. Enable the toggle and save.
+
+### Step 3 — Create users in Kwirth
+
+From **User security** (admin only): create a user whose **Id is the person's primary verified GitHub email**, set **IdP** to `github-onprem`, assign resources, and save.
 
 ## Notes
 
