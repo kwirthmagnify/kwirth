@@ -729,7 +729,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             />
         )}
         {showConfig && (
-            <CensorConfigDialog data={data} channelObject={props.channelObject} sendCommand={sendCommand} onClose={() => setShowConfig(false)} />
+            <CensorConfigDialog data={data} channelObject={props.channelObject} sendCommand={sendCommand} onClose={() => { setShowConfig(false); forceUpdate(n => n + 1) }} />
         )}
         {showConfigLlm && (
             <AiConfigLlm llms={data.llms} providers={data.providers} onClose={aiConfigLlmClose} />

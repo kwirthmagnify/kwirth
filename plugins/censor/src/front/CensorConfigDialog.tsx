@@ -179,6 +179,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
         // Send full config list + current config in one command — backend saves and restarts atomically
         const cfg = currentConfig()
         data.instanceConfig = cfg
+        data.configs = localConfigs
         sendCommand(ECensorCommand.CONFIGSET, { ...cfg, _allConfigs: localConfigs })
         onClose()
     }
