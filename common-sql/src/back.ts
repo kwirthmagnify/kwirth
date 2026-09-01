@@ -57,7 +57,10 @@ const knexForDb = (dbName: string, pool?: IPoolOptions): Knex => {
 
 const admin = (): Knex => {
     const s = requireServer()
-    if (!adminPool) { adminPool = knexForDb(s.maintenanceDb ?? 'postgres'); configuredMax.set('#admin', POOL_DEFAULT.max) }
+    // El pool de MANTENIMIENTO se usa en contadas ocasiones (createDb/dropDb/SHOW): NO mantiene conexiones
+    // calientes (min:0). Además así los procesos cortos (tests/scripts) pueden terminar sin conexiones vivas
+    // colgando el proceso (los pools de consumidor sí las mantienen, pero se cierran con closeDb).
+    if (!adminPool) { adminPool = knexForDb(s.maintenanceDb ?? 'postgres', { min: 0 }); configuredMax.set('#admin', POOL_DEFAULT.max) }
     return adminPool
 }
 
