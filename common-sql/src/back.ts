@@ -15,10 +15,23 @@ import { ISqlServer } from './index'
 export { default as knex } from 'knex'
 export type { Knex } from 'knex'
 
+/** Dimensión del pool de conexiones de un consumidor. Cada extensión pasa la suya en ensureDb. */
+export interface IPoolOptions {
+    min?: number                 // conexiones mantenidas CALIENTES siempre (>0 evita crear conexión en cada query)
+    max?: number                 // tope de conexiones simultáneas de ESTE pool
+    idleTimeoutMillis?: number   // vida de una conexión ociosa por encima de `min` (default knex/tarn: 30s)
+}
+// Default de pool: min>0 mantiene conexiones calientes → sin el ~1-2s de crear conexión cuando el pool queda
+// ocioso. Cada extensión sube/baja lo suyo (p.ej. iter/excubitor min:4, agora min:1) vía ensureDb.
+const POOL_DEFAULT: Required<Pick<IPoolOptions, 'min' | 'max'>> = { min: 2, max: 10 }
+const POOL_HEADROOM = 5   // conexiones reservadas (superusuario / otros clientes) al calcular el presupuesto
+
 let server: ISqlServer | undefined
 const pools = new Map<string, Knex>()          // consumerId -> Knex (BD del consumidor)
 let adminPool: Knex | undefined                // pool a la BD de mantenimiento (CREATE/DROP/list DATABASE)
 const schemaReady = new Map<string, Promise<void>>()
+const configuredMax = new Map<string, number>()   // consumerId (+ '#admin') -> max del pool, para el presupuesto
+let maxConnections: number | undefined            // cache de SHOW max_connections (se lee una vez)
 
 const requireServer = (): ISqlServer => {
     if (!server) throw new Error('[common-sql] not configured: call configure(server) first')
@@ -29,7 +42,7 @@ const requireServer = (): ISqlServer => {
 export const physicalDbName = (consumerId: string): string =>
     'kwirth_' + consumerId.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase()
 
-const knexForDb = (dbName: string): Knex => {
+const knexForDb = (dbName: string, pool?: IPoolOptions): Knex => {
     const s = requireServer()
     return knexFactory({
         client: s.client,
@@ -37,15 +50,35 @@ const knexForDb = (dbName: string): Knex => {
             host: s.host, port: s.port, user: s.user, password: s.password, database: dbName,
             ...(s.ssl ? { ssl: { rejectUnauthorized: false } } : {})
         },
-        pool: { min: 0, max: 10 },
+        pool: { ...POOL_DEFAULT, ...(pool ?? {}) },
         acquireConnectionTimeout: 5000
     })
 }
 
 const admin = (): Knex => {
     const s = requireServer()
-    if (!adminPool) adminPool = knexForDb(s.maintenanceDb ?? 'postgres')
+    if (!adminPool) { adminPool = knexForDb(s.maintenanceDb ?? 'postgres'); configuredMax.set('#admin', POOL_DEFAULT.max) }
     return adminPool
+}
+
+// Aviso de presupuesto: la SUMA de los `max` de todos los pools (consumidores + admin) compite por el
+// max_connections GLOBAL de Postgres. Si Σmax supera max_connections − headroom, se avisa por consola con el
+// desglose por consumidor (para saber a quién recortar). Best-effort: si no se puede leer max_connections, calla.
+const warnIfBudgetExceeded = async (): Promise<void> => {
+    try {
+        if (maxConnections === undefined) {
+            const r = await admin().raw('SHOW max_connections')
+            maxConnections = Number(r.rows?.[0]?.max_connections ?? 0) || undefined
+        }
+        if (!maxConnections) return
+        const sum = [...configuredMax.values()].reduce((a, b) => a + b, 0)
+        if (sum > maxConnections - POOL_HEADROOM) {
+            const breakdown = [...configuredMax.entries()].map(([c, m]) => `${c}=${m}`).join(', ')
+            // eslint-disable-next-line no-console
+            console.warn(`[common-sql] pool budget exceeded: Σmax=${sum} > max_connections=${maxConnections} − headroom ${POOL_HEADROOM}. Per-consumer max: ${breakdown}`)
+        }
+    }
+    catch { /* best-effort: no rompemos la provisión por no poder avisar */ }
 }
 
 // identificador saneado para nombres de BD (no parametrizables en CREATE/DROP DATABASE)
@@ -67,7 +100,7 @@ export const createDb = async (name: string): Promise<void> => {
 export const dropDb = async (name: string): Promise<void> => {
     // cerrar pool(s) que apunten a esta BD física
     for (const [cid, k] of [...pools]) {
-        if (physicalDbName(cid) === name) { await k.destroy(); pools.delete(cid) }
+        if (physicalDbName(cid) === name) { await k.destroy(); pools.delete(cid); configuredMax.delete(cid) }
     }
     await admin().raw('drop database if exists "' + safeIdent(name) + '"')
 }
@@ -78,14 +111,17 @@ export const listDbs = async (): Promise<string[]> => {
 }
 
 /** PROVISIÓN (async, una vez): asegura la BD del consumidor y abre el pool. Devuelve el Knex listo. */
-export const ensureDb = async (consumerId: string): Promise<Knex> => {
+export const ensureDb = async (consumerId: string, pool?: IPoolOptions): Promise<Knex> => {
     const existing = pools.get(consumerId)
     if (existing) return existing
     const name = physicalDbName(consumerId)
     await createDb(name)
-    const k = knexForDb(name)
+    const opts: IPoolOptions = { ...POOL_DEFAULT, ...(pool ?? {}) }
+    const k = knexForDb(name, opts)
     await k.raw('select 1')          // valida conexión
     pools.set(consumerId, k)
+    configuredMax.set(consumerId, opts.max ?? POOL_DEFAULT.max)
+    await warnIfBudgetExceeded()
     return k
 }
 
@@ -109,11 +145,12 @@ export const ensureSchemaOnce = (db: Knex, schemaId: string, fn: (db: Knex) => P
 export const closeDb = async (consumerId?: string): Promise<void> => {
     if (consumerId) {
         const k = pools.get(consumerId)
-        if (k) { await k.destroy(); pools.delete(consumerId) }
+        if (k) { await k.destroy(); pools.delete(consumerId); configuredMax.delete(consumerId) }
         return
     }
     for (const [, k] of pools) await k.destroy()
     pools.clear()
     if (adminPool) { await adminPool.destroy(); adminPool = undefined }
     schemaReady.clear()
+    configuredMax.clear()
 }
