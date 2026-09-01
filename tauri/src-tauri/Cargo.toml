@@ -1,6 +1,6 @@
 [package]
 name = "kwirth-magnify"
-version = "0.5.202"
+version = "0.5.203"
 edition = "2021"
 
 [lib]
