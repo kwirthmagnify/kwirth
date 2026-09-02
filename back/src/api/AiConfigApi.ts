@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express'
 import { ISecrets } from '../tools/ISecrets'
+import { IConfigMaps } from '../tools/IConfigMap'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS } from '@kwirthmagnify/kwirth-common-ai'
@@ -7,9 +8,11 @@ import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS } from '@kwirthmagnify/kwirth-c
 export class AiConfigApi {
     public router = express.Router()
     private secrets: ISecrets
+    private configMaps: IConfigMaps
 
-    constructor(secrets: ISecrets, apiKeyApi: ApiKeyApi) {
+    constructor(secrets: ISecrets, configMaps: IConfigMaps, apiKeyApi: ApiKeyApi) {
         this.secrets = secrets
+        this.configMaps = configMaps
 
         const authMiddleware = async (req: Request, res: Response, next: express.NextFunction) => {
             if (!(await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
@@ -50,10 +53,9 @@ export class AiConfigApi {
             .all(authMiddleware)
             .get(async (_req: Request, res: Response) => {
                 try {
-                    const content = await this.secrets.read('kwirth-store-common-' + STORAGE_KEY_LLMS)
-                    if (content && content['data']) {
-                        const decoded = Buffer.from(content['data'], 'base64').toString('utf8')
-                        res.status(200).json(JSON.parse(decoded))
+                    const content = await this.configMaps.read('kwirth-store-common-' + STORAGE_KEY_LLMS)
+                    if (content) {
+                        res.status(200).json(JSON.parse(content))
                     }
                     else {
                         res.status(200).json([])
@@ -66,8 +68,7 @@ export class AiConfigApi {
             })
             .post(async (req: Request, res: Response) => {
                 try {
-                    const base64Data = Buffer.from(JSON.stringify(req.body), 'utf8').toString('base64')
-                    await this.secrets.write('kwirth-store-common-' + STORAGE_KEY_LLMS, { data: base64Data })
+                    await this.configMaps.write('kwirth-store-common-' + STORAGE_KEY_LLMS, JSON.stringify(req.body))
                     res.status(200).json()
                 }
                 catch (err) {

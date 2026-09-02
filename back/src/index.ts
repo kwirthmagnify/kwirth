@@ -1208,7 +1208,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         riRouter.use(`/idp`, idpApi.router)
         let manageKwirthApi:ManageKwirthApi = new ManageKwirthApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, apiKeyApi, ri.kwirthData)
         riRouter.use(`/managekwirth`, manageKwirthApi.router)
-        let aiConfigApi:AiConfigApi = new AiConfigApi(ri.secrets, apiKeyApi)
+        let aiConfigApi:AiConfigApi = new AiConfigApi(ri.secrets, ri.configMaps, apiKeyApi)
         riRouter.use(`/core/aiconfig`, aiConfigApi.router)
         let manageCluster:ManageClusterApi = new ManageClusterApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, apiKeyApi)
         riRouter.use(`/managecluster`, manageCluster.router)
