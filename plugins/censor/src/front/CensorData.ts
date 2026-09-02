@@ -1,5 +1,5 @@
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
-import { ICensorInstanceConfig, ERegexOrigin } from './CensorConfig'
+import { ICensorInstanceConfig, ERegexOrigin, ICensorAssetInfo } from './CensorConfig'
 
 export { ERegexOrigin }
 
@@ -9,12 +9,6 @@ export interface ICensorLine {
     pod: string
     container: string
     timestamp?: string
-}
-
-export interface ICensorAsset {
-    namespace: string
-    pod: string
-    container: string
 }
 
 export interface ICensorRegex {
@@ -54,7 +48,7 @@ export interface ICensorData {
     uiState?: ICensorUiState
     receivedLines: ICensorLine[]
     businessLines: ICensorLine[]
-    assets: ICensorAsset[]
+    assets: ICensorAssetInfo[]
     subscriberCount: number
     paused: boolean
     started: boolean
@@ -91,7 +85,7 @@ export interface ICensorUiState {
 export class CensorData implements ICensorData {
     receivedLines: ICensorLine[] = []
     businessLines: ICensorLine[] = []
-    assets: ICensorAsset[] = []
+    assets: ICensorAssetInfo[] = []
     subscriberCount = 0
     paused = false
     started = false

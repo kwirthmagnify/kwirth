@@ -6,9 +6,29 @@ import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/f
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { ICensorData, ICensorUiState, IRunnerData, ECensorTab } from './CensorData'
-import { ECensorCommand, ERegexOrigin } from './CensorConfig'
+import { ECensorAssetState, ECensorCommand, ERegexOrigin } from './CensorConfig'
 import { CensorConfigDialog } from './CensorConfigDialog'
 import { CensorAddRegexDialog } from './CensorAddRegexDialog'
+
+// El estado del stream se pinta sobre el inventario: un container que casa con la configuración
+// sigue listado aunque su stream esté parado, reconectando o caído
+const assetStateColor = (state: ECensorAssetState): string => {
+    switch (state) {
+        case ECensorAssetState.STREAMING: return 'success.main'
+        case ECensorAssetState.RECONNECTING: return 'warning.main'
+        case ECensorAssetState.FAILED: return 'error.main'
+        default: return 'action.disabled'
+    }
+}
+
+const assetStateLabel = (state: ECensorAssetState): string => {
+    switch (state) {
+        case ECensorAssetState.STREAMING: return 'streaming'
+        case ECensorAssetState.RECONNECTING: return 'reconnecting'
+        case ECensorAssetState.FAILED: return 'stream failed'
+        default: return 'not analyzing'
+    }
+}
 
 const aggregateRunners = (runners: Map<string, IRunnerData>): IRunnerData => {
     const all = [...runners.values()]
@@ -373,13 +393,14 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                     {/* Objects being analyzed */}
                     {tab === ECensorTab.Objects && (
                         data.assets.length === 0
-                            ? <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>No objects currently being analyzed.</Typography>
+                            ? <Typography variant='caption' color='text.secondary' sx={{ p: 1, display: 'block' }}>No objects matched by the active configurations.</Typography>
                             : <List dense disablePadding>
                                 {data.assets.map((asset, i) => (
                                     <ListItem key={i} disableGutters sx={{ px: 0.5 }}>
+                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', mr: 1, flexShrink: 0, bgcolor: assetStateColor(asset.state) }} />
                                         <ListItemText
                                             primary={`${asset.pod} / ${asset.container}`}
-                                            secondary={asset.namespace}
+                                            secondary={`${asset.namespace} — ${assetStateLabel(asset.state)}`}
                                             primaryTypographyProps={{ variant: 'caption', fontFamily: 'monospace', fontSize: '11px' }}
                                             secondaryTypographyProps={{ variant: 'caption', fontSize: '10px' }} />
                                     </ListItem>

@@ -3,11 +3,19 @@ import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
 import { loadModels, buildModel, zodFromExample, generateText, Output } from '@kwirthmagnify/kwirth-common-ai/back'
 import { PassThrough } from 'stream'
-import { ECensorCommand, ERegexOrigin, ICensorInstanceConfig } from '../common/CensorTypes'
+import { ECensorAssetState, ECensorCommand, ERegexOrigin, ICensorAssetInfo, ICensorInstanceConfig } from '../common/CensorTypes'
 
 // ── Motor de análisis (autónomo, dentro del channel back) ────────────────────
 const BATCH_SIZE = 50
 const MAX_LINE_BUFFER = 25000
+// Reconexión de streams de log: el cliente de k8s corta 'follow' prematuramente con frecuencia,
+// así que un cierre no es motivo para descartar el asset (ver startAssetStream)
+const RECONNECT_DELAYS = [1_000, 2_000, 5_000, 10_000, 30_000]
+const MAX_RECONNECT_ATTEMPTS = 20
+// Tope de la ventana que se recupera tras un corte de stream (ver startAssetStream)
+const MAX_GAP_RECOVERY_SECONDS = 300
+// Agrupación de la emisión del inventario de assets (varios cambios seguidos → un solo mensaje)
+const ASSETS_BROADCAST_DELAY = 100
 
 const cleanANSI = (text: string): string => text.replace(/\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g, '')
 
@@ -87,18 +95,25 @@ interface ICensorMessage {
     llms?: ILlm[]
     providers?: ILlmProvider[]
     providersAvailable?: string[]
-    assets?: { namespace: string, pod: string, container: string }[]
+    assets?: ICensorAssetInfo[]
     sessionDescription?: string
     regexes?: { pattern: string, example: string, explanation: string, origin?: string }[]
     runnerKey?: string
 }
 
+// Un asset es una entrada de INVENTARIO (container que casa con las configs activas). El stream de
+// logs es un adorno opcional que solo existe mientras algún runner que lo cubre está analizando.
 interface IAsset {
     namespace: string
     pod: string
     container: string
-    // set once the channel opens the log stream itself (stream 1.3)
     passThroughStream?: PassThrough
+    abortController?: AbortController
+    state: ECensorAssetState
+    reconnectAttempts: number
+    reconnectTimer?: NodeJS.Timeout
+    // Momento del último corte involuntario, para recuperar solo la ventana perdida al reconectar
+    streamClosedAt?: number
     runnerIds?: Set<string>
 }
 
@@ -153,6 +168,7 @@ interface IInstance {
     scope?: 'cluster' | 'resource'
     pendingReceivedLines: { text: string; namespace: string; pod: string; container: string }[]
     receivedTimer?: NodeJS.Timeout
+    assetsTimer?: NodeJS.Timeout
 }
 
 export class CensorChannel {
@@ -267,8 +283,9 @@ export class CensorChannel {
                 }
                 this.syncRunners(instance, allActive, llmList)
                 for (const runner of instance.runners.values()) runner.analyzing = instance.analyzing
-                // Re-seed streams: cluster re-discovers; resource keeps its selection (runnerIds already updated)
+                // Re-seed inventory: cluster re-discovers; resource keeps its selection (runnerIds already updated)
                 if (instance.scope === 'cluster') await this.discoverClusterPods(instance)
+                this.reconcileStreams(instance)
                 await this.executeConfigGet(webSocket, instance, llmList)
                 this.rebuildBusinessSubscription()
                 return true
@@ -323,6 +340,8 @@ export class CensorChannel {
                     this.sendEvent(instance, 'analyzing', { analyzing: true, runnerKey: rk })
                 }
                 if (instance.scope === 'cluster') await this.discoverClusterPods(instance)
+                // Arrancar el análisis es lo que abre los streams de log
+                this.reconcileStreams(instance)
                 return true
             }
             case ECensorCommand.ANALYZESTOP: {
@@ -348,6 +367,8 @@ export class CensorChannel {
                     }
                     for (const name of savedNames) await this.saveRegexesForConfig(name)
                 }
+                // Parar el análisis cierra los streams que ya no cubre ningún runner analizando
+                this.reconcileStreams(instance)
                 return true
             }
             case ECensorCommand.REGEXDELETE: {
@@ -512,16 +533,8 @@ export class CensorChannel {
             if (this.podMatchesRunnerCfg(cfg, asset.namespace, asset.pod)) asset.runnerIds.add(rkey)
             else asset.runnerIds.delete(rkey)
         }
-        // Tear down streams for cluster assets no longer matched by any runner (resource keeps its selection)
-        if (instance.scope === 'cluster') {
-            const toStop = instance.assets.filter(a => (a.runnerIds?.size ?? 0) === 0)
-            for (const asset of toStop) {
-                asset.passThroughStream?.removeAllListeners()
-                asset.passThroughStream?.destroy()
-            }
-            instance.assets = instance.assets.filter(a => !toStop.includes(a))
-        }
-        this.sendEvent(instance, 'assets', { assets: instance.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
+        // La purga de assets sin runner y el ajuste de streams los hace el llamante una vez
+        // sincronizados TODOS los runners (purgeUnmatchedAssets + reconcileStreams)
     }
 
     private processChunk(instance: IInstance, asset: IAsset, chunk: string): void {
@@ -732,34 +745,172 @@ export class CensorChannel {
         }
     }
 
-    // Low-level opener: start a follow log stream for a pod/container and wire it to processChunk.
-    // Callers apply their own candidate filtering (resource addObject filters; cluster ADDED does not).
-    private openLogStream(instance: IInstance, ns: string, pod: string, container: string): void {
+    private assetsPayload(instance: IInstance): ICensorAssetInfo[] {
+        return instance.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container, state: a.state }))
+    }
+
+    // El inventario se emite agrupado: el descubrimiento y el alta de objetos provocan muchos cambios
+    // seguidos, y el front sustituye la lista completa con cada mensaje
+    private scheduleAssetsBroadcast(instance: IInstance): void {
+        if (instance.assetsTimer) return
+        instance.assetsTimer = setTimeout(() => {
+            instance.assetsTimer = undefined
+            this.sendEvent(instance, 'assets', { assets: this.assetsPayload(instance) })
+        }, ASSETS_BROADCAST_DELAY)
+    }
+
+    // Alta en el INVENTARIO (no abre stream). Si ya se está analizando, el stream arranca acto seguido.
+    // Los llamantes aplican su propio filtrado de candidatos (resource addObject filtra; cluster ADDED no).
+    private addAsset(instance: IInstance, ns: string, pod: string, container: string): void {
         if (instance.assets.some(a => a.namespace === ns && a.pod === pod && a.container === container)) return
-        const logStream = new PassThrough()
         const runnerIds = new Set<string>()
         for (const [rkey, runner] of instance.runners) {
             if (this.podMatchesRunnerCfg(runner.cfg, ns, pod)) runnerIds.add(rkey)
         }
-        const asset: IAsset = { namespace: ns, pod, container, passThroughStream: logStream, runnerIds }
+        const asset: IAsset = { namespace: ns, pod, container, runnerIds, state: ECensorAssetState.IDLE, reconnectAttempts: 0 }
         instance.assets.push(asset)
-        logStream.setEncoding('utf8')
-        logStream.on('data', (chunk: string) => this.processChunk(instance, asset, chunk))
-        logStream.on('end', () => {
-            instance.assets = instance.assets.filter(a => a !== asset)
-            this.sendEvent(instance, 'assets', { assets: instance.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
-        })
-        const logApi = (this.clusterInfo as { logApi: { log: (ns: string, pod: string, container: string, stream: PassThrough, opts: unknown) => Promise<void> } }).logApi
-        logApi.log(ns, pod, container, logStream, { follow: true, pretty: false, timestamps: false, tailLines: 1 })
-            .catch(err => {
-                this.backChannelObject.logWarning?.(`[censor] log stream error for ${ns}/${pod}/${container}: ${err}`)
-                instance.assets = instance.assets.filter(a => a !== asset)
-                this.sendEvent(instance, 'assets', { assets: instance.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
-            })
-        this.sendEvent(instance, 'assets', { assets: instance.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
+        if (this.assetShouldStream(instance, asset)) this.startAssetStream(instance, asset)
+        this.scheduleAssetsBroadcast(instance)
     }
 
-    // Cluster-mode discovery: list all pods and open streams for those matching any runner's logstream config
+    // Un asset necesita stream solo si algún runner que lo cubre está analizando
+    private assetShouldStream(instance: IInstance, asset: IAsset): boolean {
+        for (const rkey of (asset.runnerIds ?? [])) {
+            if (instance.runners.get(rkey)?.analyzing) return true
+        }
+        return false
+    }
+
+    private startAssetStream(instance: IInstance, asset: IAsset): void {
+        if (asset.passThroughStream) return
+        const { namespace: ns, pod, container } = asset
+        const logStream = new PassThrough()
+        asset.passThroughStream = logStream
+        asset.state = ECensorAssetState.STREAMING
+        logStream.setEncoding('utf8')
+        logStream.on('data', (chunk: string) => {
+            // Si llegan datos el stream está sano: se reinicia la cuenta de reintentos
+            asset.reconnectAttempts = 0
+            this.processChunk(instance, asset, chunk)
+        })
+        logStream.on('error', (err: Error) => {
+            this.backChannelObject.logWarning?.(`[censor] log stream failure for ${ns}/${pod}/${container}: ${err}`)
+            this.handleStreamClosed(instance, asset, logStream)
+        })
+        // El cliente de k8s hace pipe(response.body, stream) con end:true, así que un corte del body
+        // (habitual con follow) cierra este PassThrough. Eso NO significa que el container haya
+        // desaparecido: se reconecta mientras se siga analizando y el asset nunca sale del inventario.
+        logStream.on('end', () => this.handleStreamClosed(instance, asset, logStream))
+        // Se pide SOLO lo nuevo: 'tailLines' traía la última línea del histórico de cada container, y
+        // con el análisis recién arrancado eso llenaba el primer lote del LLM de líneas viejas y
+        // desordenadas. Tras un corte involuntario se recupera la ventana perdida (acotada) para no
+        // dejar un agujero de logs sin analizar.
+        const gapSeconds = asset.streamClosedAt ? Math.ceil((Date.now() - asset.streamClosedAt) / 1000) : 0
+        const sinceSeconds = Math.max(1, Math.min(gapSeconds, MAX_GAP_RECOVERY_SECONDS))
+        const logApi = (this.clusterInfo as { logApi: { log: (ns: string, pod: string, container: string, stream: PassThrough, opts: unknown) => Promise<AbortController> } }).logApi
+        logApi.log(ns, pod, container, logStream, { follow: true, pretty: false, timestamps: false, sinceSeconds })
+            .then(controller => {
+                // Si el asset ya cerró o reemplazó este stream, la petición sobra
+                if (asset.passThroughStream === logStream) asset.abortController = controller
+                else controller.abort()
+            })
+            .catch(err => {
+                this.backChannelObject.logWarning?.(`[censor] log stream error for ${ns}/${pod}/${container}: ${err}`)
+                this.handleStreamClosed(instance, asset, logStream)
+            })
+    }
+
+    // Cierre o fallo del stream: se reconecta con backoff si se sigue analizando, y si no queda en
+    // idle. El asset se mantiene en el inventario en cualquier caso.
+    private handleStreamClosed(instance: IInstance, asset: IAsset, closed: PassThrough): void {
+        if (asset.passThroughStream !== closed) return
+        asset.passThroughStream = undefined
+        asset.streamClosedAt = Date.now()
+        closed.removeAllListeners()
+        closed.destroy()
+        asset.abortController?.abort()
+        asset.abortController = undefined
+        if (asset.reconnectTimer) { clearTimeout(asset.reconnectTimer); asset.reconnectTimer = undefined }
+
+        if (!this.assetShouldStream(instance, asset)) {
+            asset.state = ECensorAssetState.IDLE
+            this.scheduleAssetsBroadcast(instance)
+            return
+        }
+        asset.reconnectAttempts++
+        if (asset.reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+            this.backChannelObject.logWarning?.(`[censor] giving up on log stream for ${asset.namespace}/${asset.pod}/${asset.container} after ${MAX_RECONNECT_ATTEMPTS} attempts`)
+            asset.state = ECensorAssetState.FAILED
+            this.scheduleAssetsBroadcast(instance)
+            return
+        }
+        asset.state = ECensorAssetState.RECONNECTING
+        this.scheduleAssetsBroadcast(instance)
+        const delay = RECONNECT_DELAYS[Math.min(asset.reconnectAttempts - 1, RECONNECT_DELAYS.length - 1)]
+        asset.reconnectTimer = setTimeout(() => {
+            asset.reconnectTimer = undefined
+            if (!instance.assets.includes(asset) || !this.assetShouldStream(instance, asset)) {
+                asset.state = ECensorAssetState.IDLE
+                this.scheduleAssetsBroadcast(instance)
+                return
+            }
+            this.startAssetStream(instance, asset)
+            this.scheduleAssetsBroadcast(instance)
+        }, delay)
+    }
+
+    // Cierra el stream de un asset (abortando la petición al api server) sin tocar el inventario
+    private stopAssetStream(asset: IAsset): void {
+        if (asset.reconnectTimer) { clearTimeout(asset.reconnectTimer); asset.reconnectTimer = undefined }
+        const logStream = asset.passThroughStream
+        asset.passThroughStream = undefined
+        asset.abortController?.abort()
+        asset.abortController = undefined
+        if (logStream) {
+            logStream.removeAllListeners()
+            logStream.destroy()
+        }
+        asset.reconnectAttempts = 0
+        // Cierre deliberado (stop del análisis, baja del objeto): al volver a arrancar se analiza
+        // desde ese momento, no se recupera lo emitido mientras estaba parado
+        asset.streamClosedAt = undefined
+        asset.state = ECensorAssetState.IDLE
+    }
+
+    // Ajusta los streams al estado de análisis: abre los que faltan y cierra los que ya no hacen falta
+    private reconcileStreams(instance: IInstance): void {
+        for (const asset of instance.assets) {
+            const shouldStream = this.assetShouldStream(instance, asset)
+            if (shouldStream) {
+                if (asset.passThroughStream || asset.reconnectTimer) continue
+                if (asset.state === ECensorAssetState.FAILED) asset.reconnectAttempts = 0
+                this.startAssetStream(instance, asset)
+            }
+            else if (asset.passThroughStream || asset.reconnectTimer || asset.state !== ECensorAssetState.IDLE) {
+                this.stopAssetStream(asset)
+            }
+        }
+        this.scheduleAssetsBroadcast(instance)
+    }
+
+    // Baja del inventario (cerrando el stream si lo hubiera)
+    private removeAssets(instance: IInstance, matches: (asset: IAsset) => boolean): void {
+        const toRemove = instance.assets.filter(matches)
+        if (toRemove.length === 0) return
+        for (const asset of toRemove) this.stopAssetStream(asset)
+        instance.assets = instance.assets.filter(a => !toRemove.includes(a))
+        this.scheduleAssetsBroadcast(instance)
+    }
+
+    // Cluster: los assets que ya no casan con ningún runner salen del inventario (en resource manda la
+    // selección del usuario). Se llama tras sincronizar TODOS los runners, nunca dentro del bucle.
+    private purgeUnmatchedAssets(instance: IInstance): void {
+        if (instance.scope !== 'cluster') return
+        this.removeAssets(instance, a => (a.runnerIds?.size ?? 0) === 0)
+    }
+
+    // Cluster-mode discovery: list all pods and inventory those matching any runner's logstream config
+    // (inventariar no abre streams: eso lo decide el estado de análisis)
     private async discoverClusterPods(instance: IInstance): Promise<void> {
         const runnerCfgs = [...instance.runners.values()].map(r => r.cfg).filter(c => c.logstreamEnabled)
         if (runnerCfgs.length === 0) return
@@ -784,7 +935,7 @@ export class CensorChannel {
                     })
                     return basicMatches.some(src => !src.labelSelector || matchesLabelSelector(labels, src.labelSelector))
                 })
-                if (passes) for (const c of containers) this.openLogStream(instance, ns, name, c.name)
+                if (passes) for (const c of containers) this.addAsset(instance, ns, name, c.name)
             }
         } catch (e) {
             this.backChannelObject.logWarning?.(`[censor] discoverClusterPods error: ${e}`)
@@ -801,13 +952,7 @@ export class CensorChannel {
 
         if (type === 'DELETED') {
             for (const instance of allInstances) {
-                const before = instance.assets.length
-                const toRemove = instance.assets.filter(a => a.pod === podName && a.namespace === namespace)
-                for (const asset of toRemove) { asset.passThroughStream?.removeAllListeners(); asset.passThroughStream?.destroy() }
-                instance.assets = instance.assets.filter(a => !(a.pod === podName && a.namespace === namespace))
-                if (instance.assets.length !== before) {
-                    this.sendEvent(instance, 'assets', { assets: instance.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
-                }
+                this.removeAssets(instance, a => a.pod === podName && a.namespace === namespace)
             }
             return
         }
@@ -817,7 +962,7 @@ export class CensorChannel {
             if (containers.length === 0) return
             for (const instance of allInstances) {
                 if (instance.scope !== 'cluster') continue
-                for (const containerName of containers) this.openLogStream(instance, namespace, podName, containerName)
+                for (const containerName of containers) this.addAsset(instance, namespace, podName, containerName)
             }
         }
     }
@@ -879,12 +1024,9 @@ export class CensorChannel {
         if (runner.flushTimer) { clearTimeout(runner.flushTimer); runner.flushTimer = undefined }
         if (runner.receivedTimer) { clearTimeout(runner.receivedTimer); runner.receivedTimer = undefined }
         instance.runners.delete(rk)
+        // Los assets quedan sin este runner, pero no se purgan aquí: un runner que entra después en la
+        // misma sincronización puede cubrirlos (de eso se encarga syncRunners al terminar)
         for (const asset of instance.assets) asset.runnerIds?.delete(rk)
-        if (instance.scope === 'cluster') {
-            const orphans = instance.assets.filter(a => (a.runnerIds?.size ?? 0) === 0)
-            for (const asset of orphans) { asset.passThroughStream?.removeAllListeners(); asset.passThroughStream?.destroy() }
-            instance.assets = instance.assets.filter(a => !orphans.includes(a))
-        }
         this.sendEvent(instance, 'analyzing', { analyzing: false, runnerKey: rk })
     }
 
@@ -893,6 +1035,8 @@ export class CensorChannel {
         const activeKeys = new Set(allActive.map(c => `${c.name}:${c.version}`))
         for (const rk of [...instance.runners.keys()]) if (!activeKeys.has(rk)) this.removeRunner(instance, rk)
         for (const cfg of allActive) this.createOrUpdateRunner(instance, cfg, llmList)
+        this.purgeUnmatchedAssets(instance)
+        this.reconcileStreams(instance)
     }
 
     // Seed runners for this instance from the active configs (ephemeral: only while the WS is open)
@@ -918,7 +1062,9 @@ export class CensorChannel {
             runner.analyzing = instance.analyzing
             this.sendEvent(instance, 'analyzing', { analyzing: runner.analyzing, runnerKey: rk })
         }
+        this.purgeUnmatchedAssets(instance)
         if (instance.scope === 'cluster') await this.discoverClusterPods(instance)
+        this.reconcileStreams(instance)
         await this.executeConfigGet(webSocket, instance, llms)
     }
 
@@ -998,8 +1144,7 @@ export class CensorChannel {
             return true
         }
 
-        if (instance.assets.some(a => a.namespace === ns && a.pod === pod && a.container === container)) return true
-        this.openLogStream(instance, ns, pod, container)
+        this.addAsset(instance, ns, pod, container)
         return true
     }
 
@@ -1039,14 +1184,12 @@ export class CensorChannel {
     // Tear down all log streams and timers for an instance (ephemeral-only lifecycle)
     private teardownInstance(instance: IInstance): void {
         if (instance.receivedTimer) { clearTimeout(instance.receivedTimer); instance.receivedTimer = undefined }
+        if (instance.assetsTimer) { clearTimeout(instance.assetsTimer); instance.assetsTimer = undefined }
         for (const runner of instance.runners.values()) {
             if (runner.flushTimer) { clearTimeout(runner.flushTimer); runner.flushTimer = undefined }
             if (runner.receivedTimer) { clearTimeout(runner.receivedTimer); runner.receivedTimer = undefined }
         }
-        for (const asset of instance.assets) {
-            asset.passThroughStream?.removeAllListeners()
-            asset.passThroughStream?.destroy()
-        }
+        for (const asset of instance.assets) this.stopAssetStream(asset)
         instance.assets = []
         instance.runners.clear()
     }
@@ -1054,10 +1197,7 @@ export class CensorChannel {
     deleteObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, ns: string, pod: string, container: string): Promise<boolean> => {
         const instance = this.getInstance(webSocket, instanceConfig.instance)
         if (instance) {
-            const toRemove = instance.assets.filter(a => a.namespace === ns && a.pod === pod && (container === '' || a.container === container))
-            for (const asset of toRemove) { asset.passThroughStream?.removeAllListeners(); asset.passThroughStream?.destroy() }
-            instance.assets = instance.assets.filter(a => !toRemove.includes(a))
-            this.sendEvent(instance, 'assets', { assets: instance.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container })) })
+            this.removeAssets(instance, a => a.namespace === ns && a.pod === pod && (container === '' || a.container === container))
         }
         return true
     }

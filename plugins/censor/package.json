@@ -3,14 +3,15 @@
   "name": "Censor",
   "displayName": "Censor",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.43",
+  "version": "0.2.44",
   "website": "https://kwirthmagnify.dev",
   "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
   "icon": "FilterList",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "watch": "node watch.mjs"
+    "watch": "node watch.mjs",
+    "test": "node tests/run.mjs"
   },
   "dependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.31",

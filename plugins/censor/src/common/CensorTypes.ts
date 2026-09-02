@@ -58,3 +58,19 @@ export interface ICensorInstanceConfig {
     addTimestamp?: boolean
     businessPath?: string
 }
+
+// Estado del stream de logs de un asset. El inventario de assets (qué containers casan con las
+// configs activas) es independiente del stream: el stream solo se abre mientras se analiza.
+export enum ECensorAssetState {
+    IDLE = 'idle',
+    STREAMING = 'streaming',
+    RECONNECTING = 'reconnecting',
+    FAILED = 'failed'
+}
+
+export interface ICensorAssetInfo {
+    namespace: string
+    pod: string
+    container: string
+    state: ECensorAssetState
+}

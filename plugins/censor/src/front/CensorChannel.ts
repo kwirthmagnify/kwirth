@@ -4,7 +4,8 @@ import { IChannel, IChannelObject, IContentProps, ISetupProps } from '@kwirthmag
 import { CensorSetup, CensorIcon } from './CensorSetup'
 import { CensorTabContent } from './CensorTabContent'
 import { CensorConfig, ECensorCommand, ICensorConfig, ICensorInstanceConfig } from './CensorConfig'
-import { CensorData, ICensorAsset, ICensorData, ICensorRegex, IRunnerData, ERegexOrigin } from './CensorData'
+import { CensorData, ICensorData, ICensorRegex, IRunnerData, ERegexOrigin } from './CensorData'
+import { ICensorAssetInfo } from './CensorConfig'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 
 const MAX_DISPLAY_LINES = 1000
@@ -17,7 +18,7 @@ interface ICensorMessage {
     action: EInstanceMessageAction
     instance: string
     kind?: 'received' | 'business' | 'llminput' | 'llmoutput' | 'llmwarning' | 'llmerror' | 'regex' | 'status' | 'config' | 'providers' | 'analyzing' | 'stats' | 'regexstats' | 'assets' | 'tags'
-    assets?: ICensorAsset[]
+    assets?: ICensorAssetInfo[]
     analyzing?: boolean
     text?: string
     lines?: { text: string, namespace: string, pod: string, container: string }[]

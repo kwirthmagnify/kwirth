@@ -1,5 +1,5 @@
 import type { ICensorInstanceConfig } from '../common/CensorTypes'
-export { ECensorCommand, ERegexOrigin, ICensorInstanceConfig, ICensorBusinessSource, ICensorLogstreamSource } from '../common/CensorTypes'
+export { ECensorCommand, ERegexOrigin, ECensorAssetState, ICensorInstanceConfig, ICensorBusinessSource, ICensorLogstreamSource, ICensorAssetInfo } from '../common/CensorTypes'
 
 export interface ICensorConfig {
     maxLines: number

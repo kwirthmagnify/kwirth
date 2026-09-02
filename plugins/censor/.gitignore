@@ -1,0 +1,2 @@
+# Test artifacts (node_modules y dist ya los cubre el .gitignore raíz)
+tests/.out/

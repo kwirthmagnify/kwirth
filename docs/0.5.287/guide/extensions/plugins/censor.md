@@ -53,7 +53,18 @@ The tabs break the pipeline apart. Counts update live.
 
 ### Objects
 
-The pods/containers currently being analyzed.
+The **inventory** of pods/containers this session covers: every container matched by the active configurations (or, in a resource view, every container you selected). An object stays on this list while it matches — it does **not** disappear because its log stream had a hiccup.
+
+Each row carries a dot with the state of its **log stream**, which is a separate thing from being inventoried:
+
+| Dot | State | Meaning |
+|---|---|---|
+| ⚪ | **not analyzing** | Inventoried, no log stream open. Censor opens streams **only while the analysis is running**, so this is the normal state before you press **Start** (and after **Stop**) — nothing is being read from Kubernetes. |
+| 🟢 | **streaming** | The log stream is open and its lines are feeding the runners that cover this object. |
+| 🟡 | **reconnecting** | The stream closed or could not be opened, and censor is retrying with a growing delay. Kubernetes closes `follow` streams on its own fairly often, so a brief amber is normal and recovers by itself. |
+| 🔴 | **stream failed** | Censor gave up after repeated failures (for example the container never accepts a log request). The object stays listed so you can see it is **not** being analyzed; restarting the analysis retries it.
+
+So an object listed in ⚪ means "this would be analyzed", and 🟢 means "this is being analyzed right now".
 
 ### Regex — the filters in force
 
