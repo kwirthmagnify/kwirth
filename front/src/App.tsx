@@ -2502,6 +2502,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showAiProviders && <AiConfigProvider
                     providersAvailable={PROVIDERS_AVAILABLE}
                     providers={aiProviders}
+                    onLoadModels={async (provider) => {
+                        const r = await fetch(`${backendUrl}/core/aiconfig/loadmodels`, addPostAuthorization(accessString, JSON.stringify(provider)))
+                        return r.ok ? await r.json() : []
+                    }}
                     onClose={(updated) => {
                         setShowAiProviders(false)
                         if (updated) fetch(`${backendUrl}/core/aiconfig/providers`, addPostAuthorization(accessString, JSON.stringify(updated))).catch(console.error)

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
-    Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
+    Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
     FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, List, ListItemButton,
     MenuItem, Select, Stack, Switch, TextField, Typography
 } from '@mui/material'
@@ -21,7 +21,7 @@ const downloadJson = async (data: unknown, filename: string) => {
     const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
     URL.revokeObjectURL(url)
 }
-import { ILlm, ILlmProvider } from './index'
+import { ILlm, ILlmModel, ILlmProvider } from './index'
 
 // ── LlmSelector ─────────────────────────────────────────────────────────────
 
@@ -208,6 +208,7 @@ interface IAiConfigProviderProps {
     providersAvailable: string[]
     providers: ILlmProvider[]
     onClose: (providers: ILlmProvider[] | undefined) => void
+    onLoadModels?: (provider: ILlmProvider) => Promise<ILlmModel[]>
 }
 
 const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProviderProps) => {
@@ -215,6 +216,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     const importProvRef = useRef<HTMLInputElement>(null)
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
     const [showPassword, setShowPassword] = useState(false)
+    const [loadingModels, setLoadingModels] = useState(false)
 
     useEffect(() => {
         setProviders(JSON.parse(JSON.stringify(props.providers)))
@@ -224,23 +226,25 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     const [providerType, setProviderType] = useState(props.providersAvailable[0] ?? '')
     const [providerKey, setProviderKey] = useState('')
     const [providerEndpoint, setProviderEndpoint] = useState('')
+    const [pendingModels, setPendingModels] = useState<ILlmModel[]>([])
 
     const onProviderSelected = (p: ILlmProvider, index: number) => {
         setProviderName(p.name)
         setProviderType(p.type ?? p.name)
         setProviderKey(p.key)
         setProviderEndpoint(p.endpoint ?? '')
+        setPendingModels(p.models ?? [])
         setSelectedIndex(index)
     }
 
-    const onNew = () => { setSelectedIndex(null); setProviderName(''); setProviderType(props.providersAvailable[0] ?? ''); setProviderKey(''); setProviderEndpoint('') }
+    const onNew = () => { setSelectedIndex(null); setProviderName(''); setProviderType(props.providersAvailable[0] ?? ''); setProviderKey(''); setProviderEndpoint(''); setPendingModels([]) }
 
     const onAdd = () => {
         if (!providerName.trim() || !providerType) return
         const endpoint = providerType === 'openai-compat' ? providerEndpoint : undefined
         const updated = [...providers]
-        if (selectedIndex !== null) updated[selectedIndex] = { ...updated[selectedIndex], name: providerName, type: providerType, key: providerKey, endpoint }
-        else updated.push({ name: providerName, type: providerType, key: providerKey, models: [], endpoint })
+        if (selectedIndex !== null) updated[selectedIndex] = { ...updated[selectedIndex], name: providerName, type: providerType, key: providerKey, models: pendingModels, endpoint }
+        else updated.push({ name: providerName, type: providerType, key: providerKey, models: pendingModels, endpoint })
         setProviders(updated)
         onNew()
     }
@@ -249,6 +253,19 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
         if (selectedIndex === null) return
         setProviders(providers.filter((_, i) => i !== selectedIndex))
         onNew()
+    }
+
+    const onLoadModels = async () => {
+        if (!props.onLoadModels || !providerType || !providerKey) return
+        setLoadingModels(true)
+        try {
+            const endpoint = providerType === 'openai-compat' ? providerEndpoint : undefined
+            const models = await props.onLoadModels({ name: providerName, type: providerType, key: providerKey, models: [], endpoint })
+            setPendingModels(models)
+        }
+        finally {
+            setLoadingModels(false)
+        }
     }
 
     return (
@@ -303,8 +320,14 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                             />
                         )}
                         <Box sx={{ flexGrow: 1 }} />
-                        <Stack direction='row' spacing={1}>
+                        <Stack direction='row' spacing={1} alignItems='center'>
                             <Button variant='outlined' onClick={onNew}>New</Button>
+                            { props.onLoadModels && (
+                                <Button variant='outlined' onClick={onLoadModels} disabled={!providerType || !providerKey || loadingModels}
+                                    startIcon={loadingModels ? <CircularProgress size={14} /> : undefined}>
+                                    {loadingModels ? 'Loading...' : `Load models${pendingModels.length ? ` (${pendingModels.length})` : ''}`}
+                                </Button>
+                            )}
                             <Typography flex={1} />
                             <Button variant='text' color='error' onClick={onRemove} disabled={selectedIndex === null}>Remove</Button>
                             <Button variant='contained' onClick={onAdd} disabled={!providerName.trim() || !providerType}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>

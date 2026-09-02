@@ -3,7 +3,8 @@ import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
-import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS } from '@kwirthmagnify/kwirth-common-ai'
+import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
+import { loadModels } from '@kwirthmagnify/kwirth-common-ai/back'
 
 export class AiConfigApi {
     public router = express.Router()
@@ -48,6 +49,18 @@ export class AiConfigApi {
                     res.status(500).json()
                 }
             })
+
+        this.router.post('/loadmodels', authMiddleware, async (req: Request, res: Response) => {
+            try {
+                const provider: ILlmProvider = req.body
+                await loadModels([provider], { logInfo: console.log, logWarning: console.warn, logError: console.error })
+                res.status(200).json(provider.models ?? [])
+            }
+            catch (err) {
+                console.error('AiConfigApi: error loading models', err)
+                res.status(500).json([])
+            }
+        })
 
         this.router.route('/llms')
             .all(authMiddleware)
