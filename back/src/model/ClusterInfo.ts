@@ -82,77 +82,103 @@ export class ClusterInfo {
             logError(ELogComponent.PROVIDER,`Cannot remove subscription of channel '${c.getChannelData().id}' from provider ${providerId} (provider do not exist)`)
     }
 
+    // Kubernetes no tiene nombre de cluster: los gestionados dejan pistas en labels/providerID del
+    // nodo, y k3s no deja ninguna (k3d solo la deja en el nombre de sus contenedores). Precedencia:
+    //   1. KWIRTH_CLUSTER_NAME — el operador manda, ninguna heurística lo pisa
+    //   2. heurística por flavour sobre el nodo control-plane
+    //   3. uid del namespace kube-system — identidad garantizada aunque no sea legible
     setKubernetesClusterName = async() => {
         try {
             if (this.name !== '') return
-            var resp = await this.coreApi.listNode()
-            if (!resp.items || resp.items.length===0) return 'unnamed'
+            const configuredName = (process.env.KWIRTH_CLUSTER_NAME ?? '').trim()
+            let detectedName = ''
 
-            let node = resp.items[0]
-            if (node.metadata?.labels && node.metadata?.labels['kubernetes.azure.com/cluster']) {
-                this.flavour = 'aks'
-                this.name = node.metadata?.labels['kubernetes.azure.com/cluster']
-                let rg = node.metadata?.labels['kubernetes.azure.com/network-resourcegroup']
-                if (this.name.startsWith(rg+'_')) this.name = this.name.substring(rg.length+1)            
+            const resp = await this.coreApi.listNode()
+            const nodes = resp.items ?? []
+            if (nodes.length > 0) {
+                // Las pistas del flavour (y en k3s el mejor candidato a nombre) están en el
+                // control-plane; items[0] puede ser un agente cualquiera
+                const controlPlane = nodes.find(n => n.metadata?.labels && (
+                    'node-role.kubernetes.io/control-plane' in n.metadata.labels ||
+                    'node-role.kubernetes.io/master' in n.metadata.labels))
+                detectedName = this.detectClusterName(controlPlane ?? nodes[0], nodes)
             }
-            else if (node.metadata?.labels && node.metadata?.labels['k8s.io/cloud-provider-aws']) {
-                this.flavour = 'eks'
-                if (node.metadata?.annotations) {
-                    let lastAppliedConfig = node.metadata?.annotations['kubectl.kubernetes.io/last-applied-configuration']
-                    if (lastAppliedConfig) {
-                        let config = JSON.parse(lastAppliedConfig)
-                        if (config) {
-                            let spec = config['spec']
-                            if (spec) {
-                                let tags = spec['tags']
-                                this.name = tags['karpenter.sh/discovery']
-                            }
-                        }
-                    }
-                    if (this.name==='') {
-                        for (let node of resp.items) {
-                            if (node.metadata?.labels) {
-                                if (node.metadata.labels['alpha.eksctl.io/cluster-name']) {
-                                    this.name=node.metadata.labels['alpha.eksctl.io/cluster-name']
-                                    break
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else if (node.metadata?.annotations && node.metadata?.annotations['k3s.io/hostname']) {
-                let hostname = node.metadata?.annotations['k3s.io/hostname'].toLocaleLowerCase()
-                this.flavour = hostname.startsWith('k3d') ? 'k3d' : 'k3s'
 
-                let i = hostname.indexOf('-agent-')
-                if (i>=0) 
-                    this.name = hostname.substring(0,i)
-                else {
-                    i = hostname.indexOf('-server-')
-                    if (i>=0) this.name = hostname.substring(0,i)
-                }
-            }
-            if (node.spec?.providerID && node.spec.providerID.toLowerCase().startsWith('gce://')) {
-                this.flavour = 'gke'
-                if (node.metadata?.labels?.['name']) {
-                    this.name = node.metadata.labels['name']
-                }
-                else {
-                    const parts = node.spec.providerID.split('/')
-                    const fullNodeName = parts[parts.length - 1]
-                    const gkeMatch = fullNodeName.match(/^gke-(.*)-[^-]+-[^-]+$/);
-                    if (gkeMatch && gkeMatch[1])
-                        this.name = gkeMatch[1]
-                    else
-                        this.name = node.metadata?.labels?.['cloud.google.com/gke-nodepool'] || 'unnamed'
-                }
+            this.name = configuredName || detectedName || await this.getClusterUid()
+            if (!configuredName && !detectedName) {
+                logWarning(ELogComponent.CORE, `Cluster name cannot be detected on flavour '${this.flavour}', using cluster uid instead. Set KWIRTH_CLUSTER_NAME to give it a name.`)
             }
         }
         catch (err) {
             logError(ELogComponent.CORE,'Cannot set cluster name')
             logError(ELogComponent.CORE,err)
-            return 'unnamed-err'
+            this.name = (process.env.KWIRTH_CLUSTER_NAME ?? '').trim() || await this.getClusterUid()
+        }
+    }
+
+    // Nombre publicado por el flavour del cluster ('' si ese flavour no publica ninguno)
+    private detectClusterName = (node: V1Node, nodes: V1Node[]): string => {
+        const labels = node.metadata?.labels ?? {}
+        const annotations = node.metadata?.annotations ?? {}
+
+        if (labels['kubernetes.azure.com/cluster']) {
+            this.flavour = 'aks'
+            // el label trae el resource group del nodo por delante (MC_<rg>_<cluster>_<region>)
+            let name = labels['kubernetes.azure.com/cluster']
+            const rg = labels['kubernetes.azure.com/network-resourcegroup']
+            if (rg && name.startsWith(rg+'_')) name = name.substring(rg.length+1)
+            return name
+        }
+
+        if (labels['k8s.io/cloud-provider-aws']) {
+            this.flavour = 'eks'
+            const lastAppliedConfig = annotations['kubectl.kubernetes.io/last-applied-configuration']
+            if (lastAppliedConfig) {
+                try {
+                    const tags = JSON.parse(lastAppliedConfig)?.spec?.tags
+                    if (tags?.['karpenter.sh/discovery']) return tags['karpenter.sh/discovery']
+                }
+                catch {
+                    logWarning(ELogComponent.CORE, 'Node last-applied-configuration is not parseable, falling back to eksctl label')
+                }
+            }
+            // eksctl etiqueta los nodos que crea, pero no necesariamente todos los del cluster
+            const eksctlNode = nodes.find(n => n.metadata?.labels?.['alpha.eksctl.io/cluster-name'])
+            return eksctlNode?.metadata?.labels?.['alpha.eksctl.io/cluster-name'] ?? ''
+        }
+
+        if (node.spec?.providerID?.toLowerCase().startsWith('gce://')) {
+            this.flavour = 'gke'
+            if (labels['name']) return labels['name']
+            const fullNodeName = node.spec.providerID.split('/').pop() ?? ''
+            const gkeMatch = fullNodeName.match(/^gke-(.*)-[^-]+-[^-]+$/)
+            return gkeMatch?.[1] || labels['cloud.google.com/gke-nodepool'] || ''
+        }
+
+        if (annotations['k3s.io/hostname']) {
+            const hostname = annotations['k3s.io/hostname'].toLocaleLowerCase()
+            this.flavour = hostname.startsWith('k3d') ? 'k3d' : 'k3s'
+            // k3d nombra sus nodos '<cluster>-server-N' / '<cluster>-agent-N', así que el nombre del
+            // cluster sale de recortar por el separador. Un k3s de verdad usa el hostname de la
+            // máquina, que no lleva separador ni nombre de cluster: lo mejor que hay es el hostname
+            // del control-plane (y si no vale, el operador tiene KWIRTH_CLUSTER_NAME)
+            if (this.flavour !== 'k3d') return hostname
+            let cut = hostname.indexOf('-agent-')
+            if (cut < 0) cut = hostname.indexOf('-server-')
+            return cut >= 0 ? hostname.substring(0, cut) : hostname
+        }
+
+        return ''
+    }
+
+    // Identidad del cluster: uid del namespace kube-system (único y estable entre reinicios)
+    private getClusterUid = async (): Promise<string> => {
+        if (this.id !== '') return this.id
+        try {
+            return (await this.coreApi.readNamespace({ name:'kube-system' })).metadata?.uid ?? ''
+        }
+        catch {
+            return ''
         }
     }
 

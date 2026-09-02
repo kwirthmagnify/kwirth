@@ -10,6 +10,35 @@ Open it from **☰ → Manage cluster list**.
 
 The cluster Kwirth itself runs against is **always present** and is named **`inCluster`** (Kubernetes deployment) or **`inDesktop`** (desktop app). You **cannot rename or delete** it — it's the one you reached by pointing your browser (or desktop app) at this Kwirth. Every other entry is a **remote** cluster you added.
 
+## The cluster's own name
+
+`inCluster` is the *entry* name in the cluster list. Separately, Kwirth works out the **real name of the cluster** it is running on, and that is what you see in the **title bar** (`Kwirth - <cluster>`), in the **tab labels** and on the **Homepage** (together with an icon for the distribution).
+
+Here is the thing: **Kubernetes has no cluster name**. There is no object in the API holding it, so Kwirth has to work it out from the clues each distribution happens to leave on its nodes:
+
+| Distribution | Where the name comes from |
+|---|---|
+| **AKS** | Node label `kubernetes.azure.com/cluster` (the node resource group prefix is stripped). |
+| **EKS** | The `karpenter.sh/discovery` tag of the node, or the `alpha.eksctl.io/cluster-name` label if the cluster was created with eksctl. |
+| **GKE** | The node name inside `providerID` (`gke-<cluster>-<nodepool>-…`). |
+| **k3d** | The node name, which k3d builds as `<cluster>-server-N` / `<cluster>-agent-N`. |
+| **k3s** | Nothing: a k3s node is just the machine's hostname. Kwirth uses the **hostname of the control-plane node**, which is a recognisable name but is the machine's, not the cluster's. |
+| **Anything else** | No clue at all. |
+
+When no name can be worked out, Kwirth falls back to the **UID of the `kube-system` namespace** — unique and stable across restarts, so the cluster is always identifiable, just not pretty to read.
+
+### Naming it yourself
+
+Because the detection is best-effort, you can state the name and skip the guessing entirely — set **`KWIRTH_CLUSTER_NAME`** on the deployment:
+
+```yaml
+env:
+  - name: KWIRTH_CLUSTER_NAME
+    value: 'shop-prod'
+```
+
+It **takes precedence over every heuristic**, so it is also the way to fix a managed cluster whose derived name you don't like (an AKS name carrying its region, or a GKE name carrying its nodepool). Use it on **k3s and bare clusters**, where there is nothing to detect, and whenever you consolidate several clusters here and want names that mean something to your team. The distribution icon keeps being detected either way.
+
 ## Add a remote cluster
 
 To observe another cluster from here, that cluster must be running its **own** Kwirth, and you need an **API key** from it.

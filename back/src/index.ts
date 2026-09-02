@@ -330,7 +330,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             }
         }
 
-        clusterInfo.setKubernetesClusterName()
+        await clusterInfo.setKubernetesClusterName()
         clusterInfo.nodes = await clusterInfo.getNodes()
 
         let configMaps
