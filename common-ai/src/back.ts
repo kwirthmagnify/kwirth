@@ -1,6 +1,6 @@
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common'
 import { ILlm, ILlmModel, ILlmProvider, IAgent } from './index'
-import { LanguageModel, tool, generateText, stepCountIs } from 'ai'
+import { LanguageModel, tool, generateText, stepCountIs, Output } from 'ai'
 import { z } from 'zod'
 import { AsyncLocalStorage } from 'async_hooks'
 import { exec } from 'child_process'
@@ -31,6 +31,52 @@ export const buildModel = (llm: ILlm, providers: ILlmProvider[]): LanguageModel 
         default: 
             console.log('Invalid provider', llm.provider)
             return null
+    }
+}
+
+export interface IVisionResult<T> {
+    object: T | null       // salida estructurada validada por el schema (null si el modelo no la produjo)
+    text: string           // texto crudo del modelo (por si hay que inspeccionar/loggear)
+    usage?: unknown        // tokens usados (coste)
+    error?: string         // mensaje si la llamada falló
+}
+
+type TJsonValue = string | number | boolean | null | TJsonValue[] | { [k: string]: TJsonValue }
+
+export interface IVisionOptions<T> {
+    model: LanguageModel
+    image: string                                          // data URL, base64 crudo o URL http(s) de la imagen
+    prompt: string                                         // instrucción de usuario (qué extraer)
+    schema: z.ZodType<T>                                   // contrato de salida estructurada (Output.object)
+    system?: string
+    temperature?: number
+    providerOptions?: Record<string, Record<string, TJsonValue>>   // p.ej. { google: { structuredOutputs: true } }
+    mediaType?: string                                     // p.ej. 'image/png' (opcional; se infiere de un data URL)
+}
+
+// Llamada MULTIMODAL genérica: manda una imagen + prompt a un LLM y devuelve salida ESTRUCTURADA validada por
+// un schema Zod (patrón Output.object). Reutilizable por toda la plataforma (Iter la usa para extraer un mapa
+// de un diagrama). No lanza: los errores vuelven en `error`.
+export const generateVision = async <T>(opts: IVisionOptions<T>): Promise<IVisionResult<T>> => {
+    try {
+        const imagePart = opts.mediaType
+            ? { type: 'image' as const, image: opts.image, mediaType: opts.mediaType }
+            : { type: 'image' as const, image: opts.image }
+        const { output, text, usage } = await generateText({
+            model: opts.model,
+            temperature: opts.temperature ?? 0,
+            system: opts.system,
+            messages: [{
+                role: 'user',
+                content: [{ type: 'text' as const, text: opts.prompt }, imagePart],
+            }],
+            output: Output.object({ schema: opts.schema }),
+            ...(opts.providerOptions ? { providerOptions: opts.providerOptions } : {}),
+        })
+        return { object: (output as T | undefined) ?? null, text: text ?? '', usage }
+    }
+    catch (err) {
+        return { object: null, text: '', error: (err as Error)?.message ?? String(err) }
     }
 }
 
