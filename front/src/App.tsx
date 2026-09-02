@@ -619,21 +619,22 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
 
         // load user tabs
-        let lastTabs = localStorage.getItem('lastTabs')
+        const uid = user?.id ?? ''
+        let lastTabs = localStorage.getItem(`lastTabs.${uid}`)
         if (lastTabs)
             setLastTabs(JSON.parse(lastTabs))
         else
             setLastTabs(DEFAULTLASTTABS)
-        let favTabs = localStorage.getItem('favTabs')
+        let favTabs = localStorage.getItem(`favTabs.${uid}`)
         if (favTabs) setFavTabs(JSON.parse(favTabs))
 
         // load user Workspaces
-        let lastWorkspaces = localStorage.getItem('lastWorkspaces')
+        let lastWorkspaces = localStorage.getItem(`lastWorkspaces.${uid}`)
         if (lastWorkspaces)
             setLastWorkspaces(JSON.parse(lastWorkspaces))
         else
             setLastWorkspaces([])
-        let favWorkspaces = localStorage.getItem('favWorkspaces')
+        let favWorkspaces = localStorage.getItem(`favWorkspaces.${uid}`)
         if (favWorkspaces) setFavWorkspaces(JSON.parse(favWorkspaces))
     },[logged, backendUrl])
 
@@ -1472,7 +1473,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     let newLastTabs = lastTabs
                     if (newLastTabs.length>5) newLastTabs= newLastTabs.slice(0,4)
                     setLastTabs([newTab, ...newLastTabs])
-                    localStorage.setItem('lastTabs', JSON.stringify([newTab, ...newLastTabs]))
+                    localStorage.setItem(`lastTabs.${user?.id ?? ''}`, JSON.stringify([newTab, ...newLastTabs]))
                 }
             }
             else {
@@ -1699,7 +1700,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             
             let newLastWorkspaces=[{name: workspace.name, description:workspace.description}, ...lastWorkspaces]
             setLastWorkspaces(newLastWorkspaces)
-            localStorage.setItem('lastWorkspaces', JSON.stringify(newLastWorkspaces))
+            localStorage.setItem(`lastWorkspaces.${user?.id ?? ''}`, JSON.stringify(newLastWorkspaces))
         }
     }
 
@@ -1721,7 +1722,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     }
                     let newLastWorkspaces=[...lastWorkspaces.filter(b => b.name!==name)]
                     setLastWorkspaces(newLastWorkspaces)
-                    localStorage.setItem('lastWorkspaces', JSON.stringify(newLastWorkspaces))
+                    localStorage.setItem(`lastWorkspaces.${user?.id ?? ''}`, JSON.stringify(newLastWorkspaces))
                 }
             }))
         }
@@ -1769,7 +1770,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 let newLastWorkspaces = lastWorkspaces
                 if (newLastWorkspaces.length>5) newLastWorkspaces= newLastWorkspaces.slice(0,4)
                 setLastWorkspaces([newWorkspace, ...newLastWorkspaces])
-                localStorage.setItem('lastWorkspaces', JSON.stringify([newWorkspace, ...newLastWorkspaces]))
+                localStorage.setItem(`lastWorkspaces.${user?.id ?? ''}`, JSON.stringify([newWorkspace, ...newLastWorkspaces]))
             }
         }
     }
@@ -2065,15 +2066,17 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
     
     const onHomepageUpdateTabs = (last: ITabSummary[], fav: ITabSummary[]): void => {
-        localStorage.setItem('lastTabs', JSON.stringify(last))
-        localStorage.setItem('favTabs', JSON.stringify(fav))
+        const uid = user?.id ?? ''
+        localStorage.setItem(`lastTabs.${uid}`, JSON.stringify(last))
+        localStorage.setItem(`favTabs.${uid}`, JSON.stringify(fav))
         setLastTabs(last)
         setFavTabs(fav)
     }
-    
+
     const onHomepageUpdateWorkspaces = (last: IWorkspaceSummary[], fav: IWorkspaceSummary[]): void => {
-        localStorage.setItem('lastWorkspaces', JSON.stringify(last))
-        localStorage.setItem('favWorkspaces', JSON.stringify(fav))
+        const uid = user?.id ?? ''
+        localStorage.setItem(`lastWorkspaces.${uid}`, JSON.stringify(last))
+        localStorage.setItem(`favWorkspaces.${uid}`, JSON.stringify(fav))
         setLastWorkspaces(last)
         setFavWorkspaces(fav)
     }
