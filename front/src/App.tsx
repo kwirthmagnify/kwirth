@@ -58,6 +58,8 @@ import { LoginManagerDialog } from './components/LoginManagerDialog'
 import { PackManagerDialog } from './components/PackManagerDialog'
 import { LoginExtensionPage } from './components/LoginExtensionPage'
 import { IHomepageExtension, ERemoteConnState } from '@kwirthmagnify/kwirth-common-front'
+import { AiConfigProvider, AiConfigLlm } from '@kwirthmagnify/kwirth-common-ai/front'
+import { ILlmProvider, ILlm, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
 
 interface IAppProps {
     backendUrl:string
@@ -256,6 +258,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     // components
     const [showAbout, setShowAbout]=useState<boolean>(false)
+    const [showAiProviders, setShowAiProviders]=useState<boolean>(false)
+    const [showAiModels, setShowAiModels]=useState<boolean>(false)
+    const [aiProviders, setAiProviders]=useState<ILlmProvider[]>([])
+    const [aiLlms, setAiLlms]=useState<ILlm[]>([])
     const [showRenameTab, setShowRenameLog]=useState<boolean>(false)
     const [showManageClusters, setShowManageClusters]=useState<boolean>(false)
     const [showSaveWorkspace, setShowSaveWorkspace]=useState<boolean>(false)
@@ -1918,8 +1924,22 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.SettingsCluster:
                 setShowSettingsCluster(true)
                 break
-            case MenuDrawerOption.UpdateKwirth:
-                setMsgBox(MsgBoxYesNo('Update Kwirth',`This action will restart the Kwirth instance and users won't be able to work during 7 to 10 seconds. In addition, all volatile API keys will be deleted. Do you want to continue?`,setMsgBox, (button) => {
+            case MenuDrawerOption.AiProviders:
+                fetch(`${backendUrl}/core/aiconfig/providers`, addGetAuthorization(accessString))
+                    .then(r => r.json())
+                    .then((data: ILlmProvider[]) => { setAiProviders(data); setShowAiProviders(true) })
+                    .catch(() => { setAiProviders([]); setShowAiProviders(true) })
+                break
+            case MenuDrawerOption.AiModels:
+                Promise.all([
+                    fetch(`${backendUrl}/core/aiconfig/providers`, addGetAuthorization(accessString)).then(r => r.json()),
+                    fetch(`${backendUrl}/core/aiconfig/llms`, addGetAuthorization(accessString)).then(r => r.json())
+                ])
+                    .then(([provs, llms]: [ILlmProvider[], ILlm[]]) => { setAiProviders(provs); setAiLlms(llms); setShowAiModels(true) })
+                    .catch(() => { setAiProviders([]); setAiLlms([]); setShowAiModels(true) })
+                break
+            case MenuDrawerOption.RestartKwirth:
+                setMsgBox(MsgBoxYesNo('Restart Kwirth',`This action will restart the Kwirth instance and users won't be able to work during 7 to 10 seconds. In addition, all volatile API keys will be deleted. Do you want to continue?`,setMsgBox, (button) => {
                     if (button===MsgBoxButtons.Yes) {
                         fetch (`${backendUrl}/managekwirth/restart`, addGetAuthorization(accessString))
                     }
@@ -2479,6 +2499,22 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 </Snackbar>
                 { notificationMenuAnchorParent && <MenuNotification anchorParent={notificationMenuAnchorParent} notifications={notifications.current} onRefresh={() => setRefresh(Math.random())} onClose={() => setNotificationMenuAnchorParent(null)} renderIcon={(channelId) => channelId ? (new (frontChannels.get(channelId)!)()).getChannelIcon() : getIconFromKind('IconK8s', 20)} />}
                 { msgBox }
+                { showAiProviders && <AiConfigProvider
+                    providersAvailable={PROVIDERS_AVAILABLE}
+                    providers={aiProviders}
+                    onClose={(updated) => {
+                        setShowAiProviders(false)
+                        if (updated) fetch(`${backendUrl}/core/aiconfig/providers`, addPostAuthorization(accessString, JSON.stringify(updated))).catch(console.error)
+                    }}
+                /> }
+                { showAiModels && <AiConfigLlm
+                    providers={aiProviders}
+                    llms={aiLlms}
+                    onClose={(updated) => {
+                        setShowAiModels(false)
+                        if (updated) fetch(`${backendUrl}/core/aiconfig/llms`, addPostAuthorization(accessString, JSON.stringify(updated))).catch(console.error)
+                    }}
+                /> }
                 { showAbout && <About onClose={() => setShowAbout(false)}/>}
             </SessionContext.Provider>
         </ThemeProvider>

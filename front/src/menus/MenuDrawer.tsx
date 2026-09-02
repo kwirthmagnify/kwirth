@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Collapse, Divider, MenuItem, MenuList } from "@mui/material"
-import { BrowserUpdated, ChevronRight, CreateNewFolderTwoTone, DeleteTwoTone, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpenTwoTone, FolderOpen, FolderZip, Home, Https, ImportExport, Info, Key, LockPerson, Palette, Person, SaveAsTwoTone, SaveTwoTone, Send, Settings } from '@kwirthmagnify/kwirth-common-front/icons'
+import { ChevronRight, CreateNewFolderTwoTone, DeleteTwoTone, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpenTwoTone, FolderOpen, FolderZip, Home, Https, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, SaveAsTwoTone, SaveTwoTone, Send, Settings, SmartToy } from '@kwirthmagnify/kwirth-common-front/icons'
 
 enum MenuDrawerOption {
     NewWorkspace,
@@ -26,7 +26,9 @@ enum MenuDrawerOption {
     ManageDocs,
     ManageLogins,
     ManagePacks,
-    UpdateKwirth,
+    AiProviders,
+    AiModels,
+    RestartKwirth,
     About,
     Exit
 }
@@ -41,6 +43,7 @@ interface IMenuDrawerProps {
 const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
     const [workspacesOpen, setWorkspacesOpen] = useState(false)
     const [extensionsOpen, setExtensionsOpen] = useState(false)
+    const [aiConfigOpen, setAiConfigOpen] = useState(false)
 
     const optionSelected = (opt:MenuDrawerOption) => {
         props.optionSelected(opt);
@@ -53,6 +56,11 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
 
     const selectExtension = (opt: MenuDrawerOption) => {
         setExtensionsOpen(false)
+        optionSelected(opt)
+    }
+
+    const selectAiConfig = (opt: MenuDrawerOption) => {
+        setAiConfigOpen(false)
         optionSelected(opt)
     }
 
@@ -99,7 +107,17 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManagePacks)}><FolderZip />&nbsp;Packs</MenuItem>
                         </MenuList>
                     </Collapse>
-                    <MenuItem onClick={() => optionSelected(MenuDrawerOption.UpdateKwirth)}><BrowserUpdated />&nbsp;Update Kwirth</MenuItem>
+                    <MenuItem onClick={() => setAiConfigOpen(prev => !prev)} sx={{ justifyContent: 'space-between' }}>
+                        <span><SmartToy />&nbsp;AI Config</span>
+                        {aiConfigOpen ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
+                    </MenuItem>
+                    <Collapse in={aiConfigOpen} timeout="auto" unmountOnExit>
+                        <MenuList disablePadding>
+                            <MenuItem sx={{ pl: 4 }} onClick={() => selectAiConfig(MenuDrawerOption.AiProviders)}><SmartToy />&nbsp;AI Providers</MenuItem>
+                            <MenuItem sx={{ pl: 4 }} onClick={() => selectAiConfig(MenuDrawerOption.AiModels)}><Memory />&nbsp;AI Models</MenuItem>
+                        </MenuList>
+                    </Collapse>
+                    <MenuItem onClick={() => optionSelected(MenuDrawerOption.RestartKwirth)}><RestartAlt />&nbsp;Restart Kwirth</MenuItem>
                     <Divider/>
                 </div>
             }
