@@ -217,6 +217,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
     const [showPassword, setShowPassword] = useState(false)
     const [loadingModels, setLoadingModels] = useState(false)
+    const loadedModelsRef = useRef<ILlmModel[]>([])
 
     useEffect(() => {
         setProviders(JSON.parse(JSON.stringify(props.providers)))
@@ -226,25 +227,35 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     const [providerType, setProviderType] = useState(props.providersAvailable[0] ?? '')
     const [providerKey, setProviderKey] = useState('')
     const [providerEndpoint, setProviderEndpoint] = useState('')
-    const [pendingModels, setPendingModels] = useState<ILlmModel[]>([])
+    const [pendingModels, setPendingModels] = useState<ILlmModel[]>([])  // solo para mostrar count en el botón
 
     const onProviderSelected = (p: ILlmProvider, index: number) => {
         setProviderName(p.name)
         setProviderType(p.type ?? p.name)
         setProviderKey(p.key)
         setProviderEndpoint(p.endpoint ?? '')
+        loadedModelsRef.current = p.models ?? []
         setPendingModels(p.models ?? [])
         setSelectedIndex(index)
     }
 
-    const onNew = () => { setSelectedIndex(null); setProviderName(''); setProviderType(props.providersAvailable[0] ?? ''); setProviderKey(''); setProviderEndpoint(''); setPendingModels([]) }
+    const onNew = () => {
+        setSelectedIndex(null)
+        setProviderName('')
+        setProviderType(props.providersAvailable[0] ?? '')
+        setProviderKey('')
+        setProviderEndpoint('')
+        loadedModelsRef.current = []
+        setPendingModels([])
+    }
 
     const onAdd = () => {
         if (!providerName.trim() || !providerType) return
         const endpoint = providerType === 'openai-compat' ? providerEndpoint : undefined
+        const models = loadedModelsRef.current
         const updated = [...providers]
-        if (selectedIndex !== null) updated[selectedIndex] = { ...updated[selectedIndex], name: providerName, type: providerType, key: providerKey, models: pendingModels, endpoint }
-        else updated.push({ name: providerName, type: providerType, key: providerKey, models: pendingModels, endpoint })
+        if (selectedIndex !== null) updated[selectedIndex] = { ...updated[selectedIndex], name: providerName, type: providerType, key: providerKey, models, endpoint }
+        else updated.push({ name: providerName, type: providerType, key: providerKey, models, endpoint })
         setProviders(updated)
         onNew()
     }
@@ -261,7 +272,13 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
         try {
             const endpoint = providerType === 'openai-compat' ? providerEndpoint : undefined
             const models = await props.onLoadModels({ name: providerName, type: providerType, key: providerKey, models: [], endpoint })
+            loadedModelsRef.current = models
             setPendingModels(models)
+            if (selectedIndex !== null) {
+                const updated = [...providers]
+                updated[selectedIndex] = { ...updated[selectedIndex], models }
+                setProviders(updated)
+            }
         }
         finally {
             setLoadingModels(false)
