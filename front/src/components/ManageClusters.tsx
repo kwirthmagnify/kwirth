@@ -123,7 +123,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     }
 
     return (<>
-        <Dialog open={true} fullWidth maxWidth='md'>
+        <Dialog open={true} fullWidth maxWidth='md' disableEnforceFocus>
             <DialogTitleHelp section='guide/admin/06-cluster-management?id=add-a-remote-cluster' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Manage clusters</DialogTitleHelp>
             <DialogContent data-refresh={refresh}>
                 <Stack sx={{ display: 'flex', flexDirection: 'row' }}>

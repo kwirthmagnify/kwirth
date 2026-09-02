@@ -160,7 +160,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     }
 
     return (<>
-        <Dialog open={true} fullWidth maxWidth='md'>
+        <Dialog open={true} fullWidth maxWidth='md' disableEnforceFocus>
             <DialogTitleHelp section='guide/admin/03-user-management?id=user-fields' docsUrl={backendUrl + '/core/docs/core/kwirth'}>User management</DialogTitleHelp>
             <DialogContent>
                 <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
