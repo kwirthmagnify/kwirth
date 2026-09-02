@@ -13,7 +13,7 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-ai": "^0.5.31",
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.33",
     "@kwirthmagnify/kwirth-common-front": "^0.5.41",
     "lodash": "^4.17.21",
     "nunjucks": "^3.2.4",
