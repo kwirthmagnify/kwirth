@@ -138,14 +138,21 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                     ))}
                                 </Select>
                             </FormControl>
-                            <FormControl variant='standard' sx={{ width: '100%' }}>
-                                <InputLabel>Model</InputLabel>
-                                <Select value={model} onChange={e => setModel(e.target.value)} variant='standard' fullWidth displayEmpty>
-                                    {props.providers.find(p => p.name === provider)?.models.map((m, i) => (
-                                        <MenuItem key={i} value={m.id}>{m.name}</MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                            {props.providers.find(p => p.name === provider)?.models.length
+                                ? (
+                                    <FormControl variant='standard' sx={{ width: '100%' }}>
+                                        <InputLabel>Model</InputLabel>
+                                        <Select value={model} onChange={e => setModel(e.target.value)} variant='standard' fullWidth displayEmpty>
+                                            {props.providers.find(p => p.name === provider)?.models.map((m, i) => (
+                                                <MenuItem key={i} value={m.id}>{m.name}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                )
+                                : (
+                                    <TextField value={model} onChange={e => setModel(e.target.value)} label='Model ID' placeholder='e.g. claude-sonnet-4-5, glm-5.2' variant='standard' fullWidth />
+                                )
+                            }
                             <TextField value={temperature} onChange={e => setTemperature(+e.target.value)} label='Model temperature' variant='standard' type='number' fullWidth />
                             <Stack direction='row' spacing={1}>
                                 <TextField value={inputCostPerMillion} onChange={e => setInputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Input cost / M tokens (€/$)' variant='standard' type='number' fullWidth inputProps={{ min: 0, step: 0.01 }} />
@@ -215,18 +222,20 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     }, [props.providers])
     const [providerName, setProviderName] = useState('')
     const [providerKey, setProviderKey] = useState(props.providersAvailable[0] ?? '')
+    const [providerEndpoint, setProviderEndpoint] = useState('')
 
     const onProviderSelected = (p: ILlmProvider, index: number) => {
-        setProviderName(p.name); setProviderKey(p.key); setSelectedIndex(index)
+        setProviderName(p.name); setProviderKey(p.key); setProviderEndpoint(p.endpoint ?? ''); setSelectedIndex(index)
     }
 
-    const onNew = () => { setSelectedIndex(null); setProviderName(''); setProviderKey('') }
+    const onNew = () => { setSelectedIndex(null); setProviderName(''); setProviderKey(''); setProviderEndpoint('') }
 
     const onAdd = () => {
         if (!providerName.trim()) return
+        const endpoint = providerName === 'openai-compat' ? providerEndpoint : undefined
         const updated = [...providers]
-        if (selectedIndex !== null) updated[selectedIndex] = { ...updated[selectedIndex], name: providerName, key: providerKey }
-        else updated.push({ name: providerName, key: providerKey, models: [] })
+        if (selectedIndex !== null) updated[selectedIndex] = { ...updated[selectedIndex], name: providerName, key: providerKey, endpoint }
+        else updated.push({ name: providerName, key: providerKey, models: [], endpoint })
         setProviders(updated)
         onNew()
     }
@@ -278,6 +287,12 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                                 )
                             }}
                         />
+                        {providerName === 'openai-compat' && (
+                            <TextField label='Base URL' variant='standard' fullWidth placeholder='https://your-maas-host/v1'
+                                value={providerEndpoint} onChange={e => setProviderEndpoint(e.target.value)}
+                                helperText='OpenAI-compatible API base URL (e.g. Huawei MaaS, vLLM, LM Studio…)'
+                            />
+                        )}
                         <Box sx={{ flexGrow: 1 }} />
                         <Stack direction='row' spacing={1}>
                             <Button variant='outlined' onClick={onNew}>New</Button>
@@ -297,7 +312,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                     e.target.value = ''
                 }} />
                 <Button startIcon={<FileUpload fontSize='small' />} onClick={() => importProvRef.current?.click()}>Import</Button>
-                <Button startIcon={<FileDownload fontSize='small' />} onClick={() => downloadJson(providers.map(p => ({ name: p.name, key: p.key })), 'kwirth-providers.json')}>Export</Button>
+                <Button startIcon={<FileDownload fontSize='small' />} onClick={() => downloadJson(providers.map(p => ({ name: p.name, key: p.key, ...(p.endpoint ? { endpoint: p.endpoint } : {}) })), 'kwirth-providers.json')}>Export</Button>
                 <Box flex={1} />
                 <Button onClick={() => props.onClose(providers)} color='primary' variant='contained'>Save</Button>
                 <Button onClick={() => props.onClose(undefined)} color='inherit'>Cancel</Button>

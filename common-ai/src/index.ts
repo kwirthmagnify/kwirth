@@ -1,6 +1,6 @@
 export const STORAGE_KEY_PROVIDERS = 'kwirth-ai-providers'
 export const STORAGE_KEY_LLMS = 'kwirth-ai-llms'
-export const PROVIDERS_AVAILABLE = ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek']
+export const PROVIDERS_AVAILABLE = ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek', 'anthropic', 'openai-compat']
 
 export interface ILlmModel {
     id: string
@@ -13,6 +13,7 @@ export interface ILlmProvider {
     name: string
     key: string
     models: ILlmModel[]
+    endpoint?: string   // used by 'openai-compat' providers (base URL of the OpenAI-compatible API)
 }
 
 export interface ILlm {

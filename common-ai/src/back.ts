@@ -1,5 +1,10 @@
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common'
 import { ILlm, ILlmModel, ILlmProvider, IAgent } from './index'
+
+interface ILogChannel {
+    logInfo?: (msg: string) => void
+    logWarning?: (msg: string) => void
+    logError?: (msg: string) => void
+}
 import { LanguageModel, tool, generateText, stepCountIs, Output } from 'ai'
 import { z } from 'zod'
 import { AsyncLocalStorage } from 'async_hooks'
@@ -14,9 +19,11 @@ import { createMistral } from '@ai-sdk/mistral'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
+import { createAnthropic } from '@ai-sdk/anthropic'
 
 export const buildModel = (llm: ILlm, providers: ILlmProvider[]): LanguageModel | null => {
-    const key = llm.useProviderKey ? providers.find(p => p.name === llm.provider)?.key : llm.key
+    const prov = providers.find(p => p.name === llm.provider)
+    const key = llm.useProviderKey ? prov?.key : llm.key
     if (!key) {
         console.log('Could not find a key')
         return null
@@ -28,7 +35,9 @@ export const buildModel = (llm: ILlm, providers: ILlmProvider[]): LanguageModel 
         case 'google': return createGoogleGenerativeAI({ apiKey: key })(llm.model)
         case 'deepseek': return createDeepSeek({ apiKey: key })(llm.model)
         case 'openrouter': return createOpenRouter({ apiKey: key })(llm.model)
-        default: 
+        case 'anthropic': return createAnthropic({ apiKey: key })(llm.model)
+        case 'openai-compat': return createOpenAI({ apiKey: key, baseURL: prov?.endpoint })(llm.model)
+        default:
             console.log('Invalid provider', llm.provider)
             return null
     }
@@ -80,7 +89,7 @@ export const generateVision = async <T>(opts: IVisionOptions<T>): Promise<IVisio
     }
 }
 
-export const loadModels = async (providers: ILlmProvider[], log: IBackChannelObject) => {
+export const loadModels = async (providers: ILlmProvider[], log: ILogChannel) => {
     log.logInfo?.('Loading AI models...')
     for (const provider of providers) {
         try {
@@ -96,6 +105,7 @@ export const loadModels = async (providers: ILlmProvider[], log: IBackChannelObj
                 case 'google': {
                     const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${provider.key}`)
                     const data = await resp.json() as any
+                    console.log(data)
                     provider.models = data.models.map((m: { name: string; displayName: string; description: string }) => ({
                         id: m.name.startsWith('models/') ? m.name.substring(7) : m.name,
                         name: m.displayName,
@@ -135,6 +145,40 @@ export const loadModels = async (providers: ILlmProvider[], log: IBackChannelObj
                         id: m.id, name: m.id, description: m.description,
                         type: m.capabilities?.completion_chat === true ? 'text' : 'other'
                     } satisfies ILlmModel))
+                    break
+                }
+                case 'anthropic': {
+                    const resp = await fetch('https://api.anthropic.com/v1/models', { headers: { 'x-api-key': provider.key, 'anthropic-version': '2023-06-01' } })
+                    const data = await resp.json() as any
+                    provider.models = (data.data ?? []).map((m: { id: string; display_name: string }) => ({
+                        id: m.id, name: m.display_name ?? m.id, description: '', type: 'text'
+                    } satisfies ILlmModel))
+                    break
+                }
+                case 'openai-compat': {
+                    if (!provider.endpoint) {
+                        log.logWarning?.(`Provider 'openai-compat' has no endpoint configured — skipping model load`)
+                        provider.models = []
+                        break
+                    }
+                    const base = provider.endpoint.replace(/\/+$/, '')
+                    const modelsUrl = base.endsWith('/v1') ? `${base}/models` : `${base}/v1/models`
+                    try {
+                        const resp = await fetch(modelsUrl, { headers: { Authorization: 'Bearer ' + provider.key } })
+                        if (!resp.ok) {
+                            log.logWarning?.(`Provider 'openai-compat' /models returned ${resp.status} — models list will be empty`)
+                            provider.models = []
+                            break
+                        }
+                        const data = await resp.json() as any
+                        provider.models = (data.data ?? data.models ?? []).map((m: { id: string; name?: string; description?: string }) => ({
+                            id: m.id, name: m.name ?? m.id, description: m.description ?? '', type: 'text'
+                        } satisfies ILlmModel))
+                    }
+                    catch (err) {
+                        log.logWarning?.(`Provider 'openai-compat' failed to load models: ${err} — models list will be empty`)
+                        provider.models = []
+                    }
                     break
                 }
                 case 'kwirth':
