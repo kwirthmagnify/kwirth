@@ -69,6 +69,14 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
     const [inputCostPerMillion, setInputCostPerMillion] = useState<number | ''>(0)
     const [outputCostPerMillion, setOutputCostPerMillion] = useState<number | ''>(0)
 
+    // Re-sincroniza el estado cuando llegan los modelos async (mismo fix de race que AiConfigProvider): al abrir,
+    // el padre monta el diálogo con props.llms vacío y los pide por WS; sin esto, la lista quedaba vacía hasta
+    // cerrar/reabrir.
+    useEffect(() => {
+        setLlms(JSON.parse(JSON.stringify(props.llms)))
+        setSelectedIndex(null)
+    }, [props.llms])
+
     const onLlmSelected = (index: number) => {
         const l = llms[index]
         if (l) {
