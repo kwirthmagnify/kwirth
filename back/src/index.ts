@@ -1126,9 +1126,15 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
                 processChannelWebsocket (ri, webSocket, instanceConfig)
                 break
 
-            case EInstanceMessageAction.START:
+            case EInstanceMessageAction.START: {
+                const loginKey = ri.apiKeyApi?.apiKeys.find(k => accessKeySerialize(k.accessKey) === instanceConfig.accessKey)
+                if (loginKey?.enabledChannels?.length && !loginKey.enabledChannels.includes(instanceConfig.channel)) {
+                    sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Channel '${instanceConfig.channel}' is not allowed for this user`, instanceConfig, ri.channels)
+                    break
+                }
                 processStartInstanceConfig(ri, webSocket, instanceConfig, accessKeyResources, validNamespaces, validPodNames, validContainers)
                 break
+            }
             case EInstanceMessageAction.STOP:
                 processStopInstanceConfig(webSocket, instanceConfig, ri.channels)
                 break

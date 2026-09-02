@@ -5,5 +5,6 @@ export interface ApiKey {
     description: string
     expire: number
     days: number
+    enabledChannels?: string[]
 }
 

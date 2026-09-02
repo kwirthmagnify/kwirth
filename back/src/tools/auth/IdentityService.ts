@@ -70,7 +70,8 @@ export class IdentityService {
                 accessKey: accessKeyCreate('permanent', user.resources),
                 description: `Login user '${user.id}' from ${ip}`,
                 expire: Date.now() + 24*60*60*1000,
-                days: 1
+                days: 1,
+                enabledChannels: user.enabledChannels?.length ? user.enabledChannels : undefined
             }
             let storedKeys = await configMaps.read('kwirth.keys', [])
             storedKeys = AuthorizationManagement.cleanApiKeys(storedKeys)
