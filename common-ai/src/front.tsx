@@ -221,21 +221,26 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
         setSelectedIndex(null)
     }, [props.providers])
     const [providerName, setProviderName] = useState('')
-    const [providerKey, setProviderKey] = useState(props.providersAvailable[0] ?? '')
+    const [providerType, setProviderType] = useState(props.providersAvailable[0] ?? '')
+    const [providerKey, setProviderKey] = useState('')
     const [providerEndpoint, setProviderEndpoint] = useState('')
 
     const onProviderSelected = (p: ILlmProvider, index: number) => {
-        setProviderName(p.name); setProviderKey(p.key); setProviderEndpoint(p.endpoint ?? ''); setSelectedIndex(index)
+        setProviderName(p.name)
+        setProviderType(p.type ?? p.name)
+        setProviderKey(p.key)
+        setProviderEndpoint(p.endpoint ?? '')
+        setSelectedIndex(index)
     }
 
-    const onNew = () => { setSelectedIndex(null); setProviderName(''); setProviderKey(''); setProviderEndpoint('') }
+    const onNew = () => { setSelectedIndex(null); setProviderName(''); setProviderType(props.providersAvailable[0] ?? ''); setProviderKey(''); setProviderEndpoint('') }
 
     const onAdd = () => {
-        if (!providerName.trim()) return
-        const endpoint = providerName === 'openai-compat' ? providerEndpoint : undefined
+        if (!providerName.trim() || !providerType) return
+        const endpoint = providerType === 'openai-compat' ? providerEndpoint : undefined
         const updated = [...providers]
-        if (selectedIndex !== null) updated[selectedIndex] = { ...updated[selectedIndex], name: providerName, key: providerKey, endpoint }
-        else updated.push({ name: providerName, key: providerKey, models: [], endpoint })
+        if (selectedIndex !== null) updated[selectedIndex] = { ...updated[selectedIndex], name: providerName, type: providerType, key: providerKey, endpoint }
+        else updated.push({ name: providerName, type: providerType, key: providerKey, models: [], endpoint })
         setProviders(updated)
         onNew()
     }
@@ -247,7 +252,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     }
 
     return (
-        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: '80vw', maxWidth: '900px', height: '45vh' } }}>
+        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: '80vw', maxWidth: '900px', height: '60vh' } }}>
             <DialogTitle>AI — Provider config</DialogTitle>
             <DialogContent style={{ display: 'flex', height: '100%' }}>
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '30%' }}>
@@ -267,13 +272,17 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '24px' }}>
                     <Stack spacing={3} style={{ width: '100%' }}>
                         <FormControl variant='standard' sx={{ width: '100%' }}>
-                            <InputLabel>Provider</InputLabel>
-                            <Select value={providerName} onChange={e => setProviderName(e.target.value)} variant='standard' fullWidth>
-                                {props.providersAvailable.map(name => (
-                                    <MenuItem key={name} value={name}>{name}</MenuItem>
+                            <InputLabel>Type</InputLabel>
+                            <Select value={providerType} onChange={e => { setProviderType(e.target.value); if (!providerName) setProviderName(e.target.value) }} variant='standard' fullWidth>
+                                {props.providersAvailable.map(t => (
+                                    <MenuItem key={t} value={t}>{t}</MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
+                        <TextField label='Name' variant='standard' fullWidth placeholder='e.g. huawei-maas, openai-prod'
+                            value={providerName} onChange={e => setProviderName(e.target.value)}
+                            helperText='Unique identifier for this provider instance'
+                        />
                         <TextField label='API Key / Token' type={showPassword ? 'text' : 'password'} variant='standard' fullWidth
                             value={providerKey} onChange={e => setProviderKey(e.target.value)}
                             helperText='This key can be afterwards linked to specific uses.'
@@ -287,7 +296,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                                 )
                             }}
                         />
-                        {providerName === 'openai-compat' && (
+                        {providerType === 'openai-compat' && (
                             <TextField label='Base URL' variant='standard' fullWidth placeholder='https://your-maas-host/v1'
                                 value={providerEndpoint} onChange={e => setProviderEndpoint(e.target.value)}
                                 helperText='OpenAI-compatible API base URL (e.g. Huawei MaaS, vLLM, LM Studio…)'
@@ -298,7 +307,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                             <Button variant='outlined' onClick={onNew}>New</Button>
                             <Typography flex={1} />
                             <Button variant='text' color='error' onClick={onRemove} disabled={selectedIndex === null}>Remove</Button>
-                            <Button variant='contained' onClick={onAdd} disabled={!providerName}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>
+                            <Button variant='contained' onClick={onAdd} disabled={!providerName.trim() || !providerType}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>
                         </Stack>
                     </Stack>
                 </Box>
@@ -312,7 +321,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                     e.target.value = ''
                 }} />
                 <Button startIcon={<FileUpload fontSize='small' />} onClick={() => importProvRef.current?.click()}>Import</Button>
-                <Button startIcon={<FileDownload fontSize='small' />} onClick={() => downloadJson(providers.map(p => ({ name: p.name, key: p.key, ...(p.endpoint ? { endpoint: p.endpoint } : {}) })), 'kwirth-providers.json')}>Export</Button>
+                <Button startIcon={<FileDownload fontSize='small' />} onClick={() => downloadJson(providers.map(p => ({ name: p.name, type: p.type ?? p.name, key: p.key, ...(p.endpoint ? { endpoint: p.endpoint } : {}) })), 'kwirth-providers.json')}>Export</Button>
                 <Box flex={1} />
                 <Button onClick={() => props.onClose(providers)} color='primary' variant='contained'>Save</Button>
                 <Button onClick={() => props.onClose(undefined)} color='inherit'>Cancel</Button>

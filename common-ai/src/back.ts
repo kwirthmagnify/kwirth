@@ -28,7 +28,8 @@ export const buildModel = (llm: ILlm, providers: ILlmProvider[]): LanguageModel 
         console.log('Could not find a key')
         return null
     }
-    switch (llm.provider) {
+    const type = prov?.type ?? prov?.name ?? llm.provider
+    switch (type) {
         case 'openai': return createOpenAI({ apiKey: key })(llm.model)
         case 'groq': return createGroq({ apiKey: key })(llm.model)
         case 'mistral': return createMistral({ apiKey: key })(llm.model)
@@ -38,7 +39,7 @@ export const buildModel = (llm: ILlm, providers: ILlmProvider[]): LanguageModel 
         case 'anthropic': return createAnthropic({ apiKey: key })(llm.model)
         case 'openai-compat': return createOpenAI({ apiKey: key, baseURL: prov?.endpoint })(llm.model)
         default:
-            console.log('Invalid provider', llm.provider)
+            console.log('Invalid provider type', type)
             return null
     }
 }
@@ -93,7 +94,8 @@ export const loadModels = async (providers: ILlmProvider[], log: ILogChannel) =>
     log.logInfo?.('Loading AI models...')
     for (const provider of providers) {
         try {
-            switch (provider.name) {
+            const type = provider.type ?? provider.name
+            switch (type) {
                 case 'deepseek': {
                     const resp = await fetch('https://api.deepseek.com/models', { headers: { Authorization: 'Bearer ' + provider.key } })
                     const data = await resp.json() as any
@@ -188,7 +190,7 @@ export const loadModels = async (providers: ILlmProvider[], log: ILogChannel) =>
                     ]
                     break
                 default:
-                    log.logWarning?.(`Provider '${provider.name}' is not implemented, will not be available.`)
+                    log.logWarning?.(`Provider '${provider.name}' has unknown type '${type}', will not be available.`)
             }
             log.logInfo?.(`Provider '${provider.name}' loaded ${provider.models.length} models`)
         }

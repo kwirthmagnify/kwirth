@@ -10,7 +10,8 @@ export interface ILlmModel {
 }
 
 export interface ILlmProvider {
-    name: string
+    name: string        // user-defined identifier (e.g. 'huawei-maas', 'my-openai'); referenced by ILlm.provider
+    type: string        // SDK adapter type — must be one of PROVIDERS_AVAILABLE (defaults to name for legacy entries)
     key: string
     models: ILlmModel[]
     endpoint?: string   // used by 'openai-compat' providers (base URL of the OpenAI-compatible API)
