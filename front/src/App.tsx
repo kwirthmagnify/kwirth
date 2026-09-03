@@ -1683,13 +1683,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 keepAliveRef: undefined,
                 reconnectRef: undefined,
                 channel: tab.channel,
-                channelObject: JSON.parse(JSON.stringify(tab.channelObject)),
+                channelObject: {
+                    ...tab.channelObject,
+                    data: undefined
+                },
                 channelStarted: tab.channelStarted,
                 channelPaused: false,
                 channelPending: false,
                 headerEl: undefined
             }
-            delete newTab.channelObject.data  // we only need uiConfig and instanceConfig
             newTabs.push(newTab)
         }
         let workspace:IWorkspace = {
