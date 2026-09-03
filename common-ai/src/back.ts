@@ -37,7 +37,13 @@ export const buildModel = (llm: ILlm, providers: ILlmProvider[]): LanguageModel 
         case 'deepseek': return createDeepSeek({ apiKey: key })(llm.model)
         case 'openrouter': return createOpenRouter({ apiKey: key })(llm.model)
         case 'anthropic': return createAnthropic({ apiKey: key })(llm.model)
-        case 'openai-compat': return createOpenAI({ apiKey: key, baseURL: prov?.endpoint })(llm.model)
+        case 'openai-compat': {
+            // baseURL debe terminar en /v1 (el SDK añade el path). Y usamos .chat() → Chat Completions API
+            // (/v1/chat/completions): los endpoints OpenAI-compatibles (Huawei MaaS, etc.) NO exponen la
+            // Responses API (/v1/responses) → si no, 404 APIG.0101.
+            const b = (prov?.endpoint ?? '').replace(/\/+$/, '')
+            return createOpenAI({ apiKey: key, baseURL: b.endsWith('/v1') ? b : `${b}/v1` }).chat(llm.model)
+        }
         default:
             console.log('Invalid provider type', type)
             return null
@@ -72,6 +78,12 @@ export const generateVision = async <T>(opts: IVisionOptions<T>): Promise<IVisio
         const imagePart = opts.mediaType
             ? { type: 'image' as const, image: opts.image, mediaType: opts.mediaType }
             : { type: 'image' as const, image: opts.image }
+        console.log('[generateVision] request', {
+            modelId: (opts.model as any)?.modelId ?? (opts.model as any)?.model ?? '(unknown)',
+            provider: (opts.model as any)?.provider ?? (opts.model as any)?.config?.provider ?? '(unknown)',
+            mediaType: opts.mediaType, imageBytes: (opts.image ?? '').length,
+            systemLen: (opts.system ?? '').length, providerOptions: opts.providerOptions,
+        })
         const { output, text, usage } = await generateText({
             model: opts.model,
             temperature: opts.temperature ?? 0,
@@ -83,10 +95,26 @@ export const generateVision = async <T>(opts: IVisionOptions<T>): Promise<IVisio
             output: Output.object({ schema: opts.schema }),
             ...(opts.providerOptions ? { providerOptions: opts.providerOptions } : {}),
         })
+        console.log('[generateVision] ok', { hasOutput: output != null, textLen: (text ?? '').length, usage })
         return { object: (output as T | undefined) ?? null, text: text ?? '', usage }
     }
     catch (err) {
-        return { object: null, text: '', error: (err as Error)?.message ?? String(err) }
+        const e = err as any
+        const body = typeof e?.responseBody === 'string' ? e.responseBody : (e?.responseBody ? JSON.stringify(e.responseBody) : undefined)
+        // Serializa el body ENVIADO truncando cadenas largas (el base64 de la imagen) para ver la ESTRUCTURA
+        // de content[] (qué campos lleva cada parte) sin volcar megas.
+        const trunc = (o: unknown): string => {
+            try { return JSON.stringify(o, (_k, v) => (typeof v === 'string' && v.length > 120 ? `${v.slice(0, 60)}…[${v.length} chars]` : v)).slice(0, 4000) }
+            catch { return String(o) }
+        }
+        // TRAZA COMPLETA del fallo de la llamada al LLM (URL, status, cuerpo de respuesta, causa, request).
+        console.error('[generateVision] FAILED', {
+            name: e?.name, message: e?.message, statusCode: e?.statusCode, url: e?.url,
+            responseBody: body, cause: e?.cause?.message ?? e?.cause,
+            requestBody: trunc(e?.requestBodyValues),
+        })
+        const parts = [e?.statusCode, e?.message, e?.url, body].filter(Boolean).map((x: unknown) => String(x))
+        return { object: null, text: '', error: parts.join(' | ') || String(err) }
     }
 }
 
@@ -107,7 +135,6 @@ export const loadModels = async (providers: ILlmProvider[], log: ILogChannel) =>
                 case 'google': {
                     const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${provider.key}`)
                     const data = await resp.json() as any
-                    console.log(data)
                     provider.models = data.models.map((m: { name: string; displayName: string; description: string }) => ({
                         id: m.name.startsWith('models/') ? m.name.substring(7) : m.name,
                         name: m.displayName,

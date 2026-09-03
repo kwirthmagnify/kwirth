@@ -286,11 +286,11 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     }
 
     return (
-        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: '80vw', maxWidth: '900px', height: '60vh' } }}>
+        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: '80vw', maxWidth: '900px', height: 'auto', maxHeight: '90vh' } }}>
             <DialogTitle>AI — Provider config</DialogTitle>
-            <DialogContent style={{ display: 'flex', height: '100%' }}>
+            <DialogContent style={{ display: 'flex' }}>
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '30%' }}>
-                    <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                    <Box sx={{ flex: 1, overflowY: 'auto', maxHeight: '60vh' }}>
                         <List sx={{ mr: 1 }}>
                             {providers.map((p, index) => (
                                 <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onProviderSelected(p, index)}>
@@ -305,6 +305,10 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                 </Box>
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '24px' }}>
                     <Stack spacing={3} style={{ width: '100%' }}>
+                        <TextField label='Name' variant='standard' fullWidth placeholder='e.g. huawei-maas, openai-prod'
+                            value={providerName} onChange={e => setProviderName(e.target.value)}
+                            helperText='Unique identifier for this provider instance'
+                        />
                         <FormControl variant='standard' sx={{ width: '100%' }}>
                             <InputLabel>Type</InputLabel>
                             <Select value={providerType} onChange={e => { setProviderType(e.target.value); if (!providerName) setProviderName(e.target.value) }} variant='standard' fullWidth>
@@ -313,10 +317,6 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                                 ))}
                             </Select>
                         </FormControl>
-                        <TextField label='Name' variant='standard' fullWidth placeholder='e.g. huawei-maas, openai-prod'
-                            value={providerName} onChange={e => setProviderName(e.target.value)}
-                            helperText='Unique identifier for this provider instance'
-                        />
                         <TextField label='API Key / Token' type={showPassword ? 'text' : 'password'} variant='standard' fullWidth
                             value={providerKey} onChange={e => setProviderKey(e.target.value)}
                             helperText='This key can be afterwards linked to specific uses.'
