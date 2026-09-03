@@ -364,8 +364,22 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             }
         }
         else {
-            secrets = new KubernetesSecrets(clusterInfo.coreApi, kwirthData.namespace)
-            configMaps = new KubernetesConfigMaps(clusterInfo.coreApi, kwirthData.namespace)
+            const kwirthStore = process.env.KWIRTH_STORE
+            if (kwirthStore && kwirthStore !== 'etcd') {
+                logInfo(ELogComponent.CORE, `Using filesystem storage at ${kwirthStore}`)
+                secrets = new NodeSecrets(kwirthStore)
+                configMaps = new NodeConfigMaps(kwirthStore)
+                let users:{ [username:string]:string } = await secrets.read('kwirth-users')
+                if (!users) {
+                    logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users secret')
+                    users = { admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0=' }
+                    await secrets.write('kwirth-users', users)
+                }
+            }
+            else {
+                secrets = new KubernetesSecrets(clusterInfo.coreApi, kwirthData.namespace)
+                configMaps = new KubernetesConfigMaps(clusterInfo.coreApi, kwirthData.namespace)
+            }
         }
 
         let runningInstance:IRunningInstance = {

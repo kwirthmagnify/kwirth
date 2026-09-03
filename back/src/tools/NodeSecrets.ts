@@ -6,8 +6,8 @@ import os from 'os'
 export class NodeSecrets implements ISecrets {
     private dir: string
 
-    constructor() {
-        this.dir = path.join(os.homedir(), '.kwirth', 'secrets')
+    constructor(baseDir?: string) {
+        this.dir = baseDir ? path.join(baseDir, 'secrets') : path.join(os.homedir(), '.kwirth', 'secrets')
         fs.mkdirSync(this.dir, { recursive: true })
     }
 

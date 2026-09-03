@@ -6,8 +6,8 @@ import os from 'os'
 export class NodeConfigMaps implements IConfigMaps {
     private dir: string
 
-    constructor() {
-        this.dir = path.join(os.homedir(), '.kwirth', 'configmaps')
+    constructor(baseDir?: string) {
+        this.dir = baseDir ? path.join(baseDir, 'configmaps') : path.join(os.homedir(), '.kwirth', 'configmaps')
         fs.mkdirSync(this.dir, { recursive: true })
     }
 
