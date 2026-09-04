@@ -62,8 +62,14 @@ export class LogChannel implements IChannel {
                                         break
                                     }
                                     case ELogSortOrder.TIME: {
-                                        let timeIndex = logData.messages.findLastIndex(m => getMsgEpoch(m) < getMsgEpoch(logLine))
-                                        logData.messages.splice(timeIndex + 1, 0, logLine)
+                                        const epoch = getMsgEpoch(logLine)
+                                        if (isNaN(epoch)) {
+                                            logData.messages.push(logLine)
+                                        }
+                                        else {
+                                            let timeIndex = logData.messages.findLastIndex(m => getMsgEpoch(m) <= epoch)
+                                            logData.messages.splice(timeIndex + 1, 0, logLine)
+                                        }
                                         break
                                     }
                                     default: logData.messages.push(logLine)

@@ -72,9 +72,9 @@
   {
     "extensionType": "plugin",
     "id": "log",
-    "version": "0.2.19",
+    "version": "0.2.20",
     "name": "Log",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.19.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.20.tgz",
     "description": "Log stream channel plugin for Kwirth",
     "icon": "Subject",
     "website": "https://kwirthmagnify.dev"

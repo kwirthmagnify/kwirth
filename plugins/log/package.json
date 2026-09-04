@@ -3,7 +3,7 @@
   "name": "Log",
   "displayName": "Log",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "website": "https://kwirthmagnify.dev",
   "description": "Log stream channel plugin for Kwirth",
   "icon": "Subject",
