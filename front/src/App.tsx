@@ -20,7 +20,7 @@ import { ManageUserSecurity } from './components/security/ManageUserSecurity'
 import { ResourceSelector, IResourceSelected } from './components/ResourceSelector'
 import { TabContent } from './components/TabContent'
 import { SettingsKwirth } from './components/settings/SettingsKwirth'
-import { IKwirthSettings } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplaceEntry } from '@kwirthmagnify/kwirth-common'
 import { SettingsUser } from './components/settings/SettingsUser'
 import { MenuTab, MenuTabOption } from './menus/MenuTab'
 import { MenuDrawer, MenuDrawerOption } from './menus/MenuDrawer'
@@ -594,49 +594,39 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const checkExtensionUpdates = async () => {
             await settingsLoaded
             if (userSettingsRef.current?.checkExtensionUpdates === false) return
-            const MANIFEST_BASE = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master'
-            const MANIFESTS: Record<string, string> = {
-                plugin:   `${MANIFEST_BASE}/plugins/manifest.json`,
-                sender:   `${MANIFEST_BASE}/senders/manifest.json`,
-                provider: `${MANIFEST_BASE}/providers/manifest.json`,
-                theme:    `${MANIFEST_BASE}/themes/manifest.json`,
-                homepage: `${MANIFEST_BASE}/homepages/manifest.json`,
-                webhook:  `${MANIFEST_BASE}/webhooks/manifest.json`,
-                login:    `${MANIFEST_BASE}/logins/manifest.json`,
-                pack:     `${MANIFEST_BASE}/packs/manifest.json`,
-                docs:     `${MANIFEST_BASE}/docs/manifest.json`,
-                idp:      `${MANIFEST_BASE}/idps/manifest.json`,
-            }
-            // idp connectors no cuelgan de /core, tienen su propio router
+            // El catalogo lo resuelve el back (/core/marketplace/<tipo>): ya viene filtrado por tipo y con la
+            // precedencia de marketplaces aplicada. Eso importa aqui: si un marketplace privado publica su
+            // propio 'log', hay que comparar contra SUS versiones y no contra las del 'log' publico.
+            // idp connectors no cuelgan de /core, tienen su propio router.
             const ENDPOINTS: Record<string, string> = {
-                plugin:   `${backendUrl}/core/plugins`,
-                sender:   `${backendUrl}/core/senders`,
-                provider: `${backendUrl}/core/providers`,
-                theme:    `${backendUrl}/core/themes`,
-                homepage: `${backendUrl}/core/homepages`,
-                webhook:  `${backendUrl}/core/webhooks`,
-                login:    `${backendUrl}/core/logins`,
-                pack:     `${backendUrl}/core/packs`,
-                docs:     `${backendUrl}/core/docs`,
-                idp:      `${backendUrl}/idp/connectors`,
+                [EExtensionType.PLUGIN]:   `${backendUrl}/core/plugins`,
+                [EExtensionType.SENDER]:   `${backendUrl}/core/senders`,
+                [EExtensionType.PROVIDER]: `${backendUrl}/core/providers`,
+                [EExtensionType.THEME]:    `${backendUrl}/core/themes`,
+                [EExtensionType.HOMEPAGE]: `${backendUrl}/core/homepages`,
+                [EExtensionType.WEBHOOK]:  `${backendUrl}/core/webhooks`,
+                [EExtensionType.LOGIN]:    `${backendUrl}/core/logins`,
+                [EExtensionType.PACK]:     `${backendUrl}/core/packs`,
+                [EExtensionType.DOCS]:     `${backendUrl}/core/docs`,
+                [EExtensionType.IDP]:      `${backendUrl}/idp/connectors`,
             }
             try {
-                const types = Object.keys(MANIFESTS)
-                const [manifests, installeds] = await Promise.all([
-                    Promise.all(types.map(t => fetch(MANIFESTS[t]).then(r => r.ok ? r.json() : []).catch(() => []))),
+                const types = Object.values(EExtensionType)
+                const [catalogs, installeds] = await Promise.all([
+                    Promise.all(types.map(t => fetch(`${backendUrl}/core/marketplace/${t}`, addGetAuthorization(accessString)).then(r => r.ok ? r.json() : []).catch(() => []))),
                     Promise.all(types.map(t => fetch(ENDPOINTS[t], addGetAuthorization(accessString)).then(r => r.ok ? r.json() : []).catch(() => [])))
                 ])
                 const updates: string[] = []
                 types.forEach((type, i) => {
-                    const manifest: { id: string, version: string }[] = manifests[i]
+                    const catalog: IMarketplaceEntry[] = catalogs[i]
                     const installed: { id: string, version: string, installedFrom?: string }[] = installeds[i]
                     // un endpoint que no devuelva array no debe tumbar el chequeo de los demas tipos
-                    if (!Array.isArray(manifest) || !Array.isArray(installed)) return
+                    if (!Array.isArray(catalog) || !Array.isArray(installed)) return
                     for (const inst of installed) {
                         if (inst.installedFrom === 'dev') continue
                         // los conectores bundled (idp) no traen version y no son actualizables
                         if (!inst.version) continue
-                        const latest = manifest.filter(m => m.id === inst.id).map(m => m.version).sort((a, b) => versionGreaterThan(a, b) ? -1 : 1)[0]
+                        const latest = catalog.filter(m => m.id === inst.id).map(m => m.version).sort((a, b) => versionGreaterThan(a, b) ? -1 : 1)[0]
                         if (latest && versionGreaterThan(latest, inst.version)) updates.push(`${type} ${inst.id} ${inst.version}→${latest}`)
                     }
                 })

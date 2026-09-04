@@ -6,9 +6,9 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { MarketplaceBadge } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
-const PLUGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/plugins/manifest.json'
 
 interface IRequirement {
     extensionType: EExtensionType
@@ -17,6 +17,8 @@ interface IRequirement {
 }
 
 interface IPluginManifestEntry {
+    marketplaceId?: string
+    marketplaceLabel?: string
     id: string
     extensionType?: EExtensionType    // tipo de extensión de la entrada (marketplace unificado / packs)
     name: string
@@ -107,7 +109,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
         setError(undefined)
         setLoadingManifest(true)
         try {
-            const res = await fetch(PLUGINS_MANIFEST_URL)
+            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.PLUGIN}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: IPluginManifestEntry[] = await res.json()
             setAvailable(data)
@@ -467,7 +469,10 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                                             onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [id]: v }))}
                                             description={plugin.description}
                                             website={plugin.website}
-                                            badge={isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
+                                            badge={<>
+                                                {isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
+                                                <MarketplaceBadge label={plugin.marketplaceLabel} />
+                                            </>}
                                             requires={plugin.requires}
                                             uses={plugin.uses}
                                             action={(() => {

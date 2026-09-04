@@ -4,16 +4,15 @@ import { CheckCircle, Delete, Download, FolderOpen, Key, Link, OpenInNew, Refres
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
-import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 
-const IDPS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/idps/manifest.json'
 
 // tipos de la API (front-local, como hace ProviderDialog con su IProviderSchemaField)
 type IdpFieldType = 'text' | 'number' | 'boolean' | 'password'
 interface IIdpConfigFieldDef { name: string; label: string; type?: IdpFieldType; required?: boolean; options?: string[] }
 interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IIdpConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; website?: string; description?: string }
 interface IIdpInstanceConfig { id: string; connectorId: string; label: string; enabled: boolean; config: Record<string, unknown> }
-interface IIdpConnectorManifestEntry { id: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string }
+interface IIdpConnectorManifestEntry { id: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string; marketplaceId?: string; marketplaceLabel?: string }
 interface IIdpInstallResult { requiresRestart?: boolean }
 
 interface IIdpManagerDialogProps {
@@ -63,7 +62,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
     const fetchManifest = async () => {
         setError(undefined); setLoadingManifest(true)
         try {
-            const res = await fetch(IDPS_MANIFEST_URL)
+            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.IDP}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             setAvailable(await res.json())
         }

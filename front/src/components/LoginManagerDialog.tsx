@@ -5,12 +5,14 @@ import { CheckCircle, Delete, Download, FolderOpen, Link, LockPerson, OpenInNew,
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
-import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { MarketplaceBadge } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
-const LOGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/logins/manifest.json'
 
 interface ILoginManifestEntry {
+    marketplaceId?: string
+    marketplaceLabel?: string
     id: string
     name: string
     displayName: string
@@ -113,7 +115,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
         setError(undefined)
         setLoadingManifest(true)
         try {
-            const res = await fetch(LOGINS_MANIFEST_URL)
+            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.LOGIN}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: ILoginManifestEntry[] = await res.json()
             setAvailable(data)
@@ -442,7 +444,10 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                                 version={t.version}
                                                 description={t.description}
                                                 website={t.website}
-                                                badge={isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
+                                                badge={<>
+                                                    {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
+                                                    <MarketplaceBadge label={getSelectedEntry(id).marketplaceLabel} />
+                                                </>}
                                                 action={
                                                     <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
                                                         <span>

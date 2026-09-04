@@ -5,12 +5,14 @@ import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, 
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
-import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { MarketplaceBadge } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
-const PACKS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/packs/manifest.json'
 
 interface IPackManifestEntry {
+    marketplaceId?: string
+    marketplaceLabel?: string
     id: string
     displayName: string
     version: string
@@ -112,7 +114,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
         setError(undefined)
         setLoadingManifest(true)
         try {
-            const res = await fetch(PACKS_MANIFEST_URL)
+            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.PACK}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: IPackManifestEntry[] = await res.json()
             setAvailable(data)
@@ -410,7 +412,10 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                                 description={t.description}
                                                 website={t.website}
                                                 members={t.extensionTypes?.join(', ')}
-                                                badge={isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
+                                                badge={<>
+                                                    {isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
+                                                    <MarketplaceBadge label={getSelectedEntry(id).marketplaceLabel} />
+                                                </>}
                                                 action={
                                                     <Tooltip title={isInstalled(id) ? 'Already installed — uninstall first' : 'Install pack'}>
                                                         <span>

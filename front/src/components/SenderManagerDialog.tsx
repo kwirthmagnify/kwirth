@@ -11,7 +11,6 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addP
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
 
-const SENDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/senders/manifest.json'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +31,8 @@ interface IRequirement {
 }
 
 interface ISenderManifestEntry {
+    marketplaceId?: string
+    marketplaceLabel?: string
     id: string
     extensionType?: EExtensionType    // tipo de extensión de la entrada (marketplace unificado / packs)
     name: string
@@ -157,7 +158,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
     const fetchManifest = async () => {
         setLoadingManifest(true)
         try {
-            const res = await fetch(SENDERS_MANIFEST_URL)
+            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.SENDER}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: ISenderManifestEntry[] = await res.json()
             setAvailable(data)

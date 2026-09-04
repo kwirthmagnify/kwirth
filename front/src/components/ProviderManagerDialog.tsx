@@ -9,7 +9,6 @@ import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common
 import { useKeyboard } from '../tools/useKeyboard'
 
 declare global { interface Window { __kwirth_providers__: Record<string, any> } }
-const PROVIDERS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json'
 
 interface IRequirement {
     extensionType: EExtensionType
@@ -18,6 +17,8 @@ interface IRequirement {
 }
 
 interface IProviderManifestEntry {
+    marketplaceId?: string
+    marketplaceLabel?: string
     id: string
     extensionType?: EExtensionType    // tipo de extensión de la entrada (marketplace unificado / packs)
     name: string
@@ -174,7 +175,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
         setError(undefined)
         setLoadingManifest(true)
         try {
-            const res = await fetch(PROVIDERS_MANIFEST_URL)
+            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.PROVIDER}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: IProviderManifestEntry[] = await res.json()
             setAvailable(data)

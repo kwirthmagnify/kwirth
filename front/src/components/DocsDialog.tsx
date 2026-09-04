@@ -4,11 +4,13 @@ import { Delete, Description, Download, FolderOpen, Link, OpenInNew, Refresh, Vi
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
+import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
 
-const DOCS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/docs/manifest.json'
 
 interface IDocsManifestEntry {
+    marketplaceId?: string
+    marketplaceLabel?: string
     id: string
     name: string
     version: string
@@ -80,7 +82,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
         setError(undefined)
         setLoadingManifest(true)
         try {
-            const res = await fetch(DOCS_MANIFEST_URL)
+            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.DOCS}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: IDocsManifestEntry[] = await res.json()
             setAvailable(data)

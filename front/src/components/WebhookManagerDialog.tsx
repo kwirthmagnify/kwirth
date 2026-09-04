@@ -11,7 +11,6 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addP
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard } from '../tools/useKeyboard'
 
-const WEBHOOKS_MANIFEST_URL = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/webhooks/manifest.json'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +31,8 @@ interface IRequirement {
 }
 
 interface IWebhookManifestEntry {
+    marketplaceId?: string
+    marketplaceLabel?: string
     id: string
     extensionType?: EExtensionType
     name: string
@@ -127,7 +128,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
     const fetchManifest = async () => {
         setLoadingManifest(true)
         try {
-            const res = await fetch(WEBHOOKS_MANIFEST_URL)
+            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.WEBHOOK}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: IWebhookManifestEntry[] = await res.json()
             setAvailable(data)
