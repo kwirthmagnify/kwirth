@@ -12,6 +12,8 @@ import { StoreApi } from './api/StoreApi'
 import { UserApi } from './api/UserApi'
 import { ApiKeyApi } from './api/ApiKeyApi'
 import { SettingsApi } from './api/SettingsApi'
+import { MarketplaceApi } from './api/MarketplaceApi'
+import { MarketplaceManager } from './tools/MarketplaceManager'
 import { LoginApi } from './api/LoginApi'
 
 // HTTP server & websockets
@@ -1226,6 +1228,12 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             return false
         }
         riRouter.use(`/core/settings`, settingsResult.router)
+
+        // Resolucion de marketplaces: el back descarga los manifests (publico + los configurados),
+        // filtra por tipo y aplica la precedencia, para que la regla exista en un solo sitio.
+        let marketplaceManager = new MarketplaceManager(ri.configMaps)
+        let marketplaceApi = new MarketplaceApi(marketplaceManager, apiKeyApi)
+        riRouter.use(`/core/marketplace`, marketplaceApi.router)
         // Catálogo global de scopes RBAC (built-in del core + los que declaran los canales): lo consume el
         // editor de seguridad. Admin-gated. Vive en /core por ser vocabulario transversal (no de user/key).
         riRouter.get(`/core/scopes`, (req: Request, res: Response) => {
