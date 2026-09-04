@@ -157,6 +157,35 @@ export class ConfigApi {
                 }
             })
 
+        // get every pod of a namespace grouped by its controller, in one shot.
+        // Must be declared before '/:namespace/:controller/pods' or express would match 'groups' as a controller name.
+        this.router.route(['/:namespace/groups/pods', '/:namespace/controllers/pods'])
+            .all( async (req:Request, res:Response, next) => {
+                if (! (await AuthorizationManagement.validKey(req,res, this.apiKeyApi))) return
+                next()
+            })
+            .get( async (req:Request, res:Response) => {
+                try {
+                    if (this.kwirthData.clusterType === EClusterType.DOCKER) {
+                        res.status(200).json({})
+                        return
+                    }
+                    let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
+                    if (accessKey) {
+                        let result = await AuthorizationManagement.getPodsByController(this.clusterInfo.coreApi, this.clusterInfo.appsApi, req.params.namespace, accessKey)
+                        res.status(200).json(result)
+                    }
+                    else {
+                        res.status(403).json({})
+                        return
+                    }
+                }
+                catch (err) {
+                    res.status(500).json({})
+                    console.log(err)
+                }
+            })
+
         // get all pods in a namespace in a controller
         this.router.route('/:namespace/:controller/pods')
             .all( async (req:Request,res:Response, next) => {

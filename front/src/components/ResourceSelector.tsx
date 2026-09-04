@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Box, Button, Checkbox, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Stack, SxProps, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Checkbox, FormControl, InputLabel, ListSubheader, MenuItem, Select, SelectChangeEvent, Stack, SxProps, TextField, Tooltip, Typography } from '@mui/material'
 import { clusterColor } from '../tools/clusterColor'
 import { Cluster } from '../model/Cluster'
 import { MsgBoxOkError } from '../tools/MsgBox'
@@ -65,6 +65,12 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     const [containers, setContainers] = useState<string[]>([])
     const [channel, setChannel] = useState(props.backChannels.length>0? props.backChannels[0].id : '')
     const [msgBox, setMsgBox] = useState(<></>)
+    const [podsByController, setPodsByController] = useState<Map<string, string[]>>(new Map())
+    const [podNamespaces, setPodNamespaces] = useState<Map<string, string>>(new Map())
+    const [nsFilter, setNsFilter] = useState('')
+    const [ctrlFilter, setCtrlFilter] = useState('')
+    const [podFilter, setPodFilter] = useState('')
+    const [containerFilter, setContainerFilter] = useState('')
 
     let isDocker = cluster.kwirthData?.clusterType === EClusterType.DOCKER
 
@@ -87,9 +93,32 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     }
 
     const loadAllControllers = async (cluster:Cluster,namespace:string) => {
-        let response = await fetch(`${cluster!.url}/config/${namespace}/groups`, addGetAuthorization(cluster!.accessString))
-        let data = await response.json() as IController[]
-        setAllControllers((prev) => [...prev, ...data.map(d => d.type+'+'+d.name)])
+        const [groupsResponse, podsResponse] = await Promise.all([
+            fetch(`${cluster!.url}/config/${namespace}/groups`, addGetAuthorization(cluster!.accessString)),
+            fetch(`${cluster!.url}/config/${namespace}/groups/pods`, addGetAuthorization(cluster!.accessString))
+        ])
+        const data = await groupsResponse.json() as IController[]
+        const podMap = await podsResponse.json() as Record<string, string[]>
+        // ReplicaSets with no pods are absent from podMap, so they get dropped from the list
+        const filtered = data.filter(d => d.type !== 'ReplicaSet' || podMap[d.type+'+'+d.name])
+        setAllControllers((prev) => {
+            const next = [...prev, ...filtered.map(d => d.type+'+'+d.name)]
+            return next.filter((v, i) => next.indexOf(v) === i)
+        })
+        setPodsByController(prev => {
+            const next = new Map(prev)
+            for (const [key, pods] of Object.entries(podMap)) {
+                next.set(key, [...new Set([...(next.get(key) ?? []), ...pods])])
+            }
+            return next
+        })
+        setPodNamespaces(prev => {
+            const next = new Map(prev)
+            for (const pods of Object.values(podMap)) {
+                for (const pod of pods) next.set(pod, namespace)
+            }
+            return next
+        })
         setControllers([])
     }
 
@@ -101,23 +130,15 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             setAllPods((prev) => [...prev, ...data])
         }
         else {
-            let list:string[] = []
-            for (let namespace of namespaces) {
-                for (let group of controllers) {
-                    let [gtype,gname] = group.split('+')
-                    let response = await fetch(`${cluster!.url}/config/${namespace}/${gname}/pods?type=${gtype}`, addGetAuthorization(cluster!.accessString))
-                    let data = await response.json()
-                    list.push (...(data as string[]))
-                }
-            }
-            setAllPods((prev) => [...prev, ...new Set(list)])
+            const pods = controllers.flatMap(group => podsByController.get(group) ?? [])
+            setAllPods((prev) => [...new Set([...prev, ...pods])])
         }
     }
 
     const loadAllContainers = async (cluster: Cluster, namespace:string, pod:string) => {
         let response = await fetch(`${cluster.url}/config/${namespace}/${pod}/containers`, addGetAuthorization(cluster.accessString))
         let data = await response.json()
-        setAllContainers((prev) => [...prev, ...(data as string[]).map(c => pod+'+'+c)])
+        setAllContainers((prev) => [...new Set([...prev, ...(data as string[]).map(c => pod+'+'+c)])])
     }
 
     const onChangeCluster = (event: SelectChangeEvent) => {
@@ -129,6 +150,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             setAllNamespaces([])
             setNamespaces([])
             setAllControllers([])
+            setPodsByController(new Map())
+            setPodNamespaces(new Map())
             setControllers([])
             setPods([])
             setAllContainers([])
@@ -140,6 +163,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             setAllNamespaces([])
             setNamespaces([])
             setAllControllers([])
+            setPodsByController(new Map())
+            setPodNamespaces(new Map())
             setControllers([])
             setPods([])
             setAllContainers([])
@@ -163,6 +188,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         else {
             setNamespaces([])
             setAllControllers([])
+            setPodsByController(new Map())
+            setPodNamespaces(new Map())
             setControllers([])
             setPods([])
             setAllContainers([])
@@ -182,7 +209,9 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         }
         else {
             setNamespaces(nss)
-            setAllControllers([...( view==='pod' || view==='container'? ['Pod+Not Applicable']:[])])
+            setAllControllers([...( view==='pod' || view==='container'? ['Pod+No controller']:[])])
+            setPodsByController(new Map())
+            setPodNamespaces(new Map())
             setControllers([])
             setPods([])
             setAllContainers([])
@@ -206,7 +235,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         setPods(pods)
         setAllContainers([])
         setContainers([])
-        if (view === 'container') namespaces.map(ns => pods.map (pod => loadAllContainers(cluster, ns, pod)))
+        if (view === 'container') pods.forEach(pod => loadAllContainers(cluster, podNamespaces.get(pod) ?? namespaces[0], pod))
     }
 
     const onChangeContainer = (event: SelectChangeEvent<typeof containers>) => {
@@ -293,37 +322,43 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         setNamespaces(props.resourceSelected!.namespaces)
 
         if (v===EInstanceConfigView.GROUP || v===EInstanceConfigView.POD || v===EInstanceConfigView.CONTAINER) {
-            let allg=[]
+            let allg: string[] = []
+            const podMap = new Map<string, string[]>()
+            const podNsMap = new Map<string, string>()
             for (let namespace of props.resourceSelected!.namespaces) {
-                let gs = await (await fetch(`${c.url}/config/${namespace}/groups`, addGetAuthorization(c.accessString))).json()
-
-                allg.push(...gs.map((g: { type: string; name: string }) => g.type+'+'+g.name))
+                const [gs, pm] = await Promise.all([
+                    (await fetch(`${c.url}/config/${namespace}/groups`, addGetAuthorization(c.accessString))).json(),
+                    (await fetch(`${c.url}/config/${namespace}/groups/pods`, addGetAuthorization(c.accessString))).json() as Promise<Record<string, string[]>>
+                ])
+                for (const [key, pods] of Object.entries(pm)) {
+                    podMap.set(key, [...new Set([...(podMap.get(key) ?? []), ...pods])])
+                    for (const pod of pods) podNsMap.set(pod, namespace)
+                }
+                for (const g of gs as { type: string; name: string }[]) {
+                    const key = g.type+'+'+g.name
+                    if (g.type === 'ReplicaSet' && !pm[key]) continue
+                    if (!allg.includes(key)) allg.push(key)
+                }
             }
             setAllControllers(allg)
+            setPodsByController(podMap)
+            setPodNamespaces(podNsMap)
             setControllers(props.resourceSelected!.controllers)
             if (v===EInstanceConfigView.POD || v===EInstanceConfigView.CONTAINER) {
-                let allp:string[] = []
-                for (let namespace of props.resourceSelected!.namespaces) {
-                    for (let controller of props.resourceSelected!.controllers) {
-                        let [gtype,gname] = controller.split('+')
-                        let ps = await (await fetch(`${c.url}/config/${namespace}/${gname}/pods?type=${gtype}`, addGetAuthorization(c.accessString))).json()
-                        allp.push (...ps)
-                    }
-                }
+                const allp = [...new Set(props.resourceSelected!.controllers.flatMap(ctrl => podMap.get(ctrl) ?? []))]
                 setAllPods(allp)
                 setPods(props.resourceSelected!.pods)
 
                 if (v===EInstanceConfigView.CONTAINER) {
                     let allc:string[]=[]
-                    for (let namespace of props.resourceSelected!.namespaces) {
-                        for (let pod of props.resourceSelected!.pods) {
-                            let cs = await (await fetch(`${c.url}/config/${namespace}/${pod}/containers`, addGetAuthorization(c.accessString))).json()
-                            console.log(cs)
-                            allc.push(...cs.map ((c: string) => pod+'+'+c))
-                        }
+                    for (let pod of props.resourceSelected!.pods) {
+                        let ns = podNsMap.get(pod) ?? props.resourceSelected!.namespaces[0]
+                        let cs = await (await fetch(`${c.url}/config/${ns}/${pod}/containers`, addGetAuthorization(c.accessString))).json()
+                        console.log(cs)
+                        allc.push(...cs.map ((c: string) => pod+'+'+c))
                     }
                     console.log('allc', allc)
-                    setAllContainers(allc)
+                    setAllContainers([...new Set(allc)])
                     setContainers(props.resourceSelected!.containers)
                 }
             }
@@ -366,8 +401,11 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
             <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={view==='' || isDocker || view===EInstanceConfigView.CLUSTER}>
                 <InputLabel>Namespace</InputLabel>
-                <Select onChange={onChangeNamespaces} multiple value={namespaces} renderValue={(selected) => selected.join(', ')}>
-                { allNamespaces && allNamespaces.map( (namespace:string) => {
+                <Select onChange={onChangeNamespaces} multiple value={namespaces} renderValue={(selected) => selected.join(', ')} onClose={() => setNsFilter('')}>
+                    <ListSubheader sx={{ p: 0 }}>
+                        <TextField size='small' fullWidth placeholder='Filter...' value={nsFilter} onChange={e => setNsFilter(e.target.value)} onKeyDown={e => e.stopPropagation()} sx={{ px: 1, pt: 0.5 }} />
+                    </ListSubheader>
+                { allNamespaces && allNamespaces.filter(ns => ns.toLowerCase().includes(nsFilter.toLowerCase())).map( (namespace:string) => {
                     return (
                         <MenuItem key={namespace} value={namespace}>
                             <Checkbox checked={namespaces.includes(namespace)} />
@@ -380,8 +418,11 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
             <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={namespaces.length===0 || view==='namespace' || isDocker  || view===EInstanceConfigView.CLUSTER}>
                 <InputLabel>Controller</InputLabel>
-                <Select onChange={onChangeController} value={controllers} multiple renderValue={(selected) => selected.map(v => v.split('+')[1]).join(', ')}>
-                { allControllers && allControllers.map( (value) => 
+                <Select onChange={onChangeController} value={controllers} multiple renderValue={(selected) => selected.map(v => v.split('+')[1]).join(', ')} onClose={() => setCtrlFilter('')}>
+                    <ListSubheader sx={{ p: 0 }}>
+                        <TextField size='small' fullWidth placeholder='Filter...' value={ctrlFilter} onChange={e => setCtrlFilter(e.target.value)} onKeyDown={e => e.stopPropagation()} sx={{ px: 1, pt: 0.5 }} />
+                    </ListSubheader>
+                { allControllers && allControllers.filter(v => v.split('+')[1].toLowerCase().includes(ctrlFilter.toLowerCase())).map( (value) =>
                     <MenuItem key={value} value={value} sx={{alignContent:'baseline'}}>
                         <Stack direction={'row'} alignItems={'center'}>
                             <Checkbox checked={controllers.includes (value)} />
@@ -397,20 +438,25 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
             <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={(!isDocker && (controllers.length === 0 || view===EInstanceConfigView.NAMESPACE || view===EInstanceConfigView.GROUP)) || (isDocker && (view ==='namespace' || namespaces.length === 0))}>
                 <InputLabel >Pod</InputLabel>
-                <Select value={pods} onChange={onChangePod} multiple renderValue={(selected) => selected.join(', ')}>
-                { allPods && allPods.map( (value:string) =>
+                <Select value={pods} onChange={onChangePod} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setPodFilter('')}>
+                    <ListSubheader sx={{ p: 0 }}>
+                        <TextField size='small' fullWidth placeholder='Filter...' value={podFilter} onChange={e => setPodFilter(e.target.value)} onKeyDown={e => e.stopPropagation()} sx={{ px: 1, pt: 0.5 }} />
+                    </ListSubheader>
+                { allPods && allPods.filter(v => v.toLowerCase().includes(podFilter.toLowerCase())).map( (value:string) =>
                     <MenuItem key={value} value={value} sx={{alignContent:'center'}}>
                         <Checkbox checked={pods.includes (value)} />{value}
                     </MenuItem>
-
                 )}
                 </Select>
             </FormControl>
 
             <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={pods.length === 0 || view===EInstanceConfigView.NAMESPACE || view===EInstanceConfigView.GROUP || view===EInstanceConfigView.POD}>
                 <InputLabel >Container</InputLabel>
-                <Select value={containers} onChange={onChangeContainer} multiple renderValue={(selected) => selected.join(', ')}>
-                { allContainers && allContainers.map( (value:string) => 
+                <Select value={containers} onChange={onChangeContainer} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setContainerFilter('')}>
+                    <ListSubheader sx={{ p: 0 }}>
+                        <TextField size='small' fullWidth placeholder='Filter...' value={containerFilter} onChange={e => setContainerFilter(e.target.value)} onKeyDown={e => e.stopPropagation()} sx={{ px: 1, pt: 0.5 }} />
+                    </ListSubheader>
+                { allContainers && allContainers.filter(v => v.split('+')[1].toLowerCase().includes(containerFilter.toLowerCase())).map( (value:string) =>
                     <MenuItem key={value} value={value} sx={{alignContent:'center'}}>
                         <Checkbox checked={containers.includes(value)} />
                         <Stack direction={'column'}>

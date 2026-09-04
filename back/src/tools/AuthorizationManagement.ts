@@ -4,7 +4,7 @@ import { ApiKey } from '@kwirthmagnify/kwirth-common'
 import * as crypto from 'crypto'
 import { IChannel } from '../channels/IChannel'
 import { Request, Response } from 'express'
-import { AppsV1Api, BatchV1Api, CoreV1Api, V1Pod } from '@kubernetes/client-node'
+import { AppsV1Api, BatchV1Api, CoreV1Api, V1Pod, V1ReplicaSet } from '@kubernetes/client-node'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 
 export class AuthorizationManagement {
@@ -525,8 +525,7 @@ export class AuthorizationManagement {
                 const validPodNames = AuthorizationManagement.getValidValues([podName], resource.pods.split(','))
                 if (validPodNames.includes(podName)) {
                     
-                    // +++ this is the case for pods without controller. should be something like controller!==null, but it depends on how front app invokes the configApi
-                    if (controller === 'Not Applicable') return podName
+                    if (controller === 'No controller') return !pod.metadata?.ownerReferences?.length ? podName : null
 
                     if (pod.metadata?.ownerReferences) {
                         const controllerName = await this.getPodControllerName(appsApi, pod, true)
@@ -542,6 +541,54 @@ export class AuthorizationManagement {
 
         const results = await Promise.all(podChecks)
         return [...new Set(results.filter((p): p is string => p !== null))]
+    }
+
+    // Groups every allowed pod of a namespace under its controllers, in a single listNamespacedPod call.
+    // A pod owned by a ReplicaSet is listed both under the ReplicaSet and under its parent Deployment,
+    // since Kwirth lets the user pick either one. Controllers with no pods are simply absent from the result.
+    public static getPodsByController = async (coreApi: CoreV1Api, appsApi: AppsV1Api, namespace: string, accessKey: AccessKey): Promise<Record<string, string[]>> => {
+        const resources = parseResources(accessKey!.resources)
+        const response = await coreApi.listNamespacedPod({ namespace })
+        const result: Record<string, string[]> = {}
+        const rsCache = new Map<string, V1ReplicaSet|undefined>()
+
+        const addPod = (key: string, podName: string) => {
+            if (!result[key]) result[key] = []
+            if (!result[key].includes(podName)) result[key].push(podName)
+        }
+
+        for (const pod of response.items) {
+            const podName = pod.metadata?.name
+            const podNs = pod.metadata?.namespace
+            if (!podName || !podNs) continue
+
+            let allowed = false
+            for (const resource of resources) {
+                if (AuthorizationManagement.getValidValues([podNs], resource.namespaces.split(',')).length === 0) continue
+                if (AuthorizationManagement.getValidValues([podName], resource.pods.split(',')).includes(podName)) {
+                    allowed = true
+                    break
+                }
+            }
+            if (!allowed) continue
+
+            const ownerRef = pod.metadata?.ownerReferences?.find(or => or.controller)
+            if (!ownerRef) {
+                addPod('Pod+No controller', podName)
+                continue
+            }
+
+            addPod(ownerRef.kind + '+' + ownerRef.name, podName)
+
+            if (ownerRef.kind === 'ReplicaSet') {
+                if (!rsCache.has(ownerRef.name)) {
+                    rsCache.set(ownerRef.name, await AuthorizationManagement.readReplicaSet(appsApi, podNs, ownerRef.name))
+                }
+                const rsOwner = rsCache.get(ownerRef.name)?.metadata?.ownerReferences?.find(or => or.controller)
+                if (rsOwner?.kind === 'Deployment') addPod('Deployment+' + rsOwner.name, podName)
+            }
+        }
+        return result
     }
 
     public static getValidPods = async (coreApi: CoreV1Api, appsApi: AppsV1Api, namespaces: string[], accessKey: AccessKey, requestedPods: string[]): Promise<string[]> => {
