@@ -46,9 +46,19 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
 
 - **A — Storage.** The marketplace list joins `IKwirthSettings` as `marketplaces`, persisted in the
   existing `kwirth.settings` document — `SettingsApi`'s PUT already merges, so adding a field needs no new
-  route, only validation of the list shape. Each entry: a stable `id`, a base URL expected to serve
-  `<base>/<folder>/manifest.json` (mirroring the public layout, so one entry covers all ten types), a
+  route, only validation of the list shape. Each entry: a stable `id`, the `url` of **one manifest**, a
   `label`, and an `enabled` flag.
+
+  **One URL is one manifest, and it may mix extension types.** Every entry in every manifest already
+  carries `extensionType` — verified across all seven populated public manifests, 416 entries, no
+  exceptions — so entries are self-describing and each manager dialog simply filters by its own type. The
+  folder split in the public layout (`plugins/manifest.json`, `senders/manifest.json`, …) is therefore
+  redundant information, and a private marketplace does not have to reproduce it: one file listing a
+  plugin, two senders and a theme works. A marketplace that prefers to split by type just registers
+  several URLs.
+
+  This also makes the fetch cheaper than the base-URL scheme would have: one request per marketplace
+  instead of ten probes per marketplace, most of which would 404.
 
   **Basic auth credentials do NOT live here.** `kwirth.settings` is an unencrypted ConfigMap; passwords
   belong in `ISecrets`, which is AES-256-GCM encrypted on the filesystem backends and RBAC-protected in
@@ -57,11 +67,11 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
   /core/settings` never returns the password — it returns a `hasPassword` boolean instead — and a PUT that
   omits the password leaves the stored one untouched rather than clearing it.
 
-  **A private marketplace has exactly the same shape as the public one:** a manifest on an open host
-  (GitHub for the OSS marketplace) whose entries each carry the full tarball `url`, pointing at a package
-  registry (npmjs for OSS). So an entry needs **one** URL, the manifest base — the package location comes
-  from the manifest itself, exactly as today. The first real target is a manifest on GitHub with packages
-  on an **npm endpoint of a Sonatype Nexus**, which accepts Basic auth directly, so no token exchange.
+  **A private marketplace has the same shape as the public one:** a manifest on an open host (GitHub for
+  the OSS marketplace) whose entries each carry the full tarball `url`, pointing at a package registry
+  (npmjs for OSS). The package location comes from the manifest itself, exactly as today, so the entry
+  needs no registry URL of its own. The first real target is a manifest on GitHub with packages on an
+  **npm endpoint of a Sonatype Nexus**, which accepts Basic auth directly, so no token exchange.
 
   **Credentials are selected by provenance, not by URL matching.** Because the back resolves, it knows
   which marketplace served each entry — the same fact that feeds the provenance badge in C2. At install
@@ -70,10 +80,13 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
   credentials to another's host. An entry with no marketplace behind it (the public one, a hand-typed URL)
   installs with no credentials at all.
 
-- **B — Back-side resolution behind one endpoint.** The back fetches the manifests and applies the
-  precedence of step D, exposing a single endpoint per extension type that returns the already-resolved
-  list with provenance stamped on each entry. The ten dialogs and the update check consume that instead of
-  fetching manifests themselves.
+- **B — Back-side resolution behind one endpoint.** The back fetches each configured manifest once,
+  filters by the requested `extensionType`, and applies the precedence of step D, exposing a single
+  endpoint per extension type that returns the already-resolved list with provenance stamped on each
+  entry. The ten dialogs and the update check consume that instead of fetching manifests themselves.
+
+  Note the precedence of step D operates on what survives the type filter: two entries sharing an `id` but
+  differing in `extensionType` are different extensions and must not shadow each other.
 
   Doing the resolution server-side rather than shipping a helper to the front buys two things: the
   precedence rule lives in one testable place instead of being re-applied in eleven, and it removes the
