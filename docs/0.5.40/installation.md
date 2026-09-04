@@ -42,7 +42,6 @@ Installation can be tailored by changing some Kwirth installation options:
 | nginx.tls          | States that TLS should be used in ingress | boolean | true/false | false |
 | nginx.secret       | Name of the secret holding the CRT and the KEY | string | - | - |
 | ingress.hostname   | Name of the host in ithe Ingress | string | - | - |
-| store              | Storage backend: `etcd` (K8s Secrets/ConfigMaps) or a filesystem path | string | `etcd` / `/mnt/data` | etcd |
 
 
 A sample 'values.yaml' file could be:
@@ -74,79 +73,6 @@ kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/t
 ```
 
 If you need to change default Kwirth configuration you may need to edit the YAML files in order to customize the deployment.
-
-## Storage configuration
-
-By default, Kwirth running in Kubernetes stores all its configuration data (users, API keys, plugin settings, AI providers, etc.) in **Kubernetes Secrets and ConfigMaps** inside the same namespace. This is the recommended approach for most clusters.
-
-However, some environments restrict Secret/ConfigMap write access, or you may prefer to keep all Kwirth data in a mounted volume (e.g. a PersistentVolumeClaim). In that case you can switch the storage backend using the `KWIRTH_STORE` environment variable.
-
-| Value | Behaviour |
-| - | - |
-| unset or `etcd` | Default. Uses Kubernetes Secrets and ConfigMaps (etcd-backed). |
-| any filesystem path | Uses the local filesystem under the given path. Secrets go to `<path>/secrets/`, ConfigMaps to `<path>/configmaps/`. |
-
-> **Note**: this setting only affects Kubernetes mode. Desktop mode always uses `~/.kwirth/`, and Docker mode uses its own volume mounts.
-
-> **Security**: when Kwirth uses filesystem storage (desktop or `KWIRTH_STORE` path), sensitive data (secrets) is encrypted at rest with AES-256-GCM using a key derived from `MASTERKEY`. Non-sensitive data (config maps) is stored as plain JSON. If you change `MASTERKEY` after first run, existing secret files will become unreadable.
-
-### Example: store Kwirth data in a PersistentVolumeClaim
-
-1. Create a PVC (or use an existing one):
-
-```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: kwirth-data
-  namespace: kwirth
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-```
-
-2. Mount the PVC in the Kwirth Deployment and set `KWIRTH_STORE`:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: kwirth
-  namespace: kwirth
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: kwirth
-  template:
-    metadata:
-      labels:
-        app: kwirth
-    spec:
-      serviceAccount: kwirth-sa
-      containers:
-        - name: kwirth
-          image: kwirthmagnify/kwirth:latest
-          env:
-            - name: KWIRTH_STORE
-              value: /mnt/kwirth-data
-          volumeMounts:
-            - name: kwirth-data
-              mountPath: /mnt/kwirth-data
-          ports:
-            - containerPort: 3883
-      volumes:
-        - name: kwirth-data
-          persistentVolumeClaim:
-            claimName: kwirth-data
-```
-
-With this setup, all Kwirth configuration is persisted in the PVC and survives pod restarts without needing permissions to write Secrets or ConfigMaps in the cluster.
-
-> **Helm**: pass `--set store=/mnt/kwirth-data` together with the appropriate `volumes`/`volumeMounts` values, or configure them in your `values.yaml`.
 
 ## Docker: Kwirth in your local docker environment
 To run Kwirth as a Docker container, you can use the following command, ensuring you mount your kubeconfig file so Kwirth can interact with your cluster:
