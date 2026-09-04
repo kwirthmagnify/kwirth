@@ -2,63 +2,68 @@
 
 ## Status (2026-09-04) — NOT STARTED
 
-Goal: let an administrator register **additional, private marketplace manifest URLs** in cluster
-settings, so an organisation can publish its own extensions (plugins, senders, providers, themes,
-homepages, webhooks, logins, packs, idp connectors) without them living in the public Kwirth manifest.
+Goal: let an administrator register **additional** marketplace manifest URLs, so an organisation can
+publish its own extensions (plugins, senders, providers, themes, homepages, webhooks, logins, packs, idp
+connectors) without them living in the public Kwirth manifest.
+
+**Additive, never a substitution.** The public OSS manifests stay exactly as they are, hardcoded in each
+manager dialog. A registered private marketplace is a *second source* consulted alongside the public one;
+removing every private entry must leave today's behaviour untouched.
+
+Marketplaces are configuration of Kwirth itself, per cluster — like the metrics interval — so the list is
+persisted server-side and the UI lives in cluster settings.
 
 ## Current state
 
-**Manifest URLs are hardcoded, once per dialog.** Every manager dialog carries its own const pointing at
-`raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/<folder>/manifest.json`:
+**The public manifest URL is hardcoded once per dialog**, and that is fine — it is the OSS marketplace:
 
-| Type | File |
-|---|---|
-| plugin | `front/src/components/PluginManagerDialog.tsx` |
-| sender | `front/src/components/SenderManagerDialog.tsx` |
-| provider | `front/src/components/ProviderManagerDialog.tsx` |
-| homepage | `front/src/components/HomepageManagerDialog.tsx` |
-| theme | `front/src/components/ThemeManagerDialog.tsx` |
-| pack | `front/src/components/PackManagerDialog.tsx` |
-| login | `front/src/components/LoginManagerDialog.tsx` |
-| idp | `front/src/components/IdpManagerDialog.tsx` |
-| webhook | `front/src/components/WebhookManagerDialog.tsx` |
-| docs | `front/src/components/DocsDialog.tsx` |
+| Type | File | | Type | File |
+|---|---|---|---|---|
+| plugin | `front/src/components/PluginManagerDialog.tsx` | | pack | `front/src/components/PackManagerDialog.tsx` |
+| sender | `front/src/components/SenderManagerDialog.tsx` | | login | `front/src/components/LoginManagerDialog.tsx` |
+| provider | `front/src/components/ProviderManagerDialog.tsx` | | idp | `front/src/components/IdpManagerDialog.tsx` |
+| homepage | `front/src/components/HomepageManagerDialog.tsx` | | webhook | `front/src/components/WebhookManagerDialog.tsx` |
+| theme | `front/src/components/ThemeManagerDialog.tsx` | | docs | `front/src/components/DocsDialog.tsx` |
 
-The startup update check in `front/src/App.tsx` holds an **eleventh copy** of the same list (see
-[[extension-upgrade]] plan). Any private-manifest support has to reach all of them, so the URLs must be
-centralised before anything else — otherwise the feature works in some dialogs and not others.
+`front/src/App.tsx` holds an eleventh copy of the same list for the startup update check (see the
+[[extension-upgrade]] plan). What has to be shared across all eleven is not the public URL — it is the
+**merge step**: fetch the configured private manifests and combine them with the public one. Writing that
+merge eleven times is what would drift.
 
-**There is no cluster-level config store.** `front/src/components/settings/SettingsCluster.tsx` is a
-one-field dialog (metrics interval) whose `onClose` returns a bare `number`. That single setting is not
-persisted as cluster config at all: `App.tsx` POSTs it to `/provider/metrics/config`, the metrics
-*provider's* own endpoint. So this feature needs a genuine cluster-scoped config store created for it,
-not just a new field in an existing one.
+**Persistence has an established pattern.** The back already stores Kwirth's own configuration through the
+`IConfigMaps` abstraction (`read`/`write`/`writeKey`/`readAllKeys`, ConfigMap-backed in k8s, filesystem
+under `KWIRTH_STORE`): `kwirth.keys` (`ApiKeyApi`), `kwirth-docs-index` (`DocsManager`),
+`kwirth-store-common-*`. A marketplace list is the same kind of object and should reuse it — no new
+storage mechanism is needed.
+
+Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-field dialog whose
+`onClose` returns a bare `number`, and that value is POSTed to `/provider/metrics/config`, the metrics
+*provider's* endpoint, not to Kwirth config. The dialog's contract has to widen regardless.
 
 ## Proposed steps
 
-- **A — Centralise manifest resolution.** One helper that returns the manifest URL list for a given
-  extension type, consumed by all 10 dialogs and by the update check. Pure refactor, no behaviour change;
-  everything else depends on it.
-- **B — Cluster config store.** A real cluster-scoped store (ConfigMap-backed, like the other core
-  config) holding the private manifest list. Decide the shape: flat list of URLs applying to every type,
-  or per-type lists. A flat list of *base* URLs (each expected to expose `<base>/<folder>/manifest.json`)
-  mirrors how the public one is laid out and keeps the UI simple.
-- **C — UI.** Add/remove/reorder rows in `SettingsCluster`, with URL validation and a reachability test
-  button. Requires widening the dialog's `onClose` contract beyond the current single number.
-- **D — Merge semantics.** Combine official + private entries: dedupe by extension id, define precedence
-  when the same id appears in both, and show provenance on the card so the user knows where an extension
-  came from. The update check must consider private manifests too, or private extensions will be reported
-  as up-to-date forever.
+- **A — Storage + API.** Persist the list under a `kwirth-marketplaces` key via `IConfigMaps`, exposed by a
+  small core API (`GET`/`PUT`), following `ApiKeyApi` as the model. Shape: a list of entries, each with a
+  base URL expected to serve `<base>/<folder>/manifest.json` — mirroring the public layout so one entry
+  covers every extension type — plus a label and an enabled flag.
+- **B — Merge helper.** One shared helper that, for a given extension type, returns the public manifest
+  entries plus those from every enabled private marketplace. Consumed by the ten dialogs and the update
+  check, so the merge exists once. The public URL stays where it is; the helper just appends.
+- **C — UI.** Add/remove/enable rows in `SettingsCluster`, with URL validation and a reachability test.
+  Requires widening `onClose` beyond the current single number.
+- **D — Merge semantics.** Dedupe by extension id and define precedence when an id appears in more than
+  one source (public wins? most recently added wins? explicit order?). Show provenance on the card so the
+  user can tell where an extension came from. The update check must consult private manifests too, or
+  privately-installed extensions stay silently unflagged forever.
 
 ## Open questions
 
-- **Authentication.** A genuinely private manifest usually sits behind auth. Does a registered URL carry
-  a token/header? Where is that credential stored, and who can read it back? This is the main design
-  decision and it should be settled before B.
-- **Fetch origin.** Manifests are fetched from the **browser** today, so a private URL must be
-  CORS-enabled and reachable from the user's network — not just from the cluster. Proxying the fetch
-  through the back would sidestep both problems and give a single place to attach credentials; worth
-  considering as part of A.
-- **Trust.** Installing pulls a tarball from a URL the manifest supplies. Registering a marketplace is
-  therefore a privileged action — it should be gated on an admin scope, and it is worth deciding whether
-  anything validates what comes back.
+- **Authentication.** A genuinely private manifest usually sits behind auth. Does an entry carry a
+  token/header, where is that credential stored (`ISecrets` rather than `IConfigMaps`, presumably), and
+  who can read it back? Main design decision; settle it before A.
+- **Fetch origin.** Manifests are fetched from the **browser** today, so a private URL would need CORS and
+  reachability from the user's network, not just from the cluster. Proxying through the back would remove
+  both constraints and give a single place to attach credentials — worth deciding as part of A, since it
+  changes the API shape.
+- **Trust.** Installing pulls a tarball from a URL the manifest supplies, so registering a marketplace is
+  a privileged action: gate it on an admin scope, and decide whether anything validates what comes back.
