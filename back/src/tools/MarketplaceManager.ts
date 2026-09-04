@@ -1,5 +1,6 @@
-import { EExtensionType, IKwirthSettings, IMarketplace, IMarketplaceEntry } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, EManifestAuthType, IKwirthSettings, IMarketplace, IMarketplaceEntry } from '@kwirthmagnify/kwirth-common'
 import { IConfigMaps } from './IConfigMap'
+import { ISecrets } from './ISecrets'
 import { SettingsApi } from '../api/SettingsApi'
 import { ELogComponent, logError, logWarning } from './Logging'
 
@@ -33,12 +34,35 @@ interface ICacheItem {
     entries: IMarketplaceEntry[]
 }
 
+// Resultado de la prueba de alcance de un manifest, para que la UI pueda distinguir credenciales de red.
+export interface IManifestTestResult {
+    ok: boolean
+    entries?: number
+    extensionTypes?: string[]
+    error?: string
+}
+
 export class MarketplaceManager {
     private configMaps: IConfigMaps
+    private secrets: ISecrets
     private cache: Map<string, ICacheItem> = new Map()
 
-    constructor(configMaps: IConfigMaps) {
+    constructor(configMaps: IConfigMaps, secrets: ISecrets) {
         this.configMaps = configMaps
+        this.secrets = secrets
+    }
+
+    // Cabeceras para leer un manifest. El token nunca sale del back.
+    public static buildManifestHeaders(marketplace: IMarketplace|undefined, token: string|undefined): Record<string, string> {
+        if (!marketplace?.manifestAuth || !token) return {}
+        switch (marketplace.manifestAuth.type) {
+            case EManifestAuthType.PRIVATE_TOKEN:
+                return { 'PRIVATE-TOKEN': token }
+            case EManifestAuthType.BEARER:
+                return { Authorization: `Bearer ${token}` }
+            default:
+                return {}
+        }
     }
 
     // Resolucion pura, sin red: dadas las fuentes YA en orden de precedencia (privados primero, publico
@@ -67,13 +91,17 @@ export class MarketplaceManager {
 
     // Descarga un manifest. Nunca lanza: una fuente inalcanzable no puede tumbar las demas, pero SI se
     // registra, a diferencia del silencio absoluto que habia cuando descargaba el navegador.
-    private async fetchManifest(url: string): Promise<IMarketplaceEntry[]> {
+    private async fetchManifest(url: string, headers: Record<string, string>): Promise<IMarketplaceEntry[]> {
         const cached = this.cache.get(url)
         if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.entries
         try {
-            const response = await fetch(url)
+            const response = await fetch(url, { headers })
             if (!response.ok) {
-                logWarning(ELogComponent.CORE, `Marketplace manifest ${url} returned ${response.status}`)
+                // 401/403 con token configurado suele ser token caducado o sin permiso: merece decirlo claro
+                const hint = (response.status === 401 || response.status === 403) && Object.keys(headers).length > 0
+                    ? ' (the configured manifest token was rejected)'
+                    : ''
+                logWarning(ELogComponent.CORE, `Marketplace manifest ${url} returned ${response.status}${hint}`)
                 return []
             }
             const body = await response.json()
@@ -95,6 +123,29 @@ export class MarketplaceManager {
         this.cache.clear()
     }
 
+    // Prueba de alcance para la UI: dice si el manifest se lee y cuantas entradas trae, distinguiendo el
+    // fallo de credenciales del de red. Si no viene token, se usa el ya guardado para ese marketplace.
+    public async testManifest(marketplace: IMarketplace, token?: string): Promise<IManifestTestResult> {
+        const effectiveToken = token && token !== '' ? token : await SettingsApi.getManifestToken(this.secrets, marketplace.id)
+        const headers = MarketplaceManager.buildManifestHeaders(marketplace, effectiveToken)
+        try {
+            const response = await fetch(marketplace.url, { headers })
+            if (response.status === 401 || response.status === 403) {
+                return { ok: false, error: Object.keys(headers).length > 0
+                    ? `The manifest rejected the token (HTTP ${response.status})`
+                    : `The manifest needs authentication (HTTP ${response.status})` }
+            }
+            if (!response.ok) return { ok: false, error: `The manifest returned HTTP ${response.status}` }
+            const body = await response.json()
+            if (!Array.isArray(body)) return { ok: false, error: 'The manifest is not a list of extensions' }
+            const types = [...new Set((body as IMarketplaceEntry[]).map(e => e.extensionType).filter(Boolean))]
+            return { ok: true, entries: body.length, extensionTypes: types }
+        }
+        catch (err) {
+            return { ok: false, error: `Could not reach the manifest: ${err}` }
+        }
+    }
+
     // Marketplaces configurados y habilitados, en su orden, y el publico al final.
     public static buildSourceList(settings: IKwirthSettings, extensionType: EExtensionType): { url: string, marketplace?: IMarketplace }[] {
         const enabled = (settings.marketplaces ?? []).filter(m => m.enabled)
@@ -108,11 +159,14 @@ export class MarketplaceManager {
         const settings = await SettingsApi.read(this.configMaps)
         const list = MarketplaceManager.buildSourceList(settings, extensionType)
         // en paralelo: una fuente lenta no debe encolar a las demas
-        const fetched = await Promise.all(list.map(async item => ({
-            marketplaceId: item.marketplace?.id,
-            marketplaceLabel: item.marketplace?.label,
-            entries: await this.fetchManifest(item.url)
-        })))
+        const fetched = await Promise.all(list.map(async item => {
+            const token = item.marketplace ? await SettingsApi.getManifestToken(this.secrets, item.marketplace.id) : undefined
+            return {
+                marketplaceId: item.marketplace?.id,
+                marketplaceLabel: item.marketplace?.label,
+                entries: await this.fetchManifest(item.url, MarketplaceManager.buildManifestHeaders(item.marketplace, token))
+            }
+        }))
         return MarketplaceManager.resolveEntries(fetched, extensionType)
     }
 

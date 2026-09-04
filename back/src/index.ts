@@ -1231,7 +1231,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
 
         // Resolucion de marketplaces: el back descarga los manifests (publico + los configurados),
         // filtra por tipo y aplica la precedencia, para que la regla exista en un solo sitio.
-        let marketplaceManager = new MarketplaceManager(ri.configMaps)
+        let marketplaceManager = new MarketplaceManager(ri.configMaps, ri.secrets)
         let marketplaceApi = new MarketplaceApi(marketplaceManager, apiKeyApi)
         riRouter.use(`/core/marketplace`, marketplaceApi.router)
         // Catálogo global de scopes RBAC (built-in del core + los que declaran los canales): lo consume el

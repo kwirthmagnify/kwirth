@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { MarketplaceManager, IMarketplaceSource } from '../../src/tools/MarketplaceManager'
-import { EExtensionType, IKwirthSettings, IMarketplaceEntry } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, EManifestAuthType, IKwirthSettings, IMarketplace, IMarketplaceEntry } from '@kwirthmagnify/kwirth-common'
 
 const entry = (id: string, version: string, extensionType = EExtensionType.PLUGIN): IMarketplaceEntry => ({
     extensionType, id, version, name: id, url: `https://example.com/${id}-${version}.tgz`

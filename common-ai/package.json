@@ -1,6 +1,6 @@
 {
   "name": "@kwirthmagnify/kwirth-common-ai",
-  "version": "0.5.46",
+  "version": "0.5.47",
   "description": "Shared AI/LLM types and utilities for Kwirth AI plugins",
   "scripts": {
     "build": "del .\\dist\\* /s /q 2>nul & tsc",
@@ -59,7 +59,7 @@
     "react": ">=18.0.0"
   },
   "devDependencies": {
-    "@kwirthmagnify/kwirth-common": "^0.5.41",
+    "@kwirthmagnify/kwirth-common": "^0.5.42",
     "@mui/icons-material": "7.1.2",
     "@mui/material": "7.1.2",
     "@types/node": "^25.9.1",

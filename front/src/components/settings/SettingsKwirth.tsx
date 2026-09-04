@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControlLabel, IconButton, InputAdornment, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
+import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { Add, Delete, Refresh, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
-import { IKwirthSettings, IMarketplace, EMarketplaceAuthType } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplace, EMarketplaceAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
-import { addGetAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
+import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
 // Enum semantico como id de tab (regla: nunca numeros)
 enum ESettingsKwirthTab {
@@ -16,7 +16,9 @@ enum ESettingsKwirthTab {
 // la escribe; si la deja vacia y ya habia una guardada, el back conserva la existente.
 interface IMarketplaceRow extends IMarketplace {
     password?: string
+    token?: string
     revealed?: boolean
+    tokenRevealed?: boolean
     testing?: boolean
     testResult?: string
 }
@@ -73,25 +75,32 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         }])
     }
 
-    // Comprueba solo que el manifest se lee. Las credenciales NO se pueden validar aqui: solo entran en
-    // juego al descargar un paquete, asi que una contraseña mal puesta no se detecta hasta instalar.
+    // La prueba la hace el BACK: si el manifest esta detras de un token privado, el navegador no puede
+    // leerlo. Comprueba la lectura del manifest y su token; la contraseña del registro de paquetes no se
+    // valida aqui, porque solo entra en juego al descargar un paquete.
     const testRow = async (index: number) => {
         const row = marketplaces[index]
         patchRow(index, { testing: true, testResult: undefined })
         try {
-            const response = await fetch(row.url)
+            const payload = JSON.stringify({
+                marketplace: { id: row.id, url: row.url.trim(), label: row.label, enabled: row.enabled, ...(row.manifestAuth ? { manifestAuth: { type: row.manifestAuth.type } } : {}) },
+                ...(row.token ? { token: row.token } : {})
+            })
+            const response = await fetch(`${props.clusterUrl}/core/marketplace/test`, addPostAuthorization(props.accessString, payload))
             if (!response.ok) {
-                patchRow(index, { testing: false, testResult: `Manifest returned ${response.status}` })
+                patchRow(index, { testing: false, testResult: `Test failed (HTTP ${response.status})` })
                 return
             }
-            const body = await response.json()
+            const result = await response.json() as { ok: boolean, entries?: number, extensionTypes?: string[], error?: string }
             patchRow(index, {
                 testing: false,
-                testResult: Array.isArray(body) ? `Manifest OK, ${body.length} entries` : 'Manifest is not a list of extensions'
+                testResult: result.ok
+                    ? `Manifest OK, ${result.entries} entries${result.extensionTypes?.length ? ` (${result.extensionTypes.join(', ')})` : ''}`
+                    : result.error ?? 'Manifest could not be read'
             })
         }
         catch {
-            patchRow(index, { testing: false, testResult: 'Could not reach the manifest' })
+            patchRow(index, { testing: false, testResult: 'Could not reach Kwirth to run the test' })
         }
     }
 
@@ -110,7 +119,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 label: m.label.trim(),
                 enabled: m.enabled,
                 ...(m.auth ? { auth: { type: m.auth.type, ...(m.auth.username ? { username: m.auth.username.trim() } : {}) } } : {}),
-                ...(m.password ? { password: m.password } : {})
+                ...(m.manifestAuth ? { manifestAuth: { type: m.manifestAuth.type } } : {}),
+                ...(m.password ? { password: m.password } : {}),
+                ...(m.token ? { token: m.token } : {})
             }))
             const payload = JSON.stringify({ metricsInterval, marketplaces: cleaned })
             const response = await fetch(`${props.clusterUrl}/core/settings`, addPutAuthorization(props.accessString, payload))
@@ -130,6 +141,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
 
     const marketplaceRow = (m: IMarketplaceRow, index: number) => {
         const basic = m.auth?.type === EMarketplaceAuthType.BASIC
+        const tokenAuth = m.manifestAuth !== undefined && m.manifestAuth.type !== EManifestAuthType.NONE
         return (
             <Box key={m.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
                 <Stack direction='row' spacing={1} alignItems='center'>
@@ -142,6 +154,28 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                     <Tooltip title='Remove this marketplace'>
                         <IconButton size='small' color='error' onClick={() => setMarketplaces(prev => prev.filter((_, i) => i !== index))}><Delete fontSize='small' /></IconButton>
                     </Tooltip>
+                </Stack>
+                <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}>
+                    <FormControlLabel
+                        control={<Checkbox checked={tokenAuth} onChange={e => patchRow(index, { manifestAuth: { type: e.target.checked ? EManifestAuthType.PRIVATE_TOKEN : EManifestAuthType.NONE, hasToken: m.manifestAuth?.hasToken } })} />}
+                        label='Manifest needs a token' />
+                    <FormControl variant='standard' sx={{ width: '22%' }} disabled={!tokenAuth}>
+                        <InputLabel>Header</InputLabel>
+                        <Select value={m.manifestAuth?.type ?? EManifestAuthType.NONE}
+                            onChange={e => patchRow(index, { manifestAuth: { type: e.target.value as EManifestAuthType, hasToken: m.manifestAuth?.hasToken } })}>
+                            <MenuItem value={EManifestAuthType.PRIVATE_TOKEN}>PRIVATE-TOKEN (GitLab)</MenuItem>
+                            <MenuItem value={EManifestAuthType.BEARER}>Authorization: Bearer</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <TextField value={m.token ?? ''} onChange={e => patchRow(index, { token: e.target.value })}
+                        variant='standard' label={m.manifestAuth?.hasToken && !m.token ? 'Token (already set)' : 'Token'}
+                        type={m.tokenRevealed ? 'text' : 'password'} sx={{ flexGrow: 1 }} disabled={!tokenAuth}
+                        slotProps={{ input: { endAdornment: (
+                            <InputAdornment position='end'>
+                                <IconButton size='small' onClick={() => patchRow(index, { tokenRevealed: !m.tokenRevealed })} disabled={!tokenAuth}>
+                                    { m.tokenRevealed ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' /> }
+                                </IconButton>
+                            </InputAdornment>) } }} />
                 </Stack>
                 <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}>
                     <FormControlLabel

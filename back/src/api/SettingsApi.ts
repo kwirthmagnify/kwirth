@@ -1,5 +1,5 @@
 import express, { Request, Response} from 'express'
-import { IKwirthSettings, IMarketplace, EMarketplaceAuthType } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplace, EMarketplaceAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { IConfigMaps } from '../tools/IConfigMap'
@@ -7,13 +7,15 @@ import { ISecrets } from '../tools/ISecrets'
 import { ELogComponent, logError } from '../tools/Logging'
 
 const SETTINGS_KEY = 'kwirth.settings'
-const CREDENTIALS_KEY = 'kwirth.marketplace.credentials'
+const CREDENTIALS_KEY = 'kwirth.marketplace.credentials'   // contraseña del registro de paquetes
+const TOKENS_KEY = 'kwirth.marketplace.tokens'             // token de lectura del manifest
 const DEFAULT_METRICS_INTERVAL = 15
 
-// Lo que puede llegar en un PUT: como IMarketplace pero admitiendo la contraseña en claro, que se
-// desvia a ISecrets y jamas se escribe en el configmap de settings.
+// Lo que puede llegar en un PUT: como IMarketplace pero admitiendo los secretos en claro, que se
+// desvian a ISecrets y jamas se escriben en el configmap de settings.
 interface IMarketplaceInput extends IMarketplace {
-    password?: string
+    password?: string   // registro de paquetes
+    token?: string      // lectura del manifest
 }
 
 interface IKwirthSettingsInput extends IKwirthSettings {
@@ -60,8 +62,17 @@ export class SettingsApi {
 
     // Credenciales de un marketplace, para quien tenga que descargar un paquete suyo. Solo back.
     public static async getPassword(secrets: ISecrets, marketplaceId: string): Promise<string|undefined> {
-        const all = await secrets.readAllKeys(CREDENTIALS_KEY)
-        const value = all[marketplaceId]
+        return SettingsApi.readSecret(secrets, CREDENTIALS_KEY, marketplaceId)
+    }
+
+    // Token de lectura del manifest (p.ej. PRIVATE-TOKEN de un GitLab privado). Solo back.
+    public static async getManifestToken(secrets: ISecrets, marketplaceId: string): Promise<string|undefined> {
+        return SettingsApi.readSecret(secrets, TOKENS_KEY, marketplaceId)
+    }
+
+    private static async readSecret(secrets: ISecrets, store: string, key: string): Promise<string|undefined> {
+        const all = await secrets.readAllKeys(store)
+        const value = all[key]
         return typeof value === 'string' && value !== '' ? value : undefined
     }
 
@@ -83,35 +94,48 @@ export class SettingsApi {
                     return `marketplace '${m.id}' uses basic auth and needs a username`
                 }
             }
+            if (m.manifestAuth !== undefined && !Object.values(EManifestAuthType).includes(m.manifestAuth.type)) {
+                return `marketplace '${m.id}' has an unknown manifest auth type`
+            }
         }
         return undefined
     }
 
     // Separa las contraseñas de la config: devuelve los marketplaces listos para el configmap y, aparte,
     // las contraseñas a persistir. Una entrada sin password conserva la ya guardada (no la borra).
-    private splitCredentials(incoming: IMarketplaceInput[]): { clean: IMarketplace[], passwords: Map<string, string> } {
+    private splitCredentials(incoming: IMarketplaceInput[]): { clean: IMarketplace[], passwords: Map<string, string>, tokens: Map<string, string> } {
         const passwords = new Map<string, string>()
+        const tokens = new Map<string, string>()
         const clean: IMarketplace[] = incoming.map(m => {
-            const { password, ...rest } = m
+            const { password, token, ...rest } = m
             if (password !== undefined && password !== '') passwords.set(m.id, password)
+            if (token !== undefined && token !== '') tokens.set(m.id, token)
             const cleaned: IMarketplace = { id: rest.id, url: rest.url, label: rest.label, enabled: rest.enabled }
             if (rest.auth) {
                 cleaned.auth = { type: rest.auth.type, ...(rest.auth.username ? { username: rest.auth.username } : {}) }
             }
+            if (rest.manifestAuth) {
+                cleaned.manifestAuth = { type: rest.manifestAuth.type }
+            }
             return cleaned
         })
-        return { clean, passwords }
+        return { clean, passwords, tokens }
     }
 
-    // Añade hasPassword a cada marketplace, sin exponer nunca la contraseña.
-    private async withPasswordFlags(settings: IKwirthSettings): Promise<IKwirthSettings> {
+    // Añade hasPassword / hasToken a cada marketplace, sin exponer nunca el secreto en si.
+    private async withSecretFlags(settings: IKwirthSettings): Promise<IKwirthSettings> {
         if (!settings.marketplaces?.length) return settings
-        const all = await this.secrets.readAllKeys(CREDENTIALS_KEY)
+        const [passwords, tokens] = await Promise.all([
+            this.secrets.readAllKeys(CREDENTIALS_KEY),
+            this.secrets.readAllKeys(TOKENS_KEY)
+        ])
         return {
             ...settings,
-            marketplaces: settings.marketplaces.map(m => m.auth
-                ? { ...m, auth: { ...m.auth, hasPassword: Boolean(all[m.id]) } }
-                : m)
+            marketplaces: settings.marketplaces.map(m => ({
+                ...m,
+                ...(m.auth ? { auth: { ...m.auth, hasPassword: Boolean(passwords[m.id]) } } : {}),
+                ...(m.manifestAuth ? { manifestAuth: { ...m.manifestAuth, hasToken: Boolean(tokens[m.id]) } } : {})
+            }))
         }
     }
 
@@ -127,7 +151,7 @@ export class SettingsApi {
                 try {
                     const stored = await SettingsApi.read(this.configMaps)
                     // se devuelven los valores efectivos, no los crudos, para que el front muestre lo que rige
-                    const withFlags = await this.withPasswordFlags(stored)
+                    const withFlags = await this.withSecretFlags(stored)
                     res.status(200).json({ ...withFlags, metricsInterval: SettingsApi.resolveMetricsInterval(stored) })
                 }
                 catch (err) {
@@ -153,17 +177,21 @@ export class SettingsApi {
                     if (incoming.metricsInterval !== undefined) merged.metricsInterval = +incoming.metricsInterval
 
                     if (incoming.marketplaces !== undefined) {
-                        const { clean, passwords } = this.splitCredentials(incoming.marketplaces)
+                        const { clean, passwords, tokens } = this.splitCredentials(incoming.marketplaces)
                         merged.marketplaces = clean
                         for (const [id, password] of passwords) await this.secrets.writeKey(CREDENTIALS_KEY, id, password)
-                        // un marketplace eliminado se lleva su contraseña con el
+                        for (const [id, token] of tokens) await this.secrets.writeKey(TOKENS_KEY, id, token)
+                        // un marketplace eliminado se lleva sus secretos con el
                         const removed = (stored.marketplaces ?? []).filter(old => !clean.some(m => m.id === old.id))
-                        for (const old of removed) await this.secrets.writeKey(CREDENTIALS_KEY, old.id, null)
+                        for (const old of removed) {
+                            await this.secrets.writeKey(CREDENTIALS_KEY, old.id, null)
+                            await this.secrets.writeKey(TOKENS_KEY, old.id, null)
+                        }
                     }
 
                     await this.configMaps.write(SETTINGS_KEY, merged)
                     if (this.onSettingsChanged) this.onSettingsChanged(merged)
-                    const withFlags = await this.withPasswordFlags(merged)
+                    const withFlags = await this.withSecretFlags(merged)
                     res.status(200).json({ ...withFlags, metricsInterval: SettingsApi.resolveMetricsInterval(merged) })
                 }
                 catch (err) {

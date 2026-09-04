@@ -6,7 +6,7 @@ import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { SettingsApi } from '../../src/api/SettingsApi'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
-import { accessKeySerialize, IKwirthSettings, EMarketplaceAuthType } from '@kwirthmagnify/kwirth-common'
+import { accessKeySerialize, IKwirthSettings, EMarketplaceAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 
 // configurar Kwirth (/core/settings) es admin-only: validKey + scope 'admin'
 const adminKey = { id: 'adminkey', type: 'permanent', resources: 'admin,cluster::::' }
@@ -36,19 +36,26 @@ const memConfigMaps = (initialSettings?: IKwirthSettings) => {
     return { cm, current: () => settings }
 }
 
-// secrets en memoria, para las contraseñas de marketplaces
-const memSecrets = (initial?: Record<string, any>) => {
-    let store: Record<string, any> = { ...(initial ?? {}) }
+// secrets en memoria. Respeta el parametro `name`: el ISecrets real guarda cada store por separado, y
+// contraseñas del registro y tokens del manifest viven en stores distintos. Un mock que los mezclara
+// dejaria pasar que el codigo pisara uno con otro.
+const CREDENTIALS_STORE = 'kwirth.marketplace.credentials'
+
+const memSecrets = (initialCredentials?: Record<string, any>) => {
+    const stores = new Map<string, Record<string, any>>()
+    if (initialCredentials) stores.set(CREDENTIALS_STORE, { ...initialCredentials })
     const s: ISecrets = {
         write: async () => {},
         read: async (_n: string, def?: any) => def,
-        writeKey: async (_name: string, key: string, value: any) => {
+        writeKey: async (name: string, key: string, value: any) => {
+            const store = stores.get(name) ?? {}
             if (value === null) delete store[key]
             else store[key] = value
+            stores.set(name, store)
         },
-        readAllKeys: async () => ({ ...store })
+        readAllKeys: async (name: string) => ({ ...(stores.get(name) ?? {}) })
     }
-    return { s, current: () => store }
+    return { s, current: () => stores.get(CREDENTIALS_STORE) ?? {} }
 }
 
 async function startServer(initialSettings?: IKwirthSettings, initialSecrets?: Record<string, any>) {
@@ -321,6 +328,53 @@ test('getPassword devuelve la contraseña al back y undefined si no hay', async 
     const secrets = memSecrets({ nexus: 's3cr3t' })
     assert.equal(await SettingsApi.getPassword(secrets.s, 'nexus'), 's3cr3t')
     assert.equal(await SettingsApi.getPassword(secrets.s, 'otro'), undefined)
+})
+
+// ---- token de lectura del manifest, separado de la contraseña del registro ----
+
+test('PUT desvia el token del manifest a secrets y no lo guarda en settings', async () => {
+    const srv = await startServer()
+    try {
+        const body = { marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN }, token: 'glpat-s3cr3t' }] }
+        const res = await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
+        assert.equal(res.status, 200)
+        assert.ok(!JSON.stringify(srv.store.current()).includes('glpat-s3cr3t'), 'el token no debe tocar el configmap')
+        assert.equal(srv.store.current()?.marketplaces?.[0].manifestAuth?.type, EManifestAuthType.PRIVATE_TOKEN)
+    }
+    finally { await srv.stop() }
+})
+
+test('GET informa hasToken pero no devuelve el token', async () => {
+    const stored: IKwirthSettings = { marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN } }] }
+    const srv = await startServer(stored)
+    try {
+        // el token vive en su propio store, distinto del de contraseñas
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH,
+            body: JSON.stringify({ marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN }, token: 'glpat-abc' }] }) })
+        const res = await fetch(`${srv.base}/core/settings`, { headers: AUTH })
+        const text = await res.text()
+        assert.ok(!text.includes('glpat-abc'), 'el token no debe viajar al front')
+        assert.equal((JSON.parse(text) as IKwirthSettings).marketplaces?.[0].manifestAuth?.hasToken, true)
+    }
+    finally { await srv.stop() }
+})
+
+test('token del manifest y contraseña del registro son independientes', async () => {
+    const srv = await startServer()
+    try {
+        const body = { marketplaces: [{ ...MP,
+            manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN }, token: 'glpat-manifest',
+            auth: { type: EMarketplaceAuthType.BASIC, username: 'u' }, password: 'nexus-pass' }] }
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
+        assert.equal(await SettingsApi.getManifestToken(srv.secrets.s, 'nexus'), 'glpat-manifest')
+        assert.equal(await SettingsApi.getPassword(srv.secrets.s, 'nexus'), 'nexus-pass')
+    }
+    finally { await srv.stop() }
+})
+
+test('validateMarketplaces rechaza un tipo de auth de manifest desconocido', () => {
+    assert.equal(SettingsApi.validateMarketplaces([{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN } }]), undefined)
+    assert.match(SettingsApi.validateMarketplaces([{ ...MP, manifestAuth: { type: 'oauth' } }]) ?? '', /unknown manifest auth type/)
 })
 
 test('marketplaces y metricsInterval no se pisan entre si', async () => {
