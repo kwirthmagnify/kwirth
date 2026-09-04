@@ -11,32 +11,44 @@ export class KubernetesSecrets implements ISecrets {
         this.namespace=namespace
     }
 
+    // Misma escritura optimista con reintento que KubernetesConfigMaps: un escritor concurrente deja el
+    // resourceVersion obsoleto y kubernetes responde 409 Conflict, que se resuelve releyendo.
     public write = async (name:string, content:{}) => {
-        let resourceVersion: string | undefined
-        try {
-            const existing = await this.coreApi.readNamespacedSecret({ name, namespace: this.namespace })
-            resourceVersion = existing.metadata?.resourceVersion
-        }
-        catch {}
-        var secret = {
-            metadata: {
-                name,
-                namespace: this.namespace,
-                ...(resourceVersion ? { resourceVersion } : {})
-            },
-            data: content
-        }
-        try {
-            if (resourceVersion) {
-                await this.coreApi?.replaceNamespacedSecret({ name, namespace: this.namespace, body: secret })
+        const MAX_ATTEMPTS = 3
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            let resourceVersion: string | undefined
+            try {
+                const existing = await this.coreApi.readNamespacedSecret({ name, namespace: this.namespace })
+                resourceVersion = existing.metadata?.resourceVersion
             }
-            else {
-                await this.coreApi?.createNamespacedSecret({ namespace: this.namespace, body: secret })
+            catch {}
+            var secret = {
+                metadata: {
+                    name,
+                    namespace: this.namespace,
+                    ...(resourceVersion ? { resourceVersion } : {})
+                },
+                data: content
             }
-        }
-        catch (err) {
-            logError(ELogComponent.STORAGE, `Error writing secret ${name}`)
-            logError(ELogComponent.STORAGE, err)
+            try {
+                if (resourceVersion) {
+                    await this.coreApi?.replaceNamespacedSecret({ name, namespace: this.namespace, body: secret })
+                }
+                else {
+                    await this.coreApi?.createNamespacedSecret({ namespace: this.namespace, body: secret })
+                }
+                return
+            }
+            catch (err:any) {
+                const conflict = err?.code === 409 || err?.body?.reason === 'Conflict' || String(err).includes('409')
+                if (conflict && attempt < MAX_ATTEMPTS) {
+                    logWarning(ELogComponent.STORAGE, `Conflict writing secret ${name}, retrying (${attempt}/${MAX_ATTEMPTS})`)
+                    continue
+                }
+                logError(ELogComponent.STORAGE, `Error writing secret ${name}`)
+                logError(ELogComponent.STORAGE, err)
+                return
+            }
         }
     }
     

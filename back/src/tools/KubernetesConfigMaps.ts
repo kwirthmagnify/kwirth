@@ -22,35 +22,46 @@ export class KubernetesConfigMaps implements IConfigMaps {
             }
             return {}
         }
-        try {
-            let resourceVersion: string | undefined
+        // Escritura optimista: se lee el resourceVersion y se hace replace. Si otro escritor se cuela
+        // entremedias, kubernetes devuelve 409 Conflict; en ese caso se reintenta releyendo la version,
+        // que es justo lo que pide el error ('apply your changes to the latest version').
+        const MAX_ATTEMPTS = 3
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
-                const existing = await this.coreApi.readNamespacedConfigMap({ name, namespace: this.namespace })
-                resourceVersion = existing.metadata?.resourceVersion
+                let resourceVersion: string | undefined
+                try {
+                    const existing = await this.coreApi.readNamespacedConfigMap({ name, namespace: this.namespace })
+                    resourceVersion = existing.metadata?.resourceVersion
+                }
+                catch {}
+                var configMap:V1ConfigMap = {
+                    metadata: {
+                        name: name,
+                        namespace: this.namespace,
+                        ...(resourceVersion ? { resourceVersion } : {})
+                    },
+                    data: { data: JSON.stringify(data) }
+                }
+                if (resourceVersion) {
+                    await this.coreApi?.replaceNamespacedConfigMap({ name, namespace: this.namespace, body: configMap })
+                }
+                else {
+                    await this.coreApi?.createNamespacedConfigMap({ namespace: this.namespace, body: configMap })
+                }
+                return {}
             }
-            catch {}
-            var configMap:V1ConfigMap = {
-                metadata: {
-                    name: name,
-                    namespace: this.namespace,
-                    ...(resourceVersion ? { resourceVersion } : {})
-                },
-                data: { data: JSON.stringify(data) }
+            catch (err:any) {
+                const conflict = err?.code === 409 || err?.body?.reason === 'Conflict' || String(err).includes('409')
+                if (conflict && attempt < MAX_ATTEMPTS) {
+                    logWarning(ELogComponent.CORE, `Conflict writing configMap ${this.namespace}/${name}, retrying (${attempt}/${MAX_ATTEMPTS})`)
+                    continue
+                }
+                logError(ELogComponent.CORE, 'Error writing configMap'+this.namespace+'/'+name)
+                logError(ELogComponent.CORE, err)
+                return undefined
             }
-            if (resourceVersion) {
-                await this.coreApi?.replaceNamespacedConfigMap({ name, namespace: this.namespace, body: configMap })
-            }
-            else {
-                await this.coreApi?.createNamespacedConfigMap({ namespace: this.namespace, body: configMap })
-            }
-            return {}
         }
-        catch (err) {
-            logError(ELogComponent.CORE, 'Error writing configMap'+this.namespace+'/'+name)
-            logError(ELogComponent.CORE, err)
-            return undefined
-        }
-
+        return undefined
     }
     
     public read = async (name:string, defaultValue:any=undefined): Promise<any> => {

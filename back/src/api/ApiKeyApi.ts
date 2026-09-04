@@ -190,10 +190,13 @@ export class ApiKeyApi {
 
     refreshKeys = async () : Promise<void> => {
         try {
-            let storedKeys = await this.configMaps.read('kwirth.keys', [])
-            storedKeys = AuthorizationManagement.cleanApiKeys(storedKeys)
-            await this.configMaps.write('kwirth.keys', storedKeys )
-            this.apiKeys = storedKeys
+            const storedKeys = await this.configMaps.read('kwirth.keys', []) as ApiKey[]
+            const cleanKeys = AuthorizationManagement.cleanApiKeys(storedKeys)
+            // Solo se escribe si de verdad ha caducado alguna. refreshKeys se llama desde validKey, o sea
+            // en el camino de autenticacion: escribir el configmap en cada peticion es un coste inutil y,
+            // con peticiones concurrentes, provoca conflictos 409 al pisarse las escrituras entre si.
+            if (cleanKeys.length !== (storedKeys?.length ?? 0)) await this.configMaps.write('kwirth.keys', cleanKeys)
+            this.apiKeys = cleanKeys
         }
         catch (err) {
             console.log('Error refreshing keys')
