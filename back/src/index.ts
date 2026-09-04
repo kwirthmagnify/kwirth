@@ -11,6 +11,7 @@ import { getLastKwirthVersion, showLogo } from './tools/branding/Branding'
 import { StoreApi } from './api/StoreApi'
 import { UserApi } from './api/UserApi'
 import { ApiKeyApi } from './api/ApiKeyApi'
+import { SettingsApi, IKwirthSettings } from './api/SettingsApi'
 import { LoginApi } from './api/LoginApi'
 
 // HTTP server & websockets
@@ -1202,6 +1203,29 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         riRouter.use(`/store`, storeApi.router)
         let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels))
         riRouter.use(`/user`, userApi.router)
+
+        // Configuracion persistida del propio Kwirth. Aplica el intervalo de metricas al provider vivo
+        // y lo refleja en kwirthData, que es lo que /config/info sirve al front.
+        const applyKwirthSettings = (settings: IKwirthSettings) => {
+            const interval = SettingsApi.resolveMetricsInterval(settings)
+            ri.kwirthData.metricsInterval = interval
+            const metricsProvider = ri.clusterInfo.providers.find(p => p.id === 'metrics') as MetricsProvider|undefined
+            if (!metricsProvider) return
+            metricsProvider.metricsInterval = interval
+            // si el provider ya estaba temporizando, hay que reiniciarlo para que tome el nuevo intervalo;
+            // si aun no ha arrancado, basta con dejar el campo puesto (startProvider lo lee de ahi)
+            if (metricsProvider.metricsIntervalRef !== undefined) {
+                metricsProvider.stopMetricsInterval()
+                metricsProvider.startMetricsInterval(interval)
+            }
+        }
+        applyKwirthSettings(await SettingsApi.read(ri.configMaps))
+        let settingsResult = await SettingsApi.create(ri.configMaps, apiKeyApi, applyKwirthSettings)
+        if (!settingsResult) {
+            logError(ELogComponent.CORE, 'Could not get settingsapi setting up routes')
+            return false
+        }
+        riRouter.use(`/core/settings`, settingsResult.router)
         // Catálogo global de scopes RBAC (built-in del core + los que declaran los canales): lo consume el
         // editor de seguridad. Admin-gated. Vive en /core por ser vocabulario transversal (no de user/key).
         riRouter.get(`/core/scopes`, (req: Request, res: Response) => {

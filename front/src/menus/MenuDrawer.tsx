@@ -11,7 +11,7 @@ enum MenuDrawerOption {
     ImportWorkspaces,
     ExportWorkspaces,
     SettingsUser,
-    SettingsCluster,
+    SettingsKwirth,
     ManageCluster,
     UserSecurity,
     ApiSecurity,
@@ -82,7 +82,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                 </MenuList>
             </Collapse>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsUser)}><Settings/>&nbsp;User settings</MenuItem>
-            <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsCluster)} disabled={props.selectedClusterName===undefined}><Settings/>&nbsp;Cluster Settings</MenuItem>
+            <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsKwirth)} disabled={props.selectedClusterName===undefined}><Settings/>&nbsp;Kwirth Settings</MenuItem>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageCluster)}><Edit/>&nbsp;Manage cluster list</MenuItem>
             <Divider/>
             { props.hasAdminScope &&

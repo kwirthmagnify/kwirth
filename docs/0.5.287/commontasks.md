@@ -35,7 +35,7 @@ What you can see in the main Kwirth is:
     - In the first block you can manage your workspaces by creating (new), loading (load) saving (save and 'save as') and deleting workspaces.
     - Next you have options for exporting your workspaces to a file or import them from a file.
     - Next option  is 'User settings'. In user setting panel you can configure default behaviors for your channels, like maximum number of messages in a log, adding timestamp to log lines, setting the interval for refreshing metrics...
-    - Next option is 'Cluster settings', where you can set some cluster-wide settings of Kwirth, like, for example, the interval Kwirth use to extract metrics from node's cAdvisor.
+    - Next option is 'Kwirth settings', where you can set the configuration of Kwirth itself on the selected cluster, like, for example, the interval Kwirth use to extract metrics from node's cAdvisor. These settings are persisted, so they survive a restart.
     - 'Manage cluster security' gives you the chance to [manage other clusters](clustermanagement) you want to **access from this Kwirth**.
     - 'API security' allows viewing and [managing API keys](apimanagement) you can create to share with other parties.
     - 'User security' is for managing users that will have access to this instance of Kwirth.

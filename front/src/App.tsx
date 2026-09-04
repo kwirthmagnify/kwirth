@@ -19,7 +19,8 @@ import { ManageClusters } from './components/ManageClusters'
 import { ManageUserSecurity } from './components/security/ManageUserSecurity'
 import { ResourceSelector, IResourceSelected } from './components/ResourceSelector'
 import { TabContent } from './components/TabContent'
-import { SettingsCluster } from './components/settings/SettingsCluster'
+import { SettingsKwirth } from './components/settings/SettingsKwirth'
+import { IKwirthSettings } from './model/KwirthSettings'
 import { SettingsUser } from './components/settings/SettingsUser'
 import { MenuTab, MenuTabOption } from './menus/MenuTab'
 import { MenuDrawer, MenuDrawerOption } from './menus/MenuDrawer'
@@ -273,7 +274,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showApiSecurity, setShowApiSecurity]=useState<boolean>(false)
     const [showUserSecurity, setShowUserSecurity]=useState<boolean>(false)
     const [showSettingsUser, setShowSettingsUser]=useState<boolean>(false)
-    const [showSettingsCluster, setShowSettingsCluster]=useState<boolean>(false)
+    const [showSettingsKwirth, setShowSettingsKwirth]=useState<boolean>(false)
     const [showPluginManagerDialog, setShowPluginManagerDialog]=useState<boolean>(false)
     const [showProviderManagerDialog, setShowProviderManagerDialog]=useState<boolean>(false)
     const [showIdpManagerDialog, setShowIdpManagerDialog]=useState<boolean>(false)
@@ -1944,8 +1945,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.SettingsUser:
                 setShowSettingsUser(true)
                 break
-            case MenuDrawerOption.SettingsCluster:
-                setShowSettingsCluster(true)
+            case MenuDrawerOption.SettingsKwirth:
+                setShowSettingsKwirth(true)
                 break
             case MenuDrawerOption.AiProviders:
                 fetch(`${backendUrl}/core/aiconfig/providers`, addGetAuthorization(accessString))
@@ -2022,18 +2023,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (ok && user) writeLoggedUserSettings(user)
     }
 
-    const onSettingsClusterClosed = (readMetricsInterval:number|undefined) => {
-        setShowSettingsCluster(false)
-        
-        if (!readMetricsInterval) return
-        if (readMetricsInterval) {
-            let cluster = clusters.find(c => c.name === selectedClusterName)
-            if (cluster && cluster.kwirthData)  {
-                cluster.kwirthData.metricsInterval = readMetricsInterval
-                let payload = JSON.stringify( { metricsInterval: readMetricsInterval } )
-                fetch (`${cluster.url}/provider/metrics/config`, addPostAuthorization(cluster.accessString, payload))
-            }
-        }
+    // el dialogo ya ha persistido en /core/settings y nos devuelve los valores efectivos;
+    // aqui solo se refresca la copia en memoria que consume ManageClusters
+    const onSettingsKwirthClosed = (savedSettings:IKwirthSettings|undefined) => {
+        setShowSettingsKwirth(false)
+        if (!savedSettings?.metricsInterval) return
+        let cluster = clusters.find(c => c.name === selectedClusterName)
+        if (cluster && cluster.kwirthData) cluster.kwirthData.metricsInterval = savedSettings.metricsInterval
     }
 
     const onRenameTabClosed = (newname:string|undefined) => {
@@ -2513,7 +2509,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     const SetupComp = ext.SetupDialog
                     return <SetupComp config={homepageSetupConfig} onSave={(cfg: Record<string, any>) => { onHomepageActivate(homepageSetupId, cfg); setHomepageSetupId(undefined) }} onClose={() => setHomepageSetupId(undefined)} />
                 })() }
-                { showSettingsCluster && clusters && <SettingsCluster onClose={onSettingsClusterClosed} clusterName={selectedClusterName} clusterMetricsInterval={clusters.find(c => c.name===selectedClusterName)?.kwirthData?.metricsInterval} /> }
+                { showSettingsKwirth && clusters && <SettingsKwirth onClose={onSettingsKwirthClosed} clusterName={selectedClusterName} clusterUrl={clusters.find(c => c.name===selectedClusterName)?.url ?? ''} accessString={clusters.find(c => c.name===selectedClusterName)?.accessString ?? ''} /> }
                 
                 { initialMessage !== '' && MsgBoxOk('Kwirth',initialMessage, () => setInitialMessage(''))}
                 { firstLogin && <FirstTimeLogin onClose={onFirstTimeLoginClose}/> }

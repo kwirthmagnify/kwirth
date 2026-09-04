@@ -37,13 +37,17 @@ Two small settings are worth knowing, both reached from the **☰ main menu**.
 
 ![User settings dialog](../../_media/guide/admin-user-settings.png)
 
-### Cluster settings
+### Kwirth settings
 
-**☰ → Cluster Settings** configures the **selected cluster**. The main option is the **metrics read interval** — how often (in seconds) Kwirth samples cluster metrics:
+**☰ → Kwirth Settings** configures **Kwirth itself** on the selected cluster, as opposed to your personal preferences. The main option is the **metrics read interval** — how often (in seconds) Kwirth samples cluster metrics:
 
-![Cluster settings dialog](../../_media/guide/admin-cluster-settings.png)
+![Kwirth settings dialog](../../_media/guide/admin-cluster-settings.png)
 
-> The metrics interval can also be set at deploy time (Helm / `--metricsinterval`); this dialog lets you adjust it per cluster afterwards.
+What you save here is **stored by Kwirth and survives a restart**. Changing it also retimes the running metrics provider immediately, so you do not need to restart anything for it to take effect.
+
+Managing these settings requires the **`admin`** scope; without it the dialog will tell you so instead of loading.
+
+> The interval can also be set at deploy time (Helm `metricsinterval` / `--metricsinterval`). Precedence is: what you save in this dialog wins; otherwise the deploy-time value; otherwise 15 seconds. So the Helm value acts as the starting point until somebody changes it here.
 
 ## What to configure next
 

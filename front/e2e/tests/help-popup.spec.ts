@@ -38,7 +38,7 @@ test('help button: dialogs del menú principal invocan window.open en su secció
 
     const CASES: ICase[] = [
         { label: 'User settings',        open: () => clickMenuItem(page, 'User settings'),        section: 'guide/admin/02-initial-config?id=user-settings-personal' },
-        { label: 'Cluster Settings',     open: () => clickMenuItem(page, 'Cluster Settings'),     section: 'guide/admin/02-initial-config?id=cluster-settings' },
+        { label: 'Kwirth Settings',      open: () => clickMenuItem(page, 'Kwirth Settings'),      section: 'guide/admin/02-initial-config?id=kwirth-settings' },
         { label: 'Manage cluster list',  open: () => clickMenuItem(page, 'Manage cluster list'),  section: 'guide/admin/06-cluster-management?id=add-a-remote-cluster' },
         { label: 'API Security',         open: () => clickMenuItem(page, 'API Security'),         section: 'guide/admin/05-api-management?id=create-an-api-key' },
         { label: 'User security',        open: () => clickMenuItem(page, 'User security'),        section: 'guide/admin/03-user-management?id=user-fields' },
