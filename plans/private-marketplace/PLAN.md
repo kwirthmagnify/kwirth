@@ -6,9 +6,11 @@ Goal: let an administrator register **additional** marketplace manifest URLs, so
 publish its own extensions (plugins, senders, providers, themes, homepages, webhooks, logins, packs, idp
 connectors) without them living in the public Kwirth manifest.
 
-**Additive, never a substitution.** The public OSS manifests stay exactly as they are, hardcoded in each
-manager dialog. A registered private marketplace is a *second source* consulted alongside the public one;
-removing every private entry must leave today's behaviour untouched.
+**Additive as a source, with precedence per id.** The public OSS manifests stay exactly as they are,
+hardcoded in each manager dialog, and are never replaced as a source — they become the last entry in the
+lookup order. A private marketplace *can* shadow an individual id (that is the point: publishing your own
+`log` without colliding with the public one), but it can never remove the public marketplace itself.
+Removing every private entry must leave today's behaviour untouched.
 
 Marketplaces are configuration of Kwirth itself, per cluster — like the metrics interval — so the list is
 persisted server-side and the UI lives in cluster settings.
@@ -51,10 +53,21 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
   check, so the merge exists once. The public URL stays where it is; the helper just appends.
 - **C — UI.** Add/remove/enable rows in `SettingsCluster`, with URL validation and a reachability test.
   Requires widening `onClose` beyond the current single number.
-- **D — Merge semantics.** Dedupe by extension id and define precedence when an id appears in more than
-  one source (public wins? most recently added wins? explicit order?). Show provenance on the card so the
-  user can tell where an extension came from. The update check must consult private manifests too, or
-  privately-installed extensions stay silently unflagged forever.
+- **D — Merge semantics. DECIDED: private marketplaces take precedence, the public OSS manifest is always
+  last.** Entries are deduped by extension id and the first match wins, so an organisation can publish its
+  own plugin called `log` and have it shadow the public `log` rather than collide with it. The public
+  manifest is simply the final fallback in the lookup order; among several private marketplaces, their
+  configured order decides. Show provenance on the card so the user can tell which marketplace an
+  extension came from — with shadowing, that is the only way to know *which* `log` is on screen.
+
+  Two consequences of shadowing that the implementation has to respect:
+  - The update check must resolve precedence **before** comparing versions, otherwise an installed private
+    `log` would be compared against the public `log` manifest and report nonsense. This is the main reason
+    the merge belongs in one shared helper (step B) rather than being rewritten per dialog.
+  - An extension installed from the public marketplace *before* a private one registered the same id would
+    silently start comparing against the private manifest, which can surface a bogus update or downgrade.
+    The existing `installedFrom` field (already used to skip `'dev'`) looks like the right place to record
+    the originating marketplace so the comparison can stay pinned to the source it was installed from.
 
 ## Open questions
 
