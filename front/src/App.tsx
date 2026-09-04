@@ -540,7 +540,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (!logged || !backendUrl) return
 
         getClusters()
-        readLoggedUserSettings()
+        const settingsLoaded = readLoggedUserSettings()
 
         // load front.js for already-installed plugins
         fetch(`${backendUrl}/core/plugins`, addGetAuthorization(accessString))
@@ -587,41 +587,62 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             })
             .catch(err => console.log(`[homepages] failed to load installed homepages: ${err}`))
 
-        // check for extension updates (dev only)
-        if (process.env.NODE_ENV !== 'production') {
-            (async () => {
-                const MANIFESTS: Record<string, string> = {
-                    plugin:   'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/plugins/manifest.json',
-                    sender:   'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/senders/manifest.json',
-                    provider: 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/providers/manifest.json',
-                    theme:    'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master/themes/manifest.json',
-                }
-                const ENDPOINTS: Record<string, string> = {
-                    plugin:   `${backendUrl}/core/plugins`,
-                    sender:   `${backendUrl}/core/senders`,
-                    provider: `${backendUrl}/core/providers`,
-                    theme:    `${backendUrl}/core/themes`,
-                }
-                try {
-                    const types = Object.keys(MANIFESTS)
-                    const [manifests, installeds] = await Promise.all([
-                        Promise.all(types.map(t => fetch(MANIFESTS[t]).then(r => r.ok ? r.json() : []).catch(() => []))),
-                        Promise.all(types.map(t => fetch(ENDPOINTS[t], addGetAuthorization(accessString)).then(r => r.ok ? r.json() : []).catch(() => [])))
-                    ])
-                    const updates: string[] = []
-                    types.forEach((type, i) => {
-                        const manifest: { id: string, version: string }[] = manifests[i]
-                        const installed: { id: string, version: string, installedFrom?: string }[] = installeds[i]
-                        for (const inst of installed) {
-                            if (inst.installedFrom === 'dev') continue
-                            const latest = manifest.filter(m => m.id === inst.id).map(m => m.version).sort((a, b) => versionGreaterThan(a, b) ? -1 : 1)[0]
-                            if (latest && versionGreaterThan(latest, inst.version)) updates.push(`${type} ${inst.id} ${inst.version}→${latest}`)
-                        }
-                    })
-                    if (updates.length > 0) notify(undefined, ENotifyLevel.WARNING, `Updates available: ${updates.join(', ')}`)
-                } catch {}
-            })()
+        // check for extension updates, unless the user turned the check off in settings.
+        // Se espera a que carguen los settings: en modo web se leen con un fetch, así que
+        // sin el await se evaluaría el flag sobre los valores por defecto.
+        const checkExtensionUpdates = async () => {
+            await settingsLoaded
+            if (userSettingsRef.current?.checkExtensionUpdates === false) return
+            const MANIFEST_BASE = 'https://raw.githubusercontent.com/kwirthmagnify/kwirth/refs/heads/master'
+            const MANIFESTS: Record<string, string> = {
+                plugin:   `${MANIFEST_BASE}/plugins/manifest.json`,
+                sender:   `${MANIFEST_BASE}/senders/manifest.json`,
+                provider: `${MANIFEST_BASE}/providers/manifest.json`,
+                theme:    `${MANIFEST_BASE}/themes/manifest.json`,
+                homepage: `${MANIFEST_BASE}/homepages/manifest.json`,
+                webhook:  `${MANIFEST_BASE}/webhooks/manifest.json`,
+                login:    `${MANIFEST_BASE}/logins/manifest.json`,
+                pack:     `${MANIFEST_BASE}/packs/manifest.json`,
+                docs:     `${MANIFEST_BASE}/docs/manifest.json`,
+                idp:      `${MANIFEST_BASE}/idps/manifest.json`,
+            }
+            // idp connectors no cuelgan de /core, tienen su propio router
+            const ENDPOINTS: Record<string, string> = {
+                plugin:   `${backendUrl}/core/plugins`,
+                sender:   `${backendUrl}/core/senders`,
+                provider: `${backendUrl}/core/providers`,
+                theme:    `${backendUrl}/core/themes`,
+                homepage: `${backendUrl}/core/homepages`,
+                webhook:  `${backendUrl}/core/webhooks`,
+                login:    `${backendUrl}/core/logins`,
+                pack:     `${backendUrl}/core/packs`,
+                docs:     `${backendUrl}/core/docs`,
+                idp:      `${backendUrl}/idp/connectors`,
+            }
+            try {
+                const types = Object.keys(MANIFESTS)
+                const [manifests, installeds] = await Promise.all([
+                    Promise.all(types.map(t => fetch(MANIFESTS[t]).then(r => r.ok ? r.json() : []).catch(() => []))),
+                    Promise.all(types.map(t => fetch(ENDPOINTS[t], addGetAuthorization(accessString)).then(r => r.ok ? r.json() : []).catch(() => [])))
+                ])
+                const updates: string[] = []
+                types.forEach((type, i) => {
+                    const manifest: { id: string, version: string }[] = manifests[i]
+                    const installed: { id: string, version: string, installedFrom?: string }[] = installeds[i]
+                    // un endpoint que no devuelva array no debe tumbar el chequeo de los demas tipos
+                    if (!Array.isArray(manifest) || !Array.isArray(installed)) return
+                    for (const inst of installed) {
+                        if (inst.installedFrom === 'dev') continue
+                        // los conectores bundled (idp) no traen version y no son actualizables
+                        if (!inst.version) continue
+                        const latest = manifest.filter(m => m.id === inst.id).map(m => m.version).sort((a, b) => versionGreaterThan(a, b) ? -1 : 1)[0]
+                        if (latest && versionGreaterThan(latest, inst.version)) updates.push(`${type} ${inst.id} ${inst.version}→${latest}`)
+                    }
+                })
+                if (updates.length > 0) notify(undefined, ENotifyLevel.WARNING, `Updates available: ${updates.join(', ')}`)
+            } catch {}
         }
+        checkExtensionUpdates()
 
 
         // load user tabs
@@ -824,7 +845,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
             }
         }
-        userSettingsRef.current = { channelSettings: [], keepAliveInterval: 60, channelUserPreferences:[] }
+        userSettingsRef.current = { channelSettings: [], keepAliveInterval: 60, channelUserPreferences:[], checkExtensionUpdates: true }
     }
 
     const writeLoggedUserSettings = async (user:IUser) => {

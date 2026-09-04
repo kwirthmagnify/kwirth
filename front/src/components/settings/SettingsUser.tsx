@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react'
-import { Button, Dialog, DialogActions, DialogContent, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
+import { Button, Checkbox, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { Settings } from '../../model/Settings'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
@@ -19,11 +19,14 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
     const [keepAliveInterval, setKeepAliveInterval] = useState<number>(props.settings? props.settings.keepAliveInterval : 60)
     const [selectedTheme, setSelectedTheme] = useState<string>(props.activeThemeName ?? '')
     const [selectedHomepage, setSelectedHomepage] = useState<string>(props.activeHomepageId ?? '')
+    // undefined en settings guardados de antes de existir el campo: se considera activado
+    const [checkExtensionUpdates, setCheckExtensionUpdates] = useState<boolean>(props.settings?.checkExtensionUpdates !== false)
     const { backendUrl } = useContext(SessionContext) as SessionContextType
 
     const ok = () =>{
         if (props.settings) {
             props.settings.keepAliveInterval = keepAliveInterval
+            props.settings.checkExtensionUpdates = checkExtensionUpdates
             props.onThemeChange(selectedTheme === '' ? undefined : selectedTheme)
             props.onHomepageChange(selectedHomepage === '' ? undefined : selectedHomepage)
             props.onClose(true)
@@ -53,6 +56,7 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
                             {props.installedHomepages.map(h => <MenuItem key={h.id} value={h.id}>{h.displayName || h.name}</MenuItem>)}
                         </Select>
                     </FormControl>
+                    <FormControlLabel control={<Checkbox checked={checkExtensionUpdates} onChange={(e) => setCheckExtensionUpdates(e.target.checked)} />} label='Notify when extension updates are available' />
                 </Stack>
             </DialogContent>
             <DialogActions>
