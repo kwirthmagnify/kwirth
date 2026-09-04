@@ -52,8 +52,20 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
   private marketplace plus the public one and returns the resolved entry list — applying the per-id
   precedence of step D, so an id is served by exactly one marketplace. Consumed by the ten dialogs and the
   update check, so the rule exists once. The public URL stays where it is.
-- **C — UI.** Add/remove/enable rows in `SettingsCluster`, with URL validation and a reachability test.
-  Requires widening `onClose` beyond the current single number.
+- **C — UI.** Add/remove/enable rows in `SettingsKwirth`, with URL validation and a reachability test. The
+  dialog already reads and writes `/core/settings` on its own, so this extends it rather than rewiring it.
+
+- **C2 — Provenance badge on every card.** Each extension card, across all ten manager dialogs, gets a
+  visual indicator with a tooltip naming where that extension came from — which marketplace served it, or
+  `dev` / a pack for the existing local cases. With shadowing this is not decoration: when a private and a
+  public marketplace both publish `log`, the badge is the only way to tell which one is on screen, and
+  which one an installed copy was downloaded from.
+
+  There is groundwork to reuse: `installedFrom` already exists on installed entries (today it marks `dev`
+  and `pack:<id>` origins) and `IdpManagerDialog` already has a `resolveSource(installedFrom)` helper for
+  rendering it. Generalise that helper so all ten dialogs share it, and extend `installedFrom` to record
+  the originating marketplace at install time — which is also what pins version comparison to the right
+  source (see D). `RemoteBadge` in `ResourceSelector.tsx` is a good shape to copy for the badge itself.
 - **D — Resolution semantics. DECIDED: private marketplaces take precedence, the public OSS manifest is
   always last.** Among several private marketplaces, their configured order decides.
 
