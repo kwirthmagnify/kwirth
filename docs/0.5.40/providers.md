@@ -129,7 +129,7 @@ processProviderEvent(providerId:string, obj:any) : void {
             break
         case 'events':
             if (obj.type==='ADDED') {
-                console.log('Added pod', obj.obj.metadata?.name)
+                console.log('Pinocchio: added pod', obj.obj.metadata?.name)
                 // Here invoke LLM through Vercel AI-SDK
             }
             break
