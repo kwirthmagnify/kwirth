@@ -44,16 +44,38 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
 
 ## Proposed steps
 
-- **A — Storage + API.** Persist the list under a `kwirth-marketplaces` key via `IConfigMaps`, exposed by a
-  small core API (`GET`/`PUT`), following `ApiKeyApi` as the model. Shape: a list of entries, each with a
-  base URL expected to serve `<base>/<folder>/manifest.json` — mirroring the public layout so one entry
-  covers every extension type — plus a label and an enabled flag.
-- **B — Resolution helper.** One shared helper that, for a given extension type, fetches every enabled
-  private marketplace plus the public one and returns the resolved entry list — applying the per-id
-  precedence of step D, so an id is served by exactly one marketplace. Consumed by the ten dialogs and the
-  update check, so the rule exists once. The public URL stays where it is.
-- **C — UI.** Add/remove/enable rows in `SettingsKwirth`, with URL validation and a reachability test. The
-  dialog already reads and writes `/core/settings` on its own, so this extends it rather than rewiring it.
+- **A — Storage.** The marketplace list joins `IKwirthSettings` as `marketplaces`, persisted in the
+  existing `kwirth.settings` document — `SettingsApi`'s PUT already merges, so adding a field needs no new
+  route, only validation of the list shape. Each entry: a stable `id`, a base URL expected to serve
+  `<base>/<folder>/manifest.json` (mirroring the public layout, so one entry covers all ten types), a
+  `label`, and an `enabled` flag.
+
+  **Basic auth credentials do NOT live here.** `kwirth.settings` is an unencrypted ConfigMap; passwords
+  belong in `ISecrets`, which is AES-256-GCM encrypted on the filesystem backends and RBAC-protected in
+  k8s. So the entry carries at most `auth: { type: 'basic', username }`, with the password stored in
+  `ISecrets` keyed by the marketplace `id`. Two consequences the implementation must honour: `GET
+  /core/settings` never returns the password — it returns a `hasPassword` boolean instead — and a PUT that
+  omits the password leaves the stored one untouched rather than clearing it.
+
+- **B — Back-side resolution behind one endpoint.** The back fetches the manifests and applies the
+  precedence of step D, exposing a single endpoint per extension type that returns the already-resolved
+  list with provenance stamped on each entry. The ten dialogs and the update check consume that instead of
+  fetching manifests themselves.
+
+  Doing the resolution server-side rather than shipping a helper to the front buys three things: the
+  precedence rule lives in one testable place instead of being re-applied in eleven; the back is where
+  Basic auth credentials can be attached without ever reaching the browser; and it removes the asymmetry
+  that motivated the proxy, since the back is already what downloads tarballs at install time.
+
+  **Consequence worth flagging:** for the back to resolve, it needs every source, the public one included.
+  The ten hardcoded public URLs therefore move from the ten dialogs into a single list in the back. They
+  stay hardcoded and stay the OSS marketplace — this only deduplicates ten copies into one and is a
+  side effect of proxying, not a change of policy.
+- **C — UI.** Add/remove/enable rows in `SettingsKwirth`, with URL validation and a reachability test that
+  exercises the credentials too, so a wrong password is caught while configuring rather than showing up as
+  an empty extension list later. The dialog already reads and writes `/core/settings` on its own, so this
+  extends it rather than rewiring it. The password field is `type=password` with a visibility toggle, and
+  renders as already-set (not blank) when `hasPassword` comes back true.
 
 - **C2 — Provenance badge on every card.** Each extension card, across all ten manager dialogs, gets a
   visual indicator with a tooltip naming where that extension came from — which marketplace served it, or
@@ -93,17 +115,20 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
 
 ## Settled
 
-- **No authentication. DECIDED:** a marketplace manifest carries only names and versions, so it can be
-  served publicly. Entries hold no credentials, and nothing here touches `ISecrets`.
+- **The back proxies manifest reads. DECIDED.** Manifests are read by the back, not the browser. This
+  removes the asymmetry that a customer-hosted marketplace could be reachable for installing (the back
+  downloads tarballs) yet invisible for listing (the browser may lack CORS or network reach) — a failure
+  that would be silent, since every manifest fetch already degrades to `[]`.
+- **Optional HTTP Basic auth per marketplace. DECIDED.** A manifest carries only names and versions and
+  *can* be public, but a marketplace may still choose to sit behind Basic auth. Credentials are optional
+  per entry, attached by the back, and never sent to the browser. Password in `ISecrets`, never in
+  `kwirth.settings` — see step A.
 
 ## Open questions
 
-- **Fetch origin.** Manifests are read by the **browser**, but the tarball download at install time is
-  done by the **back**. A customer-hosted marketplace can therefore be reachable for installing yet
-  invisible for listing — the host may lack CORS headers, or sit on a network the cluster reaches and the
-  user's browser does not. The failure is silent: every fetch already degrades to `[]`. Proxying the
-  manifest read through the back removes the asymmetry, so anything installable is listable. Decide as
-  part of A, since it changes the API shape and therefore B.
 - **Trust.** Installing pulls a tarball from a URL the manifest supplies, so registering a marketplace is
   a privileged action: the `admin` scope gate exists, but decide whether anything validates what comes
-  back.
+  back. Can wait until C.
+- **Whether install reuses the marketplace credentials.** If a marketplace is behind Basic auth, the
+  tarball it points at probably is too. The install path would then need the same credentials the resolve
+  path uses. Worth confirming before B so the credential lookup is shared rather than bolted on.
