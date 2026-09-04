@@ -340,7 +340,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         if (runningEnv.isDesktop) {
             logInfo(ELogComponent.CORE, 'Using local filesystem storage (desktop/Tauri mode)')
             configMaps = new NodeConfigMaps()
-            secrets = new NodeSecrets()
+            secrets = new NodeSecrets(undefined, envMasterKey)
             let users:{ [username:string]:string } = await secrets.read('kwirth-users')
             if (!users) {
                 logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users secret')
@@ -367,7 +367,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             const kwirthStore = process.env.KWIRTH_STORE
             if (kwirthStore && kwirthStore !== 'etcd') {
                 logInfo(ELogComponent.CORE, `Using filesystem storage at ${kwirthStore}`)
-                secrets = new NodeSecrets(kwirthStore)
+                secrets = new NodeSecrets(kwirthStore, envMasterKey)
                 configMaps = new NodeConfigMaps(kwirthStore)
                 let users:{ [username:string]:string } = await secrets.read('kwirth-users')
                 if (!users) {

@@ -88,6 +88,8 @@ However, some environments restrict Secret/ConfigMap write access, or you may pr
 
 > **Note**: this setting only affects Kubernetes mode. Desktop mode always uses `~/.kwirth/`, and Docker mode uses its own volume mounts.
 
+> **Security**: when Kwirth uses filesystem storage (desktop or `KWIRTH_STORE` path), sensitive data (secrets) is encrypted at rest with AES-256-GCM using a key derived from `MASTERKEY`. Non-sensitive data (config maps) is stored as plain JSON. If you change `MASTERKEY` after first run, existing secret files will become unreadable.
+
 ### Example: store Kwirth data in a PersistentVolumeClaim
 
 1. Create a PVC (or use an existing one):
