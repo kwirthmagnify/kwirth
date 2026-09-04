@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, Stack, TextField, Typography } from '@mui/material'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { IKwirthSettings } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
-import { IKwirthSettings } from '../../model/KwirthSettings'
 import { addGetAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
 interface ISettingsKwirthProps {

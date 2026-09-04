@@ -1,4 +1,5 @@
 import express, { Request, Response} from 'express'
+import { IKwirthSettings } from '@kwirthmagnify/kwirth-common'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { IConfigMaps } from '../tools/IConfigMap'
@@ -6,13 +7,6 @@ import { ELogComponent, logError } from '../tools/Logging'
 
 const SETTINGS_KEY = 'kwirth.settings'
 const DEFAULT_METRICS_INTERVAL = 15
-
-// Configuracion del propio Kwirth (no del usuario, que va en /store/:user/settings/general).
-// Todos los campos son opcionales: unos settings guardados antes de que existiera un campo no lo
-// tendran, y quien lo consume resuelve el valor efectivo con su propia precedencia.
-export interface IKwirthSettings {
-    metricsInterval?: number
-}
 
 export class SettingsApi {
     public router = express.Router()

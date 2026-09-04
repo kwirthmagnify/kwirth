@@ -41,7 +41,7 @@ Two small settings are worth knowing, both reached from the **☰ main menu**.
 
 **☰ → Kwirth Settings** configures **Kwirth itself** on the selected cluster, as opposed to your personal preferences. The main option is the **metrics read interval** — how often (in seconds) Kwirth samples cluster metrics:
 
-![Kwirth settings dialog](../../_media/guide/admin-cluster-settings.png)
+![Kwirth settings dialog](../../_media/guide/admin-kwirth-settings.png)
 
 What you save here is **stored by Kwirth and survives a restart**. Changing it also retimes the running metrics provider immediately, so you do not need to restart anything for it to take effect.
 

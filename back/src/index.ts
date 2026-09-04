@@ -11,7 +11,7 @@ import { getLastKwirthVersion, showLogo } from './tools/branding/Branding'
 import { StoreApi } from './api/StoreApi'
 import { UserApi } from './api/UserApi'
 import { ApiKeyApi } from './api/ApiKeyApi'
-import { SettingsApi, IKwirthSettings } from './api/SettingsApi'
+import { SettingsApi } from './api/SettingsApi'
 import { LoginApi } from './api/LoginApi'
 
 // HTTP server & websockets
@@ -38,7 +38,7 @@ import { DockerConfigMaps } from './tools/DockerConfigMaps'
 import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
-import { IUserInfo } from '@kwirthmagnify/kwirth-common'
+import { IUserInfo, IKwirthSettings } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import * as _kwirthCommon from '@kwirthmagnify/kwirth-common'
 import { IdentityService } from './tools/auth/IdentityService'

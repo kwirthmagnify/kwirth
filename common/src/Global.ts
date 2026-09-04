@@ -38,4 +38,12 @@ interface IClusterMetricsConfig {
     metricsInterval: number
 }
 
-export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig }
+// Configuracion del propio Kwirth, persistida por el back bajo la clave 'kwirth.settings' y
+// servida por /core/settings. No confundir con los settings del usuario, que van por /store.
+// Todos los campos son opcionales: unos settings guardados antes de que existiera un campo no lo
+// tendran, y el back resuelve el valor efectivo con su propia precedencia antes de devolverlos.
+interface IKwirthSettings {
+    metricsInterval?: number
+}
+
+export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings }

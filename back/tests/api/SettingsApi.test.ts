@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import express from 'express'
 import type { AddressInfo } from 'net'
 import { ApiKeyApi } from '../../src/api/ApiKeyApi'
-import { SettingsApi, IKwirthSettings } from '../../src/api/SettingsApi'
+import { SettingsApi } from '../../src/api/SettingsApi'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
-import { accessKeySerialize } from '@kwirthmagnify/kwirth-common'
+import { accessKeySerialize, IKwirthSettings } from '@kwirthmagnify/kwirth-common'
 
 // configurar Kwirth (/core/settings) es admin-only: validKey + scope 'admin'
 const adminKey = { id: 'adminkey', type: 'permanent', resources: 'admin,cluster::::' }
