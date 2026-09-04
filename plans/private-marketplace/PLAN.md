@@ -48,17 +48,27 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
   small core API (`GET`/`PUT`), following `ApiKeyApi` as the model. Shape: a list of entries, each with a
   base URL expected to serve `<base>/<folder>/manifest.json` — mirroring the public layout so one entry
   covers every extension type — plus a label and an enabled flag.
-- **B — Merge helper.** One shared helper that, for a given extension type, returns the public manifest
-  entries plus those from every enabled private marketplace. Consumed by the ten dialogs and the update
-  check, so the merge exists once. The public URL stays where it is; the helper just appends.
+- **B — Resolution helper.** One shared helper that, for a given extension type, fetches every enabled
+  private marketplace plus the public one and returns the resolved entry list — applying the per-id
+  precedence of step D, so an id is served by exactly one marketplace. Consumed by the ten dialogs and the
+  update check, so the rule exists once. The public URL stays where it is.
 - **C — UI.** Add/remove/enable rows in `SettingsCluster`, with URL validation and a reachability test.
   Requires widening `onClose` beyond the current single number.
-- **D — Merge semantics. DECIDED: private marketplaces take precedence, the public OSS manifest is always
-  last.** Entries are deduped by extension id and the first match wins, so an organisation can publish its
-  own plugin called `log` and have it shadow the public `log` rather than collide with it. The public
-  manifest is simply the final fallback in the lookup order; among several private marketplaces, their
-  configured order decides. Show provenance on the card so the user can tell which marketplace an
-  extension came from — with shadowing, that is the only way to know *which* `log` is on screen.
+- **D — Resolution semantics. DECIDED: private marketplaces take precedence, the public OSS manifest is
+  always last.** Among several private marketplaces, their configured order decides.
+
+  **Resolution happens per id, at marketplace granularity — versions are never merged across
+  marketplaces.** A manifest holds *many* entries per id, one per published version, so the rule is: find
+  the first marketplace in the lookup order that contains the id **at all**, and take that marketplace's
+  entries for it — the whole version list. Every other marketplace's entries for the same id are dropped
+  outright, not blended in. An organisation publishing its own `log` therefore gets *its* `log` and *its*
+  version history; the public `log` and all its versions disappear from view rather than interleaving.
+
+  Concretely, the `manifest.filter(m => m.id === inst.id)` the update check performs today must run
+  against the winning marketplace's entries alone, never against a concatenation of every source —
+  otherwise a private `log 1.0.0` and the public `log 0.2.20` would end up in the same version list.
+
+  Show provenance on the card: with shadowing, that is the only way to know *which* `log` is on screen.
 
   Two consequences of shadowing that the implementation has to respect:
   - The update check must resolve precedence **before** comparing versions, otherwise an installed private
