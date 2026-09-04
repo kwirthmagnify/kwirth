@@ -57,10 +57,18 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
   /core/settings` never returns the password — it returns a `hasPassword` boolean instead — and a PUT that
   omits the password leaves the stored one untouched rather than clearing it.
 
-  The first real target is an **npm endpoint on a Sonatype Nexus**: the manifest is read openly, the
-  tarballs it points at live in the Nexus repo behind Basic auth. Nexus npm repos accept Basic auth
-  directly, so no token exchange is needed. See the open question on whether such an entry needs a
-  separate manifest URL alongside the registry URL.
+  **A private marketplace has exactly the same shape as the public one:** a manifest on an open host
+  (GitHub for the OSS marketplace) whose entries each carry the full tarball `url`, pointing at a package
+  registry (npmjs for OSS). So an entry needs **one** URL, the manifest base — the package location comes
+  from the manifest itself, exactly as today. The first real target is a manifest on GitHub with packages
+  on an **npm endpoint of a Sonatype Nexus**, which accepts Basic auth directly, so no token exchange.
+
+  **Credentials are selected by provenance, not by URL matching.** Because the back resolves, it knows
+  which marketplace served each entry — the same fact that feeds the provenance badge in C2. At install
+  time the credentials used are those of the marketplace the entry came from. No prefix-matching a tarball
+  URL against configured registries, and therefore no way to accidentally send one marketplace's
+  credentials to another's host. An entry with no marketplace behind it (the public one, a hand-typed URL)
+  installs with no credentials at all.
 
 - **B — Back-side resolution behind one endpoint.** The back fetches the manifests and applies the
   precedence of step D, exposing a single endpoint per extension type that returns the already-resolved
@@ -76,12 +84,13 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
   The ten hardcoded public URLs therefore move from the ten dialogs into a single list in the back. They
   stay hardcoded and stay the OSS marketplace — this only deduplicates ten copies into one and is a
   side effect of proxying, not a change of policy.
-- **C — UI.** Add/remove/enable rows in `SettingsKwirth`, with URL validation and a reachability test. The
-  test should cover both halves separately, because they fail differently: the manifest URL is fetched
-  openly, while the registry needs the credentials — and a wrong password would otherwise stay hidden
-  until somebody tries to install. The dialog already reads and writes `/core/settings` on its own, so
-  this extends it rather than rewiring it. The password field is `type=password` with a visibility
-  toggle, and renders as already-set (not blank) when `hasPassword` comes back true.
+- **C — UI.** Add/remove/enable rows in `SettingsKwirth`, with URL validation and a reachability test that
+  fetches the manifest. Credentials cannot be verified by that test — they only come into play when
+  downloading a package — so a wrong password would otherwise stay hidden until somebody tries to install.
+  Worth having the test optionally pull the first entry's tarball headers to exercise them. The dialog
+  already reads and writes `/core/settings` on its own, so this extends it rather than rewiring it. The
+  password field is `type=password` with a visibility toggle, and renders as already-set (not blank) when
+  `hasPassword` comes back true.
 
 - **C2 — Provenance badge on every card.** Each extension card, across all ten manager dialogs, gets a
   visual indicator with a tooltip naming where that extension came from — which marketplace served it, or
@@ -133,19 +142,6 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
 
 ## Open questions
 
-- **Where a Nexus-backed marketplace serves its manifest.** The first real target is an **npm endpoint on
-  a Sonatype Nexus**, so packages are npm tarballs at
-  `<nexus>/repository/<repo>/<pkg>/-/<pkg>-<version>.tgz` behind Basic auth. But the public layout assumes
-  the manifest sits at `<base>/<folder>/manifest.json`, and an npm-hosted Nexus repo does not naturally
-  serve an arbitrary JSON file at a folder path. So either the manifest is hosted separately (a raw Nexus
-  repo, a web server, a git host) — in which case an entry needs **two** URLs, one for the manifest and
-  one for the registry — or the single base URL assumption has to change. Settle before A, since it
-  decides the entry shape.
-- **How install picks the right credentials.** The install path receives a tarball URL from the manifest.
-  To attach Basic auth it must work out which marketplace that URL belongs to, presumably by matching the
-  URL against the configured registry base URLs, longest prefix first. Straightforward, but it must be
-  deliberate: an unmatched URL has to install *without* credentials rather than silently reusing
-  somebody else's.
 - **Trust.** Installing pulls a tarball from a URL the manifest supplies, so registering a marketplace is
   a privileged action: the `admin` scope gate exists, but decide whether anything validates what comes
   back. Can wait until C.
