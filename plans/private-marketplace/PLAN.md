@@ -57,25 +57,31 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
   /core/settings` never returns the password — it returns a `hasPassword` boolean instead — and a PUT that
   omits the password leaves the stored one untouched rather than clearing it.
 
+  The first real target is an **npm endpoint on a Sonatype Nexus**: the manifest is read openly, the
+  tarballs it points at live in the Nexus repo behind Basic auth. Nexus npm repos accept Basic auth
+  directly, so no token exchange is needed. See the open question on whether such an entry needs a
+  separate manifest URL alongside the registry URL.
+
 - **B — Back-side resolution behind one endpoint.** The back fetches the manifests and applies the
   precedence of step D, exposing a single endpoint per extension type that returns the already-resolved
   list with provenance stamped on each entry. The ten dialogs and the update check consume that instead of
   fetching manifests themselves.
 
-  Doing the resolution server-side rather than shipping a helper to the front buys three things: the
-  precedence rule lives in one testable place instead of being re-applied in eleven; the back is where
-  Basic auth credentials can be attached without ever reaching the browser; and it removes the asymmetry
-  that motivated the proxy, since the back is already what downloads tarballs at install time.
+  Doing the resolution server-side rather than shipping a helper to the front buys two things: the
+  precedence rule lives in one testable place instead of being re-applied in eleven, and it removes the
+  asymmetry that motivated the proxy, since the back is already what downloads tarballs at install time.
+  (Credentials are not a reason here — the manifest read needs none; they belong to the install path.)
 
   **Consequence worth flagging:** for the back to resolve, it needs every source, the public one included.
   The ten hardcoded public URLs therefore move from the ten dialogs into a single list in the back. They
   stay hardcoded and stay the OSS marketplace — this only deduplicates ten copies into one and is a
   side effect of proxying, not a change of policy.
-- **C — UI.** Add/remove/enable rows in `SettingsKwirth`, with URL validation and a reachability test that
-  exercises the credentials too, so a wrong password is caught while configuring rather than showing up as
-  an empty extension list later. The dialog already reads and writes `/core/settings` on its own, so this
-  extends it rather than rewiring it. The password field is `type=password` with a visibility toggle, and
-  renders as already-set (not blank) when `hasPassword` comes back true.
+- **C — UI.** Add/remove/enable rows in `SettingsKwirth`, with URL validation and a reachability test. The
+  test should cover both halves separately, because they fail differently: the manifest URL is fetched
+  openly, while the registry needs the credentials — and a wrong password would otherwise stay hidden
+  until somebody tries to install. The dialog already reads and writes `/core/settings` on its own, so
+  this extends it rather than rewiring it. The password field is `type=password` with a visibility
+  toggle, and renders as already-set (not blank) when `hasPassword` comes back true.
 
 - **C2 — Provenance badge on every card.** Each extension card, across all ten manager dialogs, gets a
   visual indicator with a tooltip naming where that extension came from — which marketplace served it, or
@@ -119,16 +125,27 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
   removes the asymmetry that a customer-hosted marketplace could be reachable for installing (the back
   downloads tarballs) yet invisible for listing (the browser may lack CORS or network reach) — a failure
   that would be silent, since every manifest fetch already degrades to `[]`.
-- **Optional HTTP Basic auth per marketplace. DECIDED.** A manifest carries only names and versions and
-  *can* be public, but a marketplace may still choose to sit behind Basic auth. Credentials are optional
-  per entry, attached by the back, and never sent to the browser. Password in `ISecrets`, never in
-  `kwirth.settings` — see step A.
+- **Optional HTTP Basic auth, on the package and not on the manifest. DECIDED.** The manifest carries only
+  names and versions and is read openly, with no credentials. What can sit behind Basic auth is the
+  **package** — the tarball an entry points at. So credentials are used by the *install* path, which is
+  already back-side, and never by the manifest read. Password in `ISecrets`, never in `kwirth.settings` —
+  see step A.
 
 ## Open questions
 
+- **Where a Nexus-backed marketplace serves its manifest.** The first real target is an **npm endpoint on
+  a Sonatype Nexus**, so packages are npm tarballs at
+  `<nexus>/repository/<repo>/<pkg>/-/<pkg>-<version>.tgz` behind Basic auth. But the public layout assumes
+  the manifest sits at `<base>/<folder>/manifest.json`, and an npm-hosted Nexus repo does not naturally
+  serve an arbitrary JSON file at a folder path. So either the manifest is hosted separately (a raw Nexus
+  repo, a web server, a git host) — in which case an entry needs **two** URLs, one for the manifest and
+  one for the registry — or the single base URL assumption has to change. Settle before A, since it
+  decides the entry shape.
+- **How install picks the right credentials.** The install path receives a tarball URL from the manifest.
+  To attach Basic auth it must work out which marketplace that URL belongs to, presumably by matching the
+  URL against the configured registry base URLs, longest prefix first. Straightforward, but it must be
+  deliberate: an unmatched URL has to install *without* credentials rather than silently reusing
+  somebody else's.
 - **Trust.** Installing pulls a tarball from a URL the manifest supplies, so registering a marketplace is
   a privileged action: the `admin` scope gate exists, but decide whether anything validates what comes
   back. Can wait until C.
-- **Whether install reuses the marketplace credentials.** If a marketplace is behind Basic auth, the
-  tarball it points at probably is too. The install path would then need the same credentials the resolve
-  path uses. Worth confirming before B so the credential lookup is shared rather than bolted on.
