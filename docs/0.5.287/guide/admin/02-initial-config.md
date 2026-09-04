@@ -49,6 +49,65 @@ Managing these settings requires the **`admin`** scope; without it the dialog wi
 
 > The interval can also be set at deploy time (Helm `metricsinterval` / `--metricsinterval`). Precedence is: what you save in this dialog wins; otherwise the deploy-time value; otherwise 15 seconds. So the Helm value acts as the starting point until somebody changes it here.
 
+### Adding your own marketplace
+
+Kwirth installs extensions from the public marketplace. In the **Marketplaces** tab of the same dialog you can register **additional** ones — your organisation's own plugins, senders, themes and so on — without replacing the public one.
+
+Two things are worth understanding before you configure it.
+
+**A registered marketplace takes precedence over the public one.** Resolution happens per extension id: the first marketplace in the list that publishes an id serves it, and the public marketplace is always consulted last. This is what lets you publish your own plugin called `log` without clashing with the public one of the same name. The winner supplies its **whole version list** — versions are never mixed between marketplaces, so if your marketplace serves `log`, only your `log` versions are offered. Cards show a badge naming the marketplace an extension came from, which with shadowing is the only way to tell which `log` you are looking at.
+
+**One URL is one manifest, and it may list several extension types.** Every entry declares its own type, so a single file can hold a plugin, two senders and a theme; each manager dialog picks out what belongs to it. You do not need one URL per type.
+
+The manifest is a JSON array. Each entry carries the full tarball `url`, exactly as the public one does:
+
+```json
+[
+  {
+    "extensionType": "plugin",
+    "id": "myplugin",
+    "version": "1.0.0",
+    "name": "My Plugin",
+    "url": "https://my-registry.example.com/.../kwirth-plugin-myplugin-1.0.0.tgz",
+    "description": "What it does",
+    "icon": "Extension"
+  }
+]
+```
+
+#### Credentials
+
+A marketplace has **two independent** sets of credentials, because they are usually two different servers:
+
+| | Protects | Configured as |
+|---|---|---|
+| **Manifest** | Reading the manifest file | *Manifest needs a token* |
+| **Package** | Downloading the tarball | *Package registry needs credentials* |
+
+Either can be off — a public manifest pointing at a private registry is a perfectly normal setup, and it is the one we recommend: the manifest holds only names, versions and URLs, nothing worth protecting.
+
+Both secrets are stored encrypted by Kwirth and are used **only by the backend**. They never reach the browser, and the dialog only ever tells you whether one is set, never what it is.
+
+> Kwirth reads manifests from the **backend**, not from your browser. A manifest reachable from the cluster works even if your own machine cannot see it, and no CORS configuration is needed on your server.
+
+#### Hosting the manifest in a private GitLab repository
+
+If you keep the manifest in a private GitLab repo, register the **Files API** URL rather than the web URL:
+
+```
+https://<your-gitlab>/api/v4/projects/<group>%2F<project>/repository/files/manifest.json/raw?ref=main
+```
+
+The project path is URL-encoded, so `myorg/marketplace` becomes `myorg%2Fmarketplace`.
+
+Then tick **Manifest needs a token**, leave the header as **PRIVATE-TOKEN**, and paste a **Project Access Token** created under *Settings → Access tokens* of that project with the **`read_api`** scope.
+
+> A **deploy token** will not work here. Deploy tokens cover `git clone` and the package registries, not the REST API — which is what serves the file.
+
+Use the **refresh** button on the row to check it: it reports how many entries the manifest holds and which extension types it declares, and tells you specifically if the token was rejected rather than just failing. Note that it exercises the *manifest* credentials only — the package ones come into play at install time, so a wrong registry password will not surface until somebody installs something.
+
+> Manifests hosted on **GitHub** or **Azure DevOps** are not supported yet; both need authentication schemes Kwirth does not send today. For now, host the manifest on GitLab or on any openly readable URL.
+
 ## What to configure next
 
 With the admin account secured and the master key set, continue with:

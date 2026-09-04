@@ -153,6 +153,29 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
   already back-side, and never by the manifest read. Password in `ISecrets`, never in `kwirth.settings` —
   see step A.
 
+## Backlog: GitHub and Azure DevOps as manifest hosts
+
+Manifest authentication ships supporting **GitLab only**. Someone hosting their manifest on GitHub or
+Azure DevOps cannot register it yet, and each needs a distinct change — verified before writing any
+guide, precisely so the guide does not document something that fails:
+
+| Host | URL to register | Auth | Missing |
+|---|---|---|---|
+| GitLab | Files API `…/repository/files/<file>/raw?ref=<branch>` | `PRIVATE-TOKEN` header | — works |
+| GitHub | Contents API `…/repos/<o>/<r>/contents/<path>?ref=<b>` | Bearer | `Accept: application/vnd.github.raw` |
+| Azure DevOps | Items API `…/_apis/git/repositories/<r>/items?path=…&$format=text` | Basic, PAT as password | `EManifestAuthType.BASIC` |
+
+- **GitHub** returns JSON with base64 content unless the raw media type is requested, so the fetch would
+  be rejected as "not a list of extensions". Needs the `Accept` header — harmless to send elsewhere if it
+  carries a `*/*` fallback, so it need not be per-host configuration.
+- **Azure DevOps** authenticates PATs over HTTP Basic with the token as the password (username ignored),
+  which the manifest auth types do not cover. Needs `BASIC` adding, plus an optional `username` on
+  `IMarketplaceManifestAuth`.
+
+Both touch `IMarketplace` in common, hence a publish cascade. Deferred to ride along with the next common
+change rather than spending a cascade on its own (decision 2026-09-04). The admin guide documents GitLab
+today; the CL9 note records that the other two are pending, so the guide is completed when they land.
+
 ## Open questions
 
 - **Trust.** Installing pulls a tarball from a URL the manifest supplies, so registering a marketplace is
