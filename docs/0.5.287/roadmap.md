@@ -54,5 +54,4 @@ We cite here some interesting capabilities that are missing today:
   - [AI] ~~`kwirth`, **customization**, users should be able to login to a specific channel, in opposite to be logged in into the whole Kwirth front application ~~ DONE!
   - [AI] ~~`kwirth`, **documentation**, showing help to users shoukld be a framework feature~~ DONE!
   - `kwirth`, **CNCF**, prepare project to donate to [CNCF](https://www.cncf.io/).
-  - `kwirth`, **Extension upgrade**, Kwirth already warns the user when an installed extension has a newer version in the marketplace, but there is no way to act on that warning in place. The Install button is disabled for an id that is already installed ('Already installed — uninstall first'), so upgrading means uninstalling and reinstalling, which throws away the extension's stored configuration. We need an in-place upgrade path across the manager dialogs (plugin, sender, provider, theme, homepage, webhook, login, pack, idp) that preserves that configuration, together with an 'update available' badge on the installed card, so the user can act from the very place where the current version is displayed.
   
