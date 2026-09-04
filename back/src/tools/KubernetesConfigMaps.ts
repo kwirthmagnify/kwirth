@@ -23,29 +23,27 @@ export class KubernetesConfigMaps implements IConfigMaps {
             return {}
         }
         try {
+            let resourceVersion: string | undefined
+            try {
+                const existing = await this.coreApi.readNamespacedConfigMap({ name, namespace: this.namespace })
+                resourceVersion = existing.metadata?.resourceVersion
+            }
+            catch {}
             var configMap:V1ConfigMap = {
                 metadata: {
                     name: name,
-                    namespace: this.namespace
+                    namespace: this.namespace,
+                    ...(resourceVersion ? { resourceVersion } : {})
                 },
                 data: { data: JSON.stringify(data) }
             }
-            try {
-                await this.coreApi?.replaceNamespacedConfigMap({ name: name, namespace: this.namespace, body: configMap })
-                return {}
+            if (resourceVersion) {
+                await this.coreApi?.replaceNamespacedConfigMap({ name, namespace: this.namespace, body: configMap })
             }
-            catch (err:any) {
-                logWarning(ELogComponent.CORE, `Error replacing, try to create.`)
-                try {
-                    await this.coreApi?.createNamespacedConfigMap({ namespace: this.namespace, body: configMap })
-                    return {}
-                }
-                catch (err:any) {
-                    logError(ELogComponent.CORE, `Error creating ConfigMap`)
-                    logError(ELogComponent.CORE, err)
-                    return {}
-                }
+            else {
+                await this.coreApi?.createNamespacedConfigMap({ namespace: this.namespace, body: configMap })
             }
+            return {}
         }
         catch (err) {
             logError(ELogComponent.CORE, 'Error writing configMap'+this.namespace+'/'+name)
@@ -75,9 +73,11 @@ export class KubernetesConfigMaps implements IConfigMaps {
 
     public writeKey = async (name: string, key: string, value: any): Promise<void> => {
         let existing: Record<string, string> = {}
+        let resourceVersion: string | undefined
         try {
             const cm = await this.coreApi.readNamespacedConfigMap({ name, namespace: this.namespace })
             existing = cm.data ?? {}
+            resourceVersion = cm.metadata?.resourceVersion
         } catch (err: any) {
             if (err.code !== 404) logError(ELogComponent.CORE, `Error reading ConfigMap for writeKey ${this.namespace}/${name}: ${err}`)
         }
@@ -86,15 +86,16 @@ export class KubernetesConfigMaps implements IConfigMaps {
         } else {
             existing[key] = JSON.stringify(value)
         }
-        const configMap: V1ConfigMap = { metadata: { name, namespace: this.namespace }, data: existing }
+        const configMap: V1ConfigMap = { metadata: { name, namespace: this.namespace, ...(resourceVersion ? { resourceVersion } : {}) }, data: existing }
         try {
-            await this.coreApi.replaceNamespacedConfigMap({ name, namespace: this.namespace, body: configMap })
-        } catch {
-            try {
-                await this.coreApi.createNamespacedConfigMap({ namespace: this.namespace, body: configMap })
-            } catch (err: any) {
-                logError(ELogComponent.CORE, `Error writing key '${key}' in ConfigMap ${this.namespace}/${name}: ${err}`)
+            if (resourceVersion) {
+                await this.coreApi.replaceNamespacedConfigMap({ name, namespace: this.namespace, body: configMap })
             }
+            else {
+                await this.coreApi.createNamespacedConfigMap({ namespace: this.namespace, body: configMap })
+            }
+        } catch (err: any) {
+            logError(ELogComponent.CORE, `Error writing key '${key}' in ConfigMap ${this.namespace}/${name}: ${err}`)
         }
     }
 

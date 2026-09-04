@@ -12,24 +12,31 @@ export class KubernetesSecrets implements ISecrets {
     }
 
     public write = async (name:string, content:{}) => {
+        let resourceVersion: string | undefined
+        try {
+            const existing = await this.coreApi.readNamespacedSecret({ name, namespace: this.namespace })
+            resourceVersion = existing.metadata?.resourceVersion
+        }
+        catch {}
         var secret = {
             metadata: {
-                name: name,
-                namespace: this.namespace
+                name,
+                namespace: this.namespace,
+                ...(resourceVersion ? { resourceVersion } : {})
             },
             data: content
-        };
-        try {
-            await this.coreApi?.replaceNamespacedSecret({ name: name, namespace: this.namespace, body: secret })
         }
-        catch (err) {
-            try {
+        try {
+            if (resourceVersion) {
+                await this.coreApi?.replaceNamespacedSecret({ name, namespace: this.namespace, body: secret })
+            }
+            else {
                 await this.coreApi?.createNamespacedSecret({ namespace: this.namespace, body: secret })
             }
-            catch (err) {
-                logError(ELogComponent.STORAGE, `Error writing secret ${name}`)
-                logError(ELogComponent.STORAGE, err)
-            }
+        }
+        catch (err) {
+            logError(ELogComponent.STORAGE, `Error writing secret ${name}`)
+            logError(ELogComponent.STORAGE, err)
         }
     }
     
@@ -53,9 +60,11 @@ export class KubernetesSecrets implements ISecrets {
 
     public writeKey = async (name: string, key: string, value: any): Promise<void> => {
         let existing: Record<string, string> = {}
+        let resourceVersion: string | undefined
         try {
             const s = await this.coreApi.readNamespacedSecret({ name, namespace: this.namespace })
             existing = s.data ?? {}
+            resourceVersion = s.metadata?.resourceVersion
         } catch (err: any) {
             if (err.code !== 404) logError(ELogComponent.STORAGE, `Error reading secret for writeKey ${this.namespace}/${name}: ${err}`)
         }
@@ -64,15 +73,16 @@ export class KubernetesSecrets implements ISecrets {
         } else {
             existing[key] = Buffer.from(JSON.stringify(value), 'utf8').toString('base64')
         }
-        const secret = { metadata: { name, namespace: this.namespace }, data: existing }
+        const secret = { metadata: { name, namespace: this.namespace, ...(resourceVersion ? { resourceVersion } : {}) }, data: existing }
         try {
-            await this.coreApi.replaceNamespacedSecret({ name, namespace: this.namespace, body: secret })
-        } catch {
-            try {
-                await this.coreApi.createNamespacedSecret({ namespace: this.namespace, body: secret })
-            } catch (err: any) {
-                logError(ELogComponent.STORAGE, `Error writing key '${key}' in secret ${this.namespace}/${name}: ${err}`)
+            if (resourceVersion) {
+                await this.coreApi.replaceNamespacedSecret({ name, namespace: this.namespace, body: secret })
             }
+            else {
+                await this.coreApi.createNamespacedSecret({ namespace: this.namespace, body: secret })
+            }
+        } catch (err: any) {
+            logError(ELogComponent.STORAGE, `Error writing key '${key}' in secret ${this.namespace}/${name}: ${err}`)
         }
     }
 
