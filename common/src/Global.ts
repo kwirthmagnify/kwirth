@@ -1,4 +1,5 @@
 import { AccessKey } from "./AccessKey"
+import { IMarketplace } from "./Marketplace"
 
 interface IUser {
     id: string
@@ -44,6 +45,7 @@ interface IClusterMetricsConfig {
 // tendran, y el back resuelve el valor efectivo con su propia precedencia antes de devolverlos.
 interface IKwirthSettings {
     metricsInterval?: number
+    marketplaces?: IMarketplace[]
 }
 
 export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings }

@@ -1220,7 +1220,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             }
         }
         applyKwirthSettings(await SettingsApi.read(ri.configMaps))
-        let settingsResult = await SettingsApi.create(ri.configMaps, apiKeyApi, applyKwirthSettings)
+        let settingsResult = await SettingsApi.create(ri.configMaps, ri.secrets, apiKeyApi, applyKwirthSettings)
         if (!settingsResult) {
             logError(ELogComponent.CORE, 'Could not get settingsapi setting up routes')
             return false

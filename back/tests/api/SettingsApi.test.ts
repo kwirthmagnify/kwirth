@@ -5,7 +5,8 @@ import type { AddressInfo } from 'net'
 import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { SettingsApi } from '../../src/api/SettingsApi'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
-import { accessKeySerialize, IKwirthSettings } from '@kwirthmagnify/kwirth-common'
+import { ISecrets } from '../../src/tools/ISecrets'
+import { accessKeySerialize, IKwirthSettings, EMarketplaceAuthType } from '@kwirthmagnify/kwirth-common'
 
 // configurar Kwirth (/core/settings) es admin-only: validKey + scope 'admin'
 const adminKey = { id: 'adminkey', type: 'permanent', resources: 'admin,cluster::::' }
@@ -35,18 +36,34 @@ const memConfigMaps = (initialSettings?: IKwirthSettings) => {
     return { cm, current: () => settings }
 }
 
-async function startServer(initialSettings?: IKwirthSettings) {
+// secrets en memoria, para las contraseñas de marketplaces
+const memSecrets = (initial?: Record<string, any>) => {
+    let store: Record<string, any> = { ...(initial ?? {}) }
+    const s: ISecrets = {
+        write: async () => {},
+        read: async (_n: string, def?: any) => def,
+        writeKey: async (_name: string, key: string, value: any) => {
+            if (value === null) delete store[key]
+            else store[key] = value
+        },
+        readAllKeys: async () => ({ ...store })
+    }
+    return { s, current: () => store }
+}
+
+async function startServer(initialSettings?: IKwirthSettings, initialSecrets?: Record<string, any>) {
     const store = memConfigMaps(initialSettings)
+    const secrets = memSecrets(initialSecrets)
     const apiKeyApi = await ApiKeyApi.create(store.cm, 'masterx', true)
     const changes: IKwirthSettings[] = []
-    const settingsApi = await SettingsApi.create(store.cm, apiKeyApi!, (s) => { changes.push(s) })
+    const settingsApi = await SettingsApi.create(store.cm, secrets.s, apiKeyApi!, (s) => { changes.push(s) })
     const app = express()
     app.use(express.json())
     app.use('/core/settings', settingsApi!.router)
     const server = app.listen(0)
     await new Promise<void>(r => server.once('listening', () => r()))
     const port = (server.address() as AddressInfo).port
-    return { base: `http://127.0.0.1:${port}`, store, changes, stop: () => new Promise<void>(r => server.close(() => r())) }
+    return { base: `http://127.0.0.1:${port}`, store, secrets, changes, stop: () => new Promise<void>(r => server.close(() => r())) }
 }
 
 // ---- resolveMetricsInterval: precedencia guardado > METRICSINTERVAL > 15 ----
@@ -202,4 +219,118 @@ test('SettingsApi.read devuelve {} cuando no hay nada guardado', async () => {
 test('SettingsApi.read devuelve lo guardado', async () => {
     const store = memConfigMaps({ metricsInterval: 33 })
     assert.equal((await SettingsApi.read(store.cm)).metricsInterval, 33)
+})
+
+// ---- marketplaces: validacion ----
+
+const MP = { id: 'nexus', url: 'https://raw.example.com/manifest.json', label: 'Nexus', enabled: true }
+
+test('validateMarketplaces acepta una lista valida y rechaza lo que no lo es', () => {
+    assert.equal(SettingsApi.validateMarketplaces([]), undefined)
+    assert.equal(SettingsApi.validateMarketplaces([MP]), undefined)
+    assert.match(SettingsApi.validateMarketplaces('nope') ?? '', /must be an array/)
+    assert.match(SettingsApi.validateMarketplaces([{ ...MP, id: '' }]) ?? '', /non-empty id/)
+    assert.match(SettingsApi.validateMarketplaces([MP, MP]) ?? '', /duplicated/)
+    assert.match(SettingsApi.validateMarketplaces([{ ...MP, url: 'ftp://x' }]) ?? '', /http\(s\) url/)
+    assert.match(SettingsApi.validateMarketplaces([{ ...MP, label: '' }]) ?? '', /non-empty label/)
+    assert.match(SettingsApi.validateMarketplaces([{ ...MP, enabled: 'yes' }]) ?? '', /boolean enabled/)
+})
+
+test('validateMarketplaces exige username cuando el auth es basic', () => {
+    assert.match(SettingsApi.validateMarketplaces([{ ...MP, auth: { type: EMarketplaceAuthType.BASIC } }]) ?? '', /needs a username/)
+    assert.equal(SettingsApi.validateMarketplaces([{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }]), undefined)
+    assert.equal(SettingsApi.validateMarketplaces([{ ...MP, auth: { type: EMarketplaceAuthType.NONE } }]), undefined)
+    assert.match(SettingsApi.validateMarketplaces([{ ...MP, auth: { type: 'kerberos' } }]) ?? '', /unknown auth type/)
+})
+
+test('PUT rechaza marketplaces invalidos → 400 sin persistir', async () => {
+    const srv = await startServer()
+    try {
+        const res = await fetch(`${srv.base}/core/settings`, {
+            method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: [{ ...MP, url: 'nope' }] })
+        })
+        assert.equal(res.status, 400)
+        assert.equal(srv.store.current()?.marketplaces, undefined)
+        assert.equal(srv.changes.length, 0)
+    }
+    finally { await srv.stop() }
+})
+
+// ---- marketplaces: contraseñas fuera del configmap ----
+
+test('PUT desvia la contraseña a secrets y NUNCA la guarda en settings', async () => {
+    const srv = await startServer()
+    try {
+        const body = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' }, password: 's3cr3t' }] }
+        const res = await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
+        assert.equal(res.status, 200)
+        // la contraseña esta en secrets...
+        assert.equal(srv.secrets.current()['nexus'], 's3cr3t')
+        // ...y no aparece por ningun lado del configmap
+        assert.ok(!JSON.stringify(srv.store.current()).includes('s3cr3t'))
+    }
+    finally { await srv.stop() }
+})
+
+test('GET informa hasPassword pero no devuelve la contraseña', async () => {
+    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const srv = await startServer(stored, { nexus: 's3cr3t' })
+    try {
+        const res = await fetch(`${srv.base}/core/settings`, { headers: AUTH })
+        const body = await res.text()
+        assert.ok(!body.includes('s3cr3t'), 'la contraseña no debe viajar al front')
+        const json = JSON.parse(body) as IKwirthSettings
+        assert.equal(json.marketplaces?.[0].auth?.hasPassword, true)
+    }
+    finally { await srv.stop() }
+})
+
+test('GET marca hasPassword false cuando no hay contraseña guardada', async () => {
+    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const srv = await startServer(stored)
+    try {
+        const res = await fetch(`${srv.base}/core/settings`, { headers: AUTH })
+        assert.equal(((await res.json()) as IKwirthSettings).marketplaces?.[0].auth?.hasPassword, false)
+    }
+    finally { await srv.stop() }
+})
+
+test('PUT sin password conserva la ya guardada, no la borra', async () => {
+    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const srv = await startServer(stored, { nexus: 's3cr3t' })
+    try {
+        const body = { marketplaces: [{ ...MP, label: 'Nexus renombrado', auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
+        assert.equal(srv.secrets.current()['nexus'], 's3cr3t')
+        assert.equal(srv.store.current()?.marketplaces?.[0].label, 'Nexus renombrado')
+    }
+    finally { await srv.stop() }
+})
+
+test('borrar un marketplace se lleva su contraseña', async () => {
+    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const srv = await startServer(stored, { nexus: 's3cr3t' })
+    try {
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: [] }) })
+        assert.equal(srv.secrets.current()['nexus'], undefined)
+    }
+    finally { await srv.stop() }
+})
+
+test('getPassword devuelve la contraseña al back y undefined si no hay', async () => {
+    const secrets = memSecrets({ nexus: 's3cr3t' })
+    assert.equal(await SettingsApi.getPassword(secrets.s, 'nexus'), 's3cr3t')
+    assert.equal(await SettingsApi.getPassword(secrets.s, 'otro'), undefined)
+})
+
+test('marketplaces y metricsInterval no se pisan entre si', async () => {
+    const srv = await startServer({ metricsInterval: 30 })
+    try {
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: [MP] }) })
+        assert.equal(srv.store.current()?.metricsInterval, 30, 'el intervalo debe sobrevivir')
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ metricsInterval: 12 }) })
+        assert.equal(srv.store.current()?.marketplaces?.length, 1, 'los marketplaces deben sobrevivir')
+        assert.equal(srv.store.current()?.metricsInterval, 12)
+    }
+    finally { await srv.stop() }
 })
