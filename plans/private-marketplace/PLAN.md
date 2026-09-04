@@ -79,14 +79,19 @@ Note that `SettingsCluster.tsx` is not itself a precedent for this: it is a one-
     The existing `installedFrom` field (already used to skip `'dev'`) looks like the right place to record
     the originating marketplace so the comparison can stay pinned to the source it was installed from.
 
+## Settled
+
+- **No authentication. DECIDED:** a marketplace manifest carries only names and versions, so it can be
+  served publicly. Entries hold no credentials, and nothing here touches `ISecrets`.
+
 ## Open questions
 
-- **Authentication.** A genuinely private manifest usually sits behind auth. Does an entry carry a
-  token/header, where is that credential stored (`ISecrets` rather than `IConfigMaps`, presumably), and
-  who can read it back? Main design decision; settle it before A.
-- **Fetch origin.** Manifests are fetched from the **browser** today, so a private URL would need CORS and
-  reachability from the user's network, not just from the cluster. Proxying through the back would remove
-  both constraints and give a single place to attach credentials — worth deciding as part of A, since it
-  changes the API shape.
+- **Fetch origin.** Manifests are read by the **browser**, but the tarball download at install time is
+  done by the **back**. A customer-hosted marketplace can therefore be reachable for installing yet
+  invisible for listing — the host may lack CORS headers, or sit on a network the cluster reaches and the
+  user's browser does not. The failure is silent: every fetch already degrades to `[]`. Proxying the
+  manifest read through the back removes the asymmetry, so anything installable is listable. Decide as
+  part of A, since it changes the API shape and therefore B.
 - **Trust.** Installing pulls a tarball from a URL the manifest supplies, so registering a marketplace is
-  a privileged action: gate it on an admin scope, and decide whether anything validates what comes back.
+  a privileged action: the `admin` scope gate exists, but decide whether anything validates what comes
+  back.
