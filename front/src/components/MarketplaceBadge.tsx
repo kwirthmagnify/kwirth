@@ -10,10 +10,17 @@ interface IMarketplaceBadgeProps {
     label?: string
 }
 
-// Solo se pinta cuando la sirve un marketplace privado: si no hay ninguno configurado todo viene del
-// publico y marcar cada tarjeta con 'public' seria ruido sin informacion.
+// Se pinta SIEMPRE, tambien para el publico. Marcar solo las privadas dejaba a las publicas sin ningun
+// indicador, y no habia forma de distinguir "viene del marketplace publico" de "no se ha marcado" —
+// sobre todo en dialogos cuya tarjeta ya lleva un candado como icono, que se lee como 'privado'.
 const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceBadgeProps) => {
-    if (!props.label) return null
+    if (!props.label) {
+        return (
+            <Tooltip title='Served by the public Kwirth marketplace'>
+                <Chip label='Kwirth' size='small' variant='outlined' />
+            </Tooltip>
+        )
+    }
     return (
         <Tooltip title={`Served by the '${props.label}' marketplace, which takes precedence over the public Kwirth one`}>
             <Chip label={props.label} size='small' variant='outlined' color='primary' />

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Chip } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Link, LockPerson, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, Delete, Download, FolderOpen, Https, Link, LockPerson, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -289,10 +289,16 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
         </Stack>
     )
 
-    const LoginCard = ({ id, displayName, version, description, badge, source, website, action }: { id: string; displayName: string; version: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode }) => (
+    // El icono distingue la procedencia: candado macizo y resaltado si la sirve un marketplace privado,
+    // el de siempre en gris si viene del publico. Sin esto el candado se lee como 'privado' en todas.
+    const LoginCard = ({ id, displayName, version, description, badge, source, website, action, marketplaceLabel }: { id: string; displayName: string; version: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; marketplaceLabel?: string }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: loginGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
-                <Box sx={{ color: 'text.secondary', mt: 0.25 }}><LockPerson /></Box>
+                <Tooltip title={marketplaceLabel ? `From the private '${marketplaceLabel}' marketplace` : 'From the public Kwirth marketplace'}>
+                    <Box sx={{ color: marketplaceLabel ? 'primary.main' : 'text.secondary', mt: 0.25 }}>
+                        { marketplaceLabel ? <Https /> : <LockPerson /> }
+                    </Box>
+                </Tooltip>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName}</Typography>
@@ -444,9 +450,10 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                                 version={t.version}
                                                 description={t.description}
                                                 website={t.website}
+                                                marketplaceLabel={t.marketplaceLabel}
                                                 badge={<>
                                                     {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
-                                                    <MarketplaceBadge label={getSelectedEntry(id).marketplaceLabel} />
+                                                    <MarketplaceBadge label={t.marketplaceLabel} />
                                                 </>}
                                                 action={
                                                     <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
