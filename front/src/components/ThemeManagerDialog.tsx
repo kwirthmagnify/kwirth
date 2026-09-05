@@ -1,11 +1,11 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Link, OpenInNew, Palette, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Https, Link, OpenInNew, Palette, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge } from './MarketplaceBadge'
+import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 
@@ -94,6 +94,11 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
         return acc
     }, {} as Record<string, IThemeManifestEntry[]>)
     Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
+
+    // Procedencia de una extension YA instalada: no sale de installedFrom, porque una instalada en dev no
+    // tiene url. Se busca el id en el catalogo ya resuelto; la resolucion garantiza que todas las entradas
+    // de un id vienen del mismo marketplace, asi que con la primera basta.
+    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
 
     const getSelectedEntry = (id: string): IThemeManifestEntry => {
         const group = groupedAvailable[id]
@@ -232,15 +237,15 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
     const resolveSource = (installedFrom?: string): React.ReactElement | null => {
         if (!installedFrom) return null
         if (installedFrom === 'dev')
-            return <Chip label='dev' size='small' variant='outlined' color='warning' />
+            return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
         if (installedFrom === 'local')
-            return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
+            return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' sx={compactChip} />
         if (installedFrom.startsWith('pack:'))
-            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
+            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' sx={compactChip} /></Tooltip>
         if (installedFrom.includes('github.com/kwirthmagnify'))
-            return <Chip icon={<Palette />} label='Kwirth' size='small' variant='outlined' color='primary' />
+            return <Chip icon={<Palette />} label='Kwirth' size='small' variant='outlined' color='primary' sx={compactChip} />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
+        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ ...compactChip, maxWidth: '100%' }} /></Tooltip>
     }
 
     const themeGradient = (name: string) => {
@@ -251,7 +256,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
         return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.14 : 0.26}) 100%)`
     }
 
-    const ThemeCard = ({ name, displayName, version, versions, onVersionChange, description, badge, source, website, action, previewUrl }: { name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; previewUrl?: string }) => (
+    const ThemeCard = ({ name, displayName, version, versions, onVersionChange, description, badge, source, website, action, previewUrl, marketplaceLabel }: { name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; previewUrl?: string; marketplaceLabel?: string }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 120, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: previewUrl ? undefined : themeGradient(name), backgroundImage: previewUrl ? `url(${previewUrl})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Palette /></Box>
@@ -264,7 +269,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                 sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                 {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                               </Select>
-                            : <Chip label={`v${version}`} size='small' sx={{ minWidth: 72 }} />
+                            : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                         }
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
@@ -278,6 +283,12 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
+                <Tooltip title={marketplaceLabel ? `From the private '${marketplaceLabel}' marketplace` : 'From the public Kwirth marketplace'}>
+                    <Box sx={{ color: marketplaceLabel ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
+                        { marketplaceLabel ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
+                    </Box>
+                </Tooltip>
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceLabel} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
@@ -325,8 +336,9 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                         description={t.description}
                                         website={t.website}
                                         source={resolveSource(t.installedFrom)}
+                                        marketplaceLabel={marketplaceOfInstalled(t.id)}
                                         previewUrl={t.hasPreview ? `${backendUrl}/core/themes/${t.id}/preview` : undefined}
-                                        badge={isActive(t.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} /> : undefined}
+                                        badge={isActive(t.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} /> : undefined}
                                         action={
                                             <Stack direction='row' alignItems='center' spacing={0.5}>
                                                 {plugins.length > 0 &&
@@ -354,9 +366,9 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                 {installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name).toLowerCase().includes(installedFilter.toLowerCase())).flatMap((t, i, arr) => [
                                     <Box key={`${t.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Palette fontSize='small' /></Box>,
                                     <Typography key={`${t.id}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{t.displayName || t.name}</Typography>,
-                                    <Box key={`${t.id}-active`} sx={{ py: 1 }}>{isActive(t.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} />}</Box>,
+                                    <Box key={`${t.id}-active`} sx={{ py: 1 }}>{isActive(t.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} />}</Box>,
                                     <Box key={`${t.id}-source`} sx={{ py: 1 }}>{resolveSource(t.installedFrom)}</Box>,
-                                    <Box key={`${t.id}-ver`} sx={{ py: 1 }}><Chip label={`v${t.version}`} size='small' /></Box>,
+                                    <Box key={`${t.id}-ver`} sx={{ py: 1 }}><Chip label={`v${t.version}`} size='small' sx={compactChip} /></Box>,
                                     <Box key={`${t.id}-assign`} sx={{ py: 1 }}>
                                         {plugins.length > 0 &&
                                             <Select multiple size='small' displayEmpty value={getAssignedPlugins(t.id)} onChange={e => setPluginAssignments(t.id, e.target.value as string[])}
@@ -435,10 +447,8 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                             description={t.description}
                                             website={t.website}
                                             previewUrl={t.previewUrl}
-                                            badge={<>
-                                                {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
-                                                <MarketplaceBadge label={getSelectedEntry(id).marketplaceLabel} />
-                                            </>}
+                                            marketplaceLabel={t.marketplaceLabel}
+                                            badge={isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} /> : undefined}
                                             action={
                                                 <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
                                                     <span>
@@ -463,8 +473,8 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                         <Box key={`${id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Palette fontSize='small' /></Box>,
                                         <Typography key={`${id}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{t.displayName || t.name}</Typography>,
                                         <Box key={`${id}-status`} sx={{ py: 1 }}>
-                                            {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' />
-                                            : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />
+                                            {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
+                                            : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />
                                             : null}
                                         </Box>,
                                         <Box key={`${id}-ver`} sx={{ py: 1 }}>
@@ -472,7 +482,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                                 ? <Select size='small' value={t.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                     {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                   </Select>
-                                                : <Chip label={`v${t.version}`} size='small' />}
+                                                : <Chip label={`v${t.version}`} size='small' sx={compactChip} />}
                                         </Box>,
                                         <Box key={`${id}-install`} sx={{ py: 1 }}>
                                             <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>

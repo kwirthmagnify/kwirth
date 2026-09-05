@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, CircularProgress, Chip, Dialog, DialogActions, DialogContent, Divider, IconButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { Delete, Description, Download, FolderOpen, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CloudQueue, Delete, Description, Download, FolderOpen, Https, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 
@@ -49,6 +50,8 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
     }
 
     const [available, setAvailable] = useState<IDocsManifestEntry[]>([])
+
+    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
     const [installed, setInstalled] = useState<IDocsMeta[]>([])
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [installingId, setInstallingId] = useState<string | undefined>()
@@ -192,9 +195,9 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
     const resolveSource = (installedFrom?: string): React.ReactElement | null => {
         if (!installedFrom) return null
         if (installedFrom === 'bundled')
-            return <Chip label='bundled' size='small' variant='outlined' color='secondary' />
+            return <Chip label='bundled' size='small' variant='outlined' color='secondary' sx={compactChip} />
         if (installedFrom === 'dev')
-            return <Chip label='dev' size='small' variant='outlined' color='warning' />
+            return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
         if (installedFrom === 'local')
             return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
         if (installedFrom.includes('github.com/kwirthmagnify'))
@@ -210,7 +213,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{name || id}</Typography>
-                        <Chip label={`v${version}`} size='small' sx={{ minWidth: 72 }} />
+                        <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
                 </Box>
@@ -223,6 +226,12 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
+                <Tooltip title={marketplaceOfInstalled(id) ? `From the private '${marketplaceOfInstalled(id)}' marketplace` : 'From the public Kwirth marketplace'}>
+                    <Box sx={{ color: marketplaceOfInstalled(id) ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
+                        { marketplaceOfInstalled(id) ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
+                    </Box>
+                </Tooltip>
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(id)} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
@@ -298,7 +307,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                                     <Box key={`${doc.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Description fontSize='small' /></Box>,
                                     <Typography key={`${doc.id}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{doc.name || doc.id}</Typography>,
                                     <Box key={`${doc.id}-source`} sx={{ py: 1 }}>{resolveSource(doc.installedFrom)}</Box>,
-                                    <Box key={`${doc.id}-ver`} sx={{ py: 1 }}><Chip label={`v${doc.version}`} size='small' /></Box>,
+                                    <Box key={`${doc.id}-ver`} sx={{ py: 1 }}><Chip label={`v${doc.version}`} size='small' sx={compactChip} /></Box>,
                                     <Box key={`${doc.id}-open`} sx={{ py: 1 }}>
                                         <Tooltip title='Open in new tab'>
                                             <IconButton size='small' color='primary' onClick={() => openDocs(doc.targetType, doc.id)}>

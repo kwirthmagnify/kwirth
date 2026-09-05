@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Key, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Key, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
 
 
 // tipos de la API (front-local, como hace ProviderDialog con su IProviderSchemaField)
@@ -27,6 +28,8 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
     const [connectors, setConnectors] = useState<IIdpConnectorInfo[]>([])
     const [instances, setInstances] = useState<IIdpInstanceConfig[]>([])
     const [available, setAvailable] = useState<IIdpConnectorManifestEntry[]>([])
+
+    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [installingId, setInstallingId] = useState<string | undefined>()
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
@@ -210,16 +213,16 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
     const statusChip = (c: IIdpConnectorInfo) => {
         const inst = instanceOf(c.id)
         if (inst?.enabled) return <Chip label='enabled' color='success' size='small' icon={<CheckCircle />} />
-        if (inst) return <Chip label='disabled' size='small' variant='outlined' />
-        return <Chip label='not configured' size='small' variant='outlined' color='warning' />
+        if (inst) return <Chip label='disabled' size='small' variant='outlined' sx={compactChip} />
+        return <Chip label='not configured' size='small' variant='outlined' color='warning' sx={compactChip} />
     }
     // origen del conector (dev/bundled/local/instalado-por-URL), calcado del resolveSource de ProviderDialog
     const resolveSource = (from?: string): React.ReactElement | null => {
         if (!from) return null
-        if (from === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
+        if (from === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
         if (from.startsWith('pack:'))
-            return <Tooltip title={`Installed by pack '${from.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
-        if (from === 'bundled') return <Chip label='bundled' size='small' variant='outlined' />
+            return <Tooltip title={`Installed by pack '${from.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' sx={compactChip} /></Tooltip>
+        if (from === 'bundled') return <Chip label='bundled' size='small' variant='outlined' sx={compactChip} />
         if (from === 'local') return <Typography variant='caption' color='text.secondary'>Local file</Typography>
         const short = from.length > 40 ? from.slice(0, 37) + '…' : from
         return <Tooltip title={from}><Typography variant='caption' color='text.secondary'><Link fontSize='inherit' sx={{ verticalAlign: 'middle', mr: 0.3 }} />{short}</Typography></Tooltip>
@@ -250,13 +253,19 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{c.label}</Typography>
-                                                    {c.version && <Chip label={`v${c.version}`} size='small' sx={{ minWidth: 72 }} />}
+                                                    {c.version && <Chip label={`v${c.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />}
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{c.description || `${c.id} · ${c.kind}`}</Typography>
                                             </Box>
                                             {websiteButton(c.website)}
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
+                                            <Tooltip title={marketplaceOfInstalled(c.id) ? `From the private '${marketplaceOfInstalled(c.id)}' marketplace` : 'From the public Kwirth marketplace'}>
+                                                <Box sx={{ color: marketplaceOfInstalled(c.id) ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
+                                                    { marketplaceOfInstalled(c.id) ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
+                                                </Box>
+                                            </Tooltip>
+                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(c.id)} /></Box>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(c.installedFrom)}</Box>
                                             <Stack direction='row' spacing={0.5} alignItems='center'>
                                                 {statusChip(c)}
@@ -277,7 +286,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                         <Key fontSize='small' sx={{ color: 'text.secondary' }} />
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0 }} noWrap>{c.label}</Typography>
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(c.installedFrom)}</Box>
-                                        {c.version && <Chip label={`v${c.version}`} size='small' sx={{ minWidth: 72 }} />}
+                                        {c.version && <Chip label={`v${c.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />}
                                         {statusChip(c)}
                                         <Tooltip title='Configure'><IconButton size='small' onClick={() => openConfig(c)}><Settings fontSize='small' /></IconButton></Tooltip>
                                         <Tooltip title={c.installed ? 'Uninstall' : 'Bundled/dev connector (cannot be uninstalled)'}>
@@ -323,7 +332,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                                     { isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> }
                                                     { versions.length > 1
                                                         ? <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>{ versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>) }</Select>
-                                                        : <Chip label={`v${entry.version}`} size='small' sx={{ minWidth: 72 }} />
+                                                        : <Chip label={`v${entry.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                                     }
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>

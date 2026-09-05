@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, Delete, Download, Factory, FolderOpen, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, Factory, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 declare global { interface Window { __kwirth_providers__: Record<string, any> } }
@@ -63,6 +64,8 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
     useKeyboard(props.onClose)
 
     const [available, setAvailable] = useState<IProviderManifestEntry[]>([])
+
+    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
     const [installed, setInstalled] = useState<IInstalledProvider[]>([])
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [installingId, setInstallingId] = useState<string | undefined>()
@@ -277,9 +280,9 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
     const resolveSource = (installedFrom?: string): React.ReactElement | null => {
         if (!installedFrom) return null
         if (installedFrom === 'local') return <Typography variant='caption' color='text.secondary'>Local file</Typography>
-        if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
+        if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
         if (installedFrom.startsWith('pack:'))
-            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
+            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' sx={compactChip} /></Tooltip>
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
         return <Tooltip title={installedFrom}><Typography variant='caption' color='text.secondary'><Link fontSize='inherit' sx={{ verticalAlign: 'middle', mr: 0.3 }} />{short}</Typography></Tooltip>
     }
@@ -333,7 +336,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{provider.displayName || provider.name || provider.id}</Typography>
-                                                    <Chip label={`v${provider.version}`} size='small' sx={{ minWidth: 72 }} />
+                                                    <Chip label={`v${provider.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{provider.description}</Typography>
                                             </Box>
@@ -346,6 +349,12 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                             </Tooltip>
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
+                                            <Tooltip title={marketplaceOfInstalled(provider.id) ? `From the private '${marketplaceOfInstalled(provider.id)}' marketplace` : 'From the public Kwirth marketplace'}>
+                                                <Box sx={{ color: marketplaceOfInstalled(provider.id) ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
+                                                    { marketplaceOfInstalled(provider.id) ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
+                                                </Box>
+                                            </Tooltip>
+                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(provider.id)} /></Box>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(provider.installedFrom)}</Box>
                                             <Tooltip title={provider.hasFront || provider.hasSchema ? 'Configure' : 'No configuration available'}>
                                                 <span>
@@ -371,7 +380,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Factory fontSize='small' /></Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{provider.displayName || provider.name || provider.id}</Typography>
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(provider.installedFrom)}</Box>
-                                        <Chip label={`v${provider.version}`} size='small' sx={{ minWidth: 72 }} />
+                                        <Chip label={`v${provider.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                         <Tooltip title='Configure'>
                                             <IconButton size='small' onClick={() => setExpandedId(provider.id)}>
                                                 <Settings fontSize='small' />
@@ -440,13 +449,13 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{provider.displayName || provider.name}</Typography>
-                                                    {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                                    {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
                                                     {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                                     {versions.length > 1
                                                         ? <Select size='small' value={provider.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                             {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                           </Select>
-                                                        : <Chip label={`v${provider.version}`} size='small' sx={{ minWidth: 72 }} />
+                                                        : <Chip label={`v${provider.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                                     }
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{provider.description}</Typography>
@@ -494,13 +503,13 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                         <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                             <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Factory fontSize='small' /></Box>
                                             <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{provider.displayName || provider.name}</Typography>
-                                            {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                            {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
                                             {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                             {versions.length > 1
                                                 ? <Select size='small' value={provider.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                     {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                   </Select>
-                                                : <Chip label={`v${provider.version}`} size='small' sx={{ minWidth: 72 }} />
+                                                : <Chip label={`v${provider.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                             }
                                             <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                 <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(provider)}>

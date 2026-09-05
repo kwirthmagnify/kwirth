@@ -1,12 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Divider, IconButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Chip } from '@mui/material'
-import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, Extension, FolderOpen, Https, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge } from './MarketplaceBadge'
+import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 
@@ -87,6 +87,11 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
         return acc
     }, {} as Record<string, IPackManifestEntry[]>)
     Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
+
+    // Procedencia de una extension YA instalada: no sale de installedFrom, porque una instalada en dev no
+    // tiene url. Se busca el id en el catalogo ya resuelto; la resolucion garantiza que todas las entradas
+    // de un id vienen del mismo marketplace, asi que con la primera basta.
+    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
 
     const getSelectedEntry = (id: string): IPackManifestEntry => {
         const group = groupedAvailable[id]
@@ -245,10 +250,10 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
 
     const resolveSource = (installedFrom?: string): React.ReactElement | null => {
         if (!installedFrom) return null
-        if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
-        if (installedFrom.includes('github.com/kwirthmagnify')) return <Chip icon={<Extension />} label='Kwirth' size='small' variant='outlined' color='primary' />
+        if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' sx={compactChip} />
+        if (installedFrom.includes('github.com/kwirthmagnify')) return <Chip icon={<Extension />} label='Kwirth' size='small' variant='outlined' color='primary' sx={compactChip} />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
+        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ ...compactChip, maxWidth: '100%' }} /></Tooltip>
     }
 
     const membersSummary = (extensions: IPackExtensionRef[]) => {
@@ -272,7 +277,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
         </Stack>
     )
 
-    const PackCard = ({ id, displayName, version, description, badge, source, website, members, action }: { id: string; displayName: string; version: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; members?: string; action: React.ReactNode }) => (
+    const PackCard = ({ id, displayName, version, description, badge, source, website, members, action, marketplaceLabel }: { id: string; displayName: string; version: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; members?: string; action: React.ReactNode; marketplaceLabel?: string }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: packGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Extension /></Box>
@@ -280,7 +285,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName}</Typography>
                         {badge}
-                        <Chip label={`v${version}`} size='small' sx={{ minWidth: 72 }} />
+                        <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
                     {members && <Typography variant='caption' color='text.disabled' display='block'>{members}</Typography>}
@@ -294,6 +299,12 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
+                <Tooltip title={marketplaceLabel ? `From the private '${marketplaceLabel}' marketplace` : 'From the public Kwirth marketplace'}>
+                    <Box sx={{ color: marketplaceLabel ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
+                        { marketplaceLabel ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
+                    </Box>
+                </Tooltip>
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceLabel} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
@@ -327,6 +338,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                         version={pack.version}
                                         description={pack.description}
                                         source={resolveSource(pack.installedFrom)}
+                                        marketplaceLabel={marketplaceOfInstalled(pack.id)}
                                         website={pack.website}
                                         members={membersSummary(pack.extensions)}
                                         action={
@@ -349,7 +361,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                         <Typography variant='caption' color='text.secondary'>{pack.description}</Typography>
                                         <Typography variant='caption' color='text.disabled' display='block'>{membersSummary(pack.extensions)}</Typography>
                                     </Box>,
-                                    <Box key={`${pack.id}-version`} sx={{ py: 1 }}><Chip label={`v${pack.version}`} size='small' sx={{ minWidth: 72 }} /></Box>,
+                                    <Box key={`${pack.id}-version`} sx={{ py: 1 }}><Chip label={`v${pack.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} /></Box>,
                                     <Box key={`${pack.id}-source`} sx={{ py: 1 }}>{resolveSource(pack.installedFrom)}</Box>,
                                     <Box key={`${pack.id}-del`} sx={{ py: 1 }}>
                                         <Tooltip title='Uninstall pack (removes all member extensions)'>
@@ -412,10 +424,8 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                                 description={t.description}
                                                 website={t.website}
                                                 members={t.extensionTypes?.join(', ')}
-                                                badge={<>
-                                                    {isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
-                                                    <MarketplaceBadge label={getSelectedEntry(id).marketplaceLabel} />
-                                                </>}
+                                                marketplaceLabel={t.marketplaceLabel}
+                                            badge={isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} /> : undefined}
                                                 action={
                                                     <Tooltip title={isInstalled(id) ? 'Already installed — uninstall first' : 'Install pack'}>
                                                         <span>
@@ -440,7 +450,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                                 {t.extensionTypes && <Typography variant='caption' color='text.disabled' display='block'>{t.extensionTypes.join(', ')}</Typography>}
                                             </Box>,
                                             <Box key={`${id}-status`} sx={{ py: 1 }}>
-                                                {isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : null}
+                                                {isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} /> : null}
                                             </Box>,
                                             <Box key={`${id}-install`} sx={{ py: 1 }}>
                                                 <Tooltip title={isInstalled(id) ? 'Already installed — uninstall first' : 'Install pack'}>

@@ -1,12 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Chip } from '@mui/material'
-import { CheckCircle, Delete, Download, FolderOpen, Https, Link, LockPerson, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Https, Link, LockPerson, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge } from './MarketplaceBadge'
+import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 
@@ -269,14 +269,14 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
 
     const resolveSource = (installedFrom?: string): React.ReactElement | null => {
         if (!installedFrom) return null
-        if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
-        if (installedFrom === 'bundled') return <Chip label='bundled' size='small' variant='outlined' color='default' />
-        if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
+        if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
+        if (installedFrom === 'bundled') return <Chip label='bundled' size='small' variant='outlined' color='default' sx={compactChip} />
+        if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' sx={compactChip} />
         if (installedFrom.startsWith('pack:'))
-            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
-        if (installedFrom.includes('github.com/kwirthmagnify')) return <Chip icon={<LockPerson />} label='Kwirth' size='small' variant='outlined' color='primary' />
+            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' sx={compactChip} /></Tooltip>
+        if (installedFrom.includes('github.com/kwirthmagnify')) return <Chip icon={<LockPerson />} label='Kwirth' size='small' variant='outlined' color='primary' sx={compactChip} />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
+        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ ...compactChip, maxWidth: '100%' }} /></Tooltip>
     }
 
     const ViewToggle = () => (
@@ -294,22 +294,16 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
         </Stack>
     )
 
-    // El icono distingue la procedencia. El candado CON PERSONA es el privado: un candado 'de alguien'
-    // se lee como algo propio, mientras que el candado liso queda para lo publico. Sin esta distincion
-    // el candado se leia como 'privado' en todas las tarjetas.
     const LoginCard = ({ id, displayName, version, description, badge, source, website, action, marketplaceLabel }: { id: string; displayName: string; version: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; marketplaceLabel?: string }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: loginGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
-                <Tooltip title={marketplaceLabel ? `From the private '${marketplaceLabel}' marketplace` : 'From the public Kwirth marketplace'}>
-                    <Box sx={{ color: marketplaceLabel ? 'warning.main' : 'text.secondary', mt: 0.25 }}>
-                        { marketplaceLabel ? <LockPerson /> : <Https /> }
-                    </Box>
-                </Tooltip>
+                { /* arriba a la izquierda: QUE es (el tipo de extension) */ }
+                <Box sx={{ color: 'text.secondary', mt: 0.25 }}><LockPerson /></Box>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName}</Typography>
                         {badge}
-                        <Chip label={`v${version}`} size='small' sx={{ minWidth: 72 }} />
+                        <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
                 </Box>
@@ -322,6 +316,14 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
+                { /* abajo a la izquierda, lo primero: DE DONDE viene. Candado solo para lo privado; lo
+                     publico lleva un icono distinto, no un candado, para que no se lean como lo mismo. */ }
+                <Tooltip title={marketplaceLabel ? `From the private '${marketplaceLabel}' marketplace` : 'From the public Kwirth marketplace'}>
+                    <Box sx={{ color: marketplaceLabel ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
+                        { marketplaceLabel ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
+                    </Box>
+                </Tooltip>
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceLabel} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
@@ -358,7 +360,6 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                         source={resolveSource(login.installedFrom)}
                                         website={login.website}
                                         marketplaceLabel={marketplaceOfInstalled(login.id)}
-                                        badge={<MarketplaceBadge label={marketplaceOfInstalled(login.id)} />}
                                         action={
                                             <Stack direction='row' spacing={0.5}>
                                                 {login.configSchema && login.configSchema.length > 0 && (
@@ -387,7 +388,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                         <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{login.displayName || login.name}</Typography>
                                         <Typography variant='caption' color='text.secondary'>{login.description}</Typography>
                                     </Box>,
-                                    <Box key={`${login.id}-version`} sx={{ py: 1 }}><Chip label={`v${login.version}`} size='small' sx={{ minWidth: 72 }} /></Box>,
+                                    <Box key={`${login.id}-version`} sx={{ py: 1 }}><Chip label={`v${login.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} /></Box>,
                                     <Box key={`${login.id}-source`} sx={{ py: 1 }}>{resolveSource(login.installedFrom)}</Box>,
                                     <Box key={`${login.id}-del`} sx={{ py: 1 }}>
                                         <Stack direction='row' spacing={0.5}>
@@ -459,10 +460,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                                 description={t.description}
                                                 website={t.website}
                                                 marketplaceLabel={t.marketplaceLabel}
-                                                badge={<>
-                                                    {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
-                                                    <MarketplaceBadge label={t.marketplaceLabel} />
-                                                </>}
+                                                badge={isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} /> : undefined}
                                                 action={
                                                     <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>
                                                         <span>
@@ -486,8 +484,8 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                                 <Typography variant='caption' color='text.secondary'>{t.description}</Typography>
                                             </Box>,
                                             <Box key={`${id}-status`} sx={{ py: 1 }}>
-                                                {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' />
-                                                : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />
+                                                {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
+                                                : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />
                                                 : null}
                                             </Box>,
                                             <Box key={`${id}-install`} sx={{ py: 1 }}>

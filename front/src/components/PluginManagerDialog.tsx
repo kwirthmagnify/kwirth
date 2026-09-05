@@ -1,12 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import * as MuiIcons from '@kwirthmagnify/kwirth-common-front/icons'
-import { CheckCircle, Delete, Download, Extension, FolderOpen, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, Extension, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge } from './MarketplaceBadge'
+import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 
@@ -83,6 +83,11 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
         return acc
     }, {} as Record<string, IPluginManifestEntry[]>)
     Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
+
+    // Procedencia de una extension YA instalada: no sale de installedFrom, porque una instalada en dev no
+    // tiene url. Se busca el id en el catalogo ya resuelto; la resolucion garantiza que todas las entradas
+    // de un id vienen del mismo marketplace, asi que con la primera basta.
+    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
 
     const getSelectedEntry = (id: string): IPluginManifestEntry => {
         const group = groupedAvailable[id]
@@ -262,17 +267,17 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
     const resolveSource = (installedFrom?: string): React.ReactElement | null => {
         if (!installedFrom) return null
         if (installedFrom === 'dev')
-            return <Chip label='dev' size='small' variant='outlined' color='warning' />
+            return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
         if (installedFrom === 'local')
-            return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
+            return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' sx={compactChip} />
         if (installedFrom === 'bundled')
-            return <Chip label='bundled' size='small' variant='outlined' color='secondary' />
+            return <Chip label='bundled' size='small' variant='outlined' color='secondary' sx={compactChip} />
         if (installedFrom.startsWith('pack:'))
-            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
+            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' sx={compactChip} /></Tooltip>
         if (installedFrom.includes('github.com/kwirthmagnify'))
-            return <Chip icon={<Extension />} label='Kwirth' size='small' variant='outlined' color='primary' />
+            return <Chip icon={<Extension />} label='Kwirth' size='small' variant='outlined' color='primary' sx={compactChip} />
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
+        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ ...compactChip, maxWidth: '100%' }} /></Tooltip>
     }
 
     const resolveIcon = (iconName?: string): React.ReactElement => {
@@ -288,7 +293,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
         return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.14 : 0.26}) 100%)`
     }
 
-    const PluginCard = ({ icon, name, displayName, version, versions, onVersionChange, description, badge, source, website, action, requires, uses }: { icon?: string; name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; requires?: IRequirement[]; uses?: IRequirement[] }) => (
+    const PluginCard = ({ icon, name, displayName, version, versions, onVersionChange, description, badge, source, website, action, requires, uses, marketplaceLabel }: { icon?: string; name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; requires?: IRequirement[]; uses?: IRequirement[]; marketplaceLabel?: string }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: pluginGradient(name) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}>{resolveIcon(icon)}</Box>
@@ -301,7 +306,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                                 sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                 {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                               </Select>
-                            : <Chip label={`v${version}`} size='small' sx={{ minWidth: 72 }} />
+                            : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                         }
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
@@ -327,6 +332,14 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
+                { /* abajo a la izquierda, lo primero: DE DONDE viene. Candado solo para lo privado; lo
+                     publico lleva un icono distinto, no un candado, para que no se lean como lo mismo. */ }
+                <Tooltip title={marketplaceLabel ? `From the private '${marketplaceLabel}' marketplace` : 'From the public Kwirth marketplace'}>
+                    <Box sx={{ color: marketplaceLabel ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
+                        { marketplaceLabel ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
+                    </Box>
+                </Tooltip>
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceLabel} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
@@ -375,6 +388,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                                         description={plugin.description}
                                         website={plugin.website}
                                         source={resolveSource(plugin.installedFrom)}
+                                        marketplaceLabel={marketplaceOfInstalled(plugin.id)}
                                         action={
                                             <>
                                                 <Tooltip title='Configure'>
@@ -398,7 +412,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}>{resolveIcon(plugin.icon)}</Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plugin.displayName || plugin.name}</Typography>
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(plugin.installedFrom)}</Box>
-                                        <Chip label={`v${plugin.version}`} size='small' sx={{ minWidth: 72 }} />
+                                        <Chip label={`v${plugin.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                         <Tooltip title='Configure'>
                                             <span><IconButton size='small' onClick={() => openConfig(plugin.id)}><Settings fontSize='small' /></IconButton></span>
                                         </Tooltip>
@@ -469,10 +483,8 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                                             onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [id]: v }))}
                                             description={plugin.description}
                                             website={plugin.website}
-                                            badge={<>
-                                                {isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> : undefined}
-                                                <MarketplaceBadge label={plugin.marketplaceLabel} />
-                                            </>}
+                                            marketplaceLabel={plugin.marketplaceLabel}
+                                            badge={isDevInstalled(id) ? <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} /> : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} /> : undefined}
                                             requires={plugin.requires}
                                             uses={plugin.uses}
                                             action={(() => {
@@ -501,13 +513,13 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                                         <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                             <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}>{resolveIcon(plugin.icon)}</Box>
                                             <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plugin.displayName || plugin.name}</Typography>
-                                            {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
-                                            {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
+                                            {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
+                                            {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />}
                                             {versions.length > 1
                                                 ? <Select size='small' value={plugin.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                     {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                   </Select>
-                                                : <Chip label={`v${plugin.version}`} size='small' sx={{ minWidth: 72 }} />
+                                                : <Chip label={`v${plugin.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                             }
                                             <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                 <span>

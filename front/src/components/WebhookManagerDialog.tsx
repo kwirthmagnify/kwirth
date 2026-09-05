@@ -4,11 +4,12 @@ import {
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography, useTheme
 } from '@mui/material'
-import { Add, CheckCircle, ContentCopy, Delete, Download, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Add, CheckCircle, CloudQueue, ContentCopy, Delete, Download, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 
@@ -75,6 +76,8 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
 
     const [installed, setInstalled] = useState<IInstalledWebhook[]>([])
     const [available, setAvailable] = useState<IWebhookManifestEntry[]>([])
+
+    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [filterText, setFilterText] = useState('')
     const [availableFilter, setAvailableFilter] = useState('')
@@ -345,9 +348,9 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
     const resolveSource = (installedFrom?: string) => {
         if (!installedFrom) return null
         if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
-        if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' />
+        if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
         if (installedFrom.startsWith('pack:'))
-            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' /></Tooltip>
+            return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' sx={compactChip} /></Tooltip>
         const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
         return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
     }
@@ -406,7 +409,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{webhook.displayName || webhook.id}</Typography>
-                        <Chip label={`v${webhook.version}`} size='small' sx={{ minWidth: 72 }} />
+                        <Chip label={`v${webhook.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{webhook.description}</Typography>
                 </Box>
@@ -419,6 +422,12 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
+                <Tooltip title={marketplaceOfInstalled(webhook.id) ? `From the private '${marketplaceOfInstalled(webhook.id)}' marketplace` : 'From the public Kwirth marketplace'}>
+                    <Box sx={{ color: marketplaceOfInstalled(webhook.id) ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
+                        { marketplaceOfInstalled(webhook.id) ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
+                    </Box>
+                </Tooltip>
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(webhook.id)} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(webhook.installedFrom)}</Box>
                 <Stack direction='row' spacing={0.5} alignItems='center'>
                     {webhook.configNames.length > 0 && <Chip label={`${webhook.configNames.length} config${webhook.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' />}
@@ -474,13 +483,13 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                     <Box key={s.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Https fontSize='small' /></Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.displayName || s.id}</Typography>
-                                        {s.configNames.length > 0 && <Chip label={`${s.configNames.length} cfg`} size='small' color='primary' variant='outlined' />}
+                                        {s.configNames.length > 0 && <Chip label={`${s.configNames.length} cfg`} size='small' color='primary' variant='outlined' sx={compactChip} />}
                                         <Tooltip title='Configure'>
                                             <IconButton size='small' color='primary' onClick={() => expandWebhook(s.id)}>
                                                 <Settings fontSize='small' />
                                             </IconButton>
                                         </Tooltip>
-                                        <Chip label={`v${s.version}`} size='small' sx={{ minWidth: 72 }} />
+                                        <Chip label={`v${s.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                         <Tooltip title={s.installedFrom === 'dev' ? 'Dev webhooks cannot be uninstalled' : 'Uninstall'}>
                                             <span>
                                                 <IconButton size='small' color='error' disabled={s.installedFrom === 'dev' || uninstallingId === s.id} onClick={() => uninstall(s)}>
@@ -547,13 +556,13 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                         <Box flex={1} minWidth={0}>
                                             <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                                                 <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{entry.displayName}</Typography>
-                                                {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' />}
+                                                {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
                                                 {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
                                                 {versions.length > 1
                                                     ? <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                         {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                       </Select>
-                                                    : <Chip label={`v${entry.version}`} size='small' sx={{ minWidth: 72 }} />
+                                                    : <Chip label={`v${entry.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                                 }
                                             </Stack>
                                             <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
