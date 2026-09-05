@@ -104,6 +104,11 @@ export class MarketplaceManager {
                 logWarning(ELogComponent.CORE, `Marketplace manifest ${url} returned ${response.status}${hint}`)
                 return []
             }
+            // un 200 con HTML suele ser una pagina de login: el host ignoro el token (URL web en vez de API)
+            if ((response.headers.get('content-type') ?? '').includes('text/html')) {
+                logWarning(ELogComponent.CORE, `Marketplace manifest ${url} answered HTML instead of JSON (likely a login page: use the API endpoint, not the web URL)`)
+                return []
+            }
             const body = await response.json()
             if (!Array.isArray(body)) {
                 logWarning(ELogComponent.CORE, `Marketplace manifest ${url} is not an array`)
@@ -136,6 +141,12 @@ export class MarketplaceManager {
                     : `The manifest needs authentication (HTTP ${response.status})` }
             }
             if (!response.ok) return { ok: false, error: `The manifest returned HTTP ${response.status}` }
+            // Caso real y confuso: GitLab ignora PRIVATE-TOKEN en su URL raw de la web (/-/raw/...) y sirve
+            // la pagina de login con un 200. Sin esto el fallo se veria como "no es una lista de extensiones".
+            const contentType = response.headers.get('content-type') ?? ''
+            if (contentType.includes('text/html')) {
+                return { ok: false, error: 'The URL returned an HTML page instead of JSON. If this is a git host, use its API endpoint rather than the web URL — a web URL usually ignores the token and answers with a login page.' }
+            }
             const body = await response.json()
             if (!Array.isArray(body)) return { ok: false, error: 'The manifest is not a list of extensions' }
             const types = [...new Set((body as IMarketplaceEntry[]).map(e => e.extensionType).filter(Boolean))]
