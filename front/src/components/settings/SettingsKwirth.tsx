@@ -65,6 +65,30 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         setMarketplaces(prev => prev.map((m, i) => i === index ? { ...m, ...patch } : m))
     }
 
+    // Muestra/oculta un campo secreto. Al revelar trae el valor REALMENTE guardado (admin-only), igual que
+    // el toggleReveal de IdpManagerDialog: un ojo que solo enseñara lo recien tecleado no revelaria nada.
+    const toggleReveal = async (index: number, field: 'password'|'token') => {
+        const row = marketplaces[index]
+        const flag = field === 'password' ? 'revealed' : 'tokenRevealed'
+        if (row[flag]) { patchRow(index, { [flag]: false }); return }
+
+        // si ya hay valor en el formulario es lo que el usuario acaba de escribir: se muestra tal cual
+        const alreadyTyped = field === 'password' ? row.password : row.token
+        const stored = field === 'password' ? row.auth?.hasPassword : row.manifestAuth?.hasToken
+        if (!alreadyTyped && stored) {
+            try {
+                const response = await fetch(`${props.clusterUrl}/core/settings/marketplaces/${encodeURIComponent(row.id)}/secrets`, addGetAuthorization(props.accessString))
+                if (response.ok) {
+                    const secrets = await response.json() as { password?: string, token?: string }
+                    patchRow(index, { [flag]: true, [field]: secrets[field] ?? '' })
+                    return
+                }
+            }
+            catch { /* si no se puede recuperar, al menos se revela lo que haya en pantalla */ }
+        }
+        patchRow(index, { [flag]: true })
+    }
+
     const addRow = () => {
         setMarketplaces(prev => [...prev, {
             id: `marketplace-${Date.now()}`,
@@ -172,7 +196,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         type={m.tokenRevealed ? 'text' : 'password'} sx={{ flexGrow: 1 }} disabled={!tokenAuth}
                         slotProps={{ input: { endAdornment: (
                             <InputAdornment position='end'>
-                                <IconButton size='small' onClick={() => patchRow(index, { tokenRevealed: !m.tokenRevealed })} disabled={!tokenAuth}>
+                                <IconButton size='small' onClick={() => toggleReveal(index, 'token')} disabled={!tokenAuth} title={m.tokenRevealed ? 'Hide' : 'Show'}>
                                     { m.tokenRevealed ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' /> }
                                 </IconButton>
                             </InputAdornment>) } }} />
@@ -188,7 +212,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         type={m.revealed ? 'text' : 'password'} sx={{ width: '25%' }} disabled={!basic}
                         slotProps={{ input: { endAdornment: (
                             <InputAdornment position='end'>
-                                <IconButton size='small' onClick={() => patchRow(index, { revealed: !m.revealed })} disabled={!basic}>
+                                <IconButton size='small' onClick={() => toggleReveal(index, 'password')} disabled={!basic} title={m.revealed ? 'Hide' : 'Show'}>
                                     { m.revealed ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' /> }
                                 </IconButton>
                             </InputAdornment>) } }} />

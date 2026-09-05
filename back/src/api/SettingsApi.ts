@@ -140,6 +140,32 @@ export class SettingsApi {
     }
 
     private initializeRoutes() {
+        // Revelado de los secretos de un marketplace. Existe para que el ojo de los campos secreto pueda
+        // mostrar el valor REALMENTE guardado, no solo lo que el usuario acaba de teclear (mismo patron
+        // que el toggleReveal de IdpManagerDialog, que tira de /idp/export). Admin-only y bajo demanda:
+        // el GET normal de settings nunca devuelve secretos.
+        this.router.route('/marketplaces/:id/secrets')
+            .all( async (req:Request, res:Response, next) => {
+                if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+                if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
+                next()
+            })
+            .get( async (req:Request, res:Response) => {
+                try {
+                    const id = req.params.id
+                    const stored = await SettingsApi.read(this.configMaps)
+                    if (!(stored.marketplaces ?? []).some(m => m.id === id)) { res.status(404).json({ error: 'unknown marketplace' }); return }
+                    res.status(200).json({
+                        password: await SettingsApi.getPassword(this.secrets, id),
+                        token: await SettingsApi.getManifestToken(this.secrets, id)
+                    })
+                }
+                catch (err) {
+                    logError(ELogComponent.CORE, `Error revealing marketplace secrets: ${err}`)
+                    res.status(500).json({})
+                }
+            })
+
         this.router.route('/')
             .all( async (req:Request, res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return

@@ -372,6 +372,55 @@ test('token del manifest y contraseña del registro son independientes', async (
     finally { await srv.stop() }
 })
 
+// ---- revelado de secretos (el ojo de los campos secreto) ----
+
+test('revelar devuelve los valores realmente guardados', async () => {
+    const stored: IKwirthSettings = { marketplaces: [{ ...MP,
+        auth: { type: EMarketplaceAuthType.BASIC, username: 'u' },
+        manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN } }] }
+    const srv = await startServer(stored)
+    try {
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: [{ ...MP,
+            auth: { type: EMarketplaceAuthType.BASIC, username: 'u' }, password: 'nexus-pass',
+            manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN }, token: 'glpat-abc' }] }) })
+
+        const res = await fetch(`${srv.base}/core/settings/marketplaces/nexus/secrets`, { headers: AUTH })
+        assert.equal(res.status, 200)
+        assert.deepEqual(await res.json(), { password: 'nexus-pass', token: 'glpat-abc' })
+    }
+    finally { await srv.stop() }
+})
+
+test('revelar exige scope admin', async () => {
+    const srv = await startServer({ marketplaces: [MP] }, { nexus: 's3cr3t' })
+    try {
+        const res = await fetch(`${srv.base}/core/settings/marketplaces/nexus/secrets`, { headers: NONADMIN_AUTH })
+        assert.equal(res.status, 403)
+        assert.ok(!(await res.text()).includes('s3cr3t'))
+    }
+    finally { await srv.stop() }
+})
+
+test('revelar un marketplace inexistente da 404', async () => {
+    const srv = await startServer({ marketplaces: [MP] })
+    try {
+        assert.equal((await fetch(`${srv.base}/core/settings/marketplaces/otro/secrets`, { headers: AUTH })).status, 404)
+    }
+    finally { await srv.stop() }
+})
+
+test('revelar es BAJO DEMANDA: el GET normal de settings sigue sin traer secretos', async () => {
+    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const srv = await startServer(stored, { nexus: 's3cr3t' })
+    try {
+        const body = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).text()
+        assert.ok(!body.includes('s3cr3t'), 'el listado de settings nunca debe llevar el secreto')
+        const revealed = await (await fetch(`${srv.base}/core/settings/marketplaces/nexus/secrets`, { headers: AUTH })).json() as { password?: string }
+        assert.equal(revealed.password, 's3cr3t', 'pero pedirlo explicitamente si')
+    }
+    finally { await srv.stop() }
+})
+
 test('validateMarketplaces rechaza un tipo de auth de manifest desconocido', () => {
     assert.equal(SettingsApi.validateMarketplaces([{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN } }]), undefined)
     assert.match(SettingsApi.validateMarketplaces([{ ...MP, manifestAuth: { type: 'oauth' } }]) ?? '', /unknown manifest auth type/)
