@@ -21,9 +21,10 @@ const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceB
             </Tooltip>
         )
     }
+    // relleno, no perfilado: el chip 'dev' de estos dialogos ya es naranja perfilado y se confundirian
     return (
         <Tooltip title={`Served by the '${props.label}' marketplace, which takes precedence over the public Kwirth one`}>
-            <Chip label={props.label} size='small' variant='outlined' color='primary' />
+            <Chip label={props.label} size='small' color='warning' />
         </Tooltip>
     )
 }

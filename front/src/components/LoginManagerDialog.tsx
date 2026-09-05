@@ -89,6 +89,11 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
     }, {} as Record<string, ILoginManifestEntry[]>)
     Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
 
+    // Procedencia de una extension YA instalada. No se puede sacar de installedFrom, porque una instalada
+    // en dev no tiene url: se busca el id en el catalogo ya resuelto. Como la resolucion garantiza que
+    // todas las entradas de un id vienen del mismo marketplace, con la primera basta.
+    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
+
     const getSelectedEntry = (id: string): ILoginManifestEntry => {
         const group = groupedAvailable[id]
         const version = selectedVersions[id] ?? group[0].version
@@ -289,14 +294,15 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
         </Stack>
     )
 
-    // El icono distingue la procedencia: candado macizo y resaltado si la sirve un marketplace privado,
-    // el de siempre en gris si viene del publico. Sin esto el candado se lee como 'privado' en todas.
+    // El icono distingue la procedencia. El candado CON PERSONA es el privado: un candado 'de alguien'
+    // se lee como algo propio, mientras que el candado liso queda para lo publico. Sin esta distincion
+    // el candado se leia como 'privado' en todas las tarjetas.
     const LoginCard = ({ id, displayName, version, description, badge, source, website, action, marketplaceLabel }: { id: string; displayName: string; version: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; marketplaceLabel?: string }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: loginGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Tooltip title={marketplaceLabel ? `From the private '${marketplaceLabel}' marketplace` : 'From the public Kwirth marketplace'}>
-                    <Box sx={{ color: marketplaceLabel ? 'primary.main' : 'text.secondary', mt: 0.25 }}>
-                        { marketplaceLabel ? <Https /> : <LockPerson /> }
+                    <Box sx={{ color: marketplaceLabel ? 'warning.main' : 'text.secondary', mt: 0.25 }}>
+                        { marketplaceLabel ? <LockPerson /> : <Https /> }
                     </Box>
                 </Tooltip>
                 <Box flex={1} minWidth={0}>
@@ -351,6 +357,8 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                         description={login.description}
                                         source={resolveSource(login.installedFrom)}
                                         website={login.website}
+                                        marketplaceLabel={marketplaceOfInstalled(login.id)}
+                                        badge={<MarketplaceBadge label={marketplaceOfInstalled(login.id)} />}
                                         action={
                                             <Stack direction='row' spacing={0.5}>
                                                 {login.configSchema && login.configSchema.length > 0 && (
