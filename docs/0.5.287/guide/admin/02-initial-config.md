@@ -100,13 +100,20 @@ https://<your-gitlab>/api/v4/projects/<group>%2F<project>/repository/files/manif
 
 The project path is URL-encoded, so `myorg/marketplace` becomes `myorg%2Fmarketplace`.
 
-Then tick **Manifest needs a token**, leave the header as **PRIVATE-TOKEN**, and paste a **Project Access Token** created under *Settings → Access tokens* of that project with the **`read_repository`** scope.
+Then tick **Manifest needs a token**, leave the header as **PRIVATE-TOKEN**, and paste a **Project Access Token** created under *Settings → Access tokens* of that project. It needs **both**:
 
-> Two traps worth knowing, because both fail in confusing ways:
+- the **`read_repository`** scope, and
+- a role of **Reporter** or higher, in the *Select a role* dropdown.
+
+> Three traps, all of which fail in ways that point somewhere else:
 >
-> **Use the API URL, not the repository's web URL.** GitLab ignores the `PRIVATE-TOKEN` header on its web raw path (`/-/raw/…`) and answers with the sign-in page — and with **HTTP 200**, so it looks like it worked until you notice the content is HTML rather than your manifest. Kwirth detects this case and says so.
+> **The role matters as much as the scope.** A token created as **Guest** — the default in that dropdown — cannot read repository files no matter which scopes it carries: every `/repository/` call answers **403** while the project itself reads fine. If the token looks correctly scoped and is still rejected, this is almost certainly why.
 >
-> **`read_api` is not enough.** It grants project metadata but not file contents: everything under `/repository/` answers 403 without `read_repository`. If the test button reports a rejected token while the project itself is visible, this is why. A **deploy token** does not work either — those cover `git clone` and the package registries, not the REST API.
+> **`read_api` is not the scope you want.** It grants project metadata but not file contents; the Files API lives under `/repository/`, which needs `read_repository`.
+>
+> **Use the API URL, not the repository's web URL.** GitLab ignores the `PRIVATE-TOKEN` header on its web raw path (`/-/raw/…`) and answers with the sign-in page — and with **HTTP 200**, so it looks like it worked until you notice the body is HTML rather than your manifest. Kwirth detects this case and says so.
+>
+> A **deploy token** does not work at all here: those cover `git clone` and the package registries, not the REST API.
 
 Use the **refresh** button on the row to check it: it reports how many entries the manifest holds and which extension types it declares, and tells you specifically if the token was rejected rather than just failing. Note that it exercises the *manifest* credentials only — the package ones come into play at install time, so a wrong registry password will not surface until somebody installs something.
 
