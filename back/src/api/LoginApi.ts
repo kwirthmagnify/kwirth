@@ -87,49 +87,49 @@ export class LoginApi {
         })
 
         // change password
+        //
+        // Sin try/catch a proposito, igual que el login de arriba: el guard es el unico responsable de
+        // lo inesperado. El catch que habia aqui registraba el error y salia SIN responder, asi que la
+        // peticion se quedaba colgada para siempre — y, al resolver la promesa con normalidad, tampoco
+        // dejaba actuar al guard. Justo en el flujo del primer arranque, donde al admin se le fuerza a
+        // cambiar la contraseña por defecto.
         this.router.post('/password', async (req:Request,res:Response) => {
             guard(LoginApi.semaphore.use ( async () => {
-                try {
-                    let users = await IdentityService.readUsers(this.secrets)
-                    if (!users) {
-                        console.error('Cannot access kwirth users for changini password')
-                        res.status(401).json()
+                let users = await IdentityService.readUsers(this.secrets)
+                if (!users) {
+                    console.error('Cannot access kwirth users for changini password')
+                    res.status(401).json()
+                    return
+                }
+
+                if (!users[req.body.user]) {
+                    res.status(401).json()
+                    return
+                }
+
+                let user:IUser = JSON.parse (atob(users[req.body.user]))
+                if (user) {
+                    const { valid } = await verifyPassword(req.body.password, user.password, user.id)
+                    if (!valid) {
+                        res.status(401).send()
                         return
                     }
-
-                    if (!users[req.body.user]) {
-                        res.status(401).json()
-                        return
-                    }
-
-                    let user:IUser = JSON.parse (atob(users[req.body.user]))
-                    if (user) {
-                        const { valid } = await verifyPassword(req.body.password, user.password, user.id)
-                        if (!valid) {
-                            res.status(401).send()
-                            return
-                        }
-                        user.password = await bcrypt.hash(req.body.newpassword, 10)
-                        let ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress
-                        let newApiKey = await IdentityService.createApiKey(user, ip, this.configMaps, this.apiKeyApi)
-                        if (newApiKey) {
-                            user.accessKey=newApiKey.accessKey
-                            users[req.body.user]=btoa(JSON.stringify(user))
-                            await IdentityService.writeUsers(this.secrets, users)
-                            res.status(200).json(IdentityService.okResponse(user))
-                        }
-                        else {
-                            console.log('Error creating api key')
-                            res.status(500).json({})
-                        }
+                    user.password = await bcrypt.hash(req.body.newpassword, 10)
+                    let ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress
+                    let newApiKey = await IdentityService.createApiKey(user, ip, this.configMaps, this.apiKeyApi)
+                    if (newApiKey) {
+                        user.accessKey=newApiKey.accessKey
+                        users[req.body.user]=btoa(JSON.stringify(user))
+                        await IdentityService.writeUsers(this.secrets, users)
+                        res.status(200).json(IdentityService.okResponse(user))
                     }
                     else {
-                        res.status(403).send()
+                        console.log('Error creating api key')
+                        res.status(500).json({})
                     }
                 }
-                catch (err) {
-                    console.log('Error updating password')
-                    console.log(err)
+                else {
+                    res.status(403).send()
                 }
             }), res, ELogComponent.CORE)
         })

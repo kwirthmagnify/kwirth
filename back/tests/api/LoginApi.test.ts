@@ -176,30 +176,44 @@ test('POST /login con password null tampoco tumba nada', async () => {
     finally { await srv.stop() }
 })
 
-// OJO — HALLAZGO, no lo arregla este test: '/login/password' NO se cuelga el proceso, pero deja la
-// peticion COLGADA para siempre. Su catch (LoginApi.ts) registra el error y no responde, asi que el
-// cliente espera indefinidamente. Es un bug distinto del crash y tocarlo seria cambiar logica, asi que
-// aqui solo se comprueba lo que el guard garantiza: que nada escapa del proceso y que el servidor sigue
-// sirviendo. El test aborta la peticion por su cuenta en vez de esperarla.
-test('POST /login/password sin password no escapa del proceso (aunque la peticion quede colgada)', async () => {
+// El cambio de contraseña tenia un catch que registraba el error y salia SIN responder: la peticion se
+// quedaba colgada para siempre y, al resolver la promesa con normalidad, tampoco dejaba actuar al guard.
+// Duele especialmente aqui, porque es el endpoint del primer arranque (admin con la contraseña por
+// defecto): el usuario se quedaba con el spinner girando sin saber que habia pasado.
+test('POST /login/password sin password RESPONDE en vez de dejar la peticion colgada', async () => {
     const srv = await startServer(encodeUsers([BCRYPT_USER()]))
     try {
+        let status = 0
         const escaped = await withoutUnhandledRejections(async () => {
-            const ctrl = new AbortController()
-            const timer = setTimeout(() => ctrl.abort(), 300)
-            await fetch(srv.base + '/login/password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user: 'alice@example.com', newpassword: sha256('nuevo') }),
-                signal: ctrl.signal
-            }).catch(() => { /* se espera el abort: hoy no llega respuesta */ })
-            clearTimeout(timer)
+            status = (await post(srv.base, '/login/password', { user: 'alice@example.com', newpassword: sha256('nuevo') })).status
         })
-        assert.deepEqual(escaped, [], 'el fallo no puede salir del proceso')
+        assert.equal(status, 500, 'tiene que contestar algo, no dejar al cliente esperando')
+        assert.deepEqual(escaped, [], 'y el fallo no puede salir del proceso')
 
         // el servidor sigue atendiendo al resto
         const after = await post(srv.base, '/login', { user: 'nadie@example.com', password: 'x' })
         assert.equal(after.status, 401)
+    }
+    finally { await srv.stop() }
+})
+
+test('POST /login/password sin newpassword tambien responde', async () => {
+    // pasa la verificacion y revienta despues, en el bcrypt.hash del newpassword ausente
+    const srv = await startServer(encodeUsers([makeUser()]))
+    try {
+        const res = await post(srv.base, '/login/password', { user: 'alice@example.com', password: sha256('secret') })
+        assert.equal(res.status, 500)
+    }
+    finally { await srv.stop() }
+})
+
+test('un registro de usuario corrupto se descarta arriba y da 401, no cuelga', async () => {
+    // readUsers ya filtra lo que no decodifica, asi que el JSON.parse(atob(...)) del handler nunca ve
+    // basura: el usuario simplemente no existe. Se comprueba para que quede claro donde esta la defensa.
+    const srv = await startServer({ 'alice@example.com': 'esto-no-es-base64-de-un-json' })
+    try {
+        const res = await post(srv.base, '/login/password', { user: 'alice@example.com', password: sha256('secret'), newpassword: sha256('nuevo') })
+        assert.equal(res.status, 401)
     }
     finally { await srv.stop() }
 })
