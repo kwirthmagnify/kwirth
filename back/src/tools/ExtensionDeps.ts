@@ -11,6 +11,10 @@ export interface IInstalledIndex {
     homepage: IInstalledRef[]
     idp: IInstalledRef[]
     login: IInstalledRef[]
+    webhook: IInstalledRef[]
+    // La documentacion se identifica por (targetType, id), pero como dependencia basta el id: quien
+    // depende de una guia depende de la de SU extension, y ahi el par no aporta nada.
+    docs: IInstalledRef[]
 }
 
 function semverGte(installed: string, required: string): boolean {

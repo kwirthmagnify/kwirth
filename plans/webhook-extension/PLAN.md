@@ -313,8 +313,11 @@ the provider artifacts and the Excubitor integration are **paid** and tracked in
 
 ## Backlog
 
-- **Los webhooks no se pueden empaquetar en un `pack`.** Al añadir `docs` a los packs (CL9 2026-09-06) se
-  dejó `webhook` fuera a propósito, por decisión del usuario: el tipo aún se está asentando. Falta el caso
-  `EExtensionType.WEBHOOK` en los tres switches de `back/src/api/PackApi.ts` (comprobación de instalado,
-  install, uninstall) y la entrada `webhook: 'webhooks'` en `TYPE_DIRS` de `packs/create-pack.mjs`.
-  `WebhookManager` ya tiene `install`/`uninstallFromPack`, así que es sumar los casos, no plumbing nuevo.
+- ~~**Los webhooks no se pueden empaquetar en un `pack`.**~~ **HECHO 2026-09-06.** `EExtensionType.WEBHOOK`
+  en los tres switches de `PackApi` (comprobación de instalado, install, uninstall), `webhookManager`
+  inyectado, y `webhook: 'webhooks'` en `TYPE_DIRS` de `create-pack.mjs`. De paso se completó
+  `IInstalledIndex`, al que le faltaban **`webhook` y `docs`**: un miembro que declarase
+  `requiresExtension: ["webhook:jira:0.1.0"]` se rechazaba con *"Unknown extension type"* aunque el
+  webhook estuviese instalado. Cubierto por `tests/tools/extensionDeps.test.ts`, que además asserta que
+  el índice conoce **todos** los `EExtensionType` instalables, para que el próximo tipo nuevo no repita
+  el olvido.

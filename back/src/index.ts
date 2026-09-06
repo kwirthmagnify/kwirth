@@ -27,7 +27,7 @@ import { buildScopeCatalog, validScopeSet } from './tools/ScopeCatalog'
 
 import * as https from 'https'
 import express from 'express'
-import type { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, Response, Router } from 'express'
 import cookieParser from 'cookie-parser'
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware'
 import { ClusterInfo } from './model/ClusterInfo'
@@ -67,7 +67,8 @@ import cors from 'cors'
 import { Application } from 'express-serve-static-core'
 import * as crypto from 'crypto'
 
-import { createProviderInstance, TProviderConstructor } from './providers/IProvider'
+import { createProviderInstance, IProvider, IProviderStorage, TProviderConstructor } from './providers/IProvider'
+import { buildProviderStorage } from './tools/ProviderStorage'
 import { EventsProvider } from './providers/events/EventsProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
 
@@ -141,6 +142,7 @@ interface IRunningInstance {
     channels: Map<string,IChannel>
     remoteChannels: BackChannelData[]   // single channels not hosted here (announced as remote)
     backChannelObject: IBackChannelObject
+    providerStorage?: IProviderStorage   // persistencia inyectada a los providers (equivalente al backChannelObject de los canales)
     active: boolean
     router: any
     apiKeyApi: ApiKeyApi|undefined
@@ -1184,6 +1186,31 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
     }
 }
 
+/*
+    Monta el router de gestion de un provider (su propia configuracion) en '/core/providerconfig/<id>',
+    SIEMPRE detras de validacion de accessKey. Es la contraparte para providers de lo que el core ya hace
+    con los endpoints de un canal: la autenticacion la pone el core, no la extension.
+
+    No se puede proteger 'provider.router' en su lugar: ese es publico y recibe trafico externo
+    (exportadores OTLP, POSTs de terceros), que no lleva accessKey de Kwirth.
+*/
+const mountProviderConfigRouter = (riRouter:Router, provider:IProvider, apiKeyApi:ApiKeyApi|undefined) : void => {
+    if (!provider.configRouter || provider.configRouterStarted) return
+    if (!apiKeyApi) {
+        logError(ELogComponent.CORE, `Provider '${provider.id}' exposes a config router but there is no apiKeyApi to protect it — not mounted`)
+        return
+    }
+    const path = `/core/providerconfig/${provider.id}`
+    riRouter.use(path,
+        async (req:Request, res:Response, next:NextFunction) => {
+            if (!(await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
+            next()
+        },
+        provider.configRouter)
+    provider.configRouterStarted = true
+    logInfo(ELogComponent.CORE, `Provider '${provider.id}' config router registered at '${path}'`)
+}
+
 const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promise<boolean> => {
     try {
         const riRouter = express.Router()
@@ -1283,7 +1310,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             if (!providerInstance) {
                                 const provConstructor = registeredProviders.get(provId)
                                 if (provConstructor) {
-                                    providerInstance = createProviderInstance(provConstructor, activeRI.clusterInfo, activeRI.kwirthData) ?? undefined
+                                    providerInstance = createProviderInstance(provConstructor, activeRI.clusterInfo, activeRI.kwirthData, activeRI.providerStorage) ?? undefined
                                     if (providerInstance) {
                                         if (providerInstance.configure && providerManager) {
                                             const cfg = await providerManager.getConfig(provId)
@@ -1303,6 +1330,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                                 providerInstance.started = true
                                 logInfo(ELogComponent.CORE, `Provider '${provId}' HTTP router registered at '${provPath}'`)
                             }
+                            if (providerInstance) mountProviderConfigRouter(riRouter, providerInstance, activeRI.apiKeyApi)
                         }
                         activeRI.channels.set(id, channelInstance)
                         channelInstance.startChannel()
@@ -1384,8 +1412,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let loginExtensionApi = new LoginExtensionApi(loginManager, apiKeyApi)
             riRouter.use(`/core/logins`, loginExtensionApi.router)
         }
-        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager) {
-            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, apiKeyApi, registeredChannels, registeredProviders })
+        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager && webhookManager) {
+            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, apiKeyApi, registeredChannels, registeredProviders })
             riRouter.use(`/core/packs`, packApi.router)
         }
         if (docsManager) {
@@ -1418,6 +1446,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     logError(ELogComponent.CORE, `Provider ${provider.id} provides router but ruter doen't exist`)
                 }
             }
+            mountProviderConfigRouter(riRouter, provider, apiKeyApi)
         }
             
         ri.router = riRouter
@@ -1636,7 +1665,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         for(let provId of requiredProviders) {
             let provider = registeredProviders.get(provId)
             if (provider) {
-                let providerInstance = createProviderInstance(registeredProviders.get(provId), localClusterInfo, localKwirthData)
+                let providerInstance = createProviderInstance(registeredProviders.get(provId), localClusterInfo, localKwirthData, runningInstance.providerStorage)
                 if (providerInstance) {
                     
                     if (providerInstance.configure) {
@@ -1663,11 +1692,14 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
         // Auto-instantiate providers with providesRouter=true so their config endpoints and listeners
         // are available even before any plugin requires them.
+        // Tambien los que exponen 'configRouter': un provider dueño de su configuracion debe poder
+        // configurarse ANTES de que exista el primer suscriptor (que es justo cuando el usuario crea
+        // sus conexiones desde el dialogo). Sin esto no habria instancia viva a la que hablarle.
         for (const [provId, providerConstructor] of registeredProviders) {
             if (localClusterInfo.providers.find(p => p.id === provId)) continue
             try {
-                const tmpInstance = createProviderInstance(providerConstructor, localClusterInfo, localKwirthData)
-                if (tmpInstance?.providesRouter && tmpInstance.router) {
+                const tmpInstance = createProviderInstance(providerConstructor, localClusterInfo, localKwirthData, runningInstance.providerStorage)
+                if ((tmpInstance?.providesRouter && tmpInstance.router) || tmpInstance?.configRouter) {
                     if (tmpInstance.configure) {
                         const cfg = await providerManager.getConfig(provId)
                         if (Object.keys(cfg).length > 0) tmpInstance.configure(cfg)
@@ -1821,6 +1853,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         runningInstance.clusterInfo.senders = senderManager
         runningInstance.clusterInfo.webhooks = webhookManager
         runningInstance.backChannelObject = backChannelObject
+        runningInstance.providerStorage = buildProviderStorage(runningInstance.configMaps, runningInstance.secrets)
         await setKubernetesClusterKwirthRequirements(runningInstance, localKwirthData, runningInstance.clusterInfo, backChannelObject)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
 

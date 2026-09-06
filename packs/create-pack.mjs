@@ -51,6 +51,9 @@ const TYPE_DIRS = {
     homepage: 'homepages',
     idp:      'idps',
     login:    'logins',
+    webhook:  'webhooks',
+    // 'docs' no tiene carpeta propia: cada plugin genera su tgz con build-docs-tgz.mjs, asi que la
+    // documentacion se pasa como ruta de tgz suelta, no con --include.
 }
 
 // --- parse args ---
