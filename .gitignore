@@ -23,6 +23,8 @@ kwirth-users
 /**/bundle
 /**/build
 /back/front
+# artefacto que genera packs/create-pack.mjs; se publica a npm, no se guarda aqui
+/packs/*.pack.tgz
 
 # misc
 .DS_Store

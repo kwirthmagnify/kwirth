@@ -2,9 +2,10 @@
   "name": "@kwirthmagnify/login-censor",
   "id": "censor",
   "displayName": "Censor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Custom login page for Censor channel",
   "targetType": "login",
+  "extensionType": "login",
   "website": "https://github.com/kwirthmagnify/kwirth",
   "scripts": {
     "build": "node build.mjs",

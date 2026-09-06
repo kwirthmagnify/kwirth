@@ -1,6 +1,15 @@
 [
   {
     "extensionType": "login",
+    "id": "censor",
+    "version": "0.1.1",
+    "name": "Censor",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/login-censor/-/login-censor-0.1.1.tgz",
+    "description": "Custom login page for Censor channel",
+    "website": "https://github.com/kwirthmagnify/kwirth"
+  },
+  {
+    "extensionType": "login",
     "id": "magnify",
     "version": "0.1.2",
     "name": "Magnify",

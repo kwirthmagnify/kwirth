@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "extensionType": "pack",
+    "id": "censor",
+    "version": "0.1.0",
+    "displayName": "Censor",
+    "description": "Censor pack for Kwirth - LLM-based log noise filtering channel plus its custom login page",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/censor/-/censor-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev",
+    "extensionTypes": ["plugin", "login"]
+  }
+]

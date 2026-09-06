@@ -1,0 +1,1 @@
+node create-pack.mjs censor --include plugin:censor --include login:censor --name "Censor" --version "0.1.0" --description "Censor pack for Kwirth - LLM-based log noise filtering channel plus its custom login page" --website "https://kwirthmagnify.dev"
