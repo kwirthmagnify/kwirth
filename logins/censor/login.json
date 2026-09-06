@@ -1,0 +1,14 @@
+{
+    "startChannel": "censor",
+    "userLabel": "User",
+    "passwordLabel": "Password",
+    "newPasswordLabel": "New password",
+    "repeatPasswordLabel": "Repeat new password",
+    "changePasswordMessage": "Login successful. You can now set a new password.",
+    "changePasswordButton": "Change password",
+    "okButton": "Login",
+    "textColor": "#ffffff",
+    "top": "62%",
+    "left": "3%",
+    "width": "300px"
+}
