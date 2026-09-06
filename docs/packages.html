@@ -121,7 +121,7 @@
   <p class="lead">Extension bundles — a single <code>.tgz</code> that ships many extensions at once. Install one pack and get all its members in a single operation, with no per-extension steps.</p>
 
   <h2>What a pack is</h2>
-  <p>A <strong>pack</strong> is a single <code>.tgz</code> archive that contains <strong>multiple extensions of any type</strong> — plugins, providers, senders, themes, homepages, IdP connectors and login extensions. It is the recommended way to distribute a <strong>curated set</strong>: a "dark ops" pack that bundles the Post-Punk theme, the Matrix homepage and the Ops plugin, or a vendor pack that ships a custom login page together with the plugin it protects.</p>
+  <p>A <strong>pack</strong> is a single <code>.tgz</code> archive that contains <strong>multiple extensions of any type</strong> — plugins, providers, senders, themes, homepages, IdP connectors, login pages, webhooks and documentation. Every installable extension type can travel in a pack; the only thing a pack cannot contain is another pack. It is the recommended way to distribute a <strong>curated set</strong>: a "dark ops" pack that bundles the Post-Punk theme, the Matrix homepage and the Ops plugin, or a vendor pack that ships a plugin together with the login page that fronts it, the webhook that feeds it and its own user guide.</p>
 
   <h2>How a pack is built</h2>
   <p>A pack is a fat <code>.tgz</code> with a <code>package.json</code> (pack metadata, <code>extensionType: "pack"</code>), a <code>pack.json</code> listing the member extensions, and one inner <code>.tgz</code> per member.</p>
@@ -142,7 +142,7 @@
   <p>An extension installed via a pack shows a <strong><code>via pack</code></strong> badge in the manager of its own family, and its individual uninstall button is <strong>disabled</strong> — you remove the parent pack, never a single member. This prevents partial teardowns that would leave the pack metadata inconsistent.</p>
 
   <h2>Creating a pack</h2>
-  <p>Use the <code>create-pack.mjs</code> script at the repository root. Pass <code>--include &lt;type&gt;:&lt;name&gt;</code> to build an extension from source and embed a freshly built artifact (repeatable — types: <code>plugin</code>, <code>provider</code>, <code>sender</code>, <code>theme</code>, <code>homepage</code>, <code>idp</code>, <code>login</code>), or list pre-built <code>.tgz</code> files as positional arguments. Each run produces a distributable <code>&lt;id&gt;-&lt;version&gt;.pack.tgz</code>.</p>
+  <p>Use the <code>create-pack.mjs</code> script at the repository root. Pass <code>--include &lt;type&gt;:&lt;name&gt;</code> to build an extension from source and embed a freshly built artifact (repeatable — types: <code>plugin</code>, <code>provider</code>, <code>sender</code>, <code>theme</code>, <code>homepage</code>, <code>idp</code>, <code>login</code>, <code>webhook</code>), or list pre-built <code>.tgz</code> files as positional arguments — which is how documentation travels, since it has no source folder of its own. Each run produces a distributable <code>&lt;id&gt;-&lt;version&gt;.pack.tgz</code>.</p>
   <div style="background:#0e1117;border:1px solid var(--border);border-radius:10px;padding:20px 24px;overflow-x:auto;margin:16px 0 8px;">
     <pre style="margin:0;font-size:0.85rem;line-height:1.7;font-family:'SF Mono',SFMono-Regular,Consolas,'Liberation Mono',monospace;"><span style="color:#8b949e"># Build from source and bundle in one command</span>
 node packs/create-pack.mjs dark-ops \

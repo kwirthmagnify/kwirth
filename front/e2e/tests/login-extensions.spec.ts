@@ -130,15 +130,35 @@ test('login extensions: anonymous config dialog has scope select and resource fi
     await page.goto('about:blank')
 })
 
-// ── 7. Anonymous login: muestra spinner mientras hace auto-login ───────────────
-test('login extensions: ?loginExt=anonymous shows spinner', async ({ page }) => {
+// ── 7. Anonymous login: depende de si el auto-login está configurado ───────────
+//
+// El login 'anonymous' solo entra solo si tiene autoUser Y autoPassword en su configuración. Sin ellos
+// no puede autenticar a nadie, y en vez de romperse cae al formulario de siempre — que es lo sensato,
+// y lo que hace en un Kwirth recién instalado.
+//
+// Este test daba por hecho que estaba configurado, así que fallaba en cualquier entorno donde no lo
+// estuviera (aceptado en rojo el 2026-09-04 sin diagnosticar, diagnosticado en el CL9 del 2026-09-06).
+// Ahora comprueba la rama que corresponda: lo que NUNCA vale es quedarse en blanco.
+test('login extensions: ?loginExt=anonymous entra solo, o muestra el formulario si no está configurado', async ({ page }) => {
     await page.goto('/?loginExt=anonymous')
 
-    // Debe mostrar spinner o error (nunca el form de usuario/password)
-    await expect(page.getByRole('progressbar').or(page.getByText(/error|invalid|denied|connect/i))).toBeVisible({ timeout: 5000 })
+    const config = await page.evaluate(async () => {
+        const r = await fetch(`${window.location.origin.replace(':3000', ':3883')}/core/logins/anonymous/config`)
+        return r.ok ? await r.json().catch(() => ({})) : {}
+    }) as { autoUser?: string, autoPassword?: string }
 
-    // NO debe mostrar campos de user/password (no es un login form)
-    await expect(page.getByLabel(/user/i)).not.toBeVisible()
+    const autoLoginReady = Boolean(config.autoUser && config.autoPassword)
+
+    if (autoLoginReady) {
+        // configurado: entra solo, así que spinner o error — nunca el formulario
+        await expect(page.getByRole('progressbar').or(page.getByText(/error|invalid|denied|connect/i))).toBeVisible({ timeout: 5000 })
+        await expect(page.getByLabel(/user/i)).not.toBeVisible()
+    }
+    else {
+        // sin configurar: el formulario de siempre, operativo
+        await expect(page.getByLabel(/user/i).first()).toBeVisible({ timeout: 5000 })
+        await expect(page.getByRole('button', { name: /login|ok/i }).first()).toBeVisible()
+    }
 
     await page.goto('about:blank')
 })

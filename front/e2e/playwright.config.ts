@@ -12,6 +12,11 @@ catch { /* sin fichero → env/defaults */ }
 
 export default defineConfig({
     testDir: './tests',
+    // 'tests/private' son los e2e de los plugins de PAGO (iter, providers propios...). Tienen su propio
+    // ciclo y su propio cierre, y algunos escriben datos o regeneran capturas de SU repo: no deben
+    // colarse en una corrida del core. Para lanzarlos, se pide la ruta explicitamente:
+    //   playwright test tests/private/iter-editing.spec.ts
+    testIgnore: '**/private/**',
     timeout: 180_000,
     retries: 1,
     fullyParallel: false,

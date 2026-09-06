@@ -5,9 +5,9 @@
 
 ## What a pack is
 
-A **pack** is a single `.tgz` archive that contains **multiple extensions at once** — plugins, themes, homepages, providers, senders, IdP connectors, or login extensions. Installing one pack installs all its members in a single operation, with no need to install each extension individually.
+A **pack** is a single `.tgz` archive that contains **multiple extensions at once** — plugins, providers, senders, themes, homepages, IdP connectors, login pages, webhooks and documentation. Every installable extension type can travel in a pack; the only thing a pack cannot contain is another pack. Installing one pack installs all its members in a single operation, with no need to install each extension individually.
 
-Packs are the recommended way to distribute **curated extension sets** — for example, a "dark ops" pack that bundles the Post-Punk theme, the Matrix homepage and the Ops plugin, or a vendor pack that ships a custom login page together with the plugin it protects.
+Packs are the recommended way to distribute **curated extension sets** — for example, a "dark ops" pack that bundles the Post-Punk theme, the Matrix homepage and the Ops plugin, or a vendor pack that ships a plugin together with the login page that fronts it, the webhook that feeds it and its own user guide.
 
 ## How packs work
 
@@ -86,7 +86,7 @@ node packs/create-pack.mjs <pack-id> [options]
 
 | Option | Description |
 |---|---|
-| `--include <type>:<name>` | Build and pack an extension from source, then include it. Repeatable. Types: `plugin`, `provider`, `sender`, `theme`, `homepage`, `idp`, `login`. |
+| `--include <type>:<name>` | Build and pack an extension from source, then include it. Repeatable. Types: `plugin`, `provider`, `sender`, `theme`, `homepage`, `idp`, `login`, `webhook`. Documentation has no source folder of its own — each plugin generates its tgz with `build-docs-tgz.mjs` — so it is passed as a plain `.tgz` path instead. |
 | `--name "<display name>"` | Human-readable pack name (default: `pack-id`). |
 | `--version "1.0.0"` | Pack version (default: `1.0.0`). |
 | `--description "..."` | Short description. |
@@ -135,18 +135,19 @@ node packs/create-pack.mjs my-pack ./plugins/foo/dist/foo-1.0.0.tgz \
     "extensions": [
         { "extensionType": "theme",    "id": "post-punk", "tgz": "kwirthmagnify-theme-post-punk-1.0.0.tgz" },
         { "extensionType": "homepage", "id": "matrix",    "tgz": "kwirthmagnify-homepage-matrix-1.0.0.tgz" },
-        { "extensionType": "plugin",   "id": "ops",       "tgz": "kwirthmagnify-ops-0.5.0.tgz" }
+        { "extensionType": "plugin",   "id": "ops",       "tgz": "kwirthmagnify-ops-0.5.0.tgz" },
+        { "extensionType": "webhook",  "id": "jira",      "tgz": "kwirthmagnify-webhook-jira-0.1.1.tgz" },
+        { "extensionType": "docs",     "id": "ops",       "tgz": "docs-ops-0.5.0.tgz", "targetType": "plugin" }
     ]
 }
 ```
 
-Each entry has three required fields:
-
 | Field | Description |
 |---|---|
-| `extensionType` | `plugin`, `provider`, `sender`, `theme`, `homepage`, `idp`, or `login` |
+| `extensionType` | `plugin`, `provider`, `sender`, `theme`, `homepage`, `idp`, `login`, `webhook` or `docs` |
 | `id` | The extension's `id` as declared in its own `package.json` |
 | `tgz` | Filename of the member `.tgz` inside the pack archive |
+| `targetType` | **Documentation only, and required there:** the *type* of the extension the guide documents. A guide's `id` is the id of what it documents, so it repeats across types — the pair identifies it. See [Documentation packages](extensions/docs/index.md). |
 
 ## Notes
 
