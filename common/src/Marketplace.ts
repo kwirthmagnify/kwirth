@@ -53,6 +53,10 @@ export interface IMarketplace {
 // undefined = viene del marketplace publico OSS.
 export interface IMarketplaceEntry {
     extensionType: EExtensionType
+    // Solo en 'docs': el TIPO de la extension documentada. La documentacion se identifica por el par
+    // (targetType, id), porque el id es el de esa extension y puede repetirse entre tipos: un plugin
+    // y un theme pueden llamarse igual y traer cada uno su guia.
+    targetType?: string
     id: string
     version: string
     name: string

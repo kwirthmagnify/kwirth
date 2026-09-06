@@ -68,25 +68,32 @@ export class MarketplaceManager {
     // Resolucion pura, sin red: dadas las fuentes YA en orden de precedencia (privados primero, publico
     // ultimo), devuelve las entradas del tipo pedido.
     //
-    // La regla es por id y con granularidad de marketplace: la primera fuente que contenga un id lo sirve
-    // ENTERO, con toda su lista de versiones, y las entradas de las demas para ese id se descartan. Nunca
-    // se mezclan versiones de distintas fuentes. El filtro por tipo va ANTES: dos entradas con el mismo id
-    // pero distinto extensionType son extensiones distintas y no deben eclipsarse.
+    // La regla es por extension y con granularidad de marketplace: la primera fuente que contenga una
+    // extension la sirve ENTERA, con toda su lista de versiones, y las entradas de las demas para esa
+    // extension se descartan. Nunca se mezclan versiones de distintas fuentes. El filtro por tipo va
+    // ANTES: dos entradas con el mismo id pero distinto extensionType son extensiones distintas y no
+    // deben eclipsarse. Lo mismo dentro de 'docs', donde la identidad es el par (targetType, id).
     public static resolveEntries(sources: IMarketplaceSource[], extensionType: EExtensionType): IMarketplaceEntry[] {
         const claimed = new Set<string>()
         const result: IMarketplaceEntry[] = []
         for (const source of sources) {
             const ofType = source.entries.filter(e => e.extensionType === extensionType)
-            const idsHere = new Set(ofType.map(e => e.id))
-            for (const id of idsHere) {
-                if (claimed.has(id)) continue
-                claimed.add(id)
-                for (const entry of ofType.filter(e => e.id === id)) {
+            const keysHere = new Set(ofType.map(e => MarketplaceManager.entryKey(e)))
+            for (const key of keysHere) {
+                if (claimed.has(key)) continue
+                claimed.add(key)
+                for (const entry of ofType.filter(e => MarketplaceManager.entryKey(e) === key)) {
                     result.push({ ...entry, marketplaceId: source.marketplaceId, marketplaceLabel: source.marketplaceLabel })
                 }
             }
         }
         return result
+    }
+
+    // Que hace unica a una entrada dentro de su tipo. Para casi todas es el id; la documentacion añade
+    // el targetType, porque su id es el de la extension documentada y puede repetirse entre tipos.
+    private static entryKey(entry: IMarketplaceEntry): string {
+        return entry.targetType ? `${entry.targetType}/${entry.id}` : entry.id
     }
 
     // Descarga un manifest. Nunca lanza: una fuente inalcanzable no puede tumbar las demas, pero SI se

@@ -31,6 +31,55 @@ test('mismo id en tipos distintos NO se eclipsan: son extensiones distintas', ()
     assert.deepEqual(senders.map(e => e.version), ['9.9.9'])
 })
 
+// ---- docs: la identidad es el par (targetType, id) ----
+//
+// El id de una documentacion es el de la extension que documenta, asi que se repite entre tipos: la guia
+// del plugin 'metrics' y la del theme 'metrics' comparten id y son extensiones distintas.
+
+const docsEntry = (targetType: string, id: string, version: string): IMarketplaceEntry => ({
+    extensionType: EExtensionType.DOCS, targetType, id, version, name: `${id} guide`,
+    url: `https://example.com/docs-${targetType}-${id}-${version}.tgz`
+})
+
+test('dos guias con el mismo id y distinto targetType no se eclipsan', () => {
+    const s = source('nexus', [docsEntry('plugin', 'metrics', '1.0.0'), docsEntry('theme', 'metrics', '2.0.0')])
+    const out = MarketplaceManager.resolveEntries([s], EExtensionType.DOCS)
+    assert.equal(out.length, 2, 'son dos documentaciones distintas, no dos versiones de una')
+    assert.deepEqual(out.filter(e => e.targetType === 'plugin').map(e => e.version), ['1.0.0'])
+    assert.deepEqual(out.filter(e => e.targetType === 'theme').map(e => e.version), ['2.0.0'])
+})
+
+test('la precedencia entre marketplaces tambien va por el par, no por el id', () => {
+    // el privado publica la guia del PLUGIN 'metrics'; no debe tapar la del THEME 'metrics' del publico
+    const priv = source('nexus', [docsEntry('plugin', 'metrics', '9.9.9')])
+    const pub = source(undefined, [docsEntry('plugin', 'metrics', '1.0.0'), docsEntry('theme', 'metrics', '1.0.0')])
+    const out = MarketplaceManager.resolveEntries([priv, pub], EExtensionType.DOCS)
+
+    const forPlugin = out.filter(e => e.targetType === 'plugin')
+    assert.deepEqual(forPlugin.map(e => e.version), ['9.9.9'], 'la del plugin la sirve el privado, entera')
+    assert.equal(forPlugin[0].marketplaceId, 'nexus')
+
+    const forTheme = out.filter(e => e.targetType === 'theme')
+    assert.deepEqual(forTheme.map(e => e.version), ['1.0.0'], 'la del theme sigue viniendo del publico')
+    assert.equal(forTheme[0].marketplaceId, undefined)
+})
+
+test('el ganador de un par aporta todo su historico de versiones', () => {
+    const priv = source('nexus', [docsEntry('plugin', 'excubitor', '0.1.190'), docsEntry('plugin', 'excubitor', '0.1.191')])
+    const pub = source(undefined, [docsEntry('plugin', 'excubitor', '0.0.1')])
+    const out = MarketplaceManager.resolveEntries([priv, pub], EExtensionType.DOCS)
+    assert.deepEqual(out.map(e => e.version).sort(), ['0.1.190', '0.1.191'])
+    assert.ok(out.every(e => e.marketplaceId === 'nexus'), 'ninguna version se mezcla con la del publico')
+})
+
+test('una entrada sin targetType sigue identificandose solo por id', () => {
+    // el resto de tipos no llevan targetType: su comportamiento no cambia
+    const priv = source('nexus', [entry('log', '9.9.9')])
+    const pub = source(undefined, [entry('log', '1.0.0')])
+    const out = MarketplaceManager.resolveEntries([priv, pub], EExtensionType.PLUGIN)
+    assert.deepEqual(out.map(e => e.version), ['9.9.9'])
+})
+
 test('un manifest con varios tipos sirve a cada manager por separado', () => {
     const mixed = source('nexus', [
         entry('a', '1.0.0', EExtensionType.PLUGIN),
