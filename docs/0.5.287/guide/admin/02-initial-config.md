@@ -86,7 +86,11 @@ A marketplace has **two independent** sets of credentials, because they are usua
 
 Either can be off — a public manifest pointing at a private registry is a perfectly normal setup, and it is the one we recommend: the manifest holds only names, versions and URLs, nothing worth protecting.
 
-Both secrets are stored encrypted by Kwirth and are used **only by the backend** when it talks to your servers. They are never included in the settings the dialog loads; if you need to check one, the eye button next to the field fetches it on demand, which requires the `admin` scope.
+Both secrets are stored encrypted by Kwirth, **outside** the settings themselves, and are used by the backend when it talks to your servers.
+
+When you reopen the dialog each secret comes back **already filled in**, masked, and the eye button next to it reveals what is actually stored — so you can check a password without retyping it, and correct a single character instead of pasting the whole token again. Reading them requires the `admin` scope, like the rest of the dialog.
+
+> **Clearing the field deletes the stored secret.** Since the field always shows what is saved, an empty field means "no secret", not "leave it as it was". To keep a secret untouched, simply leave it alone.
 
 > Kwirth reads manifests from the **backend**, not from your browser. A manifest reachable from the cluster works even if your own machine cannot see it, and no CORS configuration is needed on your server.
 

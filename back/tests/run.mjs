@@ -45,6 +45,7 @@ await esbuild.build({
     outdir: OUT_DIR,
     outbase: TEST_DIR,
     outExtension: { '.js': '.mjs' },
+    sourcemap: process.env.COVERAGE ? 'inline' : false,   // COVERAGE=1 → sourcemaps para mapear la cobertura al src/
     // el src bundleado usa require/require.resolve/require.cache (carga dinámica de conectores);
     // en salida ESM hay que inyectar un require basado en createRequire.
     banner: { js: "import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);" },
@@ -60,8 +61,10 @@ await esbuild.build({
 
 const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String).filter(f => f.endsWith('.mjs')).map(f => path.join(OUT_DIR, f))
 
+// COVERAGE=1 → cobertura nativa de Node mapeada a src/ (excluye node_modules y los propios tests).
+const covArgs = process.env.COVERAGE ? ['--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**'] : []
 try {
-    execFileSync('node', ['--test', ...bundled], { stdio: 'inherit' })
+    execFileSync('node', ['--test', ...covArgs, ...bundled], { stdio: 'inherit' })
 }
 catch {
     process.exit(1)   // node --test devuelve ≠0 si algún test falla

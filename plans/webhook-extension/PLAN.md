@@ -93,13 +93,16 @@ config UI; no bespoke front required for V1).
 
 ```
 webhook-jira.tgz
-├── package.json      ← manifest, targetType: "webhook"
+├── package.json      ← manifest, extensionType: "webhook"
 ├── back.js           ← the IWebhook implementation (esbuild bundle, export default)
 └── front.js          ← optional (config schema is served from back via getConfigSchema())
 ```
 
-`package.json` (mirror `senders/console/package.json`, `targetType` per the `login` precedent in
-`plans/login-extensions/PLAN.md`):
+`package.json` (mirror `senders/console/package.json`). **`extensionType`, no `targetType`** — este plan
+decía `targetType` siguiendo el precedente de los logins, que resultó ser el error, no el patrón:
+`targetType` es exclusivo de la documentación, donde señala el *tipo* de la extensión documentada.
+Corregido en el CL9 del 2026-09-06; lo genera `build.mjs` en el dist, así que el `package.json` de fuente
+no lo declara:
 
 ```json
 {
@@ -307,3 +310,11 @@ the provider artifacts and the Excubitor integration are **paid** and tracked in
   comes with those artifacts later. The core supports both **because it does not know the scheme** — it passes
   the resolved `config` to `verify()` and each webhook type defines its own auth fields + logic.
 - **Token in URL** is a bearer secret → HTTPS mandatory; keep tokens out of logs.
+
+## Backlog
+
+- **Los webhooks no se pueden empaquetar en un `pack`.** Al añadir `docs` a los packs (CL9 2026-09-06) se
+  dejó `webhook` fuera a propósito, por decisión del usuario: el tipo aún se está asentando. Falta el caso
+  `EExtensionType.WEBHOOK` en los tres switches de `back/src/api/PackApi.ts` (comprobación de instalado,
+  install, uninstall) y la entrada `webhook: 'webhooks'` en `TYPE_DIRS` de `packs/create-pack.mjs`.
+  `WebhookManager` ya tiene `install`/`uninstallFromPack`, así que es sumar los casos, no plumbing nuevo.

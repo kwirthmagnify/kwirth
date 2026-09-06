@@ -1,6 +1,29 @@
 # Private Marketplace Manifests — Plan
 
-## Status (2026-09-04) — NOT STARTED
+## Status (2026-09-06) — ENTREGADO Y EN USO
+
+Funcionando end-to-end contra un manifest privado real en GitLab. Registro de marketplaces en *Kwirth
+settings → Marketplaces*, persistido server-side; resolución en el back (`MarketplaceManager`) con
+precedencia por extensión y **sin mezclar versiones entre marketplaces**; procedencia estampada y visible
+en las tarjetas de los once manager dialogs.
+
+Cerrado en el CL9 del **2026-09-06** (ver `plans/test-metrics-history.md`):
+
+- **Secretos**: contraseña del registro y token del manifest viven en `ISecrets`, nunca en el configmap de
+  settings. Desde `common@0.5.44` viajan al formulario **pre-rellenados y enmascarados**, con ojo para
+  revelar — el patrón de campo secreto del resto de Kwirth. Vaciar el campo borra el secreto guardado.
+  Desaparece el endpoint de revelado bajo demanda, que ya no hace falta.
+- **Identidad de la documentación**: `IMarketplaceEntry.targetType`. Una guía se identifica por el par
+  `(targetType, id)`, porque su id es el de la extensión documentada y se repite entre tipos. La
+  precedencia de `resolveEntries` va por ese par; para el resto de tipos, la clave sigue siendo el id.
+- **e2e**: `marketplace-resolve` (procedencia y precedencia, robusto a que haya privados registrados) y
+  `marketplace-secrets` (el campo secreto entero, con snapshot/restore de la configuración real).
+
+Queda pendiente lo del apartado *Backlog* de más abajo: **GitHub y Azure DevOps** como hosts de manifest.
+Hoy solo GitLab. ⚠️ No documentar un proveedor sin verificar antes que `MarketplaceManager` sabe hablar
+con él.
+
+## Status inicial (2026-09-04) — NOT STARTED
 
 Goal: let an administrator register **additional** marketplace manifest URLs, so an organisation can
 publish its own extensions (plugins, senders, providers, themes, homepages, webhooks, logins, packs, idp
