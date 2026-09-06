@@ -3,25 +3,23 @@ import { Page } from '@playwright/test'
 export const USER = process.env.KWIRTH_E2E_USER ?? 'admin'
 export const PASS = process.env.KWIRTH_E2E_PASS ?? ''
 
-// El dev server de CRA tapa la página entera con un iframe cuando hay un error de compilación, y NO lo
-// retira al recuperarse: se queda ahí interceptando todos los clicks, así que los tests fallan con un
-// "element is visible, enabled and stable" que no dice nada del motivo real. Aparece con cualquier
-// tropiezo transitorio del watch — un `npm install` mientras compila, por ejemplo.
+// El dev server de CRA tapa la página con un iframe cuando la compilación falla. Ese iframe significa
+// exactamente eso: **el front no compila**. No es un residuo que se pueda apartar — si se retira, los
+// tests siguen sobre un bundle que no es el que se quiere probar, y pueden acabar en verde.
 //
-// Se retira, pero NUNCA en silencio: si tapaba un error de compilación de verdad, ese mensaje es
-// justo lo que hace falta para entender el fallo que venga después.
-export async function dismissDevOverlay(page: Page): Promise<void> {
+// Asi que se aborta, y con el texto del overlay, que es justo el diagnostico que hace falta: sin él, el
+// sintoma es un click que no llega porque "algo" lo intercepta.
+export async function assertFrontCompiles(page: Page): Promise<void> {
     const overlay = page.locator('iframe#webpack-dev-server-client-overlay')
     if (await overlay.count() === 0) return
     const message = await page.frameLocator('iframe#webpack-dev-server-client-overlay').locator('body')
-        .innerText().catch(() => '(no se pudo leer)')
-    console.log(`[e2e] retirado el overlay del dev server, que decia:\n${message.slice(0, 500)}`)
-    await overlay.evaluate(el => el.remove()).catch(() => {})
+        .innerText().catch(() => '(no se pudo leer el overlay)')
+    throw new Error(`El front NO COMPILA — el dev server de CRA muestra:\n\n${message.slice(0, 1200)}`)
 }
 
 export async function login(page: Page, user = USER, pass = PASS): Promise<void> {
     await page.goto('/')
-    await dismissDevOverlay(page)
+    await assertFrontCompiles(page)
     await page.getByLabel('User').fill(user)
     await page.getByLabel('Password').fill(pass)
     await page.getByRole('button', { name: 'OK' }).click()
