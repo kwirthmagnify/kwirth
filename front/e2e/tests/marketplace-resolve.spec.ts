@@ -8,7 +8,9 @@ import { login, dismissOpenDialogs } from './helpers'
 //
 // NO destructivo: solo lee.
 
-interface IEntry { extensionType: string; id: string; version: string; url: string; marketplaceId?: string }
+interface IEntry { extensionType: string; targetType?: string; id: string; version: string; url: string; marketplaceId?: string }
+
+interface IMarketplace { id: string; label: string; url: string; enabled: boolean }
 
 interface ISession { auth: string; backend: string }
 
@@ -36,6 +38,13 @@ async function resolve(page: import('@playwright/test').Page, s: ISession, type:
     }, [s.backend, type, s.auth])
 }
 
+async function configuredMarketplaces(page: import('@playwright/test').Page, s: ISession): Promise<IMarketplace[]> {
+    return await page.evaluate(async ([backend, a]) => {
+        const r = await fetch(`${backend}/core/settings`, { headers: { Authorization: a } })
+        return r.ok ? ((await r.json()).marketplaces ?? []) : []
+    }, [s.backend, s.auth])
+}
+
 test('resuelve el marketplace publico y devuelve solo entradas del tipo pedido', async ({ page }) => {
     const s = await captureSession(page)
 
@@ -47,13 +56,38 @@ test('resuelve el marketplace publico y devuelve solo entradas del tipo pedido',
     // todas del tipo pedido, ninguna de otro
     expect(list.every(e => e.extensionType === 'plugin')).toBe(true)
 
-    // sin marketplaces privados configurados, todo viene del publico: sin procedencia estampada
-    expect(list.every(e => e.marketplaceId === undefined)).toBe(true)
+    // La procedencia tiene que ser coherente con lo que este configurado en ESTE Kwirth: sin
+    // marketplaceId = publico, y con marketplaceId = uno de los privados registrados. No se puede dar
+    // por hecho que no hay privados: en cuanto se registra uno, el catalogo trae entradas suyas.
+    const registered = (await configuredMarketplaces(page, s)).map(m => m.id)
+    const stamped = [...new Set(list.map(e => e.marketplaceId).filter(id => id !== undefined))]
+    for (const id of stamped) {
+        expect(registered, `la entrada dice venir de '${id}', que no esta registrado`).toContain(id)
+    }
 
-    // y trae de verdad el catalogo, con su historico de versiones
+    // el catalogo publico sigue llegando entero, con su historico de versiones
     const log = list.filter(e => e.id === 'log')
     expect(log.length).toBeGreaterThan(1)
     expect(log.every(e => e.url.includes('kwirth-plugin-log'))).toBe(true)
+    expect(log.every(e => e.marketplaceId === undefined), 'log es del marketplace publico').toBe(true)
+})
+
+test('la documentacion se identifica por el par (targetType, id)', async ({ page }) => {
+    const s = await captureSession(page)
+
+    const res = await resolve(page, s, 'docs')
+    expect(res.status).toBe(200)
+    const list = res.body as IEntry[]
+    test.skip(list.length === 0, 'no hay ninguna documentacion publicada en los marketplaces de este Kwirth')
+
+    // el id de una guia es el de la extension documentada, asi que sin targetType no se sabe de quien es
+    for (const e of list) {
+        expect(e.targetType, `la entrada docs '${e.id}' no dice a que tipo de extension documenta`).toBeTruthy()
+    }
+
+    // y el par tiene que ser unico por marketplace: dos entradas iguales serian dos versiones de la misma
+    const pairs = list.map(e => `${e.targetType}/${e.id}@${e.version}`)
+    expect(new Set(pairs).size, 'hay guias duplicadas en el catalogo').toBe(pairs.length)
 })
 
 test('cada tipo de extension resuelve su propio manifest', async ({ page }) => {
