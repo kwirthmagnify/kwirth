@@ -108,7 +108,8 @@ export class SettingsApi {
                 cleaned.auth = { type: m.auth.type, ...(m.auth.username ? { username: m.auth.username } : {}) }
             }
             if (m.manifestAuth) {
-                cleaned.manifestAuth = { type: m.manifestAuth.type }
+                // el username del Basic no es secreto: va en el configmap junto al tipo
+                cleaned.manifestAuth = { type: m.manifestAuth.type, ...(m.manifestAuth.username ? { username: m.manifestAuth.username } : {}) }
             }
             return cleaned
         })

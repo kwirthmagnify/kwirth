@@ -23,7 +23,8 @@ export interface IMarketplaceAuth {
 export enum EManifestAuthType {
     NONE = 'none',
     PRIVATE_TOKEN = 'privateToken',   // cabecera PRIVATE-TOKEN (GitLab API)
-    BEARER = 'bearer'                 // cabecera Authorization: Bearer
+    BEARER = 'bearer',                // cabecera Authorization: Bearer (GitHub Contents API)
+    BASIC = 'basic'                   // cabecera Authorization: Basic (Azure DevOps: PAT como contraseña)
 }
 
 // El token se trata igual que la contraseña: viaja al front y se muestra enmascarado con ojo.
@@ -31,6 +32,9 @@ export enum EManifestAuthType {
 export interface IMarketplaceManifestAuth {
     type: EManifestAuthType
     token?: string
+    // Solo en BASIC: la parte de usuario. Azure DevOps ignora el usuario y solo mira el PAT, asi que
+    // puede quedar vacio; otros hosts que usen Basic si lo necesitan.
+    username?: string
 }
 
 // Un marketplace registrado por el administrador. La url apunta a UN manifest, que puede contener

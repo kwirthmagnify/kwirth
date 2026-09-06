@@ -94,9 +94,21 @@ When you reopen the dialog each secret comes back **already filled in**, masked,
 
 > Kwirth reads manifests from the **backend**, not from your browser. A manifest reachable from the cluster works even if your own machine cannot see it, and no CORS configuration is needed on your server.
 
-#### Hosting the manifest in a private GitLab repository
+#### Hosting the manifest in a private repository
 
-If you keep the manifest in a private GitLab repo, register the **Files API** URL rather than the web URL:
+Three hosts are supported, each with its own URL shape and header. Pick the matching entry in the **Header** dropdown once you tick *Manifest needs a token*:
+
+| Host | Header to pick | URL to register |
+|---|---|---|
+| GitLab | `PRIVATE-TOKEN` | Files API — `…/api/v4/projects/<path>/repository/files/<file>/raw?ref=<branch>` |
+| GitHub | `Authorization: Bearer` | Contents API — `https://api.github.com/repos/<owner>/<repo>/contents/<path>?ref=<branch>` |
+| Azure DevOps | `Authorization: Basic` | Items API — `…/_apis/git/repositories/<repo>/items?path=<path>&$format=text&api-version=7.0` |
+
+In all three cases it is the **API** URL, never the one you copy from the browser's address bar. Each detail below matters; they were verified one by one, because every one of them fails in a way that points somewhere else.
+
+##### GitLab
+
+Register the **Files API** URL rather than the web URL:
 
 ```
 https://<your-gitlab>/api/v4/projects/<group>%2F<project>/repository/files/manifest.json/raw?ref=main
@@ -119,9 +131,37 @@ Then tick **Manifest needs a token**, leave the header as **PRIVATE-TOKEN**, and
 >
 > A **deploy token** does not work at all here: those cover `git clone` and the package registries, not the REST API.
 
-Use the **refresh** button on the row to check it: it reports how many entries the manifest holds and which extension types it declares, and tells you specifically if the token was rejected rather than just failing. Note that it exercises the *manifest* credentials only — the package ones come into play at install time, so a wrong registry password will not surface until somebody installs something.
+##### GitHub
 
-> Manifests hosted on **GitHub** or **Azure DevOps** are not supported yet; both need authentication schemes Kwirth does not send today. For now, host the manifest on GitLab or on any openly readable URL.
+Register the **Contents API** URL, and pick **Authorization: Bearer** as the header:
+
+```
+https://api.github.com/repos/<owner>/<repo>/contents/manifest.json?ref=main
+```
+
+The token is a **fine-grained personal access token** with *Contents: Read-only* on that repository, or a classic token with the `repo` scope. For GitHub Enterprise Server the host is `https://<your-github>/api/v3/repos/…` instead.
+
+> **Why the browser URL does not work here.** `github.com/<owner>/<repo>/blob/…` returns an HTML page. And `raw.githubusercontent.com` serves the file plainly, but ignores the token, so it only works for a **public** repo — which rather defeats the purpose.
+>
+> **Kwirth asks for the raw media type for you.** Left to itself, the Contents API answers with a JSON envelope carrying the file **base64-encoded**, which would be rejected as "not a list of extensions". Kwirth always sends `Accept: application/vnd.github.raw` with a wildcard fallback, so this needs no configuration — and does not disturb the other hosts.
+
+##### Azure DevOps
+
+Register the **Items API** URL, and pick **Authorization: Basic** as the header:
+
+```
+https://dev.azure.com/<org>/<project>/_apis/git/repositories/<repo>/items?path=/manifest.json&$format=text&api-version=7.0
+```
+
+The token is a **Personal Access Token** with *Code: Read*. Azure DevOps expects the PAT as the **password** of an HTTP Basic pair and ignores the user part, so leave **Manifest user** empty — it is there for other hosts that do use Basic with a real username.
+
+> `$format=text` is what makes it return the file itself; without it you get a JSON envelope, the same trap as GitHub.
+>
+> ⚠️ The Basic header is built exactly as Azure DevOps documents it and is covered by tests, but unlike the other two this path **has not been validated against a live Azure DevOps server**. If your manifest is rejected there, please report it.
+
+##### Checking it worked
+
+Use the **refresh** button on the row: it reports how many entries the manifest holds and which extension types it declares, and says specifically whether the token was rejected rather than just failing. Note that it exercises the *manifest* credentials only — the package ones come into play at install time, so a wrong registry password will not surface until somebody installs something.
 
 ## What to configure next
 

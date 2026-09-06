@@ -19,9 +19,15 @@ Cerrado en el CL9 del **2026-09-06** (ver `plans/test-metrics-history.md`):
 - **e2e**: `marketplace-resolve` (procedencia y precedencia, robusto a que haya privados registrados) y
   `marketplace-secrets` (el campo secreto entero, con snapshot/restore de la configuración real).
 
-Queda pendiente lo del apartado *Backlog* de más abajo: **GitHub y Azure DevOps** como hosts de manifest.
-Hoy solo GitLab. ⚠️ No documentar un proveedor sin verificar antes que `MarketplaceManager` sabe hablar
-con él.
+**Los tres hosts de manifest, cerrados el 2026-09-06** (`common@0.5.45`): GitLab (`PRIVATE-TOKEN`), GitHub
+(`Bearer` + el `Accept` del media type raw, que se manda siempre con comodín detrás) y Azure DevOps
+(`Basic` con el PAT como contraseña, más `username` opcional en `IMarketplaceManifestAuth`). Documentados
+en la guía de admin con la URL de API de cada uno.
+
+⚠️ **GitHub se verificó contra la API real** (sin el `Accept` llega base64 envuelto en JSON; con él, el
+manifest crudo). **Azure DevOps no se ha podido validar contra un servidor real** — la cabecera se
+construye como documenta Azure y hay tests, pero la guía lo dice explícitamente y pide que lo reporten si
+falla. Es lo pendiente de este apartado.
 
 ## Status inicial (2026-09-04) — NOT STARTED
 

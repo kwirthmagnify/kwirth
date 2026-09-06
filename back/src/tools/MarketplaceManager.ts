@@ -52,16 +52,28 @@ export class MarketplaceManager {
         this.secrets = secrets
     }
 
+    // La Contents API de GitHub devuelve un JSON con el fichero en base64 salvo que se pida el media type
+    // 'raw' — sin esto el manifest llegaria como {content, encoding} y se rechazaria por no ser una lista.
+    // Se manda SIEMPRE porque lleva el comodin detras: cualquier otro host responde su tipo de siempre.
+    private static readonly ACCEPT = 'application/vnd.github.raw, application/json;q=0.9, */*;q=0.8'
+
     // Cabeceras para leer un manifest. El token nunca sale del back.
     public static buildManifestHeaders(marketplace: IMarketplace|undefined, token: string|undefined): Record<string, string> {
-        if (!marketplace?.manifestAuth || !token) return {}
+        const accept = { Accept: MarketplaceManager.ACCEPT }
+        if (!marketplace?.manifestAuth || !token) return accept
         switch (marketplace.manifestAuth.type) {
             case EManifestAuthType.PRIVATE_TOKEN:
-                return { 'PRIVATE-TOKEN': token }
+                return { ...accept, 'PRIVATE-TOKEN': token }
             case EManifestAuthType.BEARER:
-                return { Authorization: `Bearer ${token}` }
+                return { ...accept, Authorization: `Bearer ${token}` }
+            case EManifestAuthType.BASIC: {
+                // Azure DevOps autentica el PAT por Basic con el token como CONTRASEÑA; el usuario lo
+                // ignora, de ahi que pueda ir vacio.
+                const user = marketplace.manifestAuth.username ?? ''
+                return { ...accept, Authorization: `Basic ${Buffer.from(`${user}:${token}`).toString('base64')}` }
+            }
             default:
-                return {}
+                return accept
         }
     }
 

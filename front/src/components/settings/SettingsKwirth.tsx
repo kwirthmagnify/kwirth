@@ -181,9 +181,15 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         <Select value={m.manifestAuth?.type ?? EManifestAuthType.NONE}
                             onChange={e => patchManifestAuth(index, { type: e.target.value as EManifestAuthType })}>
                             <MenuItem value={EManifestAuthType.PRIVATE_TOKEN}>PRIVATE-TOKEN (GitLab)</MenuItem>
-                            <MenuItem value={EManifestAuthType.BEARER}>Authorization: Bearer</MenuItem>
+                            <MenuItem value={EManifestAuthType.BEARER}>Authorization: Bearer (GitHub)</MenuItem>
+                            <MenuItem value={EManifestAuthType.BASIC}>Authorization: Basic (Azure DevOps)</MenuItem>
                         </Select>
                     </FormControl>
+                    { /* Solo Basic necesita usuario. Azure DevOps lo ignora y solo mira el PAT, asi que se
+                         puede dejar vacio; se muestra deshabilitado en los demas para no cambiar de tamaño. */ }
+                    <TextField value={m.manifestAuth?.username ?? ''} onChange={e => patchManifestAuth(index, { username: e.target.value })}
+                        variant='standard' label='Manifest user' sx={{ width: '18%' }}
+                        disabled={!tokenAuth || m.manifestAuth?.type !== EManifestAuthType.BASIC} />
                     <TextField value={m.manifestAuth?.token ?? ''} onChange={e => patchManifestAuth(index, { token: e.target.value })}
                         variant='standard' label='Token'
                         type={m.tokenRevealed ? 'text' : 'password'} sx={{ flexGrow: 1 }} disabled={!tokenAuth}

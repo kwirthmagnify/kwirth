@@ -440,6 +440,27 @@ test('vaciar el token lo borra sin tocar la contraseña del registro', async () 
     finally { await srv.stop() }
 })
 
+test('BASIC es un tipo de auth de manifest valido (Azure DevOps) y su username persiste', async () => {
+    const srv = await startServer()
+    try {
+        const body = { marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.BASIC, username: 'ci', token: 'azdo-pat' } }] }
+        const res = await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
+        assert.equal(res.status, 200)
+
+        // el username NO es secreto: va al configmap junto al tipo
+        assert.equal(srv.store.current()?.marketplaces?.[0].manifestAuth?.username, 'ci')
+        // el token si lo es: nunca toca el configmap
+        assert.ok(!JSON.stringify(srv.store.current()).includes('azdo-pat'))
+        assert.equal(await SettingsApi.getManifestToken(srv.secrets.s, 'nexus'), 'azdo-pat')
+
+        // y ambos vuelven juntos al formulario
+        const json = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
+        assert.equal(json.marketplaces?.[0].manifestAuth?.username, 'ci')
+        assert.equal(json.marketplaces?.[0].manifestAuth?.token, 'azdo-pat')
+    }
+    finally { await srv.stop() }
+})
+
 test('validateMarketplaces rechaza un tipo de auth de manifest desconocido', () => {
     assert.equal(SettingsApi.validateMarketplaces([{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN } }]), undefined)
     assert.match(SettingsApi.validateMarketplaces([{ ...MP, manifestAuth: { type: 'oauth' } }]) ?? '', /unknown manifest auth type/)
