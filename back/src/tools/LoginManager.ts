@@ -1,6 +1,8 @@
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo } from './Logging'
 import { ILoginFieldDef } from '@kwirthmagnify/kwirth-common-back'
+import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { listBundledOfType } from './BundledExtensions'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -157,23 +159,8 @@ export class LoginManager {
     }
 
     async installBundled(bundledDir: string): Promise<void> {
-        if (!fs.existsSync(bundledDir)) return
-        const files = fs.readdirSync(bundledDir).filter(f => f.endsWith('.tgz'))
-        for (const file of files) {
-            const filePath = path.join(bundledDir, file)
-            const peekTmp = path.join(os.tmpdir(), `kwirth-login-peek-${path.basename(file, '.tgz')}`)
-            let targetType: string | undefined
-            try {
-                fs.mkdirSync(peekTmp, { recursive: true })
-                await tar.x({ file: filePath, cwd: peekTmp, filter: (p: string) => p.endsWith('package.json') })
-                const pkgPath = [path.join(peekTmp, 'package.json'), path.join(peekTmp, 'package', 'package.json')].find(p => fs.existsSync(p))
-                if (pkgPath) targetType = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).targetType
-            }
-            catch {}
-            finally {
-                fs.rmSync(peekTmp, { recursive: true, force: true })
-            }
-            if (targetType !== 'login') continue
+        for (const filePath of await listBundledOfType(bundledDir, EExtensionType.LOGIN)) {
+            const file = path.basename(filePath)
             try {
                 await this.install(filePath, 'bundled')
             }

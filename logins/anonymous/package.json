@@ -4,7 +4,7 @@
     "displayName": "Anonymous",
     "version": "0.1.1",
     "description": "Auto-login extension for anonymous or demo access — no form shown, credentials configured from admin UI",
-    "targetType": "login",
+    "extensionType": "login",
     "requiresRestart": false,
     "requiresExtension": [],
     "configSchema": [

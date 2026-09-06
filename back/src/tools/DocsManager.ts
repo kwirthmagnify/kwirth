@@ -1,5 +1,7 @@
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
+import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { listBundledOfType } from './BundledExtensions'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -111,7 +113,17 @@ export class DocsManager {
         const index = (await this.configMaps.read('kwirth-docs-index', []) as IDocsMeta[]) || []
         const meta = index.find(d => d.targetType === targetType && d.id === id)
         if (meta?.installedFrom === 'bundled' || meta?.installedFrom === 'dev') throw new Error(`Docs '${targetType}/${id}' is bundled/dev and cannot be uninstalled`)
+        await this._doUninstall(targetType, id, index)
+    }
 
+    // Al desinstalar el pack se borran sus miembros sin pasar por el guard de bundled/dev: el pack es
+    // el dueño de lo que instalo.
+    async uninstallFromPack(targetType: string, id: string): Promise<void> {
+        const index = (await this.configMaps.read('kwirth-docs-index', []) as IDocsMeta[]) || []
+        await this._doUninstall(targetType, id, index)
+    }
+
+    private async _doUninstall(targetType: string, id: string, index: IDocsMeta[]): Promise<void> {
         const destDir = path.join(this.docsPath, targetType, id)
         if (fs.existsSync(destDir)) fs.rmSync(destDir, { recursive: true, force: true })
         const updatedIndex = index.filter(d => !(d.targetType === targetType && d.id === id))
@@ -121,10 +133,11 @@ export class DocsManager {
     }
 
     async installBundled(dir: string): Promise<void> {
-        if (!fs.existsSync(dir)) return
-        const files = fs.readdirSync(dir).filter(f => f.endsWith('.tgz'))
-        for (const file of files) {
-            const filePath = path.join(dir, file)
+        // Solo los tgz que se declaran 'docs'. Antes se recorrian TODOS los del directorio compartido y la
+        // unica defensa era que install() exigiera targetType: un login bundled lo llevaba, asi que pasaba
+        // el filtro y acababa instalado tambien como documentacion bajo docsPath/login/<id>.
+        for (const filePath of await listBundledOfType(dir, EExtensionType.DOCS)) {
+            const file = path.basename(filePath)
             let bundleId: string | undefined
             let bundleTargetType: string | undefined
             let bundleVersion: string | undefined

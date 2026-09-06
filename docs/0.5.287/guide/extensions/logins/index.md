@@ -61,7 +61,7 @@ A login extension is a `.tgz` archive containing three files:
 
 | File | Required | Purpose |
 |---|---|---|
-| `package.json` | ✅ | Extension metadata — `id`, `displayName`, `version`, `targetType: "login"` |
+| `package.json` | ✅ | Extension metadata — `id`, `displayName`, `version`, `extensionType: "login"` |
 | `login.json` | ✅ | Visual configuration — see [Configuration reference](#configuration-reference) |
 | `background.png` | optional | Full-screen background image |
 
@@ -76,7 +76,7 @@ Build it with the `build.mjs` script from the `logins/_template` folder.
     "displayName": "My Product",
     "version": "0.1.0",
     "description": "Branded login for My Product",
-    "targetType": "login"
+    "extensionType": "login"
 }
 ```
 

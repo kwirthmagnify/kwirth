@@ -1384,8 +1384,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let loginExtensionApi = new LoginExtensionApi(loginManager, apiKeyApi)
             riRouter.use(`/core/logins`, loginExtensionApi.router)
         }
-        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager) {
-            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, apiKeyApi, registeredChannels, registeredProviders })
+        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager) {
+            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, apiKeyApi, registeredChannels, registeredProviders })
             riRouter.use(`/core/packs`, packApi.router)
         }
         if (docsManager) {

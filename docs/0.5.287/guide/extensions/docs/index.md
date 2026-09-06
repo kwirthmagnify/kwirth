@@ -7,9 +7,14 @@
 
 A **documentation package** is a self-contained **docsify site** bundled as a `.tgz` file that Kwirth installs and serves directly from its own back end. Once installed, the package is accessible from the browser without any external dependency — the Kwirth server itself acts as the documentation host.
 
-Each package is identified by a **`targetType`** (who published it, e.g. `core` for the Kwirth core, or the plugin id for a plugin) and an **`id`** (the specific package). The installed docs are served at `/docs/<targetType>/<id>/`.
+A documentation package always documents **another extension**, so it is identified by the pair that points at it:
 
-The `core/kwirth` package — the guide you are reading right now — ships **bundled** with every Kwirth deployment.
+- **`targetType`** — the *type* of the extension being documented: `plugin`, `provider`, `sender`, `theme`, `homepage`, `idp`, `login`, or `core` for the Kwirth core itself.
+- **`id`** — the id of that very extension. `excubitor` docs carry `targetType: plugin` and `id: excubitor`, because they document the `excubitor` **plugin**.
+
+The id alone is not enough: a plugin and a theme may both be called `metrics` and each may ship its own guide, so the pair is what makes a documentation package unique. The installed docs are served at `/docs/<targetType>/<id>/`, and Kwirth uses the same pair to link the **Help** buttons of an extension to its guide.
+
+The `core/kwirth` package — the guide you are reading right now — documents the core itself and ships **bundled** with every Kwirth deployment.
 
 ## Admin guide
 

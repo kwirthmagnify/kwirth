@@ -1,14 +1,14 @@
 # Magnify — login extension for Kwirth
 
 Custom login page for the **Magnify** channel. A *login* extension is a small bundle (a `login.json`
-config + optional background image) that Kwirth serves as the login screen; it is `targetType: "login"`
+config + optional background image) that Kwirth serves as the login screen; it is `extensionType: "login"`
 and installs from the npm tarball referenced in [`../manifest.json`](../manifest.json).
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `package.json` | Metadata (`id`, `displayName`, `version`, `targetType: "login"`, `website`) + build scripts. |
+| `package.json` | Metadata (`id`, `displayName`, `version`, `extensionType: "login"`, `website`) + build scripts. |
 | `login.json` | Login page configuration (labels, colors, layout). See below. |
 | `background.png` | Optional full-page background image. |
 | `build.mjs` | Copies `package.json` + `login.json` + `background.png` into `dist/` and packs `dist/<id>.tgz`. |
@@ -59,4 +59,4 @@ Kwirth's **Manage logins** dialog offers the new version.
 - **By URL:** paste the npm tarball URL from the manifest into the custom-URL field.
 
 The core downloads the tarball, extracts it, and (via `LoginManager`) serves any package whose
-`package.json` has `targetType: "login"` as the login screen.
+`package.json` has `extensionType: "login"` as the login screen.

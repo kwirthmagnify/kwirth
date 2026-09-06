@@ -8,6 +8,9 @@ export interface IPackExtensionRef {
     extensionType: EExtensionType
     id: string
     tgz: string
+    // Solo para extensionType 'docs': la documentacion no se identifica por id, sino por el par
+    // (targetType, id), porque el id es el de la extension documentada y puede repetirse entre tipos.
+    targetType?: string
 }
 
 export interface IPackMeta {

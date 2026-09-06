@@ -7,6 +7,7 @@ import { ThemeManager } from '../tools/ThemeManager'
 import { HomepageManager } from '../tools/HomepageManager'
 import { IdpManager } from '../tools/IdpManager'
 import { LoginManager } from '../tools/LoginManager'
+import { DocsManager } from '../tools/DocsManager'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
@@ -30,6 +31,7 @@ interface IPackApiDeps {
     homepageManager: HomepageManager
     idpManager: IdpManager
     loginManager: LoginManager
+    docsManager: DocsManager
     apiKeyApi: ApiKeyApi
     registeredChannels: Map<string, TChannelConstructor>
     registeredProviders: Map<string, TProviderConstructor>
@@ -72,7 +74,7 @@ export class PackApi {
     }
 
     private async installFromTgz(tgzPath: string, installedFrom: string): Promise<IPackMeta> {
-        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, registeredChannels, registeredProviders } = this.deps
+        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, registeredChannels, registeredProviders } = this.deps
         const extractDir = path.join(os.tmpdir(), `kwirth-pack-extract-${Date.now()}`)
         fs.mkdirSync(extractDir, { recursive: true })
         try {
@@ -97,14 +99,15 @@ export class PackApi {
             if (await packManager.isInstalled(packId)) throw new Error(`Pack '${packId}' is already installed`)
 
             // check no member extension is already installed (including dev)
-            const [installedPlugins, installedProviders, installedSenders, installedThemes, installedHomepages, installedIdps, installedLogins] = await Promise.all([
+            const [installedPlugins, installedProviders, installedSenders, installedThemes, installedHomepages, installedIdps, installedLogins, installedDocs] = await Promise.all([
                 pluginManager.listInstalled(),
                 providerManager.listInstalled(),
                 senderManager.listInstalled(),
                 themeManager.listInstalled(),
                 homepageManager.listInstalled(),
                 idpManager.listInstalledMeta(),
-                loginManager.listInstalled()
+                loginManager.listInstalled(),
+                docsManager.listInstalled()
             ])
 
             for (const ext of extensions) {
@@ -117,6 +120,7 @@ export class PackApi {
                     case EExtensionType.HOMEPAGE:  exists = installedHomepages.some(p => p.id === ext.id); break
                     case EExtensionType.IDP:       exists = installedIdps.some(p => p.id === ext.id); break
                     case EExtensionType.LOGIN:     exists = installedLogins.some(p => p.id === ext.id); break
+                    case EExtensionType.DOCS:      exists = installedDocs.some(p => p.id === ext.id && p.targetType === ext.targetType); break
                     default: throw new Error(`Unsupported extension type in pack: '${ext.extensionType}'`)
                 }
                 if (exists) throw new Error(`Cannot install pack: extension '${ext.extensionType}:${ext.id}' is already installed`)
@@ -161,6 +165,7 @@ export class PackApi {
                         case EExtensionType.HOMEPAGE:  await homepageManager.install(tmpMemberTgz, packInstalledFrom); break
                         case EExtensionType.IDP:       await idpManager.install(tmpMemberTgz, packInstalledFrom); break
                         case EExtensionType.LOGIN:     await loginManager.install(tmpMemberTgz, packInstalledFrom); break
+                        case EExtensionType.DOCS:      await docsManager.install(tmpMemberTgz, packInstalledFrom); break
                     }
                     logInfo(ELogComponent.CORE, `Pack '${packId}': installed ${ext.extensionType} '${ext.id}'`)
                 }
@@ -188,7 +193,7 @@ export class PackApi {
     }
 
     private async uninstallPack(id: string): Promise<void> {
-        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, registeredChannels, registeredProviders } = this.deps
+        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, registeredChannels, registeredProviders } = this.deps
         const meta = await packManager.getPackMeta(id)
         if (!meta) throw new Error(`Pack '${id}' is not installed`)
         for (const ext of meta.extensions) {
@@ -201,6 +206,7 @@ export class PackApi {
                     case EExtensionType.HOMEPAGE:  await homepageManager.uninstallFromPack(ext.id); break
                     case EExtensionType.IDP:       await idpManager.uninstallFromPack(ext.id); break
                     case EExtensionType.LOGIN:     await loginManager.uninstallFromPack(ext.id); break
+                    case EExtensionType.DOCS:      await docsManager.uninstallFromPack(ext.targetType ?? '', ext.id); break
                 }
                 logInfo(ELogComponent.CORE, `Pack '${id}': uninstalled ${ext.extensionType} '${ext.id}'`)
             }

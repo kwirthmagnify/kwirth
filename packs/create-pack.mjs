@@ -172,10 +172,14 @@ for (const rawPath of inputTgzs) {
     if (!extId)   { console.error(`\n  ✗ Sin 'id' en package.json`);            process.exit(1) }
     if (!extType) { console.error(`\n  ✗ Sin 'extensionType' en package.json`); process.exit(1) }
 
+    // La documentacion no se identifica por id (que es el de la extension documentada), sino por el par
+    // (targetType, id), asi que su entrada tiene que arrastrar tambien el targetType.
+    if (extType === 'docs' && !pkg.targetType) { console.error(`\n  ✗ Sin 'targetType' en package.json (obligatorio en docs)`); process.exit(1) }
+
     const tgzName = basename(tgzPath)
     copyFileSync(tgzPath, join(pkgDir, tgzName))
-    extensions.push({ extensionType: extType, id: extId, tgz: tgzName })
-    console.log(`ok  (${extType}:${extId} v${pkg.version ?? '?'})`)
+    extensions.push({ extensionType: extType, id: extId, tgz: tgzName, ...(extType === 'docs' ? { targetType: pkg.targetType } : {}) })
+    console.log(`ok  (${extType}:${extId}${extType === 'docs' ? ` for ${pkg.targetType}` : ''} v${pkg.version ?? '?'})`)
 }
 
 // pack's package.json

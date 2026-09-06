@@ -171,7 +171,7 @@ node packs/create-pack.mjs my-pack \
 
   <h2>What a documentation package is</h2>
   <p>A <strong>documentation package</strong> is a docsify site bundled as a <code>.tgz</code> that Kwirth serves directly from its own back end. Once installed it is reachable in the browser with no external host — the Kwirth server itself is the documentation host.</p>
-  <p>Each package is identified by a <strong><code>targetType</code></strong> (who published it — <code>core</code> for the Kwirth core, or the plugin id for a plugin) and an <strong><code>id</code></strong> (the specific package), and is served at <code>/docs/&lt;targetType&gt;/&lt;id&gt;/</code>. The <code>core/kwirth</code> package — the user &amp; admin guide — ships <strong>bundled</strong> with every Kwirth deployment.</p>
+  <p>A documentation package always documents <em>another extension</em>, so it is identified by the pair that points at it: <strong><code>targetType</code></strong> is the <em>type</em> of the documented extension (<code>plugin</code>, <code>provider</code>, <code>sender</code>, <code>theme</code>, <code>homepage</code>, <code>idp</code>, <code>login</code>, or <code>core</code> for the Kwirth core itself) and <strong><code>id</code></strong> is that extension's own id — the Excubitor guide carries <code>targetType: plugin</code> and <code>id: excubitor</code>. The id alone would not be unique, since a plugin and a theme may share a name and each ship its own guide. Packages are served at <code>/docs/&lt;targetType&gt;/&lt;id&gt;/</code>, and Kwirth uses the same pair to point an extension's <strong>Help</strong> buttons at its guide. The <code>core/kwirth</code> package — the user &amp; admin guide — documents the core itself and ships <strong>bundled</strong> with every Kwirth deployment.</p>
 
   <h2>Managing packages</h2>
   <p>Open <strong>☰ → Manage extensions → Documentation</strong>. The left panel lists every installed package; each card shows its <strong>name</strong>, <strong>version</strong>, a short description, a <strong>source</strong> chip and two actions — <strong>📖 Open docs</strong> (opens the site in a new tab) and, for non-bundled / non-dev packages, <strong>🗑 Uninstall</strong>.</p>
@@ -187,7 +187,7 @@ node packs/create-pack.mjs my-pack \
   <p>Install from a <strong>URL</strong> (paste the <code>.tgz</code> URL and click ⬇ Download), from a <strong>local file</strong> (Browse… and upload — extracted server-side), or from the <strong>registry</strong> (the <em>Available documentation</em> section, when the public kwirthmagnify registry is reachable).</p>
 
   <h2>Package format</h2>
-  <p>A valid package is a <code>.tgz</code> with a root <code>package.json</code> carrying at least <code>targetType</code>, <code>id</code>, <code>name</code> and <code>version</code>, plus a docsify <code>index.html</code> and its Markdown content.</p>
+  <p>A valid package is a <code>.tgz</code> with a root <code>package.json</code> carrying at least <code>extensionType: "docs"</code>, the <code>targetType</code> / <code>id</code> pair of the extension it documents, plus <code>name</code> and <code>version</code>, and a docsify <code>index.html</code> with its Markdown content. <code>targetType</code> is exclusive to documentation packages: every other extension type declares only <code>extensionType</code> and its own <code>id</code>.</p>
 
   <h2>Notes</h2>
   <ul>

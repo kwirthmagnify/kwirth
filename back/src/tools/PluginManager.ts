@@ -1,5 +1,6 @@
 import { IConfigMaps } from './IConfigMap'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { listBundledOfType } from './BundledExtensions'
 import { TChannelConstructor } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { LicenseManager } from './LicenseManager'
@@ -381,16 +382,16 @@ export class PluginManager {
         }
     }
 
+    // El directorio bundled es compartido con las demas extensiones: hay que quedarse solo con los tgz
+    // que se declaran 'plugin', en vez de intentar instalar todos y dejar que fallen.
     async installBundled(dir: string, registeredChannels: Map<string, TChannelConstructor>, licenseManager?: LicenseManager): Promise<void> {
-        if (!fs.existsSync(dir)) return
-        const files = fs.readdirSync(dir).filter(f => f.endsWith('.tgz'))
-        for (const file of files) {
+        for (const filePath of await listBundledOfType(dir, EExtensionType.PLUGIN)) {
+            const file = path.basename(filePath)
             const id = path.basename(file, '.tgz')
             if (licenseManager && !licenseManager.isExtensionLicensed(EExtensionType.PLUGIN, id)) {
                 logInfo(ELogComponent.CORE, `Bundled plugin '${id}' not licensed — skipping`)
                 continue
             }
-            const filePath = path.join(dir, file)
             let _bvVersion: string | undefined
             try {
                 const _bvTmp = path.join(os.tmpdir(), `kwirth-bv-${id}`)

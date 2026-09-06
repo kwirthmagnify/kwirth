@@ -9,6 +9,8 @@ import { ISecrets } from './ISecrets'
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo } from './Logging'
 import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
+import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { listBundledOfType } from './BundledExtensions'
 
 const IDPS_SECRET = 'kwirth-idps'
 const CONNECTORS_INDEX = 'kwirth-idp-connectors-index'
@@ -199,11 +201,13 @@ export class IdpManager {
     }
 
     // instala conectores bundled desde un directorio de tgz (fetch-bundled.mjs los deja ahí)
+    // El directorio bundled es compartido: sin filtrar por tipo se intentaba instalar como conector IdP
+    // cualquier tgz, apoyandose en que el fallo posterior lo descartara.
     async installBundled(dir: string): Promise<void> {
-        if (!fs.existsSync(dir)) return
-        for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.tgz'))) {
+        for (const filePath of await listBundledOfType(dir, EExtensionType.IDP)) {
+            const file = path.basename(filePath)
             try {
-                await this.install(path.join(dir, file), 'bundled')
+                await this.install(filePath, 'bundled')
             }
             catch (err) {
                 logError(ELogComponent.AUTH, `Failed to install bundled IdP connector '${file}': ${err}`)
