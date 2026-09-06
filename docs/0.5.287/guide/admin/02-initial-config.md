@@ -75,6 +75,10 @@ The manifest is a JSON array. Each entry carries the full tarball `url`, exactly
 ]
 ```
 
+![Marketplaces tab](../../_media/guide/admin-marketplaces.png)
+
+Each row is one marketplace: a name of your choosing, the manifest URL, and whether it is consulted at all. The **⟳** button checks the manifest can actually be read, and **🗑** removes the row.
+
 #### Credentials
 
 A marketplace has **two independent** sets of credentials, because they are usually two different servers:
