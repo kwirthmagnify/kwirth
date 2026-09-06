@@ -263,12 +263,16 @@ test('PUT rechaza marketplaces invalidos → 400 sin persistir', async () => {
     finally { await srv.stop() }
 })
 
-// ---- marketplaces: contraseñas fuera del configmap ----
+// ---- marketplaces: los secretos viajan, pero NUNCA se guardan en el configmap ----
+//
+// El secreto se trata como cualquier otro campo del formulario: el GET lo devuelve pre-rellenado y el
+// PUT lo acepta dentro de auth/manifestAuth. Lo que sigue siendo invariante es DONDE se guarda: en
+// ISecrets, jamas en el configmap de settings.
 
 test('PUT desvia la contraseña a secrets y NUNCA la guarda en settings', async () => {
     const srv = await startServer()
     try {
-        const body = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' }, password: 's3cr3t' }] }
+        const body = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: 's3cr3t' } }] }
         const res = await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
         assert.equal(res.status, 200)
         // la contraseña esta en secrets...
@@ -279,25 +283,44 @@ test('PUT desvia la contraseña a secrets y NUNCA la guarda en settings', async 
     finally { await srv.stop() }
 })
 
-test('GET informa hasPassword pero no devuelve la contraseña', async () => {
+test('GET devuelve la contraseña guardada, para pre-rellenar el campo', async () => {
     const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored, { nexus: 's3cr3t' })
     try {
-        const res = await fetch(`${srv.base}/core/settings`, { headers: AUTH })
-        const body = await res.text()
-        assert.ok(!body.includes('s3cr3t'), 'la contraseña no debe viajar al front')
-        const json = JSON.parse(body) as IKwirthSettings
-        assert.equal(json.marketplaces?.[0].auth?.hasPassword, true)
+        const json = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
+        assert.equal(json.marketplaces?.[0].auth?.password, 's3cr3t')
+        assert.equal(json.marketplaces?.[0].auth?.username, 'u')
     }
     finally { await srv.stop() }
 })
 
-test('GET marca hasPassword false cuando no hay contraseña guardada', async () => {
+test('GET no trae password cuando no hay ninguna guardada', async () => {
     const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored)
     try {
-        const res = await fetch(`${srv.base}/core/settings`, { headers: AUTH })
-        assert.equal(((await res.json()) as IKwirthSettings).marketplaces?.[0].auth?.hasPassword, false)
+        const json = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
+        assert.equal(json.marketplaces?.[0].auth?.password, undefined)
+    }
+    finally { await srv.stop() }
+})
+
+test('el PUT devuelve el secreto ya persistido, para que el formulario quede coherente', async () => {
+    const srv = await startServer()
+    try {
+        const body = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: 's3cr3t' } }] }
+        const json = await (await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })).json() as IKwirthSettings
+        assert.equal(json.marketplaces?.[0].auth?.password, 's3cr3t')
+    }
+    finally { await srv.stop() }
+})
+
+test('un no-admin no llega a los secretos porque no llega a los settings', async () => {
+    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const srv = await startServer(stored, { nexus: 's3cr3t' })
+    try {
+        const res = await fetch(`${srv.base}/core/settings`, { headers: NONADMIN_AUTH })
+        assert.equal(res.status, 403)
+        assert.ok(!(await res.text()).includes('s3cr3t'))
     }
     finally { await srv.stop() }
 })
@@ -310,6 +333,32 @@ test('PUT sin password conserva la ya guardada, no la borra', async () => {
         await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
         assert.equal(srv.secrets.current()['nexus'], 's3cr3t')
         assert.equal(srv.store.current()?.marketplaces?.[0].label, 'Nexus renombrado')
+    }
+    finally { await srv.stop() }
+})
+
+test('PUT con el password VACIO borra el guardado: es el usuario limpiando el campo', async () => {
+    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const srv = await startServer(stored, { nexus: 's3cr3t' })
+    try {
+        const body = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: '' } }] }
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
+        assert.equal(srv.secrets.current()['nexus'], undefined)
+    }
+    finally { await srv.stop() }
+})
+
+test('reenviar el password pre-rellenado no lo altera (roundtrip del formulario)', async () => {
+    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const srv = await startServer(stored, { nexus: 's3cr3t' })
+    try {
+        // el front recibe el secreto en el GET y lo devuelve tal cual al guardar otro campo
+        const got = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
+        const rows = got.marketplaces!.map(m => ({ ...m, label: 'Otro nombre' }))
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: rows }) })
+        assert.equal(srv.secrets.current()['nexus'], 's3cr3t')
+        assert.equal(srv.store.current()?.marketplaces?.[0].label, 'Otro nombre')
+        assert.ok(!JSON.stringify(srv.store.current()).includes('s3cr3t'), 'el roundtrip tampoco puede colarlo en el configmap')
     }
     finally { await srv.stop() }
 })
@@ -335,7 +384,7 @@ test('getPassword devuelve la contraseña al back y undefined si no hay', async 
 test('PUT desvia el token del manifest a secrets y no lo guarda en settings', async () => {
     const srv = await startServer()
     try {
-        const body = { marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN }, token: 'glpat-s3cr3t' }] }
+        const body = { marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: 'glpat-s3cr3t' } }] }
         const res = await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
         assert.equal(res.status, 200)
         assert.ok(!JSON.stringify(srv.store.current()).includes('glpat-s3cr3t'), 'el token no debe tocar el configmap')
@@ -344,17 +393,16 @@ test('PUT desvia el token del manifest a secrets y no lo guarda en settings', as
     finally { await srv.stop() }
 })
 
-test('GET informa hasToken pero no devuelve el token', async () => {
+test('GET devuelve el token del manifest guardado', async () => {
     const stored: IKwirthSettings = { marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN } }] }
     const srv = await startServer(stored)
     try {
         // el token vive en su propio store, distinto del de contraseñas
         await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH,
-            body: JSON.stringify({ marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN }, token: 'glpat-abc' }] }) })
-        const res = await fetch(`${srv.base}/core/settings`, { headers: AUTH })
-        const text = await res.text()
-        assert.ok(!text.includes('glpat-abc'), 'el token no debe viajar al front')
-        assert.equal((JSON.parse(text) as IKwirthSettings).marketplaces?.[0].manifestAuth?.hasToken, true)
+            body: JSON.stringify({ marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: 'glpat-abc' } }] }) })
+        const json = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
+        assert.equal(json.marketplaces?.[0].manifestAuth?.token, 'glpat-abc')
+        assert.equal(json.marketplaces?.[0].auth?.password, undefined, 'y no se contamina con la contraseña del registro')
     }
     finally { await srv.stop() }
 })
@@ -363,8 +411,8 @@ test('token del manifest y contraseña del registro son independientes', async (
     const srv = await startServer()
     try {
         const body = { marketplaces: [{ ...MP,
-            manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN }, token: 'glpat-manifest',
-            auth: { type: EMarketplaceAuthType.BASIC, username: 'u' }, password: 'nexus-pass' }] }
+            manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: 'glpat-manifest' },
+            auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: 'nexus-pass' } }] }
         await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
         assert.equal(await SettingsApi.getManifestToken(srv.secrets.s, 'nexus'), 'glpat-manifest')
         assert.equal(await SettingsApi.getPassword(srv.secrets.s, 'nexus'), 'nexus-pass')
@@ -372,51 +420,22 @@ test('token del manifest y contraseña del registro son independientes', async (
     finally { await srv.stop() }
 })
 
-// ---- revelado de secretos (el ojo de los campos secreto) ----
-
-test('revelar devuelve los valores realmente guardados', async () => {
+test('vaciar el token lo borra sin tocar la contraseña del registro', async () => {
     const stored: IKwirthSettings = { marketplaces: [{ ...MP,
         auth: { type: EMarketplaceAuthType.BASIC, username: 'u' },
         manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN } }] }
     const srv = await startServer(stored)
     try {
         await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: [{ ...MP,
-            auth: { type: EMarketplaceAuthType.BASIC, username: 'u' }, password: 'nexus-pass',
-            manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN }, token: 'glpat-abc' }] }) })
+            auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: 'nexus-pass' },
+            manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: 'glpat-abc' } }] }) })
 
-        const res = await fetch(`${srv.base}/core/settings/marketplaces/nexus/secrets`, { headers: AUTH })
-        assert.equal(res.status, 200)
-        assert.deepEqual(await res.json(), { password: 'nexus-pass', token: 'glpat-abc' })
-    }
-    finally { await srv.stop() }
-})
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: [{ ...MP,
+            auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: 'nexus-pass' },
+            manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: '' } }] }) })
 
-test('revelar exige scope admin', async () => {
-    const srv = await startServer({ marketplaces: [MP] }, { nexus: 's3cr3t' })
-    try {
-        const res = await fetch(`${srv.base}/core/settings/marketplaces/nexus/secrets`, { headers: NONADMIN_AUTH })
-        assert.equal(res.status, 403)
-        assert.ok(!(await res.text()).includes('s3cr3t'))
-    }
-    finally { await srv.stop() }
-})
-
-test('revelar un marketplace inexistente da 404', async () => {
-    const srv = await startServer({ marketplaces: [MP] })
-    try {
-        assert.equal((await fetch(`${srv.base}/core/settings/marketplaces/otro/secrets`, { headers: AUTH })).status, 404)
-    }
-    finally { await srv.stop() }
-})
-
-test('revelar es BAJO DEMANDA: el GET normal de settings sigue sin traer secretos', async () => {
-    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
-    const srv = await startServer(stored, { nexus: 's3cr3t' })
-    try {
-        const body = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).text()
-        assert.ok(!body.includes('s3cr3t'), 'el listado de settings nunca debe llevar el secreto')
-        const revealed = await (await fetch(`${srv.base}/core/settings/marketplaces/nexus/secrets`, { headers: AUTH })).json() as { password?: string }
-        assert.equal(revealed.password, 's3cr3t', 'pero pedirlo explicitamente si')
+        assert.equal(await SettingsApi.getManifestToken(srv.secrets.s, 'nexus'), undefined)
+        assert.equal(await SettingsApi.getPassword(srv.secrets.s, 'nexus'), 'nexus-pass')
     }
     finally { await srv.stop() }
 })

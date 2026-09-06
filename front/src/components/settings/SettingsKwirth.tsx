@@ -12,11 +12,9 @@ enum ESettingsKwirthTab {
     MARKETPLACES = 'marketplaces'
 }
 
-// Fila editable: IMarketplace mas la contraseña en claro mientras se edita. Solo se envia si el usuario
-// la escribe; si la deja vacia y ya habia una guardada, el back conserva la existente.
+// Fila editable: IMarketplace tal cual (los secretos ya viajan dentro de auth.password / manifestAuth.token)
+// mas el estado que solo vive en la pantalla.
 interface IMarketplaceRow extends IMarketplace {
-    password?: string
-    token?: string
     revealed?: boolean
     tokenRevealed?: boolean
     testing?: boolean
@@ -65,28 +63,23 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         setMarketplaces(prev => prev.map((m, i) => i === index ? { ...m, ...patch } : m))
     }
 
-    // Muestra/oculta un campo secreto. Al revelar trae el valor REALMENTE guardado (admin-only), igual que
-    // el toggleReveal de IdpManagerDialog: un ojo que solo enseñara lo recien tecleado no revelaria nada.
-    const toggleReveal = async (index: number, field: 'password'|'token') => {
+    // auth y manifestAuth son objetos anidados: hay que reconstruirlos enteros para no perder el resto
+    // de campos (el secreto entre ellos) al tocar uno solo.
+    const patchAuth = (index: number, patch: Partial<IMarketplace['auth']>) => {
+        const current = marketplaces[index].auth
+        patchRow(index, { auth: { type: current?.type ?? EMarketplaceAuthType.NONE, ...current, ...patch } })
+    }
+
+    const patchManifestAuth = (index: number, patch: Partial<IMarketplace['manifestAuth']>) => {
+        const current = marketplaces[index].manifestAuth
+        patchRow(index, { manifestAuth: { type: current?.type ?? EManifestAuthType.NONE, ...current, ...patch } })
+    }
+
+    // El ojo solo alterna entre puntos y texto: el valor guardado ya esta en el campo desde el GET.
+    const toggleReveal = (index: number, field: 'password'|'token') => {
         const row = marketplaces[index]
         const flag = field === 'password' ? 'revealed' : 'tokenRevealed'
-        if (row[flag]) { patchRow(index, { [flag]: false }); return }
-
-        // si ya hay valor en el formulario es lo que el usuario acaba de escribir: se muestra tal cual
-        const alreadyTyped = field === 'password' ? row.password : row.token
-        const stored = field === 'password' ? row.auth?.hasPassword : row.manifestAuth?.hasToken
-        if (!alreadyTyped && stored) {
-            try {
-                const response = await fetch(`${props.clusterUrl}/core/settings/marketplaces/${encodeURIComponent(row.id)}/secrets`, addGetAuthorization(props.accessString))
-                if (response.ok) {
-                    const secrets = await response.json() as { password?: string, token?: string }
-                    patchRow(index, { [flag]: true, [field]: secrets[field] ?? '' })
-                    return
-                }
-            }
-            catch { /* si no se puede recuperar, al menos se revela lo que haya en pantalla */ }
-        }
-        patchRow(index, { [flag]: true })
+        patchRow(index, { [flag]: !row[flag] })
     }
 
     const addRow = () => {
@@ -108,7 +101,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         try {
             const payload = JSON.stringify({
                 marketplace: { id: row.id, url: row.url.trim(), label: row.label, enabled: row.enabled, ...(row.manifestAuth ? { manifestAuth: { type: row.manifestAuth.type } } : {}) },
-                ...(row.token ? { token: row.token } : {})
+                ...(row.manifestAuth?.token ? { token: row.manifestAuth.token } : {})
             })
             const response = await fetch(`${props.clusterUrl}/core/marketplace/test`, addPostAuthorization(props.accessString, payload))
             if (!response.ok) {
@@ -137,15 +130,15 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const ok = async () => {
         setError('')
         try {
+            // se envia lo que hay en el formulario, secretos incluidos: el back los desvia a su almacen
+            // cifrado. Un campo vacio significa borrar el secreto guardado, asi que se manda tal cual.
             const cleaned = marketplaces.map(m => ({
                 id: m.id,
                 url: m.url.trim(),
                 label: m.label.trim(),
                 enabled: m.enabled,
-                ...(m.auth ? { auth: { type: m.auth.type, ...(m.auth.username ? { username: m.auth.username.trim() } : {}) } } : {}),
-                ...(m.manifestAuth ? { manifestAuth: { type: m.manifestAuth.type } } : {}),
-                ...(m.password ? { password: m.password } : {}),
-                ...(m.token ? { token: m.token } : {})
+                ...(m.auth ? { auth: { type: m.auth.type, ...(m.auth.username ? { username: m.auth.username.trim() } : {}), password: m.auth.password ?? '' } } : {}),
+                ...(m.manifestAuth ? { manifestAuth: { type: m.manifestAuth.type, token: m.manifestAuth.token ?? '' } } : {})
             }))
             const payload = JSON.stringify({ metricsInterval, marketplaces: cleaned })
             const response = await fetch(`${props.clusterUrl}/core/settings`, addPutAuthorization(props.accessString, payload))
@@ -181,18 +174,18 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 </Stack>
                 <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}>
                     <FormControlLabel
-                        control={<Checkbox checked={tokenAuth} onChange={e => patchRow(index, { manifestAuth: { type: e.target.checked ? EManifestAuthType.PRIVATE_TOKEN : EManifestAuthType.NONE, hasToken: m.manifestAuth?.hasToken } })} />}
+                        control={<Checkbox checked={tokenAuth} onChange={e => patchManifestAuth(index, { type: e.target.checked ? EManifestAuthType.PRIVATE_TOKEN : EManifestAuthType.NONE })} />}
                         label='Manifest needs a token' />
                     <FormControl variant='standard' sx={{ width: '22%' }} disabled={!tokenAuth}>
                         <InputLabel>Header</InputLabel>
                         <Select value={m.manifestAuth?.type ?? EManifestAuthType.NONE}
-                            onChange={e => patchRow(index, { manifestAuth: { type: e.target.value as EManifestAuthType, hasToken: m.manifestAuth?.hasToken } })}>
+                            onChange={e => patchManifestAuth(index, { type: e.target.value as EManifestAuthType })}>
                             <MenuItem value={EManifestAuthType.PRIVATE_TOKEN}>PRIVATE-TOKEN (GitLab)</MenuItem>
                             <MenuItem value={EManifestAuthType.BEARER}>Authorization: Bearer</MenuItem>
                         </Select>
                     </FormControl>
-                    <TextField value={m.token ?? ''} onChange={e => patchRow(index, { token: e.target.value })}
-                        variant='standard' label={m.manifestAuth?.hasToken && !m.token ? 'Token (already set)' : 'Token'}
+                    <TextField value={m.manifestAuth?.token ?? ''} onChange={e => patchManifestAuth(index, { token: e.target.value })}
+                        variant='standard' label='Token'
                         type={m.tokenRevealed ? 'text' : 'password'} sx={{ flexGrow: 1 }} disabled={!tokenAuth}
                         slotProps={{ input: { endAdornment: (
                             <InputAdornment position='end'>
@@ -203,12 +196,12 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 </Stack>
                 <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}>
                     <FormControlLabel
-                        control={<Checkbox checked={basic} onChange={e => patchRow(index, { auth: { type: e.target.checked ? EMarketplaceAuthType.BASIC : EMarketplaceAuthType.NONE, username: m.auth?.username, hasPassword: m.auth?.hasPassword } })} />}
+                        control={<Checkbox checked={basic} onChange={e => patchAuth(index, { type: e.target.checked ? EMarketplaceAuthType.BASIC : EMarketplaceAuthType.NONE })} />}
                         label='Package registry needs credentials' />
-                    <TextField value={m.auth?.username ?? ''} onChange={e => patchRow(index, { auth: { type: m.auth?.type ?? EMarketplaceAuthType.BASIC, username: e.target.value, hasPassword: m.auth?.hasPassword } })}
+                    <TextField value={m.auth?.username ?? ''} onChange={e => patchAuth(index, { username: e.target.value })}
                         variant='standard' label='User' sx={{ width: '20%' }} disabled={!basic} />
-                    <TextField value={m.password ?? ''} onChange={e => patchRow(index, { password: e.target.value })}
-                        variant='standard' label={m.auth?.hasPassword && !m.password ? 'Password (already set)' : 'Password'}
+                    <TextField value={m.auth?.password ?? ''} onChange={e => patchAuth(index, { password: e.target.value })}
+                        variant='standard' label='Password'
                         type={m.revealed ? 'text' : 'password'} sx={{ width: '25%' }} disabled={!basic}
                         slotProps={{ input: { endAdornment: (
                             <InputAdornment position='end'>

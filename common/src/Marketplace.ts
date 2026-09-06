@@ -8,12 +8,13 @@ export enum EMarketplaceAuthType {
     BASIC = 'basic'
 }
 
-// Credenciales de un marketplace. La contraseña NUNCA viaja en este objeto: se guarda aparte en
-// ISecrets (cifrado en filesystem, RBAC en k8s) y el back solo informa de si existe via hasPassword.
+// Credenciales de un marketplace. La contraseña se trata como CUALQUIER otro dato: viaja al front,
+// se pre-rellena en el campo (enmascarado, con ojo para revelar) y se reenvia tal cual al guardar.
+// En reposo el back la guarda en ISecrets (cifrada en filesystem, RBAC en k8s), no en el configmap.
 export interface IMarketplaceAuth {
     type: EMarketplaceAuthType
     username?: string
-    hasPassword?: boolean   // solo lectura, lo calcula el back; enviarlo en un PUT no tiene efecto
+    password?: string
 }
 
 // Como se autentica la LECTURA DEL MANIFEST. Es independiente de la descarga del paquete: el manifest
@@ -25,10 +26,11 @@ export enum EManifestAuthType {
     BEARER = 'bearer'                 // cabecera Authorization: Bearer
 }
 
-// El token NUNCA viaja en este objeto: se guarda en ISecrets y el back solo informa de si existe.
+// El token se trata igual que la contraseña: viaja al front y se muestra enmascarado con ojo.
+// En reposo lo guarda el back en ISecrets, no en el configmap.
 export interface IMarketplaceManifestAuth {
     type: EManifestAuthType
-    hasToken?: boolean   // solo lectura, lo calcula el back; enviarlo en un PUT no tiene efecto
+    token?: string
 }
 
 // Un marketplace registrado por el administrador. La url apunta a UN manifest, que puede contener
