@@ -7,6 +7,8 @@ import { IUser } from '@kwirthmagnify/kwirth-common'
 import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { IdentityService } from '../tools/auth/IdentityService'
+import { guard } from '../tools/RequestGuard'
+import { ELogComponent } from '../tools/Logging'
 
 const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
 
@@ -39,7 +41,7 @@ export class LoginApi {
 
         // authentication (login)
         this.router.post('/', async (req:Request,res:Response) => {
-            LoginApi.semaphore.use ( async () => {
+            guard(LoginApi.semaphore.use ( async () => {
                 let users = await IdentityService.readUsers(this.secrets)
                 if (!users) {
                     console.error('Cannot access kwirth users on /')
@@ -81,12 +83,12 @@ export class LoginApi {
                 else {
                     res.status(403).json({})
                 }
-            })
+            }), res, ELogComponent.CORE)
         })
 
         // change password
         this.router.post('/password', async (req:Request,res:Response) => {
-            LoginApi.semaphore.use ( async () => {
+            guard(LoginApi.semaphore.use ( async () => {
                 try {
                     let users = await IdentityService.readUsers(this.secrets)
                     if (!users) {
@@ -129,7 +131,7 @@ export class LoginApi {
                     console.log('Error updating password')
                     console.log(err)
                 }
-            })
+            }), res, ELogComponent.CORE)
         })
 
     }

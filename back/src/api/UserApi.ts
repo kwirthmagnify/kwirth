@@ -6,6 +6,8 @@ import { ApiKeyApi } from './ApiKeyApi'
 import { ISecrets } from '../tools/ISecrets'
 import { IdentityService } from '../tools/auth/IdentityService'
 import { unknownScopesIn } from '../tools/ScopeCatalog'
+import { guard } from '../tools/RequestGuard'
+import { ELogComponent } from '../tools/Logging'
 
 export class UserApi {
     secrets: ISecrets
@@ -30,7 +32,7 @@ export class UserApi {
                 next()
             })
             .get( (req:Request,res:Response) => {
-                UserApi.semaphore.use ( async () => {
+                guard(UserApi.semaphore.use ( async () => {
                     try {
                         let users = await this.readUsersSecret(this.secrets)
                         if (users) {
@@ -44,10 +46,10 @@ export class UserApi {
                         res.status(500).json()
                         console.log(err)
                     }
-                })
+                }), res, ELogComponent.CORE)
             })
             .post( (req:Request,res:Response) => {
-                UserApi.semaphore.use ( async () => {
+                guard(UserApi.semaphore.use ( async () => {
                     try {
                         let users = await this.readUsersSecret(this.secrets)
                         if (!users) {
@@ -65,7 +67,7 @@ export class UserApi {
                         res.status(500).json()
                         console.log(err)
                     }
-                })
+                }), res, ELogComponent.CORE)
             })
 
       this.router.route('/:user')
@@ -75,7 +77,7 @@ export class UserApi {
             next()
         })
         .get( (req:Request,res:Response) => {
-            UserApi.semaphore.use ( async () => {
+            guard(UserApi.semaphore.use ( async () => {
                 try {
                     let users = await this.readUsersSecret(this.secrets)
                     if (!users) {
@@ -90,11 +92,11 @@ export class UserApi {
                     res.status(500).send()
                     console.log(err)
                 }
-            })
+            }), res, ELogComponent.CORE)
         })
         .delete( (req:Request,res:Response) => {
             try {
-                UserApi.semaphore.use ( async () => {
+                guard(UserApi.semaphore.use ( async () => {
                     let users = await this.readUsersSecret(this.secrets)
                     if (!users) {
                         res.status(400).json([])
@@ -103,15 +105,15 @@ export class UserApi {
                     delete users[req.params.user]
                     await IdentityService.writeUsers(this.secrets, users)
                     res.status(200).json()
-                });
-            }      
+                }), res, ELogComponent.CORE);
+            }
             catch (err) {
                 res.status(500).json()
                 console.log(err)
             }
         })
         .put( (req:Request,res:Response) => {
-            UserApi.semaphore.use ( async () => {
+            guard(UserApi.semaphore.use ( async () => {
                 try {
                     let users = await this.readUsersSecret(this.secrets)
                     if (!users) {
@@ -136,7 +138,7 @@ export class UserApi {
                     console.log(err)
                     res.status(500).json()
                 }
-            })
+            }), res, ELogComponent.CORE)
         })
     }
 }

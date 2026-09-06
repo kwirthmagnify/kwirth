@@ -3,6 +3,8 @@ import Semaphore from 'ts-semaphore'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { IConfigMaps } from '../tools/IConfigMap'
+import { guard } from '../tools/RequestGuard'
+import { ELogComponent } from '../tools/Logging'
 
 export class StoreApi {
     configMaps: IConfigMaps
@@ -22,7 +24,7 @@ export class StoreApi {
                 next()
             })
             .get(async (req:Request, res:Response) => {
-                StoreApi.semaphore.use ( async () => {
+                guard(StoreApi.semaphore.use ( async () => {
                     try {
                         let data:any= await this.configMaps.read('kwirth-store-'+req.params.user,{})
                         if (data===undefined)
@@ -37,7 +39,7 @@ export class StoreApi {
                         res.status(500).json()
                         console.log(err)
                     }
-                })
+                }), res, ELogComponent.CORE)
             })
 
         // get an array of object names in a group
@@ -48,7 +50,7 @@ export class StoreApi {
                 next()
             })
             .get(async (req:Request, res:Response) => {
-                StoreApi.semaphore.use ( async () => {
+                guard(StoreApi.semaphore.use ( async () => {
                     try {
                         let data:any= await this.configMaps.read('kwirth-store-'+req.params.user,{})
                         if (data === undefined)
@@ -70,7 +72,7 @@ export class StoreApi {
                         res.status(500).json()
                         console.log(err)
                     }
-                })
+                }), res, ELogComponent.CORE)
             })
 
         // get an object
@@ -80,7 +82,7 @@ export class StoreApi {
                 next()
             })
             .get( async (req:Request, res:Response) => {
-                StoreApi.semaphore.use ( async () => {
+                guard(StoreApi.semaphore.use ( async () => {
                     try {
                         let data:any= await this.configMaps.read('kwirth-store-'+req.params.user,{})
                         if (!data || data[req.params.group+'-'+req.params.key]===undefined) {
@@ -94,10 +96,10 @@ export class StoreApi {
                         res.status(500).json()
                         console.log(err)
                     }
-                })
+                }), res, ELogComponent.CORE)
             })
             .delete( async (req:Request, res:Response) => {
-                StoreApi.semaphore.use ( async () => {
+                guard(StoreApi.semaphore.use ( async () => {
                     try {
                         let data:any= await this.configMaps.read('kwirth-store-'+req.params.user)
                         if (!data) data = {}
@@ -109,10 +111,10 @@ export class StoreApi {
                         res.status(500).json()
                         console.log(err)
                     }
-                })
+                }), res, ELogComponent.CORE)
             })
             .post( async (req:Request, res:Response) => {
-                StoreApi.semaphore.use ( async () => {
+                guard(StoreApi.semaphore.use ( async () => {
                     try {
                         let data:any= await this.configMaps.read('kwirth-store-'+req.params.user,{})
                         if (!data) data={}
@@ -124,7 +126,7 @@ export class StoreApi {
                         res.status(500).json()
                         console.log(err)
                     }
-                })
+                }), res, ELogComponent.CORE)
             })
     }
 }
