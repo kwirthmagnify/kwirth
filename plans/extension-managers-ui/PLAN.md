@@ -55,7 +55,31 @@ Las listas son grids. Una columna `auto` toma el ancho de su contenido más anch
 pegado a la izquierda, así que un chip corto (`dev`) queda descolocado respecto a uno largo (`installed`).
 Las celdas de chips llevan `justifySelf: 'end'`.
 
-### 7. El texto no se abrevia distinto según la vista
+### 7. Ayuda también en el diálogo de configuración, no solo en el manager
+
+`DialogTitleHelp` con la sección que explica **esa** configuración. El manager la llevaba desde el
+principio, pero el diálogo donde de verdad se configura la extensión —que es donde surge la duda— no:
+faltaba en los nueve (los `Configure` de senders, providers, plugins, logins, webhooks e IdP, más
+Export/Import/Base configs de senders).
+
+**Verificar el anchor contra la guía antes de enlazarlo.** Un botón de ayuda que abre una sección que no
+existe es peor que no tenerlo. Los anchors salen de los `##` del `index.md` de cada familia.
+
+Fuera de los managers, el mismo criterio alcanzó a *Configure metrics* y *Add / Edit cluster*. Siguen sin
+ayuda —a propósito— los diálogos que no tienen sección propia que enlazar: About, Enter credentials,
+Rename tab, PickList, Select cluster y el de Magnify.
+
+### 8. Las acciones de una lista de configs van abajo, junto a `New`
+
+`New` y `Clone` en una barra bajo la lista, cada uno a media anchura; el borrar, en su fila. `Clone` se
+deshabilita mientras no haya una config abierta, **pero se sigue viendo**: si desapareciera, parecería que
+la funcionalidad no existe — ver la regla de visibilidad ([[feedback_dialog_visibility]]).
+
+Estaba resuelto así en senders desde antes; al añadirlo a webhooks se inventó otro patrón (un icono en
+cada fila) sin mirar el existente, y costó tres correcciones. **Antes de añadir una acción a un manager,
+buscar cómo está resuelta en los demás.**
+
+### 9. El texto no se abrevia distinto según la vista
 
 Mismo chip, mismo texto: `N configs` en tarjeta y en lista, no `N cfg` en una y `N configs` en la otra.
 

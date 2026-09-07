@@ -288,6 +288,21 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
         }
     }
 
+    /*
+        Clonar = quedarse con los valores del formulario y soltar el nombre original, pero sobre todo SIN
+        originalEditingName: eso es lo que distingue guardar una copia de renombrar la original, porque
+        saveConfig borra la anterior cuando ese campo esta puesto y el nombre ha cambiado.
+        La URL se limpia a proposito — la copia todavia no existe, y su token lo acuña el back al crearla,
+        asi que no puede heredar el de la config de origen.
+    */
+    const cloneConfig = (cfg: ConfigValues) => {
+        setEditingName(undefined)
+        setOriginalEditingName(undefined)
+        setFormValues({ ...cfg, name: `${cfg.name ?? ''} (copy)` })
+        setConfigUrl(undefined)
+        setShowAddForm(true)
+    }
+
     const saveConfig = async () => {
         if (!expandedId) return
         setSaving(true)
@@ -660,7 +675,10 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                     ))
                             }
                         </Box>
-                        <Button size='small' startIcon={<Add />} onClick={() => { setShowAddForm(true); setEditingName(undefined); setOriginalEditingName(undefined); setFormValues({}); setConfigUrl(undefined) }}>New</Button>
+                        <Stack direction='row' spacing={0.5}>
+                            <Button size='small' startIcon={<Add />} onClick={() => { setShowAddForm(true); setEditingName(undefined); setOriginalEditingName(undefined); setFormValues({}); setConfigUrl(undefined) }} sx={{ flex: 1 }}>New</Button>
+                            <Button size='small' startIcon={<ContentCopy />} disabled={!editingName} onClick={() => cloneConfig(formValues)} sx={{ flex: 1 }}>Clone</Button>
+                        </Stack>
                     </Box>
 
                     <Divider orientation='vertical' flexItem />
