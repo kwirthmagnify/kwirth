@@ -14,3 +14,4 @@ Detailed configuration and usage reference for each available Kwirth plugin.
 | [Topology](topology) | Interactive 3D cluster visualization and management |
 | [Echo](echo) | Reference implementation for plugin developers |
 | [News](news) | RSS feed streaming — reference for external-data plugins |
+| [Provider Debug](provider-debug) | Subscribe to a running provider and inspect its raw events |
