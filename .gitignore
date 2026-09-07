@@ -51,6 +51,7 @@ kwirth-bundled.json
 /plugins/agora/
 /plugins/iter/
 /iria/
+/providers/service-flow/
 /senders/jira/
 /webhooks/jira/
 /idps/entraid/
