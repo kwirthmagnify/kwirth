@@ -16,7 +16,11 @@ export default defineConfig({
     // ciclo y su propio cierre, y algunos escriben datos o regeneran capturas de SU repo: no deben
     // colarse en una corrida del core. Para lanzarlos, se pide la ruta explicitamente:
     //   playwright test tests/private/iter-editing.spec.ts
-    testIgnore: '**/private/**',
+    // Los 'capture-*' no verifican nada: SOBRESCRIBEN las imagenes de la guia en docs/_media. Dejarlos en
+    // la corrida por defecto ensucia el arbol con capturas que nadie ha mirado, cada vez que se lanzan los
+    // tests. Se piden a mano cuando toca actualizar la guia:
+    //   playwright test tests/capture-managers.spec.ts
+    testIgnore: ['**/private/**', '**/capture-*.spec.ts'],
     timeout: 180_000,
     retries: 1,
     fullyParallel: false,

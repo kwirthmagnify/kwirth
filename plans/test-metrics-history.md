@@ -23,9 +23,10 @@
   señal. Hace falta que cada spec deje la aplicación como la encontró.
 - **La suite completa tarda ~15 minutos**, y Playwright no vuelca nada hasta el final, así que no se puede
   seguir el avance. Demasiado para usarla dentro del ciclo de trabajo: hoy se acaba corriendo por grupos.
-- **Ningún spec regenera capturas sin querer.** `capture-*.spec.ts` escribe en `docs/_media/guide`, así que
-  una corrida completa modifica imágenes de la guía aunque nadie lo haya pedido — pasó en este CL9 y hubo
-  que revertir cuatro. Deberían quedar fuera de la corrida por defecto, como los privados.
+- ~~**Ningún spec regenera capturas sin querer.**~~ **HECHO 2026-09-07:** `capture-*.spec.ts` queda fuera de
+  la corrida por defecto (`testIgnore`), como los privados. Escribían en `docs/_media/guide`, así que cada
+  corrida completa modificaba imágenes de la guía sin que nadie lo pidiera; pasó dos veces en un mismo día
+  y hubo que revertir. Se piden a mano al actualizar la guía.
 
 | Fecha | Cierre | Harness | Cobertura (líneas / ramas / funcs) | e2e | Notas |
 |---|---|---|---|---|---|
