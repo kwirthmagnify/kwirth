@@ -11,4 +11,5 @@ Detailed reference for each available Kwirth provider.
 | [Metrics](metrics) | Polls cAdvisor for cluster metrics and distributes them to subscribing channels |
 | [Kafka](kafka) | Consumes Kafka topics and distributes messages to channels via space/type routing |
 | [OpenTelemetry](otel) | OTLP/HTTP receiver for traces, metrics, and logs from any OTel-instrumented service |
+| [HTTP Pull-Push](http-pull-push) | Polls remote HTTP endpoints on a schedule and pushes each result to the subscribing channels |
 | [Sample](sample) | Reference implementation — starting point for building custom providers |

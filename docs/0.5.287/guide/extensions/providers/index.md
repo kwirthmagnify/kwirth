@@ -38,6 +38,7 @@ Add these from **☰ → Manage extensions → Providers**:
 | **[Kafka](kafka)** | Connects to one or more **Kafka** broker sets and distributes topic messages to channels using the same **space/type** routing as Business. | Broker list, topics, credentials. |
 | **[OpenTelemetry](otel)** | Turns Kwirth into an **OTLP/HTTP receiver** — any OTel-instrumented service can push **traces, metrics and logs** straight to Kwirth. | OTLP endpoint/port. |
 | **[Syslog](syslog)** | Receives **syslog** messages and streams them into channels. | Listen protocol/port, framing, relay. |
+| **[HTTP Pull-Push](http-pull-push)** | **Polls** remote HTTP endpoints on a schedule and pushes each result to the subscribed channels — for sources that cannot push to you. | Per connection: url, interval, auth, timeout. |
 | **[Trivy](trivy)** | Watches the **Trivy Operator** CRDs and streams vulnerability / config-audit / secret findings. | Backs the **[Trivy](../plugins/trivy)** channel. |
 | **[Sample](sample)** | Reference implementation for **provider developers**. | Starting point for custom providers. |
 

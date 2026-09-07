@@ -13,6 +13,7 @@ Kwirth currently ships with the following providers:
   - **[Metrics](reference/metrics)**. Polls the Kubernetes cAdvisor API on a configurable interval and distributes cluster-wide resource metrics to subscribed channels.
   - **[Kafka](reference/kafka)**. Connects to one or more Kafka broker sets and distributes topic messages to channels via the same space/type routing model as Business.
   - **[OpenTelemetry](reference/otel)**. Turns Kwirth into an OTLP/HTTP receiver — any OTel-instrumented service can push traces, metrics, and logs directly to Kwirth.
+  - **[HTTP Pull-Push](reference/http-pull-push)**. Polls remote HTTP endpoints on a schedule and pushes each result to the subscribing channels — for data sources that cannot push into Kwirth by themselves.
   - **[Sample](reference/sample)**. Reference implementation for provider developers. Use it as a starting point for building custom providers.
 
 ## Architecture
