@@ -55,6 +55,8 @@ kwirth-bundled.json
 /senders/jira/
 /webhooks/jira/
 /idps/entraid/
+/themes/santander/
+/logins/santander/
 /marketplace/
 
 # claude

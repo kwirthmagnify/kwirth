@@ -24,7 +24,7 @@ login-mything.tgz
   "displayName": "My Thing Login",
   "version": "1.0.0",
   "description": "Custom login page for MyThing",
-  "targetType": "login"
+  "extensionType": "login"
 }
 ```
 
@@ -211,3 +211,57 @@ Mismo patrón que `docs` (apunta al `.tgz`, no a una carpeta dist).
 | Forced redirect on activate? | No — admin shares the URL manually |
 | Public catalog? | Yes + install from URL/file |
 | `dialogBackground` transparent? | Yes — omit field for transparent/borderless dialog |
+
+---
+
+## Estado (2026-09-07)
+
+S1–S4 cerrados. Tipo `login` en producción, con estas extensiones vivas: `anonymous`, `magnify`,
+`censor` (públicas) y las privadas de excubitor/montag/agora/iter + `santander`.
+
+### Límites del renderer, verificados sobre el dev
+
+`LoginExtensionPage.tsx` es un componente **fijo**: fondo a página completa + **un** panel
+posicionable con campos MUI `standard` y botones `outlined` pequeños. El bundle admite `login.json`
++ **un** `background.png`. Consecuencia práctica: para reproducir una pantalla de marca hay que
+**hornear el cromo en el PNG** y posicionar el panel encima. Todo lo horneado es decoración no
+clicable.
+
+Cuatro comportamientos que no eran obvios (y que ya están documentados en
+`docs/0.5.x/guide/extensions/logins/index.md`):
+
+1. **`width` es el ancho del CONTENIDO**, no del panel: el `Box` lleva `p: 3` y no lo incluye. Los
+   campos empiezan 24 px dentro de `left`.
+2. **`idpButton` solo sustituye `{provider}` con UN IdP.** Con dos o más se imprime la cadena cruda
+   y se ve un literal `LOG IN WITH {PROVIDER}`. El default documentado del propio tipo caía en esa
+   trampa.
+3. **Los themes no llegan a la pantalla de login**: se cargan tras `logged` con petición firmada
+   (`App.tsx`, guarda `if (!logged || !backendUrl) return`). El formulario sale siempre con el MUI
+   por defecto → **foco azul y botones en MAYÚSCULAS**, no configurables. Un theme de marca no
+   arregla el login.
+4. **Un dev login se instala solo al arrancar el back**; rebuildear el `.tgz` no refresca la config
+   servida (los reintentos hacen *already installed → skipping*). O reinicio, o
+   `PUT /core/logins/<id>/config`.
+
+También: `allowedIdps: []` es *truthy* y **oculta todos** los IdP (para ofrecerlos todos hay que
+**omitir** la clave), y `startChannel` **bloquea el acceso** a quien no sea admin y no tenga ese
+canal en `enabledChannels`.
+
+### Backlog — S5: ampliar el contrato del renderer (V2, no comprometido)
+
+Lo que hoy es imposible y obliga a hornearlo en el PNG. Cada punto es incremental y compatible
+hacia atrás (campos nuevos opcionales en `ILoginConfig`; si no se declaran, nada cambia):
+
+| # | Item | Por qué |
+|---|---|---|
+| S5-1 | **Botón primario con estilo propio** (`okButtonColor`, `okButtonTextColor`, `okButtonRadius`, `okButtonVariant`) | Hoy el CTA es un `outlined` pequeño con el color de `textColor`; ninguna marca con un CTA sólido (pill, relleno) puede reproducir su pantalla. Es el hueco de fidelidad más grande y el más barato de cerrar. |
+| S5-2 | **Slot de logo** (`logo.png` en el bundle + `logoTop`/`logoLeft`/`logoWidth`) | Evita hornear el logo, que es justo lo que obliga a regenerar el PNG cuando cambia la marca. |
+| S5-3 | **Enlaces declarativos** (`links: [{label, url, position}]`) | El pie legal (privacidad, cookies, términos) es obligatorio en banca/seguros y hoy solo puede ir horneado, es decir **no clicable** — un enlace legal que no navega es un problema, no un detalle estético. |
+| S5-4 | **`rememberUser`** (checkbox opcional) | Presente en casi cualquier login corporativo. |
+| S5-5 | **`textTransform` / tipografía del panel** (`fontFamily` sobre fuentes del bundle) | Cierra el hueco que dejan los themes al no aplicarse en el login (punto 3). |
+| S5-6 | **Ocultar `changePasswordButton`** (`showChangePassword: false`) | Hoy siempre se pinta si hay login por password, y aparece un segundo botón que la pantalla de referencia no tiene. |
+| S5-7 | **Layout de dos columnas** (`splitImage`, `splitAt`) | Sustituiría la técnica de hornear la columna de la foto, y arreglaría el recorte de `cover` en aspectos que no son 16:9. |
+
+⚠️ Antes de tocar `ILoginConfig` hay que revisar los 5 logins públicos y los 5 privados: los
+porcentajes de posición están calculados contra su propio PNG y un cambio en el box model del panel
+(padding, ancho) los desalinea a todos a la vez.
