@@ -69,6 +69,9 @@ interface ISenderManagerDialogProps {
     onRestartRequired?: () => void
 }
 
+// Pagina general de senders: la del manager, y el respaldo cuando un sender no trae su propia referencia.
+const SENDERS_HELP = 'guide/extensions/senders/index?id=managing-configuring-senders'
+
 const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISenderManagerDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
@@ -109,6 +112,8 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
     const [savingBase, setSavingBase] = useState(false)
     const [baseConfigOpen, setBaseConfigOpen] = useState(false)
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
+    // seccion de guia del dialogo de configuracion: la del sender abierto, o la general si no tiene
+    const [helpSection, setHelpSection] = useState(SENDERS_HELP)
 
     // Dynamic sender front loading
     const [frontLoaded, setFrontLoaded] = useState<Record<string, boolean>>({})
@@ -211,6 +216,24 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         }
     }
 
+    /*
+        La ayuda del dialogo de configuracion lleva a la pagina de referencia DEL SENDER que se esta
+        configurando, que es la que explica sus campos. No todos la tienen — un sender de pago o recien
+        instalado puede no traerla —, asi que se COMPRUEBA en vez de mantener una lista aparte: si el
+        .md no esta, se cae a la pagina general de senders. Asi, publicar la referencia de un sender la
+        enlaza sola, sin tocar el front.
+    */
+    const resolveHelpSection = async (id: string) => {
+        const own = `guide/extensions/senders/${id}`
+        try {
+            const res = await fetch(`${backendUrl}/core/docs/core/kwirth/${own}.md`, { method: 'HEAD' })
+            setHelpSection(res.ok ? own : SENDERS_HELP)
+        }
+        catch {
+            setHelpSection(SENDERS_HELP)
+        }
+    }
+
     const expandSender = async (id: string) => {
         if (expandedId === id) { setExpandedId(undefined); return }
         setExpandedId(id)
@@ -218,6 +241,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         setFormValues({})
         setError(undefined)
         setSchema([])
+        resolveHelpSection(id)
         await reloadConfigs(id)
     }
 
@@ -811,7 +835,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Generic config dialog for senders without a custom front */}
         {expandedId && !expandedSender?.hasFront && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '860px', height: '600px' } }}>
-                <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
+                <DialogTitleHelp section={helpSection} docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent sx={{ display: 'flex', gap: 2, p: '16px !important', overflow: 'hidden', height: '100%' }}>
 
                     {/* Left — config list */}
@@ -909,7 +933,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Export config selection dialog */}
         {configExportOpen && expandedId && (
             <Dialog open maxWidth='xs' fullWidth>
-                <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Export configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
+                <DialogTitleHelp section={helpSection} docsUrl={backendUrl + '/core/docs/core/kwirth'}>Export configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent>
                     <Stack spacing={0.5} sx={{ pt: 0.5 }}>
                         <FormControlLabel
@@ -955,7 +979,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Import config selection dialog */}
         {configImportOpen && expandedId && (
             <Dialog open maxWidth='xs' fullWidth>
-                <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Import configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
+                <DialogTitleHelp section={helpSection} docsUrl={backendUrl + '/core/docs/core/kwirth'}>Import configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent>
                     <Stack spacing={0.5} sx={{ pt: 0.5 }}>
                         {configImportData.configs.length === 0
@@ -1009,7 +1033,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Base config sub-dialog */}
         {baseConfigOpen && expandedId && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px' } }} onClose={() => setBaseConfigOpen(false)}>
-                <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Base configuration — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
+                <DialogTitleHelp section={helpSection} docsUrl={backendUrl + '/core/docs/core/kwirth'}>Base configuration — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent>
                     <Stack direction='column' spacing={1.5} sx={{ pt: 1 }}>
                         {schema.filter(f => f.common).map(f => renderField(f, baseFormValues, (name, val) => setBaseFormValues(prev => ({ ...prev, [name]: val }))))}
