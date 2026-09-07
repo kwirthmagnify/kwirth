@@ -1,6 +1,15 @@
 [
   {
     "extensionType": "plugin",
+    "id": "provider-debug",
+    "version": "0.1.0",
+    "name": "Provider Debug",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-provider-debug/-/kwirth-plugin-provider-debug-0.1.0.tgz",
+    "description": "Provider debugging channel for Kwirth - subscribes to a running provider and streams its raw events",
+    "icon": "DataObjectOutlined"
+  },
+  {
+    "extensionType": "plugin",
     "id": "censor",
     "version": "0.2.46",
     "name": "Censor",
