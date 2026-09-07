@@ -14,7 +14,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.25"
+    "@kwirthmagnify/kwirth-common-back": "^0.5.40"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",

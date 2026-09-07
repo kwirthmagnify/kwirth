@@ -12,7 +12,7 @@
     "test": "node tests/run.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.5.25",
+    "@kwirthmagnify/kwirth-common-back": "^0.5.40",
     "express": "^4.19.2"
   },
   "devDependencies": {

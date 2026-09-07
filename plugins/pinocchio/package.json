@@ -17,7 +17,7 @@
     "@kwirthmagnify/kwirth-common-front": "^0.5.41",
     "lodash": "^4.17.21",
     "nunjucks": "^3.2.4",
-    "@kwirthmagnify/kwirth-common-back": "^0.5.25"
+    "@kwirthmagnify/kwirth-common-back": "^0.5.40"
   },
   "devDependencies": {
     "@mui/icons-material": "7.1.2",
