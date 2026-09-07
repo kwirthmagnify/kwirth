@@ -21,10 +21,11 @@ The channels users work with. Most are **plugins** you can install or remove; a 
 - 💬 [mIRC](plugins/mirc) — cross-cluster direct messaging between users.
 - 📰 [News](plugins/news) — RSS news feed reader (demo).
 - 🧪 [Echo](plugins/echo) — reference/demo channel for plugin authors.
+- 🧩 [Provider Debug](plugins/provider-debug) — inspect the raw events a running provider emits.
 
 ## [Providers (data sources)](providers/index)
 
-Feed data into channels. Built-in: **Events**, **Metrics**, **Business**. Installable: **Tick**, **Validating**, **Kafka**, **OpenTelemetry**, **Syslog**, **Trivy**, **Sample**. → **[Providers manual](providers/index)**
+Feed data into channels. Built-in: **Events**, **Metrics**, **Business**. Installable: **Tick**, **Validating**, **Kafka**, **OpenTelemetry**, **Syslog**, **HTTP Pull-Push**, **Trivy**, **Sample**. → **[Providers manual](providers/index)**
 
 ## [Senders (output destinations)](senders/index)
 
