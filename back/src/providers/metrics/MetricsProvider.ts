@@ -1,6 +1,6 @@
 import { KwirthData } from '@kwirthmagnify/kwirth-common'
 import { IMetricsCluster, IMetricsClusterUsage, IMetricsNode, IMetricsNodeSummary } from './IMetricsModel'
-import { IProvider } from '../IProvider'
+import { IProvider, IProviderSubscriptionHelp } from '../IProvider'
 import { ClusterInfo, INodeInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
@@ -215,6 +215,22 @@ export class MetricsProvider implements IProvider {
             maxPods: 0
         }
     }
+
+    getSubscriptionHelp = (): IProviderSubscriptionHelp => ({
+        usage: [
+            'Pushes on its own clock: every metricsInterval seconds (15 by default) the whole cluster',
+            'read is delivered to every subscriber. No payload is needed and nothing has to happen in',
+            'the cluster for events to arrive, which makes it the quickest way to check that a',
+            'subscription works end to end.',
+            '',
+            'The payload is currently ignored — IMetricsSubscriberConfig is empty and the tick does not',
+            'filter per subscriber. The flags in the example are kept because consumers still send them,',
+            'but today they change nothing.',
+            '',
+            'Each delivered event is the full read: { metricsInterval, cluster, nodes, clusterMetricValues }.'
+        ].join('\n'),
+        example: { pod: true, container: true, machine: true }
+    })
 
     addSubscriber = async (channel: IChannel, data: { container:boolean, pod:boolean, machine:boolean }) => {
         try {

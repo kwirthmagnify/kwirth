@@ -1,7 +1,7 @@
 import { Watch, CoreV1Event } from '@kubernetes/client-node'
 import express, { Request, Response } from 'express'
 import { KwirthData } from '@kwirthmagnify/kwirth-common'
-import { IProvider } from '../IProvider'
+import { IProvider, IProviderSubscriptionHelp } from '../IProvider'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
@@ -88,6 +88,24 @@ export class EventsProvider implements IProvider {
         if (limit > 0) items = items.slice(0, limit)
         return items
     }
+
+    getSubscriptionHelp = (): IProviderSubscriptionHelp => ({
+        usage: [
+            'Strict opt-in: an object is delivered only if its kind is listed in "kinds". Subscribing',
+            'with {} therefore receives nothing at all.',
+            '',
+            'The watchers are started with the provider, not with your subscription, so you get changes',
+            'from now on — not the current state of the cluster. Kubernetes Event objects arrive with',
+            'kind forced to "Event", and the retention backlog kube replays on watch start is discarded.',
+            '',
+            'Each delivered event is { type, obj }, where type is ADDED / MODIFIED / DELETED.'
+        ].join('\n'),
+        example: { kinds: ['Pod', 'Event'], syncInstances: false },
+        fields: [
+            { name: 'kinds', type: 'string[]', required: true, description: 'Kubernetes kinds to receive: Pod, Deployment, Service, Ingress, Event, CustomResourceDefinition...' },
+            { name: 'syncInstances', type: 'boolean', description: 'Also receive instances of watched CRDs, and everything else regardless of kinds' }
+        ]
+    })
 
     addSubscriber = async (c: IChannel, data: { kinds: string[], syncInstances:boolean}) => {
         try {

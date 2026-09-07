@@ -1,10 +1,8 @@
 {
   "plugins": {
     "trivy": "../plugins/trivy/dist",
-    "montag": "../plugins/montag/dist",
     "pinocchio": "../plugins/pinocchio/dist",
     "mirc": "../plugins/mirc/dist",
-    "excubitor": "../plugins/excubitor/dist",
     "alert": "../plugins/alert/dist",
     "censor": "../plugins/censor/dist",
     "echo": "../plugins/echo/dist",
@@ -13,6 +11,10 @@
     "news": "../plugins/news/dist",
     "ops": "../plugins/ops/dist",
     "topology": "../plugins/topology/dist",
+    "provider-debug": "../plugins/provider-debug/dist",
+
+    "montag": "../plugins/montag/dist",
+    "excubitor": "../plugins/excubitor/dist",
     "agora": "../plugins/agora/dist",
     "iter": "../plugins/iter/dist"
   },
@@ -23,7 +25,9 @@
     "otel": "../providers/otel/dist",
     "syslog": "../providers/syslog/dist",
     "trivy": "../providers/trivy/dist",
-    "business": "../providers/business/dist"
+    "business": "../providers/business/dist",
+    "service-flow": "../providers/service-flow/dist",
+    "http-pull-push": "../providers/http-pull-push/dist"
   },
   "senders": {
     "console": "../senders/console/dist",
@@ -35,6 +39,7 @@
     "composite": "../senders/composite/dist",
     "timed": "../senders/timed/dist",
     "teams": "../senders/teams/dist",
+
     "jira": "../senders/jira/dist"
   },
   "webhooks": {
@@ -42,6 +47,8 @@
   },
   "logins": {
     "magnify": "../logins/magnify/dist/magnify.tgz",
+    "censor": "../logins/censor/dist/censor.tgz",
+
     "anonymous": "../logins/anonymous/dist/anonymous.tgz",
     "excubitor": "../plugins/excubitor/login/dist/excubitor.tgz",
     "montag": "../plugins/montag/login/dist/montag.tgz",

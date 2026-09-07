@@ -1389,7 +1389,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             riRouter.use(`/core/plugins`, pluginApi.router)
         }
         if (providerManager) {
-            let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi)
+            // El getter se evalua en cada peticion (no se congela el array): los providers se arrancan
+            // y se paran en caliente al instalar o desinstalar plugins.
+            let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi, {}, () => ri.clusterInfo.providers)
             riRouter.use(`/core/providers`, providerApi.router)
         }
         if (senderManager) {

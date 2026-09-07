@@ -21,6 +21,35 @@ export interface IProviderStorage {
 }
 
 /**
+ * Un campo del payload de suscripcion, descrito para que un consumidor pueda pintar un formulario
+ * en vez de exigir JSON a mano. Solo tiene sentido declararlos cuando el payload es plano; si es
+ * anidado (p.ej. otel, con 'spaces'), basta con 'usage' y 'example'.
+ */
+export interface IProviderSubscriptionField {
+    name: string
+    type: 'string' | 'number' | 'boolean' | 'string[]'
+    required?: boolean
+    description: string
+}
+
+/**
+ * Ayuda que un provider publica sobre COMO SUSCRIBIRSE a el, es decir sobre el argumento 'data' de
+ * addSubscriber. No confundir con el 'schema' que un provider exporta desde su back.js, que
+ * describe la configuracion del propio provider (configure/configRouter).
+ *
+ * La consume provider-debug para explicarle al usuario que escribir, pero cualquier canal que
+ * ofrezca elegir provider puede usarla.
+ */
+export interface IProviderSubscriptionHelp {
+    /** Como se usa, en prosa: que entrega, que hace falta para recibir algo, gotchas. */
+    usage: string
+    /** Payload de ejemplo, listo para pasar tal cual a addSubscriber. */
+    example: Record<string, unknown>
+    /** Descripcion campo a campo. Opcional: solo para payloads planos. */
+    fields?: IProviderSubscriptionField[]
+}
+
+/**
  * Interface that all provider plugins must implement.
  * Use 'any' for clusterInfo to avoid pulling in kubernetes/docker dependencies.
  */
@@ -37,6 +66,12 @@ export interface IProvider {
      * de terceros que aun usen la config gestionada por el core.
      */
     configure?(config: Record<string, unknown>): void
+    /**
+     * Ayuda de suscripcion. OPCIONAL: quien escriba un provider la añade si quiere. Sin ella el
+     * consumidor sigue funcionando, simplemente no tiene nada que enseñarle al usuario sobre que
+     * payload escribir.
+     */
+    getSubscriptionHelp?(): IProviderSubscriptionHelp
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
     router: any

@@ -6,7 +6,7 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 declare global { interface Window { __kwirth_providers__: Record<string, any> } }
@@ -168,7 +168,9 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
         try {
             const res = await fetch(`${backendUrl}/core/providers`, addGetAuthorization(accessString))
             const data: IInstalledProvider[] = await res.json()
-            setInstalled(data)
+            // El endpoint devuelve tambien los providers de core (events, metrics), que no son
+            // extensiones: no se instalan ni se desinstalan, asi que no pintan nada en el gestor.
+            setInstalled(data.filter(p => !(p as IInstalledProvider & { core?: boolean }).core))
         } catch (err) {
             setError(`Failed to load installed providers: ${err}`)
         }
@@ -283,8 +285,9 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
         if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
         if (installedFrom.startsWith('pack:'))
             return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' sx={compactChip} /></Tooltip>
-        const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Typography variant='caption' color='text.secondary'><Link fontSize='inherit' sx={{ verticalAlign: 'middle', mr: 0.3 }} />{short}</Typography></Tooltip>
+        // Descargado de una URL suelta: no se pinta nada. La direccion recortada llenaba la fila sin
+        // decir gran cosa, y ya la da el tooltip del icono de procedencia (MarketplaceSourceIcon).
+        return null
     }
 
     const providerGradient = (name: string) => {
@@ -349,12 +352,8 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                             </Tooltip>
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                                            <Tooltip title={marketplaceOfInstalled(provider.id) ? `From the private '${marketplaceOfInstalled(provider.id)}' marketplace` : 'From the public Kwirth marketplace'}>
-                                                <Box sx={{ color: marketplaceOfInstalled(provider.id) ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
-                                                    { marketplaceOfInstalled(provider.id) ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
-                                                </Box>
-                                            </Tooltip>
-                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(provider.id)} /></Box>
+                                            <MarketplaceSourceIcon label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} />
+                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} /></Box>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(provider.installedFrom)}</Box>
                                             <Tooltip title={provider.hasFront || provider.hasSchema ? 'Configure' : 'No configuration available'}>
                                                 <span>
@@ -450,7 +449,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{provider.displayName || provider.name}</Typography>
                                                     {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
-                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
+                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />}
                                                     {versions.length > 1
                                                         ? <Select size='small' value={provider.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                             {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
@@ -480,7 +479,14 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                                 </span>
                                             </Tooltip>
                                         </Stack>
-                                        <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
+                                        <Stack direction='row' alignItems='center' sx={{ mt: 1 }}>
+                                            { /* Misma procedencia que en las tarjetas de instalados: aqui es donde
+                                                 mas falta hace, porque es donde se elige QUE instalar y DE DONDE.
+                                                 Con la precedencia por id, dos marketplaces pueden publicar el
+                                                 mismo id y esto es lo unico que los distingue. */ }
+                                            <MarketplaceSourceIcon label={provider.marketplaceLabel} />
+                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={provider.marketplaceLabel} /></Box>
+                                            <Box sx={{ flex: 1 }} />
                                             {(() => { const unmet = (provider.requires ?? []).filter(r => !isRequirementMet(r)); return (
                                                 <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                     <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(provider)}>
@@ -503,8 +509,10 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                         <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                             <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Factory fontSize='small' /></Box>
                                             <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{provider.displayName || provider.name}</Typography>
+                                            <MarketplaceSourceIcon label={provider.marketplaceLabel} />
+                                            <MarketplaceBadge label={provider.marketplaceLabel} />
                                             {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
-                                            {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
+                                            {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />}
                                             {versions.length > 1
                                                 ? <Select size='small' value={provider.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                     {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
