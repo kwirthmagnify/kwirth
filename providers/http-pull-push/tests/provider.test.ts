@@ -262,6 +262,29 @@ test('connections survive a provider restart, credentials included', async () =>
     await second.stopProvider()
 })
 
+test('the published subscription help matches the real behaviour', async () => {
+    const { provider, calls } = await makeProvider([conn('stocks'), conn('rss')])
+    const help = provider.getSubscriptionHelp()
+
+    // el ejemplo tiene que ser un payload que de verdad funcione, no una ilustracion
+    const { subscriber, received } = makeSubscriber()
+    await provider.applyConfigs([conn('stocks'), conn('rss')])
+    await provider.addSubscriber(subscriber, help.example as { configs?: string[] })
+    await settle()
+    assert.deepEqual(calls.sort(), ['rss', 'stocks'], 'the example payload must deliver those connections')
+    assert.deepEqual([...new Set(received.map(e => e.config))].sort(), ['rss', 'stocks'])
+
+    // el gotcha que nadie adivina tiene que estar dicho
+    assert.match(help.usage, /empty array/i)
+    assert.match(help.usage, /LAZY/i)
+
+    // 'configs' declarado como el unico campo, y con el tipo que se acepta
+    assert.deepEqual(help.fields?.map(f => f.name), ['configs'])
+    assert.equal(help.fields?.[0].type, 'string[]')
+
+    await provider.stopProvider()
+})
+
 test('stopProvider stops every poller', async () => {
     const { provider, calls } = await makeProvider([conn('stocks', { intervalSeconds: 1 })])
     const { subscriber } = makeSubscriber()

@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { IProvider, IProviderStorage, IProviderSubscriber, KwirthData } from '@kwirthmagnify/kwirth-common-back'
+import { IProvider, IProviderStorage, IProviderSubscriber, IProviderSubscriptionHelp, KwirthData } from '@kwirthmagnify/kwirth-common-back'
 import { IHttpPullConfig, IHttpPullPushEvent, IHttpPullPushSubscription } from '../common/HttpPullPush'
 import { validateConfigs } from '../common/Validation'
 import { ConfigStore } from './ConfigStore'
@@ -87,6 +87,39 @@ export class HttpPullPushProvider implements IProvider {
         this.warnUnknown(data)
         this.reconcile()
     }
+
+    /*
+        Ayuda para quien se suscribe. Merece la pena declararla porque la semantica de 'configs' no se
+        adivina: un array VACIO no significa "todo", significa "nada"; y las conexiones las crea un
+        administrador en el dialogo del provider, asi que hay que decir sus nombres.
+    */
+    getSubscriptionHelp = (): IProviderSubscriptionHelp => ({
+        usage:
+            'Subscribe by CONNECTION NAME. The connections are created by an administrator in this ' +
+            'provider\'s dialog (gear in Manage extensions > Providers), so their names are the ones ' +
+            'listed there.\n\n' +
+            'Selection semantics:\n' +
+            '  - configs: ["a","b"]  -> only those connections\n' +
+            '  - configs: []         -> NOTHING is delivered (an empty array is not "everything")\n' +
+            '  - configs absent      -> every enabled connection, including ones created later\n\n' +
+            'Each event arrives wrapped, so a subscriber to several connections can tell them apart:\n' +
+            '  success: { config, timestamp, status, data }   data = parsed body (json) or raw text\n' +
+            '  failure: { config, timestamp, error }          no data, no status\n\n' +
+            'Gotchas:\n' +
+            '  - Polling is LAZY: a connection is only polled while at least one subscriber wants it, ' +
+            'so nothing happens until you subscribe (and the first pull is immediate).\n' +
+            '  - A DISABLED connection delivers nothing even if you name it explicitly.\n' +
+            '  - Naming a connection that does not exist is ignored and logged, never an error.\n' +
+            '  - With emitMode=onChange the connection stays quiet while the answer is identical.',
+        example: { configs: ['stocks', 'rss'] },
+        fields: [
+            {
+                name: 'configs',
+                type: 'string[]',
+                description: 'Connection names to receive. Empty array = nothing; omit the field = all enabled connections.'
+            }
+        ]
+    })
 
     // ── Configuracion (capa 1) ──────────────────────────────────────────────────
 

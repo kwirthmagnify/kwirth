@@ -47,6 +47,10 @@ this.clusterInfo.addSubscriber('http-pull-push', this, { configs: ['stocks', 'rs
 Subscribing to an unknown or disabled connection is ignored and logged — never a failed subscription.
 `updateSubscription()` changes the selection without unsubscribing.
 
+The provider publishes `getSubscriptionHelp()`, so a consumer that lets the user pick a provider — the
+**Provider Debug** channel, for instance — can show what to write, including the two things nobody guesses:
+that `configs: []` delivers **nothing**, and that polling is lazy so nothing happens until you subscribe.
+
 ## Event delivered
 
 ```ts
