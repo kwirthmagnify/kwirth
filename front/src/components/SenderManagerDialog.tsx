@@ -9,7 +9,7 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 
@@ -473,12 +473,13 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
 
     const resolveSource = (installedFrom?: string) => {
         if (!installedFrom) return null
-        if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
+        if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' sx={compactChip} />
         if (installedFrom === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
         if (installedFrom.startsWith('pack:'))
             return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' sx={compactChip} /></Tooltip>
-        const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
+        // Descargado de una URL suelta: no se pinta nada. La direccion recortada llenaba la fila sin
+        // decir gran cosa, y ya la da el tooltip del icono de procedencia (MarketplaceSourceIcon).
+        return null
     }
 
     // ─── Config form fields ────────────────────────────────────────────────────
@@ -579,15 +580,11 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                <Tooltip title={marketplaceOfInstalled(sender.id) ? `From the private '${marketplaceOfInstalled(sender.id)}' marketplace` : 'From the public Kwirth marketplace'}>
-                    <Box sx={{ color: marketplaceOfInstalled(sender.id) ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
-                        { marketplaceOfInstalled(sender.id) ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
-                    </Box>
-                </Tooltip>
-                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(sender.id)} /></Box>
+                <MarketplaceSourceIcon label={marketplaceOfInstalled(sender.id)} installedFrom={sender.installedFrom} />
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(sender.id)} installedFrom={sender.installedFrom} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(sender.installedFrom)}</Box>
                 <Stack direction='row' spacing={0.5} alignItems='center'>
-                    {sender.configNames.length > 0 && <Chip label={`${sender.configNames.length} config${sender.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' />}
+                    {sender.configNames.length > 0 && <Chip label={`${sender.configNames.length} config${sender.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' sx={compactChip} />}
                     <Tooltip title='Configure'>
                         <IconButton size='small' color='primary' onClick={() => expandSender(sender.id)}>
                             <Settings fontSize='small' />
@@ -643,7 +640,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                     <Box key={s.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Send fontSize='small' /></Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.displayName || s.id}</Typography>
-                                        {s.configNames.length > 0 && <Chip label={`${s.configNames.length} cfg`} size='small' color='primary' variant='outlined' sx={compactChip} />}
+                                        {s.configNames.length > 0 && <Chip label={`${s.configNames.length} config${s.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' sx={compactChip} />}
                                         <Tooltip title='Configure'>
                                             <IconButton size='small' color='primary' onClick={() => expandSender(s.id)}>
                                                 <Settings fontSize='small' />
@@ -719,13 +716,10 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{entry.displayName}</Typography>
                                                     {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
-                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
-                                                    {versions.length > 1
-                                                        ? <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                    {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />}
+                                                    <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                             {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                           </Select>
-                                                        : <Chip label={`v${entry.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
-                                                    }
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
                                                 {entry.requires && entry.requires.length > 0 && (
@@ -743,7 +737,12 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                             </Box>
                                             <Tooltip title={entry.website ? 'Open website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
                                         </Stack>
-                                        <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
+                                        <Stack direction='row' alignItems='center' sx={{ mt: 1 }}>
+                                            { /* Misma procedencia que en las tarjetas de instalados: aqui es donde
+                                                 mas falta hace, porque es donde se elige QUE instalar y DE DONDE. */ }
+                                            <MarketplaceSourceIcon label={entry.marketplaceLabel} />
+                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={entry.marketplaceLabel} /></Box>
+                                            <Box sx={{ flex: 1 }} />
                                             {(() => { const unmet = (entry.requires ?? []).filter(r => !isRequirementMet(r)); return (
                                                 <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                     <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(entry)}>
@@ -764,14 +763,13 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                         <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                             <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Send fontSize='small' /></Box>
                                             <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.displayName}</Typography>
+                                            <MarketplaceSourceIcon label={entry.marketplaceLabel} />
+                                            <MarketplaceBadge label={entry.marketplaceLabel} />
                                             {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
-                                            {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} />}
-                                            {versions.length > 1
-                                                ? <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                            {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />}
+                                            <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                     {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                   </Select>
-                                                : <Chip label={`v${entry.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
-                                            }
                                             <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>
                                                 <span><IconButton size='small' color='primary' disabled={isDevInstalled(id) || isInstalled(id) || installingId === id || unmet.length > 0} onClick={() => installFromCatalog(entry)}>
                                                     {installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' />}

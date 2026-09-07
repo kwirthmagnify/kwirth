@@ -5,7 +5,7 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
 
 
 // tipos de la API (front-local, como hace ProviderDialog con su IProviderSchemaField)
@@ -260,12 +260,8 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                             {websiteButton(c.website)}
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                                            <Tooltip title={marketplaceOfInstalled(c.id) ? `From the private '${marketplaceOfInstalled(c.id)}' marketplace` : 'From the public Kwirth marketplace'}>
-                                                <Box sx={{ color: marketplaceOfInstalled(c.id) ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
-                                                    { marketplaceOfInstalled(c.id) ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
-                                                </Box>
-                                            </Tooltip>
-                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(c.id)} /></Box>
+                                            <MarketplaceSourceIcon label={marketplaceOfInstalled(c.id)} installedFrom={c.installedFrom} />
+                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(c.id)} installedFrom={c.installedFrom} /></Box>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(c.installedFrom)}</Box>
                                             <Stack direction='row' spacing={0.5} alignItems='center'>
                                                 {statusChip(c)}
@@ -317,6 +313,36 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                     </Stack>
                     { availableIds.length === 0 && !loadingManifest
                         ? <Typography variant='body2' color='text.secondary'>No connectors available in the catalog.</Typography>
+                        : viewMode === 'list'
+                        ? <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden',
+                                     display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto',
+                                     columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                            { availableIds.flatMap((id, i, arr) => {
+                                const entry = getSelected(id)
+                                const versions = grouped[id].map(e => e.version)
+                                return [
+                                    <Box key={`${id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Key fontSize='small' /></Box>,
+                                    <Typography key={`${id}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{entry.displayName || entry.name}</Typography>,
+                                    <Box key={`${id}-mkp`} sx={{ py: 1, display: 'flex', alignItems: 'center' }}>
+                                        <MarketplaceSourceIcon label={entry.marketplaceLabel} />
+                                        <MarketplaceBadge label={entry.marketplaceLabel} />
+                                    </Box>,
+                                    <Box key={`${id}-status`} sx={{ justifySelf: 'end', py: 1 }}>
+                                        { isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} /> : null }
+                                    </Box>,
+                                    <Box key={`${id}-ver`} sx={{ justifySelf: 'end', py: 1 }}>
+                                        <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))}
+                                            sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                            { versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>) }
+                                        </Select>
+                                    </Box>,
+                                    <Box key={`${id}-install`} sx={{ py: 1 }}>
+                                        <Tooltip title={isInstalled(id) ? 'Already installed' : 'Install'}><span><IconButton size='small' color='primary' disabled={isInstalled(id) || installingId === id} onClick={() => installFromCatalog(entry)}>{ installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' /> }</IconButton></span></Tooltip>
+                                    </Box>,
+                                    ...(i < arr.length - 1 ? [<Box key={`${id}-sep`} sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', mx: -1.5 }} />] : [])
+                                ]
+                            }) }
+                          </Box>
                         : <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                             { availableIds.map(id => {
                                 const group = grouped[id]
@@ -329,17 +355,19 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5}>
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{entry.displayName || entry.name}</Typography>
-                                                    { isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} /> }
-                                                    { versions.length > 1
-                                                        ? <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>{ versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>) }</Select>
-                                                        : <Chip label={`v${entry.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
-                                                    }
+                                                    { isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} /> }
+                                                    <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>{ versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>) }</Select>
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
                                             </Box>
                                             <Tooltip title={entry.website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
                                         </Stack>
-                                        <Stack direction='row' justifyContent='flex-end' sx={{ mt: 1 }}>
+                                        <Stack direction='row' alignItems='center' sx={{ mt: 1 }}>
+                                            { /* Misma procedencia que en las tarjetas de instalados: aqui es donde
+                                                 mas falta hace, porque es donde se elige QUE instalar y DE DONDE. */ }
+                                            <MarketplaceSourceIcon label={entry.marketplaceLabel} />
+                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={entry.marketplaceLabel} /></Box>
+                                            <Box sx={{ flex: 1 }} />
                                             <Tooltip title={isInstalled(id) ? 'Already installed' : 'Install'}><span><IconButton size='small' color='primary' disabled={isInstalled(id) || installingId === id} onClick={() => installFromCatalog(entry)}>{ installingId === id ? <CircularProgress size={16} /> : <Download fontSize='small' /> }</IconButton></span></Tooltip>
                                         </Stack>
                                     </Box>

@@ -5,7 +5,7 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 
@@ -224,8 +224,9 @@ const openReconfigure = (id: string) => {
         if (installedFrom.startsWith('pack:'))
             return <Tooltip title={`Installed by pack '${installedFrom.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' sx={compactChip} /></Tooltip>
         if (installedFrom.includes('github.com/kwirthmagnify')) return <Chip icon={<Home />} label='Kwirth' size='small' variant='outlined' color='primary' sx={compactChip} />
-        const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ ...compactChip, maxWidth: '100%' }} /></Tooltip>
+        // Descargado de una URL suelta: no se pinta nada. La direccion recortada llenaba la fila sin
+        // decir gran cosa, y ya la da el tooltip del icono de procedencia (MarketplaceSourceIcon).
+        return null
     }
 
     const homepageGradient = (name: string) => {
@@ -236,7 +237,7 @@ const openReconfigure = (id: string) => {
         return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.14 : 0.26}) 100%)`
     }
 
-    const HomepageCard = ({ id, displayName, version, versions, onVersionChange, description, badge, source, website, action, marketplaceLabel }: { id: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; marketplaceLabel?: string }) => (
+    const HomepageCard = ({ id, displayName, version, versions, onVersionChange, description, badge, source, website, action, marketplaceLabel, installedFrom }: { id: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; marketplaceLabel?: string; installedFrom?: string }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: homepageGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Home /></Box>
@@ -244,7 +245,7 @@ const openReconfigure = (id: string) => {
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName}</Typography>
                         {badge}
-                        {versions && versions.length > 1
+                        {versions
                             ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
                                 sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                 {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
@@ -263,12 +264,8 @@ const openReconfigure = (id: string) => {
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                <Tooltip title={marketplaceLabel ? `From the private '${marketplaceLabel}' marketplace` : 'From the public Kwirth marketplace'}>
-                    <Box sx={{ color: marketplaceLabel ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
-                        { marketplaceLabel ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
-                    </Box>
-                </Tooltip>
-                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceLabel} /></Box>
+                <MarketplaceSourceIcon label={marketplaceLabel} installedFrom={installedFrom} />
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceLabel} installedFrom={installedFrom} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
@@ -320,6 +317,7 @@ const openReconfigure = (id: string) => {
                                         badge={isActive(hp.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} /> : undefined}
                                         source={resolveSource(hp.installedFrom)}
                                         marketplaceLabel={marketplaceOfInstalled(hp.id)}
+                                        installedFrom={hp.installedFrom}
                                         website={hp.website}
                                         action={
                                             <Stack direction='row' alignItems='center' spacing={0.5}>
@@ -349,9 +347,9 @@ const openReconfigure = (id: string) => {
                                         <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hp.displayName || hp.name}</Typography>
                                         <Typography variant='caption' color='text.secondary'>{hp.description}</Typography>
                                     </Box>,
-                                    <Box key={`${hp.id}-active`} sx={{ py: 1 }}>{isActive(hp.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} />}</Box>,
+                                    <Box key={`${hp.id}-active`} sx={{ justifySelf: 'end', py: 1 }}>{isActive(hp.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} />}</Box>,
                                     <Box key={`${hp.id}-version`} sx={{ py: 1 }}><Chip label={`v${hp.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} /></Box>,
-                                    <Box key={`${hp.id}-source`} sx={{ py: 1 }}>{resolveSource(hp.installedFrom)}</Box>,
+                                    <Box key={`${hp.id}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(hp.installedFrom)}</Box>,
                                     <Box key={`${hp.id}-btn`} sx={{ py: 1 }}>
                                         {isActive(hp.id) && getExt(hp.id)?.SetupDialog && (
                                             <Tooltip title='Configure'>
@@ -455,18 +453,15 @@ const openReconfigure = (id: string) => {
                                             <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.displayName || t.name}</Typography>
                                             <Typography variant='caption' color='text.secondary'>{t.description}</Typography>
                                         </Box>,
-                                        <Box key={`${id}-status`} sx={{ py: 1 }}>
+                                        <Box key={`${id}-status`} sx={{ justifySelf: 'end', py: 1 }}>
                                             {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
                                             : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />
                                             : null}
                                         </Box>,
                                         <Box key={`${id}-version`} sx={{ py: 1 }}>
-                                            {versions.length > 1
-                                                ? <Select size='small' value={t.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                            <Select size='small' value={t.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
                                                     {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                   </Select>
-                                                : <Chip label={`v${t.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
-                                            }
                                         </Box>,
                                         <Box key={`${id}-install`} sx={{ py: 1 }}>
                                             <Tooltip title={isDevInstalled(id) ? 'A dev version is already loaded' : isInstalled(id) ? 'Already installed — uninstall first' : 'Install'}>

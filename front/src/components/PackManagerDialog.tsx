@@ -1,12 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Divider, IconButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Chip } from '@mui/material'
 import { CheckCircle, CloudQueue, Delete, Download, Extension, FolderOpen, Https, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 
@@ -252,8 +252,9 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
         if (!installedFrom) return null
         if (installedFrom === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' sx={compactChip} />
         if (installedFrom.includes('github.com/kwirthmagnify')) return <Chip icon={<Extension />} label='Kwirth' size='small' variant='outlined' color='primary' sx={compactChip} />
-        const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ ...compactChip, maxWidth: '100%' }} /></Tooltip>
+        // Descargado de una URL suelta: no se pinta nada. La direccion recortada llenaba la fila sin
+        // decir gran cosa, y ya la da el tooltip del icono de procedencia (MarketplaceSourceIcon).
+        return null
     }
 
     const membersSummary = (extensions: IPackExtensionRef[]) => {
@@ -277,7 +278,10 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
         </Stack>
     )
 
-    const PackCard = ({ id, displayName, version, description, badge, source, website, members, action, marketplaceLabel }: { id: string; displayName: string; version: string; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; members?: string; action: React.ReactNode; marketplaceLabel?: string }) => (
+    // 'versions' solo lo pasan las tarjetas del CATALOGO: ahi la version se elige, y el selector va
+    // siempre — tambien con una sola version — para que las tarjetas no bailen entre si. En un
+    // instalado no hay nada que elegir, asi que se queda el chip.
+    const PackCard = ({ id, displayName, version, versions, onVersionChange, description, badge, source, website, members, action, marketplaceLabel, installedFrom }: { id: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; members?: string; action: React.ReactNode; marketplaceLabel?: string; installedFrom?: string }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: packGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Extension /></Box>
@@ -285,7 +289,13 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName}</Typography>
                         {badge}
-                        <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
+                        {versions
+                            ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
+                                sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                              </Select>
+                            : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
+                        }
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
                     {members && <Typography variant='caption' color='text.disabled' display='block'>{members}</Typography>}
@@ -299,12 +309,8 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                <Tooltip title={marketplaceLabel ? `From the private '${marketplaceLabel}' marketplace` : 'From the public Kwirth marketplace'}>
-                    <Box sx={{ color: marketplaceLabel ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
-                        { marketplaceLabel ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
-                    </Box>
-                </Tooltip>
-                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceLabel} /></Box>
+                <MarketplaceSourceIcon label={marketplaceLabel} installedFrom={installedFrom} />
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceLabel} installedFrom={installedFrom} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
@@ -339,6 +345,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                         description={pack.description}
                                         source={resolveSource(pack.installedFrom)}
                                         marketplaceLabel={marketplaceOfInstalled(pack.id)}
+                                        installedFrom={pack.installedFrom}
                                         website={pack.website}
                                         members={membersSummary(pack.extensions)}
                                         action={
@@ -362,7 +369,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                         <Typography variant='caption' color='text.disabled' display='block'>{membersSummary(pack.extensions)}</Typography>
                                     </Box>,
                                     <Box key={`${pack.id}-version`} sx={{ py: 1 }}><Chip label={`v${pack.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} /></Box>,
-                                    <Box key={`${pack.id}-source`} sx={{ py: 1 }}>{resolveSource(pack.installedFrom)}</Box>,
+                                    <Box key={`${pack.id}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(pack.installedFrom)}</Box>,
                                     <Box key={`${pack.id}-del`} sx={{ py: 1 }}>
                                         <Tooltip title='Uninstall pack (removes all member extensions)'>
                                             <span>
@@ -421,6 +428,8 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                                 id={id}
                                                 displayName={t.displayName}
                                                 version={t.version}
+                                                versions={groupedAvailable[id].map(e => e.version)}
+                                                onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [id]: v }))}
                                                 description={t.description}
                                                 website={t.website}
                                                 members={t.extensionTypes?.join(', ')}
@@ -439,9 +448,10 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                         )
                                     })}
                                   </Box>
-                                : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                                : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                     {filteredIds.flatMap((id, i, arr) => {
                                         const t = getSelectedEntry(id)
+                                        const versions = groupedAvailable[id].map(e => e.version)
                                         return [
                                             <Box key={`${id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Extension fontSize='small' /></Box>,
                                             <Box key={`${id}-name`} sx={{ py: 1, minWidth: 0 }}>
@@ -449,8 +459,18 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                                 <Typography variant='caption' color='text.secondary'>{t.description}</Typography>
                                                 {t.extensionTypes && <Typography variant='caption' color='text.disabled' display='block'>{t.extensionTypes.join(', ')}</Typography>}
                                             </Box>,
-                                            <Box key={`${id}-status`} sx={{ py: 1 }}>
+                                            <Box key={`${id}-mkp`} sx={{ py: 1, display: 'flex', alignItems: 'center' }}>
+                                                <MarketplaceSourceIcon label={t.marketplaceLabel} />
+                                                <MarketplaceBadge label={t.marketplaceLabel} />
+                                            </Box>,
+                                            <Box key={`${id}-status`} sx={{ justifySelf: 'end', py: 1 }}>
                                                 {isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} /> : null}
+                                            </Box>,
+                                            <Box key={`${id}-ver`} sx={{ justifySelf: 'end', py: 1 }}>
+                                                <Select size='small' value={t.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))}
+                                                    sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                    {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                                                </Select>
                                             </Box>,
                                             <Box key={`${id}-install`} sx={{ py: 1 }}>
                                                 <Tooltip title={isInstalled(id) ? 'Already installed — uninstall first' : 'Install pack'}>

@@ -5,7 +5,7 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
 
@@ -205,14 +205,15 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
         if (installedFrom === 'dev')
             return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
         if (installedFrom === 'local')
-            return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' />
+            return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' sx={compactChip} />
         if (installedFrom.includes('github.com/kwirthmagnify'))
-            return <Chip icon={<Description />} label='Kwirth' size='small' variant='outlined' color='primary' />
-        const short = installedFrom.length > 40 ? installedFrom.slice(0, 37) + '…' : installedFrom
-        return <Tooltip title={installedFrom}><Chip icon={<Link />} label={short} size='small' variant='outlined' sx={{ maxWidth: '100%' }} /></Tooltip>
+            return <Chip icon={<Description />} label='Kwirth' size='small' variant='outlined' color='primary' sx={compactChip} />
+        // Descargado de una URL suelta: no se pinta nada. La direccion recortada llenaba la fila sin
+        // decir gran cosa, y ya la da el tooltip del icono de procedencia (MarketplaceSourceIcon).
+        return null
     }
 
-    const DocsCard = ({ targetType, id, name, version, description, source, website, action }: { targetType: string; id: string; name: string; version: string; description: string; source?: React.ReactNode; website?: string; action: React.ReactNode }) => (
+    const DocsCard = ({ targetType, id, name, version, description, source, website, action, installedFrom }: { targetType: string; id: string; name: string; version: string; description: string; source?: React.ReactNode; website?: string; action: React.ReactNode; installedFrom?: string }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: docsGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Description /></Box>
@@ -232,12 +233,8 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                <Tooltip title={marketplaceOfInstalled(targetType, id) ? `From the private '${marketplaceOfInstalled(targetType, id)}' marketplace` : 'From the public Kwirth marketplace'}>
-                    <Box sx={{ color: marketplaceOfInstalled(targetType, id) ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
-                        { marketplaceOfInstalled(targetType, id) ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
-                    </Box>
-                </Tooltip>
-                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(targetType, id)} /></Box>
+                <MarketplaceSourceIcon label={marketplaceOfInstalled(targetType, id)} installedFrom={installedFrom} />
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(targetType, id)} installedFrom={installedFrom} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
@@ -288,6 +285,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                                         description={doc.description}
                                         website={doc.website}
                                         source={resolveSource(doc.installedFrom)}
+                                        installedFrom={doc.installedFrom}
                                         action={
                                             <Stack direction='row' alignItems='center' spacing={0.5}>
                                                 <Tooltip title='Open in new tab'>
@@ -313,8 +311,8 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                                 {filteredInstalled.flatMap((doc, i, arr) => [
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Description fontSize='small' /></Box>,
                                     <Typography key={`${docsKey(doc.targetType, doc.id)}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{doc.name || doc.id}</Typography>,
-                                    <Box key={`${docsKey(doc.targetType, doc.id)}-source`} sx={{ py: 1 }}>{resolveSource(doc.installedFrom)}</Box>,
-                                    <Box key={`${docsKey(doc.targetType, doc.id)}-ver`} sx={{ py: 1 }}><Chip label={`v${doc.version}`} size='small' sx={compactChip} /></Box>,
+                                    <Box key={`${docsKey(doc.targetType, doc.id)}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(doc.installedFrom)}</Box>,
+                                    <Box key={`${docsKey(doc.targetType, doc.id)}-ver`} sx={{ justifySelf: 'end', py: 1 }}><Chip label={`v${doc.version}`} size='small' sx={compactChip} /></Box>,
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-open`} sx={{ py: 1 }}>
                                         <Tooltip title='Open in new tab'>
                                             <IconButton size='small' color='primary' onClick={() => openDocs(doc.targetType, doc.id)}>
@@ -369,28 +367,58 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                                 </span>
                             </Tooltip>
                         </Stack>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
-                            {filteredAvailable.map(entry => (
-                                <DocsCard
-                                    key={docsKey(entry.targetType, entry.id)}
-                                    targetType={entry.targetType}
-                                    id={entry.id}
-                                    name={entry.name}
-                                    version={entry.version}
-                                    description={entry.description}
-                                    website={entry.website}
-                                    action={
-                                        <Tooltip title={isInstalled(entry.targetType, entry.id) ? 'Already installed' : 'Install'}>
-                                            <span>
-                                                <IconButton size='small' color='primary' disabled={isInstalled(entry.targetType, entry.id) || installingId === docsKey(entry.targetType, entry.id)} onClick={() => installFromManifest(entry)}>
-                                                    {installingId === docsKey(entry.targetType, entry.id) ? <CircularProgress size={16} /> : <Download fontSize='small' />}
-                                                </IconButton>
-                                            </span>
-                                        </Tooltip>
-                                    }
-                                />
-                            ))}
-                        </Box>
+                        { /* El conmutador card/lista vale para las DOS secciones: dejar el catalogo siempre
+                             en tarjetas hacia que al pasar a lista la mitad de abajo no cambiara. */ }
+                        {viewMode === 'card'
+                            ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
+                                {filteredAvailable.map(entry => (
+                                    <DocsCard
+                                        key={docsKey(entry.targetType, entry.id)}
+                                        targetType={entry.targetType}
+                                        id={entry.id}
+                                        name={entry.name}
+                                        version={entry.version}
+                                        description={entry.description}
+                                        website={entry.website}
+                                        action={
+                                            <Tooltip title={isInstalled(entry.targetType, entry.id) ? 'Already installed' : 'Install'}>
+                                                <span>
+                                                    <IconButton size='small' color='primary' disabled={isInstalled(entry.targetType, entry.id) || installingId === docsKey(entry.targetType, entry.id)} onClick={() => installFromManifest(entry)}>
+                                                        {installingId === docsKey(entry.targetType, entry.id) ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                        }
+                                    />
+                                ))}
+                              </Box>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden',
+                                         display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto',
+                                         columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                                {filteredAvailable.flatMap((entry, i, arr) => {
+                                    const key = docsKey(entry.targetType, entry.id)
+                                    return [
+                                        <Box key={`${key}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Description fontSize='small' /></Box>,
+                                        <Typography key={`${key}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{entry.name || entry.id}</Typography>,
+                                        <Box key={`${key}-mkp`} sx={{ py: 1, display: 'flex', alignItems: 'center' }}>
+                                            <MarketplaceSourceIcon label={entry.marketplaceLabel} />
+                                            <MarketplaceBadge label={entry.marketplaceLabel} />
+                                        </Box>,
+                                        <Box key={`${key}-ver`} sx={{ justifySelf: 'end', py: 1 }}><Chip label={`v${entry.version}`} size='small' sx={compactChip} /></Box>,
+                                        <Box key={`${key}-install`} sx={{ py: 1 }}>
+                                            <Tooltip title={isInstalled(entry.targetType, entry.id) ? 'Already installed' : 'Install'}>
+                                                <span>
+                                                    <IconButton size='small' color='primary' disabled={isInstalled(entry.targetType, entry.id) || installingId === key} onClick={() => installFromManifest(entry)}>
+                                                        {installingId === key ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                        </Box>,
+                                        ...(i < arr.length - 1 ? [<Box key={`${key}-sep`} sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', mx: -1.5 }} />] : [])
+                                    ]
+                                })}
+                              </Box>
+                        }
                     </>}
 
                 </Stack>
