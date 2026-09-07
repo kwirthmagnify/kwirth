@@ -633,7 +633,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
         {/* Generic config dialog */}
         {expandedId && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '860px', height: '600px' } }}>
-                <DialogTitle>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
+                <DialogTitleHelp section='guide/extensions/webhooks/index?id=managing-configuring-webhooks' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent sx={{ display: 'flex', gap: 2, p: '16px !important', overflow: 'hidden', height: '100%' }}>
 
                     {/* Left — config list */}

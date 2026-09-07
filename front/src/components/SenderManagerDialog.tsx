@@ -811,7 +811,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Generic config dialog for senders without a custom front */}
         {expandedId && !expandedSender?.hasFront && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '860px', height: '600px' } }}>
-                <DialogTitle>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
+                <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent sx={{ display: 'flex', gap: 2, p: '16px !important', overflow: 'hidden', height: '100%' }}>
 
                     {/* Left — config list */}
@@ -909,7 +909,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Export config selection dialog */}
         {configExportOpen && expandedId && (
             <Dialog open maxWidth='xs' fullWidth>
-                <DialogTitle>Export configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
+                <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Export configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent>
                     <Stack spacing={0.5} sx={{ pt: 0.5 }}>
                         <FormControlLabel
@@ -955,7 +955,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Import config selection dialog */}
         {configImportOpen && expandedId && (
             <Dialog open maxWidth='xs' fullWidth>
-                <DialogTitle>Import configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
+                <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Import configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent>
                     <Stack spacing={0.5} sx={{ pt: 0.5 }}>
                         {configImportData.configs.length === 0
@@ -1009,7 +1009,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Base config sub-dialog */}
         {baseConfigOpen && expandedId && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px' } }} onClose={() => setBaseConfigOpen(false)}>
-                <DialogTitle>Base configuration — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
+                <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Base configuration — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent>
                     <Stack direction='column' spacing={1.5} sx={{ pt: 1 }}>
                         {schema.filter(f => f.common).map(f => renderField(f, baseFormValues, (name, val) => setBaseFormValues(prev => ({ ...prev, [name]: val }))))}

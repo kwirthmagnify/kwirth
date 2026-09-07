@@ -553,7 +553,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
         {/* Generic config dialog for basic providers (schema-driven) */}
         {expandedId && !installed.find(p => p.id === expandedId)?.hasFront && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px', minHeight: '300px' } }}>
-                <DialogTitle>Configure: {installed.find(p => p.id === expandedId)?.displayName ?? expandedId}</DialogTitle>
+                <DialogTitleHelp section='guide/extensions/providers/index?id=managing-configuring-providers' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure: {installed.find(p => p.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent sx={{ pt: '16px !important' }}>
                     {!configSchema
                         ? <Typography variant='body2' color='text.secondary'>This provider has no configurable options.</Typography>

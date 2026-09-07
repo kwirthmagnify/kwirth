@@ -539,7 +539,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
 
         {configLogin && (
             <Dialog open={true} maxWidth='xs' fullWidth>
-                <DialogTitle>Configure — {configLogin.displayName || configLogin.name}</DialogTitle>
+                <DialogTitleHelp section='guide/extensions/logins/index?id=runtime-configuration' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure — {configLogin.displayName || configLogin.name}</DialogTitleHelp>
                 <DialogContent>
                     <Stack spacing={2} sx={{ mt: 1 }}>
                         {(configLogin.configSchema ?? []).map(field => field.type === 'select'

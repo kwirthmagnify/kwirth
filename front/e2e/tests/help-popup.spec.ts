@@ -73,3 +73,47 @@ test('help button: dialogs del menú principal invocan window.open en su secció
     // Navegar a blank para liberar el WebSocket antes del teardown (evita cuelgue de Playwright en SPA)
     await page.goto('about:blank')
 })
+
+// El manager tenia ayuda, pero el dialogo donde de verdad se configura la extension —que es donde surge
+// la duda— no la tenia. Se comprueba en senders, que es donde se detecto.
+test('help button: el dialogo de configuracion de un sender tambien lleva ayuda', async ({ page }) => {
+    await login(page)
+    await dismissOpenDialogs(page)
+
+    await page.evaluate(() => {
+        ;(window as unknown as { __helpOpens: IHelpOpen[] }).__helpOpens = []
+        window.open = ((url?: string | URL, target?: string, features?: string) => {
+            ;(window as unknown as { __helpOpens: IHelpOpen[] }).__helpOpens.push({
+                url: String(url ?? ''), target: String(target ?? ''), features: String(features ?? '')
+            })
+            return null
+        }) as typeof window.open
+    })
+    const readOpens = () => page.evaluate(() => (window as unknown as { __helpOpens: IHelpOpen[] }).__helpOpens)
+
+    await clickExtensionMenuItem(page, 'Senders')
+    const manager = page.getByRole('dialog').filter({ hasText: 'Manage senders' })
+    await manager.waitFor()
+
+    // el engranaje del primer sender instalado abre su dialogo de configuracion
+    const gear = manager.getByRole('button', { name: 'Configure' }).first()
+    test.skip(await gear.count() === 0, 'no hay ningun sender instalado que configurar')
+    await gear.click()
+
+    const config = page.getByRole('dialog').filter({ hasText: /^Configure:/ })
+    await config.waitFor({ timeout: 10_000 })
+
+    const help = config.getByRole('button', { name: 'help' })
+    await expect(help, 'el dialogo de configuracion debe llevar ayuda').toBeVisible()
+
+    const before = (await readOpens()).length
+    await help.click()
+    await expect.poll(async () => (await readOpens()).length, { timeout: 5_000 }).toBeGreaterThan(before)
+
+    const last = (await readOpens()).at(-1)!
+    expect(last.url).toContain('guide/extensions/senders/index?id=managing-configuring-senders')
+    expect(last.url).toContain('/#/')
+    expect(last.target).toBe('kwirth-guide')
+
+    await page.goto('about:blank')
+})

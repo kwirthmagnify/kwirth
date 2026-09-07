@@ -541,7 +541,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
             </DialogActions>
             {configId !== undefined && (
                 <Dialog open PaperProps={{ sx: { width: 560, maxWidth: '95vw' } }}>
-                    <DialogTitle>Configure {configId}</DialogTitle>
+                    <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure {configId}</DialogTitleHelp>
                     <DialogContent>
                         <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>Installation config (JSON) for this plugin — read by the plugin at runtime.</Typography>
                         <TextField multiline minRows={8} fullWidth value={configText} onChange={e => setConfigText(e.target.value)} disabled={configBusy} slotProps={{ input: { sx: { fontFamily: 'monospace', fontSize: 12 } } }} />

@@ -389,7 +389,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
         {/* config de la instancia del conector (lanzado desde la card, schema-driven) */}
         { editing && editConnector &&
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px', minHeight: '360px' } }}>
-                <DialogTitle>Configure: {editConnector.label}</DialogTitle>
+                <DialogTitleHelp section='guide/admin/07-idp-integration?id=enabling-an-idp' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure: {editConnector.label}</DialogTitleHelp>
                 <DialogContent sx={{ pt: '16px !important' }}>
                     <Stack spacing={2}>
                         <TextField size='small' fullWidth label='Login button label' value={editing.label} onChange={e => setEditing({ ...editing, label: e.target.value })} />
