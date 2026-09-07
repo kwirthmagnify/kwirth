@@ -136,6 +136,18 @@ what the provider is doing, without exposing a single secret.
 Read them back in `startProvider()` and recompose. The parameter is optional (`storage?`) for backwards
 compatibility, so check it before using it and fail loudly if your provider cannot work without it.
 
+### 3. `getConfigNames()` — let the manager count them for you
+
+If your provider owns several configurations, implement it and the extension manager shows the count on your
+card, exactly as it does for senders:
+
+```typescript
+getConfigNames = (): string[] => [...this.configs.keys()]
+```
+
+Names only, never values — it travels in the public provider listing. Like `getSubscriptionHelp()`, it is
+optional and read defensively: not implementing it just means no counter.
+
 ## Deprecated: core-managed configuration
 
 Older providers received their configuration through `configure(config)`, fed by the core from a ConfigMap

@@ -72,6 +72,13 @@ export interface IProvider {
      * payload escribir.
      */
     getSubscriptionHelp?(): IProviderSubscriptionHelp
+    /**
+     * Nombres de las configuraciones que el provider tiene definidas (equivalente a
+     * ISender.getConfigNames). OPCIONAL: solo tiene sentido en un provider que sea dueño de su
+     * configuracion. El gestor de extensiones lo usa para mostrar cuantas hay en la tarjeta, igual
+     * que hace con los senders. No expone valores, solo nombres.
+     */
+    getConfigNames?(): string[]
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
     router: any

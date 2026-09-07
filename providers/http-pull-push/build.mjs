@@ -60,7 +60,9 @@ else {
 }
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
-const distMeta = { type: 'commonjs', extensionType: 'provider',
+// publishConfig.access=public: un paquete con scope se publica PRIVADO por defecto y npm responde
+// 402 Payment Required. Declararlo aqui evita tener que acordarse del flag --access en cada publish.
+const distMeta = { type: 'commonjs', extensionType: 'provider', publishConfig: { access: 'public' },
     id: meta.id,
     name: meta.name,
     displayName: meta.displayName,

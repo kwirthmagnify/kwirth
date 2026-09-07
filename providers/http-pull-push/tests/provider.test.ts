@@ -262,6 +262,120 @@ test('connections survive a provider restart, credentials included', async () =>
     await second.stopProvider()
 })
 
+// El boton Test del dialogo llama a este metodo EN EL BACK, que es quien tiene la red y los certificados
+// con los que se hara el pull de verdad.
+
+test('testConnection runs the request and reports status, timing, size and a preview', async () => {
+    const { provider } = await makeProvider([])
+    const result = await provider.testConnection({ ...conn('probe'), url: 'https://example.com/x' })
+
+    assert.equal(result.ok, true)
+    assert.equal(result.status, 200)
+    assert.equal(result.jsonParsed, true)
+    assert.equal(result.bytes, JSON.stringify({ from: 'probe' }).length)
+    assert.equal(result.preview, JSON.stringify({ from: 'probe' }))
+    assert.ok(result.durationMs >= 0)
+    await provider.stopProvider()
+})
+
+test('testConnection reports a transport failure as ok:false, never as a thrown error', async () => {
+    const storage = makeStorage()
+    const provider = new HttpPullPushProvider(undefined, {} as any, storage, async () => { throw new Error('ECONNREFUSED') })
+
+    const result = await provider.testConnection({ ...conn('down'), url: 'https://nope.invalid/x' })
+
+    assert.equal(result.ok, false)
+    assert.equal(result.error, 'ECONNREFUSED')
+    assert.equal(result.status, undefined)
+    await provider.stopProvider()
+})
+
+test('testConnection validates before firing, and does not care about the interval', async () => {
+    const calls: string[] = []
+    const storage = makeStorage()
+    const provider = new HttpPullPushProvider(undefined, {} as any, storage, async (c: IHttpPullConfig) => {
+        calls.push(c.name)
+        return { status: 200, body: 'ok' }
+    })
+
+    // url invalida: no se lanza ninguna peticion
+    const bad = await provider.testConnection({ ...conn('bad'), url: 'ftp://nope' })
+    assert.equal(bad.ok, false)
+    assert.match(bad.error!, /http/)
+    assert.deepEqual(calls, [])
+
+    // un timeout mayor que el intervalo bloquea el GUARDADO, pero no debe bloquear una prueba puntual
+    const ok = await provider.testConnection({ ...conn('fine'), url: 'https://x/1', intervalSeconds: 1, timeoutMs: 30000 })
+    assert.equal(ok.ok, true)
+    assert.deepEqual(calls, ['fine'])
+    await provider.stopProvider()
+})
+
+test('testConnection ignores retries: a test reports the first outcome', async () => {
+    let attempts = 0
+    const storage = makeStorage()
+    const provider = new HttpPullPushProvider(undefined, {} as any, storage, async () => {
+        attempts++
+        throw new Error('flaky')
+    })
+
+    await provider.testConnection({ ...conn('flaky'), url: 'https://x/1', retries: 5 })
+
+    assert.equal(attempts, 1, 'a test must not insist five times')
+    await provider.stopProvider()
+})
+
+test('testConnection neither persists the connection nor starts polling it', async () => {
+    const { provider, calls } = await makeProvider([])
+
+    await provider.testConnection({ ...conn('ghost'), url: 'https://x/1' })
+    await settle()
+
+    assert.deepEqual(provider.getConfigNames(), [], 'a tested connection is not saved')
+    assert.deepEqual(calls.filter(c => c === 'ghost').length, 1, 'exactly one request: the test, no poller')
+    await provider.stopProvider()
+})
+
+test('testConnection flags a body that is not JSON', async () => {
+    const storage = makeStorage()
+    const provider = new HttpPullPushProvider(undefined, {} as any, storage, async () => ({ status: 200, body: '<html/>' }))
+
+    const result = await provider.testConnection({ ...conn('html'), url: 'https://x/1' })
+
+    assert.equal(result.ok, true)
+    assert.equal(result.jsonParsed, false)
+    assert.equal(result.preview, '<html/>')
+    await provider.stopProvider()
+})
+
+test('getConfigNames reports the names, and only the names', async () => {
+    const { provider } = await makeProvider([
+        conn('stocks', { auth: { type: 'bearer' as any, token: 'tok-secret' } }),
+        conn('rss', { enabled: false })
+    ])
+
+    const names = provider.getConfigNames()
+
+    // incluye las deshabilitadas: el contador de la tarjeta cuenta lo definido, no lo que esta corriendo
+    assert.deepEqual(names.sort(), ['rss', 'stocks'])
+    // y no se filtra nada mas: son cadenas, no objetos con credenciales dentro
+    assert.ok(names.every(n => typeof n === 'string'))
+    assert.ok(!JSON.stringify(names).includes('tok-secret'))
+    await provider.stopProvider()
+})
+
+test('getConfigNames follows the connections as they are added and removed', async () => {
+    const { provider } = await makeProvider([conn('a')])
+    assert.deepEqual(provider.getConfigNames(), ['a'])
+
+    await provider.applyConfigs([conn('a'), conn('b')])
+    assert.deepEqual(provider.getConfigNames().sort(), ['a', 'b'])
+
+    await provider.applyConfigs([conn('b')])
+    assert.deepEqual(provider.getConfigNames(), ['b'])
+    await provider.stopProvider()
+})
+
 test('the published subscription help matches the real behaviour', async () => {
     const { provider, calls } = await makeProvider([conn('stocks'), conn('rss')])
     const help = provider.getSubscriptionHelp()

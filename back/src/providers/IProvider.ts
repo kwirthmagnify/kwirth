@@ -59,6 +59,12 @@ export interface IProvider {
     */
     getSubscriptionHelp?: () => IProviderSubscriptionHelp
     /*
+        Nombres de las configuraciones definidas en el provider (equivalente a ISender.getConfigNames).
+        OPCIONAL: solo tiene sentido en un provider dueño de su configuracion. El gestor de extensiones
+        lo usa para el contador de la tarjeta. No expone valores, solo nombres.
+    */
+    getConfigNames?: () => string[]
+    /*
         @deprecated El core deja de alimentar este metodo: un provider es dueño de su propia
         configuracion y la sirve por 'configRouter'. Se mantiene por compatibilidad con providers
         de terceros que aun usen la config gestionada por el core.

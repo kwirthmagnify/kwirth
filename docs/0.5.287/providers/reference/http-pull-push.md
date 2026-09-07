@@ -51,6 +51,9 @@ The provider publishes `getSubscriptionHelp()`, so a consumer that lets the user
 **Provider Debug** channel, for instance — can show what to write, including the two things nobody guesses:
 that `configs: []` delivers **nothing**, and that polling is lazy so nothing happens until you subscribe.
 
+It also publishes `getConfigNames()`, which is what lets the provider manager show the connection count on
+the card, the same way it does for senders. Names only, never values.
+
 ## Event delivered
 
 ```ts
@@ -95,7 +98,28 @@ by the core behind accessKey validation:
 ```
 GET  {clusterUrl}/core/providerconfig/http-pull-push/configs   → the connection list
 PUT  {clusterUrl}/core/providerconfig/http-pull-push/configs   → replaces it (validated, persisted, applied live)
+POST {clusterUrl}/core/providerconfig/http-pull-push/test      → runs one request with the posted connection
 ```
+
+`POST /test` takes a single connection in the body — it does **not** have to be saved — performs the request
+**from the backend** (the network, certificates and identity the real polling uses) and answers:
+
+```ts
+interface IHttpPullTestResult {
+    ok: boolean          // false = the request itself failed (DNS, TLS, timeout…)
+    status?: number      // HTTP status when it did answer
+    durationMs: number
+    bytes?: number
+    preview?: string     // first 1500 chars of the body
+    jsonParsed?: boolean // whether the body parses as JSON
+    error?: string
+}
+```
+
+It answers **200 even when `ok` is false**, so a failed remote request is distinguishable from a failed call
+to the provider. It validates only what a single request needs (url and timeout, plus the fields the chosen
+auth mode requires) — deliberately not the interval, since a one-off test does not care about it. It ignores
+`retries`, persists nothing and starts no poller.
 
 `PUT` answers `400` with `{ errors: string[] }` when a connection is invalid: no name, duplicated name,
 a url that is not http(s), a non-positive interval or timeout, a timeout longer than the interval, or an

@@ -51,6 +51,15 @@
   },
   {
     "extensionType": "provider",
+    "id": "http-pull-push",
+    "version": "0.1.0",
+    "name": "HTTP Pull-Push Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-http-pull-push/-/kwirth-provider-http-pull-push-0.1.0.tgz",
+    "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "provider",
     "id": "trivy",
     "version": "0.1.8",
     "name": "Trivy Provider",

@@ -9,7 +9,31 @@ push into Kwirth by themselves.
 > (`configRouter`, injected `IProviderStorage`), the `configure()` deprecation and the syslog migration.
 > Requires `@kwirthmagnify/kwirth-common-back >= 0.5.37`.
 
-## Status (2026-09-06) — BACK, FRONT AND DOCS DONE AND VALIDATED LIVE; RELEASE PENDING
+## Status (2026-09-07) — SHIPPED. `provider/http-pull-push@0.1.0` published
+
+CL9 closed on 2026-09-07: harness 198 (core) + 53 (provider) · e2e green (`provider-http-pull-push`, plus
+`extension-catalogs` with no regression) · metrics history updated · guide and reference written, with the
+dialog captured · plan and backlog updated · commit, tag and push · **published to npm and listed in the
+public `providers/manifest.json`**.
+
+Added during the user's QA, after the first validation round:
+
+- **Connection count on the card**, like senders: new optional `getConfigNames()` in `IProvider`, surfaced
+  by `ProviderApi` as `configNames` and rendered as a chip **immediately left of the gear**. Read
+  defensively, so a provider that throws cannot break the listing.
+- **Dialog reworked to the sender pattern**: list with per-row delete, `New` / `Clone`, `Update`/`Add` +
+  `Cancel`, `Export` / `Import`, `Close`. No global save any more — every action persists and applies at
+  once, which is what the hot-apply deserved.
+- **Export asks about credentials** (off by default): left off the secrets come out empty, turned on the
+  dialog warns that the file becomes a secret. Import flags with `replaces` whatever it would overwrite.
+- **`Test` button that runs from the BACK** (`POST /test`): the backend has the network, certificates and
+  identity the real polling uses, so a test from the browser would prove nothing. Reports status, timing,
+  size, a body preview and whether it parses as JSON; ignores retries, persists nothing, starts no poller.
+- Two accessibility fixes that the e2e surfaced: the connection name field is `Connection name` (there were
+  two fields labelled `Name` in the same dialog) and each delete button carries its connection in its
+  `aria-label` (they were indistinguishable to a screen reader).
+
+## Earlier status (2026-09-06) — back, front and docs done and validated live
 
 - **Back** — green: typechecks, builds `dist/back.js`, suite **44/44** (config split, poller, two-layer
   behaviour, validation). README done.
@@ -130,5 +154,17 @@ the generic dialog is out of the question.
 - Both `_sidebar.md` sections + a card in the public `docs/providers.html`. ✔
 - `README.md` in the provider (description, config, examples). ✔
 - `back/kwirth-dev.json`. ✔
-- **Pending**: `providers/manifest.json` + provider `bbpm` (OSS: public npm + public manifest).
-- **Pending**: closing checklist (9 points), including `plans/test-metrics-history.md`.
+- `providers/manifest.json` + npm publish (OSS: public npm + public manifest). ✔ `0.1.0`
+- Closing checklist (9 points), including `plans/test-metrics-history.md`. ✔
+
+## Backlog
+
+- **The real pull is still only exercised by hand.** The `Test` button and the QA cover it, but no
+  automated test hits a real endpoint (by design: the suite injects a fake fetcher and must stay offline).
+  Worth a smoke test against a local HTTP server started by the test itself.
+- **Desktop untested.** The Secret/ConfigMap split is verified on Kubernetes; with no cluster `ISecrets`
+  has a different implementation and that path has not been exercised.
+- **A 4xx/5xx arrives as a success with its status**, not as an `error` — `error` is reserved for transport
+  failures. Deliberate and documented; revisit if a consumer would rather treat a 5xx as a failed pull.
+- **No `Test` from the connection list**, only from the form being edited. If it turns out to be useful,
+  a per-row test would need the poller's own state to avoid overlapping a running cycle.

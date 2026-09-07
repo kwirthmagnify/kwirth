@@ -35,8 +35,43 @@ That is the whole point of the provider layer — the remote endpoint sees Kwirt
 
 ## Configuration
 
-Set it from the card's **⚙️ gear** in **☰ → Manage extensions → Providers**. The dialog lists your
-connections on the left and edits the selected one on the right.
+Set it from the card's **⚙️ gear** in **☰ → Manage extensions → Providers**. The card itself tells you how
+many connections the provider has, the same way a sender's card does.
+
+The dialog works like the sender configuration dialog: your connections on the left, the selected one being
+edited on the right.
+
+![HTTP Pull-Push provider configuration](../../../_media/guide/provider-config-http-pull-push.png)
+
+- **New** starts an empty connection; **Clone** duplicates the one you are editing (handy for a second
+  endpoint of the same API, with the same auth).
+- **Update** — or **Add** for a new one — saves **that** connection and applies it immediately. **Cancel**
+  discards what you were editing, not the rest.
+- The **🗑️** on each row deletes that connection on the spot.
+- **Export** / **Import** move connections as JSON, which is how you carry a set-up between clusters.
+- **Close** leaves the dialog. There is no global save: every action has already been applied.
+
+## Test — before saving anything
+
+**Test** fires the request **once, right now**, and tells you the HTTP status, how long it took, how many
+bytes came back and the beginning of the response. It works on what you have on screen, so you can try a
+url before saving it.
+
+The important part: the request is made **by the Kwirth backend**, not by your browser. That is the only
+test worth trusting — the backend has the network the polling will really use, its own DNS and egress
+rules, and its own certificate store. An endpoint that answers from your laptop may be unreachable from
+inside the cluster, and the other way round.
+
+A few things you can read from the result:
+
+- **HTTP 401 / 403** means the connection got through but your credentials are wrong — a different problem
+  from a timeout.
+- **`body is not valid JSON`** on a connection set to *Response: JSON* warns you that subscribers will
+  receive raw text.
+- A duration close to your **timeout** is a sign that the timeout is too tight.
+
+The test does not save the connection, does not start polling it, and ignores **Retries** — a test reports
+the first outcome instead of insisting.
 
 | Field | What it does |
 |---|---|
@@ -68,6 +103,17 @@ reading, and it stops a forgotten connection from burning the quota of a paid AP
 **ConfigMap** (so you can audit with `kubectl` what Kwirth is querying), while passwords, tokens and custom
 header values go to a **Secret**. You do not have to do anything for this — it is how the provider stores
 its own configuration.
+
+## Exporting and importing
+
+**Export** asks you which connections to take and whether to **include credentials**, which is off by
+default. Left off, the file carries urls, intervals, headers and the auth *mode*, but the password, token or
+header value come out empty and whoever imports it has to type them — so a file that ends up in a ticket or
+a chat is not a leak. Turned on, the file contains those secrets in clear text and becomes a secret itself;
+the dialog says so.
+
+**Import** lets you pick what to bring in from the file, and flags with **replaces** any connection whose
+name already exists, so you can see what you are about to overwrite before confirming.
 
 ## Security notes
 

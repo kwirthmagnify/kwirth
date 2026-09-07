@@ -23,6 +23,12 @@ export interface IProviderRuntimeInfo {
     core?: boolean
     /** lo que el provider publica sobre como suscribirse a el; ausente si no lo implementa */
     subscriptionHelp?: IProviderSubscriptionHelp
+    /**
+     * nombres de las configuraciones que el provider tiene definidas; ausente si no publica
+     * getConfigNames(). Solo nombres, nunca valores: alimenta el contador de la tarjeta igual que
+     * 'configNames' hace en los senders.
+     */
+    configNames?: string[]
 }
 
 export type TProviderApiEntry = IProviderMeta & IProviderRuntimeInfo
@@ -61,6 +67,21 @@ export class ProviderApi {
         }
     }
 
+    /**
+     * getConfigNames() es OPCIONAL igual que getSubscriptionHelp: no implementarlo no es un error, y un
+     * provider que reviente al pedirselo no puede tumbar el listado de todos los demas.
+     */
+    private configNamesOf(provider: IProvider): string[] | undefined {
+        if (typeof provider.getConfigNames !== 'function') return undefined
+        try {
+            const names = provider.getConfigNames()
+            return Array.isArray(names) ? names.filter(n => typeof n === 'string') : undefined
+        } catch (err) {
+            logError(ELogComponent.PROVIDER, `Provider '${provider.id}' failed to report its config names: ${err}`)
+            return undefined
+        }
+    }
+
     private addRoutes(): void {
         this.router.get('/', async (_req: Request, res: Response) => {
             try {
@@ -80,6 +101,7 @@ export class ProviderApi {
                     const entry = entries.get(provider.id) ?? { id: provider.id, name: provider.id, version: 'core', description: '', core: true }
                     entry.running = true
                     entry.subscriptionHelp = this.subscriptionHelpOf(provider)
+                    entry.configNames = this.configNamesOf(provider)
                     entries.set(provider.id, entry)
                 }
 

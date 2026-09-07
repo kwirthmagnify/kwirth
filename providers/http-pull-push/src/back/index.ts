@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express'
 import { IProvider, IProviderStorage, IProviderSubscriber, IProviderSubscriptionHelp, KwirthData } from '@kwirthmagnify/kwirth-common-back'
-import { IHttpPullConfig, IHttpPullPushEvent, IHttpPullPushSubscription } from '../common/HttpPullPush'
-import { validateConfigs } from '../common/Validation'
+import { IHttpPullConfig, IHttpPullPushEvent, IHttpPullPushSubscription, IHttpPullTestResult, TEST_PREVIEW_CHARS } from '../common/HttpPullPush'
+import { validateConfigs, validateForTest } from '../common/Validation'
 import { ConfigStore } from './ConfigStore'
 import { httpFetcher, TFetcher } from './HttpFetcher'
 import { Poller } from './Poller'
@@ -149,6 +149,65 @@ export class HttpPullPushProvider implements IProvider {
                     res.status(500).json({ errors: [String(err)] })
                 }
             })
+
+        /*
+            Prueba puntual de una conexion, tal y como la tenga el usuario en el dialogo (no hace falta
+            haberla guardado). Responde 200 tambien cuando la peticion remota falla: el 'ok' del cuerpo
+            distingue "la prueba se hizo y fallo" de "la llamada al provider fallo".
+        */
+        this.configRouter.route('/test')
+            .post(async (req: Request, res: Response) => {
+                try {
+                    const result = await this.testConnection(req.body as IHttpPullConfig)
+                    res.status(200).json(result)
+                }
+                catch (err) {
+                    console.error(`[http-pull-push] Error testing connection: ${err}`)
+                    res.status(500).json({ ok: false, durationMs: 0, error: String(err) })
+                }
+            })
+    }
+
+    /*
+        Prueba una conexion HACIENDO LA PETICION DE VERDAD, una sola vez y sin persistir nada.
+
+        La ejecuta el back a proposito: es el back quien tiene la red del cluster, los certificados y la
+        identidad con los que se hara el pull real, asi que probar desde el navegador no demostraria nada
+        (otra red, otro almacen de CAs, otras reglas de salida).
+
+        Se ignoran los reintentos: en una prueba interesa el primer resultado, no la insistencia.
+    */
+    testConnection = async (config: IHttpPullConfig): Promise<IHttpPullTestResult> => {
+        const errors = validateForTest(config)
+        if (errors.length > 0) return { ok: false, durationMs: 0, error: errors.join('; ') }
+
+        const started = Date.now()
+        try {
+            const result = await this.fetcher({ ...config, retries: 0 })
+            const body = result.body ?? ''
+            let jsonParsed = false
+            try {
+                JSON.parse(body)
+                jsonParsed = true
+            }
+            catch { /* no es json: se refleja en jsonParsed, no es un fallo de la prueba */ }
+
+            return {
+                ok: true,
+                status: result.status,
+                durationMs: Date.now() - started,
+                bytes: Buffer.byteLength(body, 'utf8'),
+                preview: body.slice(0, TEST_PREVIEW_CHARS),
+                jsonParsed
+            }
+        }
+        catch (err) {
+            return {
+                ok: false,
+                durationMs: Date.now() - started,
+                error: err instanceof Error ? err.message : String(err)
+            }
+        }
     }
 
     /*
@@ -162,6 +221,9 @@ export class HttpPullPushProvider implements IProvider {
     }
 
     getConfigs = (): IHttpPullConfig[] => [...this.configs.values()]
+
+    // Solo los nombres: alimenta el contador de la tarjeta en el gestor de extensiones.
+    getConfigNames = (): string[] => [...this.configs.keys()]
 
     // ── Reconciliacion de pollers ───────────────────────────────────────────────
 

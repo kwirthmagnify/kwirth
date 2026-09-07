@@ -123,6 +123,14 @@ test.describe('http-pull-push provider', () => {
             // el filtro deja una sola tarjeta, y con ella una sola rueda dentada
             await manager.getByPlaceholder('Filter…').first().fill('http-pull-push')
             await page.waitForTimeout(500)
+
+            // la tarjeta cuenta las conexiones que el provider declara (getConfigNames)
+            const expectedCount = original.length + 1
+            await expect(
+                manager.getByText(`${expectedCount} config${expectedCount > 1 ? 's' : ''}`, { exact: true }),
+                'the card must show how many connections the provider has, like senders do'
+            ).toBeVisible({ timeout: 10000 })
+
             const gear = manager.locator('[aria-label="Configure"]')
             await expect(gear, 'only the http-pull-push card should be left').toHaveCount(1)
             await gear.getByRole('button').click()
@@ -130,9 +138,14 @@ test.describe('http-pull-push provider', () => {
             const dialog = page.getByRole('dialog').filter({ hasText: /HTTP Pull-Push Provider — Connections/i })
             await expect(dialog, 'the provider must render its own dialog, not the generic form').toBeVisible({ timeout: 15000 })
 
-            // la conexion creada antes por API aparece en la lista del dialogo
+            // sin nada seleccionado no hay formulario, y Clone no aplica
+            await expect(dialog.getByText('Select a connection to edit or click New.')).toBeVisible()
+            await expect(dialog.getByRole('button', { name: 'Clone', exact: true })).toBeDisabled()
+
+            // la conexion creada antes por API aparece en la lista; al pulsarla se edita
             await expect(dialog.getByText(`${PREFIX}quotes`)).toBeVisible({ timeout: 10000 })
             await dialog.getByText(`${PREFIX}quotes`).click()
+            await expect(dialog.getByText(`Editing: ${PREFIX}quotes`)).toBeVisible()
 
             // y sus valores se pintan en el detalle, con la credencial oculta
             await expect(dialog.getByLabel('URL')).toHaveValue('https://api.example.com/quotes')
@@ -146,7 +159,52 @@ test.describe('http-pull-push provider', () => {
             await expect(password).toHaveAttribute('type', 'text')
             await expect(password).toHaveValue('e2e-secret-value')
 
-            await dialog.getByRole('button', { name: 'Cancel' }).click()
+            // ── Update persiste al momento, sin un Save global ──────────────
+            await dialog.getByLabel('Interval (s)').fill('600')
+            await dialog.getByRole('button', { name: 'Update', exact: true }).click()
+            await expect(dialog.getByText('Select a connection to edit or click New.')).toBeVisible({ timeout: 10000 })
+            const afterUpdate = JSON.parse((await api(page, session, 'GET')).text)
+            expect(afterUpdate.find((c: any) => c.name === `${PREFIX}quotes`).intervalSeconds,
+                'Update must persist on its own').toBe(600)
+
+            // ── New + Clone + Delete en la linea ────────────────────────────
+            await dialog.getByRole('button', { name: 'New', exact: true }).click()
+            await expect(dialog.getByText('New connection')).toBeVisible()
+            await dialog.getByLabel('Connection name').fill(`${PREFIX}dup-src`)
+            await dialog.getByLabel('URL').fill('https://api.example.com/one')
+            await dialog.getByRole('button', { name: 'Add', exact: true }).click()
+            await expect(dialog.getByText(`${PREFIX}dup-src`)).toBeVisible({ timeout: 10000 })
+
+            await dialog.getByText(`${PREFIX}dup-src`).click()
+            await dialog.getByRole('button', { name: 'Clone', exact: true }).click()
+            // el clon llega con un nombre libre y hay que confirmarlo con Add
+            await expect(dialog.getByLabel('Connection name')).toHaveValue(`${PREFIX}dup-src-copy`)
+            await dialog.getByRole('button', { name: 'Add', exact: true }).click()
+            await expect(dialog.getByText(`${PREFIX}dup-src-copy`)).toBeVisible({ timeout: 10000 })
+
+            const afterClone = JSON.parse((await api(page, session, 'GET')).text)
+            expect(afterClone.filter((c: any) => c.name.startsWith(`${PREFIX}dup-src`)).length).toBe(2)
+            expect(afterClone.find((c: any) => c.name === `${PREFIX}dup-src-copy`).url,
+                'the clone must copy the values, not just the name').toBe('https://api.example.com/one')
+
+            // borrar desde la propia linea (cada boton se identifica por su conexion)
+            await dialog.getByLabel(`Delete ${PREFIX}dup-src-copy`).click()
+            await expect(dialog.getByText(`${PREFIX}dup-src-copy`)).toHaveCount(0, { timeout: 10000 })
+            const afterDelete = JSON.parse((await api(page, session, 'GET')).text)
+            expect(afterDelete.some((c: any) => c.name === `${PREFIX}dup-src-copy`)).toBe(false)
+
+            // ── el export ofrece decidir sobre las credenciales ─────────────
+            await dialog.getByRole('button', { name: 'Export', exact: true }).click()
+            const exportDialog = page.getByRole('dialog').filter({ hasText: /^Export connections/ })
+            await expect(exportDialog).toBeVisible()
+            const includeCreds = exportDialog.getByLabel('Include credentials')
+            await expect(includeCreds, 'credentials must be OUT by default').not.toBeChecked()
+            await expect(exportDialog.getByText(/Credentials are left empty/i)).toBeVisible()
+            await includeCreds.check()
+            await expect(exportDialog.getByText(/clear text/i), 'turning it on must warn').toBeVisible()
+            await exportDialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+
+            await dialog.getByRole('button', { name: 'Close', exact: true }).click()
         }
         finally {
             // ── restore: se deja exactamente lo que habia ────────────────────

@@ -68,6 +68,7 @@ on its own router.
 | 6 | `mountProviderConfigRouter()` mounts `configRouter` at `/core/providerconfig/<id>` behind `validKey`, called from the two sites where provider routers are mounted | `back/src/index.ts` | ✔ |
 | 7 | Auto-instantiate providers declaring a `configRouter`, not just those with a public router — otherwise the dialog has nothing to talk to before the first subscriber | `back/src/index.ts` | ✔ |
 | 8 | Unit tests for the injected storage (destination per `secret` flag, namespaces, round-trip, no collisions) | `back/tests/tools/providerStorage.test.ts` (new) | ✔ |
+| 9 | `getConfigNames?(): string[]` — optional, mirroring `ISender.getConfigNames`. `ProviderApi` surfaces it as `configNames` in the provider listing (read defensively, like `subscriptionHelp`) and the manager shows a `N configs` chip next to the gear, as it does for senders | `common-back/src/IProvider.ts`, `back/src/providers/IProvider.ts`, `back/src/api/ProviderApi.ts`, `front/src/components/ProviderManagerDialog.tsx` | ✔ |
 
 Design decisions inside those changes:
 

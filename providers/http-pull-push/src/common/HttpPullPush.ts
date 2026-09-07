@@ -89,8 +89,29 @@ export interface IHttpPullPushEvent {
     error?: string
 }
 
+/*
+    Resultado de probar una conexion. La prueba la ejecuta el BACK, no el navegador: es el back quien
+    tiene la red, los certificados y la identidad con los que se hara el pull de verdad, asi que probar
+    desde el front no demostraria nada.
+
+    'ok' false significa que la prueba se hizo y fallo (timeout, DNS, TLS...), no que la peticion al
+    provider fallara. Un 4xx/5xx del endpoint remoto es ok=true con su 'status', igual que en el polling.
+*/
+export interface IHttpPullTestResult {
+    ok: boolean
+    status?: number
+    durationMs: number
+    bytes?: number
+    /** primeros caracteres del cuerpo, recortado; solo para que el usuario reconozca la respuesta */
+    preview?: string
+    /** true si el cuerpo se pudo parsear como JSON (relevante con responseType=json) */
+    jsonParsed?: boolean
+    error?: string
+}
+
 export const DEFAULT_INTERVAL_SECONDS = 60
 export const DEFAULT_TIMEOUT_MS = 10000
+export const TEST_PREVIEW_CHARS = 1500
 
 export const newHttpPullConfig = (name: string): IHttpPullConfig => ({
     name,

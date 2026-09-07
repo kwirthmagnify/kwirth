@@ -1,6 +1,33 @@
 import { EAuthType, IHttpPullConfig } from './HttpPullPush'
 
 /*
+    Validacion para PROBAR una conexion: solo lo que hace falta para lanzar una peticion. A proposito no
+    mira el intervalo ni su relacion con el timeout, porque a una prueba puntual eso no le afecta y seria
+    absurdo impedir probar una url por un intervalo que aun no has ajustado.
+*/
+export const validateForTest = (config: IHttpPullConfig): string[] => {
+    const errors: string[] = []
+    if (!config) return ['No connection to test']
+    if (!config.url || !/^https?:\/\//i.test(config.url)) errors.push('url must start with http:// or https://')
+    if (!(config.timeoutMs > 0)) errors.push('timeout must be greater than zero')
+
+    switch (config.auth?.type) {
+        case EAuthType.BASIC:
+            if (!config.auth.username) errors.push('basic auth needs a username')
+            break
+        case EAuthType.BEARER:
+            if (!config.auth.token) errors.push('bearer auth needs a token')
+            break
+        case EAuthType.HEADER:
+            if (!config.auth.headerName) errors.push('header auth needs a header name')
+            break
+        default:
+            break
+    }
+    return errors
+}
+
+/*
     Validacion compartida: el back la aplica en el PUT (un cliente puede saltarse el dialogo) y el front
     la usa para avisar antes de guardar. Devuelve la lista de errores; vacia = valido.
 */

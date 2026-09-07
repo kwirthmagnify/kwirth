@@ -43,6 +43,9 @@ interface IInstalledProvider {
     hasFront?: boolean
     hasSchema?: boolean
     requiresRestart?: boolean
+    // Nombres de las configuraciones que el provider declara (getConfigNames). Ausente si no las
+    // publica: un provider sin configuracion propia no muestra contador, igual que en los senders.
+    configNames?: string[]
 }
 
 interface IProviderSchemaField {
@@ -355,6 +358,9 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                             <MarketplaceSourceIcon label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} />
                                             <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} /></Box>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(provider.installedFrom)}</Box>
+                                            {(provider.configNames?.length ?? 0) > 0 &&
+                                                <Chip label={`${provider.configNames!.length} config${provider.configNames!.length > 1 ? 's' : ''}`}
+                                                    size='small' color='primary' variant='outlined' sx={{ ...compactChip, mr: 0.5 }} />}
                                             <Tooltip title={provider.hasFront || provider.hasSchema ? 'Configure' : 'No configuration available'}>
                                                 <span>
                                                     <IconButton size='small' disabled={!provider.hasFront && !provider.hasSchema} onClick={() => setExpandedId(provider.id)}>
@@ -381,6 +387,8 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                         <MarketplaceSourceIcon label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} />
                                         <MarketplaceBadge label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} />
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(provider.installedFrom)}</Box>
+                                        {(provider.configNames?.length ?? 0) > 0 &&
+                                            <Chip label={`${provider.configNames!.length} config${provider.configNames!.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' sx={compactChip} />}
                                         <Chip label={`v${provider.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                         <Tooltip title='Configure'>
                                             <IconButton size='small' onClick={() => setExpandedId(provider.id)}>
