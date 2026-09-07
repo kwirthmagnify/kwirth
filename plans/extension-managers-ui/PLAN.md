@@ -20,11 +20,15 @@ Seis diálogos (plugins, themes, homepages, logins, packs, docs) usan una **card
 secciones y por eso no derivan. Los otros cinco tienen el JSX duplicado: ahí es donde hay que mirar dos
 veces.
 
-### 2. Procedencia siempre, en las dos secciones
+### 2. Procedencia siempre: en las dos secciones **y en las dos vistas**
 
 `MarketplaceSourceIcon` + `MarketplaceBadge` (`components/MarketplaceBadge.tsx`). En el catálogo es donde
 más importa: con la precedencia por id, dos marketplaces pueden publicar el mismo `log` y el badge es lo
 único que los distingue.
+
+Son **veinte** sitios: 11 diálogos × instalados/disponibles × card/lista. Se corrigió en dos tandas porque
+la primera solo miró las tarjetas: al pasar a lista, la procedencia desaparecía en las diez listas de
+instalados. Al auditar, **contar 20**, no 10.
 
 Una extensión de **dev**, de **fichero local** o descargada de una **URL suelta** no viene de ningún
 marketplace: icono de consola y **ningún chip**. Sin esa excepción, el badge las etiquetaba como

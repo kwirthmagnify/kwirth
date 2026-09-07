@@ -9,6 +9,11 @@ An **Identity Provider (IdP) connector** lets users **sign in to Kwirth with an 
 
 ![Identity providers manager](../../../_media/guide/manage-idps.png)
 
+The **Card / List** toggle switches to one row per extension — the same information, easier to scan once you have a few installed. Both views tell you **where each extension comes from**: the icon and chip on every row name the marketplace serving it, which matters because a private marketplace can publish its own extension under an id that also exists in the public one.
+
+![Identity providers, list view](../../../_media/guide/manage-idps-list.png)
+
+
 Each connector is a **card** showing the provider, the **protocol**, a status badge (**enabled** / **not configured**), and a **⚙️ gear** (configure) + **🗑️ delete**. You configure a connector's client id/secret and callback behind its **gear**; once configured and enabled it appears as a **"Login with …"** button on the sign-in screen.
 
 ## The bundled connectors

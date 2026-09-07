@@ -45,6 +45,11 @@ Open **☰ → Manage extensions → Senders**. Each sender is a **card** showin
 
 ![Manage senders](../../../_media/guide/manage-senders.png)
 
+The **Card / List** toggle switches to one row per extension — the same information, easier to scan once you have a few installed. Both views tell you **where each extension comes from**: the icon and chip on every row name the marketplace serving it, which matters because a private marketplace can publish its own extension under an id that also exists in the public one.
+
+![Manage senders, list view](../../../_media/guide/manage-senders-list.png)
+
+
 1. Click a sender's **gear** to open its config manager. Each sender keeps a **list of named configs** — pick one to edit, **New** to add, **Clone** to copy, and **Export/Import** to move configs as JSON:
 
 ![Configure a sender (SMTP)](../../../_media/guide/sender-config-smtp.png)

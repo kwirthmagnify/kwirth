@@ -9,6 +9,11 @@ A **homepage** is the **landing dashboard** you see on the Kwirth home screen �
 
 ![Manage homepages](../../../_media/guide/manage-homepages.png)
 
+The **Card / List** toggle switches to one row per extension — the same information, easier to scan once you have a few installed. Both views tell you **where each extension comes from**: the icon and chip on every row name the marketplace serving it, which matters because a private marketplace can publish its own extension under an id that also exists in the public one.
+
+![Manage homepages, list view](../../../_media/guide/manage-homepages-list.png)
+
+
 Each homepage is a **card** with a description, **version**, an **Activate** button and **🗑️ delete**. Install more from the **Install homepage** URL field (or **Browse**); the **Available homepages** list shows what's in the registry.
 
 ## The bundled homepages

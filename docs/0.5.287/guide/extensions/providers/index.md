@@ -50,6 +50,11 @@ Open **☰ → Manage extensions → Providers**. Each installed provider is a *
 
 ![Manage providers](../../../_media/guide/manage-providers.png)
 
+The **Card / List** toggle switches to one row per extension — the same information, easier to scan once you have a few installed. Both views tell you **where each extension comes from**: the icon and chip on every row name the marketplace serving it, which matters because a private marketplace can publish its own extension under an id that also exists in the public one.
+
+![Manage providers, list view](../../../_media/guide/manage-providers-list.png)
+
+
 Providers that connect to something external expose their settings behind the **gear**. For example, the **Syslog** provider lets you set the **listen Port**, the **Protocol** (UDP / TCP / both), **TCP framing**, queue/parallelism limits and optional **relay targets**:
 
 ![Syslog provider configuration](../../../_media/guide/provider-config-syslog.png)
