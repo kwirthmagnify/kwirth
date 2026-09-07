@@ -340,12 +340,16 @@ const openReconfigure = (id: string) => {
                                     />
                                 ))}
                               </Box>
-                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                 {filteredInstalled.flatMap((hp, i, arr) => [
                                     <Box key={`${hp.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Home fontSize='small' /></Box>,
                                     <Box key={`${hp.id}-name`} sx={{ py: 1, minWidth: 0 }}>
                                         <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hp.displayName || hp.name}</Typography>
                                         <Typography variant='caption' color='text.secondary'>{hp.description}</Typography>
+                                    </Box>,
+                                    <Box key={`${hp.id}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
+                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(hp.id)} installedFrom={hp.installedFrom} />
+                                        <MarketplaceBadge label={marketplaceOfInstalled(hp.id)} installedFrom={hp.installedFrom} />
                                     </Box>,
                                     <Box key={`${hp.id}-active`} sx={{ justifySelf: 'end', py: 1 }}>{isActive(hp.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} />}</Box>,
                                     <Box key={`${hp.id}-version`} sx={{ py: 1 }}><Chip label={`v${hp.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} /></Box>,
@@ -442,7 +446,7 @@ const openReconfigure = (id: string) => {
                                     )
                                 })}
                               </Box>
-                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                 {filteredIds.flatMap((id, i, arr) => {
                                     const group = groupedAvailable[id]
                                     const t = getSelectedEntry(id)
@@ -452,6 +456,10 @@ const openReconfigure = (id: string) => {
                                         <Box key={`${id}-name`} sx={{ py: 1, minWidth: 0 }}>
                                             <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.displayName || t.name}</Typography>
                                             <Typography variant='caption' color='text.secondary'>{t.description}</Typography>
+                                        </Box>,
+                                        <Box key={`${id}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
+                                            <MarketplaceSourceIcon label={t.marketplaceLabel} />
+                                            <MarketplaceBadge label={t.marketplaceLabel} />
                                         </Box>,
                                         <Box key={`${id}-status`} sx={{ justifySelf: 'end', py: 1 }}>
                                             {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />

@@ -364,6 +364,10 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                 {installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name).toLowerCase().includes(installedFilter.toLowerCase())).flatMap((t, i, arr) => [
                                     <Box key={`${t.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Palette fontSize='small' /></Box>,
                                     <Typography key={`${t.id}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{t.displayName || t.name}</Typography>,
+                                    <Box key={`${t.id}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
+                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(t.id)} installedFrom={t.installedFrom} />
+                                        <MarketplaceBadge label={marketplaceOfInstalled(t.id)} installedFrom={t.installedFrom} />
+                                    </Box>,
                                     <Box key={`${t.id}-active`} sx={{ justifySelf: 'end', py: 1 }}>{isActive(t.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} />}</Box>,
                                     <Box key={`${t.id}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(t.installedFrom)}</Box>,
                                     <Box key={`${t.id}-ver`} sx={{ justifySelf: 'end', py: 1 }}><Chip label={`v${t.version}`} size='small' sx={compactChip} /></Box>,
@@ -461,7 +465,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                 })}
                               </Box>
                             : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden',
-                                         display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto',
+                                         display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto',
                                          columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                 {filteredIds.flatMap((id, i, arr) => {
                                     const group = groupedAvailable[id]
@@ -470,6 +474,10 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                     return [
                                         <Box key={`${id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Palette fontSize='small' /></Box>,
                                         <Typography key={`${id}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{t.displayName || t.name}</Typography>,
+                                        <Box key={`${id}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
+                                            <MarketplaceSourceIcon label={t.marketplaceLabel} />
+                                            <MarketplaceBadge label={t.marketplaceLabel} />
+                                        </Box>,
                                         <Box key={`${id}-status`} sx={{ justifySelf: 'end', py: 1 }}>
                                             {isDevInstalled(id) ? <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
                                             : isInstalled(id) ? <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />

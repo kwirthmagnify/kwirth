@@ -73,6 +73,14 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
             // dar tiempo a que resuelva el catalogo: si no, se captura el spinner
             await page.waitForTimeout(2500)
             await dialog.screenshot({ path: `${MEDIA}/${m.file}` })
+
+            // la vista de lista tambien va a la guia: es la mitad de la pantalla que mas derivaba
+            const listToggle = dialog.getByRole('button', { name: /list view/i }).first()
+            if (await listToggle.count() > 0) {
+                await listToggle.click()
+                await page.waitForTimeout(1200)
+                await dialog.screenshot({ path: `${MEDIA}/${m.file.replace('.png', '-list.png')}` })
+            }
             await dismissOpenDialogs(page)
         }
     }

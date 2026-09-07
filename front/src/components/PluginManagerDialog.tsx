@@ -409,6 +409,8 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                                     <Box key={plugin.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}>{resolveIcon(plugin.icon)}</Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plugin.displayName || plugin.name}</Typography>
+                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(plugin.id)} installedFrom={plugin.installedFrom} />
+                                        <MarketplaceBadge label={marketplaceOfInstalled(plugin.id)} installedFrom={plugin.installedFrom} />
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(plugin.installedFrom)}</Box>
                                         <Chip label={`v${plugin.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                         <Tooltip title='Configure'>
@@ -511,6 +513,8 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                                         <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                             <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}>{resolveIcon(plugin.icon)}</Box>
                                             <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plugin.displayName || plugin.name}</Typography>
+                                            <MarketplaceSourceIcon label={plugin.marketplaceLabel} />
+                                            <MarketplaceBadge label={plugin.marketplaceLabel} />
                                             {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
                                             {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />}
                                             <Select size='small' value={plugin.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>

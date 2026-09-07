@@ -480,6 +480,8 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                     <Box key={s.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Https fontSize='small' /></Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.displayName || s.id}</Typography>
+                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(s.id)} installedFrom={s.installedFrom} />
+                                        <MarketplaceBadge label={marketplaceOfInstalled(s.id)} installedFrom={s.installedFrom} />
                                         {s.configNames.length > 0 && <Chip label={`${s.configNames.length} config${s.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' sx={compactChip} />}
                                         <Tooltip title='Configure'>
                                             <IconButton size='small' color='primary' onClick={() => expandWebhook(s.id)}>

@@ -388,12 +388,16 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                     />
                                 ))}
                               </Box>
-                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                 {filteredInstalled.flatMap((login, i, arr) => [
                                     <Box key={`${login.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><LockPerson fontSize='small' /></Box>,
                                     <Box key={`${login.id}-name`} sx={{ py: 1, minWidth: 0 }}>
                                         <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{login.displayName || login.name}</Typography>
                                         <Typography variant='caption' color='text.secondary'>{login.description}</Typography>
+                                    </Box>,
+                                    <Box key={`${login.id}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
+                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(login.id)} installedFrom={login.installedFrom} />
+                                        <MarketplaceBadge label={marketplaceOfInstalled(login.id)} installedFrom={login.installedFrom} />
                                     </Box>,
                                     <Box key={`${login.id}-version`} sx={{ py: 1 }}><Chip label={`v${login.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} /></Box>,
                                     <Box key={`${login.id}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(login.installedFrom)}</Box>,

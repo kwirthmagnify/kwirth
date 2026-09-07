@@ -378,6 +378,8 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                     <Box key={provider.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Factory fontSize='small' /></Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{provider.displayName || provider.name || provider.id}</Typography>
+                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} />
+                                        <MarketplaceBadge label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} />
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(provider.installedFrom)}</Box>
                                         <Chip label={`v${provider.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                         <Tooltip title='Configure'>

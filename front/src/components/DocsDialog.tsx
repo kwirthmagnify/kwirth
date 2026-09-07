@@ -306,11 +306,15 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                                 ))}
                               </Box>
                             : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden',
-                                         display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto',
+                                         display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto auto',
                                          columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                 {filteredInstalled.flatMap((doc, i, arr) => [
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Description fontSize='small' /></Box>,
                                     <Typography key={`${docsKey(doc.targetType, doc.id)}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{doc.name || doc.id}</Typography>,
+                                    <Box key={`${docsKey(doc.targetType, doc.id)}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
+                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(doc.targetType, doc.id)} installedFrom={doc.installedFrom} />
+                                        <MarketplaceBadge label={marketplaceOfInstalled(doc.targetType, doc.id)} installedFrom={doc.installedFrom} />
+                                    </Box>,
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(doc.installedFrom)}</Box>,
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-ver`} sx={{ justifySelf: 'end', py: 1 }}><Chip label={`v${doc.version}`} size='small' sx={compactChip} /></Box>,
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-open`} sx={{ py: 1 }}>

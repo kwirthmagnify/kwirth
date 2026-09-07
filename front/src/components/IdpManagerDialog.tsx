@@ -281,6 +281,8 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                     <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Key fontSize='small' sx={{ color: 'text.secondary' }} />
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0 }} noWrap>{c.label}</Typography>
+                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(c.id)} installedFrom={c.installedFrom} />
+                                        <MarketplaceBadge label={marketplaceOfInstalled(c.id)} installedFrom={c.installedFrom} />
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(c.installedFrom)}</Box>
                                         {c.version && <Chip label={`v${c.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />}
                                         {statusChip(c)}

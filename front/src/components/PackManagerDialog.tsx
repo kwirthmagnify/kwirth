@@ -360,13 +360,17 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                     />
                                 ))}
                               </Box>
-                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
+                            : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto auto', columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                 {filteredInstalled.flatMap((pack, i, arr) => [
                                     <Box key={`${pack.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Extension fontSize='small' /></Box>,
                                     <Box key={`${pack.id}-name`} sx={{ py: 1, minWidth: 0 }}>
                                         <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pack.displayName}</Typography>
                                         <Typography variant='caption' color='text.secondary'>{pack.description}</Typography>
                                         <Typography variant='caption' color='text.disabled' display='block'>{membersSummary(pack.extensions)}</Typography>
+                                    </Box>,
+                                    <Box key={`${pack.id}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
+                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(pack.id)} installedFrom={pack.installedFrom} />
+                                        <MarketplaceBadge label={marketplaceOfInstalled(pack.id)} installedFrom={pack.installedFrom} />
                                     </Box>,
                                     <Box key={`${pack.id}-version`} sx={{ py: 1 }}><Chip label={`v${pack.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} /></Box>,
                                     <Box key={`${pack.id}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(pack.installedFrom)}</Box>,
