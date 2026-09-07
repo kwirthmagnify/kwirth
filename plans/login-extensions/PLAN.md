@@ -247,6 +247,28 @@ También: `allowedIdps: []` es *truthy* y **oculta todos** los IdP (para ofrecer
 **omitir** la clave), y `startChannel` **bloquea el acceso** a quien no sea admin y no tenga ese
 canal en `enabledChannels`.
 
+### Bug abierto — el background de un dev login se cachea una hora
+
+`LoginExtensionApi.ts` (ruta `GET /:id/background`) manda
+`Cache-Control: public, max-age=3600` **para todos los logins, incluidos los `dev`**. Eso
+contradice el diseño del propio `LoginManager`: para un dev login, `getBackground` **re-extrae el
+PNG del `.tgz` en cada peticion**, es decir que está pensado para recarga en vivo.
+
+**Sintoma:** cambias el `background.png`, reconstruyes el `.tgz`, reinicias el back… y sigues
+viendo el fondo viejo, porque la copia cacheada está en el navegador y no la tira ni el reinicio.
+Cuesta un buen rato de diagnóstico porque todo *parece* correcto en el back (verificado por hash:
+sirve los bytes nuevos). Se sale con Ctrl+Shift+R.
+
+**Arreglo propuesto** (una línea, sin efecto en producción — los instalados siguen cacheando):
+
+```ts
+res.setHeader('Cache-Control', this.loginManager.isDevLogin(req.params.id)
+    ? 'no-store, no-cache, must-revalidate'
+    : 'public, max-age=3600')
+```
+
+Pendiente de decisión: toca el core, no se ha aplicado.
+
 ### Backlog — S5: ampliar el contrato del renderer (V2, no comprometido)
 
 Lo que hoy es imposible y obliga a hornearlo en el PNG. Cada punto es incremental y compatible
