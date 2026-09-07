@@ -6,7 +6,7 @@ import { EPinocchioCommand, IAnalysis, IConfigTrigger, IFinding, IMessage, IPino
 import { PinocchioConfigTrigger } from './PinocchioConfigTrigger'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
-import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
+import { ILlm, ILlmModel, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import React from 'react'
 import { MenuConfig } from './MenuConfig'
 import { PinocchioImportExport } from './PinocchioImportExport'
@@ -190,6 +190,21 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setShowConfigLlm(false)
     }
 
+    // Carga de modelos del provider: la hace el CORE (tiene el adaptador de cada SDK), igual que el
+    // dialogo de AI Providers de Kwirth. Sin esto el dialogo no ofrece el boton 'Load models'.
+    const aiLoadModels = async (provider: ILlmProvider): Promise<ILlmModel[]> => {
+        const response = await fetch(`${props.channelObject.clusterUrl}/core/aiconfig/loadmodels`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${props.channelObject.accessString}`,
+                'X-Kwirth-App': 'true'
+            },
+            body: JSON.stringify(provider)
+        })
+        return response.ok ? await response.json() : []
+    }
+
     const pinocchioConfigProviderClose = (providers:ILlmProvider[]|undefined) => {
         if (providers) {
             pinocchioData.providers = providers
@@ -328,7 +343,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         </Card>}
         { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} onClose={pinocchioConfigClose} />}
         { showConfigLlm && <AiConfigLlm llms={pinocchioData.config.llms} providers={pinocchioData.providers} onClose={aiConfigLlmClose} />}
-        { showConfigProvider && <AiConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onClose={pinocchioConfigProviderClose} />}
+        { showConfigProvider && <AiConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onLoadModels={aiLoadModels} onClose={pinocchioConfigProviderClose} />}
         { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} onStateChange={pinocchioPlaygroundStateChange} />}
         { showImportExport && <PinocchioImportExport config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} providers={pinocchioData.providers} pinocchioConfig={pinocchioData.config} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}

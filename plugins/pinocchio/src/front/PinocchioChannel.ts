@@ -18,6 +18,7 @@ export class PinocchioChannel implements IChannel {
         clusterInfo: false,
         exit: false,
         frontChannels: false,
+        backChannels: false,
         metrics: false,
         notifier: true,
         notifications: false,

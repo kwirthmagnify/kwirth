@@ -156,7 +156,7 @@ Optionally route the censored output to a configured **[sender](../senders/index
 
 The **LLM config** and **Provider config** buttons at the bottom of the dialog open Kwirth's **AI configuration** — and this is **shared by every plugin that uses AI** (Censor, **[Pinocchio](pinocchio)**, …). A provider/model you set up here is immediately available to all of them.
 
-- **Provider config** — register an **AI provider** and its **API key/token**.
+- **Provider config** — register an **AI provider**: a **Name** of your choosing, a **Type** (the SDK adapter — including `openai-compat` plus a **Base URL** for OpenAI-compatible endpoints such as Huawei MaaS or vLLM) and its **API key/token**.
 - **LLM config** — define the **models** (LLM id, provider, model, temperature, cost per million tokens) you then pick in the **General** tab.
 
 See the walkthrough (with screenshots) in **[Pinocchio → AI configuration](pinocchio#ai-configuration-providers--llms)**.

@@ -66,3 +66,18 @@ export async function clickExtensionMenuItem(page: Page, label: string): Promise
     await page.getByRole('menuitem', { name: label, exact: true }).click()
     await page.waitForTimeout(400)
 }
+
+// --- Comboboxes del diálogo ADD (Cluster / View / … / Channel) --------------------------------------
+// El diálogo ADD monta sus selects en orden, y el ÚLTIMO es siempre el de canal (su posición depende de
+// la vista elegida), de ahí el pickLastCombo.
+export async function pickCombo(page: Page, idx: number, option: string): Promise<void> {
+    await page.getByRole('combobox').nth(idx).click()
+    await page.getByRole('listbox').waitFor({ state: 'visible', timeout: 5000 })
+    await page.getByRole('option', { name: option, exact: true }).click()
+    await page.waitForTimeout(400)
+}
+
+export async function pickLastCombo(page: Page, option: string): Promise<void> {
+    const n = await page.getByRole('combobox').count()
+    await pickCombo(page, n - 1, option)
+}

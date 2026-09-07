@@ -1,7 +1,7 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
-import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS } from '@kwirthmagnify/kwirth-common-ai'
+import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
 import { buildModel, loadModels, IToolContext, tools as kwirthTools, toolInfoList, runWithToolContext } from '@kwirthmagnify/kwirth-common-ai/back'
 import { Request, Response } from 'express'
 import { generateText, Output, stepCountIs, z } from '@kwirthmagnify/kwirth-common-ai/back'
@@ -436,7 +436,7 @@ export class PinocchioChannel {
                         flow: EInstanceMessageFlow.RESPONSE,
                         type: EInstanceMessageType.DATA,
                         instance: instance.instanceId,
-                        providersAvailable: ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek', 'kwirth', ]
+                        providersAvailable: PROVIDERS_AVAILABLE
                     }
                     webSocket.send(JSON.stringify(msgProvidersAvailable))
                     break

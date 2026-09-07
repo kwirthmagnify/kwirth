@@ -49,13 +49,24 @@ Before Pinocchio can analyse anything it needs an **AI provider** and at least o
 
 ![AI provider configuration](../../../_media/guide/ai-provider-config.png)
 
-Pick the provider (e.g. *google*, *openai*, …), paste its **API Key / Token**, and **Add**. Kwirth loads the provider's available models (here, *google* with *50 models loaded*). The key can later be linked to specific uses. Use the **eye** to reveal the key, and **Import / Export** to move providers as JSON.
+A provider has two separate fields, and the distinction matters:
+
+| Field | What it is |
+|---|---|
+| **Name** | *Your* identifier for this particular provider instance — it's what you pick later when you define an LLM. You can register several instances of the same kind (`openai-prod`, `openai-lab`), each with its own key. |
+| **Type** | Which **SDK adapter** Kwirth uses to talk to it: `google`, `openai`, `openrouter`, `mistral`, `groq`, `deepseek`, `anthropic` or `openai-compat`. |
+| **API Key / Token** | The credential. Stored in a Kubernetes **Secret**; use the **eye** to reveal it. |
+| **Base URL** | Only for **`openai-compat`** — the base URL of the OpenAI-compatible API (must end in `/v1`). |
+
+**`openai-compat`** is the escape hatch for anything that speaks the OpenAI API without being OpenAI: **Huawei MaaS**, **vLLM**, **LM Studio**, an internal gateway… Pick the type, fill in the **Base URL**, and it behaves like any other provider. The screenshot above shows exactly that: a provider named *HUAWEI*, of type *openai-compat*, pointing at a Huawei MaaS endpoint.
+
+**Load models** asks the provider for its catalogue and caches it against that provider (here, *4 models loaded*). It's optional — you can always type a model identifier by hand in the LLM dialog — but it's the quickest way to see what a key actually gives you access to. Use **Import / Export** to move providers as JSON (the export never includes the keys' surrounding config, just `name`, `type`, `key` and `endpoint`).
 
 **Config → LLM** defines the **models** you'll actually select in triggers and the Playground:
 
 ![AI LLM configuration](../../../_media/guide/ai-llm-config.png)
 
-Each LLM entry has an **LLM ID** (the name you pick later), a **Provider**, a **Model**, a **temperature**, and optional **input/output cost per million tokens** (used to compute the cost figures you saw in Censor's performance dashboard). By default it **uses the provider's API key**, or you can enter a **specific key** for that model. Manage entries with **New / Clone / Remove / Add** and **Import / Export**.
+Each LLM entry has an **LLM ID** (the name you pick later in triggers and the Playground), a **Provider** (one of the ones you registered above, by its *Name*), a **Model ID** — free text, the provider's own model identifier, e.g. `gemini-2.5-flash` or `glm-5.2` — a **temperature**, and optional **input/output cost per million tokens** (used to compute the cost figures you saw in Censor's performance dashboard). By default it **uses the provider's API key**, or you can enter a **specific key** for that model. Manage entries with **New / Remove / Add** and **Import / Export**.
 
 > Because this config is shared, an LLM you define here (say `gemini-31-flash-lite`) is the same one Censor offers in its config — set your models up once.
 
