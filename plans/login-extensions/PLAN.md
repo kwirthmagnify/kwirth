@@ -247,6 +247,30 @@ También: `allowedIdps: []` es *truthy* y **oculta todos** los IdP (para ofrecer
 **omitir** la clave), y `startChannel` **bloquea el acceso** a quien no sea admin y no tenga ese
 canal en `enabledChannels`.
 
+### Bug abierto — `build.mjs` no trunca el `.tgz` y puede empaquetar basura
+
+`logins/_template/build.mjs` (y por herencia el `build.mjs` de **todas** las extensiones de login)
+crea el bundle con `tar -czf` sobre el fichero anterior. **El tar de Windows no lo trunca**: si el
+archivo nuevo es mas pequeno que el viejo — p.ej. porque el `background.png` ha adelgazado —
+quedan bytes del anterior al final y el `.tgz` da *trailing garbage* al descomprimir.
+
+**Por que es traicionero:** el fichero *parece* correcto y `tar -tzf` incluso **lista bien los tres
+ficheros**; lo unico que delata el problema es el codigo de salida. Un bundle asi se puede publicar
+sin que nadie lo note.
+
+**Arreglo** (aplicado ya en `logins/santander/build.mjs`, pendiente de propagar):
+
+```js
+if (existsSync(tgzPath)) rmSync(tgzPath, { force: true, maxRetries: 10, retryDelay: 200 })
+```
+
+Los reintentos no son defensivos: con el dev levantado, el back tiene ese mismo `.tgz` abierto
+(un dev login re-extrae el PNG del archivo en cada peticion del fondo) y el borrado da
+`EPERM`/`EBUSY`.
+
+**Pendiente:** propagarlo a `logins/_template` y a los `build.mjs` de los logins existentes
+(anonymous, magnify, censor y los privados de excubitor/montag/agora/iter).
+
 ### Bug abierto — el background de un dev login se cachea una hora
 
 `LoginExtensionApi.ts` (ruta `GET /:id/background`) manda
