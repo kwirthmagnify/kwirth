@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
-import { Box, Button, Card, CardContent, CardHeader, Chip, Divider, FormControl, FormControlLabel, IconButton, List, ListItem, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, Tooltip, Typography } from '@mui/material'
-import { Add as AddIcon, ArrowDownward, ArrowUpward, DeleteOutline as DeleteOutlineIcon, DeleteSweep, Download as DownloadIcon, MoreVert as MoreVertIcon, SwapVert } from '@mui/icons-material'
+import { Box, Button, Card, CardContent, CardHeader, Chip, Collapse, Divider, FormControl, FormControlLabel, IconButton, List, ListItem, ListItemIcon, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, Tooltip, Typography } from '@mui/material'
+import { Add as AddIcon, ArrowDownward, ArrowUpward, DeleteOutline as DeleteOutlineIcon, DeleteSweep, Download as DownloadIcon, ExpandLess, ExpandMore, Key, Memory, MoreVert as MoreVertIcon, Settings, SmartToy, SwapVert } from '@mui/icons-material'
 import { cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
@@ -58,6 +58,21 @@ const _defaultUi = (): ICensorUiState => ({
 const formatPerfValue = (v: number) => v >= 10000 ? `${(v / 1000).toFixed(0)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
 
 const REFRESH_INTERVAL_MS = 250
+
+// Collapsible menu group (Kwirth drawer pattern, same as Excubitor/Agora): a clickable header + indented
+// sub-items inside a Collapse. Used to group the AI config (providers/models) under a single 'AI' entry.
+const MenuGroup: React.FC<{ label: string; icon: React.ReactNode; open: boolean; onToggle: () => void; children: React.ReactNode }> = ({ label, icon, open, onToggle, children }) => (
+    <>
+        <MenuItem dense onClick={onToggle}>
+            <ListItemIcon>{icon}</ListItemIcon>
+            <Box component='span' sx={{ flex: 1 }}>{label}</Box>
+            {open ? <ExpandLess fontSize='small' /> : <ExpandMore fontSize='small' />}
+        </MenuItem>
+        <Collapse in={open} unmountOnExit>
+            <Box sx={{ '& .MuiMenuItem-root': { pl: 4 } }}>{children}</Box>
+        </Collapse>
+    </>
+)
 
 const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const data: ICensorData = props.channelObject.data
@@ -117,6 +132,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [showConfig, setShowConfig] = useState(false)
     const [showConfigLlm, setShowConfigLlm] = useState(false)
     const [showConfigProvider, setShowConfigProvider] = useState(false)
+    const [aiGroupOpen, setAiGroupOpen] = useState(false)   // collapsible 'AI' menu group (providers/models), collapsed by default
     const [addRegexState, setAddRegexState] = useState<{ runnerKey?: string, pattern?: string, explanation?: string, lockRunner?: boolean } | null>(null)
     const [activeTagFilters, setActiveTagFilters] = useState<string[]>([])
     const [tagFilterAnd, setTagFilterAnd] = useState(false)
@@ -253,14 +269,16 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         disabled={!data.ephemeralSessionName || (!(rd?.analyzing ?? false) && !data.configs.filter(c => c.active).some(c => c.logstreamEnabled || (c.businessSources?.length ?? 0) > 0))}>
                         {(rd?.analyzing ?? false) ? 'Stop' : 'Start'}
                     </Button>
-                    <IconButton size='small' onClick={(e) => setMenuAnchor(e.currentTarget)}>
+                    <IconButton size='small' onClick={(e) => { setAiGroupOpen(false); setMenuAnchor(e.currentTarget) }}>
                         <MoreVertIcon fontSize='small' />
                     </IconButton>
                     <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
-                        <MenuItem onClick={() => { setMenuAnchor(null); openConfig() }} disabled={!data.ephemeralSessionName}>Config</MenuItem>
+                        <MenuItem onClick={() => { setMenuAnchor(null); openConfig() }} disabled={!data.ephemeralSessionName}><ListItemIcon><Settings fontSize='small' /></ListItemIcon>Config</MenuItem>
                         <Divider />
-                        <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigProvider(true) }}>AI providers</MenuItem>
-                        <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigLlm(true) }}>AI models</MenuItem>
+                        <MenuGroup label='AI' icon={<SmartToy fontSize='small' />} open={aiGroupOpen} onToggle={() => setAiGroupOpen(o => !o)}>
+                            <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigProvider(true) }}><ListItemIcon><Key fontSize='small' /></ListItemIcon>AI providers</MenuItem>
+                            <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigLlm(true) }}><ListItemIcon><Memory fontSize='small' /></ListItemIcon>AI models</MenuItem>
+                        </MenuGroup>
                     </Menu>
                 </Stack>
             } />
@@ -711,7 +729,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 </Stack>
                                 {!selectedLlm?.inputCostPerMillion && (
                                     <Typography variant='caption' color='text.disabled' sx={{ mt: 1, display: 'block' }}>
-                                        Set cost/M tokens in AI Models to see costs
+                                        Set cost/M tokens in AI models to see costs
                                     </Typography>
                                 )}
                             </Box>
