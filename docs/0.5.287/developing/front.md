@@ -1,6 +1,6 @@
 # Front Channel development
 
-Starting with Kwirth 0.4 the front React app has been rearchitected to support the channel system in such a way that front features are implemented *separately* via front plugins. For easing front channel development, the Kwirth team has created an interface that Front Channels must implement.
+Starting with kwirth 0.4 the front React app has been rearchitected to support the channel system in such a way that front features are implemented *separately* via front plugins. For easing front channel development, the kwirth team has created an interface that Front Channels must implement.
 
 ## The channel interface
 
@@ -35,15 +35,15 @@ And this is the explanation for each member of the interface:
   - `getScope(): string`, channel must return the minimum scope needed to use the channel.
   - `getChannelIcon(): JSX.Element`, returns an SVG icon that will be shown on tabs next to the name of the tab in the front app.
   - `getSetupVisibility(): boolean`, channel must return the visibility status of the SetUp dialog.
-  - `setSetupVisibility(visibility:boolean): void`, Kwirth informs channel about a new visibility status for the SetUp dialog.
+  - `setSetupVisibility(visibility:boolean): void`, kwirth informs channel about a new visibility status for the SetUp dialog.
   - `processChannelMessage(channelObject, wsEvent)`, when a channel message is received from a Back Channel via a connected WebSocket, the message is delivered to the channel for further processing.
-  - `initChannel(channelObject)`, Kwirth will invoke this function when a new tab using this channel is first created (exactly after the user selects resources and clicks 'ADD' on the resource selector).
+  - `initChannel(channelObject)`, kwirth will invoke this function when a new tab using this channel is first created (exactly after the user selects resources and clicks 'ADD' on the resource selector).
   - `startChannel(channelObject)`, this function will be invoked when the user clicks on 'START' to start the channel.
-  - `pauseChannel(channelObject)`, when the user clicks on 'PAUSE' Kwirth front will invoke this function.
-  - `continueChannel(channelObject)`, when the user clicks on 'CONTINUE' on a paused channel, Kwirth front will invoke this function.
+  - `pauseChannel(channelObject)`, when the user clicks on 'PAUSE' kwirth front will invoke this function.
+  - `continueChannel(channelObject)`, when the user clicks on 'CONTINUE' on a paused channel, kwirth front will invoke this function.
   - `stopChannel(channelObject)`, this function will be invoked when the user clicks on 'STOP' to stop the channel.
-  - `socketDisconnected(channelObject)`, when the WebSocket is disconnected (user removing a tab, for example) Kwirth will invoke this function.
-  - `socketReconnect(channelObject)`, when a connection to a back channel is restored creating a new WebSocket (after WebSocket connection has been lost due to communication errors), Kwirth will invoke this function.
+  - `socketDisconnected(channelObject)`, when the WebSocket is disconnected (user removing a tab, for example) kwirth will invoke this function.
+  - `socketReconnect(channelObject)`, when a connection to a back channel is restored creating a new WebSocket (after WebSocket connection has been lost due to communication errors), kwirth will invoke this function.
 
 ## The requirements object
 
@@ -70,18 +70,18 @@ export interface IChannelRequirements {
 And the meaning of the properties is:
 
   - `setup`, the channel needs user setup before starting a new channel instance.
-  - `settings`, the channel needs access to the settings object for storing/retrieving Kwirth user settings.
+  - `settings`, the channel needs access to the settings object for storing/retrieving kwirth user settings.
   - `frontChannels`, the channel needs information about all supported channels in the front SPA (see Magnify channel).
   - `metrics`, the channel wants access to the list of metrics available from the cluster (see Metrics channel).
-  - `notifier`, if a channel wants to send notifications to the end user, this property must be enabled in order for Kwirth to provide the channel with a notifier function.
-  - `notifications`, the channel wants to access the Kwirth notifications array (the ones sent to end user).
-  - `clusterUrl`, the channel wants to know the URL of the Kwirth server, for example, for performing HTTP requests.
+  - `notifier`, if a channel wants to send notifications to the end user, this property must be enabled in order for kwirth to provide the channel with a notifier function.
+  - `notifications`, the channel wants to access the kwirth notifications array (the ones sent to end user).
+  - `clusterUrl`, the channel wants to know the URL of the kwirth server, for example, for performing HTTP requests.
   - `clusterInfo`, the channel needs information about the cluster itself.
-  - `accessString`, the channel will perform HTTP requests or new WebSocket requests to the Kwirth server, so the Access String is needed.
+  - `accessString`, the channel will perform HTTP requests or new WebSocket requests to the kwirth server, so the Access String is needed.
   - `webSocket`, the channel will send/receive data over the WebSocket, so the WebSocket object is required.
   - `userSettings`, the channel wants to store channel-user specific settings (see Magnify channel).
-  - `palette`, the channel wants to be able to change the Kwirth theme (see Magnify channel).
-  - `exit`, the channel wants to access the `exit` function of Kwirth for exiting Kwirth directly from the channel (see Magnify channel).
+  - `palette`, the channel wants to be able to change the kwirth theme (see Magnify channel).
+  - `exit`, the channel wants to access the `exit` function of kwirth for exiting kwirth directly from the channel (see Magnify channel).
 
 ## The IChannelObject
 

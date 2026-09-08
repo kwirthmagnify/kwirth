@@ -63,7 +63,7 @@ The dialog has a second tab, **START DIAGNOSTICS**, with advanced options that c
 |---|---|
 | **Max per Pod messages** | Cap on buffered lines **per pod** (independent of the global *Max messages*), so one noisy pod can't crowd out the rest. |
 | **Message sort order** | How incoming lines are ordered in the view: |
-| &nbsp;&nbsp;• *Show messages as they arrive* | Print each line the moment it reaches Kwirth (lowest latency; order follows arrival, not necessarily production time). |
+| &nbsp;&nbsp;• *Show messages as they arrive* | Print each line the moment it reaches kwirth (lowest latency; order follows arrival, not necessarily production time). |
 | &nbsp;&nbsp;• *Keep together messages from the same pod* | Group consecutive lines by pod, so a pod's output stays contiguous. |
 | &nbsp;&nbsp;• *Use message time for sorting* | Order lines by their **own timestamp** so multi-pod streams read chronologically (best for correlating events across pods). |
 
@@ -105,7 +105,7 @@ When a namespace is very chatty and you need lines to read **chronologically acr
 
 ## Admin guide
 
-- **Install / remove:** **☰ → Manage extensions → Plugins**. Install the **Log** plugin to make the `log` channel appear in the resource selector; remove it to hide it. See [Extending Kwirth](../../admin/08-extending-kwirth) for the manager.
+- **Install / remove:** **☰ → Manage extensions → Plugins**. Install the **Log** plugin to make the `log` channel appear in the resource selector; remove it to hide it. See [Extending kwirth](../../admin/08-extending-kwirth) for the manager.
 - **Permissions:** a user needs streaming scopes on the target objects — typically **`view`** and **`stream`** (and **`filter`** to use the filter box). Restrict *which* logs a user can read with the object filters on their [resources](../../admin/04-security-and-permissions).
 
 ## Notes

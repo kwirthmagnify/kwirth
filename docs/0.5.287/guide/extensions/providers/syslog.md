@@ -5,7 +5,7 @@
 
 ## What it does
 
-The **Syslog** provider makes Kwirth a **syslog receiver**. It accepts **RFC 3164 / RFC 5424** messages over **UDP** and **TCP** and streams them into subscribing channels — so appliances, network gear and legacy apps that emit syslog can feed the Kwirth event model, with optional relaying onward.
+The **Syslog** provider makes kwirth a **syslog receiver**. It accepts **RFC 3164 / RFC 5424** messages over **UDP** and **TCP** and streams them into subscribing channels — so appliances, network gear and legacy apps that emit syslog can feed the kwirth event model, with optional relaying onward.
 
 ## When to use it
 

@@ -6,7 +6,7 @@
 
 ## Overview
 
-The **Fileman** channel turns any running container into a **remote file manager**, right inside Kwirth. It lets you **browse the container's filesystem**, **view and edit** text/config files in place, and **upload, download, copy, move, rename, create and delete** files and folders — all without `kubectl cp`, `kubectl exec` or shelling in.
+The **Fileman** channel turns any running container into a **remote file manager**, right inside kwirth. It lets you **browse the container's filesystem**, **view and edit** text/config files in place, and **upload, download, copy, move, rename, create and delete** files and folders — all without `kubectl cp`, `kubectl exec` or shelling in.
 
 It works entirely over the cluster's **exec API** (the same channel a `kubectl exec` uses), so there's nothing to install inside the container. It is available for both **Kubernetes** and **Docker** sources.
 
@@ -70,15 +70,15 @@ Fileman moves data in every direction — in, out, and between containers.
 **Download (files and folders).** Use **Download** on any item:
 
 - A **file** downloads as-is.
-- A **folder** downloads as a **`.tar.gz`** archive — Kwirth `tar`s it up inside the container and streams it to your browser, so you can pull a whole directory tree out in one click.
+- A **folder** downloads as a **`.tar.gz`** archive — kwirth `tar`s it up inside the container and streams it to your browser, so you can pull a whole directory tree out in one click.
 
 **Upload (into a container).** At the container level, use the **Upload** button (or **drag-and-drop** files onto the files area). Files land in the folder you're currently viewing. To recreate a directory structure, make the folders first with **New Folder** and upload into each.
 
 **Copy / Move — within a container.** Select one or more items, **Copy** (or **Cut** to move), navigate to the destination folder, and **paste**. Kwirth runs the corresponding `cp -r` / `mv` inside the container. This works for **files and whole folders**.
 
-**Copy / Move — from one container to another.** The clipboard isn't limited to a single container: **Cut/Copy** in one container's tree, switch to a **different pod/container** in the navigation tree, and **paste**. Because containers don't share a filesystem, Kwirth bridges them transparently — it **downloads** the item from the source and **uploads** it into the destination (recursively, for folders), and on a **Move** it removes the source afterwards.
+**Copy / Move — from one container to another.** The clipboard isn't limited to a single container: **Cut/Copy** in one container's tree, switch to a **different pod/container** in the navigation tree, and **paste**. Because containers don't share a filesystem, kwirth bridges them transparently — it **downloads** the item from the source and **uploads** it into the destination (recursively, for folders), and on a **Move** it removes the source afterwards.
 
-> Cross-container transfers stream through Kwirth, so very large trees take longer than a same-container copy. The source and destination must both be in your current scope (added to the tab).
+> Cross-container transfers stream through kwirth, so very large trees take longer than a same-container copy. The source and destination must both be in your current scope (added to the tab).
 
 ## Viewing files
 

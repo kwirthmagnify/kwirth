@@ -5,16 +5,16 @@
 
 ## What a documentation package is
 
-A **documentation package** is a self-contained **docsify site** bundled as a `.tgz` file that Kwirth installs and serves directly from its own back end. Once installed, the package is accessible from the browser without any external dependency — the Kwirth server itself acts as the documentation host.
+A **documentation package** is a self-contained **docsify site** bundled as a `.tgz` file that kwirth installs and serves directly from its own back end. Once installed, the package is accessible from the browser without any external dependency — the kwirth server itself acts as the documentation host.
 
 A documentation package always documents **another extension**, so it is identified by the pair that points at it:
 
-- **`targetType`** — the *type* of the extension being documented: `plugin`, `provider`, `sender`, `theme`, `homepage`, `idp`, `login`, or `core` for the Kwirth core itself.
+- **`targetType`** — the *type* of the extension being documented: `plugin`, `provider`, `sender`, `theme`, `homepage`, `idp`, `login`, or `core` for the kwirth core itself.
 - **`id`** — the id of that very extension. `excubitor` docs carry `targetType: plugin` and `id: excubitor`, because they document the `excubitor` **plugin**.
 
-The id alone is not enough: a plugin and a theme may both be called `metrics` and each may ship its own guide, so the pair is what makes a documentation package unique. The installed docs are served at `/docs/<targetType>/<id>/`, and Kwirth uses the same pair to link the **Help** buttons of an extension to its guide.
+The id alone is not enough: a plugin and a theme may both be called `metrics` and each may ship its own guide, so the pair is what makes a documentation package unique. The installed docs are served at `/docs/<targetType>/<id>/`, and kwirth uses the same pair to link the **Help** buttons of an extension to its guide.
 
-The `core/kwirth` package — the guide you are reading right now — documents the core itself and ships **bundled** with every Kwirth deployment.
+The `core/kwirth` package — the guide you are reading right now — documents the core itself and ships **bundled** with every kwirth deployment.
 
 ## Admin guide
 
@@ -28,7 +28,7 @@ The left panel lists every installed documentation package. Each card shows the 
 
 | Source chip | Meaning |
 |---|---|
-| `bundled` | Shipped with Kwirth; **cannot be uninstalled** |
+| `bundled` | Shipped with kwirth; **cannot be uninstalled** |
 | `dev` | Loaded from a local build (development only) |
 | `local` | Installed from a file you uploaded |
 | `Kwirth` | Installed from the official kwirthmagnify registry |
@@ -62,7 +62,7 @@ Click the **🗑 delete** icon on any non-bundled, non-dev card. The package dir
 
 ## Notes
 
-- **Kubernetes ephemeral storage.** In a standard Kubernetes deployment `/tmp` is ephemeral — Kwirth re-downloads all URL-installed packages on each pod restart automatically. `bundled` packages are always present; `local` (file-uploaded) packages are **not** re-hydrated and must be re-uploaded if the pod restarts.
+- **Kubernetes ephemeral storage.** In a standard Kubernetes deployment `/tmp` is ephemeral — kwirth re-downloads all URL-installed packages on each pod restart automatically. `bundled` packages are always present; `local` (file-uploaded) packages are **not** re-hydrated and must be re-uploaded if the pod restarts.
 - **Package format.** A valid package is a `.tgz` with a `package.json` at its root containing at least `targetType`, `id`, `name`, and `version` fields, plus a docsify `index.html` and its markdown content.
 - **Access control.** Reading installed docs (`GET /docs`) is public. Installing, uploading and uninstalling require an **admin** API key.
 

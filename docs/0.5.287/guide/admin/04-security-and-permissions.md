@@ -91,6 +91,6 @@ Start from *what the person needs to do*, pick the **matching scopes**, then **n
 
 ## A note on IdP users
 
-Scopes and resources define **authorization** — *what a user can do*. For **authentication** — *proving who they are* — a user can use a Kwirth password or an external Identity Provider. The permission model above is identical either way; IdP only changes how they log in. See [IdP integration](07-idp-integration).
+Scopes and resources define **authorization** — *what a user can do*. For **authentication** — *proving who they are* — a user can use a kwirth password or an external Identity Provider. The permission model above is identical either way; IdP only changes how they log in. See [IdP integration](07-idp-integration).
 
 Next: [API management →](05-api-management)

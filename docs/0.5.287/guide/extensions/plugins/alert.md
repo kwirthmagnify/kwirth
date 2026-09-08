@@ -82,7 +82,7 @@ The **Mode** controls how often a rule fires once its condition is true — the 
 
 ## Delivering alerts to a Sender
 
-By default alerts appear **in the tab**. But you'll often want them to leave Kwirth — a Teams message, an email, a line in a file, a webhook. That's what the **Sender** field is for: pick an installed **Sender** and every alert this channel raises is also **delivered through it**.
+By default alerts appear **in the tab**. But you'll often want them to leave kwirth — a Teams message, an email, a line in a file, a webhook. That's what the **Sender** field is for: pick an installed **Sender** and every alert this channel raises is also **delivered through it**.
 
 - The **Sender** dropdown lists the senders installed under **☰ → Manage extensions → Senders**.
 - The **Config** field selects a **named configuration** of that sender (e.g. a specific Teams webhook or SMTP account) — so the same alert channel can target different destinations by switching config.
@@ -120,7 +120,7 @@ See the **[Senders](../senders/index)** family for what each sender does and how
 ## Admin guide
 
 - **Install / remove:** **☰ → Manage extensions → Plugins** → install **Alert**.
-- **Permissions:** users need the streaming scopes on the target objects; delivering to a Sender additionally requires that Sender to be configured (see [Extending Kwirth](../../admin/08-extending-kwirth) and [Senders](../senders/index)).
+- **Permissions:** users need the streaming scopes on the target objects; delivering to a Sender additionally requires that Sender to be configured (see [Extending kwirth](../../admin/08-extending-kwirth) and [Senders](../senders/index)).
 
 ## Notes
 

@@ -2,8 +2,8 @@
 An API key requires the following information to be created:
 
 - **Description**. For obvious reasons it is important to write down what an API key has been created for.
-- **Lease time**. This is the number of days that the key will be valid. Beyond that date, it will be rejected by Kwirth Core.
-- **Type**. There exist 3 types of keys, but only 1 of them can be created in the UI: 'permanent'. Permanent API keys are stored in a secure site and keep alive even if Kwirth crashes. Other types like 'volatile' or 'bearer' are explained below, right now you only need to know that 'volatile' and 'bearer' key types are expected to be used by applications, not by people.
+- **Lease time**. This is the number of days that the key will be valid. Beyond that date, it will be rejected by kwirth Core.
+- **Type**. There exist 3 types of keys, but only 1 of them can be created in the UI: 'permanent'. Permanent API keys are stored in a secure site and keep alive even if kwirth crashes. Other types like 'volatile' or 'bearer' are explained below, right now you only need to know that 'volatile' and 'bearer' key types are expected to be used by applications, not by people.
 - **Resource list** (we will explain later the details), it is a list of the resources that this key gives access to.
 
 The idea is simple, an API key allows the holder of the key to perform an action (scope) over a set of resources (namespace/group/pod/container).
@@ -18,7 +18,7 @@ For creating a resource list you must use the bottom-right buttons 'NEW', 'SAVE'
 When you create a resource you must provide this data:
 
   - **Scope**. As explained in other parts of this documentation, the scope is used to decide what actions an API Key owner can perform with the resources declared in the key. These are some sample scopes and their meaning (not a complete list):
-    - *cluster*: this scope means you can perform any Kwirth action on the cluster.
+    - *cluster*: this scope means you can perform any kwirth action on the cluster.
     - *api*: this scope allows you to manage api keys.
     - *restart*: this scope allows the owner of the key restarting pods or deployments in the cluster where the key has been created.
     - *filter*: this scope allows searching for information on Kubernetes objects.
@@ -32,7 +32,7 @@ Once you fill up all the fields, just click 'SAVE' to add the resource. You can 
 
 !> Important: once you finished editing the resources list don't forget to click 'SAVE' on the left side for saving the API key.
 
-On the 'API Key Management' dialog you can create, review, modify or delete all the existing API keys in your Kwirth except the 'bearer' type ones. For this purpose, the dialog shows an exhaustive list on the left side of the card, and the details of each selected API key on the right.
+On the 'API Key Management' dialog you can create, review, modify or delete all the existing API keys in your kwirth except the 'bearer' type ones. For this purpose, the dialog shows an exhaustive list on the left side of the card, and the details of each selected API key on the right.
 
 ## Example
 If you want to give permissions to an external application like Kubelog or KwirthLog to view all logs in your 'production' namespace you should create an API key like this:

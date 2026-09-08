@@ -5,13 +5,13 @@
 
 ## What a webhook is
 
-A **webhook** is an **input adapter** — the **inbound counterpart of a [sender](../senders)**. Where a sender delivers a message *out* of Kwirth (fire-and-forget), a webhook receives HTTP callbacks *into* Kwirth from an external system (a ticketing tool, a SCM, an alerting service), **verifies** and **parses** them, and hands a **normalized event** to whoever is interested.
+A **webhook** is an **input adapter** — the **inbound counterpart of a [sender](../senders)**. Where a sender delivers a message *out* of kwirth (fire-and-forget), a webhook receives HTTP callbacks *into* kwirth from an external system (a ticketing tool, a SCM, an alerting service), **verifies** and **parses** them, and hands a **normalized event** to whoever is interested.
 
 The key ideas:
 
 - Each webhook has an **id** (e.g. the provider it understands) and holds one or more **named configurations** — each one gets its **own public URL** with an **opaque token**: `…/webhook/<id>/<token>`.
 - That **token is a capability**: it both routes the callback and authenticates the caller (the URL is unguessable). On top of it, each webhook applies its **own verification** (a shared secret in a header, an HMAC signature…) — the core is auth-agnostic and hands the raw request to the artifact's `verify()`.
-- Delivery is **consumer-driven and scoped to a specific config**: a webhook doesn't target anyone. A channel/plugin **subscribes to one of a webhook's configs** — the pair *(webhook id, config name)* — and receives **only that config's** events. Because webhooks are shared across all of Kwirth (several configs, and several consumers, of the same type can coexist), the subscription pins the **exact instance**; anything not subscribed to that config receives nothing. Every delivered event also carries the **config name** it arrived on, so a consumer always knows which instance fired.
+- Delivery is **consumer-driven and scoped to a specific config**: a webhook doesn't target anyone. A channel/plugin **subscribes to one of a webhook's configs** — the pair *(webhook id, config name)* — and receives **only that config's** events. Because webhooks are shared across all of kwirth (several configs, and several consumers, of the same type can coexist), the subscription pins the **exact instance**; anything not subscribed to that config receives nothing. Every delivered event also carries the **config name** it arrived on, so a consumer always knows which instance fired.
 
 ## The public URL (token)
 
@@ -41,8 +41,8 @@ Concretely, a consumer's settings offer **two paired pickers**: the **webhook ty
 
 ## Admin guide
 
-- **Install / enable / remove:** from **☰ → Manage extensions → Webhooks**, using the common flow in [Extending Kwirth](../../admin/08-extending-kwirth).
-- **Exposure:** the receiver is a single public endpoint on the Kwirth server; the token in the URL + the webhook's own verification are what protect it. Serve Kwirth over **HTTPS** and keep the URLs secret.
+- **Install / enable / remove:** from **☰ → Manage extensions → Webhooks**, using the common flow in [Extending kwirth](../../admin/08-extending-kwirth).
+- **Exposure:** the receiver is a single public endpoint on the kwirth server; the token in the URL + the webhook's own verification are what protect it. Serve kwirth over **HTTPS** and keep the URLs secret.
 - **Secrets:** the shared secret / signing key a webhook expects is stored as webhook config — treat it as a credential (it's a masked field).
 
 ## Notes

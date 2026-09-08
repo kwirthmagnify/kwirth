@@ -2,14 +2,14 @@
 
 ## Managing senders from the UI
 
-Administrators can manage senders directly from the Kwirth frontend without editing any files. Open the menu drawer and choose **Manage senders** (visible only to users with cluster scope).
+Administrators can manage senders directly from the kwirth frontend without editing any files. Open the menu drawer and choose **Manage senders** (visible only to users with cluster scope).
 
 The dialog follows the same layout as the plugin and provider managers:
 
 - **Installed senders** — cards showing each registered sender with its version, description, source (dev / local / URL), and number of active configs. Click the **+** icon on a card to open an inline config panel.
 - **Config panel** — lists all named configs for the selected sender. From here you can add new configs (the form fields are driven by the sender's own `getConfigSchema()` implementation), delete existing ones, and export or import the config set for that sender as a JSON file.
 - **Install sender** — installs a new sender from a URL or a local `.tgz` file.
-- **Available senders** — catalog fetched from the Kwirth manifest, showing senders available for one-click install.
+- **Available senders** — catalog fetched from the kwirth manifest, showing senders available for one-click install.
 
 ### Export / Import
 

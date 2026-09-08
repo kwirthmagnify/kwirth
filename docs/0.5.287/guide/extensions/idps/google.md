@@ -6,7 +6,7 @@
 
 ## What it does
 
-Lets users **sign in to Kwirth with a Google / Google Workspace account** via **OpenID Connect**. Once configured and enabled, a **"Login with Google"** button appears on the sign-in screen.
+Lets users **sign in to kwirth with a Google / Google Workspace account** via **OpenID Connect**. Once configured and enabled, a **"Login with Google"** button appears on the sign-in screen.
 
 ## Configuration
 
@@ -25,7 +25,7 @@ Open **☰ → Manage extensions → Identity providers → Login with Google �
 
 ## Setup
 
-### Step 1 — Register Kwirth in Google Cloud Console
+### Step 1 — Register kwirth in Google Cloud Console
 
 1. Open [console.cloud.google.com](https://console.cloud.google.com) and create or select a project (it is free).
 2. Open **APIs & Services → OAuth consent screen**:
@@ -33,7 +33,7 @@ Open **☰ → Manage extensions → Identity providers → Login with Google �
    - Fill in the app name and support email.
 3. Open **APIs & Services → Credentials → Create credentials → OAuth client ID**:
    - **Application type: Web application**.
-   - **Authorized redirect URIs**: add your Kwirth callback URL:
+   - **Authorized redirect URIs**: add your kwirth callback URL:
 
 | Environment | Redirect URI |
 |---|---|
@@ -42,7 +42,7 @@ Open **☰ → Manage extensions → Identity providers → Login with Google �
 
 > The redirect URI uses the **provider id** `google` — this is fixed and is not an admin-assigned identifier.
 >
-> If Kwirth is served under a sub-path (`ROOTPATH`), include it in the URL.
+> If kwirth is served under a sub-path (`ROOTPATH`), include it in the URL.
 
 4. On save, Google gives you a **Client ID** and a **Client Secret**. Copy both.
 
@@ -53,7 +53,7 @@ Open **☰ → Manage extensions → Identity providers → Login with Google �
 - **Testing** mode: only accounts you add as *test users* (up to 100) can authenticate. Ideal for a pilot.
 - **Production** mode: any Google account can authenticate. No Google review is needed because only non-sensitive scopes are used.
 
-### Step 2 — Configure the connector in Kwirth
+### Step 2 — Configure the connector in kwirth
 
 As admin, open **☰ → Manage extensions → Identity providers**, find the **Google** card and click **⚙️ Settings**:
 
@@ -65,14 +65,14 @@ As admin, open **☰ → Manage extensions → Identity providers**, find the **
 
 No restart or environment variables are needed — the configuration is stored in the `kwirth-idps` secret.
 
-### Step 3 — Create users in Kwirth
+### Step 3 — Create users in kwirth
 
 From **User security** (admin only): create a user whose **Id is the person's Google email address**, set **IdP** to `google`, assign resources, and save.
 
 ## Notes
 
 - **Client Secret** is a credential — protect the connector configuration.
-- Even in Google Production mode, only users you explicitly created in Kwirth (bound to Google) can enter — any other Google account is rejected at the Kwirth level.
+- Even in Google Production mode, only users you explicitly created in kwirth (bound to Google) can enter — any other Google account is rejected at the kwirth level.
 
 ---
 

@@ -5,7 +5,7 @@
 
 ## What it does
 
-The **OpenTelemetry (OTel)** provider turns Kwirth into an **OTLP/HTTP receiver**. Any OTel-instrumented service can push **traces, metrics and logs** straight to Kwirth — no separate collector needed — and those signals are normalized and delivered to subscribing channels grouped by **space**, with optional service-name filtering.
+The **OpenTelemetry (OTel)** provider turns kwirth into an **OTLP/HTTP receiver**. Any OTel-instrumented service can push **traces, metrics and logs** straight to kwirth — no separate collector needed — and those signals are normalized and delivered to subscribing channels grouped by **space**, with optional service-name filtering.
 
 ## When to use it
 
@@ -15,7 +15,7 @@ The **OpenTelemetry (OTel)** provider turns Kwirth into an **OTLP/HTTP receiver*
 
 ## Configuration
 
-Point your OTel exporters (OTLP/HTTP, **JSON**) at Kwirth's endpoints:
+Point your OTel exporters (OTLP/HTTP, **JSON**) at kwirth's endpoints:
 
 ```
 http://<kwirth-host>:<port>/otlp/v1/traces

@@ -8,13 +8,13 @@
 
 The **Echo** channel is a **diagnostic / test generator**. It attaches to the resources in your scope and, on a fixed **interval**, emits a synthetic line per resource — a **heartbeat** you can watch. Along the way it echoes back useful plumbing information: that the instance config was accepted, the list of **senders** available in the backend, and every **container discovered** in scope.
 
-It's the simplest way to prove the whole Kwirth pipeline works end-to-end — resource discovery, live streaming to the UI, and (optionally) forwarding to a **sender** — without depending on a real workload emitting logs.
+It's the simplest way to prove the whole kwirth pipeline works end-to-end — resource discovery, live streaming to the UI, and (optionally) forwarding to a **sender** — without depending on a real workload emitting logs.
 
 ## When to use it
 
-- **Smoke-test a new deployment** of Kwirth — confirm streaming reaches the UI.
+- **Smoke-test a new deployment** of kwirth — confirm streaming reaches the UI.
 - **Test a sender** — point Echo at a sender config and verify messages arrive at the destination (console/file/email/Teams…).
-- **Verify scope & discovery** — see exactly which containers Kwirth resolves for a given selection.
+- **Verify scope & discovery** — see exactly which containers kwirth resolves for a given selection.
 - **Generate steady traffic** for demos or for exercising other components.
 
 ## Getting started

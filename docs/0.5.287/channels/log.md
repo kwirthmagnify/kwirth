@@ -1,10 +1,10 @@
 # Log
-Log channel is the first channel we built inside Kwirth, it was its main purpose in fact. But now, Log Channel is just another channel you can use for receiving container logs in real time.
+Log channel is the first channel we built inside kwirth, it was its main purpose in fact. But now, Log Channel is just another channel you can use for receiving container logs in real time.
 
 ## What for
 You can create log streams that show real time logs of a set of Kubernetes objects. When you select the view you can decide what groups of objects you want to use:
 
-  - *Namespace*, view all the logs of a namespace in one stream. As it happens with all the views inside Kwirth, you can select more than one object, that is, you can have one stream consolidating all the logs of all the pods of a set of namespaces.
+  - *Namespace*, view all the logs of a namespace in one stream. As it happens with all the views inside kwirth, you can select more than one object, that is, you can have one stream consolidating all the logs of all the pods of a set of namespaces.
   - *Group*, I mean, a Deployment, a ReplicaSet, a StatefulSet or a DaemonSet, or any combination of them.
   - *Pod*, you know, a pod or a set of pods that belong to the same or different namespaces.
   - *Container*, a set of containers that belong to the same or different pods, same or different groups and same or different namespaces.
@@ -24,7 +24,7 @@ When you start a Log Channel you see the setup card where you can decide what ki
 Start diagnostics, as mentioned, is real time streaming that **starts when the set of selected Kubernetes objects first started**. The parameters you can configure are:
 
   - **Max Messages**, maximum number of messages to show on the browser. When maximum is reached **the stream will be stopped**.
-  - **Max per pod messages**, maximum number of messages per object to add to the screen. When an object reaches the maximum, Kwirth will show no more messages coming from that object, but other objects can add messages while "Max Messages" is not reached.
+  - **Max per pod messages**, maximum number of messages per object to add to the screen. When an object reaches the maximum, kwirth will show no more messages coming from that object, but other objects can add messages while "Max Messages" is not reached.
   - **Message sort order**, depending on the investigation you are performing, you may be interested in viewing object messages in different orderings. These are possible orderings:
     - *Show messages as they arrive*, nothing to add here.
     - *Keep together messages from the same pod*, no matter when a message has occurred it will be displayed next to other messages from the same pod.
@@ -35,7 +35,7 @@ You can set your selected configuration as a default for future Log Channel star
 ![logsetup](../_media/ch-images/log-setup-sd.png ':class=imageclass40')
 
 ### Log streaming
-Log streaming is useful for viewing object current logs in real time starting from any point in time. Please take into account that a very old starting point can cause your browser to become slow in processing messages, since Kwirth Core sends all the data as quickly as it can.
+Log streaming is useful for viewing object current logs in real time starting from any point in time. Please take into account that a very old starting point can cause your browser to become slow in processing messages, since kwirth Core sends all the data as quickly as it can.
 
 The configuration for log streaming is as follows:
 

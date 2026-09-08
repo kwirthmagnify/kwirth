@@ -1,6 +1,6 @@
-# 8. Extending Kwirth
+# 8. Extending kwirth
 
-Almost everything in Kwirth is an **extension**. Channels, data sources, alert destinations, the look and feel, even the login providers — all are packaged units you install, configure and enable from one place, with **no restarts**.
+Almost everything in kwirth is an **extension**. Channels, data sources, alert destinations, the look and feel, even the login providers — all are packaged units you install, configure and enable from one place, with **no restarts**.
 
 ## Extension families
 
@@ -13,7 +13,7 @@ Almost everything in Kwirth is an **extension**. Channels, data sources, alert d
 | **Homepages** | Custom **landing dashboards**. | [Homepages](../extensions/index) |
 | **Identity providers** | **SSO connectors** (Google, GitLab, GitHub). | [IdPs](../extensions/index) — see also [IdP integration](07-idp-integration) |
 | **Login extensions** | Custom **branded login pages** with per-extension channel enforcement. | [Login extensions](../extensions/logins/index) |
-| **Documentation** | **Docsify sites** served by Kwirth itself (this guide is one). | [Documentation packages](../extensions/docs/index) |
+| **Documentation** | **Docsify sites** served by kwirth itself (this guide is one). | [Documentation packages](../extensions/docs/index) |
 | **Packs** | **Bundles** of multiple extensions installed in one shot. Members cannot be removed individually. | [Packs](../extensions/packs/index) |
 
 Each **individual** extension has its own user + admin manual in [Part III](../extensions/index).

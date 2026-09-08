@@ -6,7 +6,7 @@
 
 ## What it is
 
-The **Magnify** login extension provides a **branded login page** for the Magnify channel. It replaces the standard Kwirth login dialog with a custom-styled form and automatically opens the Magnify channel after a successful login.
+The **Magnify** login extension provides a **branded login page** for the Magnify channel. It replaces the standard kwirth login dialog with a custom-styled form and automatically opens the Magnify channel after a successful login.
 
 Navigate to `/?loginExt=magnify` to reach it. Users can bookmark this URL as their entry point.
 

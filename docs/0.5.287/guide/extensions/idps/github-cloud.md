@@ -24,7 +24,7 @@ Open **☰ → Manage extensions → Identity providers → Login with GitHub (g
 
 ## Setup
 
-### Step 1 — Register Kwirth as an OAuth App in GitHub
+### Step 1 — Register kwirth as an OAuth App in GitHub
 
 > ⚠️ It must be an **OAuth App**, not a *GitHub App*. They are different things. A GitHub App uses per-app permissions instead of OAuth scopes, so `user:email` is never granted and login fails. OAuth App client IDs do **not** start with `Iv…`.
 
@@ -39,7 +39,7 @@ In GitHub, go to **Settings → Developer settings → OAuth Apps → New OAuth 
 
 Register the app and then **generate a Client Secret**. Copy both **Client ID** and **Client Secret**.
 
-### Step 2 — Configure the connector in Kwirth
+### Step 2 — Configure the connector in kwirth
 
 As admin, open **☰ → Manage extensions → Identity providers**, find the **GitHub Cloud** card and click **⚙️ Settings**:
 
@@ -48,7 +48,7 @@ As admin, open **☰ → Manage extensions → Identity providers**, find the **
 3. **Scopes**: leave empty for the default `read:user user:email`.
 4. Enable the toggle and save.
 
-### Step 3 — Create users in Kwirth
+### Step 3 — Create users in kwirth
 
 From **User security** (admin only): create a user whose **Id is the person's primary verified GitHub email**, set **IdP** to `github-cloud`, assign resources, and save.
 

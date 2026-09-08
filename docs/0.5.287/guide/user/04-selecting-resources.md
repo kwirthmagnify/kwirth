@@ -1,6 +1,6 @@
 # 4. Selecting what to observe
 
-Before you can open a channel you have to tell Kwirth **what** you want to look at. You do this with the **resource selector** — the row of dropdowns under the top bar:
+Before you can open a channel you have to tell kwirth **what** you want to look at. You do this with the **resource selector** — the row of dropdowns under the top bar:
 
 ```
 Cluster · View · Namespace · Controller · Pod · Container · Channel   [ ADD ]
@@ -14,24 +14,24 @@ Pick the cluster you want to observe. This is the only dropdown enabled when you
 
 ![Cluster dropdown](../../_media/guide/select-cluster.png)
 
-Each entry has a small **status dot**: a coloured dot means Kwirth is connected to that cluster and can stream from it. If you only manage one cluster you will just see one entry here.
+Each entry has a small **status dot**: a coloured dot means kwirth is connected to that cluster and can stream from it. If you only manage one cluster you will just see one entry here.
 
 ### The source cluster: `inCluster` and `inDesktop`
 
-There is always **one special entry** representing the cluster you are actually connected to — the *source cluster* Kwirth itself is running against. Its name depends on **how Kwirth is running**:
+There is always **one special entry** representing the cluster you are actually connected to — the *source cluster* kwirth itself is running against. Its name depends on **how kwirth is running**:
 
 | Name | When you see it | Meaning |
 |---|---|---|
-| **`inCluster`** | Kwirth is **deployed inside a Kubernetes cluster** (as a pod). | The source cluster is the very cluster Kwirth lives in — the one you pointed your browser at. |
-| **`inDesktop`** | Kwirth is running as a **desktop application** (Windows/Mac/Linux app). | The source cluster is the local cluster the desktop app is configured to talk to (via your kubeconfig). |
+| **`inCluster`** | kwirth is **deployed inside a Kubernetes cluster** (as a pod). | The source cluster is the very cluster kwirth lives in — the one you pointed your browser at. |
+| **`inDesktop`** | kwirth is running as a **desktop application** (Windows/Mac/Linux app). | The source cluster is the local cluster the desktop app is configured to talk to (via your kubeconfig). |
 
 This source entry is **special**: it is always present, it is the one you are guaranteed to reach, and — unlike the clusters you add yourself — you **cannot rename or delete it** from cluster management.
 
 ### Observing more than one cluster
 
-Any **additional** clusters in this dropdown are ones added to **your profile**: each is another Kwirth instance (running on another cluster) that you registered by name + URL + API key. Selecting one lets you observe that remote cluster from the same screen, so you can consolidate several clusters in one place.
+Any **additional** clusters in this dropdown are ones added to **your profile**: each is another kwirth instance (running on another cluster) that you registered by name + URL + API key. Selecting one lets you observe that remote cluster from the same screen, so you can consolidate several clusters in one place.
 
-> Clusters live in **your profile**, not in a global Kwirth setting — the list is personal to you. To add, edit or remove clusters (everything except the source `inCluster` / `inDesktop` entry), see [Cluster management](../admin/06-cluster-management).
+> Clusters live in **your profile**, not in a global kwirth setting — the list is personal to you. To add, edit or remove clusters (everything except the source `inCluster` / `inDesktop` entry), see [Cluster management](../admin/06-cluster-management).
 
 ## Step 2 — View
 
@@ -70,7 +70,7 @@ Available for the *namespace*, *controller*, *pod* and *container* views. Tick o
 
 ![Namespace multi-select](../../_media/guide/select-namespace.png)
 
-Choosing namespaces makes Kwirth fetch the **controllers** living in them.
+Choosing namespaces makes kwirth fetch the **controllers** living in them.
 
 ### Controller
 
@@ -78,9 +78,9 @@ Available for the *controller*, *pod* and *container* views. A **controller** is
 
 ![Controller multi-select with type icons](../../_media/guide/select-controller.png)
 
-> In the *pod* and *container* views you are not required to filter by a real controller — Kwirth offers a **Not Applicable** entry so you can jump straight to picking pods.
+> In the *pod* and *container* views you are not required to filter by a real controller — kwirth offers a **Not Applicable** entry so you can jump straight to picking pods.
 
-Choosing controllers makes Kwirth fetch their **pods**.
+Choosing controllers makes kwirth fetch their **pods**.
 
 ### Pod
 
@@ -88,7 +88,7 @@ Available for the *pod* and *container* views. Pick the individual pods you want
 
 ![Pod multi-select](../../_media/guide/select-pod.png)
 
-Choosing pods makes Kwirth fetch their **containers**.
+Choosing pods makes kwirth fetch their **containers**.
 
 ### Container
 

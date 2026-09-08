@@ -1,8 +1,8 @@
 # Providers
-As of Kwirth version 0.5.40, we have converted data sources (the ones we use for extracting data from Kubernetes) into 'providers'. This means:
+As of kwirth version 0.5.40, we have converted data sources (the ones we use for extracting data from Kubernetes) into 'providers'. This means:
 
   - Kwirth core can be extended by adding new providers.
-  - Providers are now standardized, and they can be moved away from Kwirth core (converting them into plugins, for example).
+  - Providers are now standardized, and they can be moved away from kwirth core (converting them into plugins, for example).
 
 In the first version for the provider subsystem there exist three providers:
 
@@ -13,11 +13,11 @@ In the first version for the provider subsystem there exist three providers:
 Just follow the links to get specific information on each provider.
 
 ## Architecture
-Providers is one of the data-streaming subsystems inside Kwirth, and it is very easy to understand. The provider subsystem offers a decoupling layer between kube api and the channel subsystem, what adds these benefits:
+Providers is one of the data-streaming subsystems inside kwirth, and it is very easy to understand. The provider subsystem offers a decoupling layer between kube api and the channel subsystem, what adds these benefits:
 
   - **Isolation**, the channels are not tightly coupled to the kube API.
   - **Efficiency**, the data streams can be instantiated once per provider and distribute data to different channels (subscribers in fact), so the overhead introduced into kube API server is minimal.
-  - **Enrichment**, you can build providers that introduce external data into the Kwirth ecosystem.
+  - **Enrichment**, you can build providers that introduce external data into the kwirth ecosystem.
 
 What follows is an architectural view of the provider/channel subsystem.
 
@@ -40,11 +40,11 @@ export interface IProvider {
 
 Where:
   - `id`, is the id of the provider, the one the channels will use for reference.
-  - `providesRouter`, if you need to receive HTTP request from outside Kwirth, you must enable this and provide an Express router.
+  - `providesRouter`, if you need to receive HTTP request from outside kwirth, you must enable this and provide an Express router.
   - `addSubscriber`, a function for adding subscribers to your provider.
   - `removeSubscriber`, a function for removing subscriber to your provider.
-  - `router` , if `providesRouter` is `true`, you must provide the Express router here. When you provide a router, the endpoint will be served at Kwirth HTTP endpoint: '/&lt;rootPath&gt;/&lt;runningInstance&gt;/provider/&lt;providerId&gt;', where
-    - `rootPath` is the root path of Kwirth HTTP endpoints, typically / ot /kwirth.
+  - `router` , if `providesRouter` is `true`, you must provide the Express router here. When you provide a router, the endpoint will be served at kwirth HTTP endpoint: '/&lt;rootPath&gt;/&lt;runningInstance&gt;/provider/&lt;providerId&gt;', where
+    - `rootPath` is the root path of kwirth HTTP endpoints, typically / ot /kwirth.
     - `runningInstance` is the id of the cluster instance once it is started.
     - `providerId` is the id of your provider.
     - Example: /kwirth/23446-23446-23446-23446/provider/datastream (being 'datastream' the id of the provider).
@@ -59,7 +59,7 @@ Tick provider creates a 'tick' every 5 seconds, so channels subscribed to Tick p
 ### Features
 Tick provider has no configuration, the interval for the Tick is fixed. The source for ticks (a setInterval in fact) is **unique** for all subscribers, that is, one only source for ticks *for each cluster*.
 
-!> The source is linked to a running instance, not to Kwirth core, so you will have a unique Tick provider for each cluster.
+!> The source is linked to a running instance, not to kwirth core, so you will have a unique Tick provider for each cluster.
 
 ### Use
 When initializing a channel or when starting a channel (or any other moment afterwards) you can add yourself as a subscriber to Tick channel, and you will start receiving the ticks every five seconds.
@@ -100,7 +100,7 @@ this.clusterInfo.addSubscriber(
 ```
 
 ## Validating
-Validating providers receives Kubernetes **validating webhook** calls and send them to all subscribed channels. In the very first version no actions can be taking back to Kubernetes, so all responses from Kwirth to Kubernetes will always be `review: true`, this means Validation provider is only informative for channels.
+Validating providers receives Kubernetes **validating webhook** calls and send them to all subscribed channels. In the very first version no actions can be taking back to Kubernetes, so all responses from kwirth to Kubernetes will always be `review: true`, this means Validation provider is only informative for channels.
 
 ### What for
 You can obtain information about objects **before** they are ADDED/DELETED/MODIFIED. In near future channels will be able to answer `validating` channel regarding the review process, stating if the review is accepted or denied.

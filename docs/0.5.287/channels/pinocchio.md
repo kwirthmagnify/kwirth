@@ -1,6 +1,6 @@
 # Pinocchio
 
-Pinocchio is Kwirth's autonomous AI agent for Kubernetes cluster analysis. It watches live data streams — Kubernetes events, object mutations, and business data — and reacts to them by invoking a configured LLM with a rich set of Kubernetes interrogation tools. The LLM can inspect the cluster, gather context, and return structured findings with a severity level.
+Pinocchio is kwirth's autonomous AI agent for Kubernetes cluster analysis. It watches live data streams — Kubernetes events, object mutations, and business data — and reacts to them by invoking a configured LLM with a rich set of Kubernetes interrogation tools. The LLM can inspect the cluster, gather context, and return structured findings with a severity level.
 
 The core architecture is straightforward:
 

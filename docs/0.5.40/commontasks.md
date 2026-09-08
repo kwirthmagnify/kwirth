@@ -1,21 +1,21 @@
 # Common Tasks
 
 ## Your first access
-The first time you access your fresh copy of Kwirth you must login with admin credentials, **admin/password** (yes the password is password).
+The first time you access your fresh copy of kwirth you must login with admin credentials, **admin/password** (yes the password is password).
 
  &nbsp;&nbsp;&nbsp;&nbsp;![login](./_media/login.png)
 
-So, if everything is ok (and you have changed your password, you cannot continue if not), you should see the main Kwirth page:
+So, if everything is ok (and you have changed your password, you cannot continue if not), you should see the main kwirth page:
 
  ![main kwirth page](./_media/main-page.png)
 
-What you can see in the main Kwirth is:
+What you can see in the main kwirth is:
 
   1. The toolbar, with your login info (the user on the right), the name of the current workspace (just on the left of the user), we will see later what is a workspace. On the very left you'll find the access to the main menu, the burger icon.
 
     ![toolbar](./_media/toolbar.png)
 
-  2. The resource selector. This is one of the most important things in Kwirth.
+  2. The resource selector. This is one of the most important things in kwirth.
   
     ![resource selector](./_media/resource-selector.png)
 
@@ -26,8 +26,8 @@ What you can see in the main Kwirth is:
     - **Group**. If your view is 'group' or lower, you can select here what group inside the namespaces you selected you want to work with. In the selector you will see *replica sets*, *stateful sets* and *daemons sets*.
     - **Pod**. If the view is 'pod' or lower, you must select what pod/pods you want to use as source object (from a list made of all the namespaces and groups you selected).
     - **Container**. If the view is 'container', you must decide here what container/containers you want to use as source for the data stream. Available containers are those that live in the pods you selected.
-    - **Channel**. Prior to add a resource to the workspace, you need to specify what kind of information you want to work with. So you must select 'log', 'metrics', 'alert' or whatever channel your Kwirth core server have installed. Read information on [channels here](chanels).
-  3. The main menu gives you access to several configuration and operation options of your Kwirth installation.
+    - **Channel**. Prior to add a resource to the workspace, you need to specify what kind of information you want to work with. So you must select 'log', 'metrics', 'alert' or whatever channel your kwirth core server have installed. Read information on [channels here](chanels).
+  3. The main menu gives you access to several configuration and operation options of your kwirth installation.
 
     ![main menu](./_media/main-menu.png)
 
@@ -35,13 +35,13 @@ What you can see in the main Kwirth is:
     - In the first block you can manage your workspaces by creating (new), loading (load) saving (save and 'save as') and deleting workspaces.
     - Next you have options for exporting your workspaces to a file or import them from a file.
     - Next option  is 'User settings'. In user setting panel you can configure default behaviors for your channels, like maximum number of messages in a log, adding timestamp to log lines, setting the interval for refreshing metrics...
-    - Next option is 'Cluster settings', where you can set some cluster-wide settings of Kwirth, like, for example, the interval Kwirth use to extract metrics from node's cAdvisor.
-    - 'Manage cluster security' gives you the chance to [manage other clusters](clustermanagement) you want to **access from this Kwirth**.
+    - Next option is 'Cluster settings', where you can set some cluster-wide settings of kwirth, like, for example, the interval kwirth use to extract metrics from node's cAdvisor.
+    - 'Manage cluster security' gives you the chance to [manage other clusters](clustermanagement) you want to **access from this kwirth**.
     - 'API security' allows viewing and [managing API keys](apimanagement) you can create to share with other parties.
-    - 'User security' is for managing users that will have access to this instance of Kwirth.
-    - Update Kwirth' (an *admin option* only performs a Kwirth restart), so if you deployed Kwirth with 'latest' tag in the OCI image, Kwirth will restart with the **newest version**.`
-    - **Exit Kwirth**, just logging you off.
-    - At the very end of the menu you will find the version of the Kwirth you are working with.
+    - 'User security' is for managing users that will have access to this instance of kwirth.
+    - Update kwirth' (an *admin option* only performs a kwirth restart), so if you deployed kwirth with 'latest' tag in the OCI image, kwirth will restart with the **newest version**.`
+    - **Exit kwirth**, just logging you off.
+    - At the very end of the menu you will find the version of the kwirth you are working with.
 
 
 ## The *workspaces*

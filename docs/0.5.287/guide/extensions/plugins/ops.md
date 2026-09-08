@@ -6,7 +6,7 @@
 
 ## Overview
 
-The **Ops** channel is Kwirth's **day-to-day operations** console. Instead of leaving Kwirth for `kubectl`, you operate your workloads right here: **open a shell** into a container, **restart** a container / pod / namespace, **inspect** objects, and **jump straight to a container's logs or metrics** — all from a point-and-click UI.
+The **Ops** channel is kwirth's **day-to-day operations** console. Instead of leaving kwirth for `kubectl`, you operate your workloads right here: **open a shell** into a container, **restart** a container / pod / namespace, **inspect** objects, and **jump straight to a container's logs or metrics** — all from a point-and-click UI.
 
 The channel has two panes:
 
@@ -33,7 +33,7 @@ The channel has two panes:
 
 | Option | What it does |
 |---|---|
-| **KeepAlive shell session on backend** | Kwirth keeps your shell sessions alive on the server even when idle, and — combined with Kwirth's **reconnect** — lets you **resume a shell after losing your connection**. |
+| **KeepAlive shell session on backend** | kwirth keeps your shell sessions alive on the server even when idle, and — combined with kwirth's **reconnect** — lets you **resume a shell after losing your connection**. |
 | **Function access key** | The modifier key (e.g. **Alt**) used with the function keys to switch between shell sessions (see [Shells](#shells)). |
 | **Set as default** | Remember this setup. |
 
@@ -105,7 +105,7 @@ With **KeepAlive** on, sessions survive idle time and you can **reconnect** to t
 
 **3) From an alert to a shell**
 
-1. An [Alert](alert) fires for `checkout`. Open an `ops` tab on that Deployment, use **⋮ → View container log** to confirm, then **▷_** to shell in and fix it — without ever leaving Kwirth.
+1. An [Alert](alert) fires for `checkout`. Open an `ops` tab on that Deployment, use **⋮ → View container log** to confirm, then **▷_** to shell in and fix it — without ever leaving kwirth.
 
 ## Admin guide
 

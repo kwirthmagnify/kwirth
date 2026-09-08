@@ -5,12 +5,12 @@
 
 ## What it does
 
-The **HTTP Pull-Push** provider turns any HTTP endpoint into a Kwirth data source. You declare a set of
+The **HTTP Pull-Push** provider turns any HTTP endpoint into a kwirth data source. You declare a set of
 **connections** — a URL, how often to call it and how to authenticate — and the provider **pulls** each one
 on its own schedule and **pushes** the result to the channels that subscribed to it.
 
-It is the answer to "I want this API inside Kwirth" when the external system has no way of pushing data to
-you: instead of waiting for an OTLP exporter or a business event, Kwirth goes and fetches it.
+It is the answer to "I want this API inside kwirth" when the external system has no way of pushing data to
+you: instead of waiting for an OTLP exporter or a business event, kwirth goes and fetches it.
 
 ## When to use it
 
@@ -31,7 +31,7 @@ places by different people.
 
 The practical consequence: **one connection is fetched once per cycle**, no matter how many channels are
 listening. Three channels subscribed to the same quotes API produce one request every cycle, not three.
-That is the whole point of the provider layer — the remote endpoint sees Kwirth as a single client.
+That is the whole point of the provider layer — the remote endpoint sees kwirth as a single client.
 
 ## Configuration
 
@@ -57,7 +57,7 @@ edited on the right.
 bytes came back and the beginning of the response. It works on what you have on screen, so you can try a
 url before saving it.
 
-The important part: the request is made **by the Kwirth backend**, not by your browser. That is the only
+The important part: the request is made **by the kwirth backend**, not by your browser. That is the only
 test worth trusting — the backend has the network the polling will really use, its own DNS and egress
 rules, and its own certificate store. An endpoint that answers from your laptop may be unreachable from
 inside the cluster, and the other way round.
@@ -90,7 +90,7 @@ the first outcome instead of insisting.
 | **Body** | Only for POST / PUT / PATCH. |
 
 Changes apply **immediately on save**: enabling, disabling, editing or deleting a connection takes effect
-without restarting Kwirth.
+without restarting kwirth.
 
 ## Two behaviours worth knowing
 
@@ -100,7 +100,7 @@ means "available to be subscribed to". This is deliberate — it avoids hammerin
 reading, and it stops a forgotten connection from burning the quota of a paid API.
 
 **Where your credentials end up.** The provider splits what you type: URLs, intervals and headers go to a
-**ConfigMap** (so you can audit with `kubectl` what Kwirth is querying), while passwords, tokens and custom
+**ConfigMap** (so you can audit with `kubectl` what kwirth is querying), while passwords, tokens and custom
 header values go to a **Secret**. You do not have to do anything for this — it is how the provider stores
 its own configuration.
 
@@ -117,7 +117,7 @@ name already exists, so you can see what you are about to overwrite before confi
 
 ## Security notes
 
-- A connection is an **outbound call made by Kwirth**, with Kwirth's network identity. Anything reachable
+- A connection is an **outbound call made by kwirth**, with kwirth's network identity. Anything reachable
   from the pod is reachable from here, internal services included.
 - **Accept self-signed certificates** disables certificate verification for that connection. Use it for
   internal endpoints with their own CA, never against the public internet.

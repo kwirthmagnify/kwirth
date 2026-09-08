@@ -1,5 +1,5 @@
 # Ops
-Ops Channel is a complex, functionally rich channel that Kwirth users can use to operate (perform day-to-day operations) on your Kubernetes workload.
+Ops Channel is a complex, functionally rich channel that kwirth users can use to operate (perform day-to-day operations) on your Kubernetes workload.
 
 A typical use case is the one of a developer launching a shell to connect to a container in order to debug some error.
 
@@ -13,7 +13,7 @@ Ops Channel can be used mainly for:
 ## Features
 The only setup required for starting an Ops Channel is:
 
-  - Decide whether to **keep-alive your shell sessions** in the backend or not. That is, Kwirth will perform some keep-alive activities for the sessions to remain working even if you type nothing all day. In addition, the **reconnect feature of Kwirth** allows you to reconnect to a shell session even if you lost your connection to Kwirth.
+  - Decide whether to **keep-alive your shell sessions** in the backend or not. That is, kwirth will perform some keep-alive activities for the sessions to remain working even if you type nothing all day. In addition, the **reconnect feature of kwirth** allows you to reconnect to a shell session even if you lost your connection to kwirth.
   - The other parameter you can configure is the color scheme: light (for normal people), dark (for sysadmins), or 3270 (for mainframe lovers).
 
 ## Use

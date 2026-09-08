@@ -13,7 +13,7 @@ The result is twofold:
 - **Massively less log volume** forwarded downstream (with a live estimate of the **cost saved**, e.g. on DataDog ingestion/indexing).
 - **Sensitive/among noisy data caught** and flagged before it leaves the cluster.
 
-> Censor uses the **LLM providers configured in Kwirth** (see [AI configuration](#ai-configuration-shared-across-plugins)); you choose which model to use per config.
+> Censor uses the **LLM providers configured in kwirth** (see [AI configuration](#ai-configuration-shared-across-plugins)); you choose which model to use per config.
 
 ## When to use it
 
@@ -24,7 +24,7 @@ The result is twofold:
 
 ## Getting started
 
-1. Select your scope. Censor is **resourced**, so pick **one or more pods/containers that actually write to stdout** — for a quick demo, **Kwirth's own pod** (namespace `kwirth`) is a reliable, chatty source. Choose the **censor** channel and click **ADD**.
+1. Select your scope. Censor is **resourced**, so pick **one or more pods/containers that actually write to stdout** — for a quick demo, **kwirth's own pod** (namespace `kwirth`) is a reliable, chatty source. Choose the **censor** channel and click **ADD**.
 2. Open the tab's **⚙️ → Start**. A small **Censor** dialog asks for **visible line limits** (how many LLM input/output lines to keep in the UI); press **Start**.
 
 ![Censor start dialog](../../../_media/guide/channel-censor-setup.png)
@@ -68,7 +68,7 @@ So an object listed in ⚪ means "this would be analyzed", and 🟢 means "this 
 
 ### Regex — the filters in force
 
-Each row is a filter with its **match count**, its **% of total matches**, and an **origin** badge: **L** (LLM-generated), **M** (manual) or **H** (hybrid). Here the model spotted a repetitive Kwirth log line and generated a regex that filters it — 5 matches, 100%, origin **L**:
+Each row is a filter with its **match count**, its **% of total matches**, and an **origin** badge: **L** (LLM-generated), **M** (manual) or **H** (hybrid). Here the model spotted a repetitive kwirth log line and generated a regex that filters it — 5 matches, 100%, origin **L**:
 
 ![Censor regex tab](../../../_media/guide/channel-censor-regex.png)
 
@@ -130,7 +130,7 @@ Open **⋮ → Config**. The left panel is your **library of configs**; the righ
 
 ![Censor config — Prompt tab](../../../_media/guide/censor-config-prompt.png)
 
-- **System prompt (optional)** — leave empty to use Kwirth's default noise-filtering prompt, or supply your own (e.g. an "SRE + security" analyst persona).
+- **System prompt (optional)** — leave empty to use kwirth's default noise-filtering prompt, or supply your own (e.g. an "SRE + security" analyst persona).
 - **Output example (JSON)** — pins the **shape** of the model's response so Censor can parse it reliably. It **must be valid JSON with double quotes** (the editor validates as you type).
 
 ### Logstream tab
@@ -154,7 +154,7 @@ Optionally route the censored output to a configured **[sender](../senders/index
 
 ### AI configuration (shared across plugins)
 
-The **LLM config** and **Provider config** buttons at the bottom of the dialog open Kwirth's **AI configuration** — and this is **shared by every plugin that uses AI** (Censor, **[Pinocchio](pinocchio)**, …). A provider/model you set up here is immediately available to all of them.
+The **LLM config** and **Provider config** buttons at the bottom of the dialog open kwirth's **AI configuration** — and this is **shared by every plugin that uses AI** (Censor, **[Pinocchio](pinocchio)**, …). A provider/model you set up here is immediately available to all of them.
 
 - **Provider config** — register an **AI provider**: a **Name** of your choosing, a **Type** (the SDK adapter — including `openai-compat` plus a **Base URL** for OpenAI-compatible endpoints such as Huawei MaaS or vLLM) and its **API key/token**.
 - **LLM config** — define the **models** (LLM id, provider, model, temperature, cost per million tokens) you then pick in the **General** tab.

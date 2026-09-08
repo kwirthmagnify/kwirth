@@ -25,7 +25,7 @@ Open **☰ → Manage extensions → Identity providers → Login with GitLab (g
 
 ## Setup
 
-### Step 1 — Register Kwirth in GitLab
+### Step 1 — Register kwirth in GitLab
 
 In your GitLab instance, create an **OAuth Application**. You can do this as:
 
@@ -47,13 +47,13 @@ Fill in:
 > For local development point it at the backend directly:
 > `http://localhost:3883/core/auth/gitlab-onprem/callback`
 >
-> If Kwirth is served under a sub-path (`ROOTPATH`), include it in the URL.
+> If kwirth is served under a sub-path (`ROOTPATH`), include it in the URL.
 
 Click **Save application**. GitLab shows an **Application ID** and a **Secret** — copy both.
 
-> The Kwirth backend performs OIDC discovery (`<gitlab-url>/.well-known/openid-configuration`) and the token exchange server-side, so the machine running the Kwirth backend must be able to reach your GitLab instance (relevant when GitLab is behind a VPN).
+> The kwirth backend performs OIDC discovery (`<gitlab-url>/.well-known/openid-configuration`) and the token exchange server-side, so the machine running the kwirth backend must be able to reach your GitLab instance (relevant when GitLab is behind a VPN).
 
-### Step 2 — Configure the connector in Kwirth
+### Step 2 — Configure the connector in kwirth
 
 As admin, open **☰ → Manage extensions → Identity providers**, find the **GitLab Self-Managed** card and click **⚙️ Settings**:
 
@@ -65,12 +65,12 @@ As admin, open **☰ → Manage extensions → Identity providers**, find the **
 
 A **"Login with GitLab"** entry now appears on the login screen.
 
-### Step 3 — Create users in Kwirth
+### Step 3 — Create users in kwirth
 
-GitLab only proves identity — each person must have a matching Kwirth account. From **User security** (admin only):
+GitLab only proves identity — each person must have a matching kwirth account. From **User security** (admin only):
 
 1. Create a **New** user.
-2. Set the **Id** to the user's **GitLab verified email address** — this is how Kwirth matches the identity coming from GitLab.
+2. Set the **Id** to the user's **GitLab verified email address** — this is how kwirth matches the identity coming from GitLab.
 3. Set the **IdP** field to `gitlab-onprem`.
 4. Assign **resources** (scopes, namespaces, …) that define what the user can access.
 5. **Save**.
@@ -80,7 +80,7 @@ GitLab only proves identity — each person must have a matching Kwirth account.
 - The only difference from **[GitLab Cloud](gitlab-cloud)** is the **GitLab URL** field.
 - The **provider id** (`gitlab-onprem`) is fixed and shared by everyone using this connector — it is not per-user or per-installation.
 - The application secret is a credential — protect it and rotate it if it leaks.
-- If you enable both `gitlab-cloud` and `gitlab-onprem`, users see separate "Login with GitLab" buttons; bind each Kwirth user to the correct connector.
+- If you enable both `gitlab-cloud` and `gitlab-onprem`, users see separate "Login with GitLab" buttons; bind each kwirth user to the correct connector.
 
 ---
 

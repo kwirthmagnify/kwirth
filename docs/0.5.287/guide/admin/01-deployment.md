@@ -1,6 +1,6 @@
 # 1. Deployment
 
-Welcome to **Part II**, the administrator's guide. It covers everything needed to **run and configure** Kwirth: deploying it, securing it, and managing users, keys, clusters, identity providers and extensions.
+Welcome to **Part II**, the administrator's guide. It covers everything needed to **run and configure** kwirth: deploying it, securing it, and managing users, keys, clusters, identity providers and extensions.
 
 Kwirth is a **single component** — one container/process — that you can run in several ways. Pick the one that matches your environment.
 
@@ -15,7 +15,7 @@ Kwirth is a **single component** — one container/process — that you can run 
    helm install kwirth kwirth/kwirth -n kwirth --create-namespace
    ```
 
-This installs Kwirth in the `kwirth` namespace with defaults. Tune it with a `values.yaml`:
+This installs kwirth in the `kwirth` namespace with defaults. Tune it with a `values.yaml`:
 
 ```yaml
 kwirth:
@@ -35,7 +35,7 @@ Most useful Helm options:
 | Option | Description | Default |
 |---|---|---|
 | `masterkey` | Key used to **sign the access keys** issued to clients. **Change this.** | `Kwirth4Ever` |
-| `rootpath` | Path Kwirth is served under | `/kwirth` |
+| `rootpath` | Path kwirth is served under | `/kwirth` |
 | `image` | Full image reference | `kwirthmagnify/kwirth:latest` |
 | `resources` | Pod resources (K8s format) | `{ limits: {cpu:1, memory:2Gi}, requests: {cpu:0, memory:256Mi} }` |
 | `ingress.enabled` | Deploy an Ingress | `false` |
@@ -43,7 +43,7 @@ Most useful Helm options:
 | `ingress.hostname` | Host in the Ingress | – |
 | `nginx.tls` / `nginx.secret` | Enable TLS / secret holding CRT+KEY | – |
 
-> **Channels are plugins now.** Log, Ops, Trivy, Fileman and the rest are loaded as **plugins**, not Helm flags. Install them from the plugin management UI (see [Extending Kwirth](08-extending-kwirth)).
+> **Channels are plugins now.** Log, Ops, Trivy, Fileman and the rest are loaded as **plugins**, not Helm flags. Install them from the plugin management UI (see [Extending kwirth](08-extending-kwirth)).
 
 ## Kubernetes with manifests
 
@@ -57,7 +57,7 @@ Edit the YAML if you need to change defaults.
 
 ## Docker
 
-Mount your kubeconfig so Kwirth can reach the cluster:
+Mount your kubeconfig so kwirth can reach the cluster:
 
 ```bash
 docker run -d -p 3883:3883 \
@@ -79,12 +79,12 @@ Key command-line options include `--port`, `--rootpath`, `--masterkey`, `--metri
 
 ## Desktop
 
-Download the installer for **Windows, macOS or Linux** from the [Releases page](https://github.com/kwirthmagnify/kwirth/releases). On launch, a **context selector** lets you choose which cluster to connect to (LOCAL = contexts in your `kubeconfig`; REMOTE = clusters reachable through a Kwirth server). In this mode the source cluster appears as **`inDesktop`** (see [Selecting what to observe](../user/04-selecting-resources)).
+Download the installer for **Windows, macOS or Linux** from the [Releases page](https://github.com/kwirthmagnify/kwirth/releases). On launch, a **context selector** lets you choose which cluster to connect to (LOCAL = contexts in your `kubeconfig`; REMOTE = clusters reachable through a kwirth server). In this mode the source cluster appears as **`inDesktop`** (see [Selecting what to observe](../user/04-selecting-resources)).
 
 ## Publishing and access
 
-- The default Kubernetes install serves Kwirth at `http://<your-dns>/kwirth`.
-- To serve it under a different path, create an **Ingress** and set the **`ROOTPATH`** environment variable on the deployment to the same path — that's the one thing Kwirth needs to know:
+- The default Kubernetes install serves kwirth at `http://<your-dns>/kwirth`.
+- To serve it under a different path, create an **Ingress** and set the **`ROOTPATH`** environment variable on the deployment to the same path — that's the one thing kwirth needs to know:
 
   ```yaml
   env:
@@ -92,6 +92,6 @@ Download the installer for **Windows, macOS or Linux** from the [Releases page](
       value: '/quirz'
   ```
 - Kwirth listens on port **3883** inside the container; for Docker/External you pick the published port and path yourself (e.g. `-p 8080:3883 --rootpath /fantastic/tony` → `http://localhost:8080/fantastic/tony`).
-- The other environment variable worth setting is **`KWIRTH_CLUSTER_NAME`**, which names the cluster in the title bar and the Homepage. Kwirth detects the name on AKS, EKS, GKE and k3d, but on **k3s and bare clusters there is nothing to detect** — see [The cluster's own name](06-cluster-management#the-clusters-own-name).
+- The other environment variable worth setting is **`KWIRTH_CLUSTER_NAME`**, which names the cluster in the title bar and the Homepage. kwirth detects the name on AKS, EKS, GKE and k3d, but on **k3s and bare clusters there is nothing to detect** — see [The cluster's own name](06-cluster-management#the-clusters-own-name).
 
 Next: [Initial configuration →](02-initial-config)

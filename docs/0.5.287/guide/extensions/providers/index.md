@@ -5,25 +5,25 @@
 
 ## What a provider is
 
-A **provider** is a **data source**. It sits between an external system (the Kubernetes API, a Kafka broker, an OTLP exporter, a business app…) and Kwirth's **channels**, and streams events into the platform. Channels **subscribe** to providers; a single provider instance can feed many channels at once.
+A **provider** is a **data source**. It sits between an external system (the Kubernetes API, a Kafka broker, an OTLP exporter, a business app…) and kwirth's **channels**, and streams events into the platform. Channels **subscribe** to providers; a single provider instance can feed many channels at once.
 
-You rarely interact with a provider directly — instead you pick a **channel** (Log, Metrics, Alert, Censor, Pinocchio…) and it consumes the provider it needs behind the scenes. Providers matter to **admins** who want to bring **new kinds of data** into Kwirth or tune how existing data is collected.
+You rarely interact with a provider directly — instead you pick a **channel** (Log, Metrics, Alert, Censor, Pinocchio…) and it consumes the provider it needs behind the scenes. Providers matter to **admins** who want to bring **new kinds of data** into kwirth or tune how existing data is collected.
 
 Why the indirection?
 
 - **Isolation** — channels aren't coupled to the Kubernetes API or any external system.
 - **Efficiency** — one stream per provider is fanned out to all subscribers, so load on the source (e.g. the API server) stays low.
-- **Enrichment** — custom providers can inject **external** data (business events, IoT, third-party feeds) into the Kwirth ecosystem.
+- **Enrichment** — custom providers can inject **external** data (business events, IoT, third-party feeds) into the kwirth ecosystem.
 
 *(For the architecture diagram and the developer API, see the reference [Providers](../../providers/index) section.)*
 
 ## Built-in providers
 
-These ship with the Kwirth core — nothing to install:
+These ship with the kwirth core — nothing to install:
 
 | Provider | What it streams | Consumed by |
 |---|---|---|
-| **Events** | A Kwirth event whenever a **Kubernetes cluster event** occurs (Pod created, Deployment scaled, node pressure…). | Alert, Censor, Pinocchio, Topology… |
+| **Events** | A kwirth event whenever a **Kubernetes cluster event** occurs (Pod created, Deployment scaled, node pressure…). | Alert, Censor, Pinocchio, Topology… |
 | **Metrics** | Cluster-wide **resource metrics** polled from the kubelet/cAdvisor API on a configurable interval. | Metrics, Magnify |
 | **Business** | External **business data** ingested via HTTP `POST`, routed to channels by **space / type**. | Alert, Censor, Pinocchio |
 
@@ -34,9 +34,9 @@ Add these from **☰ → Manage extensions → Providers**:
 | Provider | What it does | Notes / key config |
 |---|---|---|
 | **[Tick](tick)** | Fires a **heartbeat** every few seconds. | Great for testing channel subscriptions; no real config. |
-| **[Validating](validating)** | Emits an event whenever the Kubernetes API calls a **Validating webhook** — lets Kwirth observe admission decisions. | Register it as a validating webhook target. |
+| **[Validating](validating)** | Emits an event whenever the Kubernetes API calls a **Validating webhook** — lets kwirth observe admission decisions. | Register it as a validating webhook target. |
 | **[Kafka](kafka)** | Connects to one or more **Kafka** broker sets and distributes topic messages to channels using the same **space/type** routing as Business. | Broker list, topics, credentials. |
-| **[OpenTelemetry](otel)** | Turns Kwirth into an **OTLP/HTTP receiver** — any OTel-instrumented service can push **traces, metrics and logs** straight to Kwirth. | OTLP endpoint/port. |
+| **[OpenTelemetry](otel)** | Turns kwirth into an **OTLP/HTTP receiver** — any OTel-instrumented service can push **traces, metrics and logs** straight to kwirth. | OTLP endpoint/port. |
 | **[Syslog](syslog)** | Receives **syslog** messages and streams them into channels. | Listen protocol/port, framing, relay. |
 | **[HTTP Pull-Push](http-pull-push)** | **Polls** remote HTTP endpoints on a schedule and pushes each result to the subscribed channels — for sources that cannot push to you. | Per connection: url, interval, auth, timeout. |
 | **[Trivy](trivy)** | Watches the **Trivy Operator** CRDs and streams vulnerability / config-audit / secret findings. | Backs the **[Trivy](../plugins/trivy)** channel. |
@@ -63,9 +63,9 @@ Install a new provider from the **Install provider** field at the bottom (paste 
 
 ## Admin guide
 
-- **Install / enable / remove:** all providers are managed from **☰ → Manage extensions → Providers**, using the common flow described in [Extending Kwirth](../../admin/08-extending-kwirth).
+- **Install / enable / remove:** all providers are managed from **☰ → Manage extensions → Providers**, using the common flow described in [Extending kwirth](../../admin/08-extending-kwirth).
 - **Configuration:** providers that talk to external systems (**Syslog**, **Kafka**, **OpenTelemetry**, **Business**) expose their connection settings behind the card's **gear**; built-in providers (Events, Metrics) are always available.
-- **Security:** a provider can bring **external, untrusted data** into Kwirth — treat provider endpoints (Business `POST`, OTLP, Syslog) like any ingress and protect them accordingly.
+- **Security:** a provider can bring **external, untrusted data** into kwirth — treat provider endpoints (Business `POST`, OTLP, Syslog) like any ingress and protect them accordingly.
 
 ## Notes
 

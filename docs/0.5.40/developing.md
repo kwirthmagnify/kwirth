@@ -1,19 +1,19 @@
 # Developing channels
-On the very first versions of Kwirth all its capabilities were implemented inside Kwirth core. That is, log streaming or the ability to restart pods or deployments were in fact TypeScript modules co-developed and integrated into Kwirth core, they were built next to it, creating one only piece which contains the core backend features (connection to kubernetes cluster, managing security, serving as a storage system for profiles, etc.), the Kwirth capabilities (log streaming, cluster basic operations) and serving the front application (the React module).
+On the very first versions of kwirth all its capabilities were implemented inside kwirth core. That is, log streaming or the ability to restart pods or deployments were in fact TypeScript modules co-developed and integrated into kwirth core, they were built next to it, creating one only piece which contains the core backend features (connection to kubernetes cluster, managing security, serving as a storage system for profiles, etc.), the kwirth capabilities (log streaming, cluster basic operations) and serving the front application (the React module).
 
-Channel development has been taken outside of Kwirth core, so Kwirth features can be increased independently from Kwirth core evolution.
+Channel development has been taken outside of kwirth core, so kwirth features can be increased independently from kwirth core evolution.
 
 ## Back Channel development
-The channel system has been designed to allow **an ordered evolution of Kwirth core** and, at the same time, to serve as a basis for other developers to create its own channels, that is, its own real-time data-streaming services for Kubernetes.
+The channel system has been designed to allow **an ordered evolution of kwirth core** and, at the same time, to serve as a basis for other developers to create its own channels, that is, its own real-time data-streaming services for Kubernetes.
 
 Creating a channel involves the following processes:
 
   1. Design your channel.
   2. Implement the back channel interface.
-  3. Configure your Kwirth.
+  3. Configure your kwirth.
 
 ### The channel interface
-When you create a new channel, the first thing you should do is to review the interface you must implement for your channel to be integrable with Kwirth. This is how the channel system has been defined for the 0.3.160 version of Kwirth:
+When you create a new channel, the first thing you should do is to review the interface you must implement for your channel to be integrable with kwirth. This is how the channel system has been defined for the 0.3.160 version of kwirth:
 
 ```typescript
 interface IChannel {
@@ -45,23 +45,23 @@ interface IChannel {
 ```
 
 And this is a short explanation on each function:
-  - `getChannelData`. The back channel must implement this function to inform Kwirth core which capabilities does it support. This refers to things like 'pausing', 'reconnecting', source support (Kubernetes, MesOS, Docker...), routing, metrics, etc.
-  - `getChannelScopeLevel`. Your channel may need to offer different scope levels to your users. For example, in metrics channel the clients can just do SNAPSHOT (obtaining a set of metrics and its values) or do STREAM (that is, obtaining metrics through a stream of data implemented as an instance inside a web socket). This function returns an id that Kwirth core uses for deciding if a specific user has an Access Key with a scope for performing the function he requested. For example, if the user has an access key for getting SNAPSHOT (value 1) and requests a metrics STREAM (value 2), Kwirth will deny the request.
-  - `endpointRequest`. If your channel will receive HTTP requests from your clients once the channel is started you need to provide this function implementation. When a connected client performs an HTTP POST to your channel, for example, the Kwirth request processor will send your the request by means of this function. See a working example in Trivy channel or Fileman channel.
-  - `websocketRequest`. If your channel will receive WebSocket connection requests from your clients once the channel is started, you need to provide this function implementation. When a connected client performs an WebSocket CONNECT to your channel, the Kwirth request processor will send your the request by means of this function. See a working example in Magnify channel.
-  - `processObjectEvent`. If your channels is subscribed to Kubernetes cluster events, Kwirth request processor will send you all ADDED/MODIFIED/DELETED events of all the Kubernetes objects in the cluster.
-  - `addObject`. Whenever a new object is detected that fulfills the conditions of a Kwirth instance (for example, a new pod appears for a channel started with VIEW configured for the namespace where the pod belongs to), the Kwirth request processor will invoke this function sending you the proper information.
+  - `getChannelData`. The back channel must implement this function to inform kwirth core which capabilities does it support. This refers to things like 'pausing', 'reconnecting', source support (Kubernetes, MesOS, Docker...), routing, metrics, etc.
+  - `getChannelScopeLevel`. Your channel may need to offer different scope levels to your users. For example, in metrics channel the clients can just do SNAPSHOT (obtaining a set of metrics and its values) or do STREAM (that is, obtaining metrics through a stream of data implemented as an instance inside a web socket). This function returns an id that kwirth core uses for deciding if a specific user has an Access Key with a scope for performing the function he requested. For example, if the user has an access key for getting SNAPSHOT (value 1) and requests a metrics STREAM (value 2), kwirth will deny the request.
+  - `endpointRequest`. If your channel will receive HTTP requests from your clients once the channel is started you need to provide this function implementation. When a connected client performs an HTTP POST to your channel, for example, the kwirth request processor will send your the request by means of this function. See a working example in Trivy channel or Fileman channel.
+  - `websocketRequest`. If your channel will receive WebSocket connection requests from your clients once the channel is started, you need to provide this function implementation. When a connected client performs an WebSocket CONNECT to your channel, the kwirth request processor will send your the request by means of this function. See a working example in Magnify channel.
+  - `processObjectEvent`. If your channels is subscribed to Kubernetes cluster events, kwirth request processor will send you all ADDED/MODIFIED/DELETED events of all the Kubernetes objects in the cluster.
+  - `addObject`. Whenever a new object is detected that fulfills the conditions of a kwirth instance (for example, a new pod appears for a channel started with VIEW configured for the namespace where the pod belongs to), the kwirth request processor will invoke this function sending you the proper information.
   - `deleteObject`. Conversely, if an object disappears, you will be notified by means of this function.
   - `pauseContinueInstance`. This function will be invoked when the client connected to the channel wants to pause receiving data (but not stopping the instance) or continue receiving data if instance has been previously paused.
   - `modifyInstance`. Modify instance (if enabled for your channel) will be invoked if the connected client wants to make some changes on instance configuration.
-  - `containsInstance`. This function provides Kwirth core with the ability to discover which type of channel a web socket belongs to.
-  - `containsAsset`. This function provides Kwirth core with the ability to discover if a channel instance has already received information about a specific asset (an asset is in fact an object uniquely identified by 'namespace/pod/container' names).
+  - `containsInstance`. This function provides kwirth core with the ability to discover which type of channel a web socket belongs to.
+  - `containsAsset`. This function provides kwirth core with the ability to discover if a channel instance has already received information about a specific asset (an asset is in fact an object uniquely identified by 'namespace/pod/container' names).
   - `stopInstance`. stopInstance is invoked when the client wants to stop an instance.
   - `removeInstance`. Kwirth core may invoke your channel removeInstance function for helping your channel keep healthy information on your clients.
-  - `processCommand`. If your channel provides COMMAND interface, all commands send from clients will be send to your channel by the Kwirth request processor adding needed data about the asset and the command.
+  - `processCommand`. If your channel provides COMMAND interface, all commands send from clients will be send to your channel by the kwirth request processor adding needed data about the asset and the command.
   - `containsConnection`, the channel should return true/false indicating if it contains a specific connection (identified by its websocket).
-  - `removeConnection`. When a web socket is closed, due to an error, a client request to close a socket or whatever, Kwirth core will invoke this function for your channel to perform cleaning functions (removeConnection would typically remove all instances of the web socket). The connection is identified by thw websocket.
-  - `refreshConnection`, Kwirth core informs channels when a front client sends a "ping", ofr back channels to know if clients are still alive (or to know last time client was alive). The connection is identified by thw websocket.
+  - `removeConnection`. When a web socket is closed, due to an error, a client request to close a socket or whatever, kwirth core will invoke this function for your channel to perform cleaning functions (removeConnection would typically remove all instances of the web socket). The connection is identified by thw websocket.
+  - `refreshConnection`, kwirth core informs channels when a front client sends a "ping", ofr back channels to know if clients are still alive (or to know last time client was alive). The connection is identified by thw websocket.
   - `updateConnection`. If your channel supports reconnect actions, this is the function call your channel will receive when a client connects an exiting instance with a new web socket. The connection is identified by thw websocket.
 
 Please be aware of the difference that exists between an instance and the real communications transport (a web socket). When a client starts an instance, a web socket must be created and connected previously. And remember, **a web socket can carry multiple instances of the same channel**.
@@ -98,7 +98,7 @@ export interface IInstanceMessage {
 So, these are all the properties included in an 'start instance' message (an instance config message):
 
  - `channel`. It is the id of the channel ('log', 'metrics', 'alert', or your own).
- - `objects`. It points to the type of kubernetes object your channel will manage: 'pods' and 'events' are the only ones starting with Kwirth 0.3.160.
+ - `objects`. It points to the type of kubernetes object your channel will manage: 'pods' and 'events' are the only ones starting with kwirth 0.3.160.
  - `action`. The action the client is requesting or the server is answering, for example: 'start', 'stop', 'pause'...
  - `flow`. Indicates the direction of the message: 'request' flows from client to server and 'response' flows back.
  - `instance`. Is the id of the instance the client or the server are working with by using this specific instance config.
@@ -116,7 +116,7 @@ This strucutre (and some others), as well as some 'enums', are included in the [
 
 
 ## Front Channel development
-Starting with Kwirth 0.4 the front React app has been rearchitected to support the channel system in such a way that front features are implement *separately* via front plugins. For easing front channel development, the Kwirth team has created an interface that Front Channels must implement.
+Starting with kwirth 0.4 the front React app has been rearchitected to support the channel system in such a way that front features are implement *separately* via front plugins. For easing front channel development, the kwirth team has created an interface that Front Channels must implement.
 
 ```typescript
 interface IChannel {
@@ -149,15 +149,15 @@ And this is the explanation for each member of the interface:
   - `getScope(): string`, channel must return the minimum scope needed to use the channel 
   - `getChannelIcon(): JSX.Element`, returns an SVG icon that will be shown on tabs next to the name of the tab in front app.
   - `getSetupVisibility():boolean`, channel must return the visibility status of the SetUp dialog.
-  - `setSetupVisibility(visibility:boolean):void`, Kwirth informs channel about a new visibility status for the SetUp dialog.
+  - `setSetupVisibility(visibility:boolean):void`, kwirth informs channel about a new visibility status for the SetUp dialog.
   - `processChannelMessage (channelObject:IChannelObject, wsEvent:MessageEvent): IChannelMessageAction`, when a channel message is received from a Back Channel via a connected websocket, the message is delivered to the channel for its further processing.
-  - `initChannel(channelObject:IChannelObject): boolean`, Kwirth will invoke this function when a new tab using this channel is first created (exactly after the user selects resources and clicks 'ADD' on resource selector).
+  - `initChannel(channelObject:IChannelObject): boolean`, kwirth will invoke this function when a new tab using this channel is first created (exactly after the user selects resources and clicks 'ADD' on resource selector).
   - `startChannel(channelObject:IChannelObject): boolean`, this function will be invoked when the user clicks on 'START' to start the channel.
-  - `pauseChannel(channelObject:IChannelObject): boolean`, when the user click on 'PAUSE' Kwirth front will invoke this function.
-  - `continueChannel(channelObject:IChannelObject): boolean`, when the user click on 'CONTINUE' on a paused channel, Kwirth front will invoke this function.
+  - `pauseChannel(channelObject:IChannelObject): boolean`, when the user click on 'PAUSE' kwirth front will invoke this function.
+  - `continueChannel(channelObject:IChannelObject): boolean`, when the user click on 'CONTINUE' on a paused channel, kwirth front will invoke this function.
   - `stopChannel(channelObject:IChannelObject): boolean`, this function will be invoked when the user clicks on 'STOP' to stop the channel.
-  - `socketDisconnected(channelObject: IChannelObject): boolean`, when the websocket is disconnected (user removing a tab, for example) Kwirth will invoke this function.
-  - `socketReconnect(channelObject: IChannelObject): boolean`, , when a connection to a back channel is restored creating a new websocket (after websocket connection has been lost due to communication errors),  Kwirth will invoke this function.
+  - `socketDisconnected(channelObject: IChannelObject): boolean`, when the websocket is disconnected (user removing a tab, for example) kwirth will invoke this function.
+  - `socketReconnect(channelObject: IChannelObject): boolean`, , when a connection to a back channel is restored creating a new websocket (after websocket connection has been lost due to communication errors),  kwirth will invoke this function.
 
 The requirements of a channel are specified via the `requirements` property, which contains this data:
 
@@ -182,18 +182,18 @@ export interface IChannelRequirements {
 And the meaning of the properties is:
 
   - `setup`, the channels needs user setup before starting a new channel instance.
-  - `setting`, the channel needs access to the settings object for storing/retrieving Kwirth user settings.
+  - `setting`, the channel needs access to the settings object for storing/retrieving kwirth user settings.
   - `frontChannels`, the channel needs information about all supported channels in the front SPA (see Magnify channel).
   - `metrics`, the channels wants access to the list of metrics available from the cluster (see Metrics channel).
-  - `notifier`, if a channel wants to send notifications to end user, this property must be enabled in order for Kwirth to provide the channel with a notifier function.
-  - `notifications`, the channel wants to access the Kwirth notifications array (the ones sent to end user). (See Magnify channel).
-  - `clusterUrl`, the channel wants to know the URL of the Kwirth sever, for example, for performing HTTP requests.
+  - `notifier`, if a channel wants to send notifications to end user, this property must be enabled in order for kwirth to provide the channel with a notifier function.
+  - `notifications`, the channel wants to access the kwirth notifications array (the ones sent to end user). (See Magnify channel).
+  - `clusterUrl`, the channel wants to know the URL of the kwirth sever, for example, for performing HTTP requests.
   - `clusterInfo`, the channel needs information about the cluster itself.
-  - `accessString`, then channel will perform HTTP request or new WebSocket request to Kwirth server, so the Access String is needed.
+  - `accessString`, then channel will perform HTTP request or new WebSocket request to kwirth server, so the Access String is needed.
   - `webSocket`, then channel will send/receive data over the WebSocket, so the WebSocket object is required.
   - `userSettings`, the channel wants to store channel-user specific settings (see Magnify channel).
-  - `palette`, the channel wants to be able to change Kwirth theme (see Magnify channel).
-  - `exit`, the channel wants to access the `exit` function fo Kwirth for exiting Kwirth directly form the channel (see Magnify channel).
+  - `palette`, the channel wants to be able to change kwirth theme (see Magnify channel).
+  - `exit`, the channel wants to access the `exit` function fo kwirth for exiting kwirth directly form the channel (see Magnify channel).
 
 
 All the information needed to run a channel is stored in an instance of IChannelObject:

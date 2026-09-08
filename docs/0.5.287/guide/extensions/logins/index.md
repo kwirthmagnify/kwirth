@@ -5,7 +5,7 @@
 
 ## What a login extension is
 
-A **login extension** is a **custom-branded login page** that replaces (or coexists with) the standard Kwirth login dialog. Each extension defines its own background image, colours, text labels and — most importantly — the **channel that opens after a successful login**.
+A **login extension** is a **custom-branded login page** that replaces (or coexists with) the standard kwirth login dialog. Each extension defines its own background image, colours, text labels and — most importantly — the **channel that opens after a successful login**.
 
 Users reach a login extension by navigating to:
 
@@ -37,7 +37,7 @@ Configuration is stored in a dedicated Kubernetes ConfigMap and is applied immed
 
 ## Channel access control
 
-When a login extension declares a `startChannel` in its configuration, Kwirth **enforces** that the authenticating user has access to that channel:
+When a login extension declares a `startChannel` in its configuration, kwirth **enforces** that the authenticating user has access to that channel:
 
 - **Password login** — checked immediately after credential validation.
 - **IdP / SSO login** — checked after the OAuth callback, before the session is established.
@@ -141,7 +141,7 @@ The page is rendered by a **fixed** component. A login extension supplies **one*
 
 **The technique for a brand-faithful page** is therefore to **bake all the static chrome into `background.png`** — logo, headings, legal footer, colour bands — and position the live form box over the area you left empty for it. Everything baked into the image is decoration: it is **not clickable**, so do not bake anything a user would expect to click.
 
-> ⚠️ **Themes do not reach the login page.** Installed themes are loaded after authentication (the front fetches them with the session's access key), so the login form is always rendered with Kwirth's **default** MUI theme. Two consequences you cannot override from `login.json`: the field focus underline is the default blue, and button captions are **UPPERCASED**. A branded theme styles the session *after* login, not the login itself.
+> ⚠️ **Themes do not reach the login page.** Installed themes are loaded after authentication (the front fetches them with the session's access key), so the login form is always rendered with kwirth's **default** MUI theme. Two consequences you cannot override from `login.json`: the field focus underline is the default blue, and button captions are **UPPERCASED**. A branded theme styles the session *after* login, not the login itself.
 
 ## Layout tips
 

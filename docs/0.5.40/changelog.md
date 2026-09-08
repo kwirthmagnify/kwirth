@@ -6,11 +6,11 @@ Minor but powerful features:
 
   - Provider architecture implemented for the first 3 providers.
   - Pinocchio channel implemented using providers.
-  - Docker delivery mode is now running outside cluster without any Kwirth installation inside cluster, that is, it is a real out-cluster deployment like KwirthElectron.
+  - Docker delivery mode is now running outside cluster without any kwirth installation inside cluster, that is, it is a real out-cluster deployment like KwirthElectron.
 
 ## 0.5.21
 The change log for this version is quite extensive. What follows is just an excerpt:
-  - **Multiple deployment options**: Now you can deliver Kwirth in several ways, not just as a Kubernetes pod: **Magnify** (a Desktop application), **Docker** (a standalone dockerized version), and **External** (a setup designed for deploying Kwirth directly to your Windows, macOS, or Linux box).
+  - **Multiple deployment options**: Now you can deliver kwirth in several ways, not just as a Kubernetes pod: **Magnify** (a Desktop application), **Docker** (a standalone dockerized version), and **External** (a setup designed for deploying kwirth directly to your Windows, macOS, or Linux box).
   - Added **Magnify channel**: A full replacement for tools like Lens or K9s.
   - Finished **Trivy channel**: Now the Trivy channel shows more information about your workload, including SBOM and configuration auditing, in addition to exposed secrets and vulnerabilities.
   - Improved performance and security for the **Fileman channel**.
@@ -24,15 +24,15 @@ The change log for this version is quite extensive. What follows is just an exce
     - Cluster usage data.
     - "Last & Fav" tabs and workspaces.
   - Added a **notifier** for sending messages to users from frontend channels.
-  - Added `react-file-manager` as a customizable file manager for Kwirth.
+  - Added `react-file-manager` as a customizable file manager for kwirth.
   - Added a parse listener for parsing `ls` commands in the Fileman channel.
   - Added **Helm chart** installation support.
 
 ## 0.4.20
   - **Strong architecture changes**: Introduced internal changes to support different kinds of connections consuming various types of information (not only logs).
-  - **Added Channels**: A Channel represents a specific kind of information that Kwirth extracts from Kubernetes and sends to clients. The first implemented channels (included in Kwirth core) are: **Log, Metrics, and Alert**.
-  - **Extensibility**: Kwirth can now be extended by creating new channels that can be loaded at runtime; increasing Kwirth's capabilities no longer implies modifying its core.
-  - **Instances**: To allow consumers to mix content from different resources, Kwirth introduced the concept of "instances" orthogonally with channels. When a client opens a WebSocket for a specific channel type, it can create instances to receive information from different sets of origin resources.
+  - **Added Channels**: A Channel represents a specific kind of information that kwirth extracts from Kubernetes and sends to clients. The first implemented channels (included in kwirth core) are: **Log, Metrics, and Alert**.
+  - **Extensibility**: Kwirth can now be extended by creating new channels that can be loaded at runtime; increasing kwirth's capabilities no longer implies modifying its core.
+  - **Instances**: To allow consumers to mix content from different resources, kwirth introduced the concept of "instances" orthogonally with channels. When a client opens a WebSocket for a specific channel type, it can create instances to receive information from different sets of origin resources.
   - **Bearer Tokens**: Since increased capabilities can produce heavy workloads, we introduced specific bearer tokens to drastically simplify workload management when multiple Kubernetes replicas are running in the backend.
   - **Multi-resource selection**: The base frontend application now supports selecting multi-resource objects. For example, you can monitor the CPU usage of three different pods from different namespaces or groups simultaneously.
   - **Data Aggregation**: The metrics section enables aggregating and/or merging data from different objects.
@@ -47,10 +47,10 @@ The change log for this version is quite extensive. What follows is just an exce
     - **kwirth_container_receive_mbps**: Mbps of data received over the last period.
     - **kwirth_container_write_mbps**: Mbps of data written to disk during the last period.
     - **kwirth_container_read_mbps**: Mbps of data read from disk during the last period.
-  - **Versioned Documentation**: Documentation is now versioned; you can select the specific Kwirth version documentation from the sidebar.
+  - **Versioned Documentation**: Documentation is now versioned; you can select the specific kwirth version documentation from the sidebar.
 
 ## 0.3.160
-  - Created `@kwirthmagnify/kwirth-common` for sharing data structures between clients and the Kwirth server.
+  - Created `@kwirthmagnify/kwirth-common` for sharing data structures between clients and the kwirth server.
   - Added a new **version detector** on user login to identify backend versions.
   - Added **multi-streaming channels** to WebSockets (required for streaming data other than logs).
   - **New Security System**: Based on differentiating services (log, streaming, operation...) and scopes. By adding the "service" entity, we can now add different data streams like metrics (snapshot or stream) and signaling info (errors, warnings).
@@ -62,12 +62,12 @@ The change log for this version is quite extensive. What follows is just an exce
   - **Status Information**: Kwirth now sends status data (pods added/stopped, Kubernetes errors) through the same socket used for log streams.
   - **Version Info via API**: Clients can now query the version to know which features are implemented.
   - Added `/find` endpoint to perform searches on Kubernetes artifacts.
-  - **Kubernetes Operations**: Added permissions-based operations to restart deployments and pods via Kwirth.
+  - **Kubernetes Operations**: Added permissions-based operations to restart deployments and pods via kwirth.
   - Several UI improvements and a simplified resource selector.
 
 ## 0.1
 Initial version including:
   - Access to several clusters.
   - Admin user management.
-  - API key security for distributed Kwirth instances.
+  - API key security for distributed kwirth instances.
   - React/TS frontend.

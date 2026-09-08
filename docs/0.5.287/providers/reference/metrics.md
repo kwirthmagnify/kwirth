@@ -5,7 +5,7 @@ The Metrics provider polls the Kubernetes cAdvisor API at a configurable interva
 ## What for
 
   - Feed real-time CPU, memory, network, and disk metrics to channels (Metrics channel, Alert, Pinocchio, Censor…).
-  - Provide cluster-level resource usage snapshots to the Kwirth frontend homepage.
+  - Provide cluster-level resource usage snapshots to the kwirth frontend homepage.
   - Let channels define alert thresholds evaluated on each metrics tick without polling Kubernetes themselves.
 
 ## Features
@@ -13,7 +13,7 @@ The Metrics provider polls the Kubernetes cAdvisor API at a configurable interva
   - **Periodic polling** — reads cAdvisor every `metricsInterval` seconds (default `15`). The interval is configurable at runtime via the `/metrics/config` endpoint.
   - **Push distribution** — on each tick, every subscribed channel receives the full `IMetricsCluster` snapshot via `processProviderEvent`.
   - **HTTP endpoints** — exposes `GET /metrics` (metrics catalogue), `GET /metrics/usage/cluster` (aggregated cluster usage), and `GET|POST /metrics/config` (read/set interval). All endpoints require a valid API key.
-  - **Custom Kwirth metrics** — computes derived metrics on top of raw cAdvisor data:
+  - **Custom kwirth metrics** — computes derived metrics on top of raw cAdvisor data:
 
 | Metric | Description |
 |---|---|

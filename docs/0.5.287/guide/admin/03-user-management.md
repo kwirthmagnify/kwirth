@@ -56,7 +56,7 @@ Picking scopes:
 
 Open the **Scopes** field and you get a **filter box** at the top — start typing to narrow a long catalog — over a **checkbox list**. Tick every action this resource should allow. Each scope shows a readable **label**, and hovering it reveals a **tooltip with its description**, so you don't have to memorize the raw scope ids.
 
-> **The scope catalog is dynamic.** The list isn't hard-coded in the front end — the Kwirth core **serves it at runtime** (built-in scopes like `cluster`, `admin`, `api`, `view`, `filter`, `stream`, plus the classic `ops$…` / `trivy$…` actions). **Installed plugins can contribute their own RBAC scopes**, so after installing a channel/plugin you may see **new scopes appear here automatically** — no upgrade of Kwirth needed. What each scope means is detailed in [Security & permissions](04-security-and-permissions).
+> **The scope catalog is dynamic.** The list isn't hard-coded in the front end — the kwirth core **serves it at runtime** (built-in scopes like `cluster`, `admin`, `api`, `view`, `filter`, `stream`, plus the classic `ops$…` / `trivy$…` actions). **Installed plugins can contribute their own RBAC scopes**, so after installing a channel/plugin you may see **new scopes appear here automatically** — no upgrade of kwirth needed. What each scope means is detailed in [Security & permissions](04-security-and-permissions).
 
 ### Create a scope/resource
 
@@ -75,7 +75,7 @@ Open the **Scopes** field and you get a **filter box** at the top — start typi
 
 Select it in **Resource List** and click **REMOVE**.
 
-> **Two SAVE buttons, two meanings.** The **right-side SAVE** commits a *resource* into the user's list. The **bottom-left SAVE** commits the *whole user* (including all its resources) to Kwirth. Always finish with the bottom-left **SAVE**, or your changes are lost.
+> **Two SAVE buttons, two meanings.** The **right-side SAVE** commits a *resource* into the user's list. The **bottom-left SAVE** commits the *whole user* (including all its resources) to kwirth. Always finish with the bottom-left **SAVE**, or your changes are lost.
 
 ## Local users vs IdP-bound users
 
@@ -92,7 +92,7 @@ If your organization uses Single Sign-On, you bind a user to an [Identity Provid
 
 Rules that make an IdP user work (all must hold):
 
-- The **Id must be the user's verified email** — this is what the provider will return and what Kwirth matches against.
+- The **Id must be the user's verified email** — this is what the provider will return and what kwirth matches against.
 - The user must be **bound to the exact connector** they will use to sign in. A verified email arriving from a *different* provider is rejected.
 - **No password** is stored for IdP users; the Password field is irrelevant for them.
 - **No auto-provisioning** — you must create the user here first. Signing in with Google/GitLab/GitHub never creates an account by itself.
@@ -108,7 +108,7 @@ To let `alice@example.com` sign in with Google:
 5. Add her **resources** (scopes + object filters) exactly as for any user — SSO changes only *how she logs in*, not *what she can do*.
 6. **SAVE**.
 
-Alice can now click *"Login with Google"* on the login screen; once Google verifies her, Kwirth lets her in with the permissions you assigned.
+Alice can now click *"Login with Google"* on the login screen; once Google verifies her, kwirth lets her in with the permissions you assigned.
 
 > The prerequisite is the connector: the **IdP** dropdown only offers providers that are installed **and enabled** in [Manage extensions → Identity providers](07-idp-integration). If Google isn't in the list, enable it there first.
 
@@ -118,7 +118,7 @@ These three fields control what happens when the user logs in:
 
 ### Auto-start channel
 
-Set this to a channel ID (e.g. `magnify`, `ops`, `trivy`) to have Kwirth open that channel **automatically in fullscreen** as soon as the user authenticates. This is useful for operators who always work in one channel and do not need the full Kwirth UI.
+Set this to a channel ID (e.g. `magnify`, `ops`, `trivy`) to have kwirth open that channel **automatically in fullscreen** as soon as the user authenticates. This is useful for operators who always work in one channel and do not need the full kwirth UI.
 
 - The channel ID must match one of the installed channels.
 - If the channel is not available (not installed, or not in the user's **Enabled channels** list), the auto-start is silently skipped.

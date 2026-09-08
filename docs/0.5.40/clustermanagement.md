@@ -1,5 +1,5 @@
 # Cluster management
-Cluster management is the tool you use to add several clusters to your instance of Kwirth. It's important to note that clusters are not added to Kwirth, **clusters you add just do form part of your profile**.
+Cluster management is the tool you use to add several clusters to your instance of kwirth. It's important to note that clusters are not added to kwirth, **clusters you add just do form part of your profile**.
 
 When you access the cluster management tool you see a list of clusters similar to this one:
 
@@ -12,8 +12,8 @@ On the left side you will always see the list of clusters you have added and the
 To add a cluster to your profile you only need to enter three simple data:
 
 - **Name**. The name of the cluster, that must be unique. This is a name **for your convenience**, does not have to be the real name of the cluster.
-- **URL**. The URL where Kwirth has been published in the cluster you are adding.
-- **API Key**. An API Key that you must create in the Kwirth instance that is running on the cluster you want to add.
+- **URL**. The URL where kwirth has been published in the cluster you are adding.
+- **API Key**. An API Key that you must create in the kwirth instance that is running on the cluster you want to add.
 
 That is, something like this:
 

@@ -1,6 +1,6 @@
 # Trivy
 
-The **Trivy** plugin integrates [Trivy Operator](https://aquasecurity.github.io/trivy-operator/) into Kwirth, giving you a live security dashboard for your workloads without leaving the UI. It reads the CRDs produced by the Trivy Operator and streams four report types per container.
+The **Trivy** plugin integrates [Trivy Operator](https://aquasecurity.github.io/trivy-operator/) into kwirth, giving you a live security dashboard for your workloads without leaving the UI. It reads the CRDs produced by the Trivy Operator and streams four report types per container.
 
 **Report types:**
 

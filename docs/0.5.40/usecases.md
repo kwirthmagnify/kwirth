@@ -1,12 +1,12 @@
 # Use cases
 
 ### Cluster logging
-The original idea behind Kwirth was to deliver real-time logs out of your Kubernetes, but Kwirth is now a whole and complete observability tool. Anyway, with Kwirth you can consolidate real-time (not Loki, nor Elastic, nor Alloy, nor Azure monitor nor any other logging stuff like that). Logging information is received via streaming channels (implemented through websockets) directly from the container to your browser.
+The original idea behind kwirth was to deliver real-time logs out of your Kubernetes, but kwirth is now a whole and complete observability tool. Anyway, with kwirth you can consolidate real-time (not Loki, nor Elastic, nor Alloy, nor Azure monitor nor any other logging stuff like that). Logging information is received via streaming channels (implemented through websockets) directly from the container to your browser.
 
 You can, for example, receive one unique log stream consolidating all the logs from one specific application. In addition, the reconnect feature allows keeping the stream alive even if you lose your communications.
 
 ### Cluster alerting
-The ability of Kwirth to manage channels in an independent way of how objects are managed makes Kwirth extremely useful to implement a simple but powerful alerting system. That is, the relation between your object set and the channel features is orthogonal.
+The ability of kwirth to manage channels in an independent way of how objects are managed makes kwirth extremely useful to implement a simple but powerful alerting system. That is, the relation between your object set and the channel features is orthogonal.
 
 Similar to how you configure your logging channel, the alert channel is useful for monitoring, for example, an application, just by...:
 
@@ -20,24 +20,24 @@ Another interesting use case is to consolidate all log from all Kubernetes names
 *Pending*
 
 ### Development teams
-You can create users with specific permissions for giving your developers the chance to access Kubernetes features via Kwirth.
+You can create users with specific permissions for giving your developers the chance to access Kubernetes features via kwirth.
 
-You can also create native Kubernetes users and give your users a Kwirth Desktop which users will use as a native desktop GUI tool for managing Kubernetes. In this case, the permissions of the users will relay on the Kubernetes user you give your developers (on a kubeconfig file, for example).
+You can also create native Kubernetes users and give your users a kwirth Desktop which users will use as a native desktop GUI tool for managing Kubernetes. In this case, the permissions of the users will relay on the Kubernetes user you give your developers (on a kubeconfig file, for example).
 
 ### Log proxying
-Although Kwirth includes a front application for accessing the logs, you can deploy Kwirth just as a log proxy, that is:
+Although kwirth includes a front application for accessing the logs, you can deploy kwirth just as a log proxy, that is:
 
-- Deploy Kwirth to your Kubernetes cluster
+- Deploy kwirth to your Kubernetes cluster
 - Configure API keys for log access
 - Use your own log consumer for accessing logs
 
-One example for this is our [Backstage](https://backstage.io) plugin [Kubelog](https://github.com/jfvilas/kubelog). Kubelog allows viewing cluster logs inside a Backstage deployment by accessing log streams via Kwirth.
+One example for this is our [Backstage](https://backstage.io) plugin [Kubelog](https://github.com/jfvilas/kubelog). Kubelog allows viewing cluster logs inside a Backstage deployment by accessing log streams via kwirth.
 
 Refer to [Kubelog](https://github.com/jfvilas/kubelog) and [KwirthLog](https://github.com/kwirthmagnify/plugin-kwirth-log) for detailed info on the project and how to install the plugin.
 
 > Please take into account that **Kubelog will not evolve functionally speaking**, KwirthLog its a modern replacement for Kubelog.
 
 ### Observability
-Tha same way you proxy log streams from your kubernetes systems, you can proxy metrics to any front application, like the front Kwirth application, Kwirth Desktop or Backstage clients.
+Tha same way you proxy log streams from your kubernetes systems, you can proxy metrics to any front application, like the front kwirth application, kwirth Desktop or Backstage clients.
 
 Refer to [KwirthMetrics](https://github.com/kwirthmagnify/plugin-kwirth-metrics) for detailed info on the project and how to install the plugin.

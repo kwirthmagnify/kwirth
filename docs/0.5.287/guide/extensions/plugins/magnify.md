@@ -1,22 +1,22 @@
 # 🔍 Magnify (plugin)
 
-> **Type:** Channel — **built-in** (ships with the Kwirth core)<br>
+> **Type:** Channel — **built-in** (ships with the kwirth core)<br>
 > **Package:** built-in (no install needed)<br>
 > **Icon:** 🔍
 
 ## Overview
 
-**Magnify** is not just a channel — it's a **complete Kubernetes management tool** built *inside* Kwirth, in the spirit of **Lens / K9s / Headlamp**. Where other channels stream one kind of data, Magnify streams **everything happening in your cluster** — all **Kubernetes artifacts** and all **events** — in real time, and lets you **act** on them.
+**Magnify** is not just a channel — it's a **complete Kubernetes management tool** built *inside* kwirth, in the spirit of **Lens / K9s / Headlamp**. Where other channels stream one kind of data, Magnify streams **everything happening in your cluster** — all **Kubernetes artifacts** and all **events** — in real time, and lets you **act** on them.
 
 On top of that live stream it adds:
 
 - An **upward command stream** to send changes back to Kubernetes (create / edit / delete / restart / evict…).
-- The ability to **open other Kwirth channels from within Magnify** — Logs, Metrics, Trivy, Fileman, and shells (Ops) — as **windows**.
+- The ability to **open other kwirth channels from within Magnify** — Logs, Metrics, Trivy, Fileman, and shells (Ops) — as **windows**.
 - **Editors** for Kubernetes objects, **full-text search** across artifacts, **cluster validation**, and **CRD** management.
 - **LogSearch** — full-text search across pod logs without opening individual log streams.
 - **Multi-cluster**: manage all your clusters from one place.
 
-> Magnify is **built-in** — there's nothing to install. It's the closest thing to "a whole cluster IDE" inside Kwirth, which is why it's the crown jewel.
+> Magnify is **built-in** — there's nothing to install. It's the closest thing to "a whole cluster IDE" inside kwirth, which is why it's the crown jewel.
 
 ## When to use it
 
@@ -188,7 +188,7 @@ The **Cluster → Overview** toolbar has a **Kube works** menu (the 🧰 toolbox
 
 A **custom action** launches a **utility/debug pod from a YAML manifest** you provide, optionally doing something **when it's ready** (e.g. dropping you into a shell). Typical examples: an `Ubuntu` or `Alpine` debug box, a `DNS Utils` pod to test cluster DNS, or purpose-built `network-sec` / `siem` / `OTel` helpers. Think of it as a personal library of `kubectl debug`-style shortcuts, right in the overview.
 
-*(A companion **Kwirth works** menu appears when you define **Kwirth-type** custom actions.)*
+*(A companion **kwirth works** menu appears when you define **kwirth-type** custom actions.)*
 
 You create and manage these under **Preferences → Custom actions** (below).
 
@@ -214,9 +214,9 @@ Magnify has its **own Preferences** panel (left nav **Preferences**). It's an ac
 - **Full-text search** — search across all Kubernetes artifacts, not just logs.
 - **CRDs** — browse and manage your Custom Resource Definitions and their instances under **Custom**.
 
-## Desktop (Kwirth Magnify)
+## Desktop (kwirth Magnify)
 
-The **desktop** app is built for local work like Lens/K9s/Headlamp: instead of connecting to one cluster, it lists **all contexts in your local `kubeconfig`** (refreshing availability automatically) and lets you add **remote** clusters (Docker/External/Kubernetes Kwirth servers). See [Deployment → Desktop](../../admin/01-deployment).
+The **desktop** app is built for local work like Lens/K9s/Headlamp: instead of connecting to one cluster, it lists **all contexts in your local `kubeconfig`** (refreshing availability automatically) and lets you add **remote** clusters (Docker/External/Kubernetes kwirth servers). See [Deployment → Desktop](../../admin/01-deployment).
 
 ## Admin guide
 

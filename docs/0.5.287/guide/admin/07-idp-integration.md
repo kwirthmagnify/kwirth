@@ -1,22 +1,22 @@
 # 7. Identity Provider integration
 
-Kwirth can delegate **authentication** to an external Identity Provider (IdP) so people sign in with their corporate or personal accounts (Single Sign-On) instead of a Kwirth password.
+Kwirth can delegate **authentication** to an external Identity Provider (IdP) so people sign in with their corporate or personal accounts (Single Sign-On) instead of a kwirth password.
 
 ## Authentication vs authorization
 
 The key idea is the split:
 
 - **Authentication** is done by the **IdP** — it only proves *"this really is `someone@example.com`, and we verified it"*.
-- **Authorization** stays in **Kwirth** — the person must already exist as a user and be bound to that IdP, and their [scopes/resources](04-security-and-permissions) decide what they can do.
+- **Authorization** stays in **kwirth** — the person must already exist as a user and be bound to that IdP, and their [scopes/resources](04-security-and-permissions) decide what they can do.
 
-The IdP says *who*; Kwirth decides *whether* and *what*.
+The IdP says *who*; kwirth decides *whether* and *what*.
 
 ## How access is granted
 
 For an IdP user to log in, **all** of these must hold:
 
 1. The IdP reports the email as **verified**.
-2. A Kwirth **user exists whose Id is that email** (created in [User management](03-user-management)).
+2. A kwirth **user exists whose Id is that email** (created in [User management](03-user-management)).
 3. That user is **bound to the exact IdP** being used.
 
 There is **no auto-provisioning** — signing in with Google (or any IdP) never creates an account by itself. A verified email arriving from a *different* provider than the one assigned to the user is rejected. The built-in `admin` and any local user/password accounts keep working alongside SSO.
@@ -62,10 +62,10 @@ More connectors are packaged independently, so third parties can ship their own.
 
 ## Binding a user to the IdP
 
-Enabling a connector is only half the job — each person still needs a Kwirth user **bound** to it. That's done in [User management](03-user-management): create a user whose **Id is their verified email** and set the **IdP** field to the connector. See the section [IdP-bound users](03-user-management#idp-bound-users) there.
+Enabling a connector is only half the job — each person still needs a kwirth user **bound** to it. That's done in [User management](03-user-management): create a user whose **Id is their verified email** and set the **IdP** field to the connector. See the section [IdP-bound users](03-user-management#idp-bound-users) there.
 
 ## Security
 
 The SSO flow is protected with **PKCE + `state`**, a **back-channel** token exchange (the browser never sees provider tokens), a **single-use** login handoff, anti open-redirect checks, masked secret storage, and **admin-only** management. For the full details see the reference [IdP security notes](../../idp/security).
 
-Next: [Extending Kwirth →](08-extending-kwirth)
+Next: [Extending kwirth →](08-extending-kwirth)

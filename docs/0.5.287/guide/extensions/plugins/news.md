@@ -6,15 +6,15 @@
 
 ## Overview
 
-The **News** channel brings a **curated tech news feed** into Kwirth. It pulls items from public RSS sources on a couple of **topics** — **Kubernetes** and **AI** — and shows them as a clean, chronological list right next to your clusters, so you can keep an eye on the ecosystem without leaving the console.
+The **News** channel brings a **curated tech news feed** into kwirth. It pulls items from public RSS sources on a couple of **topics** — **Kubernetes** and **AI** — and shows them as a clean, chronological list right next to your clusters, so you can keep an eye on the ecosystem without leaving the console.
 
-It's the lightest channel in Kwirth: no cluster data, no permissions to worry about — just headlines.
+It's the lightest channel in kwirth: no cluster data, no permissions to worry about — just headlines.
 
 ## When to use it
 
 - **Stay current** on Kubernetes and AI news while you work.
 - Keep a **dashboard tab** with the latest ecosystem headlines on a shared screen.
-- A friendly **demo/first channel** to show how Kwirth tabs and channels work.
+- A friendly **demo/first channel** to show how kwirth tabs and channels work.
 
 ## Getting started
 
@@ -43,7 +43,7 @@ The header shows the **item count / max** and the **Status**. Each entry has a *
 
 - **Install / remove:** **☰ → Manage extensions → Plugins** → install **News**.
 - **Permissions:** none special — any user who can open the channel can use it.
-- **Network:** the channel fetches **public RSS feeds over the internet**, so the Kwirth backend needs outbound access to those sources.
+- **Network:** the channel fetches **public RSS feeds over the internet**, so the kwirth backend needs outbound access to those sources.
 - **Sources:** Kubernetes and Docker.
 
 ## Notes

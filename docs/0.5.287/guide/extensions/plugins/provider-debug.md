@@ -62,5 +62,5 @@ Each event is one collapsed card: **timestamp · provider · top-level keys**. E
 
 ## Related
 
-- [Providers](../providers/index) — what a provider is and which ones ship with Kwirth.
+- [Providers](../providers/index) — what a provider is and which ones ship with kwirth.
 - [Developing providers](/0.5.287/providers/developing) — including how to publish subscription help from your own provider.

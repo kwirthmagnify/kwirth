@@ -6,13 +6,13 @@
 
 ## Overview
 
-**mIRC** is a **direct-messaging / chat** channel: it lets the people currently using Kwirth **talk to each other**, WhatsApp-style, without leaving the tool. It works **across clusters** — you can message someone connected to another cluster you can reach — and it has an **offline mailbox**, so a message to someone who's away is held and delivered when they come back.
+**mIRC** is a **direct-messaging / chat** channel: it lets the people currently using kwirth **talk to each other**, WhatsApp-style, without leaving the tool. It works **across clusters** — you can message someone connected to another cluster you can reach — and it has an **offline mailbox**, so a message to someone who's away is held and delivered when they come back.
 
 Every connection gets an automatic **nickname** (e.g. `incluster_admin_lone`), tagged with the cluster it's on.
 
 ## When to use it
 
-- Coordinate with a teammate while you're both firefighting in Kwirth ("payments pod is flapping — can you look?").
+- Coordinate with a teammate while you're both firefighting in kwirth ("payments pod is flapping — can you look?").
 - Reach someone working on **another cluster** without switching context.
 - Leave a message for someone who's offline; they'll get it on reconnect.
 
@@ -47,17 +47,17 @@ Each entry shows the person's **nickname**, a **cluster chip** (which cluster th
 
 ## Cross-cluster & offline
 
-- **Cross-cluster:** your Kwirth front talks to **all the mirc backends you can reach** (from your [cluster list](../../admin/06-cluster-management)). The cluster chip next to each user tells you where they are, so you can chat with people on other clusters as easily as your own.
+- **Cross-cluster:** your kwirth front talks to **all the mirc backends you can reach** (from your [cluster list](../../admin/06-cluster-management)). The cluster chip next to each user tells you where they are, so you can chat with people on other clusters as easily as your own.
 - **Offline mailbox:** if you message someone who is offline, the backend **holds it** and delivers it when they reconnect (the tick advances from *sent* to *delivered* then). Conversation history is also cached locally in your browser.
 
 ## Worked example — coordinate an incident
 
-Two on-call engineers, each with a Kwirth tab open:
+Two on-call engineers, each with a kwirth tab open:
 
 1. Both open a `mirc` tab and **Start**. Each appears in the other's roster with a green online dot.
 2. Engineer A clicks B and sends *"payments pod is flapping in prod — can you take a look?"*.
 3. B sees the message (ticks turn blue when read), replies *"on it 🚀 … found it — OOMKilled, bumping limits"*.
-4. A confirms *"legend 🙏"*. All without leaving Kwirth or switching clusters.
+4. A confirms *"legend 🙏"*. All without leaving kwirth or switching clusters.
 
 *(The screenshot above is exactly this exchange between two connected sessions, with two more users online in the roster.)*
 

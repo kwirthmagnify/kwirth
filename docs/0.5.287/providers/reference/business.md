@@ -1,10 +1,10 @@
 # Business
 
-The Business provider bridges external business systems with Kwirth. It exposes an **HTTP POST endpoint** that any external service can call to push business events into Kwirth. Those events are then distributed to all channels that have subscribed to the relevant space/type combination — enabling channels like [Pinocchio](../../channels/pinocchio) and [Censor](../../channels/censor) to react to business data in real time.
+The Business provider bridges external business systems with kwirth. It exposes an **HTTP POST endpoint** that any external service can call to push business events into kwirth. Those events are then distributed to all channels that have subscribed to the relevant space/type combination — enabling channels like [Pinocchio](../../channels/pinocchio) and [Censor](../../channels/censor) to react to business data in real time.
 
 ## What for
 
-  - Feed business metrics, KPIs, or operational events (order status, customer health scores, branch activity...) into Kwirth channels.
+  - Feed business metrics, KPIs, or operational events (order status, customer health scores, branch activity...) into kwirth channels.
   - Let the Pinocchio AI channel correlate business events with Kubernetes activity.
   - Trigger LLM analysis or sender notifications when specific business conditions occur.
 

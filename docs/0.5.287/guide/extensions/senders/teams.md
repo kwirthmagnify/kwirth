@@ -5,7 +5,7 @@
 
 ## What it does
 
-The **teams** sender posts messages to a **Microsoft Teams** channel through an **incoming webhook**. Turn Kwirth alerts into Teams notifications.
+The **teams** sender posts messages to a **Microsoft Teams** channel through an **incoming webhook**. Turn kwirth alerts into Teams notifications.
 
 ## Configuration
 

@@ -24,7 +24,7 @@ Open **☰ → Manage extensions → Identity providers → Login with GitLab (g
 
 ## Setup
 
-### Step 1 — Register Kwirth in GitLab.com
+### Step 1 — Register kwirth in GitLab.com
 
 In GitLab.com, create an **OAuth Application** (user avatar → Preferences → Applications, or a group's Settings → Applications):
 
@@ -39,7 +39,7 @@ In GitLab.com, create an **OAuth Application** (user avatar → Preferences → 
 
 Click **Save application**. GitLab shows an **Application ID** and a **Secret** — copy both.
 
-### Step 2 — Configure the connector in Kwirth
+### Step 2 — Configure the connector in kwirth
 
 As admin, open **☰ → Manage extensions → Identity providers**, find the **GitLab Cloud** card and click **⚙️ Settings**:
 
@@ -48,7 +48,7 @@ As admin, open **☰ → Manage extensions → Identity providers**, find the **
 3. **Scopes**: leave empty to use the default `openid email profile`.
 4. Enable the toggle and save.
 
-### Step 3 — Create users in Kwirth
+### Step 3 — Create users in kwirth
 
 From **User security** (admin only): create a user whose **Id is the person's GitLab verified email**, set **IdP** to `gitlab-cloud`, assign resources, and save.
 

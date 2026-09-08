@@ -5,7 +5,7 @@
 
 ## What it does
 
-The **Validating** provider lets Kwirth observe **Kubernetes admission decisions**. It exposes a `/validate` endpoint that the Kubernetes API calls as a **Validating Admission Webhook**; each call becomes a Kwirth event delivered to subscribing channels. This lets channels react to — or analyse — objects **as they're admitted** to the cluster.
+The **Validating** provider lets kwirth observe **Kubernetes admission decisions**. It exposes a `/validate` endpoint that the Kubernetes API calls as a **Validating Admission Webhook**; each call becomes a kwirth event delivered to subscribing channels. This lets channels react to — or analyse — objects **as they're admitted** to the cluster.
 
 ## When to use it
 
@@ -14,7 +14,7 @@ The **Validating** provider lets Kwirth observe **Kubernetes admission decisions
 
 ## Configuration
 
-The provider itself has no in-UI form (its gear is disabled); the setup is on the **Kubernetes side**: register a **ValidatingWebhookConfiguration** pointing at Kwirth's `/validate` endpoint (rules/namespaces select which objects trigger it).
+The provider itself has no in-UI form (its gear is disabled); the setup is on the **Kubernetes side**: register a **ValidatingWebhookConfiguration** pointing at kwirth's `/validate` endpoint (rules/namespaces select which objects trigger it).
 
 ## Notes
 

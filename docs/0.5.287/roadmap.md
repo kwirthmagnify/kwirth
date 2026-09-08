@@ -1,27 +1,27 @@
 # Roadmap
 We cite here some interesting capabilities that are missing today:
 
-  - [HUMAN] ~~`kwirth`, **Non-root path**. In order to be able to share an ingress with other kubernetes services, it is desirable to have the ability to configure Kwirth (front and API) for receiving requests in a non-root path, that is, something like 'http://your.dns.name/kwirth'.~~ DONE!
-  - [HUMAN] ~~`kwirth`, **Deployment**. As well as the root path should be the administrator's decision, the namespace where to deploy Kwirth should be selectable by the Kubernetes administrator.~~ DONE!
-  - [HUMAN] ~~`kwirth`, **Update self**. Add an option to restart Kwirth (if image is latest, this will update Kwirth to the latest available version).~~ DONE!
+  - [HUMAN] ~~`kwirth`, **Non-root path**. In order to be able to share an ingress with other kubernetes services, it is desirable to have the ability to configure kwirth (front and API) for receiving requests in a non-root path, that is, something like 'http://your.dns.name/kwirth'.~~ DONE!
+  - [HUMAN] ~~`kwirth`, **Deployment**. As well as the root path should be the administrator's decision, the namespace where to deploy kwirth should be selectable by the Kubernetes administrator.~~ DONE!
+  - [HUMAN] ~~`kwirth`, **Update self**. Add an option to restart kwirth (if image is latest, this will update kwirth to the latest available version).~~ DONE!
   - [HUMAN] ~~`log`, **Starting logs**. When a user starts a log object, he should be able to decide how much logging info to receive from the started log: since pod started, previous pod log, only from now on...~~ DONE!
   - `log`, **Secure log text**. We plan to add an option to protect log lines that contain specific sensitive text, like 'password', 'pw', 'email', etc., so lines including these words are treated in a special way by masking sensitive content.
   - [HUMAN] ~~`kwirth`, **API Key expire**. We need to add something useful for humans in the API management at the front application when setting expiration.~~ DONE!
   - `log`, **Log Content**. In the LogContent component (the real viewer), we need to add a socket error management component so the user knows if an error has occurred when receiving data. Several types of information can be received: socket errors, pod creation/deletion, etc.
-  - [HUMAN] ~~`log`, **Ephemeral log**. When you use Kwirth for alerting, you don't really need to store all the messages; you just want to receive them, process them, and show alerts if something happens, without storing uninterested messages.~~ DONE!
+  - [HUMAN] ~~`log`, **Ephemeral log**. When you use kwirth for alerting, you don't really need to store all the messages; you just want to receive them, process them, and show alerts if something happens, without storing uninterested messages.~~ DONE!
   - [HUMAN] ~~`metrics`, **Metrics**. We plan to add basic Kubernetes metrics monitoring in the future by checking pod/node status. The metrics will be propagated to customers through the websocket, so users can view real-time metrics and statuses.~~ DONE!
-  - [HUMAN] ~~`kwirth`, **Helm**. Although Kwirth installation is simple and straightforward, we should create a Helm chart for installing Kwirth.~~ DONE!
+  - [HUMAN] ~~`kwirth`, **Helm**. Although kwirth installation is simple and straightforward, we should create a Helm chart for installing kwirth.~~ DONE!
   - [HUMAN] ~~`kwirth`, **Event streaming**. It seems interesting to have an event streaming service (like logging or metrics) for monitoring all events that take place inside the Kubernetes cluster (object lifecycle, admin commands...).~~ DONE!
   - [HUMAN] ~~`kwirth`, **Websocket multi-service**. Currently, we support exchanging information on a websocket that belongs to different services. We need to add a 'service instance id' to allow several instances of the same service to coexist in the same websocket.~~ DONE!
   - [HUMAN] ~~`kwirth`, **Helm**. Add Ingress support to Helm Charts.~~ DONE!
-  - [AI] ~~`alert`, **Alerting metrics**. We want Kwirth to be able to alert you based on metrics thresholds, not just log messages.~~ Finally DONE!!!
+  - [AI] ~~`alert`, **Alerting metrics**. We want kwirth to be able to alert you based on metrics thresholds, not just log messages.~~ Finally DONE!!!
   - `kwirth`, **Session**. We need to manage frontend sessions and store access keys into the browser's `localStorage`.
   - [HUMAN] ~~`kwirth`, **Terminal**. Add xterm support (with dedicated websocket) for implementing real shell sessions (not just TTY in HTML).~~ DONE via Ops channel!
   - [HUMAN] ~~`kwirth`, **Dashboards**. Add workspace channel (grafana-like), and implement multi-channel websockets.~~ DONE via Magnify channel!
   - [AI] ~~`kwirth`, **AI capabilities**. Integrate AI-driven insights for log analysis, anomaly detection or artifact analysis.~~ DONE! (via 'pinocchio' and 'censor' channels)
   - [AI] ~~`kwirth`, **SSO**, implement Single Sing-On capabilities.~~ DONE!
   - [AI] ~~`kwirth`, **IdP**, implement integrations with external Identity Providers (EntraID, AD, Cognito, Keycloak, LDAP...)~~ DONE!
-  - `kwirth`, **Standard tokens**, implement JWT support (with scopes that match the VIEW system implemented inside Kwirth)
+  - `kwirth`, **Standard tokens**, implement JWT support (with scopes that match the VIEW system implemented inside kwirth)
   - `kwirth`, **Flexible authorization (RBAC/ABAC)**. Evolve the scope system beyond the per-plugin *ladder* convention (numeric level via `indexOf`), which is fine for simple plugins but too rigid for richer ones. The accessKey `resources` already store a comma-separated **set** of scope tokens and the core `hasScope` already tests membership, so an additive **permission-set** model (grant arbitrary scopes independently — e.g. *edit AI models + create working draft but NOT publish*) is available today with no core change, only a reading convention. Steps: (a) offer permission-set as a first-class option (not only ladder) in the scope catalog / user-security admin UI; (b) extend **ABAC** beyond the k8s dimensions by adding an optional, generic 6th dimension to the resource tuple (`scopes:namespaces:groups:pods:containers:selectors`, empty = any) that each plugin interprets for its own resources (e.g. a channel granting "edit everything under *business domain X*"). Backward-compatible: existing keys and ladder-based plugins keep working unchanged; the three mechanisms (ladder ⊆ permission-set ⊆ ABAC) coexist over the same grant store.
   - [AI] ~~`magnify`, **Desktop**, create a Tauri compatible build for desktop versions.~~
   - `kwirth`, **Grafana**, develop [Grafana](https://grafana.com/grafana/plugins/) plugins for log streaming and aggregation.
@@ -36,7 +36,7 @@ We cite here some interesting capabilities that are missing today:
   - [HUMAN] ~~`magnify`, **UX/UI**, improve filtering (add node filters (and other) on RFM).~~ DONE!
   - [AI] ~~`kwirth`, **Extensibility**, implement a pluggable system for providers.~~ DONE!
   - `kwirth`, **Mixed sources**, create a channel (or any other mechanism) for aggregating data from different sources under the same channel.
-  - `magnify`, **Artifact configuration**, normally all classical artifacts from Kubernetes are added to a specific section inside Kwirth Magnify (workload, cluster, config, custom...). Let's take an example: with the arrival of Gateway API, all related resources (GatewayClass, GatewayApi, HTTPRoute...) are being shown as CRD and CRD instances. But, possibly a user would expect to get those information insde 'Network' section, nor 'Customization' section. For this to be something flexible and user-customizable, MAgnify must provide a mechanism to configure what top category (workload, network, config) any Kind belongs to. This way, the user can, for example, show HTTPRoute inside network (like Ingress resources), while other Gateway API resources can be kept inside 'Custom'.
+  - `magnify`, **Artifact configuration**, normally all classical artifacts from Kubernetes are added to a specific section inside kwirth Magnify (workload, cluster, config, custom...). Let's take an example: with the arrival of Gateway API, all related resources (GatewayClass, GatewayApi, HTTPRoute...) are being shown as CRD and CRD instances. But, possibly a user would expect to get those information insde 'Network' section, nor 'Customization' section. For this to be something flexible and user-customizable, MAgnify must provide a mechanism to configure what top category (workload, network, config) any Kind belongs to. This way, the user can, for example, show HTTPRoute inside network (like Ingress resources), while other Gateway API resources can be kept inside 'Custom'.
   - `magnify`, **Ingress**, we need to add support for new Gateway artifacts, not just let them work as CRD's, 
   - `kwirth`, **Installation**, update Helm to support GatewayAPI
   - `pinocchio`, **Changes to artifacts**, when the channels (thanks to the use of an LLM) suggests modifying an artifact, we need to implement two methods: modify the object (a pod or whatever) via the Kubernetes mutating webhook, or propagate the changes to a repository when the cluster being managed via an IaC platform (ArgoCD, Flux) and a templating or kustomization mechanism (Kustomize, Helm or whatever).
@@ -51,7 +51,7 @@ We cite here some interesting capabilities that are missing today:
   - [AI] ~~`pinocchio`, **debugging**, working with tools is tricky, since there is no explanations about what LLM's is doing, so we should instrument the tools in order to have clear information on how are they doing and how the LLM is using them.~~
   - [AI] ~~`topology`, **Topology**, create a channel for whoung graphically all the computing resources ins side teh cluster, showing dependencies and relationships, as well as a fkkuent visual navigation system.~~ DONE!
   - [AI] ~~`kwirth`, **customization**, homepages shouold be fully customizable, or even be installed as extensions~~ DONE!
-  - [AI] ~~`kwirth`, **customization**, users should be able to login to a specific channel, in opposite to be logged in into the whole Kwirth front application ~~ DONE!
+  - [AI] ~~`kwirth`, **customization**, users should be able to login to a specific channel, in opposite to be logged in into the whole kwirth front application ~~ DONE!
   - [AI] ~~`kwirth`, **documentation**, showing help to users shoukld be a framework feature~~ DONE!
   - `kwirth`, **CNCF**, prepare project to donate to [CNCF](https://www.cncf.io/).
   

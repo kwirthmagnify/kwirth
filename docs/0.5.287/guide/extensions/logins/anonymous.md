@@ -20,7 +20,7 @@ Open **⚙ Settings** on the `anonymous` card in **☰ → Manage extensions →
 
 | Field | Required | Description |
 |---|---|---|
-| **Auto-login user** | ✅ | Kwirth username used for the automatic login. |
+| **Auto-login user** | ✅ | kwirth username used for the automatic login. |
 | **Auto-login password** | ✅ | Password for that user. |
 | **Start channel** | | Channel slug to open after login (e.g. `magnify`). Leave blank to land on the home screen. |
 | **Scope** | | Resource scope for the channel: `cluster`, `namespace`, `group`, `pod`, or `container`. Defaults to `cluster`. |

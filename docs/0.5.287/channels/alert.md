@@ -4,7 +4,7 @@ Alert channel is a subtype of Log Channel that can be used to raise alerts on in
 ## What for
 You can configure an alert channel for detecting log messages from objects in scope that match some specific regex. Alert channel is designed to work with three standard severity levels (INFO, WARNING, ERROR) and inform the user when a message has been produced that matches any of the configured severity levels.
 
-You can add, for example, a tab containing all the namespaces in your cluster; this way you can detect very easily when an ERROR occurs anywhere. Please remember the way Kwirth tabs change their colour when new data is received, so a working alert tab will move from green to yellow when a new alert is received (as well as it occurs with other channels, for sure).
+You can add, for example, a tab containing all the namespaces in your cluster; this way you can detect very easily when an ERROR occurs anywhere. Please remember the way kwirth tabs change their colour when new data is received, so a working alert tab will move from green to yellow when a new alert is received (as well as it occurs with other channels, for sure).
 
 ## Features
 Alert detection is **performed on the backend**, that is, your browser will only receive alerts according to your setup. When you start an Alert Channel this is the information you must provide:

@@ -87,7 +87,7 @@ The **node info panel** shows what's relevant to the kind: name + **status**, ki
 | **Service** | **Show endpoints** |
 | **Ingress** | **Show rules** |
 
-These tie the map into the rest of Kwirth: **Open shell** launches an **[Ops](ops)** session on that container, and **View logs** opens a **[Log](log)** tab scoped to the resource. **Show endpoints** / **Show rules** open a small side panel listing the Service's endpoints (IP:port) or the Ingress's host/path → service routing.
+These tie the map into the rest of kwirth: **Open shell** launches an **[Ops](ops)** session on that container, and **View logs** opens a **[Log](log)** tab scoped to the resource. **Show endpoints** / **Show rules** open a small side panel listing the Service's endpoints (IP:port) or the Ingress's host/path → service routing.
 
 ## Admin guide
 

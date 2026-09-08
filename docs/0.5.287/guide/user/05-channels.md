@@ -29,7 +29,7 @@ Click the **gear** on the tab to open the **Tab menu**:
 
 ### 3. Configure the channel
 
-The first time you **Start** a channel, Kwirth shows its **configuration dialog**. Each channel has its own options; the **Log** channel, for instance, looks like this:
+The first time you **Start** a channel, kwirth shows its **configuration dialog**. Each channel has its own options; the **Log** channel, for instance, looks like this:
 
 ![Configure log stream dialog](../../_media/guide/channel-log-setup.png)
 

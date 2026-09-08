@@ -108,7 +108,7 @@ export default MySender
 
 ### Hot-reload for development
 
-Point Kwirth at your local build output via `kwirth-dev.json`:
+Point kwirth at your local build output via `kwirth-dev.json`:
 
 ```json
 {

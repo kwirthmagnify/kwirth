@@ -1,6 +1,6 @@
 # composite
 
-The `composite` sender provides a **visual pipeline editor** in the Kwirth management UI. Instead of writing JSON by hand, you drag-and-drop `tee` nodes (fan-out), `regex` nodes (pattern filtering), and `ref` nodes (reference to a concrete sender config) into a tree that defines the full routing logic for a pipeline.
+The `composite` sender provides a **visual pipeline editor** in the kwirth management UI. Instead of writing JSON by hand, you drag-and-drop `tee` nodes (fan-out), `regex` nodes (pattern filtering), and `ref` nodes (reference to a concrete sender config) into a tree that defines the full routing logic for a pipeline.
 
 Under the hood, the pipeline is stored as a JSON tree; at runtime the composite sender interprets that tree and dispatches messages through it node-by-node.
 

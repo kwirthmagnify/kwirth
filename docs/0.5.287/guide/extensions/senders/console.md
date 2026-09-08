@@ -5,7 +5,7 @@
 
 ## What it does
 
-The **console** sender writes each message to the **Kwirth server's stdout/stderr**. It's the simplest sink — no external system, no credentials — which makes it ideal for **testing** a channel's output or for capturing messages in the pod logs.
+The **console** sender writes each message to the **kwirth server's stdout/stderr**. It's the simplest sink — no external system, no credentials — which makes it ideal for **testing** a channel's output or for capturing messages in the pod logs.
 
 ## Configuration
 
@@ -24,7 +24,7 @@ Add a named config from **☰ → Manage extensions → Senders → console → 
 ## Notes
 
 - No credentials — safe to enable anywhere; great as the **first sender** to prove the pipeline (e.g. from **[Echo](../plugins/echo)** or **[Alert](../plugins/alert)**).
-- Output lands wherever the Kwirth backend's stdout goes (typically the pod logs).
+- Output lands wherever the kwirth backend's stdout goes (typically the pod logs).
 
 ---
 

@@ -5,7 +5,7 @@
 
 ## What a theme is
 
-A **theme** restyles the whole Kwirth UI — colours, surfaces, typography and accents. Themes are **installable extensions**: install the ones you like and **activate** one to change the look instantly. (When no theme is active, Kwirth uses its built-in **light / dark** palette — that's what every screenshot in this guide uses.)
+A **theme** restyles the whole kwirth UI — colours, surfaces, typography and accents. Themes are **installable extensions**: install the ones you like and **activate** one to change the look instantly. (When no theme is active, kwirth uses its built-in **light / dark** palette — that's what every screenshot in this guide uses.)
 
 ![Manage themes](../../../_media/guide/manage-themes.png)
 
@@ -35,7 +35,7 @@ Each theme is a **card** with a description, its **version**, an **Activate** bu
 
 ## Admin guide
 
-- **Install / activate / remove:** all from **☰ → Manage extensions → Themes**, using the common flow in [Extending Kwirth](../../admin/08-extending-kwirth).
+- **Install / activate / remove:** all from **☰ → Manage extensions → Themes**, using the common flow in [Extending kwirth](../../admin/08-extending-kwirth).
 - **Scope:** a theme is a **visual** extension only — it never affects data, permissions or behaviour.
 
 ## Notes

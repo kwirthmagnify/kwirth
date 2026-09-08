@@ -1,7 +1,7 @@
 # Magnify
-Magnify is **the most incredible thing** that happened inside and outside Kwirth in the last two years. It is not just a Kwirth channel, it is a really complete *Kubernetes Management Tool*. What do we mean?
+Magnify is **the most incredible thing** that happened inside and outside kwirth in the last two years. It is not just a kwirth channel, it is a really complete *Kubernetes Management Tool*. What do we mean?
 
-We typically build Kwirth channels for providing a specific data stream for a specific type of information: logs, alerts, metrics, files, events... Magnify has been developed as a new Kwirth channel; in fact, it has a lot to do with data streaming as well as other Kwirth channels, but, what kind of data does Magnify stream to users?
+We typically build kwirth channels for providing a specific data stream for a specific type of information: logs, alerts, metrics, files, events... Magnify has been developed as a new kwirth channel; in fact, it has a lot to do with data streaming as well as other kwirth channels, but, what kind of data does Magnify stream to users?
 
 Magnify is concerned about providing users with two main data streams:
   - Kubernetes artifacts
@@ -14,7 +14,7 @@ Is that all? Of course not!!
 Magnify integrates all the data that is received from Kubernetes via the data-stream with other stuff like:
 
   - An upwards command stream, for sending commands to Kubernetes.
-  - An extension mechanism for **adding other Kwirth channels to Magnify**. This means you can do logging or observing directly from the Magnify channel.
+  - An extension mechanism for **adding other kwirth channels to Magnify**. This means you can do logging or observing directly from the Magnify channel.
   - Editors for working with Kubernetes objects.
   - Full Kubernetes object search.
   - Validation processes for **detecting inconsistencies in your Kubernetes** cluster.
@@ -92,17 +92,17 @@ If you close the LogSearch panel while a search is still running, the search is 
 
 The Magnify channel has a **User Preferences** panel (accessible from the gear icon in the Magnify toolbar) where you can adjust display and behaviour settings for the channel. In addition to those settings, the panel provides shortcut buttons to open the extension manager dialogs:
 
-  - **Plugins** — install, update, or remove Kwirth plugins
+  - **Plugins** — install, update, or remove kwirth plugins
   - **Providers** — configure available data providers
   - **Senders** — manage outbound notification adapters
 
-This means you can manage extensions without leaving the Magnify channel or navigating to the global Kwirth settings menu.
+This means you can manage extensions without leaving the Magnify channel or navigating to the global kwirth settings menu.
 
-### Specifics for Kwirth Magnify (Desktop versions)
-Kwirth Desktop is an Electron application whose login page is specifically designed for local work (the same you would do with Lens, K9s, or Headlamp). Therefore, Kwirth Desktop does not connect to a specific Kubernetes cluster by default; instead, it shows the user all the contexts available in their local `kubeconfig` file. Cluster status and availability will be refreshed automatically, as shown in the following image:
+### Specifics for kwirth Magnify (Desktop versions)
+Kwirth Desktop is an Electron application whose login page is specifically designed for local work (the same you would do with Lens, K9s, or Headlamp). Therefore, kwirth Desktop does not connect to a specific Kubernetes cluster by default; instead, it shows the user all the contexts available in their local `kubeconfig` file. Cluster status and availability will be refreshed automatically, as shown in the following image:
 
 ![local cluster selection](../_media/context-selection-local.png)
 
-If you want to connect to a cluster using any other type of Kwirth installation (like Docker, External or Kubernetes), you can add as many clusters as you want in the 'Remote cluster' selection.
+If you want to connect to a cluster using any other type of kwirth installation (like Docker, External or Kubernetes), you can add as many clusters as you want in the 'Remote cluster' selection.
 
 ![remote cluster selection](../_media/context-selection-remote.png)

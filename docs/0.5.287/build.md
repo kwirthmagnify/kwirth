@@ -1,6 +1,6 @@
-# Build Kwirth
+# Build kwirth
 
-This section covers everything you need to build Kwirth from source, for each supported platform and distribution type.
+This section covers everything you need to build kwirth from source, for each supported platform and distribution type.
 
 Kwirth can be built and distributed in several forms:
 

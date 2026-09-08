@@ -1,6 +1,6 @@
 # Pinocchio
 
-The **Pinocchio** plugin is the AI/LLM integration layer for Kwirth. It watches Kubernetes object lifecycle events (Pods, Deployments, Services, Ingresses, and more) and business data events, and runs configurable LLM-powered analyses on them. Results (findings with severity levels, explanations, and token usage) are streamed to the frontend tab in real time.
+The **Pinocchio** plugin is the AI/LLM integration layer for kwirth. It watches Kubernetes object lifecycle events (Pods, Deployments, Services, Ingresses, and more) and business data events, and runs configurable LLM-powered analyses on them. Results (findings with severity levels, explanations, and token usage) are streamed to the frontend tab in real time.
 
 **Key concepts:**
 

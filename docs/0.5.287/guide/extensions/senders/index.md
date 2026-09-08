@@ -5,7 +5,7 @@
 
 ## What a sender is
 
-A **sender** is an **output adapter**. When a channel or provider needs to push something out of Kwirth — an alert email, a Teams message, a line to a log file — it hands the message to a sender, which knows how to deliver it to that specific destination. Senders are **fire-and-forget**: they send, they don't receive.
+A **sender** is an **output adapter**. When a channel or provider needs to push something out of kwirth — an alert email, a Teams message, a line to a log file — it hands the message to a sender, which knows how to deliver it to that specific destination. Senders are **fire-and-forget**: they send, they don't receive.
 
 The key ideas:
 
@@ -19,7 +19,7 @@ These deliver a message to a real destination:
 
 | Sender | Delivers to | Key config |
 |---|---|---|
-| **[console](console)** | The Kwirth server's **stdout/stderr**. | *(none — great for testing)* |
+| **[console](console)** | The kwirth server's **stdout/stderr**. | *(none — great for testing)* |
 | **[file](file)** | A **rotating log file** on the server. | File path, rotation. |
 | **[email-smtp](email-smtp)** | **Email** via an SMTP server. | Host, port, encryption, user, password, from, to. |
 | **[email-resend](email-resend)** | **Email** via the **Resend** API. | API key, from, to. |
@@ -69,7 +69,7 @@ Channels that can emit output expose a **Sender config** selector in their setup
 
 ## Admin guide
 
-- **Install / enable / remove:** from **☰ → Manage extensions → Senders**, using the common flow in [Extending Kwirth](../../admin/08-extending-kwirth).
+- **Install / enable / remove:** from **☰ → Manage extensions → Senders**, using the common flow in [Extending kwirth](../../admin/08-extending-kwirth).
 - **Secrets:** SMTP passwords, Resend API keys and Teams webhook URLs are stored as sender config — treat them as credentials.
 - **Testing:** use the **console** sender (no config) or **Echo + a sender** to validate delivery before wiring it into alerts.
 

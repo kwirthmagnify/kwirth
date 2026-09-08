@@ -6,7 +6,7 @@
 
 ## Overview
 
-The **Trivy** channel brings **security & vulnerability scanning** into Kwirth, powered by [Trivy OSS](https://trivy.io) (Aqua Security). It streams, in real time, the **vulnerabilities, config-audit findings, exposed secrets and SBOM** of the Kubernetes objects in your scope, and rolls them up into a **Kwirth Secure Score** you can tune.
+The **Trivy** channel brings **security & vulnerability scanning** into kwirth, powered by [Trivy OSS](https://trivy.io) (Aqua Security). It streams, in real time, the **vulnerabilities, config-audit findings, exposed secrets and SBOM** of the Kubernetes objects in your scope, and rolls them up into a **kwirth Secure Score** you can tune.
 
 As always, scope is flexible: you can assess the whole security posture of an **application** made of pods/replica sets/containers across namespaces, all at once.
 
@@ -27,7 +27,7 @@ On **Start**, the config lets you choose **which severities count** — tick **I
 | Control | What it does |
 |---|---|
 | **Ignore — Critical / High / Medium / Low** | Exclude that severity from reports and from the score. |
-| **MANAGE TRIVY** | Install / manage the **Trivy Operator** in the cluster from Kwirth. *(You must start the channel once before you can configure the operator.)* |
+| **MANAGE TRIVY** | Install / manage the **Trivy Operator** in the cluster from kwirth. *(You must start the channel once before you can configure the operator.)* |
 | **Set as default** | Remember this configuration. |
 
 ## The cards view

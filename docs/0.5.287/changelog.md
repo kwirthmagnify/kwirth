@@ -6,28 +6,28 @@ Minor but powerful features:
 
   - Pinocchio is now running working with several LLM's through [AI-SDK from Vercel](https://ai-sdk.dev/docs/introduction). It has been tested with OpenRouter, Gemini and Groq. This very first version just audits Kubernetes objects upon creation, but only for information.
   - Improved channel management on front (now added 'cluster' view again).
-  - Back channels are now instantiated according to Kwirth config (they're on a pre-plugin stated, like providers and front channels). We're ready to start plugin system!!!
-  - New `business` provider is up & running, now business data can be ingested into Kwirth and sent to channels aiming to take decisions on business data.
+  - Back channels are now instantiated according to kwirth config (they're on a pre-plugin stated, like providers and front channels). We're ready to start plugin system!!!
+  - New `business` provider is up & running, now business data can be ingested into kwirth and sent to channels aiming to take decisions on business data.
   - `pinocchio` channel is triggering wehn business data or Kubernetes artifacts are received.
   - New `metrics` provider (in use by `pinocchio`, we will transition 'metrics' channel to new metrics provider in the near future)
   - New `topology` channel, for (incredibly) seeing and managing your cluster in 3D.
   - **Censor channel**: New channel for real-time LLM-based log analysis. Censor inspects log streams, detects sensitive patterns via configurable regex rules, and forwards findings through the sender system. Supports multiple LLM providers and interactive terminal sessions.
-  - **Plugin system**: Channels are now fully decoupled from Kwirth core. Plugins bundle a backend and a frontend component into a self-contained package that can be installed, updated, or removed at runtime without restarting Kwirth. All previous built-in channels (Log, Ops, Fileman, Echo, News, Trivy, Pinocchio) are now delivered as plugins.
+  - **Plugin system**: Channels are now fully decoupled from kwirth core. Plugins bundle a backend and a frontend component into a self-contained package that can be installed, updated, or removed at runtime without restarting kwirth. All previous built-in channels (Log, Ops, Fileman, Echo, News, Trivy, Pinocchio) are now delivered as plugins.
   - **Provider system**: Data sources are now modelled as providers. A provider ingests data from any source (Kubernetes events, metrics, business streams, Kafka topics, OpenTelemetry…) and makes it available to any channel or plugin that subscribes to it.
   - **Sender system**: Outbound notification adapters are now first-class citizens. Nine ready-to-use senders are included: console, file, SMTP email, Resend email, Microsoft Teams, composite (fan-out), timed, tee, and regex-routed. Senders let channels push alerts and messages to external destinations using a unified configuration model.
   - **kwirth-common-ai**: New shared package that abstracts LLM provider integrations (OpenRouter, Gemini, Groq, OpenAI, Mistral…). Used by Pinocchio and Censor to offer a unified model/provider configuration across AI-powered features.
 
 ### New UI capabilities
 
-  - **Pluggable themes**: Kwirth now supports installable UI themes. Themes are self-contained packages (bundled as `.tgz`) that can be installed, switched, and removed at runtime without restarting Kwirth. The `ThemeManager` exposes a unified API that channels and the shell use to apply color palettes, typography, and component overrides. Three themes ship out of the box: **post-punk** (high-contrast neon-on-black), **plexus** (dark blue grid aesthetic), and **SFY** (a science-fiction inspired palette). Building your own theme requires only a React component that satisfies the `ITheme` interface and a manifest declaring its id and display name.
+  - **Pluggable themes**: Kwirth now supports installable UI themes. Themes are self-contained packages (bundled as `.tgz`) that can be installed, switched, and removed at runtime without restarting kwirth. The `ThemeManager` exposes a unified API that channels and the shell use to apply color palettes, typography, and component overrides. Three themes ship out of the box: **post-punk** (high-contrast neon-on-black), **plexus** (dark blue grid aesthetic), and **SFY** (a science-fiction inspired palette). Building your own theme requires only a React component that satisfies the `ITheme` interface and a manifest declaring its id and display name.
 
-  - **Pluggable homepages**: The Kwirth homepage — the first screen shown after login — is now a pluggable component. Homepage packages expose a React component that receives the full cluster list, connection metadata, metrics helpers, and event stream accessors as props; the shell wires everything and renders whichever homepage is active. The classic **Basic** homepage (CPU, memory, and network sparklines per cluster) ships as the default. **Matrix** is a new homepage that renders a live Matrix-rain canvas backdrop per cluster card, showing real-time CPU / MEM / POD utilisation bars, cluster event streams, and quick-launch buttons for installed channels — all in a monochrome green-on-black aesthetic.
+  - **Pluggable homepages**: The kwirth homepage — the first screen shown after login — is now a pluggable component. Homepage packages expose a React component that receives the full cluster list, connection metadata, metrics helpers, and event stream accessors as props; the shell wires everything and renders whichever homepage is active. The classic **Basic** homepage (CPU, memory, and network sparklines per cluster) ships as the default. **Matrix** is a new homepage that renders a live Matrix-rain canvas backdrop per cluster card, showing real-time CPU / MEM / POD utilisation bars, cluster event streams, and quick-launch buttons for installed channels — all in a monochrome green-on-black aesthetic.
 
 ### Incremental improvements
 
   - **Magnify — LogSearch: Stop button and better defaults**: The LogSearch panel now defaults to **100 lines** (previously 500) and enforces a hard **500-line maximum**, making searches faster and more responsive. A red **Stop Search** button is available whenever a search is running and cancels it immediately. Cancellation uses a per-search UUID so multiple concurrent searches from the same client can each be stopped independently without interfering with each other. If the LogSearch panel is closed while a search is still running, the search is automatically cancelled on both the frontend and the backend.
 
-  - **Magnify — Open extension managers from the channel**: The Magnify channel's user preferences panel now includes quick-access buttons to open the Plugin, Provider, and Sender manager dialogs directly from within the channel, without having to navigate to the global Kwirth settings menu.
+  - **Magnify — Open extension managers from the channel**: The Magnify channel's user preferences panel now includes quick-access buttons to open the Plugin, Provider, and Sender manager dialogs directly from within the channel, without having to navigate to the global kwirth settings menu.
 
   - **Censor — Inference and Audit modes**: The Censor plugin now supports two distinct operating modes selectable at configuration time:
     - `inference` mode (original behaviour): the LLM continuously discovers noise patterns from the incoming log stream and accumulates regex rules to filter them out automatically.
@@ -38,9 +38,9 @@ Minor but powerful features:
 
   - **Plugin manager — Version selection**: The plugin catalog now groups all published versions of each plugin and shows a version dropdown on each card when more than one version is available, letting you choose exactly which version to install instead of always getting the latest.
 
-  - **Kwirth version update notification**: Kwirth now checks whether a newer server build is available and shows a non-intrusive notification in the UI, so administrators always know when an upgrade is ready.
+  - **kwirth version update notification**: Kwirth now checks whether a newer server build is available and shows a non-intrusive notification in the UI, so administrators always know when an upgrade is ready.
 
-  - **Pinocchio — full parity with Kwirth's AI provider catalogue (0.2.31)**: Pinocchio used to publish its own hardcoded list of provider types to the config dialog, which had drifted from the one the core actually supports. The result was that a provider of type **`openai-compat`** or **`anthropic`** — created from Kwirth's *AI Providers* menu — showed up inside the channel **with an empty Type**, and could not be created from the channel at all (no `openai-compat` option meant no **Base URL** field either). The list now comes straight from `PROVIDERS_AVAILABLE` in `kwirth-common-ai`, so there is a single source of truth. The provider dialog inside Pinocchio also gained the **Load models** button, which asks the core to fetch the provider's model catalogue — the same behaviour as the global *AI Providers* dialog.
+  - **Pinocchio — full parity with kwirth's AI provider catalogue (0.2.31)**: Pinocchio used to publish its own hardcoded list of provider types to the config dialog, which had drifted from the one the core actually supports. The result was that a provider of type **`openai-compat`** or **`anthropic`** — created from kwirth's *AI Providers* menu — showed up inside the channel **with an empty Type**, and could not be created from the channel at all (no `openai-compat` option meant no **Base URL** field either). The list now comes straight from `PROVIDERS_AVAILABLE` in `kwirth-common-ai`, so there is a single source of truth. The provider dialog inside Pinocchio also gained the **Load models** button, which asks the core to fetch the provider's model catalogue — the same behaviour as the global *AI Providers* dialog.
 
   - **Pinocchio — Kubernetes event type filter on artifact triggers**: Artifact triggers can now declare which Kubernetes event type should activate them: `ADDED`, `MODIFIED`, or `DELETED`. Leaving the field blank (or selecting "Any") makes the trigger fire on all three event types. Previously the backend only processed `ADDED` events — `MODIFIED` and `DELETED` were silently discarded. This change makes Pinocchio useful for detecting object mutations and deletions in addition to initial deployments. The event type is configurable both in the Trigger configuration screen and in the Playground's test area. The `creationTimestamp` recency bypass is still applied, but only for `ADDED` events where it makes semantic sense.
 
@@ -69,11 +69,11 @@ Minor but powerful features:
 
   - Provider architecture implemented for the first 3 providers.
   - Pinocchio channel implemented using providers.
-  - Docker delivery mode is now running outside cluster without any Kwirth installation inside cluster, that is, it is a real out-cluster deployment like KwirthElectron.
+  - Docker delivery mode is now running outside cluster without any kwirth installation inside cluster, that is, it is a real out-cluster deployment like KwirthElectron.
 
 ## 0.5.21
 The change log for this version is quite extensive. What follows is just an excerpt:
-  - **Multiple deployment options**: Now you can deliver Kwirth in several ways, not just as a Kubernetes pod: **Magnify** (a Desktop application), **Docker** (a standalone dockerized version), and **External** (a setup designed for deploying Kwirth directly to your Windows, macOS, or Linux box).
+  - **Multiple deployment options**: Now you can deliver kwirth in several ways, not just as a Kubernetes pod: **Magnify** (a Desktop application), **Docker** (a standalone dockerized version), and **External** (a setup designed for deploying kwirth directly to your Windows, macOS, or Linux box).
   - Added **Magnify channel**: A full replacement for tools like Lens or K9s.
   - Finished **Trivy channel**: Now the Trivy channel shows more information about your workload, including SBOM and configuration auditing, in addition to exposed secrets and vulnerabilities.
   - Improved performance and security for the **Fileman channel**.
@@ -87,15 +87,15 @@ The change log for this version is quite extensive. What follows is just an exce
     - Cluster usage data.
     - "Last & Fav" tabs and workspaces.
   - Added a **notifier** for sending messages to users from frontend channels.
-  - Added `react-file-manager` as a customizable file manager for Kwirth.
+  - Added `react-file-manager` as a customizable file manager for kwirth.
   - Added a parse listener for parsing `ls` commands in the Fileman channel.
   - Added **Helm chart** installation support.
 
 ## 0.4.20
   - **Strong architecture changes**: Introduced internal changes to support different kinds of connections consuming various types of information (not only logs).
-  - **Added Channels**: A Channel represents a specific kind of information that Kwirth extracts from Kubernetes and sends to clients. The first implemented channels (included in Kwirth core) are: **Log, Metrics, and Alert**.
-  - **Extensibility**: Kwirth can now be extended by creating new channels that can be loaded at runtime; increasing Kwirth's capabilities no longer implies modifying its core.
-  - **Instances**: To allow consumers to mix content from different resources, Kwirth introduced the concept of "instances" orthogonally with channels. When a client opens a WebSocket for a specific channel type, it can create instances to receive information from different sets of origin resources.
+  - **Added Channels**: A Channel represents a specific kind of information that kwirth extracts from Kubernetes and sends to clients. The first implemented channels (included in kwirth core) are: **Log, Metrics, and Alert**.
+  - **Extensibility**: Kwirth can now be extended by creating new channels that can be loaded at runtime; increasing kwirth's capabilities no longer implies modifying its core.
+  - **Instances**: To allow consumers to mix content from different resources, kwirth introduced the concept of "instances" orthogonally with channels. When a client opens a WebSocket for a specific channel type, it can create instances to receive information from different sets of origin resources.
   - **Bearer Tokens**: Since increased capabilities can produce heavy workloads, we introduced specific bearer tokens to drastically simplify workload management when multiple Kubernetes replicas are running in the backend.
   - **Multi-resource selection**: The base frontend application now supports selecting multi-resource objects. For example, you can monitor the CPU usage of three different pods from different namespaces or groups simultaneously.
   - **Data Aggregation**: The metrics section enables aggregating and/or merging data from different objects.
@@ -110,10 +110,10 @@ The change log for this version is quite extensive. What follows is just an exce
     - **kwirth_container_receive_mbps**: Mbps of data received over the last period.
     - **kwirth_container_write_mbps**: Mbps of data written to disk during the last period.
     - **kwirth_container_read_mbps**: Mbps of data read from disk during the last period.
-  - **Versioned Documentation**: Documentation is now versioned; you can select the specific Kwirth version documentation from the sidebar.
+  - **Versioned Documentation**: Documentation is now versioned; you can select the specific kwirth version documentation from the sidebar.
 
 ## 0.3.160
-  - Created `@kwirthmagnify/kwirth-common` for sharing data structures between clients and the Kwirth server.
+  - Created `@kwirthmagnify/kwirth-common` for sharing data structures between clients and the kwirth server.
   - Added a new **version detector** on user login to identify backend versions.
   - Added **multi-streaming channels** to WebSockets (required for streaming data other than logs).
   - **New Security System**: Based on differentiating services (log, streaming, operation...) and scopes. By adding the "service" entity, we can now add different data streams like metrics (snapshot or stream) and signaling info (errors, warnings).
@@ -125,12 +125,12 @@ The change log for this version is quite extensive. What follows is just an exce
   - **Status Information**: Kwirth now sends status data (pods added/stopped, Kubernetes errors) through the same socket used for log streams.
   - **Version Info via API**: Clients can now query the version to know which features are implemented.
   - Added `/find` endpoint to perform searches on Kubernetes artifacts.
-  - **Kubernetes Operations**: Added permissions-based operations to restart deployments and pods via Kwirth.
+  - **Kubernetes Operations**: Added permissions-based operations to restart deployments and pods via kwirth.
   - Several UI improvements and a simplified resource selector.
 
 ## 0.1
 Initial version including:
   - Access to several clusters.
   - Admin user management.
-  - API key security for distributed Kwirth instances.
+  - API key security for distributed kwirth instances.
   - React/TS frontend.

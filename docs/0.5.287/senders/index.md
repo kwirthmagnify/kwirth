@@ -1,12 +1,12 @@
 # Senders
 
-Starting with version 0.5, Kwirth includes a **sender subsystem** — a standardized way for backend channels and providers to push outbound notifications or messages to external systems.
+Starting with version 0.5, kwirth includes a **sender subsystem** — a standardized way for backend channels and providers to push outbound notifications or messages to external systems.
 
 A sender is a self-contained backend plugin that knows how to deliver a message to a specific destination: a log file, the server console, an email inbox, a Slack channel, a webhook, etc. Channels and providers obtain a reference to the sender manager via their runtime context and use it to trigger outbound messages without knowing anything about the underlying transport.
 
 ## Architecture
 
-The sender subsystem sits alongside the channel and provider subsystems inside the Kwirth backend. It is deliberately simple: senders are fire-and-forget output adapters, not two-way communication channels.
+The sender subsystem sits alongside the channel and provider subsystems inside the kwirth backend. It is deliberately simple: senders are fire-and-forget output adapters, not two-way communication channels.
 
 ```
 Channel / Provider
@@ -54,7 +54,7 @@ Where:
 - `addConfig(config)` — registers a named configuration. A config always has at least a `name` field; the rest is sender-specific.
 - `removeConfig(name)` — removes a previously registered config.
 - `hasConfig(name)` / `getConfigNames()` — queried by the sender manager before dispatching messages.
-- `getConfigSchema()` — **optional**. Returns the list of fields that define a config for this sender. When implemented, the Kwirth management UI uses this schema to render a type-safe form for adding new configs, so no frontend code needs to know the config structure.
+- `getConfigSchema()` — **optional**. Returns the list of fields that define a config for this sender. When implemented, the kwirth management UI uses this schema to render a type-safe form for adding new configs, so no frontend code needs to know the config structure.
 - `send(configName, message)` — delivers the message using the named config. This is the core method.
 - `startSender(senders)` — called once when the sender instance is first created.
 - `stopSender()` — called on graceful shutdown.

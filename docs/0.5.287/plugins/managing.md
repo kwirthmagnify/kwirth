@@ -2,7 +2,7 @@
 
 ## Enabling and disabling plugins
 
-Kwirth lets you control which plugins are active at startup. Plugins can be individually enabled or disabled via the Kwirth configuration. This is useful to reduce the attack surface in production or to deploy lightweight Kwirth instances focused on a specific use case.
+Kwirth lets you control which plugins are active at startup. Plugins can be individually enabled or disabled via the kwirth configuration. This is useful to reduce the attack surface in production or to deploy lightweight kwirth instances focused on a specific use case.
 
 ![manageplugins](../_media/manage-plugins.png ':class=imageclass80')
 
@@ -10,17 +10,17 @@ When a plugin is disabled, both its back endpoint and its entry in the front cha
 
 ## Managing plugins at runtime
 
-Kwirth supports **hot plugin management**: you can install, update or remove plugins on a running instance without modifying source code, without rebuilding, and without restarting Kwirth.
+Kwirth supports **hot plugin management**: you can install, update or remove plugins on a running instance without modifying source code, without rebuilding, and without restarting kwirth.
 
 Plugins are stored as Kubernetes ConfigMaps and loaded dynamically at startup and on demand. The frontend injects each plugin's JavaScript as a `<script>` tag at runtime and registers it automatically.
 
 ### Plugin Manager UI
 
-The easiest way to manage plugins is through the built-in Plugin Manager, accessible from the Kwirth settings menu (or from the **User Preferences** panel inside the Magnify channel).
+The easiest way to manage plugins is through the built-in Plugin Manager, accessible from the kwirth settings menu (or from the **User Preferences** panel inside the Magnify channel).
 
 ![plugininstall](../_media/plugin-install.png ':class=imageclass80')
 
-The dialog shows the curated plugin registry (fetched from the Kwirth manifest) with the available plugins, their versions, and descriptions. To install a plugin, click **Install** — Kwirth downloads the package, stores it in Kubernetes ConfigMaps, and activates it immediately. No restart required.
+The dialog shows the curated plugin registry (fetched from the kwirth manifest) with the available plugins, their versions, and descriptions. To install a plugin, click **Install** — kwirth downloads the package, stores it in Kubernetes ConfigMaps, and activates it immediately. No restart required.
 
 #### Choosing a specific version
 
@@ -36,11 +36,11 @@ Requires: kwirth-common-ai (provider) ≥0.5.18
 
 The **Install** button is automatically disabled when any requirement is not satisfied. Hovering over the disabled button shows a tooltip listing the missing or outdated components. Install the required components first and then return to install this plugin.
 
-The requirement check compares installed versions using Kwirth's standard version comparison (`versionGreaterThan`), so patch and minor updates satisfy a minimum-version requirement as expected.
+The requirement check compares installed versions using kwirth's standard version comparison (`versionGreaterThan`), so patch and minor updates satisfy a minimum-version requirement as expected.
 
 ### Installing from a URL
 
-You can install any plugin that is published as a `.tgz` bundle by sending a POST request to the Kwirth API:
+You can install any plugin that is published as a `.tgz` bundle by sending a POST request to the kwirth API:
 
 ```bash
 curl -X POST https://<kwirth-host>/plugins/install \
@@ -53,7 +53,7 @@ The URL can point to any accessible HTTP/HTTPS server — npm registry, a privat
 
 ### Installing from a file upload
 
-If your Kwirth instance has no internet access, you can upload a plugin `.tgz` bundle directly:
+If your kwirth instance has no internet access, you can upload a plugin `.tgz` bundle directly:
 
 ```bash
 curl -X POST https://<kwirth-host>/plugins/upload \
@@ -87,7 +87,7 @@ Both `back.js` and `front.js` are self-contained compiled bundles — no `node_m
 
 ### Hot-reload for development
 
-When developing a custom plugin locally, you can avoid the install/upload cycle by pointing Kwirth at your local build output via `kwirth-dev.json` in the backend working directory:
+When developing a custom plugin locally, you can avoid the install/upload cycle by pointing kwirth at your local build output via `kwirth-dev.json` in the backend working directory:
 
 ```json
 {
@@ -95,4 +95,4 @@ When developing a custom plugin locally, you can avoid the install/upload cycle 
 }
 ```
 
-Kwirth watches the `back.js` and `front.js` files in those paths and reloads them automatically whenever they change. This gives you a fast edit → save → test loop without touching the running Kwirth instance.
+Kwirth watches the `back.js` and `front.js` files in those paths and reloads them automatically whenever they change. This gives you a fast edit → save → test loop without touching the running kwirth instance.

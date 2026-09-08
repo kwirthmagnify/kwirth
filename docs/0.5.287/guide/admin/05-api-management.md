@@ -1,6 +1,6 @@
 # 5. API management
 
-Everything in Kwirth is reached through a secured API, and every call must carry an **access key**. When you use the web UI, Kwirth issues one for you automatically. But you will often want to hand a key to **something else** — an external tool (Backstage Kubelog, KwirthMetrics, Grafana…) or **another Kwirth** that consolidates your cluster. That's what **API management** is for.
+Everything in kwirth is reached through a secured API, and every call must carry an **access key**. When you use the web UI, kwirth issues one for you automatically. But you will often want to hand a key to **something else** — an external tool (Backstage Kubelog, KwirthMetrics, Grafana…) or **another kwirth** that consolidates your cluster. That's what **API management** is for.
 
 Open it from **☰ → API Security**. It is visible only to admins and to users holding the **`api`** scope.
 
@@ -32,11 +32,11 @@ The resource list is **semicolon-separated**, so one key can grant several diffe
 
 ### What an access key is used for
 
-An access key is the credential Kwirth checks on **every** request, so it is what you hand to anything that needs to talk to this Kwirth:
+An access key is the credential kwirth checks on **every** request, so it is what you hand to anything that needs to talk to this kwirth:
 
 - **External applications** — tools like Backstage Kubelog, KwirthMetrics or a Grafana data source present the key on each call to read the streams you allowed.
-- **Another Kwirth (cluster consolidation)** — this is how you **add a remote cluster to your cluster list**. You create a key on the *remote* Kwirth and paste it into **☰ → Manage cluster list → API Key** (together with the remote's URL). From then on, selecting that cluster in the resource selector makes Kwirth authenticate with this key automatically. See [Cluster management](06-cluster-management).
-- **Scripts / automation** — anything hitting the Kwirth API directly presents the key (as a bearer token in the `Authorization` header for bearer keys).
+- **Another kwirth (cluster consolidation)** — this is how you **add a remote cluster to your cluster list**. You create a key on the *remote* kwirth and paste it into **☰ → Manage cluster list → API Key** (together with the remote's URL). From then on, selecting that cluster in the resource selector makes kwirth authenticate with this key automatically. See [Cluster management](06-cluster-management).
+- **Scripts / automation** — anything hitting the kwirth API directly presents the key (as a bearer token in the `Authorization` header for bearer keys).
 
 In every case the key carries its own **scopes and object filters**, so it can only do what you granted when you created it — no more.
 
@@ -45,7 +45,7 @@ In every case the key carries its own **scopes and object filters**, so it can o
 | Type | Persisted? | Use |
 |---|---|---|
 | **permanent** | Yes — stored in the Kubernetes control plane; survives restarts. | Keys you create for people/tools. **The only type the UI creates.** |
-| **volatile** | No — lives only in the memory of the Kwirth instance that created it. | Machine-to-machine, single replica, disposable. |
+| **volatile** | No — lives only in the memory of the kwirth instance that created it. | Machine-to-machine, single replica, disposable. |
 | **bearer** | No — signed and handed to the client at login (OAuth-style). | Issued to clients automatically; presented in an `Authorization: Bearer …` header. |
 
 The permanent/volatile filter at the top of the dialog lets you list keys by type; the left column shows all keys (except bearer) with their description and expiry.
@@ -80,7 +80,7 @@ Give Kubelog/KwirthMetrics read access to logs in `production`:
 
 ## Using a key to reach another cluster
 
-API keys are also how one Kwirth reaches **another**: create a key on the *remote* Kwirth here, then register the remote cluster in **your** profile with that key. That is covered next in [Cluster management](06-cluster-management).
+API keys are also how one kwirth reaches **another**: create a key on the *remote* kwirth here, then register the remote cluster in **your** profile with that key. That is covered next in [Cluster management](06-cluster-management).
 
 > **Treat keys as secrets.** A key grants exactly the scopes it carries — anyone holding it can act with them until it expires. Scope keys tightly, set a sensible lease time, and delete keys you no longer need.
 

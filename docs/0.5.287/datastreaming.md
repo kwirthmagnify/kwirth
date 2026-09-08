@@ -1,14 +1,14 @@
 # Data streaming
-Kwirth, originally a log exporting system, can export Kubernetes data in real time. In the very first versions only log data was exported from Kubernetes (through Kwirth streaming mechanisms). Starting with version 0.3, Kwirth can also export:
+Kwirth, originally a log exporting system, can export Kubernetes data in real time. In the very first versions only log data was exported from Kubernetes (through kwirth streaming mechanisms). Starting with version 0.3, kwirth can also export:
 
   - Signaling data, that is, events related to control of the streams (info messages, error messages and so on)
-  - Metrics data, that is, Kwirth can export Kubernetes metrics (container related metrics) in real time.
+  - Metrics data, that is, kwirth can export Kubernetes metrics (container related metrics) in real time.
   - Security reports
   - Kubernetes objects related information
-  - In general, Kwirth provides a secure way to connect to a Kubernetes and export information in real-time using data streams over web sockets.
+  - In general, kwirth provides a secure way to connect to a Kubernetes and export information in real-time using data streams over web sockets.
 
 ## How it works
-As you may know, it's up to Kwirth clients to open connections to Kwirth server, I mean, opening web sockets for requesting data. Opening a websocket from a client to Kwirth is free, there are no security requirements for opening the web socket. Security comes into action once the web socket is open and you want to receive a stream of data, wherever it be log, metrics, alerts, CVE's or anything else. It's important to note that a web socket is a non-dedicated transport, this means that an open web socket can be used to stream different kinds of data. For sending data from server to client in an ordered way, a web socket can be used as a transport for different **services**.
+As you may know, it's up to kwirth clients to open connections to kwirth server, I mean, opening web sockets for requesting data. Opening a websocket from a client to kwirth is free, there are no security requirements for opening the web socket. Security comes into action once the web socket is open and you want to receive a stream of data, wherever it be log, metrics, alerts, CVE's or anything else. It's important to note that a web socket is a non-dedicated transport, this means that an open web socket can be used to stream different kinds of data. For sending data from server to client in an ordered way, a web socket can be used as a transport for different **services**.
 
 !> A service is a stream of data with a common scope and a common view from a specific channel.
 
@@ -22,8 +22,8 @@ This is waht *scope* and *view* mean:
   - **view** means what group of data you want to receive, that is, if your scope states a namespace and group of pods, you can decide what data you want to receive, for example:
     - Receive data for a set of pods (selected, for example, via a regex)
     - Receive data for a whole namespace
-  - **channel** is a module inside Kwirth core that extracts data for your selected Kubernetes objects and send it to the client.
-    - Each channels implements a specific feature of Kwirth (logs, alert, Trivy, metrics...).
+  - **channel** is a module inside kwirth core that extracts data for your selected Kubernetes objects and send it to the client.
+    - Each channels implements a specific feature of kwirth (logs, alert, Trivy, metrics...).
     - Each channel requires some specific scopes from the client to send him back information on the objects identified in the view. 
 
 It is important to understand what a **view** really means:
@@ -32,11 +32,11 @@ It is important to understand what a **view** really means:
   - Using the same scope, if your view is set to **container** you will receive a stream of log lines that are produced by all the containers that fulfill your scope declaration.
 
 ## Messaging
-When a client opens a web socket, the next action is to send an 'start instance' message, that is, te client sends a message to the Kwirth server explaining what kind of streaming **service** the client wants to use.
+When a client opens a web socket, the next action is to send an 'start instance' message, that is, te client sends a message to the kwirth server explaining what kind of streaming **service** the client wants to use.
 
 When the server receives a message like that, it performs the following actions:
 
-  - Extracts **access key** in order to evaluate if that access key is suitable for this Kwirth server.
+  - Extracts **access key** in order to evaluate if that access key is suitable for this kwirth server.
   - If everything is ok, next step is to check if the access key allows client to use the service that the client wants to start (log streaming, for example)
   - If the client is not allowed, a negative response is sent.
   - If the client is allowed, the streaming service is started, sending messages through the web socket according to scope and the channel identified in the 'start instance' message.
@@ -77,7 +77,7 @@ var logConfig:LogConfig = {
 ws.send(JSON.stringify(logConfig))
 ```
 
-If everything is ok, the Kwirth server would start sending log messages. What follows is a stream of JSON messages sent by the websocket
+If everything is ok, the kwirth server would start sending log messages. What follows is a stream of JSON messages sent by the websocket
 
 ![datastreaming](./_media/datastreaming.png ':class=imageclass80')
 

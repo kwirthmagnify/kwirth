@@ -1,12 +1,12 @@
 # News
-!> **This is a test/demo channel.** News is not a Kubernetes observability tool — it is provided as a reference implementation showing how to build a Kwirth plugin that consumes an external data source instead of Kubernetes data.
+!> **This is a test/demo channel.** News is not a Kubernetes observability tool — it is provided as a reference implementation showing how to build a kwirth plugin that consumes an external data source instead of Kubernetes data.
 
 News channel polls external RSS feeds and streams new items to the browser as they appear. It demonstrates the plugin lifecycle (start, pause, continue, stop) and the WebSocket message flow using a simple, easy-to-understand data source.
 
 ## What for
   - See a working example of a plugin that pulls data from an external HTTP source on a timer.
-  - Test that Kwirth's plugin loading, WebSocket streaming, and pause/continue lifecycle work correctly.
-  - Use as a starting point for building plugins that integrate external data feeds into Kwirth.
+  - Test that kwirth's plugin loading, WebSocket streaming, and pause/continue lifecycle work correctly.
+  - Use as a starting point for building plugins that integrate external data feeds into kwirth.
 
 ## Features
   - Polls two configurable RSS feeds every 5 minutes:

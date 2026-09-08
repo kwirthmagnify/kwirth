@@ -1,5 +1,5 @@
 # Validating
-The Validating provider receives Kubernetes **validating webhook** calls and sends them to all subscribed channels. In the very first version no actions can be taken back to Kubernetes, so all responses from Kwirth to Kubernetes will always be `review: true`; this means the Validating provider is only informative for channels.
+The Validating provider receives Kubernetes **validating webhook** calls and sends them to all subscribed channels. In the very first version no actions can be taken back to Kubernetes, so all responses from kwirth to Kubernetes will always be `review: true`; this means the Validating provider is only informative for channels.
 
 ## What for
 You can obtain information about objects **before** they are ADDED/DELETED/MODIFIED. In the near future, channels will be able to answer the `validating` webhook regarding the review process, stating if the review is accepted or denied.

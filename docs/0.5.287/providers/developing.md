@@ -26,9 +26,9 @@ export type TProviderConstructor =
 Where:
 
   - `id`, the id of the provider, the one channels use to refer to it.
-  - `providesRouter`, enable it if you need to receive HTTP requests **from outside Kwirth**, and provide an
+  - `providesRouter`, enable it if you need to receive HTTP requests **from outside kwirth**, and provide an
     Express router in `router`. This route is **public**: it is where an OTLP exporter or a third-party
-    system POSTs data, so it cannot demand a Kwirth accessKey. Anything you expose there is your
+    system POSTs data, so it cannot demand a kwirth accessKey. Anything you expose there is your
     responsibility to protect.
   - `addSubscriber` / `removeSubscriber`, to manage your subscribers. `data` is whatever the channel passes
     when subscribing — that is the channel's own selection, not your configuration.
@@ -45,7 +45,7 @@ The `data` argument of `addSubscriber` is a contract only you know. A consumer l
 provider has no way to guess it, and most providers deliver **nothing at all** with an empty
 payload — which looks like a bug rather than a missing option.
 
-Implement the optional `getSubscriptionHelp()` and Kwirth will show your notes wherever a user has
+Implement the optional `getSubscriptionHelp()` and kwirth will show your notes wherever a user has
 to write that payload (the **[Provider Debug](/0.5.287/guide/extensions/plugins/provider-debug)**
 channel does exactly this):
 

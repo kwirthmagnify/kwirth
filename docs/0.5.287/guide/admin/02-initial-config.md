@@ -1,6 +1,6 @@
 # 2. Initial configuration
 
-Once Kwirth is [deployed](01-deployment), a few things need attention before you hand it to users: the **admin account**, the **master key**, and a couple of **base settings**.
+Once kwirth is [deployed](01-deployment), a few things need attention before you hand it to users: the **admin account**, the **master key**, and a couple of **base settings**.
 
 ## First login and the admin account
 
@@ -9,10 +9,10 @@ Kwirth ships with a single built-in **admin** account:
 - **User:** `admin`
 - **Password:** `password`
 
-The **first time** you log in, Kwirth **forces you to change this password** — you cannot proceed until you do. Do it immediately.
+The **first time** you log in, kwirth **forces you to change this password** — you cannot proceed until you do. Do it immediately.
 
 > **Example — first boot.**
-> 1. Open Kwirth and log in as `admin` / `password`.
+> 1. Open kwirth and log in as `admin` / `password`.
 > 2. Kwirth refuses to continue and asks for a new password.
 > 3. Set a strong password and confirm. You are now in, and the default credentials no longer work.
 
@@ -20,12 +20,12 @@ The built-in admin account is special mainly because it exists from the start: i
 
 ## The master key
 
-The **master key** is the secret Kwirth uses to **sign the access keys** it issues to clients. Anyone who knows it could forge access keys, so it matters.
+The **master key** is the secret kwirth uses to **sign the access keys** it issues to clients. Anyone who knows it could forge access keys, so it matters.
 
 - Its default value is **`Kwirth4Ever`** — fine for a quick test, **never** for anything real.
 - Set your own at deploy time: Helm `masterkey`, External `--masterkey`, or the corresponding environment variable.
 
-> **Security:** treat the master key like a signing secret. Set a strong, unique value **before** exposing Kwirth to users, and store it somewhere safe (a Kubernetes secret / your secrets manager). Changing it later invalidates access keys already issued.
+> **Security:** treat the master key like a signing secret. Set a strong, unique value **before** exposing kwirth to users, and store it somewhere safe (a Kubernetes secret / your secrets manager). Changing it later invalidates access keys already issued.
 
 ## Base settings from the UI
 
@@ -33,17 +33,17 @@ Two small settings are worth knowing, both reached from the **☰ main menu**.
 
 ### User settings (personal)
 
-**☰ → User settings** holds *your own* preferences — currently the **keep-alive interval** used while you work with Kwirth:
+**☰ → User settings** holds *your own* preferences — currently the **keep-alive interval** used while you work with kwirth:
 
 ![User settings dialog](../../_media/guide/admin-user-settings.png)
 
-### Kwirth settings
+### kwirth settings
 
-**☰ → Kwirth Settings** configures **Kwirth itself** on the selected cluster, as opposed to your personal preferences. The main option is the **metrics read interval** — how often (in seconds) Kwirth samples cluster metrics:
+**☰ → kwirth Settings** configures **kwirth itself** on the selected cluster, as opposed to your personal preferences. The main option is the **metrics read interval** — how often (in seconds) kwirth samples cluster metrics:
 
 ![Kwirth settings dialog](../../_media/guide/admin-kwirth-settings.png)
 
-What you save here is **stored by Kwirth and survives a restart**. Changing it also retimes the running metrics provider immediately, so you do not need to restart anything for it to take effect.
+What you save here is **stored by kwirth and survives a restart**. Changing it also retimes the running metrics provider immediately, so you do not need to restart anything for it to take effect.
 
 Managing these settings requires the **`admin`** scope; without it the dialog will tell you so instead of loading.
 
@@ -90,7 +90,7 @@ A marketplace has **two independent** sets of credentials, because they are usua
 
 Either can be off — a public manifest pointing at a private registry is a perfectly normal setup, and it is the one we recommend: the manifest holds only names, versions and URLs, nothing worth protecting.
 
-Both secrets are stored encrypted by Kwirth, **outside** the settings themselves, and are used by the backend when it talks to your servers.
+Both secrets are stored encrypted by kwirth, **outside** the settings themselves, and are used by the backend when it talks to your servers.
 
 When you reopen the dialog each secret comes back **already filled in**, masked, and the eye button next to it reveals what is actually stored — so you can check a password without retyping it, and correct a single character instead of pasting the whole token again. Reading them requires the `admin` scope, like the rest of the dialog.
 
@@ -147,7 +147,7 @@ The token is a **fine-grained personal access token** with *Contents: Read-only*
 
 > **Why the browser URL does not work here.** `github.com/<owner>/<repo>/blob/…` returns an HTML page. And `raw.githubusercontent.com` serves the file plainly, but ignores the token, so it only works for a **public** repo — which rather defeats the purpose.
 >
-> **Kwirth asks for the raw media type for you.** Left to itself, the Contents API answers with a JSON envelope carrying the file **base64-encoded**, which would be rejected as "not a list of extensions". Kwirth always sends `Accept: application/vnd.github.raw` with a wildcard fallback, so this needs no configuration — and does not disturb the other hosts.
+> **kwirth asks for the raw media type for you.** Left to itself, the Contents API answers with a JSON envelope carrying the file **base64-encoded**, which would be rejected as "not a list of extensions". Kwirth always sends `Accept: application/vnd.github.raw` with a wildcard fallback, so this needs no configuration — and does not disturb the other hosts.
 
 ##### Azure DevOps
 
@@ -176,6 +176,6 @@ With the admin account secured and the master key set, continue with:
 3. [API management](05-api-management) — issue keys for external tools and cross-cluster access.
 4. [Cluster management](06-cluster-management) — add more clusters.
 5. [Identity Provider integration](07-idp-integration) — enable SSO.
-6. [Extending Kwirth](08-extending-kwirth) — install the channels and other extensions you need.
+6. [Extending kwirth](08-extending-kwirth) — install the channels and other extensions you need.
 
 Next: [User management →](03-user-management)

@@ -1,6 +1,6 @@
-# 3. The Kwirth UI
+# 3. The kwirth UI
 
-After you log in, Kwirth opens on the **home screen**. This chapter is a quick tour so you know where everything is before you start working.
+After you log in, kwirth opens on the **home screen**. This chapter is a quick tour so you know where everything is before you start working.
 
 ![Kwirth home screen](../../_media/guide/home.png)
 
@@ -39,7 +39,7 @@ A panel summarizing the selected cluster. Click the chevron on its right to expa
 It shows three blocks plus live gauges:
 
 - **Context** — the home cluster, the currently selected cluster, and the channels available on it.
-- **Kwirth Info** — Kwirth version, namespace, and the clusters it knows about.
+- **kwirth Info** — kwirth version, namespace, and the clusters it knows about.
 - **Cluster Info** — name, Kubernetes flavour and version, platform, node count and total CPU / memory.
 - **CPU / Mem / Tx / Rx gauges** — real-time resource usage of the cluster at a glance.
 

@@ -18,7 +18,7 @@ These are key features of Fileman channel:
   - The copy/move feature has two ways of working:
     1. You can copy/move files/folders inside the image filesystem of a specific container (wherever they live in root FS, or in a mounted FS).
     2. You can copy/move files/folders **from a container to a destination container different from the source one**. That is, you can just go to container A, "select" and "copy" a bunch of files, then navigate to container B and paste those files in there. Kwirth will take into account the fact that the source and target reside in a different container and will act accordingly.
-  - You can **download files or folders**. When you download folders, Kwirth builds a `.tar.gz` file for your download operation.
+  - You can **download files or folders**. When you download folders, kwirth builds a `.tar.gz` file for your download operation.
 
 ## Use
 Starting Fileman is **really simple**. Once you have configured your resource selector and added the new channel to the tabs, just go to the tab "Settings" icon and Start the channel. *No configuration is needed*.

@@ -2,11 +2,11 @@
 
 This part is a **reference for every extension**, grouped by type. Each entry explains **what it is**, **how to use it** and **how to configure it**, with screenshots.
 
-> All extensions are installed and managed the same way, from **☰ → Manage extensions → *(family)***. If you haven't seen the manager yet, read [Extending Kwirth](../admin/08-extending-kwirth) first — it explains the common install / configure / enable / remove flow that every family shares.
+> All extensions are installed and managed the same way, from **☰ → Manage extensions → *(family)***. If you haven't seen the manager yet, read [Extending kwirth](../admin/08-extending-kwirth) first — it explains the common install / configure / enable / remove flow that every family shares.
 
 ## Plugins (channels)
 
-The channels users work with. Most are **plugins** you can install or remove; a couple (**Metrics**, **Magnify**) are **built-in** channels that ship with the Kwirth core.
+The channels users work with. Most are **plugins** you can install or remove; a couple (**Metrics**, **Magnify**) are **built-in** channels that ship with the kwirth core.
 
 - 📄 [Log](plugins/log) — real-time log streaming.
 - 📊 [Metrics](plugins/metrics) — live CPU/memory/network/IO metrics. *(built-in)*
@@ -49,7 +49,7 @@ Replace the standard login dialog with a **custom-branded login page** tied to a
 
 ## [Documentation packages](docs/index)
 
-Self-contained docsify sites served directly by Kwirth. The `core/kwirth` package (this guide) ships bundled. Additional packages can be installed from a URL, a local file or the registry. → **[Documentation packages manual](docs/index)**
+Self-contained docsify sites served directly by kwirth. The `core/kwirth` package (this guide) ships bundled. Additional packages can be installed from a URL, a local file or the registry. → **[Documentation packages manual](docs/index)**
 
 ## [Packs (extension bundles)](packs/index)
 

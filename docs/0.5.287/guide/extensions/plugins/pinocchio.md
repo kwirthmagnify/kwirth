@@ -10,7 +10,7 @@
 
 Think of it as an on-demand security/posture reviewer: point it at "every new Pod" or "every Ingress change" and let the model flag privilege issues, missing limits, exposed secrets, supply-chain risks and more — with concrete remediation.
 
-> Pinocchio uses the **LLM providers configured in Kwirth**, and can run the model **agentically** (multiple **steps** with **tools**) to gather context before it concludes.
+> Pinocchio uses the **LLM providers configured in kwirth**, and can run the model **agentically** (multiple **steps** with **tools**) to gather context before it concludes.
 
 ## When to use it
 
@@ -43,7 +43,7 @@ Each analysis in the feed lists its **findings**, colour-coded by level (**low /
 
 ## AI configuration (Providers & LLMs)
 
-Before Pinocchio can analyse anything it needs an **AI provider** and at least one **LLM**. Both are set from the header **Config** menu, and — importantly — this **AI configuration is shared across every Kwirth plugin that uses AI** (Pinocchio, **[Censor](censor)**, …). Configure a provider/model once and it's available to all of them.
+Before Pinocchio can analyse anything it needs an **AI provider** and at least one **LLM**. Both are set from the header **Config** menu, and — importantly — this **AI configuration is shared across every kwirth plugin that uses AI** (Pinocchio, **[Censor](censor)**, …). Configure a provider/model once and it's available to all of them.
 
 **Config → Provider** registers an **AI provider** and its **API key/token**:
 
@@ -54,7 +54,7 @@ A provider has two separate fields, and the distinction matters:
 | Field | What it is |
 |---|---|
 | **Name** | *Your* identifier for this particular provider instance — it's what you pick later when you define an LLM. You can register several instances of the same kind (`openai-prod`, `openai-lab`), each with its own key. |
-| **Type** | Which **SDK adapter** Kwirth uses to talk to it: `google`, `openai`, `openrouter`, `mistral`, `groq`, `deepseek`, `anthropic` or `openai-compat`. |
+| **Type** | Which **SDK adapter** kwirth uses to talk to it: `google`, `openai`, `openrouter`, `mistral`, `groq`, `deepseek`, `anthropic` or `openai-compat`. |
 | **API Key / Token** | The credential. Stored in a Kubernetes **Secret**; use the **eye** to reveal it. |
 | **Base URL** | Only for **`openai-compat`** — the base URL of the OpenAI-compatible API (must end in `/v1`). |
 

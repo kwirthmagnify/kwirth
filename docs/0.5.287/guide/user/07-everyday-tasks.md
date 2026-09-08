@@ -1,6 +1,6 @@
 # 7. Everyday tasks
 
-This chapter is a set of **step-by-step recipes** for the things people do most often in Kwirth. Each one builds on the [resource selector](04-selecting-resources) and the [channel lifecycle](05-channels), so if a step is unfamiliar, follow the link back.
+This chapter is a set of **step-by-step recipes** for the things people do most often in kwirth. Each one builds on the [resource selector](04-selecting-resources) and the [channel lifecycle](05-channels), so if a step is unfamiliar, follow the link back.
 
 > In every recipe the pattern is the same: **fill the selector → pick a channel → ADD → gear ▶ Start → configure → read**.
 
@@ -28,7 +28,7 @@ This gives you *only* that container's lines — ideal when a pod has several co
 
 1. Select the scope you care about · **Channel** → `alert` · **ADD** · **Start**.
 2. Configure the **pattern(s)** that should raise an alert (for example a regex matching `ERROR|panic`).
-3. From now on you are notified when matching lines appear — Kwirth does the matching server-side, so you only receive what you asked for.
+3. From now on you are notified when matching lines appear — kwirth does the matching server-side, so you only receive what you asked for.
 
 See the [Alert manual](../extensions/plugins/alert) for the full pattern options.
 
@@ -73,4 +73,4 @@ If you manage several clusters, just change the **Cluster** dropdown and build t
 
 ---
 
-That completes Part I. If you administer Kwirth, continue with **[Part II — Administering Kwirth](../admin/01-deployment)**.
+That completes Part I. If you administer kwirth, continue with **[Part II — Administering kwirth](../admin/01-deployment)**.

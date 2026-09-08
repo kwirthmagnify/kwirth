@@ -1,20 +1,20 @@
 # IdP integration — security notes
 
-This page describes how Kwirth protects the Single Sign-On (SSO) flow. For the general
+This page describes how kwirth protects the Single Sign-On (SSO) flow. For the general
 concepts and per-provider setup see [IdP integration](/0.5.287/idp/index) and the provider
 pages.
 
 ## Authentication vs authorization
 
 The IdP only proves **identity** (a verified email). Kwirth keeps **authorization**: the
-person must already exist as a Kwirth user *and* be bound to the exact IdP they used.
+person must already exist as a kwirth user *and* be bound to the exact IdP they used.
 There is **no auto-provisioning** — administrators create users manually. A verified email
 arriving from a different provider than the one assigned to the user is rejected.
 
 The gate requires **all three**:
 
 1. The IdP reports the email as **verified**.
-2. A Kwirth user exists with that **email as its id**.
+2. A kwirth user exists with that **email as its id**.
 3. That user is **bound to the same IdP connector** being used.
 
 ## Authorization code flow hardening

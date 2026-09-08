@@ -1,12 +1,12 @@
 # Ops
 
-The **Ops** plugin provides day-to-day operational capabilities directly inside Kwirth: interactive shell sessions, pod and namespace restarts, and object inspection — all without leaving the browser.
+The **Ops** plugin provides day-to-day operational capabilities directly inside kwirth: interactive shell sessions, pod and namespace restarts, and object inspection — all without leaving the browser.
 
 **Setup options:**
 
 | Field | Description |
 |---|---|
-| Keep-alive | Kwirth sends periodic keep-alive signals to shell sessions so they survive long periods of inactivity. Combined with Kwirth's reconnect support, sessions survive WebSocket drops too. |
+| Keep-alive | kwirth sends periodic keep-alive signals to shell sessions so they survive long periods of inactivity. Combined with kwirth's reconnect support, sessions survive WebSocket drops too. |
 | Function access key | Modifier key that must be held while pressing F1–F12 to switch between shell sessions. Options: `Disabled` (F-key switching off), `None` (no modifier), `Alt`, `Control`, `Shift`. |
 
 **Available operations** (triggered from the UI — no typed command bar):

@@ -5,7 +5,7 @@
 
 ## What a homepage is
 
-A **homepage** is the **landing dashboard** you see on the Kwirth home screen — the cluster/overview panel with your recent and favourite workspaces. Homepages are **installable extensions**, so you can swap the default landing experience for one that suits how you work (a per-cluster card wall, a live-metrics dashboard, a themed overview…).
+A **homepage** is the **landing dashboard** you see on the kwirth home screen — the cluster/overview panel with your recent and favourite workspaces. Homepages are **installable extensions**, so you can swap the default landing experience for one that suits how you work (a per-cluster card wall, a live-metrics dashboard, a themed overview…).
 
 ![Manage homepages](../../../_media/guide/manage-homepages.png)
 
@@ -27,7 +27,7 @@ Each homepage is a **card** with a description, **version**, an **Activate** but
 
 ## Configuring a homepage
 
-When you **activate** a homepage, its **setup** may open so you can configure it; afterwards, its **card in the manager shows a ⚙️ gear** you can use to **reconfigure** it at any time (things like refresh interval, endpoints or which clusters to show). **Some homepages have no configuration** — then there's no gear. Use **Deactivate** on the active card to return to Kwirth's default home.
+When you **activate** a homepage, its **setup** may open so you can configure it; afterwards, its **card in the manager shows a ⚙️ gear** you can use to **reconfigure** it at any time (things like refresh interval, endpoints or which clusters to show). **Some homepages have no configuration** — then there's no gear. Use **Deactivate** on the active card to return to kwirth's default home.
 
 ## Applying a homepage
 
@@ -37,7 +37,7 @@ When you **activate** a homepage, its **setup** may open so you can configure it
 
 ## Admin guide
 
-- **Install / activate / remove:** all from **☰ → Manage extensions → Homepages**, using the common flow in [Extending Kwirth](../../admin/08-extending-kwirth).
+- **Install / activate / remove:** all from **☰ → Manage extensions → Homepages**, using the common flow in [Extending kwirth](../../admin/08-extending-kwirth).
 - **Scope:** a homepage changes the **landing dashboard** only; it doesn't alter cluster data or permissions.
 
 ## Notes

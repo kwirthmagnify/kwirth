@@ -2,13 +2,13 @@
 
 The Kafka provider consumes messages from one or more Kafka topics and distributes them to subscribing channels using the same space/type routing model as the [Business provider](business). It supports multiple simultaneous broker connections, SASL authentication, and SSL.
 
-?> The Kafka provider is an **installable provider** — it is not bundled in Kwirth core. Install it via the provider management UI or `kwirth-dev.json`.
+?> The Kafka provider is an **installable provider** — it is not bundled in kwirth core. Install it via the provider management UI or `kwirth-dev.json`.
 
 ## What for
 
   - Ingest business events, alerts, or operational data that your existing systems already publish to Kafka.
   - Let channels like Pinocchio or Censor react to Kafka messages in real time without modifying the producers.
-  - Bridge Kafka topics into the Kwirth space/type event model.
+  - Bridge Kafka topics into the kwirth space/type event model.
 
 ## Features
 

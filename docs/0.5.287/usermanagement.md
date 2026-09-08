@@ -3,14 +3,14 @@ User management is easy and self-explaining.
 
 ![user management](./_media/user-managment.png)
 
-There exist always an user named 'admin', the one you used when first entering Kwirth. This 'User management' tool allows you to create new users and assign them some permissions.
+There exist always an user named 'admin', the one you used when first entering kwirth. This 'User management' tool allows you to create new users and assign them some permissions.
 
 Kwirth can also delegate authentication to an external Identity Provider (Single Sign-On). See [IdP integration](/0.5.287/idp/index) for details.
 
 ## Create a user
 If you need users with specific roles and permissions yo can create it very easily:
 
-1. From the main Kwirth app got to the burger and select "USer management"
+1. From the main kwirth app got to the burger and select "USer management"
 2. Click on New to create a new user.
 3. Enter user data
    - Id of the user (this will be used for logging in).
@@ -23,6 +23,6 @@ If you need users with specific roles and permissions yo can create it very easi
    - Do the same for controllers, pods and containers.
    - Once the resource is ready click on save (right side) to add the resource permission to the list of resources.
 5. Add as many resources as you need.
-6. Click on SAVE (left side), this will effectively add the user to Kwirth.
+6. Click on SAVE (left side), this will effectively add the user to kwirth.
 
 That's all!

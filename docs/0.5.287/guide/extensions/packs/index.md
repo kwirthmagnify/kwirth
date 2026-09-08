@@ -22,7 +22,7 @@ package/
 └── ...
 ```
 
-When installed, Kwirth:
+When installed, kwirth:
 1. Verifies that **none** of the member extensions is already installed (including dev-loaded ones). If any member is already present the entire pack is rejected.
 2. Installs every member using the same logic as a direct individual install.
 3. Records the pack metadata in a dedicated ConfigMap (`kwirth-packs`).
@@ -126,7 +126,7 @@ node packs/create-pack.mjs my-pack ./plugins/foo/dist/foo-1.0.0.tgz \
 }
 ```
 
-> **`extensionType`** must be `"pack"`. This is the field Kwirth uses to recognise a pack tgz.
+> **`extensionType`** must be `"pack"`. This is the field kwirth uses to recognise a pack tgz.
 
 ### `pack.json` format
 

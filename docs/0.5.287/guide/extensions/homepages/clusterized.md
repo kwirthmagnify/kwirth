@@ -27,7 +27,7 @@ When you activate it, a **Clusterized setup** dialog opens:
 
 1. **☰ → Manage extensions → Homepages** — **Deactivate** the active homepage, then **Activate** *Clusterized*.
 2. Adjust its **setup** and **Save**.
-3. **Deactivate** to return to Kwirth's default home.
+3. **Deactivate** to return to kwirth's default home.
 
 ## Notes
 

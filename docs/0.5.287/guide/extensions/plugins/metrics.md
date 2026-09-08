@@ -1,6 +1,6 @@
 # 📊 Metrics (plugin)
 
-> **Type:** Channel — **built-in** (ships with the Kwirth core)<br>
+> **Type:** Channel — **built-in** (ships with the kwirth core)<br>
 > **Package:** built-in (no install needed)<br>
 > **Icon:** 📊
 
@@ -8,7 +8,7 @@
 
 The **Metrics** channel streams **real-time resource metrics** — CPU, memory, network, I/O — for any set of Kubernetes objects, drawn as live charts. It gathers data **directly from cAdvisor/kubelet on your nodes**, so **no Prometheus** (or any scraping stack) is required.
 
-As with every channel, you can build a scope by mixing objects (pods from different namespaces, whole namespaces, or a single container) and Kwirth will chart them together.
+As with every channel, you can build a scope by mixing objects (pods from different namespaces, whole namespaces, or a single container) and kwirth will chart them together.
 
 ## When to use it
 
@@ -31,7 +31,7 @@ As with every channel, you can build a scope by mixing objects (pods from differ
 | **Mode** | Streaming mode. Currently fixed to **Stream** (real-time). |
 | **Depth** | How many values each chart keeps; when full, the oldest drop off (the chart scrolls). |
 | **Width** | How many charts to place per row. |
-| **Interval** | Refresh interval in **seconds** — Kwirth sends new values every *interval*. Lower it for denser, faster-moving charts. |
+| **Interval** | Refresh interval in **seconds** — kwirth sends new values every *interval*. Lower it for denser, faster-moving charts. |
 | **Filter** | Filter the metric list to find metrics quickly. |
 | **Metrics list** | Click a metric name to add/remove it. Pick **one or more**. |
 | **Aggregate** | With several objects in scope, **sum** their values into a single series. |
@@ -42,7 +42,7 @@ As with every channel, you can build a scope by mixing objects (pods from differ
 
 ### The `kwirth_*` convenience metrics
 
-Besides the raw cAdvisor metrics, Kwirth adds ready-made ones. They come in two families: **container-scope** (computed over **all objects in scope**) and **cluster-scope** (whole-cluster figures).
+Besides the raw cAdvisor metrics, kwirth adds ready-made ones. They come in two families: **container-scope** (computed over **all objects in scope**) and **cluster-scope** (whole-cluster figures).
 
 **Container-scope** (`kwirth_container_*`):
 

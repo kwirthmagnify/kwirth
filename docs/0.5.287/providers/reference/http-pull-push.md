@@ -1,7 +1,7 @@
 # HTTP Pull-Push
 
 Polls remote HTTP endpoints on a schedule and pushes each result to the subscribing channels. It is the
-**pull** counterpart of Business/OTLP: those wait for an external system to POST data into Kwirth, this one
+**pull** counterpart of Business/OTLP: those wait for an external system to POST data into kwirth, this one
 goes out and fetches it.
 
 Installable provider, package `@kwirthmagnify/kwirth-provider-http-pull-push`. Requires a core that injects
@@ -127,7 +127,7 @@ auth mode missing its required field.
 
 ## Security
 
-Each connection is an **outbound call with Kwirth's own network identity**: whatever the pod can reach, a
+Each connection is an **outbound call with kwirth's own network identity**: whatever the pod can reach, a
 connection can reach, internal services included. `allowInsecureTls` disables certificate verification for
 that connection only. Response bodies are handed to subscribers verbatim — treat untrusted endpoints
 accordingly.

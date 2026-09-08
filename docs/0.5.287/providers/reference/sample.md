@@ -1,6 +1,6 @@
 # Sample
 
-The Sample provider is the **official reference implementation** for building custom Kwirth providers. It fires a simple heartbeat event to all subscribing channels every 10 seconds and demonstrates the minimal interface a provider must implement.
+The Sample provider is the **official reference implementation** for building custom kwirth providers. It fires a simple heartbeat event to all subscribing channels every 10 seconds and demonstrates the minimal interface a provider must implement.
 
 ?> The Sample provider is intended for developers learning the provider API. It is not useful in production. Use it as a starting point when building your own provider.
 

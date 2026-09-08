@@ -1,6 +1,6 @@
 # Plugins (channels)
 
-**Channels** are the features users open in the [resource selector](../../user/04-selecting-resources) to observe and operate their clusters — Log, Metrics, Alert, Ops and so on. Most channels are **plugins** you install or remove; two (**Metrics** and **Magnify**) are **built-in** and ship with the Kwirth core.
+**Channels** are the features users open in the [resource selector](../../user/04-selecting-resources) to observe and operate their clusters — Log, Metrics, Alert, Ops and so on. Most channels are **plugins** you install or remove; two (**Metrics** and **Magnify**) are **built-in** and ship with the kwirth core.
 
 ## Managing channel plugins
 
@@ -13,7 +13,7 @@ The **Card / List** toggle switches to one row per extension — the same inform
 ![Plugins manager, list view](../../../_media/guide/admin-plugins-manage-list.png)
 
 
-Each card shows the plugin's **name**, **version**, a short **description** and its **source** (an npm/registry URL, or a **`dev`** badge for a local build). Use the per-card icons to open its website, open its **⚙ Settings** (a JSON **installation-config** editor for that plugin) or **delete** it, the **Card / List** toggle and **Filter** to browse, and **Install plugin** (URL or **BROWSE…**) to add one. Installing a plugin makes its channel appear in the resource selector; removing it hides it. See [Extending Kwirth](../../admin/08-extending-kwirth) for the full manager reference.
+Each card shows the plugin's **name**, **version**, a short **description** and its **source** (an npm/registry URL, or a **`dev`** badge for a local build). Use the per-card icons to open its website, open its **⚙ Settings** (a JSON **installation-config** editor for that plugin) or **delete** it, the **Card / List** toggle and **Filter** to browse, and **Install plugin** (URL or **BROWSE…**) to add one. Installing a plugin makes its channel appear in the resource selector; removing it hides it. See [Extending kwirth](../../admin/08-extending-kwirth) for the full manager reference.
 
 ## The channels
 

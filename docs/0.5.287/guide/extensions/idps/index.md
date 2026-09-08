@@ -5,7 +5,7 @@
 
 ## What an IdP connector is
 
-An **Identity Provider (IdP) connector** lets users **sign in to Kwirth with an external identity** — Google, GitLab or GitHub — instead of (or alongside) a local Kwirth account. Each connector is an **installable extension** implementing an SSO protocol (**OIDC** or **OAuth2**) against a specific provider.
+An **Identity Provider (IdP) connector** lets users **sign in to kwirth with an external identity** — Google, GitLab or GitHub — instead of (or alongside) a local kwirth account. Each connector is an **installable extension** implementing an SSO protocol (**OIDC** or **OAuth2**) against a specific provider.
 
 ![Identity providers manager](../../../_media/guide/manage-idps.png)
 
@@ -32,13 +32,13 @@ Each connector is a **card** showing the provider, the **protocol**, a status ba
 2. Click its **⚙️ gear** and fill in the provider's **client id / secret** and settings; save. The badge flips from **not configured** to **enabled**.
 3. Users now get a **"Login with …"** button on the login screen.
 
-The **full step-by-step setup** for each provider (registering the OAuth app, redirect URIs, scopes, mapping identities to Kwirth users) lives in the admin guide — see **[Identity Provider integration](../../admin/07-idp-integration)**.
+The **full step-by-step setup** for each provider (registering the OAuth app, redirect URIs, scopes, mapping identities to kwirth users) lives in the admin guide — see **[Identity Provider integration](../../admin/07-idp-integration)**.
 
 ## Admin guide
 
-- **Install / configure / enable / remove:** all from **☰ → Manage extensions → Identity providers**, using the common flow in [Extending Kwirth](../../admin/08-extending-kwirth).
+- **Install / configure / enable / remove:** all from **☰ → Manage extensions → Identity providers**, using the common flow in [Extending kwirth](../../admin/08-extending-kwirth).
 - **Security:** IdP client secrets are credentials — protect them. Review the SSO **security notes** in [IdP integration](../../admin/07-idp-integration).
-- **Identity mapping:** an external login must map to a Kwirth user/role to get scopes — see [User management](../../admin/03-user-management) and [Security & permissions](../../admin/04-security-and-permissions).
+- **Identity mapping:** an external login must map to a kwirth user/role to get scopes — see [User management](../../admin/03-user-management) and [Security & permissions](../../admin/04-security-and-permissions).
 
 ## Notes
 

@@ -5,12 +5,12 @@
 
 ## What it does
 
-The **Kafka** provider **consumes messages from Kafka topics** and distributes them to subscribing channels using the same **space / type** routing model as the Business provider. It bridges data your systems already publish to Kafka into the Kwirth event model — so channels like **[Pinocchio](../plugins/pinocchio)** or **[Censor](../plugins/censor)** can react to Kafka messages in real time without touching the producers.
+The **Kafka** provider **consumes messages from Kafka topics** and distributes them to subscribing channels using the same **space / type** routing model as the Business provider. It bridges data your systems already publish to Kafka into the kwirth event model — so channels like **[Pinocchio](../plugins/pinocchio)** or **[Censor](../plugins/censor)** can react to Kafka messages in real time without touching the producers.
 
 ## When to use it
 
 - Ingest **business events, alerts or operational data** already on Kafka.
-- React to Kafka topics from Kwirth channels with no producer changes.
+- React to Kafka topics from kwirth channels with no producer changes.
 
 ## Configuration
 

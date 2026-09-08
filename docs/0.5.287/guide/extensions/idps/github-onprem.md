@@ -26,7 +26,7 @@ Open **☰ → Manage extensions → Identity providers → Login with GitHub (g
 
 ## Setup
 
-### Step 1 — Register Kwirth as an OAuth App in GitHub Enterprise
+### Step 1 — Register kwirth as an OAuth App in GitHub Enterprise
 
 > ⚠️ It must be an **OAuth App**, not a *GitHub App*. See the [GitHub Cloud](github-cloud) connector notes for the difference.
 
@@ -44,9 +44,9 @@ In your GitHub Enterprise instance, go to **Settings → Developer settings → 
 
 Register the app and then **generate a Client Secret**. Copy both **Client ID** and **Client Secret**.
 
-> The Kwirth backend exchanges the code for a token and calls the GitHub API server-side, so the machine running the backend must be able to reach your GitHub Enterprise instance (relevant when GHE is behind a VPN).
+> The kwirth backend exchanges the code for a token and calls the GitHub API server-side, so the machine running the backend must be able to reach your GitHub Enterprise instance (relevant when GHE is behind a VPN).
 
-### Step 2 — Configure the connector in Kwirth
+### Step 2 — Configure the connector in kwirth
 
 As admin, open **☰ → Manage extensions → Identity providers**, find the **GitHub Enterprise Server** card and click **⚙️ Settings**:
 
@@ -57,7 +57,7 @@ As admin, open **☰ → Manage extensions → Identity providers**, find the **
 5. **Scopes**: leave empty for the default `read:user user:email`.
 6. Enable the toggle and save.
 
-### Step 3 — Create users in Kwirth
+### Step 3 — Create users in kwirth
 
 From **User security** (admin only): create a user whose **Id is the person's primary verified GitHub email**, set **IdP** to `github-onprem`, assign resources, and save.
 

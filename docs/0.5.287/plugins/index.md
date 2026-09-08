@@ -1,8 +1,8 @@
 # Plugins
 
-Starting with Kwirth 0.4, the channel system has been formalized as a **plugin architecture**. A plugin is a self-contained unit of functionality that extends Kwirth with a new capability — exactly the way [Backstage plugins](https://backstage.io/plugins) work.
+Starting with kwirth 0.4, the channel system has been formalized as a **plugin architecture**. A plugin is a self-contained unit of functionality that extends kwirth with a new capability — exactly the way [Backstage plugins](https://backstage.io/plugins) work.
 
-In practice, every channel you use in Kwirth (Log, Metrics, Alert, Trivy, Ops, Fileman, Magnify, Pinocchio...) is in fact a plugin. Kwirth ships with a set of built-in plugins, and you can add external ones or build your own.
+In practice, every channel you use in kwirth (Log, Metrics, Alert, Trivy, Ops, Fileman, Magnify, Pinocchio...) is in fact a plugin. Kwirth ships with a set of built-in plugins, and you can add external ones or build your own.
 
 ## How plugins work
 
@@ -10,18 +10,18 @@ A plugin is always made of two coordinated pieces:
 
 | Part | Where it runs | What it does |
 |---|---|---|
-| **Back plugin** | Kwirth backend (Node.js) | Receives WebSocket/HTTP requests from clients, interacts with Kubernetes |
-| **Front plugin** | Kwirth frontend (React) | Renders the UI, handles user interaction, communicates with the back plugin |
+| **Back plugin** | kwirth backend (Node.js) | Receives WebSocket/HTTP requests from clients, interacts with Kubernetes |
+| **Front plugin** | kwirth frontend (React) | Renders the UI, handles user interaction, communicates with the back plugin |
 
 Both parts share the same `channelId` string (e.g., `"log"`, `"metrics"`, `"trivy"`). Kwirth core uses this id to route messages between the front and back sides of the same plugin.
 
-The communication between front and back plugin travels over the **Kwirth WebSocket** — the same persistent connection that Kwirth uses for all real-time data streaming. A single WebSocket can carry multiple plugin instances simultaneously.
+The communication between front and back plugin travels over the **kwirth WebSocket** — the same persistent connection that kwirth uses for all real-time data streaming. A single WebSocket can carry multiple plugin instances simultaneously.
 
 ![plugin architecture](../_media/kwirth-kwirth-channels.png ':class=imageclass80')
 
 ## Plugin lifecycle
 
-When a user opens a new tab in Kwirth and selects a resource, the following sequence takes place:
+When a user opens a new tab in kwirth and selects a resource, the following sequence takes place:
 
 1. **initChannel** — front plugin is notified a new tab has been created.
 2. User configures the plugin (setup dialog) and clicks **START**.
@@ -29,7 +29,7 @@ When a user opens a new tab in Kwirth and selects a resource, the following sequ
 4. Back plugin starts processing data (log stream, metrics scrape, vulnerability scan, etc.) and pushes results back.
 5. **processChannelMessage** — front plugin receives each message and updates its React component.
 6. User can **PAUSE** / **CONTINUE** / **STOP** the plugin at any time.
-7. If the WebSocket drops, Kwirth will attempt to reconnect. Back plugins that support reconnect will resume the instance on the new socket automatically.
+7. If the WebSocket drops, kwirth will attempt to reconnect. Back plugins that support reconnect will resume the instance on the new socket automatically.
 
 ?> Not all plugins support every lifecycle action. A plugin declares its capabilities via `getChannelData()` (back) and the `requirements` object (front).
 
@@ -41,7 +41,7 @@ For example, you can have three Log plugin instances open at the same time — o
 
 ## Built-in channels
 
-Two channels are compiled directly into the Kwirth binary and always available:
+Two channels are compiled directly into the kwirth binary and always available:
 
 | Channel id | Description | Docs |
 |---|---|---|
@@ -50,7 +50,7 @@ Two channels are compiled directly into the Kwirth binary and always available:
 
 ## Available plugins
 
-All other capabilities are shipped as installable plugins. They can be installed, updated, and removed at runtime without restarting Kwirth:
+All other capabilities are shipped as installable plugins. They can be installed, updated, and removed at runtime without restarting kwirth:
 
 | Plugin id | Description | Docs |
 |---|---|---|

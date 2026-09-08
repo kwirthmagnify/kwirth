@@ -2,7 +2,7 @@
 
 As you open channels, each one becomes a **tab**. A **workspace** is a **named, saved set of tabs** — so instead of rebuilding the same five tabs every morning, you save them once and bring them all back with a single click.
 
-> **Terminology:** what other tools call a "dashboard" or a "board", Kwirth calls a **workspace**.
+> **Terminology:** what other tools call a "dashboard" or a "board", kwirth calls a **workspace**.
 
 ## The Workspaces menu
 
@@ -53,7 +53,7 @@ Mark a tab or a workspace as favourite with the **★** so it is always one clic
 
 ## Sharing and backing up workspaces
 
-Workspaces can be moved between users or Kwirth instances:
+Workspaces can be moved between users or kwirth instances:
 
 - **Export all workspaces** writes them to a file you can keep as a backup or hand to a teammate.
 - **Import workspaces from file** loads that file back in.

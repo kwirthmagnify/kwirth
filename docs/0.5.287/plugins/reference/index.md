@@ -1,6 +1,6 @@
 # Plugin reference
 
-Detailed configuration and usage reference for each available Kwirth plugin.
+Detailed configuration and usage reference for each available kwirth plugin.
 
 | Plugin | Description |
 |---|---|

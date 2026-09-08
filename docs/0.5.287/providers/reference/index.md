@@ -1,6 +1,6 @@
 # Provider reference
 
-Detailed reference for each available Kwirth provider.
+Detailed reference for each available kwirth provider.
 
 | Provider | Description |
 |---|---|
