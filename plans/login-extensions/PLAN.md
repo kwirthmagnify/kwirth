@@ -247,26 +247,34 @@ También: `allowedIdps: []` es *truthy* y **oculta todos** los IdP (para ofrecer
 **omitir** la clave), y `startChannel` **bloquea el acceso** a quien no sea admin y no tenga ese
 canal en `enabledChannels`.
 
-### Bug abierto — `build.mjs` no trunca el `.tgz` y puede empaquetar basura
+### Bug abierto — dos `build.mjs` a la vez corrompen el `.tgz`
 
-`logins/_template/build.mjs` (y por herencia el `build.mjs` de **todas** las extensiones de login)
-crea el bundle con `tar -czf` sobre el fichero anterior. **El tar de Windows no lo trunca**: si el
-archivo nuevo es mas pequeno que el viejo — p.ej. porque el `background.png` ha adelgazado —
-quedan bytes del anterior al final y el `.tgz` da *trailing garbage* al descomprimir.
+⚠️ **Corrige un diagnostico anterior de este mismo documento**, que atribuia el fallo a que
+`tar -czf` no truncase el fichero previo. No es eso: la causa es una **carrera entre dos builds**.
 
-**Por que es traicionero:** el fichero *parece* correcto y `tar -tzf` incluso **lista bien los tres
-ficheros**; lo unico que delata el problema es el codigo de salida. Un bundle asi se puede publicar
-sin que nadie lo note.
+Con el dev levantado hay un `watch.mjs` vigilando la carpeta del login. Regenerar el
+`background.png` dispara **su** build al mismo tiempo que el que lanzas a mano, y los dos `tar`
+escriben el mismo `dist/<id>.tgz`. El resultado es un archivo valido seguido de la cola del otro:
+al descomprimir da *trailing garbage*. El guard `building`/`pending` de `watch.mjs` no protege —
+serializa dentro de un proceso, no entre procesos.
 
-**Arreglo** (aplicado ya en `logins/santander/build.mjs`, pendiente de propagar):
+**Por que es traicionero:** el fichero *parece* correcto y `tar -tzf` **lista bien los tres
+ficheros**; solo el codigo de salida lo delata. Un bundle asi se puede publicar sin que nadie lo
+note. Ademas rompe el dev de forma confusa: `LoginManager.getBackground` no puede extraer el PNG
+de un `.tgz` corrupto, asi que el fondo desaparece y el e2e cae en cascada.
+
+**Arreglo** (aplicado en `logins/santander/build.mjs`, pendiente de propagar): empaquetar a un
+temporal propio del proceso y renombrarlo encima al final.
 
 ```js
-if (existsSync(tgzPath)) rmSync(tgzPath, { force: true, maxRetries: 10, retryDelay: 200 })
+const tmpName = `${id}.${process.pid}.tmp.tgz`
+execSync(`tar -czf ${tmpName} package.json login.json background.png`, { cwd: distDir })
+renameSync(join(distDir, tmpName), tgzPath)   // con reintentos
 ```
 
-Los reintentos no son defensivos: con el dev levantado, el back tiene ese mismo `.tgz` abierto
-(un dev login re-extrae el PNG del archivo en cada peticion del fondo) y el borrado da
-`EPERM`/`EBUSY`.
+Asi cada build produce un archivo completo y el rename solo decide cual gana. El rename se
+reintenta porque el back puede tener el `.tgz` abierto (un dev login re-extrae el PNG del archivo
+en cada peticion del fondo) y da `EPERM`/`EBUSY`.
 
 **Pendiente:** propagarlo a `logins/_template` y a los `build.mjs` de los logins existentes
 (anonymous, magnify, censor y los privados de excubitor/montag/agora/iter).
