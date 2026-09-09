@@ -6,7 +6,7 @@ import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { SettingsApi } from '../../src/api/SettingsApi'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
-import { accessKeySerialize, IKwirthSettings, EMarketplaceAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
+import { accessKeySerialize, IKwirthSettings, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 
 // configurar Kwirth (/core/settings) es admin-only: validKey + scope 'admin'
 const adminKey = { id: 'adminkey', type: 'permanent', resources: 'admin,cluster::::' }
@@ -39,7 +39,7 @@ const memConfigMaps = (initialSettings?: IKwirthSettings) => {
 // secrets en memoria. Respeta el parametro `name`: el ISecrets real guarda cada store por separado, y
 // contraseñas del registro y tokens del manifest viven en stores distintos. Un mock que los mezclara
 // dejaria pasar que el codigo pisara uno con otro.
-const CREDENTIALS_STORE = 'kwirth.marketplace.credentials'
+const CREDENTIALS_STORE = 'kwirth.registry.credentials'
 
 const memSecrets = (initialCredentials?: Record<string, any>) => {
     const stores = new Map<string, Record<string, any>>()
@@ -231,6 +231,9 @@ test('SettingsApi.read devuelve lo guardado', async () => {
 // ---- marketplaces: validacion ----
 
 const MP = { id: 'nexus', url: 'https://raw.example.com/manifest.json', label: 'Nexus', enabled: true }
+// El registro de paquetes es OTRA cosa que el marketplace: aqui llevan el mismo id a proposito, porque
+// sus secretos viven en stores distintos y no se pueden pisar.
+const REG = { id: 'nexus', url: 'https://nexus.example.com/repository/private', label: 'Nexus', enabled: true }
 
 test('validateMarketplaces acepta una lista valida y rechaza lo que no lo es', () => {
     assert.equal(SettingsApi.validateMarketplaces([]), undefined)
@@ -243,11 +246,35 @@ test('validateMarketplaces acepta una lista valida y rechaza lo que no lo es', (
     assert.match(SettingsApi.validateMarketplaces([{ ...MP, enabled: 'yes' }]) ?? '', /boolean enabled/)
 })
 
-test('validateMarketplaces exige username cuando el auth es basic', () => {
-    assert.match(SettingsApi.validateMarketplaces([{ ...MP, auth: { type: EMarketplaceAuthType.BASIC } }]) ?? '', /needs a username/)
-    assert.equal(SettingsApi.validateMarketplaces([{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }]), undefined)
-    assert.equal(SettingsApi.validateMarketplaces([{ ...MP, auth: { type: EMarketplaceAuthType.NONE } }]), undefined)
-    assert.match(SettingsApi.validateMarketplaces([{ ...MP, auth: { type: 'kerberos' } }]) ?? '', /unknown auth type/)
+test('validatePackageRegistries exige username cuando el auth es basic', () => {
+    assert.match(SettingsApi.validatePackageRegistries([{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC } }]) ?? '', /needs a username/)
+    assert.equal(SettingsApi.validatePackageRegistries([{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }]), undefined)
+    assert.equal(SettingsApi.validatePackageRegistries([{ ...REG, auth: { type: EPackageRegistryAuthType.NONE } }]), undefined)
+    assert.match(SettingsApi.validatePackageRegistries([{ ...REG, auth: { type: 'kerberos' } }]) ?? '', /unknown auth type/)
+})
+
+test('validatePackageRegistries valida la lista igual que la de marketplaces', () => {
+    assert.equal(SettingsApi.validatePackageRegistries([]), undefined)
+    assert.equal(SettingsApi.validatePackageRegistries([REG]), undefined)
+    assert.match(SettingsApi.validatePackageRegistries('nope') ?? '', /must be an array/)
+    assert.match(SettingsApi.validatePackageRegistries([{ ...REG, id: '' }]) ?? '', /non-empty id/)
+    assert.match(SettingsApi.validatePackageRegistries([REG, REG]) ?? '', /duplicated/)
+    assert.match(SettingsApi.validatePackageRegistries([{ ...REG, url: 'ftp://x' }]) ?? '', /http\(s\) url/)
+    assert.match(SettingsApi.validatePackageRegistries([{ ...REG, label: '' }]) ?? '', /non-empty label/)
+    assert.match(SettingsApi.validatePackageRegistries([{ ...REG, enabled: 'yes' }]) ?? '', /boolean enabled/)
+})
+
+// Un marketplace ya NO lleva credenciales de paquete: manifest y paquetes son sitios distintos.
+test('el marketplace ya no acepta credenciales de paquete: se ignoran, no se persisten', async () => {
+    const srv = await startServer()
+    try {
+        const body = { marketplaces: [{ ...MP, auth: { type: 'basic', username: 'u', password: 'colado' } }] }
+        const res = await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
+        assert.equal(res.status, 200)
+        assert.ok(!JSON.stringify(srv.store.current()).includes('colado'), 'no puede acabar en el configmap')
+        assert.equal(srv.secrets.current()['nexus'], undefined, 'ni en el store de contraseñas de registro')
+    }
+    finally { await srv.stop() }
 })
 
 test('PUT rechaza marketplaces invalidos → 400 sin persistir', async () => {
@@ -272,7 +299,7 @@ test('PUT rechaza marketplaces invalidos → 400 sin persistir', async () => {
 test('PUT desvia la contraseña a secrets y NUNCA la guarda en settings', async () => {
     const srv = await startServer()
     try {
-        const body = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: 's3cr3t' } }] }
+        const body = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u', password: 's3cr3t' } }] }
         const res = await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
         assert.equal(res.status, 200)
         // la contraseña esta en secrets...
@@ -284,22 +311,22 @@ test('PUT desvia la contraseña a secrets y NUNCA la guarda en settings', async 
 })
 
 test('GET devuelve la contraseña guardada, para pre-rellenar el campo', async () => {
-    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const stored: IKwirthSettings = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored, { nexus: 's3cr3t' })
     try {
         const json = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
-        assert.equal(json.marketplaces?.[0].auth?.password, 's3cr3t')
-        assert.equal(json.marketplaces?.[0].auth?.username, 'u')
+        assert.equal(json.packageRegistries?.[0].auth?.password, 's3cr3t')
+        assert.equal(json.packageRegistries?.[0].auth?.username, 'u')
     }
     finally { await srv.stop() }
 })
 
 test('GET no trae password cuando no hay ninguna guardada', async () => {
-    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const stored: IKwirthSettings = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored)
     try {
         const json = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
-        assert.equal(json.marketplaces?.[0].auth?.password, undefined)
+        assert.equal(json.packageRegistries?.[0].auth?.password, undefined)
     }
     finally { await srv.stop() }
 })
@@ -307,15 +334,15 @@ test('GET no trae password cuando no hay ninguna guardada', async () => {
 test('el PUT devuelve el secreto ya persistido, para que el formulario quede coherente', async () => {
     const srv = await startServer()
     try {
-        const body = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: 's3cr3t' } }] }
+        const body = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u', password: 's3cr3t' } }] }
         const json = await (await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })).json() as IKwirthSettings
-        assert.equal(json.marketplaces?.[0].auth?.password, 's3cr3t')
+        assert.equal(json.packageRegistries?.[0].auth?.password, 's3cr3t')
     }
     finally { await srv.stop() }
 })
 
 test('un no-admin no llega a los secretos porque no llega a los settings', async () => {
-    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const stored: IKwirthSettings = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored, { nexus: 's3cr3t' })
     try {
         const res = await fetch(`${srv.base}/core/settings`, { headers: NONADMIN_AUTH })
@@ -326,22 +353,22 @@ test('un no-admin no llega a los secretos porque no llega a los settings', async
 })
 
 test('PUT sin password conserva la ya guardada, no la borra', async () => {
-    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const stored: IKwirthSettings = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored, { nexus: 's3cr3t' })
     try {
-        const body = { marketplaces: [{ ...MP, label: 'Nexus renombrado', auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+        const body = { packageRegistries: [{ ...REG, label: 'Nexus renombrado', auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
         await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
         assert.equal(srv.secrets.current()['nexus'], 's3cr3t')
-        assert.equal(srv.store.current()?.marketplaces?.[0].label, 'Nexus renombrado')
+        assert.equal(srv.store.current()?.packageRegistries?.[0].label, 'Nexus renombrado')
     }
     finally { await srv.stop() }
 })
 
 test('PUT con el password VACIO borra el guardado: es el usuario limpiando el campo', async () => {
-    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const stored: IKwirthSettings = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored, { nexus: 's3cr3t' })
     try {
-        const body = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: '' } }] }
+        const body = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u', password: '' } }] }
         await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
         assert.equal(srv.secrets.current()['nexus'], undefined)
     }
@@ -349,34 +376,47 @@ test('PUT con el password VACIO borra el guardado: es el usuario limpiando el ca
 })
 
 test('reenviar el password pre-rellenado no lo altera (roundtrip del formulario)', async () => {
-    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+    const stored: IKwirthSettings = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored, { nexus: 's3cr3t' })
     try {
         // el front recibe el secreto en el GET y lo devuelve tal cual al guardar otro campo
         const got = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
-        const rows = got.marketplaces!.map(m => ({ ...m, label: 'Otro nombre' }))
-        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: rows }) })
+        const rows = got.packageRegistries!.map(r => ({ ...r, label: 'Otro nombre' }))
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ packageRegistries: rows }) })
         assert.equal(srv.secrets.current()['nexus'], 's3cr3t')
-        assert.equal(srv.store.current()?.marketplaces?.[0].label, 'Otro nombre')
+        assert.equal(srv.store.current()?.packageRegistries?.[0].label, 'Otro nombre')
         assert.ok(!JSON.stringify(srv.store.current()).includes('s3cr3t'), 'el roundtrip tampoco puede colarlo en el configmap')
     }
     finally { await srv.stop() }
 })
 
-test('borrar un marketplace se lleva su contraseña', async () => {
-    const stored: IKwirthSettings = { marketplaces: [{ ...MP, auth: { type: EMarketplaceAuthType.BASIC, username: 'u' } }] }
+test('borrar un registro se lleva su contraseña', async () => {
+    const stored: IKwirthSettings = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored, { nexus: 's3cr3t' })
     try {
-        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: [] }) })
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ packageRegistries: [] }) })
         assert.equal(srv.secrets.current()['nexus'], undefined)
     }
     finally { await srv.stop() }
 })
 
-test('getPassword devuelve la contraseña al back y undefined si no hay', async () => {
+// Un PUT que solo trae marketplaces no puede llevarse por delante los registros, ni al reves: son dos
+// listas independientes y el merge es parcial.
+test('tocar los marketplaces no borra los registros', async () => {
+    const stored: IKwirthSettings = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
+    const srv = await startServer(stored, { nexus: 's3cr3t' })
+    try {
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: [MP] }) })
+        assert.equal(srv.store.current()?.packageRegistries?.length, 1)
+        assert.equal(srv.secrets.current()['nexus'], 's3cr3t')
+    }
+    finally { await srv.stop() }
+})
+
+test('getRegistryPassword devuelve la contraseña al back y undefined si no hay', async () => {
     const secrets = memSecrets({ nexus: 's3cr3t' })
-    assert.equal(await SettingsApi.getPassword(secrets.s, 'nexus'), 's3cr3t')
-    assert.equal(await SettingsApi.getPassword(secrets.s, 'otro'), undefined)
+    assert.equal(await SettingsApi.getRegistryPassword(secrets.s, 'nexus'), 's3cr3t')
+    assert.equal(await SettingsApi.getRegistryPassword(secrets.s, 'otro'), undefined)
 })
 
 // ---- token de lectura del manifest, separado de la contraseña del registro ----
@@ -402,7 +442,7 @@ test('GET devuelve el token del manifest guardado', async () => {
             body: JSON.stringify({ marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: 'glpat-abc' } }] }) })
         const json = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
         assert.equal(json.marketplaces?.[0].manifestAuth?.token, 'glpat-abc')
-        assert.equal(json.marketplaces?.[0].auth?.password, undefined, 'y no se contamina con la contraseña del registro')
+        assert.equal(json.packageRegistries?.[0].auth?.password, undefined, 'y no se contamina con la contraseña del registro')
     }
     finally { await srv.stop() }
 })
@@ -410,32 +450,34 @@ test('GET devuelve el token del manifest guardado', async () => {
 test('token del manifest y contraseña del registro son independientes', async () => {
     const srv = await startServer()
     try {
-        const body = { marketplaces: [{ ...MP,
-            manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: 'glpat-manifest' },
-            auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: 'nexus-pass' } }] }
+        // mismo id en las dos listas: cada secreto va a su store y no se pisan
+        const body = {
+            marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: 'glpat-manifest' } }],
+            packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u', password: 'nexus-pass' } }]
+        }
         await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
         assert.equal(await SettingsApi.getManifestToken(srv.secrets.s, 'nexus'), 'glpat-manifest')
-        assert.equal(await SettingsApi.getPassword(srv.secrets.s, 'nexus'), 'nexus-pass')
+        assert.equal(await SettingsApi.getRegistryPassword(srv.secrets.s, 'nexus'), 'nexus-pass')
     }
     finally { await srv.stop() }
 })
 
 test('vaciar el token lo borra sin tocar la contraseña del registro', async () => {
-    const stored: IKwirthSettings = { marketplaces: [{ ...MP,
-        auth: { type: EMarketplaceAuthType.BASIC, username: 'u' },
-        manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN } }] }
+    const stored: IKwirthSettings = {
+        marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN } }],
+        packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }]
+    }
     const srv = await startServer(stored)
     try {
-        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: [{ ...MP,
-            auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: 'nexus-pass' },
-            manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: 'glpat-abc' } }] }) })
-
-        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ marketplaces: [{ ...MP,
-            auth: { type: EMarketplaceAuthType.BASIC, username: 'u', password: 'nexus-pass' },
-            manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: '' } }] }) })
+        const withBoth = (token: string) => JSON.stringify({
+            marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token } }],
+            packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u', password: 'nexus-pass' } }]
+        })
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: withBoth('glpat-abc') })
+        await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: withBoth('') })
 
         assert.equal(await SettingsApi.getManifestToken(srv.secrets.s, 'nexus'), undefined)
-        assert.equal(await SettingsApi.getPassword(srv.secrets.s, 'nexus'), 'nexus-pass')
+        assert.equal(await SettingsApi.getRegistryPassword(srv.secrets.s, 'nexus'), 'nexus-pass')
     }
     finally { await srv.stop() }
 })

@@ -30,6 +30,10 @@ interface IInstalledHomepage {
     description: string
     website?: string
     installedFrom?: string
+
+    marketplaceId?: string
+
+    marketplaceLabel?: string
     hasPreview?: boolean
     requiresRestart?: boolean
 }
@@ -81,11 +85,6 @@ const openReconfigure = (id: string) => {
     }, {} as Record<string, IHomepageManifestEntry[]>)
     Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
 
-    // Procedencia de una extension YA instalada: no sale de installedFrom, porque una instalada en dev no
-    // tiene url. Se busca el id en el catalogo ya resuelto; la resolucion garantiza que todas las entradas
-    // de un id vienen del mismo marketplace, asi que con la primera basta.
-    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
-
     const getSelectedEntry = (id: string): IHomepageManifestEntry => {
         const group = groupedAvailable[id]
         const version = selectedVersions[id] ?? group[0].version
@@ -126,7 +125,7 @@ const openReconfigure = (id: string) => {
         setError(undefined)
         setInstallingId(hp.id)
         try {
-            const res = await fetch(`${backendUrl}/core/homepages/install`, addPostAuthorization(accessString, JSON.stringify({ url: hp.url })))
+            const res = await fetch(`${backendUrl}/core/homepages/install`, addPostAuthorization(accessString, JSON.stringify({ url: hp.url, marketplaceId: hp.marketplaceId, marketplaceLabel: hp.marketplaceLabel })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -316,7 +315,7 @@ const openReconfigure = (id: string) => {
                                         description={hp.description}
                                         badge={isActive(hp.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} /> : undefined}
                                         source={resolveSource(hp.installedFrom)}
-                                        marketplaceLabel={marketplaceOfInstalled(hp.id)}
+                                        marketplaceLabel={hp.marketplaceLabel}
                                         installedFrom={hp.installedFrom}
                                         website={hp.website}
                                         action={
@@ -348,8 +347,8 @@ const openReconfigure = (id: string) => {
                                         <Typography variant='caption' color='text.secondary'>{hp.description}</Typography>
                                     </Box>,
                                     <Box key={`${hp.id}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
-                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(hp.id)} installedFrom={hp.installedFrom} />
-                                        <MarketplaceBadge label={marketplaceOfInstalled(hp.id)} installedFrom={hp.installedFrom} />
+                                        <MarketplaceSourceIcon label={hp.marketplaceLabel} installedFrom={hp.installedFrom} />
+                                        <MarketplaceBadge label={hp.marketplaceLabel} installedFrom={hp.installedFrom} />
                                     </Box>,
                                     <Box key={`${hp.id}-active`} sx={{ justifySelf: 'end', py: 1 }}>{isActive(hp.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} />}</Box>,
                                     <Box key={`${hp.id}-version`} sx={{ py: 1 }}><Chip label={`v${hp.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} /></Box>,

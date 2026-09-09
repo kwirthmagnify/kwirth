@@ -45,6 +45,10 @@ interface IInstalledSender {
     description: string
     website?: string
     installedFrom?: string
+
+    marketplaceId?: string
+
+    marketplaceLabel?: string
     configNames: string[]
     hasFront?: boolean
     requiresRestart?: boolean
@@ -71,7 +75,6 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
     const [installed, setInstalled] = useState<IInstalledSender[]>([])
     const [available, setAvailable] = useState<ISenderManifestEntry[]>([])
 
-    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [filterText, setFilterText] = useState('')
     const [availableFilter, setAvailableFilter] = useState('')
@@ -240,7 +243,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/core/senders/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
+            const res = await fetch(`${backendUrl}/core/senders/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             const meta: IInstalledSender = await res.json()
             await loadInstalled()
@@ -595,8 +598,8 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                <MarketplaceSourceIcon label={marketplaceOfInstalled(sender.id)} installedFrom={sender.installedFrom} />
-                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(sender.id)} installedFrom={sender.installedFrom} /></Box>
+                <MarketplaceSourceIcon label={sender.marketplaceLabel} installedFrom={sender.installedFrom} />
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={sender.marketplaceLabel} installedFrom={sender.installedFrom} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(sender.installedFrom)}</Box>
                 <Stack direction='row' spacing={0.5} alignItems='center'>
                     {sender.configNames.length > 0 && <Chip label={`${sender.configNames.length} config${sender.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' sx={compactChip} />}
@@ -655,8 +658,8 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                     <Box key={s.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Send fontSize='small' /></Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.displayName || s.id}</Typography>
-                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(s.id)} installedFrom={s.installedFrom} />
-                                        <MarketplaceBadge label={marketplaceOfInstalled(s.id)} installedFrom={s.installedFrom} />
+                                        <MarketplaceSourceIcon label={s.marketplaceLabel} installedFrom={s.installedFrom} />
+                                        <MarketplaceBadge label={s.marketplaceLabel} installedFrom={s.installedFrom} />
                                         {s.configNames.length > 0 && <Chip label={`${s.configNames.length} config${s.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' sx={compactChip} />}
                                         <Tooltip title='Configure'>
                                             <IconButton size='small' color='primary' onClick={() => expandSender(s.id)}>

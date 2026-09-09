@@ -110,8 +110,13 @@ test('help button: el dialogo de configuracion de un sender tambien lleva ayuda'
     await help.click()
     await expect.poll(async () => (await readOpens()).length, { timeout: 5_000 }).toBeGreaterThan(before)
 
+    // Aqui solo se comprueba que el dialogo LLEVA ayuda y que apunta a la guia de senders. A que pagina
+    // exactamente depende del sender: desde que cada uno enlaza su propia referencia, exigir la general
+    // hacia que este test pasara o fallara segun cual fuese el primer sender instalado — parecia flaky y
+    // era una asercion caducada. Las dos ramas —pagina propia y caida a la general— las cubre
+    // sender-help.spec.ts, que las fuerza a proposito.
     const last = (await readOpens()).at(-1)!
-    expect(last.url).toContain('guide/extensions/senders/index?id=managing-configuring-senders')
+    expect(last.url).toContain('guide/extensions/senders/')
     expect(last.url).toContain('/#/')
     expect(last.target).toBe('kwirth-guide')
 

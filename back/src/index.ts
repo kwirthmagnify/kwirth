@@ -14,6 +14,7 @@ import { ApiKeyApi } from './api/ApiKeyApi'
 import { SettingsApi } from './api/SettingsApi'
 import { MarketplaceApi } from './api/MarketplaceApi'
 import { MarketplaceManager } from './tools/MarketplaceManager'
+import { configurePackageRegistries } from './tools/PackageRegistries'
 import { LoginApi } from './api/LoginApi'
 
 // HTTP server & websockets
@@ -1259,6 +1260,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         // Resolucion de marketplaces: el back descarga los manifests (publico + los configurados),
         // filtra por tipo y aplica la precedencia, para que la regla exista en un solo sitio.
         let marketplaceManager = new MarketplaceManager(ri.configMaps, ri.secrets)
+        // Los nueve managers que instalan extensiones solo reciben configMaps, asi que las credenciales
+        // de descarga se resuelven aqui una vez en vez de enhebrarlas por nueve constructores.
+        configurePackageRegistries(ri.configMaps, ri.secrets)
         let marketplaceApi = new MarketplaceApi(marketplaceManager, apiKeyApi)
         riRouter.use(`/core/marketplace`, marketplaceApi.router)
         // Catálogo global de scopes RBAC (built-in del core + los que declaran los canales): lo consume el

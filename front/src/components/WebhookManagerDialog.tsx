@@ -45,6 +45,10 @@ interface IInstalledWebhook {
     description: string
     website?: string
     installedFrom?: string
+
+    marketplaceId?: string
+
+    marketplaceLabel?: string
     configNames: string[]
     hasFront?: boolean
     requiresRestart?: boolean
@@ -68,7 +72,6 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
     const [installed, setInstalled] = useState<IInstalledWebhook[]>([])
     const [available, setAvailable] = useState<IWebhookManifestEntry[]>([])
 
-    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [filterText, setFilterText] = useState('')
     const [availableFilter, setAvailableFilter] = useState('')
@@ -196,7 +199,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/core/webhooks/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
+            const res = await fetch(`${backendUrl}/core/webhooks/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             const meta: IInstalledWebhook = await res.json()
             await loadInstalled()
@@ -429,8 +432,8 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                <MarketplaceSourceIcon label={marketplaceOfInstalled(webhook.id)} installedFrom={webhook.installedFrom} />
-                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(webhook.id)} installedFrom={webhook.installedFrom} /></Box>
+                <MarketplaceSourceIcon label={webhook.marketplaceLabel} installedFrom={webhook.installedFrom} />
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={webhook.marketplaceLabel} installedFrom={webhook.installedFrom} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(webhook.installedFrom)}</Box>
                 <Stack direction='row' spacing={0.5} alignItems='center'>
                     {webhook.configNames.length > 0 && <Chip label={`${webhook.configNames.length} config${webhook.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' sx={compactChip} />}
@@ -486,8 +489,8 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                     <Box key={s.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Https fontSize='small' /></Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.displayName || s.id}</Typography>
-                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(s.id)} installedFrom={s.installedFrom} />
-                                        <MarketplaceBadge label={marketplaceOfInstalled(s.id)} installedFrom={s.installedFrom} />
+                                        <MarketplaceSourceIcon label={s.marketplaceLabel} installedFrom={s.installedFrom} />
+                                        <MarketplaceBadge label={s.marketplaceLabel} installedFrom={s.installedFrom} />
                                         {s.configNames.length > 0 && <Chip label={`${s.configNames.length} config${s.configNames.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' sx={compactChip} />}
                                         <Tooltip title='Configure'>
                                             <IconButton size='small' color='primary' onClick={() => expandWebhook(s.id)}>

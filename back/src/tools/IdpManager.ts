@@ -1,8 +1,6 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import https from 'https'
-import http from 'http'
 import zlib from 'zlib'
 import tar from 'tar'
 import { ISecrets } from './ISecrets'
@@ -11,6 +9,7 @@ import { ELogComponent, logError, logInfo } from './Logging'
 import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
+import { downloadFile, packageHeaders } from './PackageRegistries'
 
 const IDPS_SECRET = 'kwirth-idps'
 const CONNECTORS_INDEX = 'kwirth-idp-connectors-index'
@@ -25,6 +24,11 @@ interface IIdpConnectorInfo {
     installed: boolean          // false = bundled/dev registrado en codigo; true = instalado en runtime
     version?: string
     installedFrom?: string      // 'dev' | 'bundled' | 'local' | URL de origen
+    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
+    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
+    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    marketplaceId?: string
+    marketplaceLabel?: string
     website?: string
     description?: string
 }
@@ -38,6 +42,11 @@ interface IIdpConnectorMeta {
     description?: string
     website?: string
     installedFrom?: string
+    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
+    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
+    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    marketplaceId?: string
+    marketplaceLabel?: string
     backStored?: boolean
     requiresRestart?: boolean
     requiresExtension?: string[]
@@ -49,13 +58,23 @@ interface IIdpConnectorMeta {
     - Instancias: se persisten TODAS en un unico Secret 'kwirth-idps' (incluye secretos como clientSecret).
     Espejo del patron de ProviderManager, pero la config va a Secret (no ConfigMap) y en un unico documento.
 */
+// Lo que se sabe de un conector en runtime, para cruzarlo con su clase al listarlos en la UI.
+interface IConnectorRuntimeMeta {
+    version?: string
+    installedFrom?: string
+    marketplaceId?: string
+    marketplaceLabel?: string
+    website?: string
+    description?: string
+}
+
 export class IdpManager {
     private secrets: ISecrets
     private configMaps: IConfigMaps
     private registeredIdps: Map<string, TIdpConnectorConstructor>
     private installedConnectorIds = new Set<string>()
     // meta por conector (version/origen/website) para la UI, cruzada en listConnectors; poblada en init/install/loadDevIdps
-    private connectorMeta = new Map<string, { version?: string, installedFrom?: string, website?: string, description?: string }>()
+    private connectorMeta = new Map<string, IConnectorRuntimeMeta>()
 
     constructor(secrets: ISecrets, configMaps: IConfigMaps, registeredIdps: Map<string, TIdpConnectorConstructor>) {
         this.secrets = secrets
@@ -90,6 +109,8 @@ export class IdpManager {
                     installed: this.installedConnectorIds.has(connectorId),
                     version: m?.version,
                     installedFrom: m?.installedFrom,
+                    marketplaceId: m?.marketplaceId,
+                    marketplaceLabel: m?.marketplaceLabel,
                     website: m?.website,
                     description: m?.description
                 })
@@ -113,7 +134,7 @@ export class IdpManager {
         const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
         for (const m of index) {
             this.installedConnectorIds.add(m.id)
-            this.connectorMeta.set(m.id, { version: m.version, installedFrom: m.installedFrom, website: m.website, description: m.description })
+            this.connectorMeta.set(m.id, { version: m.version, installedFrom: m.installedFrom, marketplaceId: m.marketplaceId, marketplaceLabel: m.marketplaceLabel, website: m.website, description: m.description })
         }
     }
 
@@ -123,7 +144,7 @@ export class IdpManager {
 
     // instala un conector desde un tgz (URL http(s), file:// o ruta local). El back.js se guarda
     // comprimido en configmap y se registra en registeredIdps.
-    async install(tarGzUrl: string, installedFrom?: string): Promise<IIdpConnectorMeta> {
+    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<IIdpConnectorMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-idp-${Date.now()}.tgz`)
         let tmpDir = path.join(os.tmpdir(), `kwirth-idp-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
@@ -134,7 +155,7 @@ export class IdpManager {
                 fs.copyFileSync(localPath, tmpTgz)
             }
             else {
-                await this.downloadFile(tarGzUrl, tmpTgz)
+                await downloadFile(tarGzUrl, tmpTgz, await packageHeaders(tarGzUrl))
             }
             await tar.x({ file: tmpTgz, cwd: tmpDir })
 
@@ -157,6 +178,8 @@ export class IdpManager {
                 description: pkg.description,
                 website: pkg.website,
                 installedFrom: installedFrom ?? tarGzUrl,
+                marketplaceId,
+                marketplaceLabel,
                 requiresRestart: pkg.requiresRestart ?? false,
                 requiresExtension: pkg.requiresExtension ?? []
             }
@@ -177,7 +200,7 @@ export class IdpManager {
             else index.push(meta)
             await this.configMaps.write(CONNECTORS_INDEX, index)
             this.installedConnectorIds.add(meta.id)
-            this.connectorMeta.set(meta.id, { version: meta.version, installedFrom: meta.installedFrom, website: meta.website, description: meta.description })
+            this.connectorMeta.set(meta.id, { version: meta.version, installedFrom: meta.installedFrom, marketplaceId: meta.marketplaceId, marketplaceLabel: meta.marketplaceLabel, website: meta.website, description: meta.description })
 
             this.loadBackConnector(meta.id, backJs)
             logInfo(ELogComponent.AUTH, `IdP connector '${meta.id}' v${meta.version} installed`)
@@ -277,27 +300,6 @@ export class IdpManager {
         catch (err) {
             logError(ELogComponent.AUTH, `Error loading IdP connector '${connectorId}': ${err}`)
         }
-    }
-
-    private downloadFile(url: string, destPath: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const protocol = url.startsWith('https') ? https : http
-            const file = fs.createWriteStream(destPath)
-            protocol.get(url, { headers: { 'User-Agent': 'kwirth/1.0' } }, res => {
-                if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    file.close()
-                    this.downloadFile(res.headers.location, destPath).then(resolve).catch(reject)
-                    return
-                }
-                if (res.statusCode && res.statusCode !== 200) {
-                    file.close()
-                    reject(new Error(`HTTP ${res.statusCode} downloading ${url}`))
-                    return
-                }
-                res.pipe(file)
-                file.on('finish', () => { file.close(); resolve() })
-            }).on('error', err => { file.close(); reject(err) })
-        })
     }
 
     // ---------------- instancias (Secret kwirth-idps) ----------------

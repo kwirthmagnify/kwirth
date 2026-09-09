@@ -30,6 +30,10 @@ interface IInstalledTheme {
     description: string
     website?: string
     installedFrom?: string
+
+    marketplaceId?: string
+
+    marketplaceLabel?: string
     hasPreview?: boolean
     requiresRestart?: boolean
 }
@@ -95,11 +99,6 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
     }, {} as Record<string, IThemeManifestEntry[]>)
     Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
 
-    // Procedencia de una extension YA instalada: no sale de installedFrom, porque una instalada en dev no
-    // tiene url. Se busca el id en el catalogo ya resuelto; la resolucion garantiza que todas las entradas
-    // de un id vienen del mismo marketplace, asi que con la primera basta.
-    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
-
     const getSelectedEntry = (id: string): IThemeManifestEntry => {
         const group = groupedAvailable[id]
         const version = selectedVersions[id] ?? group[0].version
@@ -144,7 +143,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
         setError(undefined)
         setInstallingId(theme.id)
         try {
-            const res = await fetch(`${backendUrl}/core/themes/install`, addPostAuthorization(accessString, JSON.stringify({ url: theme.url })))
+            const res = await fetch(`${backendUrl}/core/themes/install`, addPostAuthorization(accessString, JSON.stringify({ url: theme.url, marketplaceId: theme.marketplaceId, marketplaceLabel: theme.marketplaceLabel })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -333,7 +332,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                         description={t.description}
                                         website={t.website}
                                         source={resolveSource(t.installedFrom)}
-                                        marketplaceLabel={marketplaceOfInstalled(t.id)}
+                                        marketplaceLabel={t.marketplaceLabel}
                                         installedFrom={t.installedFrom}
                                         previewUrl={t.hasPreview ? `${backendUrl}/core/themes/${t.id}/preview` : undefined}
                                         badge={isActive(t.id) ? <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} /> : undefined}
@@ -365,8 +364,8 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                                     <Box key={`${t.id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Palette fontSize='small' /></Box>,
                                     <Typography key={`${t.id}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{t.displayName || t.name}</Typography>,
                                     <Box key={`${t.id}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
-                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(t.id)} installedFrom={t.installedFrom} />
-                                        <MarketplaceBadge label={marketplaceOfInstalled(t.id)} installedFrom={t.installedFrom} />
+                                        <MarketplaceSourceIcon label={t.marketplaceLabel} installedFrom={t.installedFrom} />
+                                        <MarketplaceBadge label={t.marketplaceLabel} installedFrom={t.installedFrom} />
                                     </Box>,
                                     <Box key={`${t.id}-active`} sx={{ justifySelf: 'end', py: 1 }}>{isActive(t.id) && <Chip label='active' size='small' color='primary' icon={<CheckCircle />} sx={compactChip} />}</Box>,
                                     <Box key={`${t.id}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(t.installedFrom)}</Box>,

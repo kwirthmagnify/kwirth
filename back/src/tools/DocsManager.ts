@@ -6,8 +6,7 @@ import tar from 'tar'
 import os from 'os'
 import path from 'path'
 import fs from 'fs'
-import https from 'https'
-import http from 'http'
+import { downloadFile, packageHeaders } from './PackageRegistries'
 
 export interface IDocsMeta {
     id: string
@@ -18,6 +17,11 @@ export interface IDocsMeta {
     icon?: string
     website?: string
     installedFrom?: string
+    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
+    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
+    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    marketplaceId?: string
+    marketplaceLabel?: string
 }
 
 // Que sobra en el indice cuando se relee kwirth-dev.json. Solo se reconcilia lo marcado 'dev': lo bundled,
@@ -56,7 +60,7 @@ export class DocsManager {
         return (await this.configMaps.read('kwirth-docs-index', [])) as IDocsMeta[] || []
     }
 
-    async install(tarGzUrl: string, installedFrom?: string): Promise<IDocsMeta> {
+    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<IDocsMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-docs-${Date.now()}.tgz`)
         const isLocalPath = tarGzUrl.startsWith('file://') || (!tarGzUrl.startsWith('http://') && !tarGzUrl.startsWith('https://'))
 
@@ -66,7 +70,7 @@ export class DocsManager {
                 fs.copyFileSync(localPath, tmpTgz)
             }
             else {
-                await this.downloadFile(tarGzUrl, tmpTgz)
+                await downloadFile(tarGzUrl, tmpTgz, await packageHeaders(tarGzUrl))
             }
 
             const peekDir = path.join(os.tmpdir(), `kwirth-docs-peek-${Date.now()}`)
@@ -93,6 +97,10 @@ export class DocsManager {
                 await tar.x({ file: tmpTgz, cwd: destDir, strip: stripLevel })
 
                 meta.installedFrom = installedFrom ?? tarGzUrl
+
+                meta.marketplaceId = marketplaceId
+
+                meta.marketplaceLabel = marketplaceLabel
                 const updatedIndex = [...index.filter(d => !(d.targetType === meta.targetType && d.id === meta.id)), meta]
                 await this.configMaps.write('kwirth-docs-index', updatedIndex)
                 this.cachedIndex = updatedIndex
@@ -201,7 +209,7 @@ export class DocsManager {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-docs-rehydrate-${meta.id}.tgz`)
         const peekDir = path.join(os.tmpdir(), `kwirth-docs-rehydrate-peek-${meta.id}`)
         try {
-            await this.downloadFile(meta.installedFrom, tmpTgz)
+            await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
             fs.mkdirSync(peekDir, { recursive: true })
             await tar.x({ file: tmpTgz, cwd: peekDir, filter: (p: string) => p.endsWith('package.json') })
             const strip = fs.existsSync(path.join(peekDir, 'package.json')) ? 0 : 1
@@ -283,26 +291,5 @@ export class DocsManager {
             if (fs.existsSync(destDir)) continue
             await this.rehydrate(meta)
         }
-    }
-
-    private downloadFile(url: string, destPath: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const protocol = url.startsWith('https') ? https : http
-            const file = fs.createWriteStream(destPath)
-            protocol.get(url, { headers: { 'User-Agent': 'kwirth/1.0' } }, res => {
-                if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    file.close()
-                    this.downloadFile(res.headers.location, destPath).then(resolve).catch(reject)
-                    return
-                }
-                if (res.statusCode && res.statusCode !== 200) {
-                    file.close()
-                    reject(new Error(`HTTP ${res.statusCode} downloading ${url}`))
-                    return
-                }
-                res.pipe(file)
-                file.on('finish', () => { file.close(); resolve() })
-            }).on('error', err => { file.close(); reject(err) })
-        })
     }
 }

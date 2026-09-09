@@ -54,7 +54,7 @@ import { SenderManagerDialog } from './components/SenderManagerDialog'
 import { WebhookManagerDialog } from './components/WebhookManagerDialog'
 import { ThemeManagerDialog } from './components/ThemeManagerDialog'
 import { HomepageManagerDialog } from './components/HomepageManagerDialog'
-import { DocsDialog } from './components/DocsDialog'
+import { DocsManagerDialog } from './components/DocsManagerDialog'
 import { LoginManagerDialog } from './components/LoginManagerDialog'
 import { PackManagerDialog } from './components/PackManagerDialog'
 import { LoginExtensionPage } from './components/LoginExtensionPage'
@@ -283,7 +283,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showWebhookManagerDialog, setShowWebhookManagerDialog]=useState<boolean>(false)
     const [showThemeManagerDialog, setShowThemeManagerDialog]=useState<boolean>(false)
     const [showHomepageManagerDialog, setShowHomepageManagerDialog]=useState<boolean>(false)
-    const [showDocsDialog, setShowDocsDialog]=useState<boolean>(false)
+    const [showDocsManagerDialog, setShowDocsManagerDialog]=useState<boolean>(false)
     const [showLoginManagerDialog, setShowLoginManagerDialog]=useState<boolean>(false)
     const [showPackManagerDialog, setShowPackManagerDialog]=useState<boolean>(false)
     const [loginExtError, setLoginExtError]=useState<string|undefined>(undefined)
@@ -992,7 +992,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 case EExtensionType.WEBHOOK:  setShowWebhookManagerDialog(true); break
                 case EExtensionType.THEME:    setShowThemeManagerDialog(true); break
                 case EExtensionType.HOMEPAGE: setShowHomepageManagerDialog(true); break
-                case EExtensionType.DOCS:     setShowDocsDialog(true); break
+                case EExtensionType.DOCS:     setShowDocsManagerDialog(true); break
             }
         }
         if (newTab.channel.requirements.multiCluster) {
@@ -1908,7 +1908,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 setShowIdpManagerDialog(true)
                 break
             case MenuDrawerOption.ManageDocs:
-                setShowDocsDialog(true)
+                setShowDocsManagerDialog(true)
                 break
             case MenuDrawerOption.ManageLogins:
                 setShowLoginManagerDialog(true)
@@ -2488,7 +2488,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showWebhookManagerDialog && <WebhookManagerDialog onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showThemeManagerDialog && <ThemeManagerDialog onClose={() => setShowThemeManagerDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} themeAssignments={themeAssignments} onAssignmentsChange={setThemeAssignments} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showHomepageManagerDialog && <HomepageManagerDialog onClose={() => setShowHomepageManagerDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showDocsDialog && <DocsDialog onClose={() => setShowDocsDialog(false)} /> }
+                { showDocsManagerDialog && <DocsManagerDialog onClose={() => setShowDocsManagerDialog(false)} /> }
                 { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
                 { showChannelSetup() }

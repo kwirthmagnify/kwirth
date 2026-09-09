@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test'
 import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 
-// Verifica la UX acordada para los campos secreto de un marketplace: el valor guardado VUELVE al
+// Verifica la UX acordada para el campo secreto de un marketplace: el valor guardado VUELVE al
 // formulario ya relleno y enmascarado, y el ojo lo revela. Antes el back solo decia si existia
 // (hasPassword/hasToken), el campo salia vacio con la etiqueta 'already set' y el ojo no ensenaba nada.
 //
@@ -23,8 +23,9 @@ import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 
 const TEST_LABEL = 'e2e-secret-check'
 const TEST_URL = 'https://e2e-secret-check.invalid/manifest.json'
-const TEST_USER = 'e2e-user'
-const TEST_PASS = 'e2e-s3cr3t-pass'
+// Un marketplace ya SOLO guarda el token del manifest. La credencial para descargar el paquete se
+// mudo a los registros de paquetes, porque manifest y paquetes son servidores distintos: la cubre
+// package-registries.spec.ts.
 const TEST_TOKEN = 'glpat-e2e-t0ken'
 
 /** El DOM de Kwirth es compartido: sin acotar al dialogo, getByLabel alcanza workspaces y tabs. */
@@ -120,9 +121,6 @@ test('el secreto de un marketplace vuelve relleno y enmascarado, y el ojo lo rev
         await dlg(page).getByLabel('Manifest URL', { exact: true }).nth(i).fill(TEST_URL)
         await dlg(page).getByLabel('Manifest needs a token', { exact: true }).nth(i).check()
         await dlg(page).getByLabel('Token', { exact: true }).nth(i).fill(TEST_TOKEN)
-        await dlg(page).getByLabel('Package registry needs credentials', { exact: true }).nth(i).check()
-        await dlg(page).getByLabel('User', { exact: true }).nth(i).fill(TEST_USER)
-        await dlg(page).getByLabel('Password', { exact: true }).nth(i).fill(TEST_PASS)
 
         await saveSettings(page)
 
@@ -139,17 +137,12 @@ test('el secreto de un marketplace vuelve relleno y enmascarado, y el ojo lo rev
         const j = await rowIndexOf(page, TEST_LABEL)
         expect(j, 'la fila de prueba deberia haberse guardado').toBeGreaterThanOrEqual(0)
 
-        const password = dlg(page).getByLabel('Password', { exact: true }).nth(j)
         const token = dlg(page).getByLabel('Token', { exact: true }).nth(j)
-        const user = dlg(page).getByLabel('User', { exact: true }).nth(j)
 
         // 1. el secreto VUELVE, relleno (antes el campo salia vacio)
-        await expect(password).toHaveValue(TEST_PASS)
         await expect(token).toHaveValue(TEST_TOKEN)
-        await expect(user).toHaveValue(TEST_USER)
 
         // 2. y enmascarado
-        await expect(password).toHaveAttribute('type', 'password')
         await expect(token).toHaveAttribute('type', 'password')
 
         // 3. el ojo lo revela — y sin ir al back, que ya no hay endpoint de revelado.
@@ -164,17 +157,12 @@ test('el secreto de un marketplace vuelve relleno y enmascarado, y el ojo lo rev
         await expect(token).toHaveValue(TEST_TOKEN)
         expect(requests.some(u => u.includes('/secrets')), 'el ojo no debe llamar al back').toBe(false)
 
-        await eyeOf(password).click()
-        await expect(password).toHaveAttribute('type', 'text')
-        await expect(password).toHaveValue(TEST_PASS)
 
-        // 4. y vuelven a ocultarse, cada uno por su cuenta
+        // 4. y vuelve a ocultarse
         await eyeOf(token).click()
         await expect(token).toHaveAttribute('type', 'password')
-        await expect(password).toHaveAttribute('type', 'text', { timeout: 2000 })
 
         // 5. la etiqueta ya no miente con 'already set'
-        await expect(dlg(page).getByLabel('Password (already set)', { exact: true })).toHaveCount(0)
         await expect(dlg(page).getByLabel('Token (already set)', { exact: true })).toHaveCount(0)
 
         await dismissOpenDialogs(page)

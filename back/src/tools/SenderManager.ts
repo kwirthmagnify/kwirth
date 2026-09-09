@@ -6,8 +6,7 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
-import https from 'https'
-import http from 'http'
+import { downloadFile, packageHeaders } from './PackageRegistries'
 
 export interface ISenderMeta {
     id: string
@@ -17,6 +16,11 @@ export interface ISenderMeta {
     description: string
     website?: string
     installedFrom?: string
+    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
+    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
+    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    marketplaceId?: string
+    marketplaceLabel?: string
     backStored?: boolean
     frontStored?: boolean
     requiresRestart?: boolean
@@ -105,7 +109,7 @@ export class SenderManager implements ISenderAccess {
         const tmpDir = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-frontsrc-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
         try {
-            await this.downloadFile(meta.installedFrom, tmpTgz)
+            await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
             await (await import('tar')).x({ file: tmpTgz, cwd: tmpDir })
             const content = fs.readFileSync(path.join(tmpDir, 'front.js'), 'utf-8')
             fs.writeFileSync(cacheFile, content)
@@ -283,7 +287,7 @@ export class SenderManager implements ISenderAccess {
         }
     }
 
-    async install(tarGzUrl: string, installedFrom?: string): Promise<ISenderMeta> {
+    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<ISenderMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-sender-${Date.now()}.tgz`)
         let tmpDir = path.join(os.tmpdir(), `kwirth-sender-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
@@ -295,7 +299,7 @@ export class SenderManager implements ISenderAccess {
                 const localPath = tarGzUrl.startsWith('file://') ? new URL(tarGzUrl).pathname.replace(/^\/([A-Za-z]:)/, '$1') : tarGzUrl
                 fs.copyFileSync(localPath, tmpTgz)
             } else {
-                await this.downloadFile(tarGzUrl, tmpTgz)
+                await downloadFile(tarGzUrl, tmpTgz, await packageHeaders(tarGzUrl))
             }
             await tar.x({ file: tmpTgz, cwd: tmpDir })
 
@@ -316,6 +320,10 @@ export class SenderManager implements ISenderAccess {
                 throw new Error(`Sender '${meta.id}' is already installed`)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
+
+            meta.marketplaceId = marketplaceId
+
+            meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
             meta.requiresExtension = meta.requiresExtension ?? []
             const backJs = fs.readFileSync(backPath, 'utf-8')
@@ -428,7 +436,7 @@ export class SenderManager implements ISenderAccess {
         const tmpDir = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-src-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
         try {
-            await this.downloadFile(meta.installedFrom, tmpTgz)
+            await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
             await tar.x({ file: tmpTgz, cwd: tmpDir })
             const content = fs.readFileSync(path.join(tmpDir, 'back.js'), 'utf-8')
             fs.writeFileSync(cacheFile, content)
@@ -585,25 +593,4 @@ export class SenderManager implements ISenderAccess {
     }
 
     // ── Utilities ───────────────────────────────────────────────────────────────
-
-    private downloadFile(url: string, destPath: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const protocol = url.startsWith('https') ? https : http
-            const file = fs.createWriteStream(destPath)
-            protocol.get(url, { headers: { 'User-Agent': 'kwirth/1.0' } }, res => {
-                if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    file.close()
-                    this.downloadFile(res.headers.location, destPath).then(resolve).catch(reject)
-                    return
-                }
-                if (res.statusCode && res.statusCode !== 200) {
-                    file.close()
-                    reject(new Error(`HTTP ${res.statusCode} downloading ${url}`))
-                    return
-                }
-                res.pipe(file)
-                file.on('finish', () => { file.close(); resolve() })
-            }).on('error', err => { file.close(); reject(err) })
-        })
-    }
 }

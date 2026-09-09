@@ -32,9 +32,9 @@ export class DocsApi {
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                const { url } = req.body
+                const { url, marketplaceId, marketplaceLabel } = req.body
                 if (!url) return void res.status(400).json({ error: 'url required' })
-                const meta = await this.docsManager.install(url)
+                const meta = await this.docsManager.install(url, undefined, marketplaceId, marketplaceLabel)
                 logInfo(ELogComponent.CORE, `Docs installed via API: ${meta.targetType}/${meta.id} v${meta.version}`)
                 res.json(meta)
             }

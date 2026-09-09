@@ -133,9 +133,9 @@ export class ProviderApi {
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                const { url } = req.body
+                const { url, marketplaceId, marketplaceLabel } = req.body
                 if (!url) return void res.status(400).json({ error: 'url required' })
-                const meta = await this.providerManager.install(url, this.registeredProviders)
+                const meta = await this.providerManager.install(url, this.registeredProviders, undefined, marketplaceId, marketplaceLabel)
                 this.callbacks.onProviderInstalled?.(meta.id)
                 logInfo(ELogComponent.CORE, `Provider installed via API: ${meta.id} v${meta.version}`)
                 res.json(meta)

@@ -1,25 +1,7 @@
 import { EExtensionType } from './ExtensionType'
 
-// Como se autentica Kwirth contra el registro de paquetes de un marketplace. El manifest siempre se
-// lee abierto; esto aplica solo a la DESCARGA DEL PAQUETE. Enum (regla: no string-literals para
-// valores enumerados que cruzan back↔front).
-export enum EMarketplaceAuthType {
-    NONE = 'none',
-    BASIC = 'basic'
-}
-
-// Credenciales de un marketplace. La contraseña se trata como CUALQUIER otro dato: viaja al front,
-// se pre-rellena en el campo (enmascarado, con ojo para revelar) y se reenvia tal cual al guardar.
-// En reposo el back la guarda en ISecrets (cifrada en filesystem, RBAC en k8s), no en el configmap.
-export interface IMarketplaceAuth {
-    type: EMarketplaceAuthType
-    username?: string
-    password?: string
-}
-
-// Como se autentica la LECTURA DEL MANIFEST. Es independiente de la descarga del paquete: el manifest
-// puede vivir en un repo git privado (cabecera PRIVATE-TOKEN de GitLab) mientras los paquetes estan en
-// otro sitio con otras credenciales, o al reves.
+// Como se autentica la LECTURA DEL MANIFEST. Un marketplace SOLO sirve manifests; de donde se bajan los
+// paquetes lo dice la url de cada entrada, y sus credenciales viven aparte, en IPackageRegistry.
 export enum EManifestAuthType {
     NONE = 'none',
     PRIVATE_TOKEN = 'privateToken',   // cabecera PRIVATE-TOKEN (GitLab API)
@@ -39,17 +21,15 @@ export interface IMarketplaceManifestAuth {
 
 // Un marketplace registrado por el administrador. La url apunta a UN manifest, que puede contener
 // extensiones de varios tipos: cada entrada lleva su extensionType y los managers filtran por el suyo.
-// La ubicacion del paquete no se configura aqui, viene en el campo url de cada entrada del manifest.
 //
-// Dos credenciales independientes, porque son dos servidores distintos:
-//   manifestAuth -> leer el manifest (p.ej. la API de un GitLab privado)
-//   auth         -> descargar el paquete (p.ej. un endpoint npm de Nexus con basic auth)
+// Aqui SOLO se configura como leer el manifest. Donde vive cada paquete lo dice la url de su entrada, y
+// las credenciales para bajarlo salen de IPackageRegistry casando esa url — porque manifest y paquetes
+// son sitios distintos: el marketplace publico tiene los manifests en GitHub y los tarballs en npmjs.
 export interface IMarketplace {
     id: string
     url: string
     label: string
     enabled: boolean
-    auth?: IMarketplaceAuth
     manifestAuth?: IMarketplaceManifestAuth
 }
 

@@ -2,23 +2,27 @@ import React, { useState, useEffect, useContext } from 'react'
 import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { Add, Delete, Refresh, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
-import { IKwirthSettings, IMarketplace, EMarketplaceAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
 // Enum semantico como id de tab (regla: nunca numeros)
 enum ESettingsKwirthTab {
     GENERAL = 'general',
-    MARKETPLACES = 'marketplaces'
+    MARKETPLACES = 'marketplaces',
+    REGISTRIES = 'registries'
 }
 
-// Fila editable: IMarketplace tal cual (los secretos ya viajan dentro de auth.password / manifestAuth.token)
-// mas el estado que solo vive en la pantalla.
+// Fila editable: IMarketplace tal cual (el token ya viaja dentro de manifestAuth) mas el estado que solo
+// vive en la pantalla.
 interface IMarketplaceRow extends IMarketplace {
-    revealed?: boolean
     tokenRevealed?: boolean
     testing?: boolean
     testResult?: string
+}
+
+interface IPackageRegistryRow extends IPackageRegistry {
+    revealed?: boolean
 }
 
 interface ISettingsKwirthProps {
@@ -32,6 +36,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [tab, setTab] = useState<ESettingsKwirthTab>(ESettingsKwirthTab.GENERAL)
     const [metricsInterval, setMetricsInterval] = useState<number>(0)
     const [marketplaces, setMarketplaces] = useState<IMarketplaceRow[]>([])
+    const [registries, setRegistries] = useState<IPackageRegistryRow[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const { backendUrl } = useContext(SessionContext) as SessionContextType
@@ -48,6 +53,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 const settings = await response.json() as IKwirthSettings
                 setMetricsInterval(settings.metricsInterval ?? 0)
                 setMarketplaces((settings.marketplaces ?? []).map(m => ({ ...m })))
+                setRegistries((settings.packageRegistries ?? []).map(r => ({ ...r })))
             }
             catch {
                 setError('Could not reach Kwirth to read its settings.')
@@ -63,32 +69,36 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         setMarketplaces(prev => prev.map((m, i) => i === index ? { ...m, ...patch } : m))
     }
 
-    // auth y manifestAuth son objetos anidados: hay que reconstruirlos enteros para no perder el resto
-    // de campos (el secreto entre ellos) al tocar uno solo.
-    const patchAuth = (index: number, patch: Partial<IMarketplace['auth']>) => {
-        const current = marketplaces[index].auth
-        patchRow(index, { auth: { type: current?.type ?? EMarketplaceAuthType.NONE, ...current, ...patch } })
-    }
-
+    // manifestAuth es un objeto anidado: hay que reconstruirlo entero para no perder el resto de campos
+    // (el token entre ellos) al tocar uno solo.
     const patchManifestAuth = (index: number, patch: Partial<IMarketplace['manifestAuth']>) => {
         const current = marketplaces[index].manifestAuth
         patchRow(index, { manifestAuth: { type: current?.type ?? EManifestAuthType.NONE, ...current, ...patch } })
     }
 
     // El ojo solo alterna entre puntos y texto: el valor guardado ya esta en el campo desde el GET.
-    const toggleReveal = (index: number, field: 'password'|'token') => {
-        const row = marketplaces[index]
-        const flag = field === 'password' ? 'revealed' : 'tokenRevealed'
-        patchRow(index, { [flag]: !row[flag] })
-    }
+    const toggleToken = (index: number) => patchRow(index, { tokenRevealed: !marketplaces[index].tokenRevealed })
 
     const addRow = () => {
-        setMarketplaces(prev => [...prev, {
-            id: `marketplace-${Date.now()}`,
+        setMarketplaces(prev => [...prev, { id: `marketplace-${Date.now()}`, url: '', label: '', enabled: true }])
+    }
+
+    const patchRegistry = (index: number, patch: Partial<IPackageRegistryRow>) => {
+        setRegistries(prev => prev.map((r, i) => i === index ? { ...r, ...patch } : r))
+    }
+
+    const patchRegistryAuth = (index: number, patch: Partial<IPackageRegistry['auth']>) => {
+        const current = registries[index].auth
+        patchRegistry(index, { auth: { type: current?.type ?? EPackageRegistryAuthType.NONE, ...current, ...patch } })
+    }
+
+    const addRegistry = () => {
+        setRegistries(prev => [...prev, {
+            id: `registry-${Date.now()}`,
             url: '',
             label: '',
             enabled: true,
-            auth: { type: EMarketplaceAuthType.NONE }
+            auth: { type: EPackageRegistryAuthType.NONE }
         }])
     }
 
@@ -121,11 +131,13 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         }
     }
 
-    const rowsValid = () => marketplaces.every(m =>
-        /^https?:\/\/.+/i.test(m.url) &&
-        m.label.trim() !== '' &&
-        (m.auth?.type !== EMarketplaceAuthType.BASIC || (m.auth.username ?? '').trim() !== '')
-    )
+    const rowsValid = () =>
+        marketplaces.every(m => /^https?:\/\/.+/i.test(m.url) && m.label.trim() !== '') &&
+        registries.every(r =>
+            /^https?:\/\/.+/i.test(r.url) &&
+            r.label.trim() !== '' &&
+            (r.auth?.type !== EPackageRegistryAuthType.BASIC || (r.auth.username ?? '').trim() !== '')
+        )
 
     const ok = async () => {
         setError('')
@@ -137,10 +149,22 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 url: m.url.trim(),
                 label: m.label.trim(),
                 enabled: m.enabled,
-                ...(m.auth ? { auth: { type: m.auth.type, ...(m.auth.username ? { username: m.auth.username.trim() } : {}), password: m.auth.password ?? '' } } : {}),
-                ...(m.manifestAuth ? { manifestAuth: { type: m.manifestAuth.type, token: m.manifestAuth.token ?? '' } } : {})
+                ...(m.manifestAuth ? { manifestAuth: { type: m.manifestAuth.type, ...(m.manifestAuth.username ? { username: m.manifestAuth.username.trim() } : {}), token: m.manifestAuth.token ?? '' } } : {})
             }))
-            const payload = JSON.stringify({ metricsInterval, marketplaces: cleaned })
+            const cleanedRegistries = registries.map(r => ({
+                id: r.id,
+                url: r.url.trim(),
+                label: r.label.trim(),
+                enabled: r.enabled,
+                ...(r.auth ? { auth: {
+                    type: r.auth.type,
+                    ...(r.auth.username ? { username: r.auth.username.trim() } : {}),
+                    ...(r.auth.type === EPackageRegistryAuthType.BEARER
+                        ? { token: r.auth.token ?? '' }
+                        : { password: r.auth.password ?? '' })
+                } } : {})
+            }))
+            const payload = JSON.stringify({ metricsInterval, marketplaces: cleaned, packageRegistries: cleanedRegistries })
             const response = await fetch(`${props.clusterUrl}/core/settings`, addPutAuthorization(props.accessString, payload))
             if (!response.ok) {
                 const detail = await response.json().catch(() => ({}))
@@ -157,7 +181,6 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     }
 
     const marketplaceRow = (m: IMarketplaceRow, index: number) => {
-        const basic = m.auth?.type === EMarketplaceAuthType.BASIC
         const tokenAuth = m.manifestAuth !== undefined && m.manifestAuth.type !== EManifestAuthType.NONE
         return (
             <Box key={m.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
@@ -195,29 +218,62 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         type={m.tokenRevealed ? 'text' : 'password'} sx={{ flexGrow: 1 }} disabled={!tokenAuth}
                         slotProps={{ input: { endAdornment: (
                             <InputAdornment position='end'>
-                                <IconButton size='small' onClick={() => toggleReveal(index, 'token')} disabled={!tokenAuth} title={m.tokenRevealed ? 'Hide' : 'Show'}>
+                                <IconButton size='small' onClick={() => toggleToken(index)} disabled={!tokenAuth} title={m.tokenRevealed ? 'Hide' : 'Show'}>
                                     { m.tokenRevealed ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' /> }
-                                </IconButton>
-                            </InputAdornment>) } }} />
-                </Stack>
-                <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}>
-                    <FormControlLabel
-                        control={<Checkbox checked={basic} onChange={e => patchAuth(index, { type: e.target.checked ? EMarketplaceAuthType.BASIC : EMarketplaceAuthType.NONE })} />}
-                        label='Package registry needs credentials' />
-                    <TextField value={m.auth?.username ?? ''} onChange={e => patchAuth(index, { username: e.target.value })}
-                        variant='standard' label='User' sx={{ width: '20%' }} disabled={!basic} />
-                    <TextField value={m.auth?.password ?? ''} onChange={e => patchAuth(index, { password: e.target.value })}
-                        variant='standard' label='Password'
-                        type={m.revealed ? 'text' : 'password'} sx={{ width: '25%' }} disabled={!basic}
-                        slotProps={{ input: { endAdornment: (
-                            <InputAdornment position='end'>
-                                <IconButton size='small' onClick={() => toggleReveal(index, 'password')} disabled={!basic} title={m.revealed ? 'Hide' : 'Show'}>
-                                    { m.revealed ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' /> }
                                 </IconButton>
                             </InputAdornment>) } }} />
                 </Stack>
                 { m.testing && <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}><CircularProgress size={14} /><Typography variant='caption'>Reading manifest…</Typography></Stack> }
                 { m.testResult && <Typography variant='caption' color={m.testResult.startsWith('Manifest OK') ? 'success.main' : 'error.main'}>{m.testResult}</Typography> }
+            </Box>
+        )
+    }
+
+    const registryRow = (r: IPackageRegistryRow, index: number) => {
+        const type = r.auth?.type ?? EPackageRegistryAuthType.NONE
+        const needsAuth = type !== EPackageRegistryAuthType.NONE
+        const basic = type === EPackageRegistryAuthType.BASIC
+        const bearer = type === EPackageRegistryAuthType.BEARER
+        return (
+            <Box key={r.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                <Stack direction='row' spacing={1} alignItems='center'>
+                    <TextField value={r.label} onChange={e => patchRegistry(index, { label: e.target.value })} variant='standard' label='Name' sx={{ width: '25%' }} />
+                    <TextField value={r.url} onChange={e => patchRegistry(index, { url: e.target.value })} variant='standard' label='Base URL' sx={{ flexGrow: 1 }} placeholder='https://…/repository/my-repo' />
+                    <FormControlLabel control={<Checkbox checked={r.enabled} onChange={e => patchRegistry(index, { enabled: e.target.checked })} />} label='Enabled' />
+                    <Tooltip title='Remove this registry'>
+                        <IconButton size='small' color='error' onClick={() => setRegistries(prev => prev.filter((_, i) => i !== index))}><Delete fontSize='small' /></IconButton>
+                    </Tooltip>
+                </Stack>
+                <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}>
+                    <FormControlLabel
+                        control={<Checkbox checked={needsAuth} onChange={e => patchRegistryAuth(index, { type: e.target.checked ? EPackageRegistryAuthType.BEARER : EPackageRegistryAuthType.NONE })} />}
+                        label='Needs credentials' />
+                    { /* Bearer y Basic NO son intercambiables: el endpoint npm de un Nexus con user tokens
+                         acepta el token como Bearer y rechaza esa misma credencial como Basic. */ }
+                    <FormControl variant='standard' sx={{ width: '22%' }} disabled={!needsAuth}>
+                        <InputLabel>Auth</InputLabel>
+                        <Select value={bearer || basic ? type : EPackageRegistryAuthType.BEARER}
+                            onChange={e => patchRegistryAuth(index, { type: e.target.value as EPackageRegistryAuthType })}>
+                            <MenuItem value={EPackageRegistryAuthType.BEARER}>Token (Bearer)</MenuItem>
+                            <MenuItem value={EPackageRegistryAuthType.BASIC}>User and password (Basic)</MenuItem>
+                        </Select>
+                    </FormControl>
+                    { /* El usuario solo aplica a Basic; se deja visible y deshabilitado para no cambiar de
+                         tamaño al alternar (regla: habilitar/deshabilitar, nunca mostrar/ocultar). */ }
+                    <TextField value={r.auth?.username ?? ''} onChange={e => patchRegistryAuth(index, { username: e.target.value })}
+                        variant='standard' label='User' sx={{ width: '20%' }} disabled={!basic} />
+                    <TextField
+                        value={(bearer ? r.auth?.token : r.auth?.password) ?? ''}
+                        onChange={e => patchRegistryAuth(index, bearer ? { token: e.target.value } : { password: e.target.value })}
+                        variant='standard' label={bearer ? 'Token' : 'Password'}
+                        type={r.revealed ? 'text' : 'password'} sx={{ flexGrow: 1 }} disabled={!needsAuth}
+                        slotProps={{ input: { endAdornment: (
+                            <InputAdornment position='end'>
+                                <IconButton size='small' onClick={() => patchRegistry(index, { revealed: !r.revealed })} disabled={!needsAuth} title={r.revealed ? 'Hide' : 'Show'}>
+                                    { r.revealed ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' /> }
+                                </IconButton>
+                            </InputAdornment>) } }} />
+                </Stack>
             </Box>
         )
     }
@@ -229,6 +285,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 <Tabs value={tab} onChange={(_e, v) => setTab(v as ESettingsKwirthTab)}>
                     <Tab label='General' value={ESettingsKwirthTab.GENERAL} />
                     <Tab label='Marketplaces' value={ESettingsKwirthTab.MARKETPLACES} />
+                    <Tab label='Package registries' value={ESettingsKwirthTab.REGISTRIES} />
                 </Tabs>
 
                 <Box hidden={tab !== ESettingsKwirthTab.GENERAL}>
@@ -248,6 +305,21 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         { marketplaces.map(marketplaceRow) }
                         { marketplaces.length === 0 && <Typography variant='body2' color='text.secondary'>No extra marketplaces. Only the public Kwirth marketplace is used.</Typography> }
                         <Box><Button startIcon={<Add />} onClick={addRow} disabled={loading || error!==''}>Add marketplace</Button></Box>
+                    </Stack>
+                </Box>
+
+                <Box hidden={tab !== ESettingsKwirthTab.REGISTRIES}>
+                    <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
+                        <Typography variant='body2'>
+                            Where packages are <b>downloaded</b> from, which is not where the manifests live: a marketplace only
+                            lists extensions, and each entry says which URL its tarball comes from. Kwirth picks the credentials
+                            by matching that URL against the <b>Base URL</b> below, treated as a prefix — so one registry can
+                            cover a whole server, or just one repository inside it. When several match, the longest one wins.
+                            Registries are only needed for private servers; public packages download anonymously.
+                        </Typography>
+                        { registries.map(registryRow) }
+                        { registries.length === 0 && <Typography variant='body2' color='text.secondary'>No package registries. Every package is downloaded anonymously.</Typography> }
+                        <Box><Button startIcon={<Add />} onClick={addRegistry} disabled={loading || error!==''}>Add registry</Button></Box>
                     </Stack>
                 </Box>
 

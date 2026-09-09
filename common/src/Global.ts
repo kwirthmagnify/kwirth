@@ -1,5 +1,6 @@
 import { AccessKey } from "./AccessKey"
 import { IMarketplace } from "./Marketplace"
+import { IPackageRegistry } from "./PackageRegistry"
 
 interface IUser {
     id: string
@@ -45,7 +46,11 @@ interface IClusterMetricsConfig {
 // tendran, y el back resuelve el valor efectivo con su propia precedencia antes de devolverlos.
 interface IKwirthSettings {
     metricsInterval?: number
+    // De donde se LEEN los manifests
     marketplaces?: IMarketplace[]
+    // De donde se DESCARGAN los paquetes, y con que credenciales. Lista aparte porque no hay relacion
+    // uno-a-uno: un manifest puede listar tarballs alojados en varios registros distintos.
+    packageRegistries?: IPackageRegistry[]
 }
 
 export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings }

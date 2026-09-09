@@ -41,6 +41,10 @@ interface IInstalledProvider {
     description: string
     website?: string
     installedFrom?: string
+
+    marketplaceId?: string
+
+    marketplaceLabel?: string
     hasFront?: boolean
     hasSchema?: boolean
     requiresRestart?: boolean
@@ -61,7 +65,6 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
 
     const [available, setAvailable] = useState<IProviderManifestEntry[]>([])
 
-    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
     const [installed, setInstalled] = useState<IInstalledProvider[]>([])
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [installingId, setInstallingId] = useState<string | undefined>()
@@ -206,7 +209,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
         setError(undefined)
         setInstallingId(provider.id)
         try {
-            const res = await fetch(`${backendUrl}/core/providers/install`, addPostAuthorization(accessString, JSON.stringify({ url: provider.url })))
+            const res = await fetch(`${backendUrl}/core/providers/install`, addPostAuthorization(accessString, JSON.stringify({ url: provider.url, marketplaceId: provider.marketplaceId, marketplaceLabel: provider.marketplaceLabel })))
             if (!res.ok) { const body = await res.json(); throw new Error(body.error ?? `HTTP ${res.status}`) }
             const meta: IInstalledProvider = await res.json()
             await loadInstalled()
@@ -348,8 +351,8 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                             </Tooltip>
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                                            <MarketplaceSourceIcon label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} />
-                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} /></Box>
+                                            <MarketplaceSourceIcon label={provider.marketplaceLabel} installedFrom={provider.installedFrom} />
+                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={provider.marketplaceLabel} installedFrom={provider.installedFrom} /></Box>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(provider.installedFrom)}</Box>
                                             {(provider.configNames?.length ?? 0) > 0 &&
                                                 <Chip label={`${provider.configNames!.length} config${provider.configNames!.length > 1 ? 's' : ''}`}
@@ -377,8 +380,8 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                     <Box key={provider.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Factory fontSize='small' /></Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{provider.displayName || provider.name || provider.id}</Typography>
-                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} />
-                                        <MarketplaceBadge label={marketplaceOfInstalled(provider.id)} installedFrom={provider.installedFrom} />
+                                        <MarketplaceSourceIcon label={provider.marketplaceLabel} installedFrom={provider.installedFrom} />
+                                        <MarketplaceBadge label={provider.marketplaceLabel} installedFrom={provider.installedFrom} />
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(provider.installedFrom)}</Box>
                                         {(provider.configNames?.length ?? 0) > 0 &&
                                             <Chip label={`${provider.configNames!.length} config${provider.configNames!.length > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' sx={compactChip} />}

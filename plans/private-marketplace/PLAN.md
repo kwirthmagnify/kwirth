@@ -1,5 +1,33 @@
 # Private Marketplace Manifests — Plan
 
+## Cierre del 2026-09-09 — el registro de paquetes se separa del marketplace
+
+**Un marketplace solo dice QUÉ existe; no aloja los paquetes.** La `url` de cada entrada puede apuntar a
+cualquier sitio — el propio marketplace público tiene los manifests en GitHub y los tarballs en npmjs.
+Colgar la credencial de descarga del marketplace, como se hacía, solo funcionaba por casualidad.
+
+- **`packageRegistries`**, lista propia en los settings, con su pestaña. La credencial se elige **casando
+  la URL del tarball** contra el `url` del registro, tratado como **prefijo**: un mismo Nexus aloja varios
+  repos y puede que solo uno pida credenciales. Cuando varios casan, gana el más largo.
+- **Basic y Bearer.** ⚠️ No son intercambiables aunque el token parezca una credencial codificada:
+  verificado contra el Nexus real, el mismo user token da **200 como Bearer y 401 como Basic**.
+- **`IMarketplace.auth` eliminado** (`common@0.5.47`, `Bearer` en `@0.5.48`). Sin migración, regla de dev.
+- **Un solo `downloadFile`** en `tools/PackageRegistries.ts` sustituye a **nueve copias idénticas**, una
+  por manager, de las que **ninguna mandaba credenciales**: ese era el 401. Las cabeceras de auth **no
+  cruzan a otro host** en un redirect — un Nexus redirige a almacenamiento con URL prefirmada, y reenviar
+  ahí el `Authorization` filtraría la credencial y además rompe la petición.
+- **La procedencia se GUARDA al instalar** (`marketplaceId` / `marketplaceLabel` en el meta), en vez de
+  deducirse de `installedFrom`. Con precedencia por id, dos marketplaces pueden servir el mismo `log`: hay
+  que saber cuál instaló el usuario, no cuál gana hoy. Deducirlo dejó de ser posible en cuanto manifest y
+  paquetes pasaron a ser servidores distintos.
+
+### Pendiente
+
+- Que **saltarse el fondo de un login se vea**. Si `background.png` no cabe en el ConfigMap (tope duro de
+  ~1 MiB de Kubernetes) hoy es una línea de log: el login queda sin fondo y nadie se entera. Debería
+  fallar la instalación o avisar en el manager. Salió al instalar el login de agora desde el Nexus.
+- **Azure DevOps sigue sin validar** contra un servidor real (ver abajo).
+
 ## Status (2026-09-06) — ENTREGADO Y EN USO
 
 Funcionando end-to-end contra un manifest privado real en GitLab. Registro de marketplaces en *Kwirth

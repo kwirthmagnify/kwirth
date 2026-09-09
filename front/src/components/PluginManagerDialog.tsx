@@ -41,6 +41,10 @@ interface IInstalledPlugin {
     icon?: string
     website?: string
     installedFrom?: string
+
+    marketplaceId?: string
+
+    marketplaceLabel?: string
     requiresRestart?: boolean
 }
 
@@ -83,11 +87,6 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
         return acc
     }, {} as Record<string, IPluginManifestEntry[]>)
     Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
-
-    // Procedencia de una extension YA instalada: no sale de installedFrom, porque una instalada en dev no
-    // tiene url. Se busca el id en el catalogo ya resuelto; la resolucion garantiza que todas las entradas
-    // de un id vienen del mismo marketplace, asi que con la primera basta.
-    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
 
     const getSelectedEntry = (id: string): IPluginManifestEntry => {
         const group = groupedAvailable[id]
@@ -175,7 +174,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
         setError(undefined)
         setInstallingId(plugin.id)
         try {
-            const res = await fetch(`${backendUrl}/core/plugins/install`, addPostAuthorization(accessString, JSON.stringify({ url: plugin.url })))
+            const res = await fetch(`${backendUrl}/core/plugins/install`, addPostAuthorization(accessString, JSON.stringify({ url: plugin.url, marketplaceId: plugin.marketplaceId, marketplaceLabel: plugin.marketplaceLabel })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -385,7 +384,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                                         description={plugin.description}
                                         website={plugin.website}
                                         source={resolveSource(plugin.installedFrom)}
-                                        marketplaceLabel={marketplaceOfInstalled(plugin.id)}
+                                        marketplaceLabel={plugin.marketplaceLabel}
                                         installedFrom={plugin.installedFrom}
                                         action={
                                             <>
@@ -409,8 +408,8 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                                     <Box key={plugin.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}>{resolveIcon(plugin.icon)}</Box>
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plugin.displayName || plugin.name}</Typography>
-                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(plugin.id)} installedFrom={plugin.installedFrom} />
-                                        <MarketplaceBadge label={marketplaceOfInstalled(plugin.id)} installedFrom={plugin.installedFrom} />
+                                        <MarketplaceSourceIcon label={plugin.marketplaceLabel} installedFrom={plugin.installedFrom} />
+                                        <MarketplaceBadge label={plugin.marketplaceLabel} installedFrom={plugin.installedFrom} />
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(plugin.installedFrom)}</Box>
                                         <Chip label={`v${plugin.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                         <Tooltip title='Configure'>

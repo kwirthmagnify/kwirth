@@ -38,9 +38,9 @@ export class PluginApi {
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                const { url } = req.body
+                const { url, marketplaceId, marketplaceLabel } = req.body
                 if (!url) return void res.status(400).json({ error: 'url required' })
-                const meta = await this.pluginManager.install(url, this.registeredChannels)
+                const meta = await this.pluginManager.install(url, this.registeredChannels, undefined, marketplaceId, marketplaceLabel)
                 this.callbacks.onPluginInstalled?.(meta.id)
                 logInfo(ELogComponent.CORE, `Plugin installed via API: ${meta.id} v${meta.version}`)
                 res.json(meta)

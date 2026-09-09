@@ -3,12 +3,11 @@ import { ELogComponent, logError, logInfo } from './Logging'
 import { ILoginFieldDef } from '@kwirthmagnify/kwirth-common-back'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
+import { downloadFile, packageHeaders } from './PackageRegistries'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
 import fs from 'fs'
-import https from 'https'
-import http from 'http'
 
 export interface ILoginMeta {
     id: string
@@ -18,6 +17,11 @@ export interface ILoginMeta {
     description: string
     website?: string
     installedFrom?: string
+    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
+    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
+    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    marketplaceId?: string
+    marketplaceLabel?: string
     requiresRestart?: boolean
     requiresExtension?: string[]
     configSchema?: ILoginFieldDef[]
@@ -81,7 +85,7 @@ export class LoginManager {
         return this.devLogins.has(id)
     }
 
-    async install(tarGzUrl: string, installedFrom?: string): Promise<ILoginMeta> {
+    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<ILoginMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-login-${Date.now()}.tgz`)
         const tmpDir = path.join(os.tmpdir(), `kwirth-login-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
@@ -94,7 +98,7 @@ export class LoginManager {
                 fs.copyFileSync(localPath, tmpTgz)
             }
             else {
-                await this.downloadFile(tarGzUrl, tmpTgz)
+                await downloadFile(tarGzUrl, tmpTgz, await packageHeaders(tarGzUrl))
             }
             await tar.x({ file: tmpTgz, cwd: tmpDir })
 
@@ -115,6 +119,8 @@ export class LoginManager {
                 description: pkg.description ?? '',
                 website: pkg.website,
                 installedFrom: installedFrom ?? tarGzUrl,
+                marketplaceId,
+                marketplaceLabel,
                 requiresRestart: pkg.requiresRestart ?? false,
                 requiresExtension: pkg.requiresExtension ?? [],
                 configSchema: Array.isArray(pkg.configSchema) ? pkg.configSchema : undefined
@@ -310,26 +316,5 @@ export class LoginManager {
         const data = await this.configMaps.read(`kwirth-login-${id}`) as { meta: ILoginMeta; config: ILoginConfig; background?: string } | null
         if (!data?.background) return undefined
         return Buffer.from(data.background, 'base64')
-    }
-
-    private downloadFile(url: string, destPath: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const protocol = url.startsWith('https') ? https : http
-            const file = fs.createWriteStream(destPath)
-            protocol.get(url, { headers: { 'User-Agent': 'kwirth/1.0' } }, res => {
-                if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    file.close()
-                    this.downloadFile(res.headers.location, destPath).then(resolve).catch(reject)
-                    return
-                }
-                if (res.statusCode && res.statusCode !== 200) {
-                    file.close()
-                    reject(new Error(`HTTP ${res.statusCode} downloading ${url}`))
-                    return
-                }
-                res.pipe(file)
-                file.on('finish', () => { file.close(); resolve() })
-            }).on('error', err => { file.close(); reject(err) })
-        })
     }
 }

@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, CircularProgress, Chip, Dialog, DialogActions, DialogContent, Divider, IconButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { Box, Button, CircularProgress, Chip, Dialog, DialogActions, DialogContent, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { CloudQueue, Delete, Description, Download, FolderOpen, Https, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
 
@@ -34,13 +34,15 @@ interface IDocsMeta {
     icon?: string
     website?: string
     installedFrom?: string
+    marketplaceId?: string
+    marketplaceLabel?: string
 }
 
-interface IDocsDialogProps {
+interface IDocsManagerDialogProps {
     onClose: () => void
 }
 
-const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
+const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManagerDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const theme = useTheme()
     useKeyboard(props.onClose)
@@ -56,11 +58,10 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
 
     const [available, setAvailable] = useState<IDocsManifestEntry[]>([])
 
-    const marketplaceOfInstalled = (targetType: string, id: string): string|undefined =>
-        available.find(e => e.id === id && e.targetType === targetType)?.marketplaceLabel
     const [installed, setInstalled] = useState<IDocsMeta[]>([])
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [installingId, setInstallingId] = useState<string | undefined>()
+    const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
     const [error, setError] = useState<string | undefined>()
     const [customUrl, setCustomUrl] = useState('')
@@ -134,7 +135,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
         setError(undefined)
         setInstallingId(docsKey(entry.targetType, entry.id))
         try {
-            const res = await fetch(`${backendUrl}/core/docs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
+            const res = await fetch(`${backendUrl}/core/docs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -213,14 +214,20 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
         return null
     }
 
-    const DocsCard = ({ targetType, id, name, version, description, source, website, action, installedFrom }: { targetType: string; id: string; name: string; version: string; description: string; source?: React.ReactNode; website?: string; action: React.ReactNode; installedFrom?: string }) => (
+    const DocsCard = ({ targetType, id, name, version, description, source, website, action, installedFrom, marketplaceLabel, versions, onVersionChange }: { targetType: string; id: string; name: string; version: string; description: string; source?: React.ReactNode; website?: string; action: React.ReactNode; installedFrom?: string; marketplaceLabel?: string; versions?: string[]; onVersionChange?: (v: string) => void }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: docsGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Description /></Box>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{name || id}</Typography>
-                        <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
+                        {versions
+                            ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
+                                sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
+                              </Select>
+                            : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
+                        }
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
                 </Box>
@@ -233,8 +240,8 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                 </Tooltip>
             </Stack>
             <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                <MarketplaceSourceIcon label={marketplaceOfInstalled(targetType, id)} installedFrom={installedFrom} />
-                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(targetType, id)} installedFrom={installedFrom} /></Box>
+                <MarketplaceSourceIcon label={marketplaceLabel} installedFrom={installedFrom} />
+                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceLabel} installedFrom={installedFrom} /></Box>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
@@ -257,7 +264,28 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
     )
 
     const filteredInstalled = installed.filter(d => !installedFilter || d.id.includes(installedFilter.toLowerCase()) || (d.name || '').toLowerCase().includes(installedFilter.toLowerCase()))
-    const filteredAvailable = available.filter(d => !filterText || d.id.includes(filterText.toLowerCase()) || d.name.toLowerCase().includes(filterText.toLowerCase()))
+    // Una documentacion puede estar publicada en varias versiones, asi que el catalogo se agrupa y la
+    // tarjeta ofrece un Select en vez de un chip fijo — igual que los otros diez managers. Se agrupa por el
+    // PAR (targetType, id), que es la identidad de unas docs: el id es el de la extension documentada y
+    // puede repetirse entre tipos.
+    const groupedAvailable: Record<string, IDocsManifestEntry[]> = available.reduce((acc, d) => {
+        const key = docsKey(d.targetType, d.id)
+        if (!acc[key]) acc[key] = []
+        acc[key].push(d)
+        return acc
+    }, {} as Record<string, IDocsManifestEntry[]>)
+    Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
+
+    const filteredKeys = Object.keys(groupedAvailable).filter(k => {
+        const d = groupedAvailable[k][0]
+        return !filterText || d.id.includes(filterText.toLowerCase()) || d.name.toLowerCase().includes(filterText.toLowerCase())
+    })
+
+    // La entrada que se instalaria: la version elegida en el Select, o la mas nueva si no se ha tocado.
+    const selectedEntry = (key: string): IDocsManifestEntry => {
+        const group = groupedAvailable[key]
+        return group.find(d => d.version === selectedVersions[key]) ?? group[0]
+    }
 
     return (
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
@@ -286,6 +314,7 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                                         website={doc.website}
                                         source={resolveSource(doc.installedFrom)}
                                         installedFrom={doc.installedFrom}
+                                        marketplaceLabel={doc.marketplaceLabel}
                                         action={
                                             <Stack direction='row' alignItems='center' spacing={0.5}>
                                                 <Tooltip title='Open in new tab'>
@@ -312,8 +341,8 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Description fontSize='small' /></Box>,
                                     <Typography key={`${docsKey(doc.targetType, doc.id)}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{doc.name || doc.id}</Typography>,
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
-                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(doc.targetType, doc.id)} installedFrom={doc.installedFrom} />
-                                        <MarketplaceBadge label={marketplaceOfInstalled(doc.targetType, doc.id)} installedFrom={doc.installedFrom} />
+                                        <MarketplaceSourceIcon label={doc.marketplaceLabel} installedFrom={doc.installedFrom} />
+                                        <MarketplaceBadge label={doc.marketplaceLabel} installedFrom={doc.installedFrom} />
                                     </Box>,
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(doc.installedFrom)}</Box>,
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-ver`} sx={{ justifySelf: 'end', py: 1 }}><Chip label={`v${doc.version}`} size='small' sx={compactChip} /></Box>,
@@ -375,15 +404,20 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                              en tarjetas hacia que al pasar a lista la mitad de abajo no cambiara. */ }
                         {viewMode === 'card'
                             ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
-                                {filteredAvailable.map(entry => (
+                                {filteredKeys.map(key => {
+                                  const entry = selectedEntry(key)
+                                  return (
                                     <DocsCard
-                                        key={docsKey(entry.targetType, entry.id)}
+                                        key={key}
                                         targetType={entry.targetType}
                                         id={entry.id}
                                         name={entry.name}
                                         version={entry.version}
                                         description={entry.description}
                                         website={entry.website}
+                                        marketplaceLabel={entry.marketplaceLabel}
+                                        versions={groupedAvailable[key].map(d => d.version)}
+                                        onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [key]: v }))}
                                         action={
                                             <Tooltip title={isInstalled(entry.targetType, entry.id) ? 'Already installed' : 'Install'}>
                                                 <span>
@@ -394,13 +428,14 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                                             </Tooltip>
                                         }
                                     />
-                                ))}
+                                  )
+                                })}
                               </Box>
                             : <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden',
                                          display: 'grid', gridTemplateColumns: 'auto 1fr auto auto auto',
                                          columnGap: 1, alignItems: 'center', px: 1.5 }}>
-                                {filteredAvailable.flatMap((entry, i, arr) => {
-                                    const key = docsKey(entry.targetType, entry.id)
+                                {filteredKeys.flatMap((key, i, arr) => {
+                                    const entry = selectedEntry(key)
                                     return [
                                         <Box key={`${key}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Description fontSize='small' /></Box>,
                                         <Typography key={`${key}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{entry.name || entry.id}</Typography>,
@@ -408,7 +443,11 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
                                             <MarketplaceSourceIcon label={entry.marketplaceLabel} />
                                             <MarketplaceBadge label={entry.marketplaceLabel} />
                                         </Box>,
-                                        <Box key={`${key}-ver`} sx={{ justifySelf: 'end', py: 1 }}><Chip label={`v${entry.version}`} size='small' sx={compactChip} /></Box>,
+                                        <Box key={`${key}-ver`} sx={{ justifySelf: 'end', py: 1 }}>
+                                            <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [key]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+                                                {groupedAvailable[key].map(d => <MenuItem key={d.version} value={d.version} sx={{ fontSize: '0.75rem' }}>{d.version}</MenuItem>)}
+                                            </Select>
+                                        </Box>,
                                         <Box key={`${key}-install`} sx={{ py: 1 }}>
                                             <Tooltip title={isInstalled(entry.targetType, entry.id) ? 'Already installed' : 'Install'}>
                                                 <span>
@@ -435,4 +474,4 @@ const DocsDialog: React.FC<IDocsDialogProps> = (props: IDocsDialogProps) => {
     )
 }
 
-export { DocsDialog }
+export { DocsManagerDialog }

@@ -35,6 +35,10 @@ interface IInstalledPack {
     description: string
     website?: string
     installedFrom?: string
+
+    marketplaceId?: string
+
+    marketplaceLabel?: string
     extensions: IPackExtensionRef[]
     requiresRestart?: boolean
 }
@@ -87,11 +91,6 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
         return acc
     }, {} as Record<string, IPackManifestEntry[]>)
     Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
-
-    // Procedencia de una extension YA instalada: no sale de installedFrom, porque una instalada en dev no
-    // tiene url. Se busca el id en el catalogo ya resuelto; la resolucion garantiza que todas las entradas
-    // de un id vienen del mismo marketplace, asi que con la primera basta.
-    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
 
     const getSelectedEntry = (id: string): IPackManifestEntry => {
         const group = groupedAvailable[id]
@@ -152,7 +151,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/core/packs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
+            const res = await fetch(`${backendUrl}/core/packs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -344,7 +343,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                         version={pack.version}
                                         description={pack.description}
                                         source={resolveSource(pack.installedFrom)}
-                                        marketplaceLabel={marketplaceOfInstalled(pack.id)}
+                                        marketplaceLabel={pack.marketplaceLabel}
                                         installedFrom={pack.installedFrom}
                                         website={pack.website}
                                         members={membersSummary(pack.extensions)}
@@ -369,8 +368,8 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                                         <Typography variant='caption' color='text.disabled' display='block'>{membersSummary(pack.extensions)}</Typography>
                                     </Box>,
                                     <Box key={`${pack.id}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
-                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(pack.id)} installedFrom={pack.installedFrom} />
-                                        <MarketplaceBadge label={marketplaceOfInstalled(pack.id)} installedFrom={pack.installedFrom} />
+                                        <MarketplaceSourceIcon label={pack.marketplaceLabel} installedFrom={pack.installedFrom} />
+                                        <MarketplaceBadge label={pack.marketplaceLabel} installedFrom={pack.installedFrom} />
                                     </Box>,
                                     <Box key={`${pack.id}-version`} sx={{ py: 1 }}><Chip label={`v${pack.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} /></Box>,
                                     <Box key={`${pack.id}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(pack.installedFrom)}</Box>,

@@ -31,6 +31,7 @@ export * from './AuthMethod'
 export * from './ExtensionType'
 export * from './ExtensionScope'
 export * from './Marketplace'
+export * from './PackageRegistry'
 // (daemons eliminados: se retira export * from './Daemon')
 export * from './Version'
 export * from './FrontChannel'

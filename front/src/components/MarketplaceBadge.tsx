@@ -31,8 +31,15 @@ const compact = compactChip
     Antes la URL se enseñaba recortada en un chip aparte, que ademas de ocupar la fila entera duplicaba
     lo que ya dice el badge cuando la extension SI viene de un catalogo.
 */
-const comesFromNoMarketplace = (installedFrom?: string): boolean =>
-    installedFrom === 'dev' || installedFrom === 'local' || isPlainUrl(installedFrom)
+// ⚠️ La procedencia se GUARDA al instalar, no se deduce. Antes se miraba la URL de descarga, y eso dejo
+// de valer: el manifest y los paquetes viven en servidores distintos, asi que la url del tgz apunta al
+// registro y no dice nada del marketplace. Ademas, con precedencia por id, dos marketplaces pueden servir
+// la misma extension y hay que saber cual instalo el usuario, no cual gana hoy.
+//
+// Por eso un label presente MANDA: significa que consta de donde vino. La heuristica de la url solo se
+// aplica cuando no consta nada, que es el caso de una url pegada a mano o de lo instalado antes de esto.
+const comesFromNoMarketplace = (label?: string, installedFrom?: string): boolean =>
+    !label && (installedFrom === 'dev' || installedFrom === 'local' || isPlainUrl(installedFrom))
 
 // Una URL de descarga directa. El marketplace publico se sirve desde el repo de kwirthmagnify, asi que
 // esa sí es procedencia conocida y no entra aqui.
@@ -42,7 +49,17 @@ const isPlainUrl = (installedFrom?: string): boolean =>
     && !installedFrom!.includes('github.com/kwirthmagnify')
 
 const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceBadgeProps) => {
-    if (comesFromNoMarketplace(props.installedFrom)) return null
+    if (comesFromNoMarketplace(props.label, props.installedFrom)) return null
+
+    // Lo que viene DENTRO de Kwirth no lo sirve el marketplace publico. Etiquetarlo 'Kwirth' anunciaba
+    // como OSS publica a una extension de pago cargada en el bundle.
+    if (!props.label && props.installedFrom === 'bundled') {
+        return (
+            <Tooltip title='Shipped inside this Kwirth image — it does not come from any marketplace'>
+                <Chip label='Bundled' size='small' variant='outlined' sx={compact} />
+            </Tooltip>
+        )
+    }
 
     if (!props.label) {
         return (
@@ -65,7 +82,7 @@ const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceB
     local). Antes estaba duplicado en linea en los 10 dialogos de gestion de extensiones.
 */
 const MarketplaceSourceIcon: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceBadgeProps) => {
-    if (comesFromNoMarketplace(props.installedFrom)) {
+    if (comesFromNoMarketplace(props.label, props.installedFrom)) {
         const title = props.installedFrom === 'dev'
             ? 'Loaded from disk (kwirth-dev.json) — it does not come from any marketplace'
             : props.installedFrom === 'local'

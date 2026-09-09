@@ -79,18 +79,15 @@ The manifest is a JSON array. Each entry carries the full tarball `url`, exactly
 
 Each row is one marketplace: a name of your choosing, the manifest URL, and whether it is consulted at all. The **⟳** button checks the manifest can actually be read, and **🗑** removes the row.
 
-#### Credentials
+#### Credentials for the manifest
 
-A marketplace has **two independent** sets of credentials, because they are usually two different servers:
+A marketplace protects one thing only: **reading the manifest file**. Tick *Manifest needs a token* and pick the header its host expects.
 
-| | Protects | Configured as |
-|---|---|---|
-| **Manifest** | Reading the manifest file | *Manifest needs a token* |
-| **Package** | Downloading the tarball | *Package registry needs credentials* |
+Downloading the packages is a **separate matter**, configured in the [Package registries](#package-registries) tab — because a marketplace only lists extensions, and each entry says which URL its tarball comes from. Those are usually two different servers: the public kwirth marketplace keeps its manifests on GitHub and its packages on npmjs.
 
-Either can be off — a public manifest pointing at a private registry is a perfectly normal setup, and it is the one we recommend: the manifest holds only names, versions and URLs, nothing worth protecting.
+A public manifest pointing at a private registry is a perfectly normal setup, and the one we recommend: the manifest holds only names, versions and URLs, nothing worth protecting.
 
-Both secrets are stored encrypted by kwirth, **outside** the settings themselves, and are used by the backend when it talks to your servers.
+The token is stored encrypted by kwirth, **outside** the settings themselves, and is used by the backend when it talks to your server.
 
 When you reopen the dialog each secret comes back **already filled in**, masked, and the eye button next to it reveals what is actually stored — so you can check a password without retyping it, and correct a single character instead of pasting the whole token again. Reading them requires the `admin` scope, like the rest of the dialog.
 
@@ -166,6 +163,38 @@ The token is a **Personal Access Token** with *Code: Read*. Azure DevOps expects
 ##### Checking it worked
 
 Use the **refresh** button on the row: it reports how many entries the manifest holds and which extension types it declares, and says specifically whether the token was rejected rather than just failing. Note that it exercises the *manifest* credentials only — the package ones come into play at install time, so a wrong registry password will not surface until somebody installs something.
+
+### Package registries
+
+A marketplace tells kwirth **what exists**; it does not host the packages. Each manifest entry carries the full tarball URL, and that URL can point anywhere — the public kwirth marketplace itself keeps its manifests on GitHub and its packages on npmjs.
+
+So when a package lives behind a private registry, its credentials go in the **Package registries** tab, not on the marketplace row. Kwirth picks them by **matching the tarball URL** against the registries you declare here.
+
+Each row is one registry:
+
+| Field | What it means |
+|---|---|
+| **Name** | Yours, to recognise the row |
+| **Base URL** | A **prefix**, not just a host. Every download whose URL starts with it uses this row's credentials |
+| **Enabled** | Unticked, the row stops injecting anything — useful to test whether a registry is really needed |
+| **Needs credentials** | Off for a public registry: those download anonymously |
+
+Because the URL is matched as a **prefix**, one server can hold several repositories with different access: `https://nexus.example.com/repository/private` can require a token while the rest of the server does not. **When several rows match, the longest one wins**, so a specific rule beats a general one.
+
+#### Which authentication to pick
+
+| Auth | Header sent | When |
+|---|---|---|
+| **Token (Bearer)** | `Authorization: Bearer <token>` | npm-style registries that issue *user tokens* — the default |
+| **User and password (Basic)** | `Authorization: Basic <user:password>` | Registries that authenticate the account directly |
+
+> **The two are not interchangeable, even when the token looks like an encoded credential.** Verified against a Sonatype Nexus: the same npm user token answers **200** as Bearer and **401** as Basic. If a download fails with 401 while the credentials are right, this is the first thing to check.
+>
+> The `User` field is disabled in Bearer mode, because the token carries the identity by itself.
+
+The secret is stored encrypted by kwirth, outside the settings, exactly like the manifest token — and comes back pre-filled and masked, with an eye to reveal it. Clearing the field deletes it.
+
+> **Credentials never follow a redirect to another host.** Registries commonly answer a download with a redirect to object storage bearing a pre-signed URL; forwarding the `Authorization` header there would hand your credential to a third party, and those endpoints usually reject the double authentication anyway.
 
 ## What to configure next
 

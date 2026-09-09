@@ -10,7 +10,7 @@ import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './Marketpl
 
 
 // tipos de la API (front-local, como hace ProviderDialog con su IProviderSchemaField)
-interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; website?: string; description?: string }
+interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; marketplaceId?: string; marketplaceLabel?: string; website?: string; description?: string }
 interface IIdpInstanceConfig { id: string; connectorId: string; label: string; enabled: boolean; config: Record<string, unknown> }
 interface IIdpConnectorManifestEntry { id: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string; marketplaceId?: string; marketplaceLabel?: string }
 interface IIdpInstallResult { requiresRestart?: boolean }
@@ -28,7 +28,6 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
     const [instances, setInstances] = useState<IIdpInstanceConfig[]>([])
     const [available, setAvailable] = useState<IIdpConnectorManifestEntry[]>([])
 
-    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [installingId, setInstallingId] = useState<string | undefined>()
     const [uninstallingId, setUninstallingId] = useState<string | undefined>()
@@ -160,7 +159,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
     const installFromCatalog = async (entry: IIdpConnectorManifestEntry) => {
         setError(undefined); setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/idp/connectors/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
+            const res = await fetch(`${backendUrl}/idp/connectors/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
             const meta: IIdpInstallResult = await res.json()
             await load()
@@ -259,8 +258,8 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                             {websiteButton(c.website)}
                                         </Stack>
                                         <Stack direction='row' justifyContent='space-between' alignItems='center' sx={{ mt: 1 }}>
-                                            <MarketplaceSourceIcon label={marketplaceOfInstalled(c.id)} installedFrom={c.installedFrom} />
-                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceOfInstalled(c.id)} installedFrom={c.installedFrom} /></Box>
+                                            <MarketplaceSourceIcon label={c.marketplaceLabel} installedFrom={c.installedFrom} />
+                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={c.marketplaceLabel} installedFrom={c.installedFrom} /></Box>
                                             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{resolveSource(c.installedFrom)}</Box>
                                             <Stack direction='row' spacing={0.5} alignItems='center'>
                                                 {statusChip(c)}
@@ -280,8 +279,8 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                     <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                         <Key fontSize='small' sx={{ color: 'text.secondary' }} />
                                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0 }} noWrap>{c.label}</Typography>
-                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(c.id)} installedFrom={c.installedFrom} />
-                                        <MarketplaceBadge label={marketplaceOfInstalled(c.id)} installedFrom={c.installedFrom} />
+                                        <MarketplaceSourceIcon label={c.marketplaceLabel} installedFrom={c.installedFrom} />
+                                        <MarketplaceBadge label={c.marketplaceLabel} installedFrom={c.installedFrom} />
                                         <Box sx={{ flexShrink: 0 }}>{resolveSource(c.installedFrom)}</Box>
                                         {c.version && <Chip label={`v${c.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />}
                                         {statusChip(c)}

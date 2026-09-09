@@ -31,6 +31,10 @@ interface IInstalledLogin {
     description: string
     website?: string
     installedFrom?: string
+
+    marketplaceId?: string
+
+    marketplaceLabel?: string
     requiresRestart?: boolean
     configSchema?: IConfigFieldDef[]
 }
@@ -82,11 +86,6 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
     }, {} as Record<string, ILoginManifestEntry[]>)
     Object.values(groupedAvailable).forEach(group => group.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
 
-    // Procedencia de una extension YA instalada. No se puede sacar de installedFrom, porque una instalada
-    // en dev no tiene url: se busca el id en el catalogo ya resuelto. Como la resolucion garantiza que
-    // todas las entradas de un id vienen del mismo marketplace, con la primera basta.
-    const marketplaceOfInstalled = (id: string): string|undefined => available.find(e => e.id === id)?.marketplaceLabel
-
     const getSelectedEntry = (id: string): ILoginManifestEntry => {
         const group = groupedAvailable[id]
         const version = selectedVersions[id] ?? group[0].version
@@ -130,7 +129,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/core/logins/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url })))
+            const res = await fetch(`${backendUrl}/core/logins/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -358,7 +357,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                         description={login.description}
                                         source={resolveSource(login.installedFrom)}
                                         website={login.website}
-                                        marketplaceLabel={marketplaceOfInstalled(login.id)}
+                                        marketplaceLabel={login.marketplaceLabel}
                                         installedFrom={login.installedFrom}
                                         action={
                                             <Stack direction='row' spacing={0.5}>
@@ -389,8 +388,8 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                         <Typography variant='caption' color='text.secondary'>{login.description}</Typography>
                                     </Box>,
                                     <Box key={`${login.id}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
-                                        <MarketplaceSourceIcon label={marketplaceOfInstalled(login.id)} installedFrom={login.installedFrom} />
-                                        <MarketplaceBadge label={marketplaceOfInstalled(login.id)} installedFrom={login.installedFrom} />
+                                        <MarketplaceSourceIcon label={login.marketplaceLabel} installedFrom={login.installedFrom} />
+                                        <MarketplaceBadge label={login.marketplaceLabel} installedFrom={login.installedFrom} />
                                     </Box>,
                                     <Box key={`${login.id}-version`} sx={{ py: 1 }}><Chip label={`v${login.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} /></Box>,
                                     <Box key={`${login.id}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(login.installedFrom)}</Box>,
