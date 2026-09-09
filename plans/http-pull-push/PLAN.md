@@ -155,7 +155,7 @@ the generic dialog is out of the question.
 - `README.md` in the provider (description, config, examples). ✔
 - `back/kwirth-dev.json`. ✔
 - `providers/manifest.json` + npm publish (OSS: public npm + public manifest). ✔ `0.1.0`
-- Closing checklist (9 points), including `plans/test-metrics-history.md`. ✔
+- Closing checklist (9 points), including `docs/plan/test-metrics-history.md`. ✔
 
 ## Backlog
 

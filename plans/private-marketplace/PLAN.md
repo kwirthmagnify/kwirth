@@ -7,7 +7,7 @@ settings → Marketplaces*, persistido server-side; resolución en el back (`Mar
 precedencia por extensión y **sin mezclar versiones entre marketplaces**; procedencia estampada y visible
 en las tarjetas de los once manager dialogs.
 
-Cerrado en el CL9 del **2026-09-06** (ver `plans/test-metrics-history.md`):
+Cerrado en el CL9 del **2026-09-06** (ver `docs/plan/test-metrics-history.md`):
 
 - **Secretos**: contraseña del registro y token del manifest viven en `ISecrets`, nunca en el configmap de
   settings. Desde `common@0.5.44` viajan al formulario **pre-rellenados y enmascarados**, con ojo para

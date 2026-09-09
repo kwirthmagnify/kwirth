@@ -4,8 +4,10 @@
 > de stream**. Se **añade** una fila arriba en cada cierre (punto 2 de la checklist CL9); **no se
 > sobrescribe** — es un histórico.
 >
-> Vive en `plans/` y no en `docs/`, porque `docs/` de la raíz es el **website público**: esto es material
-> de desarrollo. Cada plugin de pago mantiene el suyo en `<plugin>/docs/plan/test-metrics-history.md`.
+> Vive en `docs/plan/`, la misma ruta que usa cada plugin (`<plugin>/docs/plan/test-metrics-history.md`),
+> para que el histórico esté siempre en el mismo sitio se mire el core o una extensión. Estuvo en `plans/`
+> hasta el **2026-09-09** por no publicar datos de QA en el website; se movió al decidir que publicarlos no
+> supone ningún problema y que la coherencia de ruta vale más.
 >
 > **Cómo se obtiene cada dato:**
 > - **Harness** = nº de tests que reporta `npm test` en `back/` (`node --test`).
