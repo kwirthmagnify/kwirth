@@ -11,7 +11,11 @@ import { downloadFile, packageHeaders } from './PackageRegistries'
 export interface IDocsMeta {
     id: string
     targetType: string
+    // 'name' es el nombre del PAQUETE y 'displayName' el humano, como en los otros diez tipos. Mientras
+    // las docs solo se cargaban de dev, el tgz metia el nombre humano en 'name' y nadie noto la falta;
+    // publicada en un registro, 'name' es el scope npm y el que se pinta es 'displayName'.
     name: string
+    displayName?: string
     version: string
     description: string
     icon?: string

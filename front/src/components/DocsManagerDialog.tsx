@@ -17,6 +17,7 @@ interface IDocsManifestEntry {
     targetType: string
     id: string
     name: string
+    displayName?: string
     version: string
     description: string
     website?: string
@@ -28,7 +29,11 @@ const docsKey = (targetType: string, id: string) => `${targetType}/${id}`
 interface IDocsMeta {
     id: string
     targetType: string
+    // 'name' es el nombre del PAQUETE (npm) y 'displayName' el humano, igual que en los otros diez tipos.
+    // Mientras las docs solo venian de dev, el tgz metia el nombre humano en 'name' y colaba; en cuanto
+    // una se instala desde un registro, 'name' es el scope y hay que pintar 'displayName'.
     name: string
+    displayName?: string
     version: string
     description: string
     icon?: string
@@ -143,7 +148,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
             await loadInstalled()
         }
         catch (err) {
-            setError(`Failed to install ${entry.name}: ${err}`)
+            setError(`Failed to install ${entry.displayName || entry.name}: ${err}`)
         }
         finally {
             setInstallingId(undefined)
@@ -214,13 +219,13 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
         return null
     }
 
-    const DocsCard = ({ targetType, id, name, version, description, source, website, action, installedFrom, marketplaceLabel, versions, onVersionChange }: { targetType: string; id: string; name: string; version: string; description: string; source?: React.ReactNode; website?: string; action: React.ReactNode; installedFrom?: string; marketplaceLabel?: string; versions?: string[]; onVersionChange?: (v: string) => void }) => (
+    const DocsCard = ({ targetType, id, name, displayName, version, description, source, website, action, installedFrom, marketplaceLabel, versions, onVersionChange }: { targetType: string; id: string; name: string; displayName?: string; version: string; description: string; source?: React.ReactNode; website?: string; action: React.ReactNode; installedFrom?: string; marketplaceLabel?: string; versions?: string[]; onVersionChange?: (v: string) => void }) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: docsGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Description /></Box>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                        <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{name || id}</Typography>
+                        <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName || name || id}</Typography>
                         {versions
                             ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
                                 sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
@@ -263,7 +268,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
         </Stack>
     )
 
-    const filteredInstalled = installed.filter(d => !installedFilter || d.id.includes(installedFilter.toLowerCase()) || (d.name || '').toLowerCase().includes(installedFilter.toLowerCase()))
+    const filteredInstalled = installed.filter(d => !installedFilter || d.id.includes(installedFilter.toLowerCase()) || (d.displayName || d.name || '').toLowerCase().includes(installedFilter.toLowerCase()))
     // Una documentacion puede estar publicada en varias versiones, asi que el catalogo se agrupa y la
     // tarjeta ofrece un Select en vez de un chip fijo — igual que los otros diez managers. Se agrupa por el
     // PAR (targetType, id), que es la identidad de unas docs: el id es el de la extension documentada y
@@ -278,7 +283,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
 
     const filteredKeys = Object.keys(groupedAvailable).filter(k => {
         const d = groupedAvailable[k][0]
-        return !filterText || d.id.includes(filterText.toLowerCase()) || d.name.toLowerCase().includes(filterText.toLowerCase())
+        return !filterText || d.id.includes(filterText.toLowerCase()) || (d.displayName || d.name).toLowerCase().includes(filterText.toLowerCase())
     })
 
     // La entrada que se instalaria: la version elegida en el Select, o la mas nueva si no se ha tocado.
@@ -309,6 +314,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
                                         targetType={doc.targetType}
                                         id={doc.id}
                                         name={doc.name}
+                                        displayName={doc.displayName}
                                         version={doc.version}
                                         description={doc.description}
                                         website={doc.website}
@@ -339,7 +345,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
                                          columnGap: 1, alignItems: 'center', px: 1.5 }}>
                                 {filteredInstalled.flatMap((doc, i, arr) => [
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Description fontSize='small' /></Box>,
-                                    <Typography key={`${docsKey(doc.targetType, doc.id)}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{doc.name || doc.id}</Typography>,
+                                    <Typography key={`${docsKey(doc.targetType, doc.id)}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{doc.displayName || doc.name || doc.id}</Typography>,
                                     <Box key={`${docsKey(doc.targetType, doc.id)}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
                                         <MarketplaceSourceIcon label={doc.marketplaceLabel} installedFrom={doc.installedFrom} />
                                         <MarketplaceBadge label={doc.marketplaceLabel} installedFrom={doc.installedFrom} />
@@ -412,6 +418,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
                                         targetType={entry.targetType}
                                         id={entry.id}
                                         name={entry.name}
+                                        displayName={entry.displayName}
                                         version={entry.version}
                                         description={entry.description}
                                         website={entry.website}
@@ -438,7 +445,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
                                     const entry = selectedEntry(key)
                                     return [
                                         <Box key={`${key}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Description fontSize='small' /></Box>,
-                                        <Typography key={`${key}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{entry.name || entry.id}</Typography>,
+                                        <Typography key={`${key}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{entry.displayName || entry.name || entry.id}</Typography>,
                                         <Box key={`${key}-mkp`} sx={{ py: 1, display: 'flex', alignItems: 'center' }}>
                                             <MarketplaceSourceIcon label={entry.marketplaceLabel} />
                                             <MarketplaceBadge label={entry.marketplaceLabel} />

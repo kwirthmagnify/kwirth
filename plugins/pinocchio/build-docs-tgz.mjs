@@ -42,7 +42,8 @@ try {
         extensionType: 'docs',
         targetType: 'plugin',
         id: 'pinocchio',
-        name: 'kwirth Pinocchio — Guide',
+        name: '@kwirthmagnify/kwirth-docs-pinocchio',
+        displayName: 'kwirth Pinocchio — Guide',
         version: pkg.version,
         description: 'User and administrator guide for the kwirth Pinocchio plugin'
     }, null, 2))
