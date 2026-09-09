@@ -1,6 +1,6 @@
 import { Router, Request, Response, raw } from 'express'
 import { ProviderManager } from '../tools/ProviderManager'
-import { IProvider, IProviderSubscriptionHelp, TProviderConstructor } from '../providers/IProvider'
+import { IProvider, IProviderFieldDef, IProviderSubscriptionHelp, TProviderConstructor } from '../providers/IProvider'
 import { IProviderMeta } from '../tools/ProviderManager'
 import { ELogComponent, logError, logInfo } from '../tools/Logging'
 import { ApiKeyApi } from './ApiKeyApi'
@@ -82,6 +82,22 @@ export class ProviderApi {
         }
     }
 
+    /**
+     * getConfigSchema() es la forma ESTANDAR de que un provider declare su configuracion, la misma
+     * que ISender e IWebhook. Es OPCIONAL, y un provider que reviente al pedirsela no puede tumbar el
+     * listado de todos los demas.
+     */
+    private configSchemaOf(provider: IProvider): IProviderFieldDef[] | undefined {
+        if (typeof provider.getConfigSchema !== 'function') return undefined
+        try {
+            const schema = provider.getConfigSchema()
+            return Array.isArray(schema) && schema.length > 0 ? schema : undefined
+        } catch (err) {
+            logError(ELogComponent.PROVIDER, `Provider '${provider.id}' failed to report its config schema: ${err}`)
+            return undefined
+        }
+    }
+
     private addRoutes(): void {
         this.router.get('/', async (_req: Request, res: Response) => {
             try {
@@ -102,6 +118,9 @@ export class ProviderApi {
                     entry.running = true
                     entry.subscriptionHelp = this.subscriptionHelpOf(provider)
                     entry.configNames = this.configNamesOf(provider)
+                    // Un provider que declara su schema por metodo tambien tiene configuracion que
+                    // ofrecer, aunque no exportara la constante 'schema' que se lee al instalarlo.
+                    if (this.configSchemaOf(provider)) entry.hasSchema = true
                     entries.set(provider.id, entry)
                 }
 
@@ -159,7 +178,11 @@ export class ProviderApi {
         })
 
         this.router.get('/:id/schema', async (req: Request, res: Response) => {
-            const schema = await this.providerManager.getSchemaAsync(req.params.id)
+            // Se le pregunta primero al provider VIVO, que es la via estandar. Si no hay instancia
+            // -- un provider sin router al que nadie se ha suscrito no se instancia nunca -- se cae al
+            // array 'schema' que el core extrajo de su back.js al instalarlo.
+            const running = this.getRunningProviders().find(p => p.id === req.params.id)
+            const schema = (running ? this.configSchemaOf(running) : undefined) ?? await this.providerManager.getSchemaAsync(req.params.id)
             if (!schema) return void res.status(404).json({ error: 'No schema' })
             res.json(schema)
         })

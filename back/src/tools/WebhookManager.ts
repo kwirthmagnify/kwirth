@@ -46,7 +46,8 @@ export class WebhookManager implements IWebhookAccess {
     private registeredWebhooks = new Map<string, TWebhookConstructor>()
     private instances = new Map<string, IWebhook>()
     private devWebhooks = new Map<string, IDevWebhook>()
-    private devWatchers = new Map<string, fs.FSWatcher>()
+    // ruta vigilada por id, para poder hacer fs.unwatchFile al desregistrar
+    private devWatchers = new Map<string, string>()
     private configStore = new Map<string, Map<string, IWebhookConfig>>()
     private installedIds: string[] = []
     private installedMetas = new Map<string, IWebhookMeta>()
@@ -203,15 +204,18 @@ export class WebhookManager implements IWebhookAccess {
         this.devWebhooks.set(id, { distPath: absPath, meta })
         this.reloadDevBack(id, backPath)
 
-        try {
-            const watcher = fs.watch(backPath, () => {
+        // Se vigila por POLLING, igual que ProviderManager, y nunca con fs.watch: un build limpio
+        // borra dist/back.js antes de regenerarlo, y un fs.watch sobre un fichero que desaparece
+        // emite un 'error' ASINCRONO que el try/catch no ve y que, sin listener, node convierte en
+        // uncaughtException y se lleva el core por delante. watchFile tolera que el fichero se vaya
+        // y vuelva. mtimeMs 0 = no existe ahora mismo: se ignora en vez de intentar recargarlo.
+        fs.watchFile(backPath, { persistent: false, interval: 500 }, (curr, prev) => {
+            if (curr.mtimeMs !== prev.mtimeMs && curr.mtimeMs !== 0) {
                 logInfo(ELogComponent.CORE, `[dev] Webhook '${id}' back.js changed — hot-reloading`)
                 this.reloadDevBack(id, backPath)
-            })
-            this.devWatchers.set(id, watcher)
-        } catch (err) {
-            logError(ELogComponent.CORE, `[dev] Cannot watch '${backPath}': ${err}`)
-        }
+            }
+        })
+        this.devWatchers.set(id, backPath)
 
         logInfo(ELogComponent.CORE, `[dev] Webhook '${id}' registered from ${absPath}`)
     }

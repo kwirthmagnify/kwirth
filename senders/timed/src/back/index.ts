@@ -124,7 +124,7 @@ export class TimedSender implements ISender {
     getConfigSchema(): ISenderFieldDef[] {
         return [
             { name: 'name',          label: 'Name',           required: true },
-            { name: 'timezone',      label: 'Timezone',       type: 'select', options: TIMEZONES, labels: TIMEZONES.map(tz => { const off = tzOffset(tz); return off ? `${tz} (${off})` : tz }) } as unknown as ISenderFieldDef,
+            { name: 'timezone',      label: 'Timezone',       type: 'select', options: TIMEZONES, labels: TIMEZONES.map(tz => { const off = tzOffset(tz); return off ? `${tz} (${off})` : tz }) },
             { name: 'rules',         label: 'Rules (JSON)',   type: 'json' },
             { name: 'defaultAction', label: 'Default action', type: 'select', options: ['drop', 'send'] },
         ]

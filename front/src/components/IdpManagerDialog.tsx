@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Key, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
@@ -9,9 +10,7 @@ import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './Marketpl
 
 
 // tipos de la API (front-local, como hace ProviderDialog con su IProviderSchemaField)
-type IdpFieldType = 'text' | 'number' | 'boolean' | 'password'
-interface IIdpConfigFieldDef { name: string; label: string; type?: IdpFieldType; required?: boolean; options?: string[] }
-interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IIdpConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; website?: string; description?: string }
+interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; website?: string; description?: string }
 interface IIdpInstanceConfig { id: string; connectorId: string; label: string; enabled: boolean; config: Record<string, unknown> }
 interface IIdpConnectorManifestEntry { id: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string; marketplaceId?: string; marketplaceLabel?: string }
 interface IIdpInstallResult { requiresRestart?: boolean }
@@ -117,7 +116,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
         catch (err) { setError(`Failed to save '${editing.id}': ${err}`) }
         finally { setSavingConfig(false) }
     }
-    const renderConfigField = (field: IIdpConfigFieldDef) => {
+    const renderConfigField = (field: IConfigFieldDef) => {
         const val = editing?.config[field.name]
         if (field.type === 'boolean') return <FormControlLabel key={field.name} control={<Switch checked={!!val} onChange={e => setCfg(field.name, e.target.checked)} />} label={field.label} />
         const isSecret = field.type === 'password'

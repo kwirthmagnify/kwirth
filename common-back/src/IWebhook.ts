@@ -1,23 +1,15 @@
-import { IWebhookEvent, IWebhookConfig, IWebhookAccess, IWebhookConsumer, IWebhookStoredConfig } from '@kwirthmagnify/kwirth-common'
+import { IWebhookEvent, IWebhookConfig, IWebhookAccess, IWebhookConsumer, IWebhookStoredConfig, TConfigFieldType, IConfigFieldDef, IExtensionNodeMeta } from '@kwirthmagnify/kwirth-common'
 
 export { IWebhookEvent, IWebhookConfig, IWebhookAccess, IWebhookConsumer, IWebhookStoredConfig }
 
-export type WebhookFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json'
+/** @deprecated usa TConfigFieldType, comun a todas las extensiones. */
+export type WebhookFieldType = TConfigFieldType
 
-export interface IWebhookFieldDef {
-    name: string
-    label: string
-    type?: WebhookFieldType
-    required?: boolean
-    options?: string[]
-    common?: boolean
-}
+/** Campo de configuracion de un webhook. Es el contrato comun IConfigFieldDef, sin nada propio. */
+export type IWebhookFieldDef = IConfigFieldDef
 
-export interface IWebhookNodeMeta {
-    label: string
-    icon?: string
-    description?: string
-}
+/** @deprecated usa IExtensionNodeMeta, comun a todas las extensiones. */
+export type IWebhookNodeMeta = IExtensionNodeMeta
 
 export interface IWebhook {
     readonly id: string

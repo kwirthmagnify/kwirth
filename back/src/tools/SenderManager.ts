@@ -23,7 +23,10 @@ export interface ISenderMeta {
     requiresExtension?: string[]
 }
 
-export { ISenderConfig, ISenderMessage }
+// 'export type' y no 'export': son interfaces. Reexportarlas como valores hace que el bundler
+// emita un import de runtime contra kwirth-common-back (que es CJS) y reviente al cargarlo desde
+// ESM. WebhookManager ya lo hacia asi.
+export type { ISenderConfig, ISenderMessage }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
@@ -37,7 +40,8 @@ export class SenderManager implements ISenderAccess {
     private registeredSenders = new Map<string, TSenderConstructor>()
     private instances = new Map<string, ISender>()
     private devSenders = new Map<string, IDevSender>()
-    private devWatchers = new Map<string, fs.FSWatcher>()
+    // ruta vigilada por id, para poder hacer fs.unwatchFile al desregistrar
+    private devWatchers = new Map<string, string>()
     private configStore = new Map<string, Map<string, ISenderConfig>>()
     private commonFieldStore = new Map<string, Record<string, unknown>>()
     private installedIds: string[] = []
@@ -205,15 +209,18 @@ export class SenderManager implements ISenderAccess {
         this.devSenders.set(id, { distPath: absPath, meta })
         this.reloadDevBack(id, backPath)
 
-        try {
-            const watcher = fs.watch(backPath, () => {
+        // Se vigila por POLLING, igual que ProviderManager, y nunca con fs.watch: un build limpio
+        // borra dist/back.js antes de regenerarlo, y un fs.watch sobre un fichero que desaparece
+        // emite un 'error' ASINCRONO que el try/catch no ve y que, sin listener, node convierte en
+        // uncaughtException y se lleva el core por delante. watchFile tolera que el fichero se vaya
+        // y vuelva. mtimeMs 0 = no existe ahora mismo: se ignora en vez de intentar recargarlo.
+        fs.watchFile(backPath, { persistent: false, interval: 500 }, (curr, prev) => {
+            if (curr.mtimeMs !== prev.mtimeMs && curr.mtimeMs !== 0) {
                 logInfo(ELogComponent.CORE, `[dev] Sender '${id}' back.js changed — hot-reloading`)
                 this.reloadDevBack(id, backPath)
-            })
-            this.devWatchers.set(id, watcher)
-        } catch (err) {
-            logError(ELogComponent.CORE, `[dev] Cannot watch '${backPath}': ${err}`)
-        }
+            }
+        })
+        this.devWatchers.set(id, backPath)
 
         logInfo(ELogComponent.CORE, `[dev] Sender '${id}' registered from ${absPath}`)
     }

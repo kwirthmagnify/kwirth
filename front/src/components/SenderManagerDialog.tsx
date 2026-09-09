@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import {
     Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem,
@@ -14,16 +15,6 @@ import { useKeyboard } from '../tools/useKeyboard'
 
 
 // ─── Types ──────────────────────────────────────────────────────────────────
-
-interface ISenderFieldDef {
-    name: string
-    label: string
-    type?: 'text' | 'number' | 'boolean' | 'password' | 'select'
-    required?: boolean
-    options?: string[]
-    labels?: string[]
-    common?: boolean
-}
 
 interface IRequirement {
     extensionType: EExtensionType
@@ -99,7 +90,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
 
     // Config panel state
     const [expandedId, setExpandedId] = useState<string | undefined>()
-    const [schema, setSchema] = useState<ISenderFieldDef[]>([])
+    const [schema, setSchema] = useState<IConfigFieldDef[]>([])
     const [configs, setConfigs] = useState<ConfigValues[]>([])
     const [loadingConfigs, setLoadingConfigs] = useState(false)
     const [deletingName, setDeletingName] = useState<string | undefined>()
@@ -512,7 +503,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
     const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
     const toggleSecret = (name: string) => setRevealedSecrets(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
 
-    const renderField = (f: ISenderFieldDef, values: ConfigValues, onChange: (name: string, val: unknown) => void, isEditing = false) => {
+    const renderField = (f: IConfigFieldDef, values: ConfigValues, onChange: (name: string, val: unknown) => void, isEditing = false) => {
         const value = values[f.name] ?? (f.type === 'boolean' ? false : '')
 
         if (f.type === 'boolean') return (

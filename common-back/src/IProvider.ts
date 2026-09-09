@@ -1,4 +1,4 @@
-import { KwirthData } from '@kwirthmagnify/kwirth-common'
+import { KwirthData, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 
 /**
  * Minimal interface representing the channel side that providers interact with.
@@ -50,6 +50,12 @@ export interface IProviderSubscriptionHelp {
 }
 
 /**
+ * Un campo de la configuracion del PROPIO provider (no de la suscripcion). Es el contrato comun
+ * IConfigFieldDef, el mismo que usan senders, webhooks, idps y logins.
+ */
+export type IProviderFieldDef = IConfigFieldDef
+
+/**
  * Interface that all provider plugins must implement.
  * Use 'any' for clusterInfo to avoid pulling in kubernetes/docker dependencies.
  */
@@ -79,6 +85,15 @@ export interface IProvider {
      * que hace con los senders. No expone valores, solo nombres.
      */
     getConfigNames?(): string[]
+    /**
+     * Schema de configuracion del propio provider, con el que kwirth pinta un formulario generico.
+     * Es la forma ESTANDAR de declararlo, la misma que ISender.getConfigSchema e IWebhook.
+     *
+     * Un provider al que nadie se suscribe y que no expone router NO se instancia nunca, asi que en
+     * ese caso no hay a quien preguntarselo: para esos, exporta ademas una constante 'schema' con el
+     * mismo array desde el back.js, que el core lee al instalar sin instanciar nada.
+     */
+    getConfigSchema?(): IProviderFieldDef[]
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
     router: any

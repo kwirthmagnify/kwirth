@@ -38,7 +38,8 @@ export class PluginManager {
     private installedIds: string[] = []
     private cachedIndex: IPluginMeta[] = []
     private devPlugins = new Map<string, IDevPlugin>()
-    private devWatchers = new Map<string, fs.FSWatcher>()
+    // ruta vigilada por id, para poder hacer fs.unwatchFile al desregistrar
+    private devWatchers = new Map<string, string>()
     onDevPluginReloaded?: (id: string, ChannelClass: TChannelConstructor) => void
 
     constructor(configMaps: IConfigMaps) {
@@ -109,19 +110,18 @@ export class PluginManager {
 
         this.reloadDevBack(id, backPath, registeredChannels)
 
-        try {
-            const dir = path.dirname(backPath)
-            const filename = path.basename(backPath)
-            const watcher = fs.watch(dir, (_, changedFile) => {
-                if (changedFile === filename) {
-                    logInfo(ELogComponent.CORE, `[dev] Extension '${id}' back.js changed — hot-reloading`)
-                    this.reloadDevBack(id, backPath, registeredChannels)
-                }
-            })
-            this.devWatchers.set(id, watcher)
-        } catch (err) {
-            logError(ELogComponent.CORE, `[dev] Cannot watch '${backPath}': ${err}`)
-        }
+        // Se vigila por POLLING, igual que ProviderManager, y nunca con fs.watch: un build limpio
+        // borra dist/ entero antes de regenerarlo, y un fs.watch sobre un fichero o directorio que
+        // desaparece emite un 'error' ASINCRONO que el try/catch no ve y que, sin listener, node
+        // convierte en uncaughtException y se lleva el core por delante. watchFile tolera que la
+        // ruta se vaya y vuelva. mtimeMs 0 = no existe ahora mismo: se ignora.
+        fs.watchFile(backPath, { persistent: false, interval: 500 }, (curr, prev) => {
+            if (curr.mtimeMs !== prev.mtimeMs && curr.mtimeMs !== 0) {
+                logInfo(ELogComponent.CORE, `[dev] Extension '${id}' back.js changed — hot-reloading`)
+                this.reloadDevBack(id, backPath, registeredChannels)
+            }
+        })
+        this.devWatchers.set(id, backPath)
 
         logInfo(ELogComponent.CORE, `[dev] Plugin '${id}' registered from ${absPath}`)
     }

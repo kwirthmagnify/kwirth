@@ -1,23 +1,15 @@
-import { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig, ISenderResult } from '@kwirthmagnify/kwirth-common'
+import { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig, ISenderResult, TConfigFieldType, IConfigFieldDef, IExtensionNodeMeta } from '@kwirthmagnify/kwirth-common'
 
 export { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig, ISenderResult }
 
-export type SenderFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json'
+/** @deprecated usa TConfigFieldType, comun a todas las extensiones. */
+export type SenderFieldType = TConfigFieldType
 
-export interface ISenderFieldDef {
-    name: string
-    label: string
-    type?: SenderFieldType
-    required?: boolean
-    options?: string[]
-    common?: boolean
-}
+/** Campo de configuracion de un sender. Es el contrato comun IConfigFieldDef, sin nada propio. */
+export type ISenderFieldDef = IConfigFieldDef
 
-export interface ISenderNodeMeta {
-    label: string
-    icon?: string
-    description?: string
-}
+/** @deprecated usa IExtensionNodeMeta, comun a todas las extensiones. */
+export type ISenderNodeMeta = IExtensionNodeMeta
 
 export interface ISender {
     readonly id: string

@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Chip } from '@mui/material'
 import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Https, Link, LockPerson, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
@@ -22,14 +23,6 @@ interface ILoginManifestEntry {
     url: string
 }
 
-interface ILoginFieldDef {
-    name: string
-    label: string
-    type?: 'text' | 'number' | 'boolean' | 'password' | 'select'
-    required?: boolean
-    options?: string[]
-}
-
 interface IInstalledLogin {
     id: string
     name: string
@@ -39,7 +32,7 @@ interface IInstalledLogin {
     website?: string
     installedFrom?: string
     requiresRestart?: boolean
-    configSchema?: ILoginFieldDef[]
+    configSchema?: IConfigFieldDef[]
 }
 
 interface ILoginManagerDialogProps {

@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { CheckCircle, CloudQueue, Delete, Download, Factory, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 
@@ -48,14 +49,6 @@ interface IInstalledProvider {
     configNames?: string[]
 }
 
-interface IProviderSchemaField {
-    name: string
-    label: string
-    type: 'string' | 'number' | 'boolean' | 'password'
-    required?: boolean
-    default?: string | number | boolean
-}
-
 interface IProviderManagerDialogProps {
     onClose: () => void
     onRestartRequired?: () => void
@@ -81,7 +74,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
     const [expandedId, setExpandedId] = useState<string | undefined>()
     const [frontLoaded, setFrontLoaded] = useState<Record<string, boolean>>({})
-    const [configSchema, setConfigSchema] = useState<IProviderSchemaField[] | undefined>()
+    const [configSchema, setConfigSchema] = useState<IConfigFieldDef[] | undefined>()
     const [configValues, setConfigValues] = useState<Record<string, unknown>>({})
     const [savingConfig, setSavingConfig] = useState(false)
 
@@ -151,7 +144,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
         }
     }
 
-    const renderConfigField = (field: IProviderSchemaField) => {
+    const renderConfigField = (field: IConfigFieldDef) => {
         const val = configValues[field.name]
         if (field.type === 'boolean') return (
             <FormControlLabel key={field.name}

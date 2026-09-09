@@ -1,3 +1,4 @@
+import { IProviderFieldDef } from '@kwirthmagnify/kwirth-common-back'
 import { IConfigMaps } from './IConfigMap'
 import { TProviderConstructor } from '../providers/IProvider'
 import { ELogComponent, logError, logInfo } from './Logging'
@@ -9,13 +10,11 @@ import https from 'https'
 import http from 'http'
 import zlib from 'zlib'
 
-export interface IProviderSchemaField {
-    name: string
-    label: string
-    type: 'string' | 'number' | 'boolean' | 'password'
-    required?: boolean
-    default?: string | number | boolean
-}
+/**
+ * @deprecated usa IProviderFieldDef de kwirth-common-back, que es el contrato comun a todas las
+ * extensiones. Se mantiene el nombre porque es el que viaja en la respuesta de '/core/providers/:id/schema'.
+ */
+export type IProviderSchemaField = IProviderFieldDef
 
 export interface IProviderMeta {
     id: string
@@ -101,8 +100,10 @@ export class ProviderManager {
 
         this.reloadDevBack(id, backPath, registeredProviders)
 
+        // mtimeMs 0 = el fichero no existe ahora mismo (un build limpio borra dist antes de
+        // regenerarlo): se ignora, en vez de intentar recargarlo y loguear un ENOENT enganoso.
         fs.watchFile(backPath, { persistent: false, interval: 500 }, (curr, prev) => {
-            if (curr.mtimeMs !== prev.mtimeMs) {
+            if (curr.mtimeMs !== prev.mtimeMs && curr.mtimeMs !== 0) {
                 logInfo(ELogComponent.CORE, `[dev] Provider '${id}' back.js changed — hot-reloading`)
                 this.reloadDevBack(id, backPath, registeredProviders)
             }

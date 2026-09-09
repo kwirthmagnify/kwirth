@@ -9,21 +9,19 @@
     implementarlo importando '@kwirthmagnify/kwirth-common-back', igual que ISender/IProvider.
 */
 
+import { TConfigFieldType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+
 export enum EIdpConnectorKind {
     OIDC = 'oidc',
     OAUTH2 = 'oauth2'
 }
 
-export type IdpFieldType = 'text' | 'number' | 'boolean' | 'password'
+/** @deprecated usa TConfigFieldType, comun a todas las extensiones. */
+export type IdpFieldType = TConfigFieldType
 
-// campo del schema de configuracion (para generar el formulario en el front, con secretos 'password')
-export interface IIdpConfigFieldDef {
-    name: string
-    label: string
-    type?: IdpFieldType
-    required?: boolean
-    options?: string[]
-}
+// campo del schema de configuracion (para generar el formulario en el front, con secretos 'password').
+// Es el contrato comun IConfigFieldDef, sin nada propio.
+export type IIdpConfigFieldDef = IConfigFieldDef
 
 // identidad verificada que el conector extrae del IdP tras el callback
 export interface IIdpIdentity {

@@ -1,9 +1,7 @@
-export type LoginFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select'
+import { TConfigFieldType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 
-export interface ILoginFieldDef {
-    name: string
-    label: string
-    type?: LoginFieldType
-    required?: boolean
-    options?: string[]
-}
+/** @deprecated usa TConfigFieldType, comun a todas las extensiones. */
+export type LoginFieldType = TConfigFieldType
+
+/** Campo de configuracion de un login. Es el contrato comun IConfigFieldDef, sin nada propio. */
+export type ILoginFieldDef = IConfigFieldDef
