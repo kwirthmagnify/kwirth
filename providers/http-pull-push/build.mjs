@@ -1,4 +1,5 @@
 import esbuild from 'esbuild'
+import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
@@ -20,6 +21,23 @@ const kwirthGlobalsPlugin = {
             contents: `module.exports = ${globals[args.path]}`, loader: 'js',
         }))
     },
+}
+
+// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
+// El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
+const TSC = 'node_modules/typescript/lib/tsc.js'
+if (fs.existsSync(TSC)) {
+    try {
+        execFileSync(process.execPath, [TSC, '--noEmit'], { stdio: 'inherit' })
+        console.log('Typecheck passed')
+    }
+    catch {
+        console.error('Typecheck failed — build aborted')
+        process.exit(1)
+    }
+}
+else {
+    console.log('Skipping typecheck: typescript is not installed (run npm install)')
 }
 
 fs.mkdirSync('dist', { recursive: true })

@@ -16,7 +16,7 @@ export class AlertChannel implements IChannel {
 
     requirements: IChannelRequirements = {
         accessString: true, clusterUrl: true, clusterInfo: false, exit: false,
-        frontChannels: false, metrics: true, notifier: true, notifications: true,
+        frontChannels: false, backChannels: false, metrics: true, notifier: true, notifications: true,
         setup: true, settings: false, palette: false, userSettings: false, webSocket: false
     }
 

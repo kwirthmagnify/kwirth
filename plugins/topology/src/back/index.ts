@@ -10,6 +10,7 @@ import {
     IInstanceMessage,
     ISignalMessage,
 } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { ETopoAction, ETopologyNodeKind, ETopologyNodeStatus } from '../common/TopologyTypes'
 
 interface ITopologyWsMessage {
