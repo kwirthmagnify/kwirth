@@ -67,11 +67,9 @@ If you write your own `ClusterRole` instead of using the one in that manifest, g
   verbs: ['*']
 ```
 
-> **`batch` is easy to miss and its absence is confusing.** Jobs live in that group, and kwirth lists
-> every controller type together when it builds the resource selector. Without `batch`, listing jobs is
-> refused and **the selector shows no controllers at all** — not even the deployments you *can* read.
-> From version 0.5.288 the missing type is simply skipped and the reason is logged naming the group, but
-> those controllers still will not appear until the permission is granted.
+> **`batch` is the one usually forgotten.** Jobs live in that group, so without it **jobs are missing
+> from the resource selector** — everything else still works, and the backend log says which type it
+> could not list and which API group it belongs to.
 >
 > A quick check, replacing the namespace and service account with yours:
 >

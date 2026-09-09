@@ -139,7 +139,7 @@
     <tr><td>Kubernetes</td><td>1.24+</td><td>Any distribution: EKS, GKE, AKS, k3s, Kind, Docker Desktop</td></tr>
     <tr><td>Helm</td><td>3.x</td><td>Required for Helm install method</td></tr>
     <tr><td>kubectl</td><td>1.24+</td><td>For manual install or port-forwarding</td></tr>
-    <tr><td>ClusterRole</td><td>—</td><td>Kwirth needs read access to cluster resources. If you write your own role instead of using the supplied manifests, include the <code>batch</code> API group — without it the resource selector lists no controllers at all</td></tr>
+    <tr><td>ClusterRole</td><td>—</td><td>Kwirth needs read access to cluster resources. If you write your own role instead of using the supplied manifests, include the <code>batch</code> API group, or jobs will not appear in the resource selector</td></tr>
   </table>
   </div>
 
