@@ -23,8 +23,7 @@
     "otel": "../providers/otel/dist",
     "syslog": "../providers/syslog/dist",
     "trivy": "../providers/trivy/dist",
-    "business": "../providers/business/dist",
-    "service-flow": "../providers/service-flow/dist"
+    "business": "../providers/business/dist"
   },
   "senders": {
     "console": "../senders/console/dist",
@@ -78,7 +77,6 @@
   },
   "docs": {
     "kwirth": "bundle/docs/kwirth.tgz",
-    "service-flow": "../providers/service-flow/docs/service-flow.tgz",
     "pinocchio": "../plugins/pinocchio/docs/pinocchio.tgz",
     "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
     "montag": "../plugins/montag/docs/montag.tgz",
