@@ -83,6 +83,33 @@ buscar cómo está resuelta en los demás.**
 
 Mismo chip, mismo texto: `N configs` en tarjeta y en lista, no `N cfg` en una y `N configs` en la otra.
 
+## Pendiente: un diálogo genérico y cards estándar
+
+**El criterio escrito no basta, y hay evidencia de sobra.** Once copias del mismo diálogo significan que
+cada arreglo hay que aplicarlo once veces, y basta olvidar una para que reaparezca. Solo el 2026-09-09
+salieron tres fallos del mismo molde:
+
+- `DocsDialog.tsx` se llamaba distinto y por eso se libró de **tres** tandas seguidas — el Select de
+  versión, la procedencia en las listas y los chips —. Las auditorías barren `*ManagerDialog.tsx`.
+- Las tarjetas de disponibles de **senders** pintaban `displayName` sin alternativa y 40 de 105 entradas
+  salían **en blanco**. Siete diálogos ya usaban `displayName || name`; ese no.
+- Una auditoría propia dio los once en verde **con senders roto**, porque comprobaba si aparecían ciertos
+  identificadores en el fichero, no qué pinta la tarjeta ni con qué datos.
+
+Lo que hace falta:
+
+- **Un diálogo genérico de gestión de extensiones**, parametrizado por tipo: las dos secciones, el
+  conmutador card/lista, el filtro, el agrupado por id con su Select de versión, la instalación desde URL
+  y desde fichero, y la procedencia. Lo específico de cada tipo —las acciones y los campos propios— entra
+  por composición, no copiando el contenedor.
+- **Componentes de card estandarizados**, uno por vista (tarjeta y fila), que reciban un modelo común:
+  nombre, versión, descripción, procedencia, acciones. El nombre se resuelve **en un solo sitio**, y una
+  card sin nombre deja de ser posible por construcción.
+
+Mientras eso no exista, el criterio de este documento y las auditorías son un parche: reducen la deriva,
+no la impiden. Y la auditoría tiene que mirar **lo que se renderiza contra datos reales**, no la presencia
+de identificadores — es lo que dejó pasar lo de senders.
+
 ## Auditorías
 
 El criterio se comprueba con scripts, no a ojo: contar usos de `MarketplaceSourceIcon` por fichero, chips
