@@ -205,7 +205,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
             await loadInstalled()
             if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
-            setError(`Failed to install ${entry.displayName}: ${err}`)
+            setError(`Failed to install ${entry.displayName || entry.name}: ${err}`)
         } finally {
             setInstallingId(undefined)
         }
@@ -563,7 +563,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                 const entry = getSelectedWebhook(id); const versions = groupedAvailable[id].map(p => p.version)
                                 return [
                                     <Box key={`${id}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}><Https fontSize='small' /></Box>,
-                                    <Typography key={`${id}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{entry.displayName}</Typography>,
+                                    <Typography key={`${id}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{entry.displayName || entry.name}</Typography>,
                                     <Box key={`${id}-mkp`} sx={{ py: 1, display: 'flex', alignItems: 'center' }}>
                                         <MarketplaceSourceIcon label={entry.marketplaceLabel} />
                                         <MarketplaceBadge label={entry.marketplaceLabel} />
@@ -602,7 +602,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                         <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Https fontSize='small' /></Box>
                                         <Box flex={1} minWidth={0}>
                                             <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                                                <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{entry.displayName}</Typography>
+                                                <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{entry.displayName || entry.name}</Typography>
                                                 {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
                                                 {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />}
                                                 <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>

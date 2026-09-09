@@ -249,7 +249,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
             await loadInstalled()
             if (meta.requiresRestart) props.onRestartRequired?.()
         } catch (err) {
-            setError(`Failed to install ${entry.displayName}: ${err}`)
+            setError(`Failed to install ${entry.displayName || entry.name}: ${err}`)
         } finally {
             setInstallingId(undefined)
         }
@@ -734,7 +734,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Send fontSize='small' /></Box>
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                                                    <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{entry.displayName}</Typography>
+                                                    <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{entry.displayName || entry.name}</Typography>
                                                     {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
                                                     {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />}
                                                     <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
@@ -782,7 +782,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                     return (
                                         <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                                             <Box sx={{ color: 'text.secondary', flexShrink: 0, display: 'flex' }}><Send fontSize='small' /></Box>
-                                            <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.displayName}</Typography>
+                                            <Typography variant='body2' fontWeight='bold' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.displayName || entry.name}</Typography>
                                             <MarketplaceSourceIcon label={entry.marketplaceLabel} />
                                             <MarketplaceBadge label={entry.marketplaceLabel} />
                                             {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
