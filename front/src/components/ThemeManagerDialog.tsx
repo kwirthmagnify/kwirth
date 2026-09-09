@@ -5,8 +5,9 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
+import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
 
 
 interface IThemeManifestEntry {
@@ -143,7 +144,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
         setError(undefined)
         setInstallingId(theme.id)
         try {
-            const res = await fetch(`${backendUrl}/core/themes/install`, addPostAuthorization(accessString, JSON.stringify({ url: theme.url, marketplaceId: theme.marketplaceId, marketplaceLabel: theme.marketplaceLabel })))
+            const res = await fetch(`${backendUrl}/core/themes/install`, addPostAuthorization(accessString, JSON.stringify({ url: theme.url, marketplaceId: theme.marketplaceId, marketplaceLabel: theme.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -257,7 +258,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
     }
 
     const ThemeCard = ({ name, displayName, version, versions, onVersionChange, description, badge, source, website, action, previewUrl, marketplaceLabel, installedFrom }: { name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; previewUrl?: string; marketplaceLabel?: string; installedFrom?: string }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 120, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: previewUrl ? undefined : themeGradient(name), backgroundImage: previewUrl ? `url(${previewUrl})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+        <Box sx={{ ...extensionCardSx, background: previewUrl ? undefined : themeGradient(name), backgroundImage: previewUrl ? `url(${previewUrl})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Palette /></Box>
                 <Box flex={1} minWidth={0}>
@@ -272,7 +273,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                             : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                         }
                     </Stack>
-                    <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
+                    <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{description}</Typography>
                 </Box>
                 <Tooltip title={website ? 'Open theme website' : 'No website available'}>
                     <span>

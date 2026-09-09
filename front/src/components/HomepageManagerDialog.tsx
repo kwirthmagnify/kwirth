@@ -5,8 +5,9 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
+import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
 
 
 interface IHomepageManifestEntry {
@@ -125,7 +126,7 @@ const openReconfigure = (id: string) => {
         setError(undefined)
         setInstallingId(hp.id)
         try {
-            const res = await fetch(`${backendUrl}/core/homepages/install`, addPostAuthorization(accessString, JSON.stringify({ url: hp.url, marketplaceId: hp.marketplaceId, marketplaceLabel: hp.marketplaceLabel })))
+            const res = await fetch(`${backendUrl}/core/homepages/install`, addPostAuthorization(accessString, JSON.stringify({ url: hp.url, marketplaceId: hp.marketplaceId, marketplaceLabel: hp.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -237,7 +238,7 @@ const openReconfigure = (id: string) => {
     }
 
     const HomepageCard = ({ id, displayName, version, versions, onVersionChange, description, badge, source, website, action, marketplaceLabel, installedFrom }: { id: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; marketplaceLabel?: string; installedFrom?: string }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: homepageGradient(id) }}>
+        <Box sx={{ ...extensionCardSx, background: homepageGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Home /></Box>
                 <Box flex={1} minWidth={0}>
@@ -252,7 +253,7 @@ const openReconfigure = (id: string) => {
                             : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                         }
                     </Stack>
-                    <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
+                    <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{description}</Typography>
                 </Box>
                 <Tooltip title={website ? 'Open homepage website' : 'No website available'}>
                     <span>

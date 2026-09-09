@@ -5,8 +5,9 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
+import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
 
 
 // Una documentacion se identifica por el PAR (targetType, id): el id es el de la extension documentada
@@ -140,7 +141,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
         setError(undefined)
         setInstallingId(docsKey(entry.targetType, entry.id))
         try {
-            const res = await fetch(`${backendUrl}/core/docs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
+            const res = await fetch(`${backendUrl}/core/docs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -220,7 +221,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
     }
 
     const DocsCard = ({ targetType, id, name, displayName, version, description, source, website, action, installedFrom, marketplaceLabel, versions, onVersionChange }: { targetType: string; id: string; name: string; displayName?: string; version: string; description: string; source?: React.ReactNode; website?: string; action: React.ReactNode; installedFrom?: string; marketplaceLabel?: string; versions?: string[]; onVersionChange?: (v: string) => void }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: docsGradient(id) }}>
+        <Box sx={{ ...extensionCardSx, background: docsGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Description /></Box>
                 <Box flex={1} minWidth={0}>
@@ -234,7 +235,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
                             : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                         }
                     </Stack>
-                    <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
+                    <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{description}</Typography>
                 </Box>
                 <Tooltip title={website ? 'Open website' : 'No website available'}>
                     <span>

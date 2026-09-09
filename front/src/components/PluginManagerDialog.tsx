@@ -6,8 +6,9 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
+import { extensionCardSx, extensionCardDescriptionSx, dependencyList } from './extensionCardStyle'
 
 
 interface IRequirement {
@@ -174,7 +175,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
         setError(undefined)
         setInstallingId(plugin.id)
         try {
-            const res = await fetch(`${backendUrl}/core/plugins/install`, addPostAuthorization(accessString, JSON.stringify({ url: plugin.url, marketplaceId: plugin.marketplaceId, marketplaceLabel: plugin.marketplaceLabel })))
+            const res = await fetch(`${backendUrl}/core/plugins/install`, addPostAuthorization(accessString, JSON.stringify({ url: plugin.url, marketplaceId: plugin.marketplaceId, marketplaceLabel: plugin.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -294,7 +295,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
     }
 
     const PluginCard = ({ icon, name, displayName, version, versions, onVersionChange, description, badge, source, website, action, requires, uses, marketplaceLabel, installedFrom }: { icon?: string; name: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; requires?: IRequirement[]; uses?: IRequirement[]; marketplaceLabel?: string; installedFrom?: string }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: pluginGradient(name) }}>
+        <Box sx={{ ...extensionCardSx, background: pluginGradient(name) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}>{resolveIcon(icon)}</Box>
                 <Box flex={1} minWidth={0}>
@@ -309,17 +310,22 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                             : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                         }
                     </Stack>
-                    <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
-                    {requires && requires.length > 0 && (
+                    <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{description}</Typography>
+                    { /* Resumidas en un chip, con el detalle en el tooltip: una lista de chips hacia crecer
+                         la tarjeta y rompia la altura comun de las once. */ }
+                    {((requires && requires.length > 0) || (uses && uses.length > 0)) && (
                         <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                            <Typography variant='caption' color='text.disabled'>Requires:</Typography>
-                            {requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.extensionType[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
-                        </Stack>
-                    )}
-                    {uses && uses.length > 0 && (
-                        <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                            <Typography variant='caption' color='text.disabled'>Uses:</Typography>
-                            {uses.map((r, i) => <Chip key={i} label={`${r.id} (${r.extensionType[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18, opacity: isRequirementMet(r) ? 1 : 0.45 }} />)}
+                            {requires && requires.length > 0 && (
+                                <Tooltip title={`Requires: ${dependencyList(requires)}`}>
+                                    <Chip label={`Requires ${requires.length}`} size='small' variant='outlined' sx={compactChip} />
+                                </Tooltip>
+                            )}
+                            {uses && uses.length > 0 && (
+                                <Tooltip title={`Uses: ${dependencyList(uses)}`}>
+                                    <Chip label={`Uses ${uses.length}`} size='small' variant='outlined'
+                                        sx={{ ...compactChip, opacity: uses.every(isRequirementMet) ? 1 : 0.45 }} />
+                                </Tooltip>
+                            )}
                         </Stack>
                     )}
                 </Box>

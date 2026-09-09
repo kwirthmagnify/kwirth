@@ -7,8 +7,9 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
+import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
 
 
 interface ILoginManifestEntry {
@@ -129,7 +130,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/core/logins/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
+            const res = await fetch(`${backendUrl}/core/logins/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -291,7 +292,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
     // siempre — tambien con una sola version — para que las tarjetas no bailen entre si. En un
     // instalado no hay nada que elegir, asi que se queda el chip.
     const LoginCard = ({ id, displayName, version, versions, onVersionChange, description, badge, source, website, action, marketplaceLabel, installedFrom }: { id: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; action: React.ReactNode; marketplaceLabel?: string; installedFrom?: string }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: loginGradient(id) }}>
+        <Box sx={{ ...extensionCardSx, background: loginGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 { /* arriba a la izquierda: QUE es (el tipo de extension) */ }
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><LockPerson /></Box>
@@ -307,7 +308,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                             : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                         }
                     </Stack>
-                    <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
+                    <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{description}</Typography>
                 </Box>
                 <Tooltip title={website ? 'Open login extension website' : 'No website available'}>
                     <span>

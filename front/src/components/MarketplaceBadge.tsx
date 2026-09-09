@@ -1,6 +1,12 @@
 import React from 'react'
 import { Box, Chip, Tooltip } from '@mui/material'
-import { CloudQueue, Https, Terminal } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CloudQueue, FolderOpen, Https, Link, Terminal } from '@kwirthmagnify/kwirth-common-front/icons'
+
+// El marketplace publico no tiene id ni label propios: en el catalogo se representa con label undefined.
+// Pero una extension YA INSTALADA necesita constancia de que vino de EL y no de una url pegada a mano, asi
+// que al instalar se graba este label. Sin esto, lo instalado del publico se veia como 'descargado de una
+// url suelta': icono de consola y sin chip.
+export const PUBLIC_MARKETPLACE_LABEL = 'Kwirth'
 
 // Indicador de procedencia en las tarjetas del catalogo: que marketplace sirve esa extension.
 // No es decorativo. Con la precedencia por id, un marketplace privado puede publicar su propio 'log' y
@@ -61,10 +67,12 @@ const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceB
         )
     }
 
-    if (!props.label) {
+    // El publico: sin label en el catalogo, con PUBLIC_MARKETPLACE_LABEL una vez instalado. Perfilado, no
+    // relleno, para que se distinga de un privado de un vistazo.
+    if (!props.label || props.label === PUBLIC_MARKETPLACE_LABEL) {
         return (
             <Tooltip title='Served by the public Kwirth marketplace'>
-                <Chip label='Kwirth' size='small' variant='outlined' sx={compact} />
+                <Chip label={PUBLIC_MARKETPLACE_LABEL} size='small' variant='outlined' sx={compact} />
             </Tooltip>
         )
     }
@@ -82,24 +90,26 @@ const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceB
     local). Antes estaba duplicado en linea en los 10 dialogos de gestion de extensiones.
 */
 const MarketplaceSourceIcon: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceBadgeProps) => {
+    // La CONSOLA es de dev y solo de dev. Un fichero local y una url pegada a mano tampoco vienen de un
+    // marketplace, pero no son lo mismo: cada uno lleva su icono, o el de dev deja de significar dev.
     if (comesFromNoMarketplace(props.label, props.installedFrom)) {
-        const title = props.installedFrom === 'dev'
-            ? 'Loaded from disk (kwirth-dev.json) — it does not come from any marketplace'
+        const [title, icon] = props.installedFrom === 'dev'
+            ? ['Loaded from disk (kwirth-dev.json) — it does not come from any marketplace', <Terminal fontSize='small' />]
             : props.installedFrom === 'local'
-                ? 'Installed from a local file — it does not come from any marketplace'
-                : `Downloaded directly from ${props.installedFrom} — it does not come from any marketplace`
+                ? ['Installed from a local file — it does not come from any marketplace', <FolderOpen fontSize='small' />]
+                : [`Downloaded directly from ${props.installedFrom} — it does not come from any marketplace`, <Link fontSize='small' />]
         return (
-            <Tooltip title={title}>
-                <Box sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
-                    <Terminal fontSize='small' />
-                </Box>
+            <Tooltip title={title as string}>
+                <Box sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>{icon}</Box>
             </Tooltip>
         )
     }
+
+    const isPrivate = Boolean(props.label) && props.label !== PUBLIC_MARKETPLACE_LABEL
     return (
-        <Tooltip title={props.label ? `From the private '${props.label}' marketplace` : 'From the public Kwirth marketplace'}>
-            <Box sx={{ color: props.label ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
-                { props.label ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
+        <Tooltip title={isPrivate ? `From the private '${props.label}' marketplace` : 'From the public Kwirth marketplace'}>
+            <Box sx={{ color: isPrivate ? 'warning.main' : 'text.secondary', display: 'flex', alignItems: 'center', mr: 0.75 }}>
+                { isPrivate ? <Https fontSize='small' /> : <CloudQueue fontSize='small' /> }
             </Box>
         </Tooltip>
     )

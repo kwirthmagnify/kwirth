@@ -6,7 +6,8 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
+import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
 
 
 // tipos de la API (front-local, como hace ProviderDialog con su IProviderSchemaField)
@@ -159,7 +160,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
     const installFromCatalog = async (entry: IIdpConnectorManifestEntry) => {
         setError(undefined); setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/idp/connectors/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
+            const res = await fetch(`${backendUrl}/idp/connectors/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL })))
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
             const meta: IIdpInstallResult = await res.json()
             await load()
@@ -245,7 +246,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                         : viewMode === 'card'
                             ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                                 { shownConnectors.map(c => (
-                                    <Box key={c.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: idpGradient(c.id) }}>
+                                    <Box key={c.id} sx={{ ...extensionCardSx, background: idpGradient(c.id) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Key /></Box>
                                             <Box flex={1} minWidth={0}>
@@ -253,7 +254,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{c.label}</Typography>
                                                     {c.version && <Chip label={`v${c.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />}
                                                 </Stack>
-                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{c.description || `${c.id} · ${c.kind}`}</Typography>
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{c.description || `${c.id} · ${c.kind}`}</Typography>
                                             </Box>
                                             {websiteButton(c.website)}
                                         </Stack>
@@ -349,7 +350,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                 const entry = getSelected(id)
                                 const versions = group.map(e => e.version)
                                 return (
-                                    <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: idpGradient(entry.name) }}>
+                                    <Box key={id} sx={{ ...extensionCardSx, background: idpGradient(entry.name) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Key /></Box>
                                             <Box flex={1} minWidth={0}>
@@ -358,7 +359,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                                     { isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} /> }
                                                     <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>{ versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>) }</Select>
                                                 </Stack>
-                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{entry.description}</Typography>
                                             </Box>
                                             <Tooltip title={entry.website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
                                         </Stack>

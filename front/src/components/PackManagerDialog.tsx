@@ -6,8 +6,9 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
+import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
 
 
 interface IPackManifestEntry {
@@ -151,7 +152,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/core/packs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
+            const res = await fetch(`${backendUrl}/core/packs/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL })))
             if (!res.ok) {
                 const body = await res.json()
                 throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -281,7 +282,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
     // siempre — tambien con una sola version — para que las tarjetas no bailen entre si. En un
     // instalado no hay nada que elegir, asi que se queda el chip.
     const PackCard = ({ id, displayName, version, versions, onVersionChange, description, badge, source, website, members, action, marketplaceLabel, installedFrom }: { id: string; displayName: string; version: string; versions?: string[]; onVersionChange?: (v: string) => void; description: string; badge?: React.ReactNode; source?: React.ReactNode; website?: string; members?: string; action: React.ReactNode; marketplaceLabel?: string; installedFrom?: string }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: packGradient(id) }}>
+        <Box sx={{ ...extensionCardSx, background: packGradient(id) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Extension /></Box>
                 <Box flex={1} minWidth={0}>
@@ -296,7 +297,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                             : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                         }
                     </Stack>
-                    <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{description}</Typography>
+                    <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{description}</Typography>
                     {members && <Typography variant='caption' color='text.disabled' display='block'>{members}</Typography>}
                 </Box>
                 <Tooltip title={website ? 'Open pack website' : 'No website available'}>

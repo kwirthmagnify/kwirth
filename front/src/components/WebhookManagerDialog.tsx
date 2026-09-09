@@ -10,8 +10,9 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
+import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
 
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -199,7 +200,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/core/webhooks/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
+            const res = await fetch(`${backendUrl}/core/webhooks/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL })))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             const meta: IInstalledWebhook = await res.json()
             await loadInstalled()
@@ -413,7 +414,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
     // ─── Webhook card ─────────────────────────────────────────────────────────
 
     const WebhookCard = ({ webhook }: { webhook: IInstalledWebhook }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: webhookGradient(webhook.name) }}>
+        <Box sx={{ ...extensionCardSx, background: webhookGradient(webhook.name) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Https fontSize='small' /></Box>
                 <Box flex={1} minWidth={0}>
@@ -421,7 +422,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{webhook.displayName || webhook.id}</Typography>
                         <Chip label={`v${webhook.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                     </Stack>
-                    <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{webhook.description}</Typography>
+                    <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{webhook.description}</Typography>
                 </Box>
                 <Tooltip title={webhook.website ? 'Open website' : 'No website available'}>
                     <span>
@@ -597,7 +598,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                             {Object.keys(groupedAvailable).filter(id => !availableFilter || id.includes(availableFilter.toLowerCase()) || groupedAvailable[id][0].displayName?.toLowerCase().includes(availableFilter.toLowerCase())).map(id => {
                                 const group = groupedAvailable[id]; const entry = getSelectedWebhook(id); const versions = group.map(p => p.version)
                                 return (
-                                <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: webhookGradient(entry.name) }}>
+                                <Box key={id} sx={{ ...extensionCardSx, background: webhookGradient(entry.name) }}>
                                     <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                         <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Https fontSize='small' /></Box>
                                         <Box flex={1} minWidth={0}>
@@ -609,7 +610,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                                         {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                       </Select>
                                             </Stack>
-                                            <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
+                                            <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{entry.description}</Typography>
                                         </Box>
                                         <Tooltip title={entry.website ? 'Open website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
                                     </Stack>

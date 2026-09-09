@@ -10,8 +10,9 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
+import { extensionCardSx, extensionCardDescriptionSx, dependencyList } from './extensionCardStyle'
 
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -243,7 +244,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         setError(undefined)
         setInstallingId(entry.id)
         try {
-            const res = await fetch(`${backendUrl}/core/senders/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel })))
+            const res = await fetch(`${backendUrl}/core/senders/install`, addPostAuthorization(accessString, JSON.stringify({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL })))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             const meta: IInstalledSender = await res.json()
             await loadInstalled()
@@ -579,7 +580,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
     // ─── Sender card ──────────────────────────────────────────────────────────
 
     const SenderCard = ({ sender }: { sender: IInstalledSender }) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: senderGradient(sender.name) }}>
+        <Box sx={{ ...extensionCardSx, background: senderGradient(sender.name) }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Send fontSize='small' /></Box>
                 <Box flex={1} minWidth={0}>
@@ -587,7 +588,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                         <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{sender.displayName || sender.id}</Typography>
                         <Chip label={`v${sender.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                     </Stack>
-                    <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{sender.description}</Typography>
+                    <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{sender.description}</Typography>
                 </Box>
                 <Tooltip title={sender.website ? 'Open website' : 'No website available'}>
                     <span>
@@ -729,7 +730,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                 {filteredIds.map(id => {
                                     const group = groupedAvailable[id]; const entry = getSelectedSender(id); const versions = group.map(p => p.version)
                                     return (
-                                    <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: senderGradient(entry.name) }}>
+                                    <Box key={id} sx={{ ...extensionCardSx, background: senderGradient(entry.name) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Send fontSize='small' /></Box>
                                             <Box flex={1} minWidth={0}>
@@ -741,17 +742,22 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                                             {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                           </Select>
                                                 </Stack>
-                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{entry.description}</Typography>
-                                                {entry.requires && entry.requires.length > 0 && (
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{entry.description}</Typography>
+                                                { /* Resumidas en un chip, con el detalle en el tooltip: una lista
+                                                     de chips hacia crecer la tarjeta y rompia la altura comun. */ }
+                                                {((entry.requires && entry.requires.length > 0) || (entry.uses && entry.uses.length > 0)) && (
                                                     <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                                                        <Typography variant='caption' color='text.disabled'>Requires:</Typography>
-                                                        {entry.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.extensionType[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
-                                                    </Stack>
-                                                )}
-                                                {entry.uses && entry.uses.length > 0 && (
-                                                    <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                                                        <Typography variant='caption' color='text.disabled'>Uses:</Typography>
-                                                        {entry.uses.map((r, i) => <Chip key={i} label={`${r.id} (${r.extensionType[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18, opacity: isRequirementMet(r) ? 1 : 0.45 }} />)}
+                                                        {entry.requires && entry.requires.length > 0 && (
+                                                            <Tooltip title={`Requires: ${dependencyList(entry.requires)}`}>
+                                                                <Chip label={`Requires ${entry.requires.length}`} size='small' variant='outlined' sx={compactChip} />
+                                                            </Tooltip>
+                                                        )}
+                                                        {entry.uses && entry.uses.length > 0 && (
+                                                            <Tooltip title={`Uses: ${dependencyList(entry.uses)}`}>
+                                                                <Chip label={`Uses ${entry.uses.length}`} size='small' variant='outlined'
+                                                                    sx={{ ...compactChip, opacity: entry.uses.every(isRequirementMet) ? 1 : 0.45 }} />
+                                                            </Tooltip>
+                                                        )}
                                                     </Stack>
                                                 )}
                                             </Box>

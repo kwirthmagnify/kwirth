@@ -7,8 +7,9 @@ import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
+import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
+import { extensionCardSx, extensionCardDescriptionSx, dependencyList } from './extensionCardStyle'
 
 declare global { interface Window { __kwirth_providers__: Record<string, any> } }
 
@@ -209,7 +210,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
         setError(undefined)
         setInstallingId(provider.id)
         try {
-            const res = await fetch(`${backendUrl}/core/providers/install`, addPostAuthorization(accessString, JSON.stringify({ url: provider.url, marketplaceId: provider.marketplaceId, marketplaceLabel: provider.marketplaceLabel })))
+            const res = await fetch(`${backendUrl}/core/providers/install`, addPostAuthorization(accessString, JSON.stringify({ url: provider.url, marketplaceId: provider.marketplaceId, marketplaceLabel: provider.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL })))
             if (!res.ok) { const body = await res.json(); throw new Error(body.error ?? `HTTP ${res.status}`) }
             const meta: IInstalledProvider = await res.json()
             await loadInstalled()
@@ -332,7 +333,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                         : viewMode === 'card'
                             ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.5 }}>
                                 {installed.filter(p => !installedFilter || p.id.includes(installedFilter.toLowerCase()) || (p.displayName || p.name || '').toLowerCase().includes(installedFilter.toLowerCase())).map(provider => (
-                                    <Box key={provider.id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: providerGradient(provider.name) }}>
+                                    <Box key={provider.id} sx={{ ...extensionCardSx, background: providerGradient(provider.name) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Factory /></Box>
                                             <Box flex={1} minWidth={0}>
@@ -340,7 +341,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                                     <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{provider.displayName || provider.name || provider.id}</Typography>
                                                     <Chip label={`v${provider.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                                 </Stack>
-                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{provider.description}</Typography>
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{provider.description}</Typography>
                                             </Box>
                                             <Tooltip title={provider.website ? 'Open provider website' : 'No website available'}>
                                                 <span>
@@ -448,7 +449,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                     const provider = getSelectedProvider(id)
                                     const versions = group.map(p => p.version)
                                     return (
-                                    <Box key={id} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 1.5, minHeight: 100, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, background: providerGradient(provider.name) }}>
+                                    <Box key={id} sx={{ ...extensionCardSx, background: providerGradient(provider.name) }}>
                                         <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Factory /></Box>
                                             <Box flex={1} minWidth={0}>
@@ -460,17 +461,22 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                                             {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
                                                           </Select>
                                                 </Stack>
-                                                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>{provider.description}</Typography>
-                                                {provider.requires && provider.requires.length > 0 && (
+                                                <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{provider.description}</Typography>
+                                                { /* Resumidas en un chip, con el detalle en el tooltip: una lista
+                                                     de chips hacia crecer la tarjeta y rompia la altura comun. */ }
+                                                {((provider.requires && provider.requires.length > 0) || (provider.uses && provider.uses.length > 0)) && (
                                                     <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                                                        <Typography variant='caption' color='text.disabled'>Requires:</Typography>
-                                                        {provider.requires.map((r, i) => <Chip key={i} label={`${r.id} (${r.extensionType[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18 }} />)}
-                                                    </Stack>
-                                                )}
-                                                {provider.uses && provider.uses.length > 0 && (
-                                                    <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                                                        <Typography variant='caption' color='text.disabled'>Uses:</Typography>
-                                                        {provider.uses.map((r, i) => <Chip key={i} label={`${r.id} (${r.extensionType[0].toUpperCase()}) ≥${r.minVersion}`} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 18, opacity: isRequirementMet(r) ? 1 : 0.45 }} />)}
+                                                        {provider.requires && provider.requires.length > 0 && (
+                                                            <Tooltip title={`Requires: ${dependencyList(provider.requires)}`}>
+                                                                <Chip label={`Requires ${provider.requires.length}`} size='small' variant='outlined' sx={compactChip} />
+                                                            </Tooltip>
+                                                        )}
+                                                        {provider.uses && provider.uses.length > 0 && (
+                                                            <Tooltip title={`Uses: ${dependencyList(provider.uses)}`}>
+                                                                <Chip label={`Uses ${provider.uses.length}`} size='small' variant='outlined'
+                                                                    sx={{ ...compactChip, opacity: provider.uses.every(isRequirementMet) ? 1 : 0.45 }} />
+                                                            </Tooltip>
+                                                        )}
                                                     </Stack>
                                                 )}
                                             </Box>
