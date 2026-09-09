@@ -38,6 +38,11 @@ That is the whole point of the provider layer — the remote endpoint sees kwirt
 Set it from the card's **⚙️ gear** in **☰ → Manage extensions → Providers**. The card itself tells you how
 many connections the provider has, the same way a sender's card does.
 
+> **Restart the core after installing it**, as kwirth prompts you to. This provider serves its own
+> configuration dialog from its own HTTP route, and the core wires routes in **while it starts up** — so
+> until you restart, the gear opens but every action answers `HTTP 404`. Nothing is broken and there is
+> nothing to reinstall. See [When a restart is needed](../../admin/08-extending-kwirth#when-a-restart-is-needed).
+
 The dialog works like the sender configuration dialog: your connections on the left, the selected one being
 edited on the right.
 

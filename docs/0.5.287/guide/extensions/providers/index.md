@@ -61,6 +61,8 @@ Providers that connect to something external expose their settings behind the **
 
 Install a new provider from the **Install provider** field at the bottom (paste a package URL or **Browse**).
 
+> **Some providers need the core restarted after installing**, and kwirth prompts you when they do. It applies to providers that own an HTTP route — their own ingestion endpoint, or their own configuration dialog — and to providers that listen on a port, because the core wires routes and opens listeners **while it starts up**. Installed without the restart, such a provider answers `HTTP 404` in its own dialog, or silently never opens its port. Nothing is broken and nothing needs reinstalling. Details in [When a restart is needed](../../admin/08-extending-kwirth#when-a-restart-is-needed).
+
 ## Admin guide
 
 - **Install / enable / remove:** all providers are managed from **☰ → Manage extensions → Providers**, using the common flow described in [Extending kwirth](../../admin/08-extending-kwirth).

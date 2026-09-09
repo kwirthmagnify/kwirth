@@ -29,6 +29,7 @@ Set it from the card's **⚙️ gear** in **☰ → Manage extensions → Provid
 
 ## Notes
 
+- **Restart the core after installing it.** kwirth prompts you. The listener is opened when the provider is instantiated, and the core does that while it starts up — so until you restart, **the port simply is not open, and nothing says so**. This provider's failure mode is silent: no error, no traffic. See [When a restart is needed](../../admin/08-extending-kwirth#when-a-restart-is-needed).
 - The listen port is network-facing — expose it deliberately and protect it.
 - UDP is fire-and-forget (may drop under load); TCP is reliable but needs correct **framing** to split messages.
 
