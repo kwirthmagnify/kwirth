@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Key, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Key, Https, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -221,10 +221,11 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
         if (from === 'dev') return <Chip label='dev' size='small' variant='outlined' color='warning' sx={compactChip} />
         if (from.startsWith('pack:'))
             return <Tooltip title={`Installed by pack '${from.slice(5)}'`}><Chip label='via pack' size='small' variant='outlined' color='secondary' sx={compactChip} /></Tooltip>
-        if (from === 'bundled') return <Chip label='bundled' size='small' variant='outlined' sx={compactChip} />
-        if (from === 'local') return <Typography variant='caption' color='text.secondary'>Local file</Typography>
-        const short = from.length > 40 ? from.slice(0, 37) + '…' : from
-        return <Tooltip title={from}><Typography variant='caption' color='text.secondary'><Link fontSize='inherit' sx={{ verticalAlign: 'middle', mr: 0.3 }} />{short}</Typography></Tooltip>
+        if (from === 'bundled') return <Chip label='bundled' size='small' variant='outlined' color='secondary' sx={compactChip} />
+        if (from === 'local') return <Chip icon={<FolderOpen />} label='Local file' size='small' variant='outlined' sx={compactChip} />
+        // Descargado de una URL suelta: no se pinta nada. La direccion recortada llenaba la fila sin
+        // decir gran cosa, y ya la da el tooltip del icono de procedencia (MarketplaceSourceIcon).
+        return null
     }
     const websiteButton = (website?: string) =>
         <Tooltip title={website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
