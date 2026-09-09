@@ -1,15 +1,19 @@
 {
-  "name": "@kwirthmagnify/login-censor",
-  "id": "censor",
-  "displayName": "Censor",
-  "version": "0.1.3",
-  "description": "Custom login page for Censor channel",
-  "extensionType": "login",
-  "website": "https://github.com/kwirthmagnify/kwirth",
-  "scripts": {
-    "build": "node build.mjs",
-    "watch": "node watch.mjs"
-  },
-  "requiresRestart": false,
-  "requiresExtension": []
+    "name": "@kwirthmagnify/login-censor",
+    "id": "censor",
+    "displayName": "Censor",
+    "version": "0.1.3",
+    "files": [
+        "login.json",
+        "background.png"
+    ],
+    "description": "Custom login page for Censor channel",
+    "extensionType": "login",
+    "website": "https://github.com/kwirthmagnify/kwirth",
+    "scripts": {
+        "build": "node build.mjs",
+        "watch": "node watch.mjs"
+    },
+    "requiresRestart": false,
+    "requiresExtension": []
 }

@@ -1,15 +1,19 @@
 {
-  "name": "@kwirthmagnify/login-template",
-  "id": "template",
-  "displayName": "Template",
-  "version": "0.0.1",
-  "description": "Starting point for a Kwirth login extension",
-  "extensionType": "login",
-  "website": "https://github.com/kwirthmagnify/kwirth",
-  "scripts": {
-    "build": "node build.mjs",
-    "watch": "node watch.mjs"
-  },
-  "requiresRestart": false,
-  "requiresExtension": []
+    "name": "@kwirthmagnify/login-template",
+    "id": "template",
+    "displayName": "Template",
+    "version": "0.0.1",
+    "files": [
+        "login.json",
+        "background.png"
+    ],
+    "description": "Starting point for a Kwirth login extension",
+    "extensionType": "login",
+    "website": "https://github.com/kwirthmagnify/kwirth",
+    "scripts": {
+        "build": "node build.mjs",
+        "watch": "node watch.mjs"
+    },
+    "requiresRestart": false,
+    "requiresExtension": []
 }
