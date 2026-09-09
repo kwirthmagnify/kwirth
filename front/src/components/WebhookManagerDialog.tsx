@@ -7,7 +7,7 @@ import {
 } from '@mui/material'
 import { Add, CheckCircle, CloudQueue, ContentCopy, Delete, Download, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
@@ -459,7 +459,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
     return (
         <>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/webhooks/index?id=managing-configuring-webhooks' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Manage webhooks</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/webhooks/index?id=managing-configuring-webhooks' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Manage webhooks</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
@@ -642,7 +642,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
         {/* Generic config dialog */}
         {expandedId && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '860px', height: '600px' } }}>
-                <DialogTitleHelp section='guide/extensions/webhooks/index?id=managing-configuring-webhooks' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
+                <DialogTitleHelp section='guide/extensions/webhooks/index?id=managing-configuring-webhooks' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent sx={{ display: 'flex', gap: 2, p: '16px !important', overflow: 'hidden', height: '100%' }}>
 
                     {/* Left — config list */}

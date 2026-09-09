@@ -7,7 +7,7 @@ import {
 } from '@mui/material'
 import { Add, CheckCircle, CloudQueue, ContentCopy, Delete, Download, FileDownload, FileUpload, FolderOpen, Https, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
@@ -628,7 +628,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
     return (
         <>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Manage senders</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/senders/index?id=managing-configuring-senders' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Manage senders</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
@@ -829,7 +829,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Generic config dialog for senders without a custom front */}
         {expandedId && !expandedSender?.hasFront && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '860px', height: '600px' } }}>
-                <DialogTitleHelp section={helpSection} docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
+                <DialogTitleHelp section={helpSection} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Configure: {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent sx={{ display: 'flex', gap: 2, p: '16px !important', overflow: 'hidden', height: '100%' }}>
 
                     {/* Left — config list */}
@@ -927,7 +927,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Export config selection dialog */}
         {configExportOpen && expandedId && (
             <Dialog open maxWidth='xs' fullWidth>
-                <DialogTitleHelp section={helpSection} docsUrl={backendUrl + '/core/docs/core/kwirth'}>Export configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
+                <DialogTitleHelp section={helpSection} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Export configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent>
                     <Stack spacing={0.5} sx={{ pt: 0.5 }}>
                         <FormControlLabel
@@ -973,7 +973,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Import config selection dialog */}
         {configImportOpen && expandedId && (
             <Dialog open maxWidth='xs' fullWidth>
-                <DialogTitleHelp section={helpSection} docsUrl={backendUrl + '/core/docs/core/kwirth'}>Import configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
+                <DialogTitleHelp section={helpSection} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Import configs — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent>
                     <Stack spacing={0.5} sx={{ pt: 0.5 }}>
                         {configImportData.configs.length === 0
@@ -1027,7 +1027,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
         {/* Base config sub-dialog */}
         {baseConfigOpen && expandedId && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px' } }} onClose={() => setBaseConfigOpen(false)}>
-                <DialogTitleHelp section={helpSection} docsUrl={backendUrl + '/core/docs/core/kwirth'}>Base configuration — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
+                <DialogTitleHelp section={helpSection} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Base configuration — {installed.find(s => s.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent>
                     <Stack direction='column' spacing={1.5} sx={{ pt: 1 }}>
                         {schema.filter(f => f.common).map(f => renderField(f, baseFormValues, (name, val) => setBaseFormValues(prev => ({ ...prev, [name]: val }))))}

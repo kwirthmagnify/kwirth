@@ -3,7 +3,7 @@ import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Key, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
@@ -230,7 +230,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
 
     return (<>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/admin/07-idp-integration?id=enabling-an-idp' docsUrl={backendUrl + '/core/docs/core/kwirth'}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Key fontSize='small' />Identity providers</Box></DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/07-idp-integration?id=enabling-an-idp' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Key fontSize='small' />Identity providers</Box></DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
@@ -387,7 +387,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
         {/* config de la instancia del conector (lanzado desde la card, schema-driven) */}
         { editing && editConnector &&
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px', minHeight: '360px' } }}>
-                <DialogTitleHelp section='guide/admin/07-idp-integration?id=enabling-an-idp' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure: {editConnector.label}</DialogTitleHelp>
+                <DialogTitleHelp section='guide/admin/07-idp-integration?id=enabling-an-idp' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Configure: {editConnector.label}</DialogTitleHelp>
                 <DialogContent sx={{ pt: '16px !important' }}>
                     <Stack spacing={2}>
                         <TextField size='small' fullWidth label='Login button label' value={editing.label} onChange={e => setEditing({ ...editing, label: e.target.value })} />

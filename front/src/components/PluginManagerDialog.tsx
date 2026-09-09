@@ -3,7 +3,7 @@ import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogConte
 import * as MuiIcons from '@kwirthmagnify/kwirth-common-front/icons'
 import { CheckCircle, CloudQueue, Delete, Download, Extension, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
@@ -361,7 +361,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
 
     return (
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Manage plugins</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Manage plugins</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
@@ -540,7 +540,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
             </DialogActions>
             {configId !== undefined && (
                 <Dialog open PaperProps={{ sx: { width: 560, maxWidth: '95vw' } }}>
-                    <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure {configId}</DialogTitleHelp>
+                    <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Configure {configId}</DialogTitleHelp>
                     <DialogContent>
                         <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>Installation config (JSON) for this plugin — read by the plugin at runtime.</Typography>
                         <TextField multiline minRows={8} fullWidth value={configText} onChange={e => setConfigText(e.target.value)} disabled={configBusy} slotProps={{ input: { sx: { fontFamily: 'monospace', fontSize: 12 } } }} />

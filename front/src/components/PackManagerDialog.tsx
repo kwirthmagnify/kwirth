@@ -3,7 +3,7 @@ import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Di
 import { Chip } from '@mui/material'
 import { CheckCircle, CloudQueue, Delete, Download, Extension, FolderOpen, Https, Link, OpenInNew, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
@@ -321,7 +321,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
 
     return (
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/packs/index'>Manage extension packs</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/packs/index' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Manage extension packs</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 

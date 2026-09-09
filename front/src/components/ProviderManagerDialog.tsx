@@ -4,7 +4,7 @@ import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogConte
 import { CheckCircle, CloudQueue, Delete, Download, Factory, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
@@ -318,7 +318,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
     return (
         <>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/providers/index?id=managing-configuring-providers' docsUrl={backendUrl + '/core/docs/core/kwirth'}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Factory fontSize='small' />Manage providers</Box></DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/providers/index?id=managing-configuring-providers' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Factory fontSize='small' />Manage providers</Box></DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
@@ -549,7 +549,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
         {/* Generic config dialog for basic providers (schema-driven) */}
         {expandedId && !installed.find(p => p.id === expandedId)?.hasFront && (
             <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px', minHeight: '300px' } }}>
-                <DialogTitleHelp section='guide/extensions/providers/index?id=managing-configuring-providers' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure: {installed.find(p => p.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
+                <DialogTitleHelp section='guide/extensions/providers/index?id=managing-configuring-providers' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Configure: {installed.find(p => p.id === expandedId)?.displayName ?? expandedId}</DialogTitleHelp>
                 <DialogContent sx={{ pt: '16px !important' }}>
                     {!configSchema
                         ? <Typography variant='body2' color='text.secondary'>This provider has no configurable options.</Typography>

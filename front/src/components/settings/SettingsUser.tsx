@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { Settings } from '../../model/Settings'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
@@ -35,7 +35,7 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='xs' disableRestoreFocus={true}>
-            <DialogTitleHelp section='guide/admin/02-initial-config?id=user-settings-personal' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Settings</DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/02-initial-config?id=user-settings-personal' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Settings</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
                     <Typography variant='body2'>

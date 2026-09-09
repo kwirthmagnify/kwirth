@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react'
 import { useKeyboard } from '../tools/useKeyboard'
 import { Button, Dialog, DialogActions, DialogContent, List, ListItem, ListItemButton, Stack, TextField, Typography} from '@mui/material'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { Cluster } from '../model/Cluster'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxWaitCancel, MsgBoxYesNo } from '../tools/MsgBox'
 import { addGetAuthorization } from '../tools/AuthorizationManagement'
@@ -124,7 +124,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='md' disableEnforceFocus>
-            <DialogTitleHelp section='guide/admin/06-cluster-management?id=add-a-remote-cluster' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Manage clusters</DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/06-cluster-management?id=add-a-remote-cluster' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Manage clusters</DialogTitleHelp>
             <DialogContent data-refresh={refresh}>
                 <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
                     <List sx={{flexGrow:1, mr:2, width:'50vh' }}>

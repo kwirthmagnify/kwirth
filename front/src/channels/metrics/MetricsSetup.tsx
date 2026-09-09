@@ -5,7 +5,7 @@ import { ISetupProps } from '../IChannel'
 import { BarChart } from '@kwirthmagnify/kwirth-common-front/icons'
 import { MetricsInstanceConfig, MetricsConfig } from './MetricsConfig'
 import { EMetricsConfigMode } from './MetricsTypes'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
 const MetricsIcon = <BarChart/>
@@ -101,7 +101,7 @@ const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
 
     return (<>
         <Dialog open={true} maxWidth={false} sx={{'& .MuiDialog-paper': { width: '50vw', maxWidth: '60vw', height:'60vh', maxHeight:'40vw' } }}>
-            <DialogTitleHelp section='guide/user/07-everyday-tasks?id=build-a-metrics-view' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure metrics for {props.channelObject?.view}</DialogTitleHelp>
+            <DialogTitleHelp section='guide/user/07-everyday-tasks?id=build-a-metrics-view' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Configure metrics for {props.channelObject?.view}</DialogTitleHelp>
             <DialogContent >
                 <Stack spacing={2} direction={'column'} sx={{ mt:'16px' }}>
                     <Stack direction={'row'} spacing={1} >

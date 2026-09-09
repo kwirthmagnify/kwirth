@@ -51,7 +51,24 @@ export interface ILoginConfig {
     autoPassword?: string
 }
 
-const CONFIGMAP_SIZE_LIMIT = 800 * 1024
+// El tope no es nuestro: un ConfigMap de Kubernetes no pasa de ~1 MiB por objeto, y el fondo viaja dentro
+// en base64. Subirlo no es opcion; la imagen tiene que caber.
+export const CONFIGMAP_SIZE_LIMIT = 800 * 1024
+
+// Que le pasa al fondo de un login, o undefined si nada. Sin fondo tampoco hay problema: un login puede
+// no traerlo. El problema es traerlo y que no quepa, porque entonces la pagina sale distinta de como su
+// autor la diseño y hasta ahora eso era solo una linea de log.
+export const backgroundProblem = (backgroundB64: string|undefined): string|undefined =>
+    backgroundB64 !== undefined && backgroundB64.length > CONFIGMAP_SIZE_LIMIT ? 'background-too-large' : undefined
+
+// Lo que se guarda de un login instalado. `problem` marca que se instalo A MEDIAS: la extension funciona
+// pero le falta algo, y la pagina de login lo dice para que quien la vea pueda avisar al administrador.
+interface ILoginPayload {
+    meta: ILoginMeta
+    config: ILoginConfig
+    background?: string
+    problem?: string
+}
 
 // Que sobra en el indice cuando se relee kwirth-dev.json. Solo se reconcilia lo marcado 'dev': lo bundled,
 // lo de un pack y lo instalado desde marketplace, URL o fichero se queda donde esta, que es instalado de
@@ -136,11 +153,16 @@ export class LoginManager {
             const backgroundPath = path.join(base, 'background.png')
             const backgroundB64 = fs.existsSync(backgroundPath) ? fs.readFileSync(backgroundPath).toString('base64') : undefined
 
-            const payload: { meta: ILoginMeta; config: ILoginConfig; background?: string } = { meta, config: loginConfig }
-            if (backgroundB64) {
-                if (backgroundB64.length <= CONFIGMAP_SIZE_LIMIT) payload.background = backgroundB64
-                else logInfo(ELogComponent.CORE, `Login '${meta.id}': background.png exceeds ${CONFIGMAP_SIZE_LIMIT} bytes and will not be stored in ConfigMap`)
+            const payload: ILoginPayload = { meta, config: loginConfig }
+            const problem = backgroundProblem(backgroundB64)
+            if (problem) {
+                // Antes esto era SOLO una linea de log: el login salia sin fondo y nadie se enteraba. Paso
+                // de verdad con un login instalado desde el marketplace. Ahora queda anotado en el propio
+                // login, para que su pagina pueda avisar a quien la vea.
+                logInfo(ELogComponent.CORE, `Login '${meta.id}': background.png exceeds ${CONFIGMAP_SIZE_LIMIT} bytes and will not be stored in ConfigMap`)
+                payload.problem = problem
             }
+            else if (backgroundB64) payload.background = backgroundB64
 
             await this.configMaps.write(`kwirth-login-${meta.id}`, payload)
 
@@ -271,15 +293,16 @@ export class LoginManager {
         return data?.config
     }
 
-    async getConfigWithMeta(id: string): Promise<(ILoginConfig & { hasBackground: boolean }) | undefined> {
-        const data = await this.configMaps.read(`kwirth-login-${id}`) as { meta: ILoginMeta; config: ILoginConfig; background?: string } | null
+    async getConfigWithMeta(id: string): Promise<(ILoginConfig & { hasBackground: boolean; problem?: string }) | undefined> {
+        const data = await this.configMaps.read(`kwirth-login-${id}`) as ILoginPayload | null
         if (!data?.config) return undefined
         let hasBackground = !!data.background
         if (!hasBackground && this.isDevLogin(id)) {
             const dev = this.devLogins.get(id)
             if (dev) hasBackground = await this.tgzHasBackground(dev.tgzPath)
         }
-        return { ...data.config, hasBackground }
+        // el problema viaja a una pagina SIN autenticar, asi que va como codigo, no como detalle interno
+        return { ...data.config, hasBackground, ...(data.problem && !hasBackground ? { problem: data.problem } : {}) }
     }
 
     private async tgzHasBackground(tgzPath: string): Promise<boolean> {

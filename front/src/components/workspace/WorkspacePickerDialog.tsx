@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, Divider, FormControlLabel, Stack, Typography } from '@mui/material'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
 interface IWorkspacePickerDialogProps {
@@ -22,7 +22,7 @@ const WorkspacePickerDialog: React.FC<IWorkspacePickerDialogProps> = ({ title, w
 
     return (
         <Dialog open maxWidth='xs' fullWidth>
-            <DialogTitleHelp section='guide/user/06-workspaces?id=the-workspaces-menu' docsUrl={backendUrl + '/core/docs/core/kwirth'}>{title}</DialogTitleHelp>
+            <DialogTitleHelp section='guide/user/06-workspaces?id=the-workspaces-menu' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>{title}</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={0.5}>
                     <FormControlLabel

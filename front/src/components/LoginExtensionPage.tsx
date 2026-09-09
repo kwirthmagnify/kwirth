@@ -40,6 +40,9 @@ interface ILoginConfig {
     startContainer?: string
     allowedIdps?: string[]
     hasBackground?: boolean
+    // La extension se instalo a medias: la pagina funciona pero le falta algo. Llega como codigo, no como
+    // detalle, porque esta pagina se sirve SIN autenticar.
+    problem?: string
     autoUser?: string
     autoPassword?: string
 }
@@ -303,6 +306,17 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
                     </>}
                 </Stack>
             </Box>
+
+            { /* Una extension puede quedar instalada A MEDIAS —p.ej. su fondo no cabe en el ConfigMap— y
+                 hasta ahora eso era solo una linea de log: la pagina salia rara y nadie se enteraba. Se
+                 avisa abajo del todo, discreto, y nombrando el login para que quien lo vea pueda decir
+                 CUAL falla. No se explica el motivo: esta pagina se sirve sin autenticar. */ }
+            { config.problem &&
+                <Typography variant='caption' color='error'
+                    sx={{ position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center', opacity: 0.9 }}>
+                    There is a problem with the '{props.slug}' login page — please contact your Kwirth administrator.
+                </Typography>
+            }
         </Box>
     )
 }

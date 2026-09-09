@@ -4,7 +4,7 @@ import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Di
 import { Chip } from '@mui/material'
 import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Https, Link, LockPerson, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
@@ -334,7 +334,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
     return (
         <>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            <DialogTitleHelp section='guide/extensions/logins/index'>Manage login extensions</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/logins/index' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Manage login extensions</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
@@ -531,7 +531,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
 
         {configLogin && (
             <Dialog open={true} maxWidth='xs' fullWidth>
-                <DialogTitleHelp section='guide/extensions/logins/index?id=runtime-configuration' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure — {configLogin.displayName || configLogin.name}</DialogTitleHelp>
+                <DialogTitleHelp section='guide/extensions/logins/index?id=runtime-configuration' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Configure — {configLogin.displayName || configLogin.name}</DialogTitleHelp>
                 <DialogContent>
                     <Stack spacing={2} sx={{ mt: 1 }}>
                         {(configLogin.configSchema ?? []).map(field => field.type === 'select'

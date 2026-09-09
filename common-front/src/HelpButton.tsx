@@ -7,16 +7,21 @@ import HelpOutline from '@mui/icons-material/HelpOutline'
 // llevar ancla de heading (…?id=slug). Pensado para la barra de título de un dialog.
 // Regla de proyecto: si un dialog tiene sección de ayuda, llevar este botón (ver memoria dialog-help-button).
 
-const DEFAULT_DOCS_URL = 'http://localhost:4000'   // fallback si no hay docsUrl configurado
+// ⚠️ AQUÍ HUBO un `DEFAULT_DOCS_URL = 'http://localhost:4000'`, resto de cuando las guías se servían a mano.
+// Premiaba el patrón malo: si no le pasabas base, el botón no fallaba — se iba a un puerto local que no
+// existe en ningún cluster. Con eso, agora estuvo meses con la URL mal y nadie lo notó. Sin base no hay
+// botón: mejor que no aparezca a que aparezca y no lleve a ninguna parte.
+//
+// Para construir la base, usa `docsUrl(clusterUrl, tipo, id)` de este mismo paquete.
 
 export interface IHelpButtonProps {
-    docsUrl?: string    // base de la guía (p.ej. generalConfig.docsUrl); si falta, DEFAULT_DOCS_URL
+    docsUrl?: string    // base de la guía; derívala con docsUrl(clusterUrl, …). Sin ella no se pinta nada
     section: string     // ruta de la sección, sin barra inicial (p.ej. 'admin/06-sla-settings')
 }
 
 const HelpButton: React.FC<IHelpButtonProps> = ({ docsUrl, section }) => {
     const open = (): void => {
-        const base = (docsUrl || DEFAULT_DOCS_URL).replace(/\/+$/, '')
+        const base = (docsUrl ?? '').replace(/\/+$/, '')
         // Popup del navegador (ventana aparte, no pestaña): las features de tamaño fuerzan el popup.
         // Tamaño: 48% ancho × 64% alto de la pantalla ACTUAL. Centrado en su monitor (multi-monitor) vía
         // availLeft/availTop (origen del monitor donde está la ventana). left/top solo los respeta si es popup real.
@@ -34,6 +39,7 @@ const HelpButton: React.FC<IHelpButtonProps> = ({ docsUrl, section }) => {
         const w = window.open(`${base}/#/${section}`, 'kwirth-guide', features)
         if (w) { w.opener = null; w.focus() }   // opener=null = seguridad (equiv. noopener, que aquí forzaría pestaña)
     }
+    if (!docsUrl) return null
     return (
         <Tooltip arrow title='Open the guide for this section'>
             <IconButton size='small' aria-label='help' onClick={open}><HelpOutline fontSize='small' /></IconButton>

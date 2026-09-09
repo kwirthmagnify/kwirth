@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { Add, Delete, Refresh, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
@@ -280,7 +280,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='md' disableRestoreFocus={true}>
-            <DialogTitleHelp section='guide/admin/02-initial-config?id=kwirth-settings' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Kwirth settings</DialogTitleHelp>
+            <DialogTitleHelp section='guide/admin/02-initial-config?id=kwirth-settings' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Kwirth settings</DialogTitleHelp>
             <DialogContent sx={{ height: 460, overflowY: 'auto' }}>
                 <Tabs value={tab} onChange={(_e, v) => setTab(v as ESettingsKwirthTab)}>
                     <Tab label='General' value={ESettingsKwirthTab.GENERAL} />

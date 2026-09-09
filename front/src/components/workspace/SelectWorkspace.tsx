@@ -1,6 +1,6 @@
 import { useContext } from 'react'
 import { Stack, Button, Dialog, DialogActions, DialogContent, Typography, List, ListItemButton, ListItem } from '@mui/material'
-import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
 interface ISelectWorkspaceProps {
@@ -18,7 +18,7 @@ const SelectWorkspace: React.FC<ISelectWorkspaceProps> = (props:ISelectWorkspace
     const { backendUrl } = useContext(SessionContext) as SessionContextType
     return (
         <Dialog open={true}>
-            <DialogTitleHelp section='guide/user/06-workspaces?id=reopening-a-workspace' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Select workspace</DialogTitleHelp>
+            <DialogTitleHelp section='guide/user/06-workspaces?id=reopening-a-workspace' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Select workspace</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' sx={{width:'50vh'}}>
                     <Typography>{
