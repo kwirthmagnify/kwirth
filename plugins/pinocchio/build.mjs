@@ -1,4 +1,5 @@
 import esbuild from 'esbuild'
+import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
@@ -56,6 +57,23 @@ const kwirthBackGlobalsPlugin = {
     },
 }
 
+// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
+// El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
+const TSC = 'node_modules/typescript/lib/tsc.js'
+if (fs.existsSync(TSC)) {
+    try {
+        execFileSync(process.execPath, [TSC, '--noEmit'], { stdio: 'inherit' })
+        console.log('Typecheck passed')
+    }
+    catch {
+        console.error('Typecheck failed — build aborted')
+        process.exit(1)
+    }
+}
+else {
+    console.log('Skipping typecheck: typescript is not installed (run npm install)')
+}
+
 fs.mkdirSync('dist', { recursive: true })
 
 await esbuild.build({
@@ -101,6 +119,10 @@ const distMeta = { type: 'commonjs', extensionType: 'plugin',
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
+
+// Docs: la guia de usuario/admin se empaqueta como extension 'docs' (docs/pinocchio.tgz). Un solo
+// 'npm run build' deja listas las tres piezas: front.js, back.js y el tarball de la guia.
+await import('./build-docs-tgz.mjs')
 
 console.log(`Done. Run 'npm publish' on your 'dist' folder in order to publish your package to npmjs.`)
 console.log(`Pacakge will be accesible (and installable on Kwirth) via this URL: https://registry.npmjs.org/${meta.publisher}/kwirth-plugin-${meta.id}/-/kwirth-plugin-${meta.id}-${meta.version}.tgz`)

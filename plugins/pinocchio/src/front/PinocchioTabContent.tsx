@@ -11,7 +11,15 @@ import React from 'react'
 import { MenuConfig } from './MenuConfig'
 import { PinocchioImportExport } from './PinocchioImportExport'
 import { PinocchioPlayground } from './PinocchioPlayground'
-import { IChannelObject, MarkdownViewer } from '@kwirthmagnify/kwirth-common-front'
+import { IChannelObject, MarkdownViewer, HelpButton as _HelpButton, DialogTitleHelp as _DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { docsUrl } from './utils'
+
+// Guardas: un host antiguo puede no exportar todavia estos componentes. Sin ellas, un export ausente
+// renderiza 'undefined' como componente y React tumba la pestaña entera.
+const HelpButton: typeof _HelpButton = typeof _HelpButton === 'function' ? _HelpButton : () => null
+const DialogTitleHelp: typeof _DialogTitleHelp = typeof _DialogTitleHelp === 'function'
+    ? _DialogTitleHelp
+    : (props) => <DialogTitle sx={props.sx} id={props.id}>{props.children}</DialogTitle>
 
 interface IContentProps {
     webSocket?: WebSocket
@@ -331,6 +339,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     <Button variant='outlined' onClick={() => setShowClearDialog(true)}>Clear</Button>
                     <Button variant='outlined' onClick={() => { playgroundStartIndex.current = pinocchioData.content.length; setShowPlayground(true) }}>Playground</Button>
                     <Button variant='outlined' onClick={(event) => setAnchorMenu(event.currentTarget)}>Config</Button>
+                    <HelpButton docsUrl={docsUrl(props.channelObject.clusterUrl)} section='user/02-ui-tour' />
                 </Stack>}>
             </CardHeader>
                 <CardContent sx={{flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
@@ -341,15 +350,15 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 </Box>
             </CardContent>
         </Card>}
-        { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} onClose={pinocchioConfigClose} />}
+        { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} docsUrl={docsUrl(props.channelObject.clusterUrl)} onClose={pinocchioConfigClose} />}
         { showConfigLlm && <AiConfigLlm llms={pinocchioData.config.llms} providers={pinocchioData.providers} onClose={aiConfigLlmClose} />}
         { showConfigProvider && <AiConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onLoadModels={aiLoadModels} onClose={pinocchioConfigProviderClose} />}
         { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} onStateChange={pinocchioPlaygroundStateChange} />}
-        { showImportExport && <PinocchioImportExport config={pinocchioData.config} onClose={pinocchioImportExportClose} />}
+        { showImportExport && <PinocchioImportExport config={pinocchioData.config} docsUrl={docsUrl(props.channelObject.clusterUrl)} onClose={pinocchioImportExportClose} />}
         { anchorMenu && <MenuConfig anchorParent={anchorMenu} providers={pinocchioData.providers} pinocchioConfig={pinocchioData.config} onAction={onConfigAction} onClose={() => setAnchorMenu(undefined)} />}
         { showClearDialog && (
             <Dialog open={true} onClose={() => setShowClearDialog(false)} PaperProps={{ sx: { width: '420px', maxWidth: '420px' } }}>
-                <DialogTitle>Clear findings</DialogTitle>
+                <DialogTitleHelp docsUrl={docsUrl(props.channelObject.clusterUrl)} section='user/02-ui-tour'>Clear findings</DialogTitleHelp>
                 <DialogContent>
                     <Typography variant='body2' sx={{ mb: 1 }}><b>Clear my view</b> — removes what you see here. The back keeps its analyses and will send them again if you reconnect.</Typography>
                     <Typography variant='body2'><b>Clear back</b> — deletes all analyses stored in the channel. Affects all connected fronts.</Typography>
@@ -383,11 +392,11 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         )}
         { selectedAnalysis !== null && (
             <Dialog open={true} onClose={() => setSelectedAnalysis(null)} PaperProps={{ sx: { width: '60vw', maxWidth: '860px', maxHeight: '80vh' } }}>
-                <DialogTitle>
+                <DialogTitleHelp docsUrl={docsUrl(props.channelObject.clusterUrl)} section='user/05-findings'>
                     {selectedAnalysis.resource
                         ? `${selectedAnalysis.resource.kind} / ${selectedAnalysis.resource.name}`
                         : 'Analysis detail'}
-                </DialogTitle>
+                </DialogTitleHelp>
                 <DialogContent dividers sx={{ display: 'flex', flexDirection: 'row', gap: 3, alignItems: 'flex-start' }}>
                     <Stack sx={{ flex: 1, gap: 1.5 }}>
                         {selectedAnalysis.resource && <>
@@ -478,14 +487,14 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         )}
         { selectedFinding !== null && (
             <Dialog open={true} onClose={() => setSelectedFinding(null)} PaperProps={{ sx: { width: '60vw', maxWidth: '860px', maxHeight: '80vh' } }}>
-                <DialogTitle>
+                <DialogTitleHelp docsUrl={docsUrl(props.channelObject.clusterUrl)} section='user/05-findings'>
                     <Stack direction='row' alignItems='center' gap={1}>
                         <Typography variant='body2' sx={{ backgroundColor: color(selectedFinding.level), display: 'inline-block', p: 0.5, borderRadius: '4px', flexShrink: 0 }}>
                             {selectedFinding.level}
                         </Typography>
                         <Typography variant='h6'>{selectedFinding.control_name}</Typography>
                     </Stack>
-                </DialogTitle>
+                </DialogTitleHelp>
                 <DialogContent dividers sx={{ display: 'flex', flexDirection: 'row', gap: 3, alignItems: 'flex-start' }}>
                     <Stack sx={{ flex: 1, gap: 1.5 }}>
                         {[
@@ -529,7 +538,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         )}
         { reportContent !== null && (
             <Dialog open={true} onClose={() => setReportContent(null)} PaperProps={{ sx: { width: '60vw', maxWidth: '900px', maxHeight: '70vh' } }}>
-                <DialogTitle>Report</DialogTitle>
+                <DialogTitleHelp docsUrl={docsUrl(props.channelObject.clusterUrl)} section='user/05-findings'>Report</DialogTitleHelp>
                 <DialogContent sx={{ pt: 2, px: 3, pb: 1 }}>
                     <MarkdownViewer content={reportContent} />
                 </DialogContent>

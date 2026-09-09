@@ -10,7 +10,8 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "watch": "node watch.mjs"
+    "watch": "node watch.mjs",
+    "docs": "node build-docs-tgz.mjs"
   },
   "dependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.45",
@@ -31,6 +32,7 @@
     "esbuild": "^0.27.2",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
+    "tar": "^7.5.22",
     "typescript": "^5.4.0"
   },
   "requiresRestart": false,

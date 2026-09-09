@@ -3,10 +3,12 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormCon
 import { ScienceOutlined, Upload, Bolt, FileDownload, FileUpload, CheckCircleOutline, HistoryOutlined, DeleteOutlined } from '@mui/icons-material'
 import { EK8sEvent, EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState, k8sEventsAvailable, kindsAvailable } from './PinocchioConfig'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { useKeyboard as _useKeyboard } from '@kwirthmagnify/kwirth-common-front'
+import { useKeyboard as _useKeyboard, HelpButton as _HelpButton } from '@kwirthmagnify/kwirth-common-front'
 import { ToolSelector as _ToolSelector } from '@kwirthmagnify/kwirth-common-ai/front'
+import { docsUrl } from './utils'
 const useKeyboard: typeof _useKeyboard = typeof _useKeyboard === 'function' ? _useKeyboard : () => {}
 const ToolSelector: typeof _ToolSelector = typeof _ToolSelector === 'function' ? _ToolSelector : (() => null) as any
+const HelpButton: typeof _HelpButton = typeof _HelpButton === 'function' ? _HelpButton : () => null
 
 interface IProps {
     pinocchioConfig: IPinocchioConfig
@@ -310,7 +312,8 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
             <DialogTitle sx={{ pb: 0 }}>
                 <Stack direction='row' alignItems='center' spacing={1}>
                     <ScienceOutlined />
-                    <Typography variant='h6'>Playground</Typography>
+                    <Typography variant='h6' sx={{ flex: 1 }}>Playground</Typography>
+                    <HelpButton docsUrl={docsUrl(props.clusterUrl)} section='user/06-playground' />
                 </Stack>
                 <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mt: 1 }}>
                     <Tab label='LLM' />

@@ -3,6 +3,7 @@ import { Backdrop, Box, Button, Checkbox, CircularProgress, Dialog, DialogAction
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { Delete, Edit } from '@kwirthmagnify/kwirth-common-front/icons'
 import { AccessKey } from '@kwirthmagnify/kwirth-common'
+import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 
 interface IContextSelectorProps {
     isDesktop: boolean
@@ -231,7 +232,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
         </Dialog>
 
         <Dialog open={clusterDialogOpen} disableRestoreFocus>
-            <DialogTitle>{clusterDialogEditIndex === null ? 'Add cluster' : 'Edit cluster'}</DialogTitle>
+            <DialogTitleHelp section='guide/admin/06-cluster-management?id=add-a-remote-cluster' docsUrl={backendUrl + '/core/docs/core/kwirth'}>{clusterDialogEditIndex === null ? 'Add cluster' : 'Edit cluster'}</DialogTitleHelp>
             <DialogContent sx={{width: 420, height: 210}}>
                 <Stack direction='column' spacing={2} sx={{mt: 1}}>
                     <TextField label='Name' value={clusterDialogData.name} onChange={e => setClusterDialogData(d => ({...d, name: e.target.value}))} fullWidth size='small'/>

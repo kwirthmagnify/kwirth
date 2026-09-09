@@ -52,8 +52,15 @@ test.describe('pinocchio: AI config compartido de Kwirth', () => {
 
     test.afterAll(async () => { await page?.close() })
 
-    const openConfig = async (item: RegExp) => {
+    // 'AI providers' y 'AI models' viven dentro del grupo PLEGABLE 'AI' del menu Config: hay que
+    // expandirlo antes de poder clicarlos.
+    const openConfig = async (item: RegExp, group?: RegExp) => {
         await page.getByRole('button', { name: 'Config', exact: true }).click()
+        await page.waitForTimeout(400)
+        if (group) {
+            await page.getByRole('menuitem', { name: group }).click()
+            await page.waitForTimeout(500)
+        }
         await page.getByRole('menuitem', { name: item }).click()
         await page.waitForTimeout(1000)
         return page.getByRole('dialog')
@@ -80,7 +87,7 @@ test.describe('pinocchio: AI config compartido de Kwirth', () => {
     })
 
     test('el dialogo de providers pinta cada provider con su tipo y su contador de modelos', async () => {
-        const dlg = await openConfig(/^Provider$/)
+        const dlg = await openConfig(/^AI providers$/, /^AI$/)
         await expect(dlg.getByText('AI — Provider config')).toBeVisible()
         for (const prov of providers) {
             await dlg.getByText(prov.name, { exact: true }).first().click()
@@ -94,7 +101,7 @@ test.describe('pinocchio: AI config compartido de Kwirth', () => {
     })
 
     test('el dialogo de providers ofrece Load models (lo resuelve el core)', async () => {
-        const dlg = await openConfig(/^Provider$/)
+        const dlg = await openConfig(/^AI providers$/, /^AI$/)
         await dlg.getByText(providers[0].name, { exact: true }).first().click()
         await expect(dlg.getByRole('button', { name: /load models/i })).toBeEnabled()
         await dlg.getByRole('button', { name: /^cancel$/i }).click()
@@ -102,7 +109,7 @@ test.describe('pinocchio: AI config compartido de Kwirth', () => {
     })
 
     test('el dialogo de LLMs lista los LLMs del AI config con su provider', async () => {
-        const dlg = await openConfig(/^LLM$/)
+        const dlg = await openConfig(/^AI models$/, /^AI$/)
         await expect(dlg.getByText('AI — LLM config')).toBeVisible()
         const listText = await dlg.locator('.MuiList-root').first().innerText()
         for (const llm of llms) {

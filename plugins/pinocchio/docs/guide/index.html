@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pinocchio — Guide</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="Pinocchio — user & administration guide">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+  <link rel="stylesheet" href="kwirth-dark.css">
+  <style>
+    .sidebar { width: 320px; }
+    .content { left: 320px; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    // Colapsable de secciones propio (sin plugin): togglea con el chevron, abre por defecto,
+    // mantiene abierta la seccion de la pagina activa y NO se contrae al navegar.
+    var sectionState = {}
+    window.$docsify = {
+      homepage: 'index.md',
+      relativePath: true,
+      loadSidebar: true,
+      auto2top: true,
+      name: 'Pinocchio',
+      subMaxLevel: 0,
+      search: {
+        paths: 'auto',
+        placeholder: 'Search...',
+        noData: 'No results',
+        depth: 4
+      },
+      plugins: [
+        function (hook) {
+          hook.doneEach(function () {
+            var secs = document.querySelectorAll('.sidebar-nav > ul > li')
+            secs.forEach(function (li) {
+              var sub = li.querySelector(':scope > ul')
+              var head = li.querySelector(':scope > strong, :scope > p > strong')
+              if (!sub || !head) return
+              li.classList.add('has-children')
+              var key = head.textContent.trim()
+              if (sectionState[key] === undefined) sectionState[key] = true   // abierto por defecto
+              var active = !!li.querySelector('a.active')
+              li.classList.toggle('open', sectionState[key] || active)        // la activa siempre abierta
+              head.style.cursor = 'pointer'
+              head.onclick = function (e) {
+                e.preventDefault(); e.stopPropagation()
+                sectionState[key] = !li.classList.contains('open')
+                li.classList.toggle('open', sectionState[key])
+              }
+            })
+          })
+        }
+      ]
+    }
+  </script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify-copy-code/dist/docsify-copy-code.min.js"></script>
+</body>
+</html>

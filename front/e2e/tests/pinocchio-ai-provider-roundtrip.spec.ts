@@ -63,9 +63,13 @@ test.describe('pinocchio: round-trip de provider openai-compat', () => {
 
     test.afterAll(async () => { await page?.close() })
 
+    // 'AI providers' vive dentro del grupo PLEGABLE 'AI' del menu Config: hay que expandirlo primero.
     const openProviderDialog = async () => {
         await page.getByRole('button', { name: 'Config', exact: true }).click()
-        await page.getByRole('menuitem', { name: /^Provider$/ }).click()
+        await page.waitForTimeout(400)
+        await page.getByRole('menuitem', { name: /^AI$/ }).click()
+        await page.waitForTimeout(500)
+        await page.getByRole('menuitem', { name: /^AI providers$/ }).click()
         await page.waitForTimeout(1000)
         return page.getByRole('dialog')
     }

@@ -1,0 +1,2 @@
+# Artefacto generado por build-docs-tgz.mjs: se empaqueta desde docs/guide/, no se versiona.
+docs/*.tgz

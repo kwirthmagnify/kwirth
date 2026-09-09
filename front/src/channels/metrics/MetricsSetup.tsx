@@ -1,14 +1,18 @@
-import React, { useRef, useState } from 'react'
+import React, { useContext, useRef, useState } from 'react'
 import { Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, ListItemText, MenuItem, Select, Stack, TextField, Tooltip, Typography} from '@mui/material'
 import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { ISetupProps } from '../IChannel'
 import { BarChart } from '@kwirthmagnify/kwirth-common-front/icons'
 import { MetricsInstanceConfig, MetricsConfig } from './MetricsConfig'
 import { EMetricsConfigMode } from './MetricsTypes'
+import { DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
 const MetricsIcon = <BarChart/>
 
 const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
+    // el dialogo se monta dentro del SessionContext.Provider de App, de donde sale la url de la guia
+    const { backendUrl } = useContext(SessionContext) as SessionContextType
     let metricsInstanceConfig:MetricsInstanceConfig = props.setupConfig?.channelInstanceConfig || new MetricsInstanceConfig()
     let metricsConfig:MetricsConfig = props.setupConfig?.channelConfig || new MetricsConfig()
     let allMetricsList = props.channelObject.metricsList
@@ -97,7 +101,7 @@ const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
 
     return (<>
         <Dialog open={true} maxWidth={false} sx={{'& .MuiDialog-paper': { width: '50vw', maxWidth: '60vw', height:'60vh', maxHeight:'40vw' } }}>
-            <DialogTitle>Configure metrics for {props.channelObject?.view}</DialogTitle>
+            <DialogTitleHelp section='guide/user/07-everyday-tasks?id=build-a-metrics-view' docsUrl={backendUrl + '/core/docs/core/kwirth'}>Configure metrics for {props.channelObject?.view}</DialogTitleHelp>
             <DialogContent >
                 <Stack spacing={2} direction={'column'} sx={{ mt:'16px' }}>
                     <Stack direction={'row'} spacing={1} >

@@ -3,14 +3,18 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider
 import { Add as AddIcon, Delete as DeleteIcon, ContentCopy as CloneIcon } from '@mui/icons-material'
 import { EK8sEvent, IConfigTrigger, IConfigTriggerVersion, IPinocchioConfig, k8sEventsAvailable, kindsAvailable } from './PinocchioConfig'
 import { objectClone, MsgBoxButtons, MsgBoxOkWarning, MsgBoxYesNo } from './utils'
-import { useKeyboard } from '@kwirthmagnify/kwirth-common-front'
+import { useKeyboard, DialogTitleHelp as _DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { ToolSelector as _ToolSelector } from '@kwirthmagnify/kwirth-common-ai/front'
 const ToolSelector = typeof _ToolSelector === 'function' ? _ToolSelector : () => null
+const DialogTitleHelp: typeof _DialogTitleHelp = typeof _DialogTitleHelp === 'function'
+    ? _DialogTitleHelp
+    : (props) => <DialogTitle sx={props.sx} id={props.id}>{props.children}</DialogTitle>
 
 interface IPinocchioLlmConfigProps {
     onClose: (pc: IPinocchioConfig | undefined) => void
     pinocchioConfig: IPinocchioConfig
     toolsAvailable: { name: string, description: string }[]
+    docsUrl?: string
 }
 
 const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPinocchioLlmConfigProps) => {
@@ -235,7 +239,7 @@ const PinocchioConfigTrigger: React.FC<IPinocchioLlmConfigProps> = (props: IPino
 
     return (<>
         <Dialog open={true} PaperProps={{ sx: { width: '90vw', maxWidth: '1500px', height: '82vh' } }}>
-            <DialogTitle>Trigger Config</DialogTitle>
+            <DialogTitleHelp docsUrl={props.docsUrl} section='user/04-triggers'>Trigger Config</DialogTitleHelp>
             <DialogContent sx={{ display: 'flex', height: '100%', overflow: 'hidden', py: 1, px: 2 }}>
 
                 {/* ── Left panel ── */}

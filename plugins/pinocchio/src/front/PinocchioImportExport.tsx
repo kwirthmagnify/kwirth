@@ -1,13 +1,17 @@
 ﻿import React, { useRef, useState } from 'react'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
 import { IConfigTrigger, IPinocchioConfig } from './PinocchioConfig'
-import { useKeyboard as _useKeyboard } from '@kwirthmagnify/kwirth-common-front'
+import { useKeyboard as _useKeyboard, DialogTitleHelp as _DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 
 // Guard: older Tauri host builds may not export useKeyboard yet
 const useKeyboard: typeof _useKeyboard = typeof _useKeyboard === 'function' ? _useKeyboard : () => {}
+const DialogTitleHelp: typeof _DialogTitleHelp = typeof _DialogTitleHelp === 'function'
+    ? _DialogTitleHelp
+    : (props) => <DialogTitle sx={props.sx} id={props.id}>{props.children}</DialogTitle>
 
 interface IProps {
     config: IPinocchioConfig
+    docsUrl?: string
     onClose: (config?: IPinocchioConfig) => void
 }
 
@@ -104,7 +108,7 @@ const PinocchioImportExport: React.FC<IProps> = (props) => {
 
     return (
         <Dialog open={true} PaperProps={{ sx: { width: '50vw', maxWidth: '560px' } }}>
-            <DialogTitle>Triggers — Import / Export</DialogTitle>
+            <DialogTitleHelp docsUrl={props.docsUrl} section='user/07-import-export'>Triggers — Import / Export</DialogTitleHelp>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 1 }}>
                 <Stack direction='row' spacing={1} sx={{ mb: 1 }}>
                     <Button size='small' variant={mode === 'export' ? 'contained' : 'outlined'} onClick={() => setMode('export')}>Export</Button>
