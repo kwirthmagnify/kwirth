@@ -55,6 +55,30 @@ kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/t
 
 Edit the YAML if you need to change defaults.
 
+### The API groups kwirth needs
+
+If you write your own `ClusterRole` instead of using the one in that manifest, grant **all** of these:
+
+```yaml
+- apiGroups: ['', 'apps', 'batch', 'autoscaling', 'policy', 'coordination.k8s.io',
+              'metrics.k8s.io', 'rbac.authorization.k8s.io', 'networking.k8s.io',
+              'storage.k8s.io', 'apiextensions.k8s.io', 'aquasecurity.github.io']
+  resources: ['*']
+  verbs: ['*']
+```
+
+> **`batch` is easy to miss and its absence is confusing.** Jobs live in that group, and kwirth lists
+> every controller type together when it builds the resource selector. Without `batch`, listing jobs is
+> refused and **the selector shows no controllers at all** — not even the deployments you *can* read.
+> From version 0.5.288 the missing type is simply skipped and the reason is logged naming the group, but
+> those controllers still will not appear until the permission is granted.
+>
+> A quick check, replacing the namespace and service account with yours:
+>
+> ```bash
+> kubectl auth can-i list jobs --as=system:serviceaccount:kwirth:kwirth-sa -A
+> ```
+
 ## Docker
 
 Mount your kubeconfig so kwirth can reach the cluster:

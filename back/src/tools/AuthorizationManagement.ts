@@ -7,6 +7,61 @@ import { Request, Response } from 'express'
 import { AppsV1Api, BatchV1Api, CoreV1Api, V1Pod, V1ReplicaSet } from '@kubernetes/client-node'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 
+// Lo minimo que hace falta de un objeto de kubernetes para identificarlo: no se tipa cada V1XxxList
+// porque lo unico que se usa es el nombre y el namespace.
+interface IListedResource {
+    metadata?: { name?: string, namespace?: string }
+}
+
+// Un tipo de controller y como pedirlo. El apiGroup viaja SOLO para poder decirlo en el log: cuando falta
+// un permiso, saber que 'Job' vive en 'batch' es la diferencia entre arreglarlo en un minuto y no saber
+// por donde empezar.
+interface IControllerSource {
+    kind: string
+    apiGroup: string
+    list: () => Promise<{ items: IListedResource[] }>
+}
+
+export interface IControllerRef {
+    kind: string
+    name: string
+    namespace: string
+}
+
+/*
+    Lista los controllers TOLERANDO que alguno falle.
+
+    Antes esto era un Promise.all, y un solo 403 rechazaba la promesa entera: el ServiceAccount de un
+    despliegue real no puede listar 'jobs' —el ClusterRole de la documentacion no incluye el apiGroup
+    'batch'— y eso dejaba al usuario sin NINGUN controller, ni siquiera los deployments, que si tenia
+    permiso para ver. Peor aun: el catch devolvia [], indistinguible de 'este namespace esta vacio', y el
+    motivo solo aparecia en el log del pod.
+
+    Con allSettled, lo que se puede leer se lee, y lo que no se registra nombrando el tipo Y su apiGroup.
+*/
+export const listControllersTolerant = async (
+    sources: IControllerSource[],
+    onFailure: (kind: string, apiGroup: string, err: unknown) => void = (kind, apiGroup, err) => {
+        logWarning(ELogComponent.AUTH, `Cannot list ${kind} (apiGroup '${apiGroup}') — they will be missing from the selector. Check the ClusterRole grants '${apiGroup}': ${err}`)
+    }
+): Promise<IControllerRef[]> => {
+    const settled = await Promise.allSettled(sources.map(s => s.list()))
+    const found: IControllerRef[] = []
+    settled.forEach((outcome, i) => {
+        const { kind, apiGroup } = sources[i]
+        if (outcome.status === 'rejected') {
+            onFailure(kind, apiGroup, outcome.reason)
+            return
+        }
+        for (const item of outcome.value.items) {
+            const name = item.metadata?.name
+            const namespace = item.metadata?.namespace
+            if (name && namespace) found.push({ kind, name, namespace })
+        }
+    })
+    return found
+}
+
 export class AuthorizationManagement {
     
     public static cleanApiKeys = (apiKeys:ApiKey[]) => {
@@ -271,24 +326,16 @@ export class AuthorizationManagement {
         try {
             let resources = parseResources(accessKey!.resources)
         
-            const [deployments, replicaSets, replicationControllers, daemonSets, statefulSets, jobs] = await Promise.all([
-                appsApi.listDeploymentForAllNamespaces(),
-                appsApi.listReplicaSetForAllNamespaces(),
-                coreApi.listReplicationControllerForAllNamespaces(),
-                appsApi.listDaemonSetForAllNamespaces(),
-                appsApi.listStatefulSetForAllNamespaces(),
-                batchApi.listJobForAllNamespaces()
+            const allControllers = await listControllersTolerant([
+                { kind: 'Deployment',            apiGroup: 'apps',  list: () => appsApi.listDeploymentForAllNamespaces() },
+                { kind: 'ReplicaSet',            apiGroup: 'apps',  list: () => appsApi.listReplicaSetForAllNamespaces() },
+                { kind: 'ReplicationController', apiGroup: '""',    list: () => coreApi.listReplicationControllerForAllNamespaces() },
+                { kind: 'DaemonSet',             apiGroup: 'apps',  list: () => appsApi.listDaemonSetForAllNamespaces() },
+                { kind: 'StatefulSet',           apiGroup: 'apps',  list: () => appsApi.listStatefulSetForAllNamespaces() },
+                { kind: 'Job',                   apiGroup: 'batch', list: () => batchApi.listJobForAllNamespaces() }
             ])
-            const allControllers = [
-                ...deployments.items.map(i => ({ ...i, kind: 'Deployment' })),
-                ...replicaSets.items.map(i => ({ ...i, kind: 'ReplicaSet' })),
-                ...replicationControllers.items.map(i => ({ ...i, kind: 'ReplicationController' })),
-                ...daemonSets.items.map(i => ({ ...i, kind: 'DaemonSet' })),
-                ...statefulSets.items.map(i => ({ ...i, kind: 'StatefulSet' })),
-                ...jobs.items.map(i => ({ ...i, kind: 'Job' }))
-            ]
             for (let controllerType of ['Deployment','ReplicaSet','ReplicationController','DaemonSet','StatefulSet','Job']) {
-                let controllerList:string[] = allControllers.filter((c:any) => c.metadata.namespace === namespace && c.kind===controllerType).map((c:any) => c.metadata.name) || []
+                let controllerList:string[] = allControllers.filter(c => c.namespace === namespace && c.kind === controllerType).map(c => c.name)
 
                 // we prune glist according to resources and namespaces
                 for (let resource of resources) {
