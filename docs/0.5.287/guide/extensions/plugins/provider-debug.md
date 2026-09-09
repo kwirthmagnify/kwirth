@@ -56,7 +56,9 @@ If a provider shows *"does not publish subscription help"*, it simply has not im
 
 The header shows the provider, how full the buffer is, the status, the **search box**, and a **🗑 clear** button.
 
-Below it, **Running providers** lists what is alive right now, followed by the channel's own signals (subscription confirmed, provider not running, malformed payload…).
+Below it, **Running providers** lists what is alive right now. On the right of that same row, two chips track the start-up: **config** turns green when the core accepts the instance configuration, and **subscribed** when the provider confirms the subscription. If one of them stays grey, that is where the start-up stopped.
+
+Anything that actually needs reading — *provider not running*, *malformed payload* — still appears as a text line under the chips.
 
 Each event is one collapsed card: **timestamp · provider · top-level keys**. Expand it for the full JSON, coloured by type, and use the **copy** button to put that JSON on your clipboard.
 

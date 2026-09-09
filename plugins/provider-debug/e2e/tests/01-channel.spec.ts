@@ -89,6 +89,9 @@ const startWith = async (providerId: string, payload = ''): Promise<void> => {
     await page.waitForTimeout(2500)
 }
 
+/** Chip de hito del arranque ('config' / 'subscribed'), por texto exacto de su etiqueta. */
+const statusChip = (label: string) => page.locator('.MuiChip-root').filter({ hasText: new RegExp('^' + label + '$') }).first()
+
 const METRICS_PAYLOAD = '{"pod":true,"container":true,"machine":true}'
 const eventsArrived = () => expect(page.getByText(/Events: [1-9]\d* \/ 200/)).toBeVisible({ timeout: 90000 })
 
@@ -198,9 +201,18 @@ test('subscribing to a running provider is confirmed and streams its raw events'
     // del cluster (back/src/providers/metrics/MetricsProvider.ts, tick()).
     await startWith('metrics', METRICS_PAYLOAD)
 
-    await expect(page.getByText("Subscribed to provider 'metrics'")).toBeVisible()
+    await expect(statusChip('subscribed')).toHaveClass(/MuiChip-filledSuccess/)
     await expect(page.getByText('Provider: metrics')).toBeVisible()
     await eventsArrived()
+})
+
+test('the start milestones are chips, not text lines', async () => {
+    // los dos hitos se encienden en verde...
+    await expect(statusChip('config')).toHaveClass(/MuiChip-filledSuccess/)
+    await expect(statusChip('subscribed')).toHaveClass(/MuiChip-filledSuccess/)
+
+    // ...y sus antiguas lineas *** ... *** ya no se pintan
+    await expect(page.getByText(/^\*\*\* .* \*\*\*$/)).toHaveCount(0)
 })
 
 test('each event is collapsed behind a summary and expands to its raw JSON', async () => {

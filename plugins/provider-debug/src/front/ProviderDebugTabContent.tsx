@@ -257,6 +257,15 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
                     <Stack direction='row' spacing={1} alignItems='center' flexWrap='wrap' useFlexGap>
                         <Typography variant='caption' color='text.secondary'>Running providers</Typography>
                         {formatProviders()}
+                        {/* los dos hitos del arranque, en vez de dos líneas de texto sueltas */}
+                        <Stack direction='row' spacing={1} sx={{ ml: 'auto' }}>
+                            <Chip label='config' size='small'
+                                color={data.configAccepted ? 'success' : 'default'}
+                                variant={data.configAccepted ? 'filled' : 'outlined'} />
+                            <Chip label='subscribed' size='small'
+                                color={data.subscribed ? 'success' : 'default'}
+                                variant={data.subscribed ? 'filled' : 'outlined'} />
+                        </Stack>
                     </Stack>
                     {data.signals.map((s, index) => <Typography key={index} variant='caption' color='text.secondary'>*** {s} ***</Typography>)}
                 </Stack>

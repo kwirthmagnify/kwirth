@@ -1,4 +1,4 @@
-import { EInstanceConfigScope, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ISignalMessage } from '@kwirthmagnify/kwirth-common'
+import { EInstanceConfigScope, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, ISignalMessage } from '@kwirthmagnify/kwirth-common'
 import { IChannel, IChannelObject, IChannelRequirements, IChannelMessageAction, IContentProps, ISetupProps, EChannelRefreshAction } from '@kwirthmagnify/kwirth-common-front'
 import { EProviderDebugPayload, IProviderDebugMessageResponse } from '../common/ProviderDebugTypes'
 import { ProviderDebugConfig, ProviderDebugInstanceConfig, IProviderDebugConfig } from './ProviderDebugConfig'
@@ -54,9 +54,24 @@ export class ProviderDebugChannel implements IChannel {
                 return { action: EChannelRefreshAction.REFRESH }
             case EInstanceMessageType.SIGNAL: {
                 const signalMessage: ISignalMessage = JSON.parse(wsEvent.data)
-                if (signalMessage.flow === EInstanceMessageFlow.RESPONSE && signalMessage.action === EInstanceMessageAction.START) {
-                    channelObject.instanceId = signalMessage.instance
+                const startResponse = signalMessage.flow === EInstanceMessageFlow.RESPONSE && signalMessage.action === EInstanceMessageAction.START
+                if (startResponse) channelObject.instanceId = signalMessage.instance
+
+                // Los dos hitos del arranque se muestran como chips, no como líneas de texto, y se
+                // distinguen por ESTRUCTURA, no por su literal:
+                //  - el core responde al start config con un IInstanceConfigResponse, que NO lleva
+                //    'level' (back/src/index.ts, sendInstanceConfigSignalMessage)
+                //  - este canal siempre manda ISignalMessage CON 'level': INFO al suscribirse y
+                //    ERROR en los fallos, que sí deben seguir leyéndose como texto
+                if (startResponse && signalMessage.level === undefined) {
+                    data.configAccepted = true
+                    return { action: EChannelRefreshAction.REFRESH }
                 }
+                if (startResponse && signalMessage.level === ESignalMessageLevel.INFO) {
+                    data.subscribed = true
+                    return { action: EChannelRefreshAction.REFRESH }
+                }
+
                 if (signalMessage.text) data.signals.push(signalMessage.text)
                 return { action: EChannelRefreshAction.REFRESH }
             }
@@ -76,6 +91,9 @@ export class ProviderDebugChannel implements IChannel {
         const data: IProviderDebugData = channelObject.data
         data.events = []
         data.signals = []
+        // los dos hitos se apagan en cada arranque: se vuelven a encender con sus respuestas
+        data.configAccepted = false
+        data.subscribed = false
         // 'providers' NO se limpia a propósito: es lo que puebla la Select del setup, que se abre
         // ANTES de arrancar. Perderlo aquí dejaría el desplegable sin los providers de core en cada
         // rearranque. El back manda el catálogo fresco justo después, así que se sobreescribe solo.
@@ -98,6 +116,8 @@ export class ProviderDebugChannel implements IChannel {
 
     stopChannel(channelObject: IChannelObject): boolean {
         const data: IProviderDebugData = channelObject.data
+        data.configAccepted = false
+        data.subscribed = false
         data.paused = false
         data.started = false
         return true

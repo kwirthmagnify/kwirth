@@ -74,7 +74,13 @@ Plugin de canal para inspeccionar qué emite realmente un provider. Público, op
      el resultado fuera de pantalla (las marcas llevan `data-pd-hit`).
    - El texto buscable de cada evento se serializa una vez y se cachea en un `WeakMap`: con 200
      eventos de `metrics`, re-stringificar por tecla costaba megas por render.
-7. **Cards sin animación al abrir/cerrar.** Se quitó `Accordion`: el `Collapse` de MUI ignora el
+7. **Hitos del arranque como chips**, en vez de dos líneas de texto sueltas: `config` (el core
+   acepta la config de instancia) y `subscribed` (el canal confirma la suscripción), verdes al
+   ocurrir, a la derecha de la fila de providers.
+   - Se detectan por **estructura**, no por su literal: el core responde al start config con un
+     `IInstanceConfigResponse`, que NO lleva `level`; este canal manda `ISignalMessage` **con**
+     `level` (INFO al suscribirse, ERROR en los fallos). Los errores siguen leyéndose como texto.
+8. **Cards sin animación al abrir/cerrar.** Se quitó `Accordion`: el `Collapse` de MUI ignora el
    `timeout: 0` de `slotProps.transition` y escribe su transición en estilo **inline**, que gana a
    cualquier clase. Ahora el detalle se renderiza a mano (`{open && ...}`), así que no hay
    transición que quitar y una tarjeta plegada **no tiene DOM**.
@@ -83,11 +89,11 @@ Plugin de canal para inspeccionar qué emite realmente un provider. Público, op
 
 ### Pendiente
 
-8. Autoscroll con anclaje al fondo.
-9. Plantillas de payload por provider conocido — el matiz de `events` (sin `kinds` no entrega
+9. Autoscroll con anclaje al fondo.
+10. Plantillas de payload por provider conocido — el matiz de `events` (sin `kinds` no entrega
    nada) es justo lo que hace falta que la UI enseñe sola.
-10. `modifiable: true` para cambiar de provider sin parar y rearrancar la instancia.
-11. Export del buffer a JSON.
+11. `modifiable: true` para cambiar de provider sin parar y rearrancar la instancia.
+12. Export del buffer a JSON.
 
 ### Nota de mantenimiento
 
