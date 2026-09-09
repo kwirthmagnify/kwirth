@@ -107,11 +107,14 @@ const openReconfigure = (id: string) => {
         }
     }
 
-    const fetchManifest = async () => {
+    // refresh: el back cachea cada manifest 5 minutos, asi que el boton de refrescar el catalogo tiene que
+    // pedir explicitamente que lo invalide. Sin esto el boton no refrescaba nada: volvia a preguntar y el
+    // back respondia lo mismo de su cache, y una extension recien publicada no aparecia hasta pasado el TTL.
+    const fetchManifest = async (refresh = false) => {
         setError(undefined)
         setLoadingManifest(true)
         try {
-            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.HOMEPAGE}`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.HOMEPAGE}${refresh ? '?refresh=true' : ''}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data: IHomepageManifestEntry[] = await res.json()
             setAvailable(data)
@@ -403,7 +406,7 @@ const openReconfigure = (id: string) => {
                         <TextField size='small' placeholder='Filter…' value={filterText} onChange={e => setFilterText(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
                         <Tooltip title='Refresh catalog'>
                             <span>
-                                <IconButton size='small' sx={{ width: 30, height: 30 }} onClick={fetchManifest} disabled={loadingManifest}>
+                                <IconButton size='small' sx={{ width: 30, height: 30 }} onClick={() => fetchManifest(true)} disabled={loadingManifest}>
                                     {loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' />}
                                 </IconButton>
                             </span>

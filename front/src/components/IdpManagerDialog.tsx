@@ -61,10 +61,13 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
         catch (err) { setError(`Failed to load identity providers: ${err}`) }
     }
 
-    const fetchManifest = async () => {
+    // refresh: el back cachea cada manifest 5 minutos, asi que el boton de refrescar el catalogo tiene que
+    // pedir explicitamente que lo invalide. Sin esto el boton no refrescaba nada: volvia a preguntar y el
+    // back respondia lo mismo de su cache, y una extension recien publicada no aparecia hasta pasado el TTL.
+    const fetchManifest = async (refresh = false) => {
         setError(undefined); setLoadingManifest(true)
         try {
-            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.IDP}`, addGetAuthorization(accessString))
+            const res = await fetch(`${backendUrl}/core/marketplace/${EExtensionType.IDP}${refresh ? '?refresh=true' : ''}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             setAvailable(await res.json())
         }
@@ -311,7 +314,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                     <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
                         <Typography variant='subtitle2'>Available connectors</Typography>
                         <TextField size='small' placeholder='Filter…' value={availableFilter} onChange={e => setAvailableFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
-                        <Tooltip title='Refresh catalog'><span><IconButton size='small' sx={{ width: 30, height: 30 }} onClick={fetchManifest} disabled={loadingManifest}>{ loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' /> }</IconButton></span></Tooltip>
+                        <Tooltip title='Refresh catalog'><span><IconButton size='small' sx={{ width: 30, height: 30 }} onClick={() => fetchManifest(true)} disabled={loadingManifest}>{ loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' /> }</IconButton></span></Tooltip>
                     </Stack>
                     { availableIds.length === 0 && !loadingManifest
                         ? <Typography variant='body2' color='text.secondary'>No connectors available in the catalog.</Typography>
