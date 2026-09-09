@@ -66,14 +66,28 @@ Plugin de canal para inspeccionar qué emite realmente un provider. Público, op
    - No confundir con el `schema` que un provider exporta desde `back.js`: ese describe la config
      del propio provider (`configure`/`configRouter`), no el payload de suscripción.
 
+6. **Buscador en la barra** con contador `posición/total` (a la izquierda del campo, siempre
+   visible, `0/0` si no hay búsqueda), anterior/siguiente (también Enter y Shift+Enter, con vuelta
+   al principio) y limpiar. Resalta en vídeo inverso TODAS las coincidencias del JSON desplegado y
+   tiñe el timestamp de los eventos que casan, para saber qué tarjetas abrir sin abrirlas.
+   - Salta a la **coincidencia**, no a la tarjeta: con miles de líneas, centrar la tarjeta dejaba
+     el resultado fuera de pantalla (las marcas llevan `data-pd-hit`).
+   - El texto buscable de cada evento se serializa una vez y se cachea en un `WeakMap`: con 200
+     eventos de `metrics`, re-stringificar por tecla costaba megas por render.
+7. **Cards sin animación al abrir/cerrar.** Se quitó `Accordion`: el `Collapse` de MUI ignora el
+   `timeout: 0` de `slotProps.transition` y escribe su transición en estilo **inline**, que gana a
+   cualquier clase. Ahora el detalle se renderiza a mano (`{open && ...}`), así que no hay
+   transición que quitar y una tarjeta plegada **no tiene DOM**.
+   - La expansión pasa a ser controlada y por **referencia al evento**, no por índice (buffer
+     circular).
+
 ### Pendiente
 
-6. Filtro por texto sobre el buffer, y contador de descartados.
-7. Autoscroll con anclaje al fondo.
-8. Plantillas de payload por provider conocido — el matiz de `events` (sin `kinds` no entrega
+8. Autoscroll con anclaje al fondo.
+9. Plantillas de payload por provider conocido — el matiz de `events` (sin `kinds` no entrega
    nada) es justo lo que hace falta que la UI enseñe sola.
-9. `modifiable: true` para cambiar de provider sin parar y rearrancar la instancia.
-10. Export del buffer a JSON.
+10. `modifiable: true` para cambiar de provider sin parar y rearrancar la instancia.
+11. Export del buffer a JSON.
 
 ### Nota de mantenimiento
 

@@ -3,6 +3,8 @@ import { Box, useTheme } from '@mui/material'
 
 interface IJsonBlockProps {
     value: unknown
+    /** texto a resaltar en vídeo inverso; vacío o ausente = sin resaltado */
+    highlight?: string
 }
 
 // Un token por captura: cadena (con o sin ':' detrás, que la convierte en clave), literal o número.
@@ -22,6 +24,37 @@ export const JsonBlock: React.FC<IJsonBlockProps> = (props: IJsonBlockProps) => 
         return theme.palette.warning.main
     }
 
+    /**
+     * Parte un trozo de texto por el término buscado y pinta las coincidencias en vídeo inverso,
+     * conservando el color del token en lo que no casa. El resaltado se aplica DENTRO de cada
+     * token, así que una búsqueda que cruce la frontera de dos tokens (p.ej. `": 15`) no se marca:
+     * lo normal es buscar una palabra, y a cambio no hay que re-tokenizar el JSON entero.
+     */
+    const paint = (text: string, color: string | undefined, keyBase: string): React.ReactNode[] => {
+        const needle = (props.highlight ?? '').trim()
+        if (needle === '') return [<span key={keyBase} style={color ? { color } : undefined}>{text}</span>]
+
+        const nodes: React.ReactNode[] = []
+        const lower = text.toLowerCase()
+        const target = needle.toLowerCase()
+        let from = 0
+        let at = lower.indexOf(target)
+        while (at >= 0) {
+            if (at > from) nodes.push(<span key={`${keyBase}-${from}`} style={color ? { color } : undefined}>{text.slice(from, at)}</span>)
+            nodes.push(
+                // el marcador permite que el buscador centre la COINCIDENCIA y no la tarjeta: con un
+                // JSON de miles de líneas, centrar la tarjeta deja el resultado fuera de pantalla
+                <span key={`${keyBase}-h${at}`} data-pd-hit='1' style={{ backgroundColor: theme.palette.text.primary, color: theme.palette.background.paper }}>
+                    {text.slice(at, at + needle.length)}
+                </span>
+            )
+            from = at + needle.length
+            at = lower.indexOf(target, from)
+        }
+        if (from < text.length) nodes.push(<span key={`${keyBase}-${from}`} style={color ? { color } : undefined}>{text.slice(from)}</span>)
+        return nodes
+    }
+
     const render = (): React.ReactNode[] => {
         let text: string
         try {
@@ -37,11 +70,11 @@ export const JsonBlock: React.FC<IJsonBlockProps> = (props: IJsonBlockProps) => 
         let match: RegExpExecArray | null
         TOKEN.lastIndex = 0
         while ((match = TOKEN.exec(text)) !== null) {
-            if (match.index > last) nodes.push(<span key={`p${last}`}>{text.slice(last, match.index)}</span>)
-            nodes.push(<span key={`t${match.index}`} style={{ color: colorOf(match[0]) }}>{match[0]}</span>)
+            if (match.index > last) nodes.push(...paint(text.slice(last, match.index), undefined, `p${last}`))
+            nodes.push(...paint(match[0], colorOf(match[0]), `t${match.index}`))
             last = match.index + match[0].length
         }
-        if (last < text.length) nodes.push(<span key={`p${last}`}>{text.slice(last)}</span>)
+        if (last < text.length) nodes.push(...paint(text.slice(last), undefined, `p${last}`))
         return nodes
     }
 

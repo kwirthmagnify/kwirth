@@ -10,6 +10,11 @@ import { login, openChannelPicker, openTabMenu, CHANNEL } from './helpers'
  */
 test.describe.configure({ mode: 'serial' })
 
+// Trace y video apagados: la SPA mantiene el websocket vivo (metrics empuja cada 15 s) y el cierre
+// de la pagina se queda colgado finalizando el trace. Las capturas de fallo no se pierden: las
+// adjunta el afterEach a mano, porque la pagina se crea fuera de la fixture.
+test.use({ trace: 'off', screenshot: 'off', video: 'off' })
+
 let page: Page
 
 test.beforeAll(async ({ browser }) => {
@@ -24,7 +29,11 @@ test.beforeAll(async ({ browser }) => {
 })
 
 test.afterAll(async () => {
-    await page?.close()
+    // La SPA deja el websocket vivo (metrics empuja cada 15 s) y page.close() se queda colgado
+    // finalizando el trace. Se navega fuera para soltar el socket y se cierra el CONTEXTO, que no
+    // espera al cierre ordenado de la pagina.
+    await page?.goto('about:blank').catch(() => { })
+    await page?.context().close().catch(() => { })
 })
 
 // La página se crea a mano, así que Playwright no le adjunta capturas solo: se hace aquí.
@@ -86,6 +95,7 @@ const eventsArrived = () => expect(page.getByText(/Events: [1-9]\d* \/ 200/)).to
 test('the tab explains that the channel must be started', async () => {
     await expect(page.getByText(/Provider Debug not started\. Start the channel/)).toBeVisible()
 })
+
 
 // GET /core/providers es la vista completa del core, así que todo lo de la Select (ids, estado y
 // ayuda) está disponible SIN haber arrancado el canal ni una vez. Estos tests van antes del primer
@@ -194,11 +204,10 @@ test('subscribing to a running provider is confirmed and streams its raw events'
 })
 
 test('each event is collapsed behind a summary and expands to its raw JSON', async () => {
-    // el resumen del acordeón enseña las claves de primer nivel sin desplegar
-    const summary = page.getByRole('button').filter({ hasText: 'metricsInterval' }).first()
-    await expect(summary).toBeVisible()
+    // el resumen enseña las claves de primer nivel sin desplegar
+    await expect(page.getByText(/metricsInterval, cluster/).first()).toBeVisible()
 
-    await summary.click()
+    await page.locator('button[aria-label="Expand event"]').first().click()
 
     await expect(page.getByText('"metricsInterval"').first()).toBeVisible()
 })
@@ -223,6 +232,97 @@ test('each event can be copied without collapsing its card', async () => {
     }, { timeout: 10000 }).toContain('metricsInterval')
     // el botón vive dentro del summary, así que el click no debe plegar la tarjeta abierta
     await expect(page.getByText('"metricsInterval"').first()).toBeVisible()
+})
+
+test('expanding a card is not animated', async () => {
+    // Un evento puede traer miles de lineas: animar el despliegue lo deja ilegible mientras crece.
+    // MUI vuelca el timeout del Collapse a transition-duration, asi que es asertable de verdad.
+    // El detalle se renderiza directamente, sin Collapse de por medio: si el JSON desplegado no
+    // cuelga de ningun Collapse, no hay transicion que pueda animarlo. Se comprueba sobre el
+    // elemento real en vez de sobre duraciones CSS, que MUI escribe en estilo inline.
+    const expand = page.locator('button[aria-label="Expand event"]').first()
+    if (await expand.isVisible().catch(() => false)) await expand.click()
+
+    const json = page.getByText('"metricsInterval"').first()
+    await expect(json).toBeVisible()
+
+    const insideCollapse = await json.evaluate(el => Boolean(el.closest('.MuiCollapse-root')))
+    expect(insideCollapse).toBe(false)
+})
+
+test('the match counter sits left of the search box and starts at 0/0', async () => {
+    await expect(page.getByText('0/0')).toBeVisible()
+
+    // se comprueba el orden REAL en el DOM, no solo que ambos existan
+    const order = await page.evaluate(() => {
+        const input = document.querySelector('input[aria-label="Search events"]')
+        const counter = [...document.querySelectorAll('span,p')].find(el => el.textContent?.trim() === '0/0')
+        if (!input || !counter) return 'falta ' + (!input ? 'input' : 'contador')
+        return (counter.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING) ? 'contador-antes' : 'contador-despues'
+    })
+    expect(order).toBe('contador-antes')
+})
+
+test('the search box reports how many events match', async () => {
+    await page.getByLabel('Search events').fill('metricsInterval')
+
+    // aun no se ha saltado a ninguna, asi que la posicion es 0 y el total el numero de eventos
+    await expect(page.getByText(/^0\/[1-9]\d*$/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Next match' })).toBeEnabled()
+})
+
+test('a search with no hits disables the navigation', async () => {
+    await page.getByLabel('Search events').fill('no-existe-este-texto-en-ningun-evento')
+
+    await expect(page.getByText('0/0')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Next match' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Previous match' })).toBeDisabled()
+})
+
+test('next and previous walk the matches and open the card', async () => {
+    await page.getByLabel('Search events').fill('metricsInterval')
+    // se pliega lo que hubiera abierto de tests anteriores, para probar que navegar despliega
+    const openCard = page.locator('button[aria-label="Collapse event"]').first()
+    if (await openCard.isVisible().catch(() => false)) await openCard.click()
+
+    await page.getByRole('button', { name: 'Next match' }).click()
+
+    await expect(page.getByText(/^1\/[1-9]\d*$/)).toBeVisible()
+    // la coincidencia se abre sola: su JSON queda a la vista
+    await expect(page.getByText('"metricsInterval"').first()).toBeVisible()
+
+    // previous desde la primera da la vuelta a la ultima
+    await page.getByRole('button', { name: 'Previous match' }).click()
+    await expect(page.getByText(/^\d+\/\d+$/)).toBeVisible()
+})
+
+test('the searched text is highlighted inside the expanded card', async () => {
+    await page.getByLabel('Search events').fill('maxPods')
+    await page.getByRole('button', { name: 'Next match' }).click()
+
+    // el termino se pinta en video inverso: su span lleva fondo propio, no el transparente heredado
+    const marked = page.locator('pre span').filter({ hasText: /^maxPods$/ }).first()
+    await expect(marked).toBeVisible()
+
+    const style = await marked.evaluate(el => {
+        const s = getComputedStyle(el)
+        return { bg: s.backgroundColor, color: s.color }
+    })
+    expect(style.bg).not.toBe('rgba(0, 0, 0, 0)')
+    expect(style.bg).not.toBe(style.color)
+})
+
+test('clearing the search empties the box and resets the counter', async () => {
+    await page.getByLabel('Search events').fill('metricsInterval')
+
+    await page.getByRole('button', { name: 'Clear search' }).click()
+
+    await expect(page.getByLabel('Search events')).toHaveValue('')
+    // el contador no se esconde: se queda en 0/0 para que el hueco no baile
+    await expect(page.getByText('0/0')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Next match' })).toBeDisabled()
+    // el boton de limpiar tampoco desaparece, solo se deshabilita
+    await expect(page.getByRole('button', { name: 'Clear search' })).toBeDisabled()
 })
 
 test('the clear button empties the captured events', async () => {

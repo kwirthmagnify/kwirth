@@ -46,8 +46,13 @@ test('capture', async ({ page }) => {
     await page.getByRole('button', { name: 'USE EXAMPLE' }).click()
     await page.getByRole('button', { name: 'OK' }).click()
     await expect(page.getByText(/Events: [1-9]\d* \/ 200/)).toBeVisible({ timeout: 90000 })
-    await page.getByRole('button').filter({ hasText: 'metricsInterval' }).first().click()
-    await page.waitForTimeout(900)
+    // se busca un termino y se salta a el: la captura ensena el buscador, el contador y el
+    // resaltado en video inverso dentro de la tarjeta desplegada
+    await page.getByLabel('Search events').fill('maxPods')
+    await page.getByRole('button', { name: 'Next match' }).click()
+    // se aparta el raton: si no, el tooltip del boton sale en la captura de la guia
+    await page.mouse.move(800, 700)
+    await page.waitForTimeout(1200)
     await page.screenshot({ path: `${MEDIA}/channel-provider-debug-view.png` })
 
     // la SPA mantiene el websocket vivo; sin esto el teardown se cuelga

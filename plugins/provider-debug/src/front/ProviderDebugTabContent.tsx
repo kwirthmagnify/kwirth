@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Accordion, AccordionDetails, AccordionSummary, Box, Card, CardContent, CardHeader, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material'
+import { Box, Card, CardContent, CardHeader, Chip, IconButton, InputAdornment, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
-import { Check, ContentCopy, DeleteSweep, ExpandMore, Info } from '@mui/icons-material'
+import { ArrowDownward, ArrowUpward, Check, Clear, ContentCopy, DeleteSweep, ExpandLess, ExpandMore, Info, Search } from '@mui/icons-material'
 import { IProviderDebugData } from './ProviderDebugData'
 import { IProviderDebugConfig } from './ProviderDebugConfig'
 import { JsonBlock } from './JsonBlock'
@@ -17,6 +17,16 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
     // necesita su propio disparador de render.
     const [, forceRender] = useState(0)
     const [copied, setCopied] = useState<IProviderDebugEvent | null>(null)
+    const [search, setSearch] = useState('')
+    // -1 = todavía no se ha saltado a ninguna coincidencia (solo se muestra el total)
+    const [matchPos, setMatchPos] = useState(-1)
+    // Expansión CONTROLADA y por referencia al evento, no por índice: el buffer es circular y los
+    // índices bailan con cada evento nuevo, así que una tarjeta abierta acabaría siendo otra.
+    const [expanded, setExpanded] = useState<Set<IProviderDebugEvent>>(new Set())
+    const cardRefs = useRef<Map<IProviderDebugEvent, HTMLElement>>(new Map())
+    // El texto de búsqueda de cada evento se serializa UNA vez: con 200 eventos de metrics,
+    // re-stringificar en cada tecla y en cada evento entrante costaria megas por render.
+    const searchText = useRef<WeakMap<IProviderDebugEvent, string>>(new WeakMap())
 
     useEffect(() => {
         if (boxRef.current) setBoxTop(boxRef.current.getBoundingClientRect().top)
@@ -25,8 +35,55 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
     const clear = () => {
         data.events = []
         data.signals = []
+        setExpanded(new Set())
+        cardRefs.current.clear()
+        setMatchPos(-1)
         forceRender(n => n + 1)
     }
+
+    const textOf = (event: IProviderDebugEvent): string => {
+        const cached = searchText.current.get(event)
+        if (cached !== undefined) return cached
+        let text: string
+        try {
+            text = (event.providerId + ' ' + JSON.stringify(event.event)).toLowerCase()
+        }
+        catch {
+            text = event.providerId.toLowerCase()
+        }
+        searchText.current.set(event, text)
+        return text
+    }
+
+    const matches = (): IProviderDebugEvent[] => {
+        const needle = search.trim().toLowerCase()
+        if (needle === '') return []
+        return data.events.filter(event => textOf(event).includes(needle))
+    }
+
+    const isMatch = (event: IProviderDebugEvent): boolean => {
+        const needle = search.trim().toLowerCase()
+        return needle !== '' && textOf(event).includes(needle)
+    }
+
+    /** Salta a la coincidencia 'pos' (con vuelta al principio), la despliega y la centra. */
+    const goToMatch = (pos: number) => {
+        const found = matches()
+        if (found.length === 0) return
+        const next = ((pos % found.length) + found.length) % found.length
+        const target = found[next]
+        setMatchPos(next)
+        setExpanded(prev => new Set(prev).add(target))
+        // El scroll va tras el render que despliega la tarjeta, y apunta a la primera coincidencia
+        // resaltada, no a la tarjeta: centrar una tarjeta de miles de líneas deja el resultado
+        // fuera de pantalla. Sin scroll animado, por lo mismo que el despliegue.
+        setTimeout(() => {
+            const card = cardRefs.current.get(target)
+            const hit = card?.querySelector('[data-pd-hit]')
+            ;(hit ?? card)?.scrollIntoView({ block: 'center' })
+        }, 0)
+    }
+
 
     /**
      * La API asíncrona del portapapeles se rechaza en bastantes contextos (permiso denegado, iframe,
@@ -86,30 +143,54 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
         )
     }
 
-    const formatEvent = (event: IProviderDebugEvent, index: number) => (
-        <Accordion key={index} disableGutters slotProps={{ transition: { unmountOnExit: true } }}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-                <Stack direction='row' spacing={1.5} alignItems='center' sx={{ minWidth: 0, width: '100%' }}>
-                    <Typography variant='caption' color='text.secondary' sx={{ fontFamily: 'monospace' }}>{new Date(event.ts).toISOString()}</Typography>
+    const toggle = (event: IProviderDebugEvent) => setExpanded(prev => {
+        const next = new Set(prev)
+        if (next.has(event)) next.delete(event)
+        else next.add(event)
+        return next
+    })
+
+    /**
+     * Desplegable propio en vez de Accordion. Un evento puede traer miles de líneas de JSON y el
+     * Collapse de MUI las anima midiendo su altura, lo que deja la tarjeta ilegible mientras crece;
+     * además su transición va en estilo inline y no se deja quitar ni con timeout 0 ni con CSS.
+     * Renderizando el detalle a mano no hay transición que quitar, y el DOM plegado ni existe.
+     */
+    const formatEvent = (event: IProviderDebugEvent, index: number, current: IProviderDebugEvent | undefined) => {
+        const open = expanded.has(event)
+        return (
+            <Paper
+                key={index}
+                variant='outlined'
+                ref={(el: HTMLElement | null) => { if (el) cardRefs.current.set(event, el); else cardRefs.current.delete(event) }}
+                sx={{ mb: 0.5, ...(current === event ? { outline: 2, outlineColor: 'warning.main', outlineOffset: -2 } : {}) }}
+            >
+                <Stack direction='row' spacing={1.5} alignItems='center' sx={{ minWidth: 0, px: 1, py: 0.5, cursor: 'pointer' }} onClick={() => toggle(event)}>
+                    <IconButton size='small' aria-label={open ? 'Collapse event' : 'Expand event'} onClick={(e) => { e.stopPropagation(); toggle(event) }}>
+                        {open ? <ExpandLess fontSize='small' /> : <ExpandMore fontSize='small' />}
+                    </IconButton>
+                    <Typography variant='caption' color={isMatch(event) ? 'warning.main' : 'text.secondary'} sx={{ fontFamily: 'monospace' }}>{new Date(event.ts).toISOString()}</Typography>
                     <Chip label={event.providerId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
                     <Typography variant='caption' color='text.secondary' noWrap>{summaryOf(event.event)}</Typography>
                     <Tooltip title={copied === event ? 'Copied' : 'Copy event JSON'}>
-                        {/* dentro del summary, así que hay que frenar el click o el acordeón se pliega */}
+                        {/* la fila entera despliega, así que hay que frenar el click aquí */}
                         <IconButton size='small' aria-label='Copy event JSON' sx={{ ml: 'auto' }} onClick={(e) => { e.stopPropagation(); copy(event) }}>
                             {copied === event ? <Check fontSize='small' color='success' /> : <ContentCopy fontSize='small' />}
                         </IconButton>
                     </Tooltip>
                 </Stack>
-            </AccordionSummary>
-            <AccordionDetails>
-                <JsonBlock value={event.event} />
-            </AccordionDetails>
-        </Accordion>
-    )
+                {open && <Box sx={{ px: 2, pb: 1 }}><JsonBlock value={event.event} highlight={search} /></Box>}
+            </Paper>
+        )
+    }
 
     if (!data.started) {
         return <Box sx={{ p: 2 }}><Typography color='text.secondary'>Provider Debug not started. Start the channel (tab settings ⚙ → Start) to subscribe to a provider and watch its raw events.</Typography></Box>
     }
+
+    // Se resuelven una sola vez por render: 'matches' recorre todo el buffer.
+    const found = matches()
+    const current = matchPos >= 0 && matchPos < found.length ? found[matchPos] : undefined
 
     return (
         <Card sx={{ flex: 1, width: '98%', alignSelf: 'center', m: 1 }}>
@@ -118,24 +199,70 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
                     <Typography mr={4}><b>Provider:</b> {instanceConfig.providerId || '(none)'}</Typography>
                     <Typography mr={4}><b>Events:</b> {data.events.length} / {config.maxEvents}</Typography>
                     <Typography mr={4}><Info fontSize='small' sx={{ mb: 0.25 }} /><b>&nbsp;Status:</b> {data.paused ? 'paused' : data.started ? 'started' : 'stopped'}</Typography>
-                    <Tooltip title='Clear captured events'>
-                        <span style={{ marginLeft: 'auto' }}>
-                            <IconButton size='small' aria-label='Clear captured events' onClick={clear} disabled={data.events.length === 0 && data.signals.length === 0}>
-                                <DeleteSweep fontSize='small' />
-                            </IconButton>
-                        </span>
-                    </Tooltip>
+                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ ml: 'auto' }}>
+                        {/* siempre visible: sin búsqueda marca 0/0, así el hueco no baila al escribir */}
+                        <Typography variant='caption' color={found.length === 0 && search.trim() !== '' ? 'warning.main' : 'text.secondary'} sx={{ minWidth: 44, textAlign: 'right' }}>
+                            {`${matchPos + 1}/${found.length}`}
+                        </Typography>
+                        <TextField
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setMatchPos(-1) }}
+                            onKeyDown={(e) => {
+                                if (e.key !== 'Enter') return
+                                e.preventDefault()
+                                goToMatch(e.shiftKey ? matchPos - 1 : matchPos + 1)
+                            }}
+                            placeholder='Search events'
+                            variant='standard'
+                            sx={{ width: 200 }}
+                            slotProps={{
+                                htmlInput: { 'aria-label': 'Search events' },
+                                input: {
+                                    startAdornment: <InputAdornment position='start'><Search fontSize='small' /></InputAdornment>,
+                                    // siempre presente y deshabilitado: si se renderiza en
+                                    // condicional desaparece bajo el propio click que lo pulsa
+                                    endAdornment: <InputAdornment position='end'>
+                                        <IconButton size='small' aria-label='Clear search' disabled={search === ''} onClick={() => { setSearch(''); setMatchPos(-1) }}><Clear fontSize='small' /></IconButton>
+                                    </InputAdornment>
+                                }
+                            }}
+                        />
+                        <Tooltip title='Previous match (Shift+Enter)'>
+                            <span>
+                                <IconButton size='small' aria-label='Previous match' disabled={found.length === 0} onClick={() => goToMatch(matchPos - 1)}>
+                                    <ArrowUpward fontSize='small' />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title='Next match (Enter)'>
+                            <span>
+                                <IconButton size='small' aria-label='Next match' disabled={found.length === 0} onClick={() => goToMatch(matchPos + 1)}>
+                                    <ArrowDownward fontSize='small' />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title='Clear captured events'>
+                            <span>
+                                <IconButton size='small' aria-label='Clear captured events' onClick={clear} disabled={data.events.length === 0 && data.signals.length === 0}>
+                                    <DeleteSweep fontSize='small' />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                    </Stack>
                 </Stack>
             } />
             <CardContent>
                 <Stack direction='column' spacing={1} sx={{ mb: 1 }}>
-                    <Typography variant='caption' color='text.secondary'>Running providers</Typography>
-                    {formatProviders()}
+                    {/* etiqueta y chips en la misma línea; los chips siguen envolviendo si no caben */}
+                    <Stack direction='row' spacing={1} alignItems='center' flexWrap='wrap' useFlexGap>
+                        <Typography variant='caption' color='text.secondary'>Running providers</Typography>
+                        {formatProviders()}
+                    </Stack>
                     {data.signals.map((s, index) => <Typography key={index} variant='caption' color='text.secondary'>*** {s} ***</Typography>)}
                 </Stack>
                 <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
                     <Box sx={{ flex: 1, overflowY: 'auto', ml: 1, mr: 1 }}>
-                        {data.events.map((e, index) => formatEvent(e, index))}
+                        {data.events.map((e, index) => formatEvent(e, index, current))}
                     </Box>
                 </Box>
             </CardContent>

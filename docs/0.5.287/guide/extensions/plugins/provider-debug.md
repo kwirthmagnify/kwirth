@@ -54,11 +54,21 @@ If a provider shows *"does not publish subscription help"*, it simply has not im
 
 ![Provider Debug output](../../../_media/guide/channel-provider-debug-view.png)
 
-The header shows the provider, how full the buffer is, the status, and a **🗑 clear** button.
+The header shows the provider, how full the buffer is, the status, the **search box**, and a **🗑 clear** button.
 
 Below it, **Running providers** lists what is alive right now, followed by the channel's own signals (subscription confirmed, provider not running, malformed payload…).
 
 Each event is one collapsed card: **timestamp · provider · top-level keys**. Expand it for the full JSON, coloured by type, and use the **copy** button to put that JSON on your clipboard.
+
+Cards open and close **without animation**, and a collapsed card renders nothing at all. That is deliberate: a single event can carry thousands of lines, and animating that much content makes it unreadable while it grows.
+
+### Searching
+
+Type in the search box and the counter tells you how many events contain that text — it looks inside the whole event, not just the summary. **↑ / ↓** (or **Enter** / **Shift+Enter**) walk the matches, wrapping around at the ends.
+
+Jumping to a match expands its card, outlines it, and scrolls straight to the **highlighted text** rather than to the card — with a long event, centring the card would leave the hit off screen. Every occurrence is painted in inverse video, so it is easy to spot while you scroll through the rest of the JSON.
+
+Matching events also show their timestamp in the highlight colour, so you can see which cards are worth opening without expanding them.
 
 ## Related
 

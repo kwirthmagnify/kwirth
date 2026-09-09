@@ -78,6 +78,7 @@
   },
   "docs": {
     "kwirth": "bundle/docs/kwirth.tgz",
+    "service-flow": "../providers/service-flow/docs/service-flow.tgz",
     "pinocchio": "../plugins/pinocchio/docs/pinocchio.tgz",
     "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
     "montag": "../plugins/montag/docs/montag.tgz",
