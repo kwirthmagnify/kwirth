@@ -21,12 +21,25 @@ Colgar la credencial de descarga del marketplace, como se hacía, solo funcionab
   que saber cuál instaló el usuario, no cuál gana hoy. Deducirlo dejó de ser posible en cuanto manifest y
   paquetes pasaron a ser servidores distintos.
 
+### Cerrado también el 2026-09-09
+
+- ~~Que **saltarse el fondo de un login se vea**.~~ **HECHO.** Si `background.png` no cabe en el ConfigMap
+  (tope duro de ~1 MiB de Kubernetes), el back lo anota en el propio login y su página muestra abajo,
+  pequeño y en rojo, un aviso que **nombra el login** para que quien lo vea pueda decir cuál falla. No
+  explica el motivo: esa página se sirve **sin autenticar**. El detalle sigue en el log del admin.
+  Documentado en la guía de logins, con el límite práctico (~600 KB) y el aviso de que **en dev parece que
+  funciona**, porque un login de dev lee el fondo del tgz en disco.
+- ~~El **helper `docsUrl` compartido**.~~ **HECHO**, `common-front@0.5.53`: `docsUrl(clusterUrl, tipo, id)`
+  y `pluginDocsUrl`. Muere el `DEFAULT_DOCS_URL = 'http://localhost:4000'` de `HelpButton`, que era lo que
+  permitía que una URL mal puesta no hiciera ruido — **sin base ya no se pinta el botón**. Salieron dos
+  diálogos del core que nunca pasaban base y llevaban desde siempre a ese localhost. 59 repeticiones de la
+  cadena eliminadas: excubitor 21, iter 10, core 28.
+
 ### Pendiente
 
-- Que **saltarse el fondo de un login se vea**. Si `background.png` no cabe en el ConfigMap (tope duro de
-  ~1 MiB de Kubernetes) hoy es una línea de log: el login queda sin fondo y nadie se entera. Debería
-  fallar la instalación o avisar en el manager. Salió al instalar el login de agora desde el Nexus.
 - **Azure DevOps sigue sin validar** contra un servidor real (ver abajo).
+- **agora y montag** conservan su helper local de la guía; adoptarán el compartido en su próxima versión,
+  para no forzar un republish al Nexus solo por eso.
 
 ## Status (2026-09-06) — ENTREGADO Y EN USO
 

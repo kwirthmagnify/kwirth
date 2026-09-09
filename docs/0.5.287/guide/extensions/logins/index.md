@@ -63,9 +63,26 @@ A login extension is a `.tgz` archive containing three files:
 |---|---|---|
 | `package.json` | ✅ | Extension metadata — `id`, `displayName`, `version`, `extensionType: "login"` |
 | `login.json` | ✅ | Visual configuration — see [Configuration reference](#configuration-reference) |
-| `background.png` | optional | Full-screen background image |
+| `background.png` | optional | Full-screen background image — see the size limit below |
 
 Build it with the `build.mjs` script from the `logins/_template` folder.
+
+> ### ⚠️ `background.png` must stay under ~600 KB
+>
+> The image is stored inside a Kubernetes ConfigMap, encoded in base64 — which makes it about a third
+> larger. A ConfigMap cannot exceed roughly 1 MiB, so kwirth refuses any background whose encoded form
+> passes **800 KB**; in practice that means a PNG of about **600 KB or less**.
+>
+> Over that, **the extension still installs, but without its background**, and the login page shows a
+> small red line naming it and asking the user to contact their kwirth administrator. The reason is only
+> in the backend log — the login page is served before anyone authenticates, so it says nothing more.
+>
+> Two things that help: drop the alpha channel (a full-page background does not need one) and scale the
+> image down. A photographic background at 1200×896 will not fit; the same one at 600×448 does.
+>
+> ⚠️ **In dev it looks like it works.** A login declared in `kwirth-dev.json` reads its background
+> straight from the tgz on disk, so an oversized image renders fine — and only fails once somebody
+> installs the extension for real.
 
 ### `package.json` minimal example
 
