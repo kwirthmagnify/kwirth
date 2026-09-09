@@ -8,7 +8,7 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } fro
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
-import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
+import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
 
 
 interface IPackManifestEntry {
@@ -287,7 +287,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Extension /></Box>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                        <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName}</Typography>
+                        <Typography variant='body2' fontWeight='bold' component='span' sx={extensionCardTitleSx}>{displayName}</Typography>
                         {badge}
                         {versions
                             ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
@@ -298,7 +298,10 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
                         }
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{description}</Typography>
-                    {members && <Typography variant='caption' color='text.disabled' display='block'>{members}</Typography>}
+                    { /* El resumen de miembros es la unica linea que tiene un pack y no tienen los otros
+                         nueve tipos: en una linea y con elipsis, o un pack con muchos tipos crece y se come
+                         la fila de procedencia y acciones. */ }
+                    {members && <Typography variant='caption' color='text.disabled' display='block' noWrap>{members}</Typography>}
                 </Box>
                 <Tooltip title={website ? 'Open pack website' : 'No website available'}>
                     <span>

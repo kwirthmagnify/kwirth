@@ -12,7 +12,7 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addP
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
-import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
+import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
 
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -419,7 +419,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Https fontSize='small' /></Box>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                        <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{webhook.displayName || webhook.id}</Typography>
+                        <Typography variant='body2' fontWeight='bold' sx={extensionCardTitleSx}>{webhook.displayName || webhook.id}</Typography>
                         <Chip label={`v${webhook.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{webhook.description}</Typography>
@@ -603,7 +603,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                         <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Https fontSize='small' /></Box>
                                         <Box flex={1} minWidth={0}>
                                             <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                                                <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{entry.displayName || entry.name}</Typography>
+                                                <Typography variant='body2' fontWeight='bold' sx={extensionCardTitleSx}>{entry.displayName || entry.name}</Typography>
                                                 {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
                                                 {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />}
                                                 <Select size='small' value={entry.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>

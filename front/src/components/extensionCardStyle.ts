@@ -34,6 +34,17 @@ export const extensionCardSx: SxProps<Theme> = {
 export const dependencyList = (deps: { extensionType: string, id: string, minVersion: string }[]): string =>
     deps.map(d => `${d.extensionType} ${d.id} ≥${d.minVersion}`).join(', ')
 
+// El nombre, SIEMPRE en una línea. Las vistas de lista ya lo recortaban; las tarjetas no, así que un
+// displayName largo envolvía a dos líneas y empujaba la fila de abajo (procedencia y acciones) fuera de la
+// altura fija. Necesita minWidth 0: en un flex, el hijo no baja de su contenido si no se le dice.
+export const extensionCardTitleSx: SxProps<Theme> = {
+    flex: 1,
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+}
+
 // Dos líneas y elipsis. Sin esto, la descripción manda sobre la altura de toda la fila.
 export const extensionCardDescriptionSx: SxProps<Theme> = {
     mt: 0.5,

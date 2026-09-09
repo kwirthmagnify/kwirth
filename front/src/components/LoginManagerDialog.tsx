@@ -9,7 +9,7 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addP
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
-import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
+import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
 
 
 interface ILoginManifestEntry {
@@ -298,7 +298,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><LockPerson /></Box>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                        <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName}</Typography>
+                        <Typography variant='body2' fontWeight='bold' component='span' sx={extensionCardTitleSx}>{displayName}</Typography>
                         {badge}
                         {versions
                             ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}

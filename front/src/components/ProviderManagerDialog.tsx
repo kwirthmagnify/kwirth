@@ -9,7 +9,7 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } fro
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
-import { extensionCardSx, extensionCardDescriptionSx, dependencyList } from './extensionCardStyle'
+import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx, dependencyList } from './extensionCardStyle'
 
 declare global { interface Window { __kwirth_providers__: Record<string, any> } }
 
@@ -338,7 +338,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Factory /></Box>
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                                                    <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{provider.displayName || provider.name || provider.id}</Typography>
+                                                    <Typography variant='body2' fontWeight='bold' sx={extensionCardTitleSx}>{provider.displayName || provider.name || provider.id}</Typography>
                                                     <Chip label={`v${provider.version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{provider.description}</Typography>
@@ -454,7 +454,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                             <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Factory /></Box>
                                             <Box flex={1} minWidth={0}>
                                                 <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                                                    <Typography variant='body2' fontWeight='bold' sx={{ flex: 1 }}>{provider.displayName || provider.name}</Typography>
+                                                    <Typography variant='body2' fontWeight='bold' sx={extensionCardTitleSx}>{provider.displayName || provider.name}</Typography>
                                                     {isDevInstalled(id) && <Chip label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />}
                                                     {isInstalled(id) && <Chip label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />}
                                                     <Select size='small' value={provider.version} onChange={e => setSelectedVersions(prev => ({ ...prev, [id]: e.target.value }))} sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>

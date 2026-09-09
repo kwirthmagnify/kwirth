@@ -7,7 +7,7 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } fro
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { useKeyboard } from '../tools/useKeyboard'
-import { extensionCardSx, extensionCardDescriptionSx } from './extensionCardStyle'
+import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
 
 
 // Una documentacion se identifica por el PAR (targetType, id): el id es el de la extension documentada
@@ -226,7 +226,7 @@ const DocsManagerDialog: React.FC<IDocsManagerDialogProps> = (props: IDocsManage
                 <Box sx={{ color: 'text.secondary', mt: 0.25 }}><Description /></Box>
                 <Box flex={1} minWidth={0}>
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                        <Typography variant='body2' fontWeight='bold' component='span' sx={{ flex: 1 }}>{displayName || name || id}</Typography>
+                        <Typography variant='body2' fontWeight='bold' component='span' sx={extensionCardTitleSx}>{displayName || name || id}</Typography>
                         {versions
                             ? <Select size='small' value={version} onChange={e => onVersionChange?.(e.target.value)}
                                 sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
