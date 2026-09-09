@@ -2,7 +2,7 @@
   "id": "http-pull-push",
   "name": "@kwirthmagnify/kwirth-provider-http-pull-push",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "HTTP Pull-Push Provider",
   "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
   "website": "https://kwirthmagnify.dev",
@@ -26,6 +26,6 @@
     "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
   },
-  "requiresRestart": false,
+  "requiresRestart": true,
   "requiresExtension": []
 }

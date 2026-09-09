@@ -34,6 +34,15 @@
   {
     "extensionType": "provider",
     "id": "syslog",
+    "version": "0.1.27",
+    "name": "Syslog Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.1.27.tgz",
+    "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "provider",
+    "id": "syslog",
     "version": "0.1.26",
     "name": "Syslog Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.1.26.tgz",
@@ -47,6 +56,15 @@
     "name": "Tick Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.10.tgz",
     "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "provider",
+    "id": "http-pull-push",
+    "version": "0.1.1",
+    "name": "HTTP Pull-Push Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-http-pull-push/-/kwirth-provider-http-pull-push-0.1.1.tgz",
+    "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
     "website": "https://kwirthmagnify.dev"
   },
   {
