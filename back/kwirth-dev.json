@@ -22,11 +22,9 @@
     "kafka": "../providers/kafka/dist",
     "otel": "../providers/otel/dist",
     "syslog": "../providers/syslog/dist",
-    "trivy": "../providers/trivy/dist",
-    "business": "../providers/business/dist"
+    "trivy": "../providers/trivy/dist"
   },
   "senders": {
-    "console": "../senders/console/dist",
     "file": "../senders/file/dist",
     "email-resend": "../senders/email-resend/dist",
     "email-smtp": "../senders/email-smtp/dist",
@@ -39,10 +37,8 @@
     "jira": "../senders/jira/dist"
   },
   "webhooks": {
-    "jira": "../webhooks/jira/dist"
   },
   "logins": {
-    "magnify": "../logins/magnify/dist/magnify.tgz",
     "censor": "../logins/censor/dist/censor.tgz",
 
     "anonymous": "../logins/anonymous/dist/anonymous.tgz",
@@ -54,7 +50,6 @@
   "homepages": {
   },
   "themes": {
-    "iter": "../plugins/iter/theme/dist",
     "santander": "../themes/santander/dist"
   },
   "senderConfigs": {
@@ -69,7 +64,6 @@
     ]
   },
   "idps": {
-    "google": "../idps/google/dist",
     "gitlab-cloud": "../idps/gitlab-cloud/dist",
     "gitlab-onprem": "../idps/gitlab-onprem/dist",
     "github-cloud": "../idps/github-cloud/dist",
@@ -77,7 +71,6 @@
   },
   "docs": {
     "kwirth": "bundle/docs/kwirth.tgz",
-    "pinocchio": "../plugins/pinocchio/docs/pinocchio.tgz",
     "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
     "montag": "../plugins/montag/docs/montag.tgz",
     "iter": "../plugins/iter/docs/iter.tgz"
