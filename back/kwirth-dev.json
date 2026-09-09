@@ -32,9 +32,7 @@
     "regex": "../senders/regex/dist",
     "composite": "../senders/composite/dist",
     "timed": "../senders/timed/dist",
-    "teams": "../senders/teams/dist",
-
-    "jira": "../senders/jira/dist"
+    "teams": "../senders/teams/dist"
   },
   "webhooks": {
   },
