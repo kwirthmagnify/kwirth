@@ -48,7 +48,10 @@ try {
         description: 'User and administrator guide for the kwirth Pinocchio plugin'
     }, null, 2))
 
-    await tarCreate({ gzip: true, file: outTgz, cwd: tmpDir }, ['.'])
+    // El prefijo 'package/' NO es decorativo: npmjs rechaza el tarball sin el, con
+    // "415 Unsupported Media Type - invalid path: ./". Kwirth acepta las dos formas al instalar —busca
+    // package.json en la raiz y bajo package/—, asi que esto no rompe nada y ademas hace el tgz publicable.
+    await tarCreate({ gzip: true, file: outTgz, cwd: tmpDir, prefix: 'package' }, ['.'])
     console.log(`pinocchio docs tgz: ${outTgz} (v${pkg.version})`)
 }
 finally {
