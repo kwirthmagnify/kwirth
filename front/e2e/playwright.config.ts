@@ -18,9 +18,14 @@ export default defineConfig({
     //   playwright test tests/private/iter-editing.spec.ts
     // Los 'capture-*' no verifican nada: SOBRESCRIBEN las imagenes de la guia en docs/_media. Dejarlos en
     // la corrida por defecto ensucia el arbol con capturas que nadie ha mirado, cada vez que se lanzan los
-    // tests. Se piden a mano cuando toca actualizar la guia:
-    //   playwright test tests/capture-managers.spec.ts
-    testIgnore: ['**/private/**', '**/capture-*.spec.ts'],
+    // tests. Se piden a mano poniendo CAPTURES:
+    //   CAPTURES=1 playwright test tests/capture-managers.spec.ts
+    //
+    // Hace falta la variable: 'testIgnore' se aplica tambien cuando se nombra el fichero en la linea de
+    // comandos, asi que sin esto no habia NINGUNA forma de lanzarlas sin editar esta config.
+    testIgnore: process.env.CAPTURES
+        ? ['**/private/**']
+        : ['**/private/**', '**/capture-*.spec.ts'],
     timeout: 180_000,
     retries: 1,
     fullyParallel: false,

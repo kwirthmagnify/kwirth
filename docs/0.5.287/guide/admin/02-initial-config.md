@@ -170,6 +170,8 @@ A marketplace tells kwirth **what exists**; it does not host the packages. Each 
 
 So when a package lives behind a private registry, its credentials go in the **Package registries** tab, not on the marketplace row. Kwirth picks them by **matching the tarball URL** against the registries you declare here.
 
+![Package registries tab](../../_media/guide/admin-package-registries.png)
+
 Each row is one registry:
 
 | Field | What it means |

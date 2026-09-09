@@ -25,7 +25,11 @@ const SAMPLE = {
     manifestUser: '',
     token: 'glpat-ExampleTokenValue',
     user: 'acme-ci',
-    password: 'example-password'
+    password: 'example-password',
+    // El registro de paquetes es OTRO servidor que el manifest: por eso la captura enseña otro host.
+    registryLabel: 'acme-nexus',
+    registryUrl: 'https://nexus.acme.com/repository/acme-private',
+    registryToken: 'example-registry-token'
 }
 
 /** Escribe en un input de React de forma que el componente registre el cambio. */
@@ -59,18 +63,34 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
     const rows = await dlg(page).getByLabel('Manifest URL', { exact: true }).count()
     test.skip(rows === 0, 'no hay ningún marketplace registrado que capturar')
 
-    // Para que la imagen enseñe el caso completo — manifest con token Y registro con credenciales —
-    // se marcan las dos casillas. Es una ilustración, no la configuración real: nada de esto se guarda.
-    const registryCreds = dlg(page).getByLabel('Package registry needs credentials', { exact: true }).first()
-    if (!await registryCreds.isChecked()) await registryCreds.check()
+    // Para que la imagen enseñe el caso completo, se marca el token del manifest. Es una ilustración, no
+    // la configuración real: nada de esto se guarda.
     const manifestToken = dlg(page).getByLabel('Manifest needs a token', { exact: true }).first()
     if (!await manifestToken.isChecked()) await manifestToken.check()
     await page.waitForTimeout(300)
 
-    // redactar TODO lo identificable antes de que la imagen exista
-    await redact(page, 'Name', SAMPLE.label)
+    // Se preparan y redactan las DOS pestañas antes de capturar ninguna. El diálogo mantiene en el DOM
+    // los campos de la pestaña oculta, asi que el registro real seguiria ahi mientras se fotografia la
+    // otra: la comprobación de fuga mira todos los inputs, y con razon.
+    await page.getByRole('tab', { name: 'Package registries' }).click()
+    await page.waitForTimeout(600)
+    if (await dlg(page).getByLabel('Base URL', { exact: true }).count() === 0) {
+        await dlg(page).getByRole('button', { name: 'Add registry' }).click()
+        await page.waitForTimeout(300)
+    }
+    const needsCreds = dlg(page).getByLabel('Needs credentials', { exact: true }).first()
+    if (!await needsCreds.isChecked()) await needsCreds.check()
+    await page.waitForTimeout(300)
+    await redact(page, 'Base URL', SAMPLE.registryUrl)
+
+    await page.getByRole('tab', { name: 'Marketplaces' }).click()
+    await page.waitForTimeout(400)
+
+    // redactar TODO lo identificable antes de que exista ninguna imagen. 'Name', 'User', 'Password' y
+    // 'Token' se repiten en las dos pestañas, y redact() escribe en todas sus apariciones.
     await redact(page, 'Manifest URL', SAMPLE.url)
     await redact(page, 'Manifest user', SAMPLE.manifestUser)
+    await redact(page, 'Name', SAMPLE.label)
     await redact(page, 'Token', SAMPLE.token)
     await redact(page, 'User', SAMPLE.user)
     await redact(page, 'Password', SAMPLE.password)
@@ -80,9 +100,17 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
     const leaked = await dlg(page).evaluate(el =>
         Array.from(el.querySelectorAll('input')).map(i => (i as HTMLInputElement).value).join(' | '))
     expect(leaked, 'ha quedado una URL real en la captura').not.toContain('plexus')
+    expect(leaked, 'ha quedado el nombre del repo privado en la captura').not.toContain('IriaOperae')
     expect(leaked, 'ha quedado un token real en la captura').not.toMatch(/glpat-(?!Example)/)
 
     await page.screenshot({ path: `${MEDIA}/admin-marketplaces.png` })
+
+    // y la pestaña de registros de paquetes, que es donde vive ahora la credencial de DESCARGA
+    await page.getByRole('tab', { name: 'Package registries' }).click()
+    await page.waitForTimeout(600)
+    await redact(page, 'Name', SAMPLE.registryLabel)
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: `${MEDIA}/admin-package-registries.png` })
 
     // Cancel: lo redactado NO se guarda
     await dialog.getByRole('button', { name: 'Cancel' }).click()
