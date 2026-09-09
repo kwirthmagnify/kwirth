@@ -49,6 +49,13 @@ export interface ILoginConfig {
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
+// Que sobra en el indice cuando se relee kwirth-dev.json. Solo se reconcilia lo marcado 'dev': lo bundled,
+// lo de un pack y lo instalado desde marketplace, URL o fichero se queda donde esta, que es instalado de
+// verdad. Vale tanto el id que trae el tgz como la clave del fichero de dev, para que un login declarado
+// pero todavia sin construir no pierda su sitio por no haberse podido instalar hoy.
+export const staleDevLogins = (index: ILoginMeta[], declared: Set<string>): ILoginMeta[] =>
+    index.filter(m => m.installedFrom === 'dev' && !declared.has(m.id))
+
 export class LoginManager {
     private configMaps: IConfigMaps
     private cachedIndex: ILoginMeta[] = []
@@ -173,37 +180,64 @@ export class LoginManager {
         }
     }
 
+    // kwirth-dev.json es DECLARATIVO: lo que figura aqui queda instalado y lo que se quita del fichero se
+    // desinstala. Hace falta decirlo porque un login de dev es una instalacion REAL —se escribe en
+    // ConfigMaps, que es de donde se sirve la pantalla de login antes de autenticar a nadie—, asi que
+    // borrar la linea solo dejaba de reinstalarlo: la entrada sobrevivia en el indice y el manager lo
+    // seguia dando por instalado para siempre.
+    //
+    // Solo se reconcilia lo marcado 'dev'. Lo instalado desde un marketplace, una URL, un fichero o un
+    // pack no se toca: eso es instalado de verdad y se mantiene.
     loadDevLogins(): void {
         const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
         if (!fs.existsSync(devConfigPath)) return
+        let loginsMap: Record<string, string> = {}
         try {
-            const raw = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8'))
-            const loginsMap: Record<string, string> = raw.logins ?? {}
-            for (const [id, tgzPath] of Object.entries(loginsMap)) {
-                if (typeof tgzPath === 'string') this.registerDevLogin(id, tgzPath)
-            }
+            loginsMap = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8')).logins ?? {}
         }
         catch (err) {
             logError(ELogComponent.CORE, `Failed to load kwirth-dev.json logins: ${err}`)
+            return
+        }
+        // Secuencial a proposito: cada install hace leer-indice / anadir / escribir-indice, y en paralelo
+        // se pisan entre ellos y se pierden entradas.
+        ;(async () => {
+            const declared = new Set<string>()
+            for (const [id, tgzPath] of Object.entries(loginsMap)) {
+                if (typeof tgzPath !== 'string') continue
+                declared.add(id)
+                const installedId = await this.registerDevLogin(id, tgzPath)
+                if (installedId) declared.add(installedId)
+            }
+            await this.pruneDevLogins(declared)
+        })().catch(err => logError(ELogComponent.CORE, `Failed to load kwirth-dev.json logins: ${err}`))
+    }
+
+    private async pruneDevLogins(declared: Set<string>): Promise<void> {
+        let index = (await this.configMaps.read('kwirth-logins-index', []) as ILoginMeta[]) || []
+        for (const meta of staleDevLogins(index, declared)) {
+            this.devLogins.delete(meta.id)
+            await this._doUninstall(meta.id, index)
+            index = index.filter(m => m.id !== meta.id)
+            logInfo(ELogComponent.CORE, `[dev] Login extension '${meta.id}' no longer in kwirth-dev.json — uninstalled`)
         }
     }
 
-    private registerDevLogin(id: string, tgzPath: string): void {
+    private async registerDevLogin(id: string, tgzPath: string): Promise<string | undefined> {
         const absPath = path.resolve(tgzPath)
-        const meta: ILoginMeta = { id, name: id, displayName: id, version: 'dev', description: 'dev login', installedFrom: 'dev' }
-        ;(async () => {
-            try {
-                const installed = await this.install(absPath, 'dev')
-                this.devLogins.set(id, { tgzPath: absPath, meta: installed })
-                logInfo(ELogComponent.CORE, `[dev] Login extension '${id}' registered from ${absPath}`)
-            }
-            catch (err) {
-                if ((err as Error)?.message?.includes('already installed'))
-                    logInfo(ELogComponent.CORE, `[dev] Login extension '${id}' already installed — skipping`)
-                else
-                    logError(ELogComponent.CORE, `[dev] Failed to register login extension '${id}': ${err}`)
-            }
-        })()
+        try {
+            const installed = await this.install(absPath, 'dev')
+            this.devLogins.set(id, { tgzPath: absPath, meta: installed })
+            logInfo(ELogComponent.CORE, `[dev] Login extension '${id}' registered from ${absPath}`)
+            return installed.id
+        }
+        catch (err) {
+            if ((err as Error)?.message?.includes('already installed'))
+                logInfo(ELogComponent.CORE, `[dev] Login extension '${id}' already installed — skipping`)
+            else
+                logError(ELogComponent.CORE, `[dev] Failed to register login extension '${id}': ${err}`)
+            return undefined
+        }
     }
 
     async uninstall(id: string): Promise<void> {

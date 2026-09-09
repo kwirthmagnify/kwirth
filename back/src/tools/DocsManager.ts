@@ -20,6 +20,17 @@ export interface IDocsMeta {
     installedFrom?: string
 }
 
+// Que sobra en el indice cuando se relee kwirth-dev.json. Solo se reconcilia lo marcado 'dev': lo bundled,
+// lo de un pack y lo instalado desde marketplace, URL o fichero se queda donde esta.
+//
+// La identidad de unas docs es el par (targetType, id), pero la clave del fichero de dev es solo una
+// etiqueta. Asi que la entrada se salva si se acaba de instalar, o si su id coincide con una etiqueta
+// declarada — lo segundo cubre las declaradas que hoy no se pueden instalar por no estar construidas.
+export const staleDevDocs = (index: IDocsMeta[], declaredLabels: Set<string>, installedPairs: Set<string>): IDocsMeta[] =>
+    index.filter(d => d.installedFrom === 'dev'
+        && !installedPairs.has(`${d.targetType}/${d.id}`)
+        && !declaredLabels.has(d.id))
+
 export class DocsManager {
     private configMaps: IConfigMaps
     private cachedIndex: IDocsMeta[] = []
@@ -209,21 +220,39 @@ export class DocsManager {
         }
     }
 
+    // kwirth-dev.json es DECLARATIVO: lo que figura aqui queda instalado y lo que se quita del fichero se
+    // desinstala. Una documentacion de dev es una instalacion REAL —entra en el indice y se despliega bajo
+    // docsPath—, asi que borrar la linea solo dejaba de reinstalarla: la entrada sobrevivia y el manager la
+    // seguia dando por instalada. Y no habia forma de quitarla desde la UI, porque el guard de uninstall
+    // rechaza precisamente lo marcado 'dev'.
+    //
+    // Solo se reconcilia lo marcado 'dev'. Lo instalado desde un marketplace, una URL, un fichero o un pack
+    // no se toca.
     loadDevDocs(): void {
         const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
         if (!fs.existsSync(devConfigPath)) return
-        const raw = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8'))
-        const entries = Object.entries(raw.docs ?? {})
-        if (entries.length === 0) return
+        let entries: [string, unknown][] = []
+        try {
+            entries = Object.entries(JSON.parse(fs.readFileSync(devConfigPath, 'utf-8')).docs ?? {})
+        }
+        catch (err) {
+            logError(ELogComponent.CORE, `Failed to load kwirth-dev.json (docs): ${err}`)
+            return
+        }
         ;(async () => {
+            const declaredLabels = new Set<string>()
+            const installedPairs = new Set<string>()
             for (const [label, tgzPath] of entries) {
-                const resolved = path.resolve(process.cwd(), tgzPath as string)
+                if (typeof tgzPath !== 'string') continue
+                declaredLabels.add(label)
+                const resolved = path.resolve(process.cwd(), tgzPath)
                 if (!fs.existsSync(resolved)) {
                     logWarning(ELogComponent.CORE, `[dev] Docs '${label}' tgz not found at ${resolved} — run 'npm run build' in back/ first`)
                     continue
                 }
                 try {
                     const meta = await this.install(resolved, 'dev')
+                    installedPairs.add(`${meta.targetType}/${meta.id}`)
                     logInfo(ELogComponent.CORE, `[dev] Docs '${meta.targetType}/${meta.id}' v${meta.version} installed`)
                 }
                 catch (err) {
@@ -233,7 +262,17 @@ export class DocsManager {
                         logError(ELogComponent.CORE, `[dev] Failed to install docs '${label}': ${err}`)
                 }
             }
+            await this.pruneDevDocs(declaredLabels, installedPairs)
         })().catch(err => logError(ELogComponent.CORE, `Failed to load kwirth-dev.json (docs): ${err}`))
+    }
+
+    private async pruneDevDocs(declaredLabels: Set<string>, installedPairs: Set<string>): Promise<void> {
+        let index = (await this.configMaps.read('kwirth-docs-index', []) as IDocsMeta[]) || []
+        for (const meta of staleDevDocs(index, declaredLabels, installedPairs)) {
+            await this._doUninstall(meta.targetType, meta.id, index)
+            index = index.filter(d => !(d.targetType === meta.targetType && d.id === meta.id))
+            logInfo(ELogComponent.CORE, `[dev] Docs '${meta.targetType}/${meta.id}' no longer in kwirth-dev.json — uninstalled`)
+        }
     }
 
     // On startup, re-downloads all URL-installed docs whose filesystem dir is missing.
