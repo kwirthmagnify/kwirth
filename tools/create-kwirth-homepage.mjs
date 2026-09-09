@@ -3,16 +3,42 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 
-const rl = createInterface({ input: process.stdin, output: process.stdout })
-const ask = (q, def) => rl.question(def ? `${q} [${def}]: ` : `${q}: `).then(v => v.trim() || def || '')
+// Modo no interactivo: en cuanto llega --id no se pregunta nada, util para CI y para repetir un scaffold.
+const argv = process.argv.slice(2)
+const flag = (n) => {
+    const i = argv.indexOf(`--${n}`)
+    return i >= 0 && i + 1 < argv.length && !argv[i + 1].startsWith('--') ? argv[i + 1] : undefined
+}
 
-console.log('\n── Kwirth homepage scaffold ────────────────────────────────\n')
+if (argv.includes('--help')) {
+    console.log(`
+Usage: node tools/create-kwirth-homepage.mjs [options]
 
-const id          = await ask('Homepage ID (kebab-case, e.g. my-homepage)')
-const displayName = await ask('Display name', id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' '))
-const description = await ask('Description', `${displayName} homepage for Kwirth`)
-const website     = await ask('Website URL (optional)', '')
-rl.close()
+With no options the script asks everything interactively. Passing --id skips every
+prompt and takes the remaining values from the flags (or their defaults).
+
+  --id <kebab-case>       
+  --name <text>           
+  --description <text>    
+  --website <url>         
+  --help                    this text
+`)
+    process.exit(0)
+}
+
+const interactive = !flag('id')
+const rl = interactive ? createInterface({ input: process.stdin, output: process.stdout }) : undefined
+const ask = (q, def) => interactive
+    ? rl.question(def ? `${q} [${def}]: ` : `${q}: `).then(v => v.trim() || def || '')
+    : Promise.resolve(def || '')
+
+if (interactive) console.log('\n── Kwirth homepage scaffold ────────────────────────────────\n')
+
+const id          = flag('id') ?? await ask('Homepage ID (kebab-case, e.g. my-homepage)')
+const displayName = flag('name') ?? await ask('Display name', id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' '))
+const description = flag('description') ?? await ask('Description', `${displayName} homepage for Kwirth`)
+const website     = flag('website') ?? await ask('Website URL (optional)', '')
+if (rl) rl.close()
 
 if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {
     console.error('Error: Homepage ID must be lowercase kebab-case (e.g. my-homepage)')
@@ -79,6 +105,7 @@ write('tsconfig.json', `{
 // ─── build.mjs ─────────────────────────────────────────────────────────────────
 
 write('build.mjs', `import esbuild from 'esbuild'
+import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
@@ -101,6 +128,23 @@ const kwirthGlobalsPlugin = {
             loader: 'js',
         }))
     },
+}
+
+// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
+// El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
+const TSC = 'node_modules/typescript/lib/tsc.js'
+if (fs.existsSync(TSC)) {
+    try {
+        execFileSync(process.execPath, [TSC, '--noEmit'], { stdio: 'inherit' })
+        console.log('Typecheck passed')
+    }
+    catch {
+        console.error('Typecheck failed — build aborted')
+        process.exit(1)
+    }
+}
+else {
+    console.log('Skipping typecheck: typescript is not installed (run npm install)')
 }
 
 fs.mkdirSync('dist', { recursive: true })

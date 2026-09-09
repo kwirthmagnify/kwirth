@@ -3,18 +3,46 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 
-const rl = createInterface({ input: process.stdin, output: process.stdout })
-const ask = (q, def) => rl.question(def ? `${q} [${def}]: ` : `${q}: `).then(v => v.trim() || def || '')
+// Modo no interactivo: en cuanto llega --id no se pregunta nada, util para CI y para repetir un scaffold.
+const argv = process.argv.slice(2)
+const flag = (n) => {
+    const i = argv.indexOf(`--${n}`)
+    return i >= 0 && i + 1 < argv.length && !argv[i + 1].startsWith('--') ? argv[i + 1] : undefined
+}
 
-console.log('\n── Kwirth plugin scaffold ──────────────────────────────────\n')
+if (argv.includes('--help')) {
+    console.log(`
+Usage: node tools/create-kwirth-plugin.mjs [options]
 
-const id          = await ask('Plugin ID (kebab-case, e.g. my-plugin)')
-const name        = await ask('Display name', id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' '))
-const publisher   = await ask('Publisher name (e.g. @my-scope)')
-const description = await ask('Description', `${name} channel plugin for Kwirth`)
-const icon        = await ask('MUI icon name', 'Extension')
-const website     = await ask('Website URL (optional)', '')
-rl.close()
+With no options the script asks everything interactively. Passing --id skips every
+prompt and takes the remaining values from the flags (or their defaults).
+
+  --id <kebab-case>       
+  --name <text>           
+  --publisher <@scope>    
+  --description <text>    
+  --icon <MUI name>       
+  --website <url>         
+  --help                    this text
+`)
+    process.exit(0)
+}
+
+const interactive = !flag('id')
+const rl = interactive ? createInterface({ input: process.stdin, output: process.stdout }) : undefined
+const ask = (q, def) => interactive
+    ? rl.question(def ? `${q} [${def}]: ` : `${q}: `).then(v => v.trim() || def || '')
+    : Promise.resolve(def || '')
+
+if (interactive) console.log('\n── Kwirth plugin scaffold ──────────────────────────────────\n')
+
+const id          = flag('id') ?? await ask('Plugin ID (kebab-case, e.g. my-plugin)')
+const name        = flag('name') ?? await ask('Display name', id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' '))
+const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-scope)', '@my-scope')
+const description = flag('description') ?? await ask('Description', `${name} channel plugin for Kwirth`)
+const icon        = flag('icon') ?? await ask('MUI icon name', 'Extension')
+const website     = flag('website') ?? await ask('Website URL (optional)', '')
+if (rl) rl.close()
 
 if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {
     console.error('Error: Plugin ID must be lowercase kebab-case (e.g. my-plugin)')
@@ -53,12 +81,14 @@ write('package.json', `{
         "watch": "node watch.mjs"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common": "^0.5.14",
-        "@kwirthmagnify/kwirth-common-front": "^0.5.16"
+        "@kwirthmagnify/kwirth-common": "^0.5.46",
+        "@kwirthmagnify/kwirth-common-back": "^0.5.42",
+        "@kwirthmagnify/kwirth-common-front": "^0.5.52"
     },
     "devDependencies": {
         "@mui/icons-material": "7.1.2",
         "@mui/material": "7.1.2",
+        "@types/express": "^4.17.21",
         "@types/node": "^20.12.13",
         "@types/react": "^18.3.0",
         "esbuild": "^0.27.2",
@@ -69,9 +99,29 @@ write('package.json', `{
 }
 `)
 
+// ─── tsconfig.json ─────────────────────────────────────────────────────────
+
+// No es decorativo: el build lo ejecuta con 'tsc --noEmit' antes de empaquetar. Lleva jsx y lib
+// DOM porque src/front tiene .tsx, igual que el tsconfig de cualquier extension con front.
+write('tsconfig.json', `{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "jsx": "react",
+        "strict": true,
+        "lib": ["ES2020", "DOM"],
+        "skipLibCheck": true,
+        "esModuleInterop": true
+    },
+    "include": ["src"]
+}
+`)
+
 // ─── build.mjs ─────────────────────────────────────────────────────────────
 
 write('build.mjs', `import esbuild from 'esbuild'
+import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
@@ -110,6 +160,23 @@ const kwirthBackGlobalsPlugin = {
             loader: 'js',
         }))
     },
+}
+
+// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
+// El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
+const TSC = 'node_modules/typescript/lib/tsc.js'
+if (fs.existsSync(TSC)) {
+    try {
+        execFileSync(process.execPath, [TSC, '--noEmit'], { stdio: 'inherit' })
+        console.log('Typecheck passed')
+    }
+    catch {
+        console.error('Typecheck failed — build aborted')
+        process.exit(1)
+    }
+}
+else {
+    console.log('Skipping typecheck: typescript is not installed (run npm install)')
 }
 
 fs.mkdirSync('dist', { recursive: true })
@@ -275,8 +342,9 @@ write('src/back/index.ts', `import {
     IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize,
     EClusterType, BackChannelData, EInstanceMessageType,
     EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel,
-    IBackChannelObject, IBackChannelRequirements
+    IBackChannelRequirements
 } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
 import { I${className}InstanceConfig, I${className}MessageResponse } from '../common/${className}Types'
 
@@ -459,6 +527,7 @@ export class ${className}Channel implements IChannel {
         clusterInfo: false,
         exit: false,
         frontChannels: false,
+        backChannels: false,
         metrics: false,
         notifier: false,
         notifications: false,
@@ -534,7 +603,7 @@ export class ${className}Data implements I${className}Data {
 
 write(`src/front/${className}Setup.tsx`, `import React from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material'
-import ${icon} from '@mui/icons-material/${icon}'
+import { ${icon} } from '@mui/icons-material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { ${className}Config, ${className}InstanceConfig } from './${className}Config'
 
@@ -573,7 +642,7 @@ export { ${className}Setup, ${className}Icon }
 write(`src/front/${className}TabContent.tsx`, `import React from 'react'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { Box, List, ListItem, ListItemText, Typography } from '@mui/material'
-import ${icon} from '@mui/icons-material/${icon}'
+import { ${icon} } from '@mui/icons-material'
 import { I${className}Data } from './${className}Data'
 
 export const ${className}TabContent: React.FC<IContentProps> = ({ channelObject }) => {
