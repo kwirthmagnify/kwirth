@@ -743,23 +743,6 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                                           </Select>
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{entry.description}</Typography>
-                                                { /* Resumidas en un chip, con el detalle en el tooltip: una lista
-                                                     de chips hacia crecer la tarjeta y rompia la altura comun. */ }
-                                                {((entry.requires && entry.requires.length > 0) || (entry.uses && entry.uses.length > 0)) && (
-                                                    <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                                                        {entry.requires && entry.requires.length > 0 && (
-                                                            <Tooltip title={`Requires: ${dependencyList(entry.requires)}`}>
-                                                                <Chip label={`Requires ${entry.requires.length}`} size='small' variant='outlined' sx={compactChip} />
-                                                            </Tooltip>
-                                                        )}
-                                                        {entry.uses && entry.uses.length > 0 && (
-                                                            <Tooltip title={`Uses: ${dependencyList(entry.uses)}`}>
-                                                                <Chip label={`Uses ${entry.uses.length}`} size='small' variant='outlined'
-                                                                    sx={{ ...compactChip, opacity: entry.uses.every(isRequirementMet) ? 1 : 0.45 }} />
-                                                            </Tooltip>
-                                                        )}
-                                                    </Stack>
-                                                )}
                                             </Box>
                                             <Tooltip title={entry.website ? 'Open website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
                                         </Stack>
@@ -767,7 +750,23 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                             { /* Misma procedencia que en las tarjetas de instalados: aqui es donde
                                                  mas falta hace, porque es donde se elige QUE instalar y DE DONDE. */ }
                                             <MarketplaceSourceIcon label={entry.marketplaceLabel} />
-                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={entry.marketplaceLabel} /></Box>
+                                            { /* Las dependencias van pegadas al chip del marketplace, en esta misma
+                                                 linea: resumidas en un chip con el detalle en el tooltip. Como fila
+                                                 propia bajo la descripcion hacian crecer la tarjeta. */ }
+                                            <Stack direction='row' alignItems='center' spacing={0.5} sx={{ mr: 0.75 }}>
+                                                <MarketplaceBadge label={entry.marketplaceLabel} />
+                                                {entry.requires && entry.requires.length > 0 && (
+                                                    <Tooltip title={`Requires: ${dependencyList(entry.requires)}`}>
+                                                        <Chip label={`Requires ${entry.requires.length}`} size='small' variant='outlined' sx={compactChip} />
+                                                    </Tooltip>
+                                                )}
+                                                {entry.uses && entry.uses.length > 0 && (
+                                                    <Tooltip title={`Uses: ${dependencyList(entry.uses)}`}>
+                                                        <Chip label={`Uses ${entry.uses.length}`} size='small' variant='outlined'
+                                                            sx={{ ...compactChip, opacity: entry.uses.every(isRequirementMet) ? 1 : 0.45 }} />
+                                                    </Tooltip>
+                                                )}
+                                            </Stack>
                                             <Box sx={{ flex: 1 }} />
                                             {(() => { const unmet = (entry.requires ?? []).filter(r => !isRequirementMet(r)); return (
                                                 <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>

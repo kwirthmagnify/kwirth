@@ -462,23 +462,6 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                                           </Select>
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{provider.description}</Typography>
-                                                { /* Resumidas en un chip, con el detalle en el tooltip: una lista
-                                                     de chips hacia crecer la tarjeta y rompia la altura comun. */ }
-                                                {((provider.requires && provider.requires.length > 0) || (provider.uses && provider.uses.length > 0)) && (
-                                                    <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                                                        {provider.requires && provider.requires.length > 0 && (
-                                                            <Tooltip title={`Requires: ${dependencyList(provider.requires)}`}>
-                                                                <Chip label={`Requires ${provider.requires.length}`} size='small' variant='outlined' sx={compactChip} />
-                                                            </Tooltip>
-                                                        )}
-                                                        {provider.uses && provider.uses.length > 0 && (
-                                                            <Tooltip title={`Uses: ${dependencyList(provider.uses)}`}>
-                                                                <Chip label={`Uses ${provider.uses.length}`} size='small' variant='outlined'
-                                                                    sx={{ ...compactChip, opacity: provider.uses.every(isRequirementMet) ? 1 : 0.45 }} />
-                                                            </Tooltip>
-                                                        )}
-                                                    </Stack>
-                                                )}
                                             </Box>
                                             <Tooltip title={provider.website ? 'Open provider website' : 'No website available'}>
                                                 <span>
@@ -494,7 +477,23 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                                  Con la precedencia por id, dos marketplaces pueden publicar el
                                                  mismo id y esto es lo unico que los distingue. */ }
                                             <MarketplaceSourceIcon label={provider.marketplaceLabel} />
-                                            <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={provider.marketplaceLabel} /></Box>
+                                            { /* Las dependencias van pegadas al chip del marketplace, en esta misma
+                                                 linea: resumidas en un chip con el detalle en el tooltip. Como fila
+                                                 propia bajo la descripcion hacian crecer la tarjeta. */ }
+                                            <Stack direction='row' alignItems='center' spacing={0.5} sx={{ mr: 0.75 }}>
+                                                <MarketplaceBadge label={provider.marketplaceLabel} />
+                                                {provider.requires && provider.requires.length > 0 && (
+                                                    <Tooltip title={`Requires: ${dependencyList(provider.requires)}`}>
+                                                        <Chip label={`Requires ${provider.requires.length}`} size='small' variant='outlined' sx={compactChip} />
+                                                    </Tooltip>
+                                                )}
+                                                {provider.uses && provider.uses.length > 0 && (
+                                                    <Tooltip title={`Uses: ${dependencyList(provider.uses)}`}>
+                                                        <Chip label={`Uses ${provider.uses.length}`} size='small' variant='outlined'
+                                                            sx={{ ...compactChip, opacity: provider.uses.every(isRequirementMet) ? 1 : 0.45 }} />
+                                                    </Tooltip>
+                                                )}
+                                            </Stack>
                                             <Box sx={{ flex: 1 }} />
                                             {(() => { const unmet = (provider.requires ?? []).filter(r => !isRequirementMet(r)); return (
                                                 <Tooltip title={isDevInstalled(id) ? 'Dev version active' : isInstalled(id) ? 'Already installed' : unmet.length > 0 ? `Requires: ${unmet.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')}` : 'Install'}>

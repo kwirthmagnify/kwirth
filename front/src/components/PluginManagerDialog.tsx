@@ -311,23 +311,6 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                         }
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{description}</Typography>
-                    { /* Resumidas en un chip, con el detalle en el tooltip: una lista de chips hacia crecer
-                         la tarjeta y rompia la altura comun de las once. */ }
-                    {((requires && requires.length > 0) || (uses && uses.length > 0)) && (
-                        <Stack direction='row' flexWrap='wrap' useFlexGap spacing={0.5} sx={{ mt: 0.5 }}>
-                            {requires && requires.length > 0 && (
-                                <Tooltip title={`Requires: ${dependencyList(requires)}`}>
-                                    <Chip label={`Requires ${requires.length}`} size='small' variant='outlined' sx={compactChip} />
-                                </Tooltip>
-                            )}
-                            {uses && uses.length > 0 && (
-                                <Tooltip title={`Uses: ${dependencyList(uses)}`}>
-                                    <Chip label={`Uses ${uses.length}`} size='small' variant='outlined'
-                                        sx={{ ...compactChip, opacity: uses.every(isRequirementMet) ? 1 : 0.45 }} />
-                                </Tooltip>
-                            )}
-                        </Stack>
-                    )}
                 </Box>
                 <Tooltip title={website ? 'Open plugin website' : 'No website available'}>
                     <span>
@@ -341,7 +324,23 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
                 { /* abajo a la izquierda, lo primero: DE DONDE viene. Candado solo para lo privado; lo
                      publico lleva un icono distinto, no un candado, para que no se lean como lo mismo. */ }
                 <MarketplaceSourceIcon label={marketplaceLabel} installedFrom={installedFrom} />
-                <Box sx={{ mr: 0.75 }}><MarketplaceBadge label={marketplaceLabel} installedFrom={installedFrom} /></Box>
+                { /* Las dependencias van pegadas al chip del marketplace, en esta misma linea: resumidas en
+                     un chip con el detalle en el tooltip. Como fila propia bajo la descripcion hacian crecer
+                     la tarjeta y rompian la altura comun de los diez tipos. */ }
+                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ mr: 0.75 }}>
+                    <MarketplaceBadge label={marketplaceLabel} installedFrom={installedFrom} />
+                    {requires && requires.length > 0 && (
+                        <Tooltip title={`Requires: ${dependencyList(requires)}`}>
+                            <Chip label={`Requires ${requires.length}`} size='small' variant='outlined' sx={compactChip} />
+                        </Tooltip>
+                    )}
+                    {uses && uses.length > 0 && (
+                        <Tooltip title={`Uses: ${dependencyList(uses)}`}>
+                            <Chip label={`Uses ${uses.length}`} size='small' variant='outlined'
+                                sx={{ ...compactChip, opacity: uses.every(isRequirementMet) ? 1 : 0.45 }} />
+                        </Tooltip>
+                    )}
+                </Stack>
                 <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', mr: 1 }}>{source}</Box>
                 {action}
             </Stack>
