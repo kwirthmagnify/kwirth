@@ -38,6 +38,7 @@ interface ICensorMessage {
     subscriberCount?: number
     instanceConfig?: ICensorInstanceConfig
     configs?: ICensorInstanceConfig[]
+    autoStart?: boolean
     llms?: ILlm[]
     providers?: ILlmProvider[]
     providersAvailable?: string[]
@@ -168,6 +169,7 @@ export class CensorChannel implements IChannel {
                     if (msg.providersAvailable !== undefined) data.providersAvailable = msg.providersAvailable
                     if (msg.instanceConfig) data.instanceConfig = msg.instanceConfig
                     if (msg.configs !== undefined) data.configs = msg.configs
+                    if (msg.autoStart !== undefined) data.autoStart = msg.autoStart
                     if (msg.sessionDescription !== undefined) data.ephemeralSessionName = msg.sessionDescription ?? null
                 }
                 else if (msg.kind === 'providers') {
@@ -177,6 +179,12 @@ export class CensorChannel implements IChannel {
                 else if (msg.kind === 'analyzing' && msg.analyzing !== undefined && msg.runnerKey) {
                     const rd = ensureRunner(msg.runnerKey)
                     rd.analyzing = msg.analyzing
+                    // El contador de tiempo lo arrancaba solo el botón Start; con autoStart el análisis
+                    // empieza sin que nadie pulse nada, así que la marca se pone al enterarse
+                    if (msg.analyzing && data.startTime === undefined) {
+                        data.startTime = Date.now()
+                        data.stopTime = undefined
+                    }
                 }
                 else if (msg.kind === 'assets' && msg.assets !== undefined) {
                     data.assets = msg.assets

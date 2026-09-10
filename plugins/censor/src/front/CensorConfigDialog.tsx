@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from 'react'
 import { Add as AddIcon, ContentCopy as ContentCopyIcon, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon } from '@mui/icons-material'
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material'
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
 import { ICensorData } from './CensorData'
 import { ECensorCommand, ICensorInstanceConfig, ICensorBusinessSource, ICensorLogstreamSource } from './CensorConfig'
@@ -59,6 +59,8 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
     const [senderId, setSenderId] = useState('')
     const [senderConfigName, setSenderConfigName] = useState('')
     const [configActive, setConfigActive] = useState(false)
+    // Autostart del analisis: uno solo para todo el canal (no por config)
+    const [autoStart, setAutoStart] = useState(data.autoStart)
 
     useEffect(() => {
         const url = channelObject.clusterUrl
@@ -105,6 +107,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
         setSenderId(cfg.senderId ?? '')
         setSenderConfigName(cfg.senderConfigName ?? '')
         setConfigActive(cfg.active ?? false)
+
     }
 
     const currentConfig = (): ICensorInstanceConfig => ({
@@ -180,7 +183,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
         const cfg = currentConfig()
         data.instanceConfig = cfg
         data.configs = localConfigs
-        sendCommand(ECensorCommand.CONFIGSET, { ...cfg, _allConfigs: localConfigs })
+        sendCommand(ECensorCommand.CONFIGSET, { ...cfg, _allConfigs: localConfigs, _autoStart: autoStart })
         onClose()
     }
 
@@ -229,6 +232,14 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                         <Button variant='outlined' size='small' startIcon={<ContentCopyIcon />} onClick={onConfigClone} disabled={selectedIdx === null} sx={{ fontSize: 11 }}>Clone</Button>
                         <Button variant='outlined' size='small' color='error' startIcon={<DeleteIcon />} onClick={onDeleteLocal} disabled={selectedIdx === null} sx={{ fontSize: 11 }}>Delete</Button>
                     </Stack>
+                    <Divider sx={{ mt: 1 }} />
+                    {/* Uno solo para todo el canal: arranca el análisis de las configs ON al arrancar el channel */}
+                    <Tooltip title='When the channel starts, begin analyzing with every ON config, without waiting for the Start button'>
+                        <FormControlLabel
+                            control={<Switch size='small' checked={autoStart} onChange={e => setAutoStart(e.target.checked)} />}
+                            label={<Typography variant='caption'>Auto start what's ON</Typography>}
+                            sx={{ ml: 0.5, mt: 0.5 }} />
+                    </Tooltip>
                 </Box>
 
                 {/* Right panel — editor */}

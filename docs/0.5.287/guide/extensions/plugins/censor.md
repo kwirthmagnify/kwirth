@@ -47,6 +47,23 @@ Once started, the topbar drives everything:
 | **Start / Stop** | Start or stop the **analysis**. |
 | **⋮ → Config** | Open the configuration dialog. |
 
+### Auto start
+
+There are **two** starts, and they are different things:
+
+1. **Starting the channel** — the tab itself. That is Kwirth's, and it happens when you add the tab and press its Start, when a channel opens automatically at login, or when you restore a workspace. It brings the channel up: censor inventories the objects that match your configs (the **Objects** tab) and waits.
+2. **Starting the analysis** — the **Start** in censor's own topbar. This is what opens the log streams and begins spending LLM calls.
+
+**Auto start what's ON** chains the second to the first. It is a **single switch for the whole channel**, under the configs list in **⋮ → Config**: with it on, the moment the channel is up censor **begins analyzing on its own**, with every config that is **ON**, exactly as if you had pressed **Start**. It does not matter how the channel came up — by hand, at login, or restoring a workspace: censor only cares that its channel is running.
+
+Details worth knowing:
+
+- It is **one switch, not one per config**. What it starts is whatever is **active** at that moment (the configs with the **ON** chip), so activating or deactivating a config is what decides whether it takes part. The topbar's **Start/Stop** keeps governing everything, as always.
+- It is **not** part of a config, so it does **not** travel in [Import / Export](#import--export): it is a preference of this installation.
+- If **no** ON config has a source configured (no logstream and no business sources), it does **not** auto start — the analysis would be "running" without being able to receive a single line, which is also why the **Start** button stays disabled in that case.
+- The **inference / audit** mode is taken from the config itself, so an unattended start behaves exactly as that config is set up.
+- Combined with a channel that opens by itself (login or workspace), this means **analysis running with nobody watching**, and LLM calls being spent. That is the point of the option, but it is worth deciding deliberately.
+
 ## The analysis view (tabs)
 
 The tabs break the pipeline apart. Counts update live.
@@ -111,6 +128,7 @@ Open **⋮ → Config**. The left panel is your **library of configs**; the righ
 - Each config has a **Name** and a **Version**; the **Active** ones show an **ON** chip.
 - **Activation is per-config** via the **Active** switch (General tab). **Several configs can be active at once** — each active config runs as an independent **runner** (see the topbar's **All configs** selector), so you can, say, run a cheap fast filter and a thorough one side by side.
 - **New** starts a blank config; **Delete** removes the selected one; **Add/Update** saves your edits into the list; **OK** persists everything and restarts the runners atomically.
+- Under the list, **Auto start what's ON** is a single switch for the whole channel — see [Auto start](#auto-start).
 
 ### General tab
 

@@ -16,6 +16,9 @@ const MAX_RECONNECT_ATTEMPTS = 20
 const MAX_GAP_RECOVERY_SECONDS = 300
 // Agrupación de la emisión del inventario de assets (varios cambios seguidos → un solo mensaje)
 const ASSETS_BROADCAST_DELAY = 100
+// Autostart del análisis: un único flag para todo el canal, aparte de las configs (no viaja con
+// ellas en el export/import porque es una preferencia de esta instalación)
+const STORAGE_KEY_AUTOSTART = 'censor-autostart'
 
 const cleanANSI = (text: string): string => text.replace(/\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g, '')
 
@@ -92,6 +95,7 @@ interface ICensorMessage {
     pendingCount?: number
     instanceConfig?: ICensorInstanceConfig
     configs?: ICensorInstanceConfig[]
+    autoStart?: boolean
     llms?: ILlm[]
     providers?: ILlmProvider[]
     providersAvailable?: string[]
@@ -262,8 +266,8 @@ export class CensorChannel {
                 await this.executeConfigGet(webSocket, instance)
                 return true
             case ECensorCommand.CONFIGSET: {
-                const raw = msg.data as ICensorInstanceConfig & { _llms?: ILlm[], _allConfigs?: ICensorInstanceConfig[] }
-                const { _llms, _allConfigs, ...cfg } = raw
+                const raw = msg.data as ICensorInstanceConfig & { _llms?: ILlm[], _allConfigs?: ICensorInstanceConfig[], _autoStart?: boolean }
+                const { _llms, _allConfigs, _autoStart, ...cfg } = raw
                 instance.cfg = cfg as ICensorInstanceConfig
                 if (_llms) await this.backChannelObject.writeStorageCommon!(STORAGE_KEY_LLMS, false, _llms)
                 const llmList: ILlm[] = _llms ?? (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
@@ -272,6 +276,7 @@ export class CensorChannel {
                 if (_allConfigs) {
                     await this.backChannelObject.writeStorage!('censor-configs', false, _allConfigs)
                 }
+                if (_autoStart !== undefined) await this.backChannelObject.writeStorage!(STORAGE_KEY_AUTOSTART, false, _autoStart)
                 instance.scope = instance.instanceConfig.view === EInstanceConfigView.CLUSTER ? 'cluster' : 'resource'
                 // Determine active configs (from the full list if provided, else from storage)
                 const savedForActive: ICensorInstanceConfig[] = _allConfigs ?? ((await this.backChannelObject.readStorage!('censor-configs', false)) ?? [])
@@ -490,6 +495,12 @@ export class CensorChannel {
             }
         }
         await this.backChannelObject.writeStorage!(`censor-regexes-${configName}`, false, regexes)
+    }
+
+    // ¿Se puede analizar con estas configs? Es la misma condición que habilita el botón Start: sin
+    // ninguna fuente configurada el análisis no recibiría una sola línea
+    private someConfigHasSource(configs: ICensorInstanceConfig[]): boolean {
+        return configs.some(c => Boolean(c.logstreamEnabled) || (c.businessSources?.length ?? 0) > 0)
     }
 
     private podMatchesRunnerCfg(cfg: ICensorInstanceConfig, namespace: string, podName: string): boolean {
@@ -1058,6 +1069,10 @@ export class CensorChannel {
             instance.ephemeralDescription = generateSessionName(existing)
         }
         for (const cfg of allActive) this.createOrUpdateRunner(instance, cfg, llms)
+        // Autostart del ANÁLISIS (no del channel, que ya está arrancado si estamos aquí): con el
+        // flag puesto se arranca todo lo que esté activo, igual que pulsar Start en la topbar
+        const autoStart: boolean = ((await this.backChannelObject.readStorage!(STORAGE_KEY_AUTOSTART, false)) ?? false) === true
+        if (autoStart && this.someConfigHasSource(allActive)) instance.analyzing = true
         for (const [rk, runner] of instance.runners) {
             runner.analyzing = instance.analyzing
             this.sendEvent(instance, 'analyzing', { analyzing: runner.analyzing, runnerKey: rk })
@@ -1151,6 +1166,7 @@ export class CensorChannel {
     private executeConfigGet = async (webSocket: WebSocket, instance: IInstance, llmsOverride?: ILlm[]): Promise<void> => {
         const llms: ILlm[] = llmsOverride ?? (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
         const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
+        const autoStart: boolean = ((await this.backChannelObject.readStorage!(STORAGE_KEY_AUTOSTART, false)) ?? false) === true
         const storedProviders: ILlmProvider[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)) ?? []
         if (storedProviders.length > 0) {
             // reuse already-loaded models; load only providers not yet known
@@ -1173,6 +1189,7 @@ export class CensorChannel {
             kind: 'config',
             instanceConfig: { ...instance.cfg, scope: derivedScope },
             configs,
+            autoStart,
             llms,
             providers: this.providers,
             providersAvailable: PROVIDERS_AVAILABLE,

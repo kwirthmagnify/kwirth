@@ -59,6 +59,7 @@ export interface ICensorData {
     providersAvailable: string[]
     instanceConfig: ICensorInstanceConfig
     configs: ICensorInstanceConfig[]
+    autoStart: boolean
     ephemeralSessionName: string | null
     runners: Map<string, IRunnerData>
 }
@@ -95,6 +96,7 @@ export class CensorData implements ICensorData {
     providersAvailable: string[] = []
     instanceConfig: ICensorInstanceConfig = { name: '', version: '1', llmId: '', system: '', batchSize: 50, exampleJson: '{"patterns":["example regex"]}', temperature: 0.2, active: false }
     configs: ICensorInstanceConfig[] = []
+    autoStart = false
     ephemeralSessionName: string | null = null
     runners: Map<string, IRunnerData> = new Map()
 }
