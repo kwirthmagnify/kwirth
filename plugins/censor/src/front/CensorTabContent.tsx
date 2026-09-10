@@ -224,7 +224,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const panelHeight = `calc(100vh - ${contentTop}px - 16px)`
     return <>
         {data.started &&
-        <Card sx={{ display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', mt: 1, minHeight: 0 }}>
+        <Card data-testid='censor-panel' sx={{ display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', mt: 1, minHeight: 0 }}>
             <CardHeader title={
                 <Stack direction='row' alignItems='center' spacing={1}>
                     <Typography><b>Processed:</b> {rd?.processedCount ?? 0}</Typography>
@@ -265,15 +265,15 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                         if (!isAnalyzing) { data.startTime = Date.now(); data.stopTime = undefined }
                         else data.stopTime = Date.now()
                         sendCommand(isAnalyzing ? ECensorCommand.ANALYZESTOP : ECensorCommand.ANALYZESTART)
-                    }} color={(rd?.analyzing ?? false) ? 'error' : 'success'} variant='outlined' size='small'
+                    }} color={(rd?.analyzing ?? false) ? 'error' : 'success'} variant='outlined' size='small' data-testid='censor-analyze-toggle'
                         disabled={!data.ephemeralSessionName || (!(rd?.analyzing ?? false) && !data.configs.filter(c => c.active).some(c => c.logstreamEnabled || (c.businessSources?.length ?? 0) > 0))}>
                         {(rd?.analyzing ?? false) ? 'Stop' : 'Start'}
                     </Button>
-                    <IconButton size='small' onClick={(e) => { setAiGroupOpen(false); setMenuAnchor(e.currentTarget) }}>
+                    <IconButton size='small' data-testid='censor-menu' onClick={(e) => { setAiGroupOpen(false); setMenuAnchor(e.currentTarget) }}>
                         <MoreVertIcon fontSize='small' />
                     </IconButton>
                     <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
-                        <MenuItem onClick={() => { setMenuAnchor(null); openConfig() }} disabled={!data.ephemeralSessionName}><ListItemIcon><Settings fontSize='small' /></ListItemIcon>Config</MenuItem>
+                        <MenuItem data-testid='censor-menu-config' onClick={() => { setMenuAnchor(null); openConfig() }} disabled={!data.ephemeralSessionName}><ListItemIcon><Settings fontSize='small' /></ListItemIcon>Config</MenuItem>
                         <Divider />
                         <MenuGroup label='AI' icon={<SmartToy fontSize='small' />} open={aiGroupOpen} onToggle={() => setAiGroupOpen(o => !o)}>
                             <MenuItem onClick={() => { setMenuAnchor(null); setShowConfigProvider(true) }}><ListItemIcon><Key fontSize='small' /></ListItemIcon>AI providers</MenuItem>
