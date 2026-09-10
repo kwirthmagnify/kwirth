@@ -45,7 +45,7 @@ await esbuild.build({
     // deps pesadas externalizadas: los tests de oauth2/github solo tocan src puro (IIdpConnector),
     // pero si algún test importara el index se externalizan igual.
     external: [
-        '@kubernetes/client-node', '@kwirthmagnify/kwirth-common', 'express', 'js-yaml', 'openid-client'
+        '@kubernetes/client-node', '@kwirthmagnify/kwirth-common', 'express', 'js-yaml', 'openid-client', 'jose'
     ],
     loader: { '.ts': 'ts' },
 })
