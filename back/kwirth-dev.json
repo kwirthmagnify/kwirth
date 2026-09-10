@@ -37,8 +37,6 @@
   "webhooks": {
   },
   "logins": {
-    "censor": "../logins/censor/dist/censor.tgz",
-
     "anonymous": "../logins/anonymous/dist/anonymous.tgz",
     "excubitor": "../plugins/excubitor/login/dist/excubitor.tgz",
     "montag": "../plugins/montag/login/dist/montag.tgz",
