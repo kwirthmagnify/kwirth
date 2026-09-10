@@ -27,6 +27,7 @@ await esbuild.build({
     entryPoints: entries,
     bundle: true, format: 'esm', platform: 'node', target: 'node20',
     outdir: OUT_DIR, outbase: TEST_DIR, outExtension: { '.js': '.mjs' },
+    sourcemap: process.env.COVERAGE ? 'inline' : false,   // COVERAGE=1 → sourcemaps to map coverage back to src/
     external: [
         'express',
         '@kwirthmagnify/kwirth-common',
@@ -41,5 +42,6 @@ await esbuild.build({
 // 4) Ejecuta los bundles con el runner nativo (cada fichero en su propio proceso)
 const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String)
     .filter(f => f.endsWith('.mjs')).map(f => path.join(OUT_DIR, f))
-try { execFileSync('node', ['--test', ...bundled], { stdio: 'inherit' }) }
+const covArgs = process.env.COVERAGE ? ['--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**'] : []
+try { execFileSync('node', ['--test', ...covArgs, ...bundled], { stdio: 'inherit' }) }
 catch { process.exit(1) }
