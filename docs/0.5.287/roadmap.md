@@ -53,5 +53,6 @@ We cite here some interesting capabilities that are missing today:
   - [AI] ~~`kwirth`, **customization**, homepages shouold be fully customizable, or even be installed as extensions~~ DONE!
   - [AI] ~~`kwirth`, **customization**, users should be able to login to a specific channel, in opposite to be logged in into the whole kwirth front application ~~ DONE!
   - [AI] ~~`kwirth`, **documentation**, showing help to users shoukld be a framework feature~~ DONE!
+  - `kwirth`, **Docker image size**, the image installs its dependencies with `npm install`, which brings the **devDependencies** along: TypeScript, esbuild, nodemon and ts-node travel inside an image that only ever runs a pre-bundled `bundle.js` — around 45 MB that nothing uses at runtime. Switching to `--omit=dev` is not a one-liner to be applied blindly: extensions loaded at runtime resolve their `require` against the image's own `node_modules` (today `express`, `knex`, `pg` and the `kwirth-common` packages), so the change has to keep every runtime dependency and drop only the build-time tree.
   - `kwirth`, **CNCF**, prepare project to donate to [CNCF](https://www.cncf.io/).
   
