@@ -310,10 +310,15 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
             { /* Una extension puede quedar instalada A MEDIAS —p.ej. su fondo no cabe en el ConfigMap— y
                  hasta ahora eso era solo una linea de log: la pagina salia rara y nadie se enteraba. Se
                  avisa abajo del todo, discreto, y nombrando el login para que quien lo vea pueda decir
-                 CUAL falla. No se explica el motivo: esta pagina se sirve sin autenticar. */ }
+                 CUAL falla. No se explica el motivo: esta pagina se sirve sin autenticar.
+
+                 pointerEvents none NO es cosmetico: la linea es una banda de lado a lado por encima de
+                 todo, y si el formulario esta colocado abajo —cada login elige donde— se comia los
+                 clicks del boton de Login. Avisar de que la pagina esta a medias no puede impedir
+                 entrar por ella. */ }
             { config.problem &&
                 <Typography variant='caption' color='error'
-                    sx={{ position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center', opacity: 0.9 }}>
+                    sx={{ position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center', opacity: 0.9, pointerEvents: 'none' }}>
                     There is a problem with the '{props.slug}' login page — please contact your Kwirth administrator.
                 </Typography>
             }

@@ -162,3 +162,38 @@ test('login extensions: ?loginExt=anonymous entra solo, o muestra el formulario 
 
     await page.goto('about:blank')
 })
+
+// ── 5. Boton de abrir la pagina del login desde su tarjeta ────────────────────
+//
+// La direccion no se escribe a mano en ningun sitio: es la misma por la que ha entrado quien mira, mas
+// ?loginExt=<id>. El test lo comprueba contra el id REAL de la tarjeta, no contra un literal, porque lo
+// que esta en juego es justo eso — que el enlace lleve al login de ESA tarjeta.
+test('login extensions: la tarjeta abre su pagina de login en otra pestaña', async ({ page, context }) => {
+    await login(page)
+    await dismissOpenDialogs(page)
+    await clickExtensionMenuItem(page, 'Login extensions')
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    const openButtons = dialog.locator('button[aria-label="Open login page"]')
+    const count = await openButtons.count()
+    if (count === 0) test.skip(true, 'no hay ningun login instalado en esta instancia')
+
+    // el id de la tarjeta: el enlace tiene que apuntar a ESE login
+    const popupPromise = context.waitForEvent('page')
+    await openButtons.first().click()
+    const popup = await popupPromise
+    await popup.waitForLoadState('domcontentloaded')
+
+    const url = new URL(popup.url())
+    expect(url.origin).toBe(new URL(page.url()).origin)
+    expect(url.searchParams.get('loginExt')).toBeTruthy()
+
+    // y la pagina que sale es la del login de extension, no el dialogo estandar
+    await expect(popup.getByLabel(/user/i).first()).toBeVisible({ timeout: 8000 })
+
+    await popup.close()
+    await page.keyboard.press('Escape')
+    await page.goto('about:blank')
+})

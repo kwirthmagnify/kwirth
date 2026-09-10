@@ -150,6 +150,18 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
         }
     }
 
+    /*
+     * Abre la pagina de ese login en otra pestaña, para verla sin cerrar la sesion.
+     *
+     * La direccion es la MISMA por la que ha entrado quien esta mirando —origen y ruta, que no siempre
+     * es la raiz: Kwirth se sirve tambien bajo un rootPath— mas ?loginExt=<id>, que es como el front
+     * decide pintar el login de una extension en vez del suyo. Es la misma forma que arma
+     * LoginExtensionPage para su returnTo, no una convencion nueva.
+     */
+    const openLoginPage = (id: string) => {
+        window.open(`${window.location.origin}${window.location.pathname}?loginExt=${encodeURIComponent(id)}`, '_blank', 'noopener')
+    }
+
     const uninstall = async (login: IInstalledLogin) => {
         setError(undefined)
         setUninstallingId(login.id)
@@ -365,6 +377,11 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                         installedFrom={login.installedFrom}
                                         action={
                                             <Stack direction='row' spacing={0.5}>
+                                                <Tooltip title='Open login page in new tab'>
+                                                    <IconButton size='small' color='primary' aria-label='Open login page' onClick={() => openLoginPage(login.id)}>
+                                                        <OpenInNew fontSize='small' />
+                                                    </IconButton>
+                                                </Tooltip>
                                                 {login.configSchema && login.configSchema.length > 0 && (
                                                     <Tooltip title='Configure'>
                                                         <IconButton size='small' aria-label='Configure' onClick={() => openConfig(login)}>
@@ -399,6 +416,11 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                     <Box key={`${login.id}-source`} sx={{ justifySelf: 'end', py: 1 }}>{resolveSource(login.installedFrom)}</Box>,
                                     <Box key={`${login.id}-del`} sx={{ py: 1 }}>
                                         <Stack direction='row' spacing={0.5}>
+                                            <Tooltip title='Open login page in new tab'>
+                                                <IconButton size='small' color='primary' aria-label='Open login page' onClick={() => openLoginPage(login.id)}>
+                                                    <OpenInNew fontSize='small' />
+                                                </IconButton>
+                                            </Tooltip>
                                             {login.configSchema && login.configSchema.length > 0 && (
                                                 <Tooltip title='Configure'>
                                                     <IconButton size='small' onClick={() => openConfig(login)}>
