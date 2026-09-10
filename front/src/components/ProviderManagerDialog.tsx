@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
-import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, CloudQueue, Delete, Download, Factory, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, InputAdornment, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { CheckCircle, CloudQueue, Delete, Download, Factory, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, Visibility, VisibilityOff, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
@@ -80,6 +80,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
     const [frontLoaded, setFrontLoaded] = useState<Record<string, boolean>>({})
     const [configSchema, setConfigSchema] = useState<IConfigFieldDef[] | undefined>()
     const [configValues, setConfigValues] = useState<Record<string, unknown>>({})
+    const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
     const [savingConfig, setSavingConfig] = useState(false)
 
     const groupedAvailable: Record<string, IProviderManifestEntry[]> = available.reduce((acc, p) => { if (!acc[p.id]) acc[p.id]=[]; acc[p.id].push(p); return acc }, {} as Record<string, IProviderManifestEntry[]>)
@@ -148,6 +149,8 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
         }
     }
 
+    const toggleSecret = (name: string) => setRevealedSecrets(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
+
     const renderConfigField = (field: IConfigFieldDef) => {
         const val = configValues[field.name]
         if (field.type === 'boolean') return (
@@ -155,13 +158,24 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                 control={<Switch checked={!!val} onChange={e => setConfigValues(prev => ({ ...prev, [field.name]: e.target.checked }))} />}
                 label={field.label} />
         )
+        const isPassword = field.type === 'password'
+        const revealed = revealedSecrets.has(field.name)
         return (
             <TextField key={field.name} size='small' fullWidth label={field.label}
-                type={field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : 'text'}
+                type={field.type === 'number' ? 'number' : (isPassword && !revealed) ? 'password' : 'text'}
                 value={val ?? field.default ?? ''}
                 onChange={e => setConfigValues(prev => ({ ...prev, [field.name]: field.type === 'number' ? Number(e.target.value) : e.target.value }))}
                 required={field.required}
-                slotProps={{ htmlInput: { autoComplete: field.type === 'password' ? 'new-password' : 'off' } }} />
+                slotProps={{
+                    htmlInput: { autoComplete: isPassword ? 'new-password' : 'off' },
+                    ...(isPassword ? { input: { endAdornment: (
+                        <InputAdornment position='end'>
+                            <IconButton size='small' edge='end' aria-label={revealed ? 'Hide' : 'Show'} onClick={() => toggleSecret(field.name)}>
+                                {revealed ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' />}
+                            </IconButton>
+                        </InputAdornment>
+                    ) } } : {})
+                }} />
         )
     }
 
