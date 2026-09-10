@@ -160,7 +160,8 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                 type={field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : 'text'}
                 value={val ?? field.default ?? ''}
                 onChange={e => setConfigValues(prev => ({ ...prev, [field.name]: field.type === 'number' ? Number(e.target.value) : e.target.value }))}
-                required={field.required} />
+                required={field.required}
+                slotProps={{ htmlInput: { autoComplete: field.type === 'password' ? 'new-password' : 'off' } }} />
         )
     }
 

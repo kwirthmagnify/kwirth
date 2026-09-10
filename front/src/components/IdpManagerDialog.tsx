@@ -126,11 +126,15 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
         const inputType = field.type === 'number' ? 'number' : (isSecret && !revealed[field.name]) ? 'password' : 'text'
         return <TextField key={field.name} size='small' fullWidth label={field.label} type={inputType} value={val ?? ''} required={field.required}
             onChange={e => setCfg(field.name, field.type === 'number' ? Number(e.target.value) : e.target.value)}
-            slotProps={isSecret ? { input: { endAdornment: (
-                <IconButton size='small' edge='end' onClick={() => toggleReveal(field.name)} title={revealed[field.name] ? 'Hide' : 'Show'}>
-                    { revealed[field.name] ? <VisibilityOff fontSize='small'/> : <Visibility fontSize='small'/> }
-                </IconButton>
-            ) } } : undefined} />
+            slotProps={{
+                // evita el autofill del navegador (mete el usuario/contraseña de admin en tenant/secret)
+                htmlInput: { autoComplete: isSecret ? 'new-password' : 'off' },
+                ...(isSecret ? { input: { endAdornment: (
+                    <IconButton size='small' edge='end' onClick={() => toggleReveal(field.name)} title={revealed[field.name] ? 'Hide' : 'Show'}>
+                        { revealed[field.name] ? <VisibilityOff fontSize='small'/> : <Visibility fontSize='small'/> }
+                    </IconButton>
+                ) } } : {})
+            }} />
     }
 
     // ---- marketplace (available connectors) ----
