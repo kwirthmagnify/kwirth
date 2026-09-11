@@ -199,3 +199,48 @@ test('the filter field of a dropdown keeps the focus while you type', async () =
     await page.keyboard.press('Escape')
     await expect(filter).not.toBeVisible()
 })
+
+test('a resource view only offers channels that support per-resource invocation', async () => {
+    /*
+        La regla por view: 'cluster' ofrece los cluster-wide MAS los autonomos, 'none' solo los
+        autonomos, y las cuatro de recurso solo los que declaran resourced.
+
+        Esa ultima rama NO EXISTIA: con view 'namespace' (o pod, o…) se ofrecian todos los canales,
+        incluido uno que no sabe arrancar por recurso, y addable() tampoco lo paraba porque solo mira
+        que haya recursos elegidos.
+
+        Se asierta con dos canales del core de bandera opuesta, que siempre estan: 'magnify' es
+        cluster-wide y NO resourced, 'metrics' es resourced y no cluster-wide.
+    */
+    await pickCombo(page, COMBO_VIEW, 'namespace')
+
+    const count = await page.getByRole('combobox').count()
+    await page.getByRole('combobox').nth(count - 1).click()
+    await page.getByRole('listbox').waitFor({ state: 'visible', timeout: 5000 })
+
+    const estado = async (nombre: string): Promise<string | null> =>
+        await page.getByRole('option').filter({ hasText: new RegExp(`^${nombre}$`) }).first().getAttribute('aria-disabled')
+
+    expect(await estado('magnify'), 'magnify no soporta invocacion por recurso: con view namespace no deberia ser elegible').toBe('true')
+    expect(await estado('metrics'), 'metrics si soporta invocacion por recurso: con view namespace tiene que ser elegible').not.toBe('true')
+
+    await page.keyboard.press('Escape')
+})
+
+test('the cluster view also offers autonomous channels', async () => {
+    // 'cluster' ya ofrecia los cluster-wide; lo que faltaba es que un canal autonomo cupiese tambien,
+    // porque si no necesita nada del cluster tampoco le estorba que la view lo sea.
+    await pickCombo(page, COMBO_VIEW, 'cluster')
+
+    const count = await page.getByRole('combobox').count()
+    await page.getByRole('combobox').nth(count - 1).click()
+    await page.getByRole('listbox').waitFor({ state: 'visible', timeout: 5000 })
+
+    const magnify = await page.getByRole('option').filter({ hasText: /^magnify$/ }).first().getAttribute('aria-disabled')
+    const metrics = await page.getByRole('option').filter({ hasText: /^metrics$/ }).first().getAttribute('aria-disabled')
+
+    expect(magnify, 'magnify es cluster-wide: tiene que ser elegible con view cluster').not.toBe('true')
+    expect(metrics, 'metrics no es cluster-wide ni autonomo: no deberia ser elegible con view cluster').toBe('true')
+
+    await page.keyboard.press('Escape')
+})

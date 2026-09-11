@@ -32,6 +32,32 @@ const RemoteBadge: React.FC<{ operative: boolean }> = ({ operative }) => (
 const isAutonomous = (channel: BackChannelData | undefined): boolean =>
     channel !== undefined && !channel.cluster && !channel.resourced
 
+/*
+    Que canales tienen sentido con la view elegida:
+
+      cluster                              -> los que soportan invocacion cluster-wide, MAS los
+                                              autonomos: si un canal no necesita nada del cluster,
+                                              tampoco le estorba que la view lo sea
+      none                                 -> solo los autonomos
+      namespace/controller/pod/container   -> solo los que soportan invocacion POR RECURSO
+
+    Antes solo se filtraba en 'cluster' y en 'none', asi que con cualquier view de recurso se ofrecian
+    TODOS los canales, incluido uno que no sabe arrancar por recurso. Y 'addable()' tampoco lo paraba:
+    solo mira que haya recursos seleccionados, no si el canal los admite.
+*/
+const channelFitsView = (channel: BackChannelData, view: EInstanceConfigView | ''): boolean => {
+    switch (view) {
+        case '':
+            return true
+        case EInstanceConfigView.CLUSTER:
+            return channel.cluster || isAutonomous(channel)
+        case EInstanceConfigView.NONE:
+            return isAutonomous(channel)
+        default:
+            return channel.resourced
+    }
+}
+
 interface IResourceSelected {
     channelId: string
     clusterName: string
@@ -280,9 +306,10 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         const channelId = event.target.value as EInstanceMessageChannel
         setChannel(channelId)
 
-        // Un canal autonomo solo funciona con la view 'none', asi que pedirsela al usuario seria
-        // pedirle que adivine.
-        if (isAutonomous(props.backChannels.find(c => c.id === channelId))) setView(EInstanceConfigView.NONE)
+        // Un canal autonomo no arranca con una view de recurso, asi que se le pone 'none' y no se le
+        // pide que adivine. Si ya estaba en 'cluster' se respeta: ahi tambien cabe.
+        const elegido = props.backChannels.find(c => c.id === channelId)
+        if (isAutonomous(elegido) && view !== EInstanceConfigView.CLUSTER) setView(EInstanceConfigView.NONE)
     }
 
     const onAdd = () => {
@@ -537,7 +564,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                         const cls = props.frontChannels?.get(c.id)
                         const icon = cls ? React.cloneElement(new cls().getChannelIcon(), { sx: { fontSize: 18, mr: 0.5 } }) : null
                         return (
-                            <MenuItem key={c.id} value={c.id} disabled={(view===EInstanceConfigView.CLUSTER && !c.cluster) || (view===EInstanceConfigView.NONE && !isAutonomous(c))}>
+                            <MenuItem key={c.id} value={c.id} disabled={!channelFitsView(c, view)}>
                                 <Stack direction='row' alignItems='center'>
                                     {icon}
                                     <span>{c.id}</span>

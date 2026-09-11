@@ -44,6 +44,21 @@ Olvidar la 2 y la 4 produce falsos "sin usar". Pasó: `NotificationsOff` salió 
   ⚠️ Lo que no se puede verificar desde aquí: una extensión de terceros, fuera del árbol, que pida uno
   por nombre. Se asumió ese riesgo a sabiendas.
 
+## ⚠️ Quitar un icono del barrel rompe los plugins YA CONSTRUIDOS
+
+Un plugin **no bundlea sus iconos**: su build mapea `@mui/icons-material` y el barrel de kwirth a
+`window.__kwirth__.MUI.icons`, así que los pide **por nombre en runtime**. Si el icono ya no está, el
+componente llega `undefined` y React revienta con *"Element type is invalid… got: undefined"* — no hay
+error de compilación que lo avise, porque el `dist` es de antes.
+
+Pasó al podar los nueve (2026-09-11): reventaron **fileman**, **alert** y **pinocchio**, cuyos `dist`
+seguían pidiendo `AccountTreeOutlined`, `FolderCopyTwoTone`, `InfoOutlined`, `CheckCircleOutline`,
+`DeleteOutlined` y `ScienceOutlined`. Arreglar las fuentes y pasar `tsc` **no basta**.
+
+**Receta:** tras retirar un icono, reconstruir todo plugin que lo usara y republicar los que estén
+publicados. Para comprobar que no queda ninguno, buscar los nombres retirados en los `*/dist/front.js`
+— ojo, `Clear` da falso positivo porque aparece como texto de tooltip (`title: "Clear"`).
+
 ## Trampa al verificar esto
 
 No barrer `.js`: `back/front/static/js`, `docker/bundle`, `electron/bundle`, `external/bundle` y
