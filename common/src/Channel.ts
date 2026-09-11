@@ -39,6 +39,13 @@ interface BackChannelData {
     websocket: boolean  // this channel allows websocket creation (aside from main websocket communication)
     cluster: boolean    // this channel supports cluster-wide invocation (addObject called once with *all)
     resourced: boolean  // this channel supports resource-based invocation (addObject called per selected resource)
+    /*
+        BOTH false = autonomous channel: it needs nothing from the cluster and can ONLY be started with
+        the 'none' view, which invokes addObject once with empty selectors. Use it for a channel whose
+        data does not live in the cluster (an external API, for instance): declaring 'cluster' instead
+        would make the core register the instance as holding a cluster-wide access key, which is
+        unjustified privilege and noise in the audit trail for a channel that never looks at a pod.
+    */
     mode?: EChannelMode  // hosted here (local) or elsewhere (remote); set by the core when announcing channels
 }
 
