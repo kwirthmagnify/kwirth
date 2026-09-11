@@ -1,4 +1,5 @@
-import { ISenderAccess, IWebhookAccess, IUserInfo } from '@kwirthmagnify/kwirth-common'
+import { ISenderAccess, IWebhookAccess, IUserInfo, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
+import { IClusterEndpoint, IRemoteChannelHandlers, IRemoteChannelHandle } from './IFederation'
 
 // Objeto que el CORE inyecta al back de un canal (storage, logging, catálogo de usuarios, config de
 // instalación, senders). Es un contrato del lado BACK, por eso vive en common-back (no en common).
@@ -21,4 +22,14 @@ export interface IBackChannelObject {
     // Ingesta de webhooks (contraparte inbound de senders): el consumidor se suscribe a los eventos
     // dirigidos a su target vía subscribe(); el core le entrega los ya verificados y parseados.
     webhooks?: IWebhookAccess
+    // Federación multi-cluster back-a-back: abre un WS CLIENTE hacia un cluster remoto (endpoint), lo
+    // arranca (START con SU accessKey, protocolo plano sin challenge) y entrega los frames por
+    // handlers.onMessage. Gestiona la reconexión con backoff y captura el instance del START (para poder
+    // enviar comandos referenciando un instance válido en ESE cluster). El WS crudo NO se expone: el
+    // plugin usa el handle (send/close). Primitiva del FRAMEWORK, la implementa el core (no el plugin).
+    openRemoteChannel?(endpoint: IClusterEndpoint, config: IInstanceConfig, handlers: IRemoteChannelHandlers): IRemoteChannelHandle
+    // Lee el store de PERFIL de un usuario (ConfigMap kwirth-store-<userId>, clave '<group>-<key>') y
+    // devuelve el valor ya parseado (el store guarda JSON stringificado; esto hace el JSON.parse). Ej.:
+    // readUserStore(userId, 'clusters', 'list') → IClusterEndpoint[]. Clave inexistente → undefined. Read-only.
+    readUserStore?(userId: string, group: string, key: string): Promise<unknown>
 }

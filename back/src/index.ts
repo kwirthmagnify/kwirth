@@ -84,6 +84,7 @@ import { WebhookApi } from './api/WebhookApi'
 import { SenderManager } from './tools/SenderManager'
 import { WebhookManager } from './tools/WebhookManager'
 import { handleInbound } from './tools/WebhookReceiver'
+import { openRemoteChannel } from './tools/RemoteChannel'
 import { AuthApi } from './api/AuthApi'
 import { IdpApi } from './api/IdpApi'
 import { IdpManager } from './tools/IdpManager'
@@ -1882,6 +1883,23 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             },
             senders: senderManager,
             webhooks: webhookManager,
+            // Federación back-a-back (framework): abre un WS cliente hacia un cluster remoto y lo gestiona
+            // (START con SU accessKey, reconexión con backoff, captura del instance). El WS crudo no se
+            // expone; el plugin usa el handle. La implementación vive en tools/RemoteChannel.
+            openRemoteChannel: (endpoint, config, handlers) => openRemoteChannel(endpoint, config, handlers, (m) => logError(ELogComponent.CHANNEL, m)),
+            // Lee el store de PERFIL de un usuario (ConfigMap kwirth-store-<userId>, clave '<group>-<key>')
+            // y devuelve el valor ya parseado (el store guarda cada valor JSON-stringificado). Read-only,
+            // tolerante a fallo. Ej.: readUserStore(userId, 'clusters', 'list') → IClusterEndpoint[].
+            readUserStore: async (userId: string, group: string, key: string): Promise<unknown> => {
+                try {
+                    const data: any = await runningInstance.configMaps.read('kwirth-store-' + userId, {})
+                    if (!data || typeof data !== 'object') return undefined
+                    const raw = data[group + '-' + key]
+                    if (raw === undefined) return undefined
+                    return typeof raw === 'string' ? JSON.parse(raw) : raw
+                }
+                catch { return undefined }
+            },
         }
 
         runningInstance.clusterInfo.senders = senderManager
