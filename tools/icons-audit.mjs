@@ -1,22 +1,37 @@
-// Barrido profundo: para CADA icono del barrel, en que ficheros fuente se usa.
-//
-// Tres formas de consumo, y las tres cuentan:
-//   1. import { X } desde el barrel de kwirth  -> uso estatico del monorepo
-//   2. import { X } desde '@mui/icons-material' -> lo mismo, pero sin pasar por el barrel
-//   3. "icon": "X" en un manifest/package.json -> se resuelve POR NOMBRE en runtime contra el global
-//      window.__kwirth__.MUI.icons, asi que el icono tiene que seguir en el barrel aunque nadie lo importe
-import { readFileSync, readdirSync, statSync, writeFileSync } from 'fs'
-import { join, extname, relative } from 'path'
+/*
+    Auditoria del barrel de iconos (common-front/src/kwirthicons.ts): que iconos hay y donde se usan.
 
-const root = 'C:/github/aisdkvercel/kwirth'
-const icons = [...readFileSync(`${root}/common-front/src/kwirthicons.ts`, 'utf8')
+    Se barre TODO el working copy, repos privados incluidos, porque los de pago viven dentro (gitignorados
+    pero presentes) y tambien consumen el barrel.
+
+    Hay CUATRO formas de consumir un icono, y solo la primera se ve leyendo imports:
+
+      1. import { X } from '@kwirthmagnify/kwirth-common-front/icons'  — lo normal en front y extensiones
+      2. import { X } from './kwirthicons'                             — DENTRO de common-front, ruta relativa
+      3. import { X } from '@mui/icons-material'                       — sin pasar por el barrel
+      4. "icon": "X" / icon: 'X'                                       — POR NOMBRE, en un manifest o en codigo;
+         se resuelve en runtime contra window.__kwirth__.MUI.icons, asi que el icono tiene que seguir en el
+         barrel aunque nadie lo importe
+
+    Las vias 2 y 4 son las que producen falsos "sin usar" si se olvidan.
+
+    Uso:  node tools/icons-audit.mjs   -> reescribe plans/icons/ICONS-AUDIT.md
+*/
+import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'fs'
+import { join, extname, relative, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+const icons = [...readFileSync(join(root, 'common-front/src/kwirthicons.ts'), 'utf8')
     .matchAll(/export \{ default as (\w+) \}/g)].map(m => m[1])
+
+const SKIP = ['node_modules', '.git', 'dist', 'build', 'test-results', '.cache']
 
 const walk = (dir, out = []) => {
     let entries
     try { entries = readdirSync(dir) } catch { return out }
     for (const e of entries) {
-        if (['node_modules', '.git', 'dist', 'build', 'test-results', '.cache'].includes(e)) continue
+        if (SKIP.includes(e)) continue
         const p = join(dir, e)
         let st
         try { st = statSync(p) } catch { continue }
@@ -26,8 +41,13 @@ const walk = (dir, out = []) => {
     return out
 }
 
-const files = walk(root).filter(f => !f.includes('kwirthicons'))
-const uso = new Map(icons.map(i => [i, { code: new Set(), manifest: new Set() }]))
+const IMPORT_BARREL = /import\s*\{([^}]*)\}\s*from\s*'(?:@kwirthmagnify\/kwirth-common-front\/icons|@mui\/icons-material|[.\/]*kwirthicons)'/g
+const IMPORT_DEEP = /from '@mui\/icons-material\/(\w+)'/g
+const NAME_IN_JSON = /"icon"\s*:\s*"(\w+)"/g
+const NAME_IN_CODE = /[{,;\s]icon\s*:\s*'(\w+)'/g
+
+const files = walk(root).filter(f => !f.includes('kwirthicons') && !f.includes('icons-audit') && !f.includes('ICONS-AUDIT'))
+const uso = new Map(icons.map(i => [i, { code: new Set(), byName: new Set() }]))
 
 for (const f of files) {
     let t
@@ -35,39 +55,46 @@ for (const f of files) {
     const rel = relative(root, f).replace(/\\/g, '/')
 
     if (f.endsWith('.json')) {
-        for (const m of t.matchAll(/"icon"\s*:\s*"(\w+)"/g)) uso.get(m[1])?.manifest.add(rel)
+        for (const m of t.matchAll(NAME_IN_JSON)) uso.get(m[1])?.byName.add(rel)
         continue
     }
-    // nombres importados de un barrel de iconos (kwirth o @mui), con o sin alias
-    const listas = [...t.matchAll(/import\s*\{([^}]*)\}\s*from\s*'(?:@kwirthmagnify\/kwirth-common-front\/icons|@mui\/icons-material)'/g)]
-    const importados = new Set()
-    for (const l of listas) {
-        for (const trozo of l[1].split(',')) {
+    for (const m of t.matchAll(NAME_IN_CODE)) uso.get(m[1])?.byName.add(rel)
+    for (const m of t.matchAll(IMPORT_DEEP)) uso.get(m[1])?.code.add(rel + ' (deep)')
+    for (const lista of t.matchAll(IMPORT_BARREL)) {
+        for (const trozo of lista[1].split(',')) {
             const nombre = trozo.trim().split(/\s+as\s+/)[0].trim()
-            if (nombre) importados.add(nombre)
+            if (nombre && uso.has(nombre)) uso.get(nombre).code.add(rel)
         }
     }
-    for (const i of importados) if (uso.has(i)) uso.get(i).code.add(rel)
-    // deep imports, que deberian estar prohibidos fuera de common-front
-    for (const m of t.matchAll(/from '@mui\/icons-material\/(\w+)'/g)) if (uso.has(m[1])) uso.get(m[1]).code.add(rel + ' (deep)')
 }
 
-const filas = icons.map(i => ({ icono: i, code: [...uso.get(i).code].sort(), manifest: [...uso.get(i).manifest].sort() }))
-const sinUso = filas.filter(f => f.code.length === 0 && f.manifest.length === 0)
+const filas = icons.map(i => ({
+    icono: i,
+    code: [...uso.get(i).code].sort(),
+    byName: [...uso.get(i).byName].sort()
+}))
+const sinUso = filas.filter(f => !f.code.length && !f.byName.length)
+const soloNombre = filas.filter(f => !f.code.length && f.byName.length)
 
-let md = `# Iconos del barrel kwirthicons\n\n${icons.length} iconos. Generado por barrido de ${files.length} ficheros del working copy (incluye los repos privados).\n\n`
-md += `- Con uso en codigo: ${filas.filter(f => f.code.length).length}\n`
-md += `- Solo pedidos por nombre desde un manifest: ${filas.filter(f => !f.code.length && f.manifest.length).length}\n`
-md += `- Sin ningun uso: ${sinUso.length}\n\n`
-md += `| Icono | Ficheros que lo usan | Manifests que lo piden por nombre |\n|---|---|---|\n`
+let md = `# Iconos del barrel kwirthicons\n\n`
+md += `${icons.length} iconos, cruzados contra ${files.length} ficheros del working copy (repos privados incluidos).\n`
+md += `Regenerar con \`node tools/icons-audit.mjs\`.\n\n`
+md += `Se cuentan las cuatro formas de consumir un icono: import del barrel de kwirth (por paquete o relativo\n`
+md += `dentro de common-front), import de @mui, y cita **por nombre** (\`"icon": "X"\` en un manifest o\n`
+md += `\`icon: 'X'\` en codigo), que se resuelve en runtime contra \`window.__kwirth__.MUI.icons\`.\n\n`
+md += `- Usados por import: **${filas.filter(f => f.code.length).length}**\n`
+md += `- Solo citados por nombre: **${soloNombre.length}**${soloNombre.length ? ` (${soloNombre.map(f => f.icono).join(', ')})` : ''}\n`
+md += `- Sin ningun uso: **${sinUso.length}**${sinUso.length ? ` (${sinUso.map(f => f.icono).join(', ')})` : ''}\n\n`
+md += `| Icono | Ficheros que lo importan | Citado por nombre en |\n|---|---|---|\n`
 for (const f of filas) {
-    md += `| \`${f.icono}\` | ${f.code.length ? f.code.join('<br>') : '—'} | ${f.manifest.length ? f.manifest.join('<br>') : '—'} |\n`
+    md += `| \`${f.icono}\` | ${f.code.length ? f.code.join('<br>') : '—'} | ${f.byName.length ? f.byName.join('<br>') : '—'} |\n`
 }
-writeFileSync(`${root}/plans/icons/ICONS-AUDIT.md`, md)
+mkdirSync(join(root, 'plans/icons'), { recursive: true })
+writeFileSync(join(root, 'plans/icons/ICONS-AUDIT.md'), md)
 
-console.log(`${icons.length} iconos, ${files.length} ficheros barridos`)
-console.log(`con uso en codigo: ${filas.filter(f => f.code.length).length}`)
-console.log(`solo por nombre en manifest: ${filas.filter(f => !f.code.length && f.manifest.length).length}`)
-console.log(`SIN NINGUN USO (${sinUso.length}): ${sinUso.map(f => f.icono).join(', ')}`)
+console.log(`${icons.length} iconos, ${files.length} ficheros`)
+console.log(`por import : ${filas.filter(f => f.code.length).length}`)
+console.log(`solo por nombre: ${soloNombre.length}  -> ${soloNombre.map(f => f.icono).join(', ') || '-'}`)
+console.log(`sin uso    : ${sinUso.length}  -> ${sinUso.map(f => f.icono).join(', ') || '-'}`)
 const deep = filas.filter(f => f.code.some(c => c.endsWith('(deep)')))
-console.log(`deep imports vivos: ${deep.length ? deep.map(f => f.icono + ' ' + f.code.filter(c => c.endsWith('(deep)')).join()).join(' | ') : 'ninguno'}`)
+console.log(`deep imports: ${deep.map(f => f.icono).join(', ') || 'ninguno'}`)
