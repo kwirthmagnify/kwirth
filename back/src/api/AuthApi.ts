@@ -94,6 +94,12 @@ export class AuthApi {
                 if (idpManager) {
                     const instances = await idpManager.getEnabledInstances()
                     for (const inst of instances) {
+                        // no ofrecer un metodo cuyo conector no esta cargado (desinstalado, quitado de dev, o fallo
+                        // al cargar): el login lo mostraria y al pulsarlo daria 'connector not available'
+                        if (!idpManager.getConnector(inst.connectorId)) {
+                            logWarning(ELogComponent.AUTH, `Skipping login method '${inst.id}': connector '${inst.connectorId}' not available`)
+                            continue
+                        }
                         methods.push({ id: inst.id, label: inst.label, kind: EAuthMethodKind.REDIRECT, startUrl: `/core/auth/${inst.id}/start` })
                     }
                 }
