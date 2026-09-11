@@ -14,8 +14,7 @@
 
     "montag": "../plugins/montag/dist",
     "excubitor": "../plugins/excubitor/dist",
-    "iter": "../plugins/iter/dist",
-    "sugarless": "../plugins/sugarless/dist"
+    "iter": "../plugins/iter/dist"
   },
   "providers": {
     "tick": "../providers/tick/dist",
@@ -23,8 +22,7 @@
     "kafka": "../providers/kafka/dist",
     "otel": "../providers/otel/dist",
     "syslog": "../providers/syslog/dist",
-    "trivy": "../providers/trivy/dist",
-    "sugarless": "../providers/sugarless/dist"
+    "trivy": "../providers/trivy/dist"
   },
   "senders": {
     "file": "../senders/file/dist",
