@@ -64,8 +64,7 @@
     "gitlab-cloud": "../idps/gitlab-cloud/dist",
     "gitlab-onprem": "../idps/gitlab-onprem/dist",
     "github-cloud": "../idps/github-cloud/dist",
-    "github-onprem": "../idps/github-onprem/dist",
-    "entraid": "../idps/entraid/dist"
+    "github-onprem": "../idps/github-onprem/dist"
   },
   "docs": {
     "kwirth": "bundle/docs/kwirth.tgz",
