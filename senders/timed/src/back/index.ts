@@ -104,7 +104,7 @@ export class TimedSender implements ISender {
     }
 
     getNodeMeta() {
-        return { label: 'Timed filter', icon: 'AccessTime', description: 'Routes or drops messages based on time-of-day windows and day-of-week rules.' }
+        return { label: 'Timed filter', icon: 'Schedule', description: 'Routes or drops messages based on time-of-day windows and day-of-week rules.' }
     }
 
     async send(_configName: string, _message: ISenderMessage): Promise<void> {}

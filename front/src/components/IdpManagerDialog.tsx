@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Key, Https, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Key, Https, Launch, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -238,7 +238,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
         return null
     }
     const websiteButton = (website?: string) =>
-        <Tooltip title={website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
+        <Tooltip title={website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}><Launch fontSize='small' /></IconButton></span></Tooltip>
 
     return (<>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
@@ -372,7 +372,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{entry.description}</Typography>
                                             </Box>
-                                            <Tooltip title={entry.website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
+                                            <Tooltip title={entry.website ? 'Open connector website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><Launch fontSize='small' /></IconButton></span></Tooltip>
                                         </Stack>
                                         <Stack direction='row' alignItems='center' sx={{ mt: 1 }}>
                                             { /* Misma procedencia que en las tarjetas de instalados: aqui es donde

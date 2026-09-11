@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react'
-import { Add as AddIcon, ContentCopy as ContentCopyIcon, Delete as DeleteIcon, DeleteOutline as DeleteOutlineIcon } from '@mui/icons-material'
+import { Add as AddIcon, ContentCopy as ContentCopyIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
 import { ICensorData } from './CensorData'
@@ -347,7 +347,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                                                                 onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, labelSelector: e.target.value } : s))}
                                                                 sx={{ flex: 2 }} placeholder='e.g. app=myapp' />
                                                             <IconButton size='small' onClick={() => setLogstreamSources(prev => prev.filter((_, j) => j !== i))}>
-                                                                <DeleteOutlineIcon sx={{ fontSize: 14 }} />
+                                                                <DeleteIcon sx={{ fontSize: 14 }} />
                                                             </IconButton>
                                                         </Stack>
                                                     ))}
@@ -383,7 +383,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                                                 label={<Typography variant='caption'>TS</Typography>}
                                                 sx={{ ml: 0, mr: 0, whiteSpace: 'nowrap' }} />
                                             <IconButton size='small' onClick={() => setBusinessSources(prev => prev.filter((_, j) => j !== i))}>
-                                                <DeleteOutlineIcon sx={{ fontSize: 14 }} />
+                                                <DeleteIcon sx={{ fontSize: 14 }} />
                                             </IconButton>
                                         </Stack>
                                     ))}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Box, Button, Card, CardContent, IconButton, LinearProgress, Stack, Tooltip, Typography } from '@mui/material'
-import { OpenInBrowser, Settings as SettingsIcon } from '@mui/icons-material'
+import { Launch, Settings as SettingsIcon } from '@mui/icons-material'
 import { IHomepageProps } from '@kwirthmagnify/kwirth-common-front'
 import { ClusterizedSetup } from './ClusterizedSetup'
 
@@ -123,7 +123,7 @@ const Clusterized: React.FC<IHomepageProps> = (props) => {
                                 <Button
                                     variant='outlined'
                                     size='small'
-                                    startIcon={<OpenInBrowser />}
+                                    startIcon={<Launch />}
                                     onClick={() => launchMagnify(cluster.name)}
                                 >
                                     Magnify

@@ -4,7 +4,20 @@ import {
     FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, List, ListItemButton,
     MenuItem, Select, Stack, Switch, TextField, Typography
 } from '@mui/material'
-import { FileDownload, FileUpload, Visibility, VisibilityOff } from '@mui/icons-material'
+/*
+    DEEP IMPORTS A PROPOSITO, no es un descuido.
+
+    common-ai lo BUNDLEA el front (webpack), y '@mui/icons-material' es un barrel CommonJS que no se
+    puede tree-shakear: importar de la raiz se lleva los ~2000 iconos al bundle. Medido: pasar estas
+    cuatro lineas al barrel raiz engordo el main del front en 1,62 MB.
+
+    Por eso la regla de "nada de deep imports" es solo para PLUGINS —ahi rompe @emotion, que carga su
+    propia copia—, y common-front y common-ai son la excepcion documentada.
+*/
+import Download from '@mui/icons-material/Download'
+import FileUpload from '@mui/icons-material/FileUpload'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 
 const downloadJson = async (data: unknown, filename: string) => {
     const json = JSON.stringify(data, null, 2)
@@ -190,7 +203,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                     e.target.value = ''
                 }} />
                 <Button startIcon={<FileUpload fontSize='small' />} onClick={() => importLlmRef.current?.click()}>Import</Button>
-                <Button startIcon={<FileDownload fontSize='small' />} onClick={() => downloadJson(llms, 'kwirth-llms.json')}>Export</Button>
+                <Button startIcon={<Download fontSize='small' />} onClick={() => downloadJson(llms, 'kwirth-llms.json')}>Export</Button>
                 <Box flex={1} />
                 <Button onClick={() => props.onClose(llms)} variant='contained'>OK</Button>
                 <Button onClick={() => props.onClose(undefined)} color='inherit'>Cancel</Button>
@@ -358,7 +371,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                     e.target.value = ''
                 }} />
                 <Button startIcon={<FileUpload fontSize='small' />} onClick={() => importProvRef.current?.click()}>Import</Button>
-                <Button startIcon={<FileDownload fontSize='small' />} onClick={() => downloadJson(providers.map(p => ({ name: p.name, type: p.type ?? p.name, key: p.key, ...(p.endpoint ? { endpoint: p.endpoint } : {}) })), 'kwirth-providers.json')}>Export</Button>
+                <Button startIcon={<Download fontSize='small' />} onClick={() => downloadJson(providers.map(p => ({ name: p.name, type: p.type ?? p.name, key: p.key, ...(p.endpoint ? { endpoint: p.endpoint } : {}) })), 'kwirth-providers.json')}>Export</Button>
                 <Box flex={1} />
                 <Button onClick={() => props.onClose(providers)} color='primary' variant='contained'>Save</Button>
                 <Button onClick={() => props.onClose(undefined)} color='inherit'>Cancel</Button>

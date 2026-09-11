@@ -5,7 +5,7 @@ import {
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography, useTheme
 } from '@mui/material'
-import { Add, CheckCircle, CloudQueue, ContentCopy, Delete, Download, FileDownload, FileUpload, FolderOpen, Https, Link, OpenInNew, Refresh, Send, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Add, CheckCircle, CloudQueue, ContentCopy, Delete, Download, FileUpload, FolderOpen, Https, Link, Launch, Refresh, Send, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -600,7 +600,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                 <Tooltip title={sender.website ? 'Open website' : 'No website available'}>
                     <span>
                         <IconButton size='small' sx={{ mr: -0.5 }} disabled={!sender.website} onClick={() => window.open(sender.website!, '_blank', 'noopener')}>
-                            <OpenInNew fontSize='small' />
+                            <Launch fontSize='small' />
                         </IconButton>
                     </span>
                 </Tooltip>
@@ -751,7 +751,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                                                 </Stack>
                                                 <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{entry.description}</Typography>
                                             </Box>
-                                            <Tooltip title={entry.website ? 'Open website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
+                                            <Tooltip title={entry.website ? 'Open website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><Launch fontSize='small' /></IconButton></span></Tooltip>
                                         </Stack>
                                         <Stack direction='row' alignItems='center' sx={{ mt: 1 }}>
                                             { /* Misma procedencia que en las tarjetas de instalados: aqui es donde
@@ -821,7 +821,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                     <input ref={senderFileInputRef} type='file' accept='.json' style={{ display: 'none' }}
                         onChange={e => { const f = e.target.files?.[0]; if (f) importAll(f) }} />
                     <Tooltip title='Export ALL sender configs to JSON'>
-                        <Button size='small' startIcon={<FileDownload />} onClick={exportAll}>Export all</Button>
+                        <Button size='small' startIcon={<Download />} onClick={exportAll}>Export all</Button>
                     </Tooltip>
                     <Tooltip title='Import sender configs from JSON (all senders)'>
                         <Button size='small' startIcon={<FileUpload />} onClick={() => senderFileInputRef.current?.click()}>Import all</Button>
@@ -921,7 +921,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                             onChange={e => { const f = e.target.files?.[0]; if (f) openImportDialog(f) }} />
                         <Tooltip title='Export configs to JSON'>
                             <span>
-                                <Button size='small' startIcon={<FileDownload />} disabled={configs.length === 0}
+                                <Button size='small' startIcon={<Download />} disabled={configs.length === 0}
                                     onClick={() => { setConfigExportSelected(new Set(configs.map(c => c.name))); setConfigExportOpen(true) }}>
                                     Export
                                 </Button>

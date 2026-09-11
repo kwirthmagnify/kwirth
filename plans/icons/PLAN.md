@@ -32,7 +32,7 @@ Olvidar la 2 y la 4 produce falsos "sin usar". Pasó: `NotificationsOff` salió 
   cinco two-tone. `FolderCopyTwoTone` **se queda**: 14 entradas de `plugins/manifest.json` lo piden por
   nombre y quitarlo dejaría sin icono a las versiones publicadas de fileman. common-front 0.5.54.
 - **Deep imports de montag** (`6338b9c` en su repo): tres ficheros pasaron al barrel raíz.
-- **Deep imports de common-ai**: cuatro iconos al barrel raíz, common-ai 0.5.48 publicado.
+- **Deep imports de common-ai**: REVERTIDO. Ver abajo — pasarlos al barrel raíz costó 1,62 MB.
 - **Cascada de common-front 0.5.54**: rango subido en los 22 dependientes. No se republicaron los
   artefactos, por lo dicho arriba: saldrían idénticos byte a byte.
 
@@ -74,7 +74,14 @@ Doce senders lo implementan (`{ label, icon: 'AccessTime' }`) y **nadie lo llama
 `AccessTime`, `CallSplit`, `Email` y `Speed` solo estén citados por nombre y no se pinten nunca. O se
 cablea en el diseñador, o sobra en la interfaz.
 
-### 3. Deep imports que quedan
-`common-front/src/MsgBox.tsx` y `HelpButton.tsx` (`Error`, `Warning`, `Info`, `HelpOutline`).
-common-front es la **excepción documentada** a la regla, así que esto es decisión, no deuda: se deja o
-se alinea, pero no rompe nada.
+## ⚠️ Los deep imports de common-front y common-ai NO se tocan
+
+`common-front/src/MsgBox.tsx` y `HelpButton.tsx` importan `@mui/icons-material/Error` y compañia por
+ruta directa, y **tiene que seguir asi**. Lo aprendi rompiendolo (2026-09-11): al pasar los cuatro de
+`common-ai` al barrel raiz, el main del front paso de **1,21 MB a 2,82 MB (+1,62 MB)**, porque
+`@mui/icons-material` es un barrel CommonJS que webpack no tree-shakea y se lleva los ~2000 iconos.
+
+La regla de "nada de deep imports" es **solo para plugins** —ahi rompe @emotion, que carga su propia
+copia—, y common-front/common-ai son la excepcion justamente porque los BUNDLEA el front. Revertido
+en common-ai 0.5.50, con el motivo escrito en el propio fichero para que no lo "arregle" nadie mas.
+

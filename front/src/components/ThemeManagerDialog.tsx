@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Https, Link, OpenInNew, Palette, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Https, Link, Launch, Palette, Refresh, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -285,7 +285,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
                 <Tooltip title={website ? 'Open theme website' : 'No website available'}>
                     <span>
                         <IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}>
-                            <OpenInNew fontSize='small' />
+                            <Launch fontSize='small' />
                         </IconButton>
                     </span>
                 </Tooltip>

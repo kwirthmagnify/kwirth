@@ -108,6 +108,37 @@ md += `| | Icono | Ficheros que lo importan | Citado por nombre en |\n|---|---|-
 for (const f of filas) {
     md += `| ${dibujo(f.icono)} | \`${f.icono}\` | ${f.code.length ? f.code.join('<br>') : '—'} | ${f.byName.length ? f.byName.join('<br>') : '—'} |\n`
 }
+/*
+    Segunda tabla: la vista inversa, por PROYECTO. La primera responde "quien usa este icono"; esta
+    responde "que iconos usa este plugin", que es lo que hace falta cuando se toca un proyecto o se
+    quiere saber a quien afecta retirar algo.
+
+    El proyecto es el directorio raiz del artefacto: plugins/censor, senders/tee, front, common-front…
+*/
+const proyectoDe = (rel) => {
+    const p = rel.split('/')
+    if (['plugins', 'providers', 'senders', 'homepages', 'idps', 'webhooks', 'logins'].includes(p[0]) && p[1]) return `${p[0]}/${p[1]}`
+    return p[0]
+}
+
+const porProyecto = new Map()
+for (const f of filas) {
+    for (const ref of [...f.code, ...f.byName]) {
+        const proyecto = proyectoDe(ref.replace(' (deep)', ''))
+        if (!porProyecto.has(proyecto)) porProyecto.set(proyecto, new Set())
+        porProyecto.get(proyecto).add(f.icono)
+    }
+}
+
+md += `\n## Por proyecto\n\n`
+md += `La vista inversa: que iconos usa cada artefacto. Util para saber a quien afecta retirar uno, y\n`
+md += `para revisar la coherencia dentro de un mismo proyecto.\n\n`
+md += `| Proyecto | Iconos | Total |\n|---|---|---|\n`
+for (const proyecto of [...porProyecto.keys()].sort()) {
+    const lista = [...porProyecto.get(proyecto)].sort()
+    md += `| \`${proyecto}\` | ${lista.map(i => `${dibujo(i)} ${i}`).join(' · ')} | ${lista.length} |\n`
+}
+
 mkdirSync(join(root, 'plans/icons'), { recursive: true })
 writeFileSync(join(root, 'plans/icons/ICONS-AUDIT.md'), md)
 

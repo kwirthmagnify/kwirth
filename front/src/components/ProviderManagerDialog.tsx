@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, InputAdornment, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { CheckCircle, CloudQueue, Delete, Download, Factory, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, Visibility, VisibilityOff, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, Factory, FolderOpen, Https, Link, Launch, Refresh, Settings, Visibility, VisibilityOff, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
@@ -368,7 +368,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                             <Tooltip title={provider.website ? 'Open provider website' : 'No website available'}>
                                                 <span>
                                                     <IconButton size='small' sx={{ mr: -0.5 }} disabled={!provider.website} onClick={() => window.open(provider.website!, '_blank', 'noopener')}>
-                                                        <OpenInNew fontSize='small' />
+                                                        <Launch fontSize='small' />
                                                     </IconButton>
                                                 </span>
                                             </Tooltip>
@@ -488,7 +488,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
                                             <Tooltip title={provider.website ? 'Open provider website' : 'No website available'}>
                                                 <span>
                                                     <IconButton size='small' sx={{ mr: -0.5 }} disabled={!provider.website} onClick={() => window.open(provider.website!, '_blank', 'noopener')}>
-                                                        <OpenInNew fontSize='small' />
+                                                        <Launch fontSize='small' />
                                                     </IconButton>
                                                 </span>
                                             </Tooltip>

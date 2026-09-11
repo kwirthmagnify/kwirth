@@ -4,7 +4,7 @@ import {
     DialogTitle, Divider, FormControlLabel, IconButton, List, ListItem, ListItemButton,
     ListItemText, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
-import { AccountTree, Add, Delete, FileDownload, FileUpload, FilterAlt, Send } from '@mui/icons-material'
+import { AccountTree, Add, Delete, Download, FileUpload, FilterAlt, Send } from '@mui/icons-material'
 import { IAvailableSender, ICompositeNode, IPipelineConfig } from './types'
 import { createNode, nodeAtPath } from './treeUtils'
 import PipelineCanvas from './PipelineCanvas'
@@ -432,7 +432,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                         onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f) }} />
                     <Tooltip title='Export pipelines to JSON'>
                         <span>
-                            <Button size='small' startIcon={<FileDownload />} disabled={Object.keys(pipelines).length === 0}
+                            <Button size='small' startIcon={<Download />} disabled={Object.keys(pipelines).length === 0}
                                 onClick={() => { setExportSelected(new Set(Object.keys(pipelines))); setExportDialogOpen(true) }}>
                                 Export
                             </Button>

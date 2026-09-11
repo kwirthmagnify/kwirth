@@ -5,7 +5,7 @@ import {
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography, useTheme
 } from '@mui/material'
-import { Add, CheckCircle, CloudQueue, ContentCopy, Delete, Download, FolderOpen, Https, Link, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Add, CheckCircle, CloudQueue, ContentCopy, Delete, Download, FolderOpen, Https, Link, Launch, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -434,7 +434,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                 <Tooltip title={webhook.website ? 'Open website' : 'No website available'}>
                     <span>
                         <IconButton size='small' sx={{ mr: -0.5 }} disabled={!webhook.website} onClick={() => window.open(webhook.website!, '_blank', 'noopener')}>
-                            <OpenInNew fontSize='small' />
+                            <Launch fontSize='small' />
                         </IconButton>
                     </span>
                 </Tooltip>
@@ -619,7 +619,7 @@ const WebhookManagerDialog: React.FC<IWebhookManagerDialogProps> = (props: IWebh
                                             </Stack>
                                             <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{entry.description}</Typography>
                                         </Box>
-                                        <Tooltip title={entry.website ? 'Open website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><OpenInNew fontSize='small' /></IconButton></span></Tooltip>
+                                        <Tooltip title={entry.website ? 'Open website' : 'No website available'}><span><IconButton size='small' sx={{ mr: -0.5 }} disabled={!entry.website} onClick={() => window.open(entry.website!, '_blank', 'noopener')}><Launch fontSize='small' /></IconButton></span></Tooltip>
                                     </Stack>
                                     <Stack direction='row' alignItems='center' sx={{ mt: 1 }}>
                                         { /* Misma procedencia que en las tarjetas de instalados: aqui es donde

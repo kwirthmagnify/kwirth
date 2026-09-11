@@ -4,7 +4,7 @@ import {
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
-import { Add, ContentCopy, Delete, FileDownload, FileUpload } from '@mui/icons-material'
+import { Add, ContentCopy, Delete, Download, FileUpload } from '@mui/icons-material'
 import {
     EAuthType, EEmitMode, EHttpMethod, EResponseType, IHttpPullConfig, IHttpPullTestResult, newHttpPullConfig
 } from '../common/HttpPullPush'
@@ -483,7 +483,7 @@ const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ on
                         onChange={e => { const f = e.target.files?.[0]; if (f) openImport(f) }} />
                     <Tooltip title='Export connections to JSON'>
                         <span>
-                            <Button size='small' startIcon={<FileDownload />} disabled={configs.length === 0}
+                            <Button size='small' startIcon={<Download />} disabled={configs.length === 0}
                                 onClick={() => { setExportSelected(new Set(configs.map(c => c.name))); setExportWithCredentials(false); setExportOpen(true) }}>
                                 Export
                             </Button>

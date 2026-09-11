@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Box, Card, CardContent, CardHeader, Collapse, Divider, Fade, IconButton, Stack, Tooltip, Typography } from '@mui/material'
 import { IWorkspaceSummary } from '../model/IWorkspace'
 import { ITabSummary } from '../model/ITabObject'
-import { Delete, ExpandLess, ExpandMore, FactCheck, HelpOutline, OpenInBrowser, Star } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Delete, ExpandLess, ExpandMore, FactCheck, HelpOutline, Launch, Star } from '@kwirthmagnify/kwirth-common-front/icons'
 
 import { IHomepageProps } from '@kwirthmagnify/kwirth-common-front'
 import { Cluster } from '../model/Cluster'
@@ -168,7 +168,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 <Tooltip title={`Open this configuration on a new tab`}>
                                     <span>
                                         <IconButton onClick={() => props.onHomepageSelectTab(tab)} disabled={disabled}>
-                                            <OpenInBrowser/>
+                                            <Launch/>
                                         </IconButton>
                                     </span>
                                 </Tooltip>
@@ -208,7 +208,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                             <Typography flexGrow={1}/>
                             <Tooltip title='Open workspace and start all tabs'>
                                 <IconButton onClick={() => props.onSelectWorkspace(workspace)}>
-                                    <OpenInBrowser/>
+                                    <Launch/>
                                 </IconButton>
                             </Tooltip>
                             <Tooltip title='Open workspace without starting tabs'>

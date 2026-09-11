@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Chip } from '@mui/material'
-import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Https, Link, LockPerson, OpenInNew, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CheckCircle, CloudQueue, Delete, Download, FolderOpen, Https, Link, LockPerson, Launch, Refresh, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -331,7 +331,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                 <Tooltip title={website ? 'Open login extension website' : 'No website available'}>
                     <span>
                         <IconButton size='small' sx={{ mr: -0.5 }} disabled={!website} onClick={() => window.open(website!, '_blank', 'noopener')}>
-                            <OpenInNew fontSize='small' />
+                            <Launch fontSize='small' />
                         </IconButton>
                     </span>
                 </Tooltip>
@@ -382,7 +382,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                             <Stack direction='row' spacing={0.5}>
                                                 <Tooltip title='Open login page in new tab'>
                                                     <IconButton size='small' color='primary' aria-label='Open login page' onClick={() => openLoginPage(login.id)}>
-                                                        <OpenInNew fontSize='small' />
+                                                        <Launch fontSize='small' />
                                                     </IconButton>
                                                 </Tooltip>
                                                 {login.configSchema && login.configSchema.length > 0 && (
@@ -421,7 +421,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                                         <Stack direction='row' spacing={0.5}>
                                             <Tooltip title='Open login page in new tab'>
                                                 <IconButton size='small' color='primary' aria-label='Open login page' onClick={() => openLoginPage(login.id)}>
-                                                    <OpenInNew fontSize='small' />
+                                                    <Launch fontSize='small' />
                                                 </IconButton>
                                             </Tooltip>
                                             {login.configSchema && login.configSchema.length > 0 && (
