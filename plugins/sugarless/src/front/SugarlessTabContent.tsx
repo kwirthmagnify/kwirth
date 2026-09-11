@@ -46,6 +46,16 @@ export const SugarlessTabContent: React.FC<IContentProps> = (props: IContentProp
     const latest = lastSample(data)
 
     const emptyState = (): React.ReactNode => {
+        /*
+            Antes de arrancar el canal no hay nada que esperar: lo que falta es que el usuario le de a
+            Start. Decirle "esperando la primera lectura" seria mandarle a esperar algo que no va a
+            llegar, porque ni siquiera hay suscripcion al provider todavia.
+        */
+        if (!data.started) {
+            return <EmptyState title='Sugarless not started'
+                detail='Start the channel (tab settings ⚙ → Start) to see the glucose readings.' />
+        }
+
         switch (data.status) {
             case ESugarlessStatus.NOT_CONFIGURED:
                 return <EmptyState title='Not configured yet'
@@ -79,7 +89,9 @@ export const SugarlessTabContent: React.FC<IContentProps> = (props: IContentProp
     return (
         <Card sx={{ flex: 1, width: '98%', alignSelf: 'center', m: 1 }}>
             <CardContent>
-                <Stack direction='row' alignItems='baseline' spacing={2} sx={{ mb: 1, flexWrap: 'wrap' }}>
+                {/* La cabecera con el valor y los contadores solo tiene sentido con el canal en marcha:
+                    antes de arrancar seria un '--' y un '0 reading(s)' que no informan de nada. */}
+                {data.started && <Stack direction='row' alignItems='baseline' spacing={2} sx={{ mb: 1, flexWrap: 'wrap' }}>
                     <Typography variant='h3' sx={{ color: valueColor(), lineHeight: 1 }}>
                         {latest ? latest.value : '--'}
                     </Typography>
@@ -90,7 +102,7 @@ export const SugarlessTabContent: React.FC<IContentProps> = (props: IContentProp
                         <Chip size='small' variant='outlined' label={`target ${data.targetLow}–${data.targetHigh}`} />}
                     {data.paused && <Chip size='small' color='warning' label='paused' />}
                     <Typography variant='body2' color='text.secondary'>{data.samples.length} reading(s)</Typography>
-                </Stack>
+                </Stack>}
 
                 <Box ref={boxRef} sx={{ height: `calc(100vh - ${boxTop}px - 35px)`, minHeight: 220 }}>
                     {data.samples.length === 0

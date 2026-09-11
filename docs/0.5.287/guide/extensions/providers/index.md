@@ -39,6 +39,7 @@ Add these from **☰ → Manage extensions → Providers**:
 | **[OpenTelemetry](otel)** | Turns kwirth into an **OTLP/HTTP receiver** — any OTel-instrumented service can push **traces, metrics and logs** straight to kwirth. | OTLP endpoint/port. |
 | **[Syslog](syslog)** | Receives **syslog** messages and streams them into channels. | Listen protocol/port, framing, relay. |
 | **[HTTP Pull-Push](http-pull-push)** | **Polls** remote HTTP endpoints on a schedule and pushes each result to the subscribed channels — for sources that cannot push to you. | Per connection: url, interval, auth, timeout. |
+| **[Sugarless](sugarless)** | Reads glucose readings from LibreLinkUp and keeps a rolling history for the channels that chart them. | One account: credentials, region, interval, history size. |
 | **[Trivy](trivy)** | Watches the **Trivy Operator** CRDs and streams vulnerability / config-audit / secret findings. | Backs the **[Trivy](../plugins/trivy)** channel. |
 | **[Sample](sample)** | Reference implementation for **provider developers**. | Starting point for custom providers. |
 

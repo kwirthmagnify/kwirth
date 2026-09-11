@@ -365,8 +365,24 @@ para ver los eventos en crudo. Ese es el MVP de la fase y la razón de ordenarla
 **F2 — Plugin con gráfico.** Canal cluster-scoped, suscripción por instancia, gráfica en vivo, los
 tres estados vacíos, README.
 
-**F3 — Cierre.** Registro de ambos en `back/kwirth-dev.json`, tests de harness, e2e, documentación y
-publicación (npm público + `manifest.json` de `providers/` y de `plugins/`).
+**F3 — Cierre. ✅ CL9 completado el 2026-09-11**, salvo la publicación.
+
+| # | Punto | Estado |
+|---|---|---|
+| 1 | harness | ✅ provider **81** · plugin **27** |
+| 2 | e2e + métricas | ✅ `front/e2e/tests/sugarless.spec.ts` **4/4** · cobertura provider **91,11/75,75/92,59**, plugin **96,80/90,40/84,27** · histórico en el `docs/plan/` de cada artefacto |
+| 3 | qa manual | ✅ validado por el usuario |
+| 4 | guía | ✅ 4 páginas nuevas (guía + referencia, de provider y de plugin) y 9 puntos de índice/sidebar |
+| 5 | backlog | ✅ este documento |
+| 6 | plan | ✅ este documento |
+| 7 | commit | ✅ |
+| 8 | tag | ✅ `provider/sugarless@0.1.0` · `plugin/sugarless@0.1.0` |
+| 9 | push | ✅ |
+
+**Pendiente, y es decisión del usuario: la publicación.** `npm publish` contra el registro público y las
+entradas en `providers/manifest.json` y `plugins/manifest.json`. Es el único paso irreversible del cierre
+y no se ha dado sin autorización explícita. Hasta entonces, los dos artefactos viven en
+`back/kwirth-dev.json` y son perfectamente usables en el entorno de desarrollo.
 
 Los tests y el README de cada artefacto son parte de "hecho" de su fase, no de F3.
 

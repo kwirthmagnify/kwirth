@@ -39,14 +39,21 @@ await esbuild.build({
     outdir: OUT_DIR,
     outbase: TEST_DIR,
     outExtension: { '.js': '.mjs' },
+    sourcemap: process.env.COVERAGE ? 'inline' : false,   // COVERAGE=1 -> mapea la cobertura a src/
     external: ['express', '@kwirthmagnify/kwirth-common-back', '@kwirthmagnify/kwirth-common'],
     loader: { '.ts': 'ts' },
 })
 
 const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String).filter(f => f.endsWith('.mjs')).map(f => path.join(OUT_DIR, f))
 
+// Cobertura: es el punto 2 del cierre (CL9). Mide los modulos que el harness CARGA, no todo el
+// codigo: los componentes React los cubre el e2e y no entran en esta medida.
+const covArgs = process.env.COVERAGE
+    ? ['--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**']
+    : []
+
 try {
-    execFileSync('node', ['--test', ...bundled], { stdio: 'inherit' })
+    execFileSync('node', ['--test', ...covArgs, ...bundled], { stdio: 'inherit' })
 }
 catch {
     process.exit(1)

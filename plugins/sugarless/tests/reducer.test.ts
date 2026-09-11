@@ -168,3 +168,16 @@ test('every trend has its own glyph, and stable points sideways', () => {
 test('lastSample is undefined while there is nothing', () => {
     assert.equal(lastSample(new SugarlessData()), undefined)
 })
+
+test('a fresh tab is NOT started, which is what the empty state keys off', () => {
+    /*
+        Antes de arrancar el canal, la pestaña no debe decir "esperando la primera lectura": no hay
+        nada esperando, falta que el usuario le de a Start. El componente lo decide con este flag, asi
+        que aqui se fija que arranca en false y que startChannel es quien lo pone a true.
+    */
+    const data = new SugarlessData()
+    assert.equal(data.started, false)
+
+    // Y el estado por defecto sigue siendo WAITING: es lo correcto UNA VEZ arrancado.
+    assert.equal(data.status, ESugarlessStatus.WAITING)
+})
