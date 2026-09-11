@@ -6,7 +6,7 @@
   "version": "0.2.21",
   "website": "https://kwirthmagnify.dev",
   "description": "File Manager channel plugin for Kwirth",
-  "icon": "FolderCopyTwoTone",
+  "icon": "FolderCopy",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",

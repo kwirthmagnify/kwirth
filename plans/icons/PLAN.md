@@ -36,14 +36,24 @@ Olvidar la 2 y la 4 produce falsos "sin usar". Pasó: `NotificationsOff` salió 
 - **Cascada de common-front 0.5.54**: rango subido en los 22 dependientes. No se republicaron los
   artefactos, por lo dicho arriba: saldrían idénticos byte a byte.
 
+- **Poda de los cinco sin uso** (2026-09-11): `Block`, `Checklist`, `DarkModeOutlined`,
+  `LightModeOutlined` y `Panorama` fuera del barrel. common-front 0.5.55. Antes de borrarlos se
+  comprobó, **solo sobre fuentes** (`.ts`/`.tsx`/`.json`), que no había ni una cita entrecomillada ni
+  un uso como componente: los cinco nombres solo aparecían en su propia línea del barrel. Verificado
+  con `tsc` y con el build del front, que ademas bajó 729 B. El barrel queda en 144.
+  ⚠️ Lo que no se puede verificar desde aquí: una extensión de terceros, fuera del árbol, que pida uno
+  por nombre. Se asumió ese riesgo a sabiendas.
+
+## Trampa al verificar esto
+
+No barrer `.js`: `back/front/static/js`, `docker/bundle`, `electron/bundle`, `external/bundle` y
+`tauri/src-tauri/{resources,target}` son **copias del front compilado** y llevan el barrel entero
+minificado dentro, así que los 149 nombres dan positivo ahí. Dos barridos seguidos salieron
+inservibles por esto. Buscar en `.ts`, `.tsx` y `.json`, y punto.
+
 ## Pendiente
 
-### 1. Cinco iconos sin ningún uso
-`Block`, `Checklist`, `DarkModeOutlined`, `LightModeOutlined`, `Panorama`. Son los únicos candidatos a
-poda. ⚠️ Es cambio de contrato: cualquier extensión de terceros puede pedirlos por nombre y se quedaría
-sin icono. Ahorro real: cinco módulos de icono.
-
-### 2. `getNodeMeta()` no tiene consumidor
+### 1. `getNodeMeta()` no tiene consumidor
 Doce senders lo implementan (`{ label, icon: 'AccessTime' }`) y **nadie lo llama**: es opcional en
 `ISender`/`IWebhook` y el diseñador de composite resuelve sus tipos con iconos fijos. De ahí que
 `AccessTime`, `CallSplit`, `Email` y `Speed` solo estén citados por nombre y no se pinten nunca. O se

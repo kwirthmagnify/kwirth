@@ -1,6 +1,6 @@
 ﻿import React, { useRef, useState } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, Menu, MenuItem, Select, Stack, Tab, Tabs, TextareaAutosize, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
-import { ScienceOutlined, Upload, Bolt, FileDownload, FileUpload, CheckCircleOutline, HistoryOutlined, DeleteOutlined } from '@mui/icons-material'
+import { ScienceOutlined, Upload, Bolt, FileDownload, FileUpload, CheckCircle, HistoryOutlined, DeleteOutline } from '@mui/icons-material'
 import { EK8sEvent, EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState, k8sEventsAvailable, kindsAvailable } from './PinocchioConfig'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard as _useKeyboard, HelpButton as _HelpButton } from '@kwirthmagnify/kwirth-common-front'
@@ -423,7 +423,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                             <Box sx={{ flex: 1 }} />
                             <Tooltip title='Upload LLM, steps, tools and system to backend'>
                                 <span>
-                                    <Button variant={configApplied ? 'text' : 'outlined'} startIcon={configApplied ? <CheckCircleOutline color='success' /> : <Upload />} onClick={handleApply} disabled={!llm} color={configApplied ? 'success' : 'primary'}>
+                                    <Button variant={configApplied ? 'text' : 'outlined'} startIcon={configApplied ? <CheckCircle color='success' /> : <Upload />} onClick={handleApply} disabled={!llm} color={configApplied ? 'success' : 'primary'}>
                                         {configApplied ? 'Config applied' : 'Apply Config'}
                                     </Button>
                                 </span>
@@ -505,7 +505,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                                 {entry.space} · {entry.type}
                             </Typography>
                             <IconButton size='small' onClick={e => { e.stopPropagation(); removeFromHistory(i) }}>
-                                <DeleteOutlined sx={{ fontSize: 14 }} />
+                                <DeleteOutline sx={{ fontSize: 14 }} />
                             </IconButton>
                         </MenuItem>
                     ))
@@ -515,7 +515,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                                 {entry.length > 80 ? entry.slice(0, 80) + '…' : entry}
                             </Typography>
                             <IconButton size='small' onClick={e => { e.stopPropagation(); removeFromHistory(i) }}>
-                                <DeleteOutlined sx={{ fontSize: 14 }} />
+                                <DeleteOutline sx={{ fontSize: 14 }} />
                             </IconButton>
                         </MenuItem>
                     ))
