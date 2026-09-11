@@ -11,7 +11,7 @@
     "watch": "node watch.mjs"
   },
   "devDependencies": {
-    "@kwirthmagnify/kwirth-common-front": "^0.5.41",
+    "@kwirthmagnify/kwirth-common-front": "^0.5.54",
     "@mui/icons-material": "7.1.2",
     "@mui/material": "7.1.2",
     "@types/react": "^18.3.0",
