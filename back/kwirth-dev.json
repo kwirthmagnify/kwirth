@@ -22,7 +22,8 @@
     "kafka": "../providers/kafka/dist",
     "otel": "../providers/otel/dist",
     "syslog": "../providers/syslog/dist",
-    "trivy": "../providers/trivy/dist"
+    "trivy": "../providers/trivy/dist",
+    "sugarless": "../providers/sugarless/dist"
   },
   "senders": {
     "file": "../senders/file/dist",
