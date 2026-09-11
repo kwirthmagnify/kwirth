@@ -23,6 +23,15 @@ const RemoteBadge: React.FC<{ operative: boolean }> = ({ operative }) => (
     </Tooltip>
 )
 
+/*
+    Canal autonomo: no necesita nada del cluster, asi que la unica view en la que se puede arrancar es
+    'none'. Se reconoce por tener las DOS banderas de invocacion en false — sin 'cluster' no se le
+    puede llamar una vez con '*all', y sin 'resourced' no se le puede llamar por recurso, asi que esa
+    combinacion no tenia ninguna via de arranque hasta que existio la view 'none'.
+*/
+const isAutonomous = (channel: BackChannelData | undefined): boolean =>
+    channel !== undefined && !channel.cluster && !channel.resourced
+
 interface IResourceSelected {
     channelId: string
     clusterName: string
@@ -54,7 +63,7 @@ interface IController {
 
 const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelectorProps) => {
     const [cluster, setCluster] = useState<Cluster>(new Cluster())
-    const [view, setView] = useState('')
+    const [view, setView] = useState<EInstanceConfigView | ''>('')
     const [allNamespaces, setAllNamespaces] = useState<string[]>([])
     const [namespaces, setNamespaces] = useState<string[]>([])
     const [allControllers, setAllControllers] = useState<string[]>([])
@@ -73,6 +82,10 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     const [containerFilter, setContainerFilter] = useState('')
 
     let isDocker = cluster.kwirthData?.clusterType === EClusterType.DOCKER
+
+    // Views que no seleccionan recursos: con ellas los desplegables de namespace/controller/pod/
+    // container no pintan nada que elegir.
+    const noResourceView = view === EInstanceConfigView.CLUSTER || view === EInstanceConfigView.NONE
 
     const loadAllNamespaces = async (cluster:Cluster) => {
         if (cluster?.url) {
@@ -174,8 +187,28 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     }
 
     const onChangeView = (event: SelectChangeEvent) => {
-        let view=event.target.value
+        const view = event.target.value as EInstanceConfigView
         setView(view)
+
+        /*
+            La view 'none' es de canales que no necesitan el cluster, asi que aqui no se consulta
+            nada: el resto de ramas llaman a loadAllNamespaces(), y eso ademas de ser una peticion
+            inutil le saltaria un MsgBox de error a quien no tenga permiso para listar namespaces.
+        */
+        if (view === EInstanceConfigView.NONE) {
+            setNamespaces([])
+            setAllControllers([])
+            setPodsByController(new Map())
+            setPodNamespaces(new Map())
+            setControllers([])
+            setPods([])
+            setAllContainers([])
+            setContainers([])
+            // Un canal no autonomo no puede arrancar con esta view: se deselecciona en vez de dejar
+            // al usuario con un ADD que el back rechazaria sin explicar gran cosa.
+            if (!isAutonomous(props.backChannels.find(c => c.id === channel))) setChannel('')
+            return
+        }
 
         if (isDocker) {
             setNamespaces(['$docker'])
@@ -205,18 +238,18 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             setNamespaces(['$docker'])
             setAllPods([])
             setPods([])
-            if (view!=='namespace') loadAllPods(['$docker'], ['$docker'])
+            if (view!==EInstanceConfigView.NAMESPACE) loadAllPods(['$docker'], ['$docker'])
         }
         else {
             setNamespaces(nss)
-            setAllControllers([...( view==='pod' || view==='container'? ['Pod+No controller']:[])])
+            setAllControllers([...( view===EInstanceConfigView.POD || view===EInstanceConfigView.CONTAINER? ['Pod+No controller']:[])])
             setPodsByController(new Map())
             setPodNamespaces(new Map())
             setControllers([])
             setPods([])
             setAllContainers([])
             setContainers([])
-            if (view!=='namespace') nss.map (ns => loadAllControllers(cluster, ns))
+            if (view!==EInstanceConfigView.NAMESPACE) nss.map (ns => loadAllControllers(cluster, ns))
         }
     }
 
@@ -235,7 +268,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         setPods(pods)
         setAllContainers([])
         setContainers([])
-        if (view === 'container') pods.forEach(pod => loadAllContainers(cluster, podNamespaces.get(pod) ?? namespaces[0], pod))
+        if (view === EInstanceConfigView.CONTAINER) pods.forEach(pod => loadAllContainers(cluster, podNamespaces.get(pod) ?? namespaces[0], pod))
     }
 
     const onChangeContainer = (event: SelectChangeEvent<typeof containers>) => {
@@ -244,12 +277,19 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     }
 
     const onChangeChannel = (event: SelectChangeEvent) => {
-        setChannel(event.target.value as EInstanceMessageChannel)
+        const channelId = event.target.value as EInstanceMessageChannel
+        setChannel(channelId)
+
+        // Un canal autonomo solo funciona con la view 'none', asi que pedirsela al usuario seria
+        // pedirle que adivine.
+        if (isAutonomous(props.backChannels.find(c => c.id === channelId))) setView(EInstanceConfigView.NONE)
     }
 
     const onAdd = () => {
         let tabName = ''
-        if (view===EInstanceConfigView.CLUSTER)
+        if (view===EInstanceConfigView.NONE)
+            tabName = channel.toUpperCase()
+        else if (view===EInstanceConfigView.CLUSTER)
             tabName = 'CLUSTER'
         if (view===EInstanceConfigView.NAMESPACE)
             tabName=namespaces.join('+')
@@ -280,6 +320,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     const addable = () => {
         if (cluster === undefined) return false
         if (channel === EInstanceMessageChannel.NONE || channel ==='') return false
+        if (view===EInstanceConfigView.NONE) return true
         if (view===EInstanceConfigView.CLUSTER) return true
         if (view==='') return false
         if (namespaces.length === 0) return false
@@ -315,8 +356,13 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         props.onChangeCluster(c.name)
         setCluster(c)
         setChannel(props.resourceSelected!.channelId)
-        let v = props.resourceSelected!.view
+        let v = props.resourceSelected!.view as EInstanceConfigView
         setView(v)
+
+        // Restaurar una pestaña de canal autonomo no debe consultar el cluster: no hay recursos que
+        // repoblar, y la peticion fallaria para quien no tenga permiso de listar namespaces.
+        if (v === EInstanceConfigView.NONE) return
+
         let alln=await (await fetch(`${c.url}/config/namespace`, addGetAuthorization(c.accessString))).json()
         setAllNamespaces(alln)
         setNamespaces(props.resourceSelected!.namespaces)
@@ -391,6 +437,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={cluster.name===''}>
                 <InputLabel>View</InputLabel>
                 <Select value={view} onChange={onChangeView} >
+                    <MenuItem key={EInstanceConfigView.NONE} value={EInstanceConfigView.NONE}>none</MenuItem>
                     <MenuItem key={EInstanceConfigView.CLUSTER} value={EInstanceConfigView.CLUSTER}>cluster</MenuItem>
                     <MenuItem key={EInstanceConfigView.NAMESPACE} value={EInstanceConfigView.NAMESPACE} disabled={isDocker}>namespace</MenuItem>
                     <MenuItem key={EInstanceConfigView.GROUP} value={EInstanceConfigView.GROUP} disabled={isDocker}>controller</MenuItem>
@@ -399,11 +446,16 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 </Select>
             </FormControl>
 
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={view==='' || isDocker || view===EInstanceConfigView.CLUSTER}>
+            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={view==='' || isDocker || noResourceView}>
                 <InputLabel>Namespace</InputLabel>
-                <Select onChange={onChangeNamespaces} multiple value={namespaces} renderValue={(selected) => selected.join(', ')} onClose={() => setNsFilter('')}>
+                { /* autoFocus:false en el menu NO es cosmetico: MenuList clona el item ACTIVO con
+                     autoFocus y lo recalcula en cada render, asi que al teclear cambiaba la lista
+                     filtrada, otro MenuItem montaba con foco y se lo robaba al campo de filtro a cada
+                     letra. Apagarlo en el menu tambien apaga autoFocusItem (Menu lo deriva de el), y el
+                     foco inicial lo pone el propio TextField. */ }
+                <Select onChange={onChangeNamespaces} multiple value={namespaces} renderValue={(selected) => selected.join(', ')} onClose={() => setNsFilter('')} MenuProps={{ autoFocus: false }}>
                     <ListSubheader sx={{ p: 0 }}>
-                        <TextField size='small' fullWidth placeholder='Filter...' value={nsFilter} onChange={e => setNsFilter(e.target.value)} onKeyDown={e => e.stopPropagation()} sx={{ px: 1, pt: 0.5 }} />
+                        <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={nsFilter} onChange={e => setNsFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
                     </ListSubheader>
                 { allNamespaces && allNamespaces.filter(ns => ns.toLowerCase().includes(nsFilter.toLowerCase())).map( (namespace:string) => {
                     return (
@@ -416,11 +468,11 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 </Select>
             </FormControl>
 
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={namespaces.length===0 || view==='namespace' || isDocker  || view===EInstanceConfigView.CLUSTER}>
+            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={namespaces.length===0 || view===EInstanceConfigView.NAMESPACE || isDocker || noResourceView}>
                 <InputLabel>Controller</InputLabel>
-                <Select onChange={onChangeController} value={controllers} multiple renderValue={(selected) => selected.map(v => v.split('+')[1]).join(', ')} onClose={() => setCtrlFilter('')}>
+                <Select onChange={onChangeController} value={controllers} multiple renderValue={(selected) => selected.map(v => v.split('+')[1]).join(', ')} onClose={() => setCtrlFilter('')} MenuProps={{ autoFocus: false }}>
                     <ListSubheader sx={{ p: 0 }}>
-                        <TextField size='small' fullWidth placeholder='Filter...' value={ctrlFilter} onChange={e => setCtrlFilter(e.target.value)} onKeyDown={e => e.stopPropagation()} sx={{ px: 1, pt: 0.5 }} />
+                        <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={ctrlFilter} onChange={e => setCtrlFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
                     </ListSubheader>
                 { allControllers && allControllers.filter(v => v.split('+')[1].toLowerCase().includes(ctrlFilter.toLowerCase())).map( (value) =>
                     <MenuItem key={value} value={value} sx={{alignContent:'baseline'}}>
@@ -438,9 +490,9 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
             <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={(!isDocker && (controllers.length === 0 || view===EInstanceConfigView.NAMESPACE || view===EInstanceConfigView.GROUP)) || (isDocker && (view ==='namespace' || namespaces.length === 0))}>
                 <InputLabel >Pod</InputLabel>
-                <Select value={pods} onChange={onChangePod} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setPodFilter('')}>
+                <Select value={pods} onChange={onChangePod} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setPodFilter('')} MenuProps={{ autoFocus: false }}>
                     <ListSubheader sx={{ p: 0 }}>
-                        <TextField size='small' fullWidth placeholder='Filter...' value={podFilter} onChange={e => setPodFilter(e.target.value)} onKeyDown={e => e.stopPropagation()} sx={{ px: 1, pt: 0.5 }} />
+                        <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={podFilter} onChange={e => setPodFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
                     </ListSubheader>
                 { allPods && allPods.filter(v => v.toLowerCase().includes(podFilter.toLowerCase())).map( (value:string) =>
                     <MenuItem key={value} value={value} sx={{alignContent:'center'}}>
@@ -452,9 +504,9 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
             <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={pods.length === 0 || view===EInstanceConfigView.NAMESPACE || view===EInstanceConfigView.GROUP || view===EInstanceConfigView.POD}>
                 <InputLabel >Container</InputLabel>
-                <Select value={containers} onChange={onChangeContainer} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setContainerFilter('')}>
+                <Select value={containers} onChange={onChangeContainer} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setContainerFilter('')} MenuProps={{ autoFocus: false }}>
                     <ListSubheader sx={{ p: 0 }}>
-                        <TextField size='small' fullWidth placeholder='Filter...' value={containerFilter} onChange={e => setContainerFilter(e.target.value)} onKeyDown={e => e.stopPropagation()} sx={{ px: 1, pt: 0.5 }} />
+                        <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={containerFilter} onChange={e => setContainerFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
                     </ListSubheader>
                 { allContainers && allContainers.filter(v => v.split('+')[1].toLowerCase().includes(containerFilter.toLowerCase())).map( (value:string) =>
                     <MenuItem key={value} value={value} sx={{alignContent:'center'}}>
@@ -485,7 +537,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                         const cls = props.frontChannels?.get(c.id)
                         const icon = cls ? React.cloneElement(new cls().getChannelIcon(), { sx: { fontSize: 18, mr: 0.5 } }) : null
                         return (
-                            <MenuItem key={c.id} value={c.id} disabled={(view===EInstanceConfigView.CLUSTER && !c.cluster)}>
+                            <MenuItem key={c.id} value={c.id} disabled={(view===EInstanceConfigView.CLUSTER && !c.cluster) || (view===EInstanceConfigView.NONE && !isAutonomous(c))}>
                                 <Stack direction='row' alignItems='center'>
                                     {icon}
                                     <span>{c.id}</span>
