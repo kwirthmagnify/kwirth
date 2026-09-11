@@ -15,4 +15,3 @@ Detailed configuration and usage reference for each available kwirth plugin.
 | [Echo](echo) | Reference implementation for plugin developers |
 | [News](news) | RSS feed streaming — reference for external-data plugins |
 | [Provider Debug](provider-debug) | Subscribe to a running provider and inspect its raw events |
-| [Sugarless](sugarless) | Chart glucose readings from the sugarless provider; the first autonomous channel (view `none`) |

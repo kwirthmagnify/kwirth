@@ -33,6 +33,5 @@ Each card shows the plugin's **name**, **version**, a short **description** and 
 | 📰 [News](news) | RSS news feed reader (demo) | plugin |
 | 🧪 [Echo](echo) | Reference/demo channel for plugin authors | plugin |
 | 🧩 [Provider Debug](provider-debug) | Watch the raw events a provider emits | plugin |
-| 🩸 [Sugarless](sugarless) | Chart glucose readings in real time — the first channel that needs nothing from the cluster | plugin |
 
 > All channels share the same [lifecycle](../../user/05-channels): select resources → **ADD** → gear **▶ Start** → configure → read. Follow the links above for each channel's specific configuration and usage.

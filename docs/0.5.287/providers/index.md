@@ -14,7 +14,6 @@ Kwirth currently ships with the following providers:
   - **[Kafka](reference/kafka)**. Connects to one or more Kafka broker sets and distributes topic messages to channels via the same space/type routing model as Business.
   - **[OpenTelemetry](reference/otel)**. Turns kwirth into an OTLP/HTTP receiver — any OTel-instrumented service can push traces, metrics, and logs directly to kwirth.
   - **[HTTP Pull-Push](reference/http-pull-push)**. Polls remote HTTP endpoints on a schedule and pushes each result to the subscribing channels — for data sources that cannot push into kwirth by themselves.
-  - **[Sugarless](reference/sugarless)**. Reads glucose readings from LibreLinkUp and keeps a rolling history in memory — a session with a computed header, which is why it is its own provider and not an HTTP Pull-Push connection.
   - **[Sample](reference/sample)**. Reference implementation for provider developers. Use it as a starting point for building custom providers.
 
 ## Architecture

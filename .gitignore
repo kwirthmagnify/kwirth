@@ -50,6 +50,8 @@ kwirth-bundled.json
 /plugins/excubitor/
 /plugins/agora/
 /plugins/iter/
+/plugins/sugarless/
+/providers/sugarless/
 /iria/
 /providers/service-flow/
 /senders/jira/
