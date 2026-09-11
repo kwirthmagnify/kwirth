@@ -116,3 +116,42 @@ Work:
 - Bump + build + publish (OSS: public npm + public manifest), and re-check its guide page.
 
 Deprioritised by the user (syslog is not in use), so it runs after the `http-pull-push` block.
+
+---
+
+## BUG PENDIENTE (2026-09-11): un provider instalado en caliente no monta su `configRouter`
+
+Detectado al preguntarse por qué un provider dueño de su configuración tiene que declarar
+`requiresRestart: true`. La respuesta es un hueco del cableado, no una limitación necesaria.
+
+El `configRouter` solo se engancha en **dos** sitios:
+
+| Dónde | Cuándo corre |
+|---|---|
+| `back/src/index.ts:1483` | Al **arrancar**, recorriendo los providers vivos |
+| `back/src/index.ts:1365` | Al instalar **un plugin** en caliente, para los providers que ese plugin declara en `requiresExtension` |
+
+No hay un tercero. `ProviderApi` define el callback `onProviderInstalled` y lo invoca en sus dos rutas de
+instalación (`/install` y `/upload`), pero **`index.ts` no lo implementa**: queda `undefined` y no pasa
+nada.
+
+**Consecuencia:** instalar un provider **por su cuenta** desde el marketplace deja su ruta sin montar. El
+diálogo se pinta igual —el front se sirve aparte— y todo lo que el usuario haga responde `HTTP 404`.
+
+**Y el síntoma es peor de lo que parece, porque es intermitente:** si en vez del provider se instala el
+**plugin** que lo requiere, esa otra ruta sí lo instancia y sí monta el router. O sea que el mismo
+producto funciona en caliente o no según por dónde entre el usuario, sin nada que se lo explique.
+
+**Arreglo:** implementar `onProviderInstalled` en `index.ts` — instanciar el provider recién instalado,
+arrancarlo y montar su `configRouter` (y su `router` público si declara `providesRouter`), exactamente lo
+que ya hace el bucle de arranque.
+
+**A quién beneficia:** a todos los providers dueños de su configuración, que hoy arrastran un
+`requiresRestart: true` que dejaría de ser necesario por este motivo: `http-pull-push`, `service-flow` y
+cualquiera de terceros. Ojo: `requiresRestart` seguiría haciendo falta por **otras** razones (un provider
+que registre informers o consuma recursos del arranque), así que el arreglo no lo elimina en bloque — hay
+que revisarlo caso por caso.
+
+**Relacionado:** el mismo hueco explica el aviso que ya se da al instalar estos providers, documentado en
+la guía de administración (`08-extending-kwirth`, *When a restart is needed*). Si esto se arregla, esa
+página hay que revisarla.
