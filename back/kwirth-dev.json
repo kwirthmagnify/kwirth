@@ -14,7 +14,8 @@
 
     "montag": "../plugins/montag/dist",
     "excubitor": "../plugins/excubitor/dist",
-    "iter": "../plugins/iter/dist"
+    "iter": "../plugins/iter/dist",
+    "sugarless": "../plugins/sugarless/dist"
   },
   "providers": {
     "tick": "../providers/tick/dist",

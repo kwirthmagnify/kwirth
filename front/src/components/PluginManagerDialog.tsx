@@ -10,6 +10,7 @@ import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLAC
 import { ERestartAction } from './extensionRestart'
 import { useKeyboard } from '../tools/useKeyboard'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx, dependencyList } from './extensionCardStyle'
+import { sanitizeSvg } from '../tools/sanitizeSvg'
 
 
 interface IRequirement {
@@ -288,7 +289,26 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
         return null
     }
 
+    /*
+        El 'icon' del package.json de una extension admite DOS formas:
+
+          - el nombre de un icono del set curado ('Newspaper', 'Science'...), que es como estaba
+          - un SVG en crudo, para que una extension pueda traer SU icono
+
+        Lo segundo existe porque el set curado lo sirve el paquete comun: un plugin que quisiera un
+        icono propio obligaba a anadir un export a kwirthicons, publicar common-front y reconstruir el
+        core. Para un plugin de terceros eso es directamente imposible.
+
+        El SVG se SANEA con lista blanca antes de pintarlo (ver sanitizeSvg): viene del package.json de
+        una extension que puede haberse instalado desde un marketplace ajeno, y un SVG admite <script>
+        y manejadores on*.
+    */
     const resolveIcon = (iconName?: string): React.ReactElement => {
+        const svg = sanitizeSvg(iconName)
+        if (svg) {
+            return <Box component='span' sx={{ display: 'flex', width: 24, height: 24 }}
+                dangerouslySetInnerHTML={{ __html: svg }} />
+        }
         const IconComponent = iconName ? (MuiIcons as Record<string, React.ElementType>)[iconName] : undefined
         return IconComponent ? <IconComponent /> : <Extension />
     }

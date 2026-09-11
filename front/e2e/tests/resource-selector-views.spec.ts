@@ -115,9 +115,12 @@ test('selecting the none view does not query the cluster', async () => {
 
 test('with the none view, channels that need the cluster are not selectable', async () => {
     /*
-        Hoy NINGUN canal del core es autonomo (sugarless sera el primero), asi que la asercion correcta
-        es que todos aparezcan deshabilitados. Cuando exista uno autonomo, este test es el que avisara
-        de que hay que ampliarlo: dejara de ser cierto que TODOS lo estan.
+        Se comprueba por el lado que no depende de que haya un canal autonomo instalado: los canales
+        que SI necesitan el cluster tienen que quedar fuera. Nombrar 'log' y 'metrics' es seguro
+        porque son del core y siempre estan.
+
+        No se asierta que sugarless este habilitado a proposito: este es un e2e del CORE, y no debe
+        exigir que un plugin concreto este instalado para pasar.
     */
     await pickCombo(page, COMBO_VIEW, 'none')
 
@@ -129,13 +132,17 @@ test('with the none view, channels that need the cluster are not selectable', as
     const total = await options.count()
     expect(total, 'el desplegable de canales no deberia estar vacio').toBeGreaterThan(0)
 
+    let checked = 0
     for (let index = 0; index < total; index++) {
         const option = options.nth(index)
         const name = (await option.innerText()).trim()
+        if (name !== 'log' && name !== 'metrics') continue
+        checked++
         const disabled = await option.getAttribute('aria-disabled')
-        expect(disabled, `el canal '${name}' necesita el cluster, no deberia ser elegible con la view 'none'`).toBe('true')
+        expect(disabled, `el canal '${name}' necesita recursos del cluster, no deberia ser elegible con la view 'none'`).toBe('true')
     }
 
+    expect(checked, 'no se ha encontrado ningun canal del core en la lista: la asercion no ha probado nada').toBeGreaterThan(0)
     await page.keyboard.press('Escape')
 })
 
