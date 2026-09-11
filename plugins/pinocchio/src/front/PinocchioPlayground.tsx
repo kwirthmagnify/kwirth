@@ -1,6 +1,6 @@
 ﻿import React, { useRef, useState } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, Menu, MenuItem, Select, Stack, Tab, Tabs, TextareaAutosize, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
-import { Science, Upload, Bolt, Download, FileUpload, CheckCircle, HistoryOutlined, Delete } from '@mui/icons-material'
+import { Science, Upload, Bolt, Download, CheckCircle, HistoryOutlined, Delete } from '@mui/icons-material'
 import { EK8sEvent, EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState, k8sEventsAvailable, kindsAvailable } from './PinocchioConfig'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard as _useKeyboard, HelpButton as _HelpButton } from '@kwirthmagnify/kwirth-common-front'
@@ -488,7 +488,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                     <input ref={uploadRef} type='file' accept='.json' style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadConfig(f) }} />
                     <Button variant='outlined' size='small' startIcon={<Upload />} onClick={() => setShowImportDialog(true)}>Import</Button>
                     <Button variant='outlined' size='small' startIcon={<Download />} onClick={openExportDialog}>Export</Button>
-                    <Button variant='outlined' size='small' startIcon={<FileUpload />} onClick={() => uploadRef.current?.click()}>Upload</Button>
+                    <Button variant='outlined' size='small' startIcon={<Upload />} onClick={() => uploadRef.current?.click()}>Upload</Button>
                     <Button variant='outlined' size='small' startIcon={<Download />} onClick={downloadConfig}>Download</Button>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>

@@ -4,7 +4,7 @@ import {
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
-import { Add, ContentCopy, Delete, Download, FileUpload } from '@mui/icons-material'
+import { Add, ContentCopy, Delete, Download, Upload } from '@mui/icons-material'
 import {
     EAuthType, EEmitMode, EHttpMethod, EResponseType, IHttpPullConfig, IHttpPullTestResult, newHttpPullConfig
 } from '../common/HttpPullPush'
@@ -490,7 +490,7 @@ const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ on
                         </span>
                     </Tooltip>
                     <Tooltip title='Import connections from JSON'>
-                        <Button size='small' startIcon={<FileUpload />} onClick={() => importFileRef.current?.click()}>Import</Button>
+                        <Button size='small' startIcon={<Upload />} onClick={() => importFileRef.current?.click()}>Import</Button>
                     </Tooltip>
                 </Stack>
                 <Button onClick={onClose} disabled={saving}>Close</Button>

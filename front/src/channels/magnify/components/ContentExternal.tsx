@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAsync } from 'react-use'
 import { Box, DialogContent, DialogTitle, Divider, IconButton, Popover, Stack, Typography } from '@mui/material'
-import { Info, PauseCircle, PlayCircle, Settings, StopCircle } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Info, Pause, PlayArrow, Settings, Stop } from '@kwirthmagnify/kwirth-common-front/icons'
 
 import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelObject, IContentProps } from '../../IChannel'
@@ -687,13 +687,13 @@ const containerRef = useRef<HTMLDivElement>(null)
             <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
                 <Stack direction={'row'} alignItems={'center'}>
                     <IconButton size="small" onClick={play} disabled={!contentExternalData.options.autostart || (contentExternalData.content?.externalChannelStarted && !contentExternalData.content?.externalChannelPaused)}>
-                        <PlayCircle fontSize="small"/>
+                        <PlayArrow fontSize="small"/>
                     </IconButton>
                     <IconButton size="small" onClick={pause} disabled={!contentExternalData.options.pauseable || !contentExternalData.content?.externalChannelStarted || contentExternalData.content?.externalChannelPaused}>
-                        <PauseCircle fontSize="small"/>
+                        <Pause fontSize="small"/>
                     </IconButton>
                     <IconButton size="small" onClick={stop} disabled={!contentExternalData.options.stoppable || !contentExternalData.content?.externalChannelStarted}>
-                        <StopCircle fontSize="small"/>
+                        <Stop fontSize="small"/>
                     </IconButton>
                     <IconButton size="small" disabled={!contentExternalData.options.configurable} onClick={(event) => setAnchorConfig(event.target as HTMLElement)}>
                         <Settings fontSize="small"/>

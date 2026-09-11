@@ -4,7 +4,7 @@ import {
     DialogTitle, Divider, FormControlLabel, IconButton, List, ListItem, ListItemButton,
     ListItemText, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
-import { AccountTree, Add, Delete, Download, FileUpload, FilterAlt, Send } from '@mui/icons-material'
+import { AccountTree, Add, Delete, Download, Upload, FilterAlt, Send } from '@mui/icons-material'
 import { IAvailableSender, ICompositeNode, IPipelineConfig } from './types'
 import { createNode, nodeAtPath } from './treeUtils'
 import PipelineCanvas from './PipelineCanvas'
@@ -439,7 +439,7 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
                         </span>
                     </Tooltip>
                     <Tooltip title='Import pipelines from JSON'>
-                        <Button size='small' startIcon={<FileUpload />} onClick={() => importFileRef.current?.click()}>Import</Button>
+                        <Button size='small' startIcon={<Upload />} onClick={() => importFileRef.current?.click()}>Import</Button>
                     </Tooltip>
                 </Stack>
                 <Button onClick={onClose}>Close</Button>

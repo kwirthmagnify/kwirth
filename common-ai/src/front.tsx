@@ -15,7 +15,7 @@ import {
     propia copia—, y common-front y common-ai son la excepcion documentada.
 */
 import Download from '@mui/icons-material/Download'
-import FileUpload from '@mui/icons-material/FileUpload'
+import Upload from '@mui/icons-material/Upload'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 
@@ -202,7 +202,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                     reader.readAsText(f)
                     e.target.value = ''
                 }} />
-                <Button startIcon={<FileUpload fontSize='small' />} onClick={() => importLlmRef.current?.click()}>Import</Button>
+                <Button startIcon={<Upload fontSize='small' />} onClick={() => importLlmRef.current?.click()}>Import</Button>
                 <Button startIcon={<Download fontSize='small' />} onClick={() => downloadJson(llms, 'kwirth-llms.json')}>Export</Button>
                 <Box flex={1} />
                 <Button onClick={() => props.onClose(llms)} variant='contained'>OK</Button>
@@ -370,7 +370,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                     reader.readAsText(f)
                     e.target.value = ''
                 }} />
-                <Button startIcon={<FileUpload fontSize='small' />} onClick={() => importProvRef.current?.click()}>Import</Button>
+                <Button startIcon={<Upload fontSize='small' />} onClick={() => importProvRef.current?.click()}>Import</Button>
                 <Button startIcon={<Download fontSize='small' />} onClick={() => downloadJson(providers.map(p => ({ name: p.name, type: p.type ?? p.name, key: p.key, ...(p.endpoint ? { endpoint: p.endpoint } : {}) })), 'kwirth-providers.json')}>Export</Button>
                 <Box flex={1} />
                 <Button onClick={() => props.onClose(providers)} color='primary' variant='contained'>Save</Button>

@@ -1,5 +1,5 @@
 import { IFileObject, ISpace, ISpaceMenuItem } from '@jfvilas/react-file-manager'
-import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, ManageSearch, PauseCircle, PlayCircle, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@kwirthmagnify/kwirth-common-front/icons'
+import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, ManageSearch, Pause, PlayArrow, RestartAlt, Search, Stop, Subject, Terminal, VerifiedUser } from '@kwirthmagnify/kwirth-common-front/icons'
 import { Cluster, Config, Customize, Kubernetes, Network, Pod, Security, Settings, Storage } from '../icons/Icons'
 
 const spaces = new Map<string, ISpace>()
@@ -1790,21 +1790,21 @@ spaces.set('Node',
             },
             {
                 name: 'cordon',
-                icon: <PauseCircle fontSize='small' />,
+                icon: <Pause fontSize='small' />,
                 text: 'Cordon',
                 multi: true,
                 permission: true,
             },
             {
                 name: 'uncordon',
-                icon: <PlayCircle fontSize='small' />,
+                icon: <PlayArrow fontSize='small' />,
                 text: 'UnCordon',
                 multi: true,
                 permission: true,
             },
             {
                 name: 'drain',
-                icon: <StopCircle fontSize='small' />,
+                icon: <Stop fontSize='small' />,
                 text: 'Drain',
                 multi: true,
                 permission: true,
@@ -2840,17 +2840,17 @@ spaces.set('CronJob',
                 permission: true,
             },
             {   name: 'trigger',
-                icon: <PlayCircle fontSize='small'/>,
+                icon: <PlayArrow fontSize='small'/>,
                 text: 'Trigger',
                 permission: true,
             },
             {   name: 'suspend',
-                icon: <PauseCircle fontSize='small'/>,
+                icon: <Pause fontSize='small'/>,
                 text: 'Suspend',
                 permission: true,
             },
             {   name: 'resume',
-                icon: <PlayCircle fontSize='small'/>,
+                icon: <PlayArrow fontSize='small'/>,
                 text: 'Resume',
                 permission: true,
             },

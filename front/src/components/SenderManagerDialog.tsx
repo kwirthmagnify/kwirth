@@ -5,7 +5,7 @@ import {
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography, useTheme
 } from '@mui/material'
-import { Add, CheckCircle, CloudQueue, ContentCopy, Delete, Download, FileUpload, FolderOpen, Https, Link, Launch, Refresh, Send, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Add, CheckCircle, CloudQueue, ContentCopy, Delete, Download, Upload, FolderOpen, Https, Link, Launch, Refresh, Send, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
@@ -824,7 +824,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                         <Button size='small' startIcon={<Download />} onClick={exportAll}>Export all</Button>
                     </Tooltip>
                     <Tooltip title='Import sender configs from JSON (all senders)'>
-                        <Button size='small' startIcon={<FileUpload />} onClick={() => senderFileInputRef.current?.click()}>Import all</Button>
+                        <Button size='small' startIcon={<Upload />} onClick={() => senderFileInputRef.current?.click()}>Import all</Button>
                     </Tooltip>
                 </Stack>
                 <Button onClick={props.onClose}>Close</Button>
@@ -928,7 +928,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
                             </span>
                         </Tooltip>
                         <Tooltip title='Import configs from JSON'>
-                            <Button size='small' startIcon={<FileUpload />} onClick={() => configImportFileRef.current?.click()}>Import</Button>
+                            <Button size='small' startIcon={<Upload />} onClick={() => configImportFileRef.current?.click()}>Import</Button>
                         </Tooltip>
                     </Stack>
                     <Button onClick={() => setExpandedId(undefined)}>Close</Button>

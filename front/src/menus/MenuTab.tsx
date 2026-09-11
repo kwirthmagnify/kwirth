@@ -1,6 +1,6 @@
 import React from 'react'
 import { Collapse, Menu, MenuItem, MenuList, Typography } from '@mui/material'
-import { Check, Pause, PlayArrow, RemoveCircleRounded,  Stop, ExpandLess, ExpandMore, DriveFileRenameOutline, KeyboardArrowLeft, KeyboardArrowRight, KeyboardDoubleArrowLeft, KeyboardDoubleArrowRight, PlayCircle, Info, FactCheck, Fullscreen } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Check, Pause, PlayArrow, Delete, Stop, ExpandLess, ExpandMore, DriveFileRenameOutline, KeyboardArrowLeft, KeyboardArrowRight, KeyboardDoubleArrowLeft, KeyboardDoubleArrowRight, Info, FactCheck, Fullscreen } from '@kwirthmagnify/kwirth-common-front/icons'
 import { ITabObject } from '../model/ITabObject'
 import { BackChannelData } from '@kwirthmagnify/kwirth-common'
 
@@ -46,12 +46,12 @@ const MenuTab: React.FC<IMenuTabProps> = (props:IMenuTabProps) => {
                 <MenuItem key='tabmr' onClick={() => props.optionSelected(MenuTabOption.TabMoveRight)} disabled={props.selectedTabIndex===props.tabs.length-1} sx={{pl:5}}><KeyboardArrowRight/>Move to right</MenuItem>
                 <MenuItem key='tabms' onClick={() => props.optionSelected(MenuTabOption.TabMoveFirst)} disabled={props.selectedTabIndex===0} sx={{pl:5}}><KeyboardDoubleArrowLeft/>&nbsp;Move to start</MenuItem>
                 <MenuItem key='tabme' onClick={() => props.optionSelected(MenuTabOption.TabMoveLast)} disabled={props.selectedTabIndex===props.tabs.length-1} sx={{pl:5}}><KeyboardDoubleArrowRight/>&nbsp;Move to end</MenuItem>
-                <MenuItem key='tabrm' onClick={() => props.optionSelected(MenuTabOption.TabRemove)} sx={{pl:5}}><RemoveCircleRounded/>&nbsp;Remove</MenuItem>
+                <MenuItem key='tabrm' onClick={() => props.optionSelected(MenuTabOption.TabRemove)} sx={{pl:5}}><Delete/>&nbsp;Remove</MenuItem>
                 <MenuItem key='restoreparms' onClick={() => props.optionSelected(MenuTabOption.TabRestoreParameters)} sx={{pl:5}}><FactCheck/>&nbsp;Restore tab parameters</MenuItem>
                 <MenuItem key='fullscreen' onClick={() => props.optionSelected(MenuTabOption.FullScreen)} sx={{pl:5}}><Fullscreen/>&nbsp;Full screen (Ctrl+Alt+F11)</MenuItem>
             </Collapse>
             
-            <MenuItem key='channelstart' onClick={() => props.optionSelected(MenuTabOption.ChannelStart)} disabled={props.selectedTab?.channelStarted}><PlayCircle/>&nbsp;Start</MenuItem>
+            <MenuItem key='channelstart' onClick={() => props.optionSelected(MenuTabOption.ChannelStart)} disabled={props.selectedTab?.channelStarted}><PlayArrow/>&nbsp;Start</MenuItem>
             <MenuItem key='channelpause' onClick={() => props.optionSelected(MenuTabOption.ChannelPause)} disabled={!props.selectedTab?.channelStarted || !pauseable}>{props.selectedTab?.channelPaused?<><PlayArrow/>Resume</>:<><Pause/>Pause</>}</MenuItem>
             <MenuItem key='channelstop' onClick={() => props.optionSelected(MenuTabOption.ChannelStop)} disabled={!props.selectedTab?.channelStarted}><Stop/>&nbsp;Stop</MenuItem>
 
