@@ -329,9 +329,10 @@ El enum vive en `src/common` del provider porque cruza la frontera back↔front 
 **Decisión 2: el plugin solo muestra el gráfico.** Sin configuración propia: todo lo configurable vive
 en el provider.
 
-- Canal **cluster-scoped y no basado en recursos**: `cluster: true`, `resourced: false`. Esto es
-  identidad del producto, no un detalle: si el canal pidiera seleccionar pods para arrancar, la demo se
-  desmontaría sola. La instancia llega vía `addObject('*all')`, como en `provider-debug`.
+- Canal **autónomo**: `cluster: false` **y** `resourced: false`. Esto es identidad del producto, no un
+  detalle: si el canal pidiera seleccionar pods para arrancar, la demo se desmontaría sola — y pedir
+  ámbito de clúster para no mirar ni un pod la desmontaba igual. Se arranca con la view `none`, que
+  hubo que cablear en el core para esto (ver `plans/instance-view-none/PLAN.md`).
 - `requiresExtension: ["provider:sugarless:<ver>"]`, patrón de `plugins/echo`.
 - `pauseable: true` (congelar el gráfico durante una explicación es útil), `modifiable: false`.
 - Contenido de la pestaña: una gráfica de línea temporal, con
@@ -349,6 +350,12 @@ en el provider.
 ## 7. Fases
 
 Cada fase entrega algo usable por sí solo.
+
+> **F1 y F2 CERRADAS el 2026-09-11**, ambas validadas en vivo contra la API real. Dos cambios sobre
+> lo planeado, los dos a mejor: el canal resultó ser **autónomo** (`cluster:false` + `resourced:false`,
+> view `none`) en vez de cluster-scoped, lo que exigió cablear esa view en el core
+> (`plans/instance-view-none/PLAN.md`); y el icono es un **SVG propio** del plugin, para lo que el core
+> pasó a aceptar SVG en el campo `icon` del `package.json`, saneado con lista blanca.
 
 **F1 — Provider operativo.** Configuración + persistencia partida + login + polling + dedupe + ring
 buffer + snapshot al suscribirse + diálogo de configuración con test de credenciales + README.
