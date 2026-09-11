@@ -148,8 +148,18 @@ Por eso `http-pull-push` se fabricó su propio `ConfigStore`, y Sugarless copia 
 Endpoints propios, montados por el core en `/core/providerconfig/sugarless`, siempre detrás de
 validación de accessKey:
 
-- `GET /config` — configuración actual. **Nunca devuelve la contraseña**, solo si está puesta o no.
-- `PUT /config` — la reemplaza (validada, persistida y aplicada en caliente).
+- `GET /config` — configuración actual **completa, contraseña incluida**. El diálogo la pinta
+  enmascarada con un ojo para revelarla.
+- `PUT /config` — la reemplaza (validada, persistida y aplicada en caliente). **Se persiste lo que
+  llega**, sin merges.
+
+> **Corregido el 2026-09-11 tras un error.** La primera implementación devolvía un `hasPassword` en
+> lugar del valor y hacía un merge "campo vacío = no la cambies" en el PUT. Eso **está prohibido en
+> este proyecto** y está escrito en `.claude/CLAUDE.md`: en Kwirth los secretos se manejan como
+> cualquier otro dato — viajan al front y se ocultan **solo en la UI**, con `type='password'` y un
+> toggle de ojo. Lo que hace que un campo sea secreto es únicamente **dónde se persiste** (Secret en
+> vez de ConfigMap), no que se esconda del navegador. Referencia viva: `http-pull-push`, cuyo
+> `GET /configs` devuelve las conexiones con las credenciales recompuestas del Secret.
 - `POST /test` — prueba las credenciales **desde el back** y devuelve si el login funciona y cuántas
   conexiones ve. Se prueba en el back porque es el back quien tiene la red y la identidad con las que
   se hará el pull de verdad; probar desde el navegador no demostraría nada.

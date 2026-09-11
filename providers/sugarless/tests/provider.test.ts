@@ -128,43 +128,33 @@ test('a new subscriber is told about a pending problem without waiting a whole i
     }
 })
 
-test('the configuration view never carries the password', async () => {
+test('the configuration served to the dialog carries the real password', async () => {
+    /*
+        Los secretos se tratan como cualquier otro dato: viajan al front y el dialogo los pinta
+        enmascarados con un ojo para revelarlos. Nada de 'hasPassword' ni de vistas redactadas.
+    */
     const provider = new SugarlessProvider(undefined, {} as KwirthData, memoryStorage(), happyFetcher())
     try {
         await provider.applyConfig(testConfig({ password: 'top-secret' }))
-        const view = provider.configView()
+        const served = provider.getConfig()
 
-        assert.equal('password' in view, false)
-        assert.equal(view.hasPassword, true)
-        assert.equal(JSON.stringify(view).includes('top-secret'), false)
-        assert.equal(view.email, 'follower@example.com')
+        assert.equal(served.password, 'top-secret')
+        assert.equal(served.email, 'follower@example.com')
     }
     finally {
         await provider.stopProvider()
     }
 })
 
-test('hasPassword is false while none is stored', async () => {
+test('an empty password is stored as empty, not merged with the previous one', async () => {
     const provider = new SugarlessProvider(undefined, {} as KwirthData, memoryStorage(), happyFetcher())
     try {
-        await provider.startProvider()
-        assert.equal(provider.configView().hasPassword, false)
-    }
-    finally {
-        await provider.stopProvider()
-    }
-})
+        await provider.applyConfig(testConfig({ password: 'first' }))
+        await provider.applyConfig(testConfig({ password: '' }))
 
-test('saving with an empty password keeps the stored one', async () => {
-    const provider = new SugarlessProvider(undefined, {} as KwirthData, memoryStorage(), happyFetcher())
-    try {
-        await provider.applyConfig(testConfig({ password: 'kept' }))
-        // Segundo guardado cambiando solo el intervalo, con el campo de contraseña vacio.
-        const result = await provider.testConfig(testConfig({ password: '', intervalSeconds: 90 }))
-
-        // Si no se hubiera reutilizado la guardada, el login habria fallado por falta de credenciales.
-        assert.equal(result.ok, true)
-        assert.equal(result.connections, 1)
+        assert.equal(provider.getConfig().password, '')
+        // Y sin credencial no se poletea.
+        assert.deepEqual(provider.getConfigNames(), [])
     }
     finally {
         await provider.stopProvider()

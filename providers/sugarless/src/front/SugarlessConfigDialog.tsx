@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
     Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider,
     Stack, TextField, Typography
 } from '@mui/material'
 import {
     DEFAULT_CLIENT_VERSION, DEFAULT_INTERVAL_SECONDS, DEFAULT_MAX_SAMPLES, ESugarlessErrorKind,
-    ISugarlessConfig, ISugarlessConfigView, ISugarlessTestResult, MIN_INTERVAL_SECONDS, newSugarlessConfig
+    ISugarlessConfig, ISugarlessTestResult, MIN_INTERVAL_SECONDS, newSugarlessConfig
 } from '../common/Sugarless'
 import { validateConfig } from '../common/Validation'
 import SecretField from './SecretField'
@@ -28,6 +28,36 @@ const authHeaders = (accessString: string) => ({
     'X-Kwirth-App': 'true'
 })
 
+/*
+    Convierte una respuesta fallida en algo que se pueda accionar.
+
+    El 404 tiene tratamiento propio porque es el fallo mas probable y el mas desconcertante: el front
+    del provider se sirve desde dist y se pinta igual, pero su router del back solo se monta al
+    arrancar el core. Sin reinicio, el dialogo aparece entero y NADA de lo que haces funciona.
+*/
+const describeFailure = async (response: Response): Promise<string> => {
+    const body: { errors?: string[] } = await response.json().catch(() => ({}))
+    if (body.errors && body.errors.length > 0) return body.errors.join('; ')
+    if (response.status === 404) {
+        return 'HTTP 404: the Sugarless backend is not mounted. A provider that owns its configuration ' +
+            'only gets its endpoints registered when the core starts, so a freshly installed one needs ' +
+            'a Kwirth core restart (this provider declares requiresRestart).'
+    }
+    if (response.status === 403) return 'HTTP 403: the access key was rejected.'
+    return `HTTP ${response.status}`
+}
+
+/*
+    Desactiva el autofill del navegador en todos los campos, no solo en el de la contraseña.
+
+    Va en 'htmlInput' porque es el atributo del <input> real lo que mira Chrome, que es el criterio que
+    ya sigue el resto del front (IdpManagerDialog, ProviderManagerDialog). Y va en TODOS los campos
+    porque Chrome no solo tiñe el fondo de azul: mete el usuario y la contraseña guardados en cualquier
+    campo que le parezca un login. Aqui eso significaria guardar como credencial de LibreLinkUp algo
+    que el usuario nunca escribio -- y pisando de paso la contraseña buena que venia del back.
+*/
+const NO_AUTOFILL = { htmlInput: { autoComplete: 'off' } }
+
 // El fallo mas probable de todos merece una explicacion, no un mensaje de error a secas.
 const FOLLOWER_HINT =
     'LibreLinkUp reports the patients an account FOLLOWS, not your own sensors. Use the credentials ' +
@@ -36,36 +66,42 @@ const FOLLOWER_HINT =
 
 const SugarlessConfigDialog: React.FC<ISugarlessConfigDialogProps> = ({ onClose, backendUrl, accessString }) => {
     const [form, setForm] = useState<ISugarlessConfig>(newSugarlessConfig())
-    const [hasStoredPassword, setHasStoredPassword] = useState(false)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [testing, setTesting] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
     const [notice, setNotice] = useState<string | undefined>()
     const [testResult, setTestResult] = useState<ISugarlessTestResult | undefined>()
+    const feedbackRef = useRef<HTMLDivElement>(null)
+
+    /*
+        El resultado se pinta al final del formulario, que con la altura fija del dialogo puede quedar
+        por debajo del borde. Sin esto, pulsar Test parece no hacer nada: el Alert esta, pero fuera de
+        la vista.
+    */
+    useEffect(() => {
+        if (testResult || errors.length > 0) feedbackRef.current?.scrollIntoView({ block: 'nearest' })
+    }, [testResult, errors])
 
     useEffect(() => {
         fetch(CONFIG_URL(backendUrl), { headers: authHeaders(accessString) })
-            .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
-            .then((view: ISugarlessConfigView) => {
-                setHasStoredPassword(view.hasPassword === true)
+            .then(async r => r.ok ? r.json() : Promise.reject(await describeFailure(r)))
+            .then((stored: ISugarlessConfig) => {
                 setForm({
-                    email: view.email ?? '',
-                    // Vacio a proposito: la contraseña guardada no viaja al navegador.
-                    password: '',
-                    region: view.region ?? '',
-                    intervalSeconds: view.intervalSeconds ?? DEFAULT_INTERVAL_SECONDS,
-                    maxSamples: view.maxSamples ?? DEFAULT_MAX_SAMPLES,
-                    clientVersion: view.clientVersion ?? DEFAULT_CLIENT_VERSION
+                    email: stored.email ?? '',
+                    // La contraseña llega entera y se pre-rellena: el ojo del campo la revela.
+                    password: stored.password ?? '',
+                    region: stored.region ?? '',
+                    intervalSeconds: stored.intervalSeconds ?? DEFAULT_INTERVAL_SECONDS,
+                    maxSamples: stored.maxSamples ?? DEFAULT_MAX_SAMPLES,
+                    clientVersion: stored.clientVersion ?? DEFAULT_CLIENT_VERSION
                 })
             })
             .catch(err => setErrors([`Failed to load the configuration: ${err}`]))
             .finally(() => setLoading(false))
     }, [])
 
-    // Al guardar solo es obligatoria la contraseña si no hay ninguna guardada: dejarla vacia con una
-    // ya guardada significa "no la cambies".
-    const localErrors = (): string[] => validateConfig(form, !hasStoredPassword)
+    const localErrors = (): string[] => validateConfig(form)
 
     const set = <K extends keyof ISugarlessConfig>(key: K, value: ISugarlessConfig[K]): void => {
         setForm(previous => ({ ...previous, [key]: value }))
@@ -87,8 +123,7 @@ const SugarlessConfigDialog: React.FC<ISugarlessConfigDialogProps> = ({ onClose,
                 body: JSON.stringify(form)
             })
             if (!response.ok) {
-                const body: { errors?: string[] } = await response.json().catch(() => ({}))
-                setErrors(body.errors ?? [`HTTP ${response.status}`])
+                setErrors([await describeFailure(response)])
                 return
             }
             onClose()
@@ -120,6 +155,14 @@ const SugarlessConfigDialog: React.FC<ISugarlessConfigDialogProps> = ({ onClose,
                 headers: authHeaders(accessString),
                 body: JSON.stringify(form)
             })
+            /*
+                Se comprueba el 'ok' ANTES de parsear: un 404 devuelve HTML, y sin esta rama el
+                usuario veria un error de JSON invalido en vez de por que ha fallado de verdad.
+            */
+            if (!response.ok) {
+                setTestResult({ ok: false, durationMs: 0, error: await describeFailure(response) })
+                return
+            }
             setTestResult(await response.json() as ISugarlessTestResult)
         }
         catch (err) {
@@ -158,7 +201,7 @@ const SugarlessConfigDialog: React.FC<ISugarlessConfigDialogProps> = ({ onClose,
 
     return <Dialog open={true} onClose={onClose} maxWidth='sm' fullWidth>
         <DialogTitle>Sugarless — LibreLinkUp account</DialogTitle>
-        <DialogContent sx={{ height: 480, display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+        <DialogContent sx={{ height: 480, display: 'flex', flexDirection: 'column', gap: 2, pt: 1, overflowY: 'auto' }}>
             {loading
                 ? <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}><CircularProgress /></Box>
                 : <>
@@ -168,21 +211,23 @@ const SugarlessConfigDialog: React.FC<ISugarlessConfigDialogProps> = ({ onClose,
 
                     <Stack direction='row' spacing={2}>
                         <TextField size='small' label='Email' sx={{ width: 320 }} value={form.email} disabled={busy}
-                            autoComplete='off'
+                            slotProps={NO_AUTOFILL}
                             onChange={e => set('email', e.target.value)} />
                     </Stack>
 
                     <SecretField label='Password' value={form.password} disabled={busy}
                         onChange={value => set('password', value)}
-                        helperText={hasStoredPassword ? 'A password is stored. Leave this empty to keep it.' : 'Required'} />
+                        helperText='Required' />
 
                     <Divider />
 
                     <Stack direction='row' spacing={2}>
-                        <TextField size='small' label='Region' sx={{ width: 150 }} value={form.region} disabled={busy}
+                        <TextField size='small' label='Region' sx={{ width: 150 }} slotProps={NO_AUTOFILL}
+                            value={form.region} disabled={busy}
                             helperText='Empty = auto'
                             onChange={e => set('region', e.target.value)} />
                         <TextField size='small' label='Interval (s)' type='number' sx={{ width: 150 }}
+                            slotProps={NO_AUTOFILL}
                             value={form.intervalSeconds} disabled={busy}
                             helperText={`Minimum ${MIN_INTERVAL_SECONDS}`}
                             onChange={e => set('intervalSeconds', Number(e.target.value))} />
@@ -190,16 +235,18 @@ const SugarlessConfigDialog: React.FC<ISugarlessConfigDialogProps> = ({ onClose,
 
                     <Stack direction='row' spacing={2}>
                         <TextField size='small' label='Max samples' type='number' sx={{ width: 150 }}
+                            slotProps={NO_AUTOFILL}
                             value={form.maxSamples} disabled={busy}
                             helperText='In-memory history'
                             onChange={e => set('maxSamples', Number(e.target.value))} />
                         <TextField size='small' label='Client version' sx={{ width: 150 }}
+                            slotProps={NO_AUTOFILL}
                             value={form.clientVersion} disabled={busy}
                             helperText='Raise it if the API asks'
                             onChange={e => set('clientVersion', e.target.value)} />
                     </Stack>
 
-                    <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+                    <Box ref={feedbackRef}>
                         {errors.length > 0 && <Alert severity='error'>
                             {errors.map((message, index) => <Typography key={index} variant='body2'>{message}</Typography>)}
                         </Alert>}

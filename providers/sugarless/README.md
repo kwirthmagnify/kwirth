@@ -93,7 +93,7 @@ Set it from the card's **⚙️ gear** in **☰ → Manage extensions → Provid
 | Field | What it does |
 |---|---|
 | `email` | The **follower** account, not the patient's. |
-| `password` | Stored in a Secret. Leave it empty when editing to keep the stored one. |
+| `password` | Persisted in a Secret. The dialog shows it masked, with an eye to reveal it. |
 | `region` | Empty = derived automatically from the login token. Set it to override (`eu`, `us`, …). |
 | `intervalSeconds` | How often the API is polled. Minimum 30; the default 60 is plenty, given the sensor's ~15 min cadence. |
 | `maxSamples` | Size of the in-memory history. 240 ≈ 4 h at one sample per minute. |
@@ -145,6 +145,12 @@ npm test          # node:test suite, no network involved
 ```
 
 Register it in `back/kwirth-dev.json` under `providers` to have the dev core load it from `dist/`.
+
+**Every change to `back.js` needs a core restart, and the log will tell you otherwise.** The dev
+watcher swaps the *constructor* in the registry and logs `Provider 'sugarless' backend reloaded`, but
+the instance that is already running — and the `configRouter` Express has already mounted — stays on
+the old code. So the front picks the new bundle up on a browser reload while the backend does not, and
+you end up debugging a mismatch between two builds. Front-only changes do reload on their own.
 
 The test suite injects a fake fetcher, so **no test touches the network** and none of them needs a real
 account. The fixtures carry the verified *shape* of the API responses with invented values: the real

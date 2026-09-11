@@ -4,15 +4,15 @@ import { validateConfig } from '../src/common/Validation'
 import { MIN_INTERVAL_SECONDS, REQUEST_TIMEOUT_MS } from '../src/common/Sugarless'
 import { testConfig } from './fixtures'
 
-const errorsFor = (overrides: Parameters<typeof testConfig>[0], requirePassword = true): string[] =>
-    validateConfig(testConfig(overrides), requirePassword)
+const errorsFor = (overrides: Parameters<typeof testConfig>[0]): string[] =>
+    validateConfig(testConfig(overrides))
 
 test('a complete configuration is valid', () => {
     assert.deepEqual(errorsFor({}), [])
 })
 
 test('rejects a missing configuration', () => {
-    assert.deepEqual(validateConfig(undefined, true), ['No configuration provided'])
+    assert.deepEqual(validateConfig(undefined), ['No configuration provided'])
 })
 
 test('requires an email that looks like one', () => {
@@ -23,11 +23,9 @@ test('requires an email that looks like one', () => {
     assert.deepEqual(errorsFor({ email: 'a.b+tag@c.example.com' }), [])
 })
 
-test('requires the password only when asked to', () => {
-    // Al crear la configuracion hace falta.
-    assert.match(errorsFor({ password: '' }, true).join(' '), /Password is required/)
-    // Al editar una ya guardada, vacio significa "no la cambies".
-    assert.deepEqual(errorsFor({ password: '' }, false), [])
+test('requires the password, with no "empty means keep the stored one" exception', () => {
+    // El secreto viaja entero al dialogo y vuelve entero, asi que vacio quiere decir vacio.
+    assert.match(errorsFor({ password: '' }).join(' '), /Password is required/)
 })
 
 test('enforces the minimum polling interval', () => {
@@ -87,7 +85,7 @@ test('reports every problem at once instead of one at a time', () => {
         intervalSeconds: 1,
         maxSamples: 0,
         clientVersion: ''
-    }, true)
+    })
 
     assert.ok(found.length >= 5, `expected several errors, got ${found.length}: ${found.join(' | ')}`)
 })

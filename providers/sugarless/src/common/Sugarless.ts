@@ -87,7 +87,10 @@ export interface ISugarlessEvent {
 
 /*
     Configuracion del provider. Es UNA, no una lista.
-    'password' es el unico campo secreto: el ConfigStore lo separa y lo manda a un Secret.
+
+    'password' es el unico campo secreto, y secreto significa UNA sola cosa: que el ConfigStore lo
+    separa y lo persiste en un Secret en vez de en el ConfigMap. Por lo demas se trata como cualquier
+    otro campo — viaja entero al dialogo, que lo pinta enmascarado con un ojo para revelarlo.
 */
 export interface ISugarlessConfig {
     /** Credenciales de la cuenta SEGUIDORA de LibreLinkUp, no las del paciente. Ver README. */
@@ -99,15 +102,6 @@ export interface ISugarlessConfig {
     maxSamples: number
     /** Version de cliente que se declara a Abbott. Configurable porque su minimo sube con el tiempo. */
     clientVersion: string
-}
-
-/*
-    Lo que el dialogo recibe al leer la configuracion. La contraseña NUNCA viaja al navegador: solo
-    viaja si esta puesta, para que el formulario pueda decir "sin cambios" en vez de mentir con un
-    campo vacio.
-*/
-export interface ISugarlessConfigView extends Omit<ISugarlessConfig, 'password'> {
-    hasPassword: boolean
 }
 
 /** Resultado de probar las credenciales. La prueba la ejecuta el BACK, que es quien tiene la red. */

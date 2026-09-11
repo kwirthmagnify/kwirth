@@ -298,3 +298,28 @@ test('reports an unexpected HTTP status with its body', async () => {
     const err = await expectKind(client.read(), ESugarlessErrorKind.UNEXPECTED)
     assert.match(err.message, /RequiredHeaderMissing/)
 })
+
+test('a 200 with no token says what is missing instead of just the status', async () => {
+    /*
+        La API contesta 200 tanto con credenciales malas como cuando pide un paso mas. Un mensaje que
+        solo dijera 'HTTP 200' obligaria a adivinar cual de las dos cosas ha pasado.
+    */
+    const { fetcher } = makeFetcher(() => ({
+        status: 200,
+        body: { status: 0, data: { step: { type: 'verifyPhone' }, user: { id: 'u1' } } }
+    }))
+    const client = new LibreClient(testConfig(), fetcher)
+
+    const err = await expectKind(client.read(), ESugarlessErrorKind.AUTH_FAILED)
+    assert.match(err.message, /authTicket\.token/)
+    assert.match(err.message, /data keys: \[step, user\]/)
+})
+
+test('a non JSON answer to the login is reported as such, with a preview', async () => {
+    const { fetcher } = makeFetcher(() => ({ status: 200, body: '<html>maintenance</html>' }))
+    const client = new LibreClient(testConfig(), fetcher)
+
+    const err = await expectKind(client.read(), ESugarlessErrorKind.AUTH_FAILED)
+    assert.match(err.message, /was not JSON/)
+    assert.match(err.message, /maintenance/)
+})

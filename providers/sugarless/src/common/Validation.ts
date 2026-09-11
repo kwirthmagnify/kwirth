@@ -9,11 +9,11 @@ const VERSION_SHAPE = /^\d+(\.\d+)*$/
     Validacion compartida: el back la aplica en el PUT (un cliente puede saltarse el dialogo) y el
     front la usa para avisar antes de guardar. Devuelve la lista de errores; vacia = valida.
 
-    'password' se valida aparte con 'requirePassword': al editar una configuracion ya guardada, un
-    campo de contraseña vacio significa "dejala como esta", no "borrala". Meter esa regla aqui haria
-    imposible guardar un cambio de intervalo sin volver a teclear la credencial.
+    La contraseña se valida como cualquier otro campo obligatorio. No hay caso especial de "vacio
+    significa no la cambies": el dialogo recibe la configuracion entera, secreto incluido, y la
+    reenvia entera, asi que un campo vacio quiere decir vacio.
 */
-export const validateConfig = (config: ISugarlessConfig | undefined, requirePassword: boolean): string[] => {
+export const validateConfig = (config: ISugarlessConfig | undefined): string[] => {
     const errors: string[] = []
     if (!config) return ['No configuration provided']
 
@@ -21,7 +21,7 @@ export const validateConfig = (config: ISugarlessConfig | undefined, requirePass
     if (email === '') errors.push('Email is required')
     else if (!EMAIL_SHAPE.test(email)) errors.push('Email does not look like an email address')
 
-    if (requirePassword && (config.password ?? '') === '') errors.push('Password is required')
+    if ((config.password ?? '') === '') errors.push('Password is required')
 
     if (!Number.isFinite(config.intervalSeconds)) errors.push('Interval must be a number')
     else if (config.intervalSeconds < MIN_INTERVAL_SECONDS) errors.push(`Interval must be at least ${MIN_INTERVAL_SECONDS} seconds`)

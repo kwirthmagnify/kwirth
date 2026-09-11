@@ -20,9 +20,11 @@ const SecretField: React.FC<ISecretFieldProps> = ({ label, value, onChange, help
         type={visible ? 'text' : 'password'}
         helperText={helperText}
         disabled={disabled === true}
-        autoComplete='new-password'
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
         slotProps={{
+            // Evita el autofill del navegador. Va en htmlInput y no como prop de TextField porque es
+            // el atributo del <input> real lo que mira Chrome; el prop no siempre llega hasta ahi.
+            htmlInput: { autoComplete: 'new-password' },
             input: {
                 endAdornment: (
                     <InputAdornment position='end'>

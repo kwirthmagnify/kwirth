@@ -363,11 +363,34 @@ export class LibreClient {
             )
         }
 
-        const token = body?.data?.authTicket?.token
-        const userId = body?.data?.user?.id
+        /*
+            A partir de aqui el login no ha ido bien, y el mensaje tiene que decir POR QUE. Un
+            'Login failed: HTTP 200' no sirve de nada: la API contesta 200 tanto con credenciales
+            malas como cuando pide un paso mas (verificacion en dos factores, por ejemplo), y sin
+            distinguirlo no hay forma de saber si hay que cambiar la contraseña o mirar el telefono.
+        */
+        if (!body) {
+            throw new SugarlessError(
+                ESugarlessErrorKind.AUTH_FAILED,
+                `Login failed: HTTP ${response.status}, and the answer was not JSON: ${response.body.slice(0, 200)}`
+            )
+        }
+
+        const token = body.data?.authTicket?.token
+        const userId = body.data?.user?.id
         if (!token || !userId) {
-            const detail = body?.error?.message ?? `HTTP ${response.status}`
-            throw new SugarlessError(ESugarlessErrorKind.AUTH_FAILED, `Login failed: ${detail}`)
+            const missing = [
+                !token ? 'data.authTicket.token' : undefined,
+                !userId ? 'data.user.id' : undefined
+            ].filter(part => part !== undefined).join(' and ')
+
+            const detail = body.error?.message ?? `no error message, API status ${body.status}`
+            throw new SugarlessError(
+                ESugarlessErrorKind.AUTH_FAILED,
+                `Login failed (HTTP ${response.status}): ${detail}. The answer carries no ${missing}. ` +
+                `Top-level keys: [${Object.keys(body).join(', ')}], data keys: [${Object.keys(body.data ?? {}).join(', ')}]. ` +
+                'If the credentials are right, check whether the account is asking for a verification step.'
+            )
         }
 
         // La region configurada manda; si esta vacia, se deriva del claim del token.

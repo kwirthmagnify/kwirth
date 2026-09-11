@@ -3,8 +3,8 @@ import {
     IProvider, IProviderStorage, IProviderSubscriber, IProviderSubscriptionHelp, KwirthData
 } from '@kwirthmagnify/kwirth-common-back'
 import {
-    EGlucoseUnit, ESugarlessErrorKind, ESugarlessPayload, ISugarlessConfig, ISugarlessConfigView,
-    ISugarlessEvent, ISugarlessTestResult, newSugarlessConfig
+    EGlucoseUnit, ESugarlessErrorKind, ESugarlessPayload, ISugarlessConfig, ISugarlessEvent,
+    ISugarlessTestResult, newSugarlessConfig
 } from '../common/Sugarless'
 import { validateConfig } from '../common/Validation'
 import { ConfigStore } from './ConfigStore'
@@ -132,8 +132,10 @@ export class SugarlessProvider implements IProvider {
     private addConfigRoutes = (): void => {
         this.configRouter.route('/config')
             .get(async (_req: Request, res: Response) => {
-                // el core ya ha validado el accessKey antes de llegar aqui
-                res.status(200).json(this.configView())
+                // El core ya ha validado el accessKey antes de llegar aqui. Se devuelve la
+                // configuracion COMPLETA, contraseña incluida: el dialogo la pinta enmascarada con un
+                // ojo para revelarla, igual que el resto del front de kwirth.
+                res.status(200).json(this.config)
             })
             .put(async (req: Request, res: Response) => {
                 try {
@@ -142,13 +144,13 @@ export class SugarlessProvider implements IProvider {
                         res.status(400).json({ errors: ['Body must be a configuration object'] })
                         return
                     }
-                    const candidate = this.mergeSecret(incoming)
-                    const errors = validateConfig(candidate, true)
+                    // Se persiste lo que llega, sin merges: el dialogo manda la configuracion entera.
+                    const errors = validateConfig(incoming)
                     if (errors.length > 0) {
                         res.status(400).json({ errors })
                         return
                     }
-                    await this.applyConfig(candidate)
+                    await this.applyConfig(incoming)
                     res.status(200).json({ ok: true })
                 }
                 catch (err) {
@@ -175,37 +177,14 @@ export class SugarlessProvider implements IProvider {
             })
     }
 
-    /*
-        La contraseña NUNCA viaja al navegador. El dialogo solo necesita saber si hay una guardada,
-        para poder decir "sin cambios" en vez de mentir con un campo vacio.
-    */
-    configView = (): ISugarlessConfigView => {
-        const { password, ...rest } = this.config
-        return {
-            ...rest,
-            hasPassword: (password ?? '') !== ''
-        }
-    }
-
-    /*
-        Un campo de contraseña vacio significa "deja la que hay", no "borrala". Sin esta regla no se
-        podria cambiar el intervalo sin volver a teclear la credencial, y el dialogo tendria que
-        recibir el secreto para poder reenviarlo.
-    */
-    private mergeSecret = (incoming: ISugarlessConfig): ISugarlessConfig => ({
-        ...incoming,
-        password: (incoming.password ?? '') !== '' ? incoming.password : this.config.password
-    })
-
     testConfig = async (incoming: ISugarlessConfig | undefined): Promise<ISugarlessTestResult> => {
         if (!incoming) return { ok: false, durationMs: 0, error: 'No configuration to test' }
 
-        const candidate = this.mergeSecret(incoming)
-        const errors = validateConfig(candidate, true)
+        const errors = validateConfig(incoming)
         if (errors.length > 0) return { ok: false, durationMs: 0, error: errors.join('; ') }
 
         const started = Date.now()
-        const client = new LibreClient(candidate, this.fetcher)
+        const client = new LibreClient(incoming, this.fetcher)
         try {
             const reading = await client.read()
             return {
