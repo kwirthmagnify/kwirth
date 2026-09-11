@@ -3,7 +3,7 @@
 > Cambio de **core**. Afecta al contrato de canales y al selector de recursos, que usan todos los
 > canales, así que tiene superficie de regresión propia.
 > Estado: **decisiones cerradas 2026-09-11**, implementación pendiente.
-> Origen: al arrancar el plugin `sugarless` (glucosa vía LibreLinkUp) se constató que un canal que no
+> Origen: al construir un canal privado cuyos datos vienen de una API externa se constató que un canal que no
 > necesita **nada** del clúster no tiene forma de arrancarse sin pedir acceso de clúster.
 
 ---
@@ -12,7 +12,7 @@
 
 Un canal se arranca con una **view** (`EInstanceConfigView`): `cluster`, `namespace`, `group`, `pod`,
 `container`. Todas describen **recursos de Kubernetes**. Un canal cuyo dato no vive en el clúster —
-sugarless lee glucosa de una API en internet — no encaja en ninguna.
+el canal que motivó esto lee de una API en internet — no encaja en ninguna.
 
 Hoy la única salida es declarar `cluster: true` y arrancarse con view `cluster`. Y eso es lo que hace
 el core en `back/src/index.ts:761`:
@@ -64,12 +64,12 @@ se ven trazando el arranque de verdad:
 usuario puede lanzar, `undefined` = todos. Y eso **ya es por canal**, que era justo la carencia que se
 temía.
 
-Consecuencia práctica: con `enabledChannels` poblado se concede sugarless sin conceder echo, agora ni
+Consecuencia práctica: con `enabledChannels` poblado se concede un canal concreto sin conceder echo, agora ni
 iter. Con `enabledChannels` vacío el usuario puede lanzar cualquier canal, y el scope no lo impide para
 los de view `cluster`/`none`.
 
 Los scopes por canal siguen siendo un punto legítimo del roadmap V2 —el vocabulario compartido es real
-para el camino de recursos— pero **no son un bloqueo para este cambio** ni para sugarless.
+para el camino de recursos— pero **no son un bloqueo para este cambio** ni para el canal que lo motivó.
 
 ---
 
@@ -124,8 +124,8 @@ Y el estado `view` pasa de `useState('')` a estar tipado con el enum, con las 7 
 literales convertidas (decisión 5).
 
 **Lo que NO cambia, y es correcto que no cambie:** la view `none` sigue exigiendo elegir clúster, porque
-lo que se elige ahí no es *qué se inspecciona* sino **en qué Kwirth corre el canal**. Sugarless
-necesita saber qué backend le sirve la glucosa.
+lo que se elige ahí no es *qué se inspecciona* sino **en qué Kwirth corre el canal**. Un canal autónomo
+necesita saber qué backend le sirve sus datos.
 
 ### 3.3 Contrato — `common/src/Channel.ts`
 
@@ -137,7 +137,7 @@ en este plan.
 
 ## 4. Regresión: qué hay que revisar antes de dar esto por bueno
 
-`ResourceSelector` lo usa **todo canal**, así que el riesgo no está en sugarless sino en no romper lo
+`ResourceSelector` lo usa **todo canal**, así que el riesgo no está en el canal nuevo sino en no romper lo
 que ya funciona:
 
 - [ ] Las cinco views existentes siguen ofreciéndose y arrancando igual (`log` por namespace, `metrics`
@@ -174,7 +174,7 @@ fuera de este alcance.
 ## 5. Fases
 
 **F1 — El cableado.** Los tres cambios de §3 y la checklist de regresión de §4. El MVP es que
-sugarless (o cualquier canal con las dos banderas en `false`) arranque con view `none` y que nada de lo
+un canal con las dos banderas en `false` arranque con view `none` y que nada de lo
 anterior cambie.
 
 **F2 — e2e.** Un test que arranque un canal autónomo con view `none` y compruebe que el log del core

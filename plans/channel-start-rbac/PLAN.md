@@ -2,7 +2,7 @@
 
 > Cambio de **core** más auditoría de los 16 plugins. Afecta a la autorización, así que su riesgo no es
 > romper una pantalla: es dejar usuarios fuera o dejar puertas abiertas.
-> Estado: **decisiones cerradas 2026-09-11**, implementación **después de F2 de sugarless**.
+> Estado: **decisiones cerradas 2026-09-11**, implementación **después del canal que lo destapó**.
 > Origen: al cablear la view `none` se preguntó si un usuario sin scopes puede arrancar un canal. La
 > respuesta es **sí**, y no solo el nuevo.
 
@@ -33,7 +33,7 @@ exactamente el mismo gate, así que **no empeora nada**, pero tampoco mejora.
 | `agora` (10), `excubitor` (2), `ops` (1), `trivy` (1) | `echo`, `news`, `log`, `fileman`, `alert`, `topology`, `mirc`, `censor`, `pinocchio`, `provider-debug`, **`iter`**, **`montag`** |
 
 `iter` y `montag` son **productos de pago** y hoy los arranca cualquier clave válida. Eso es el
-hallazgo que justifica este plan por sí solo, independientemente de sugarless.
+hallazgo que justifica este plan por sí solo, independientemente del canal que lo destapó.
 
 > **Corrección de lo dicho antes.** En una versión anterior del análisis se afirmó que conceder el
 > scope `none` habilitaba de golpe `echo`, `agora`, `iter` y `provider-debug`. Es falso: el nivel
@@ -67,9 +67,9 @@ Exactamente al revés de la intención. Hay que revisar lo mismo en `excubitor`,
 |---|---|---|
 | 1 | La comprobación va en el **core**, no por convención en cada plugin | 12 de 16 no la implementaron. Una regla que depende de que cada autor se acuerde es la que ya tenemos, y además cubre a los plugins de terceros que no controlamos. |
 | 2 | **No** se añade un `$start` universal. El scope mínimo que ya declara cada plugin **es** su scope de arranque | Para agora el mínimo es `agora$user` ("entrar en salas y chatear"). Un `agora$start` por debajo concedería abrir una pestaña que no puedes usar: un permiso que no compra nada y uno más que olvidar asignar. |
-| 3 | `none` = **nivel 0** = lo arranca cualquier clave válida, sin concesión | Es el concepto de "canal público", que es lo que se quiere para una demo como sugarless. Sin esto, un usuario sin scopes no podría arrancar ni un canal `none`, porque una cadena de scopes vacía ya da nivel 0 y `none` estaba en el 1. |
+| 3 | `none` = **nivel 0** = lo arranca cualquier clave válida, sin concesión | Es el concepto de "canal público", que es lo que se quiere para un canal de demostración. Sin esto, un usuario sin scopes no podría arrancar ni un canal `none`, porque una cadena de scopes vacía ya da nivel 0 y `none` estaba en el 1. |
 | 4 | Un canal **sin** `getScopeCatalog()` sigue abierto | Es lo único que permite encender el chequeo sin dejar fuera a los usuarios actuales ni romper plugins de terceros. Cada plugin se cierra el día que declara sus scopes, y cerrarlo es entonces un acto deliberado. |
-| 5 | Se implementa **después** de F2 de sugarless | Sugarless no depende de esto: declarará `none` y será público a propósito. |
+| 5 | Se implementa **después** del canal que lo destapó | Ese canal no depende de esto: declarará `none` y será abierto a propósito. |
 
 ---
 
@@ -136,5 +136,5 @@ Los tres casos que tienen que quedar asertados en e2e, porque son los que hoy fa
 - [ ] Una clave **sin scopes** NO arranca agora (hoy sí).
 - [ ] Una clave con **`agora$user`** SÍ lo arranca (hoy, con el chequeo encendido, sería denegada).
 - [ ] Una clave con **solo `cluster`** NO lo arranca (hoy pasaría, y es lo contrario de lo que se quiere).
-- [ ] Una clave sin scopes SÍ arranca un canal que pide `none` (el caso de sugarless).
+- [ ] Una clave sin scopes SÍ arranca un canal que pide `none`.
 - [ ] Un canal sin catálogo sigue arrancando como hoy.

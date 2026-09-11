@@ -119,7 +119,7 @@ test('with the none view, channels that need the cluster are not selectable', as
         que SI necesitan el cluster tienen que quedar fuera. Nombrar 'log' y 'metrics' es seguro
         porque son del core y siempre estan.
 
-        No se asierta que sugarless este habilitado a proposito: este es un e2e del CORE, y no debe
+        No se asierta que un canal autonomo concreto este habilitado a proposito: este es un e2e del CORE, y no debe
         exigir que un plugin concreto este instalado para pasar.
     */
     await pickCombo(page, COMBO_VIEW, 'none')
