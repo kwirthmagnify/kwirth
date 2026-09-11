@@ -6,6 +6,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
+import { ERestartAction } from './extensionRestart'
 import { useKeyboard } from '../tools/useKeyboard'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
 
@@ -45,7 +46,7 @@ interface IHomepageManagerDialogProps {
     onActivate: (id: string | undefined, config: Record<string, any>) => void
     onHomepageLoad: (id: string) => void
     onHomepageUnload: (id: string) => void
-    onRestartRequired?: () => void
+    onRestartRequired?: (extension: string, action: ERestartAction) => void
 }
 
 const HomepageManagerDialog: React.FC<IHomepageManagerDialogProps> = (props: IHomepageManagerDialogProps) => {
@@ -137,7 +138,7 @@ const openReconfigure = (id: string) => {
             const meta: IInstalledHomepage = await res.json()
             await loadInstalled()
             props.onHomepageLoad(meta.id)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install ${hp.name}: ${err}`)
         } finally {
@@ -157,6 +158,9 @@ const openReconfigure = (id: string) => {
             if (props.activeHomepageId === hp.id) props.onActivate(undefined, {})
             props.onHomepageUnload(hp.id)
             await loadInstalled()
+            // Quitarla tampoco es inmediato: lo que se engancha al arrancar (su router, por ejemplo)
+            // sigue montado hasta que se reinicie, aunque ya no salga en la lista.
+            if (hp.requiresRestart) props.onRestartRequired?.(hp.id, ERestartAction.UNINSTALL)
         } catch (err) {
             setError(`Failed to uninstall ${hp.name}: ${err}`)
         } finally {
@@ -178,7 +182,7 @@ const openReconfigure = (id: string) => {
             const meta: IInstalledHomepage = await res.json()
             await loadInstalled()
             props.onHomepageLoad(meta.id)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
             setCustomUrl('')
         } catch (err) {
             setError(`Failed to install homepage: ${err}`)
@@ -207,7 +211,7 @@ const openReconfigure = (id: string) => {
             const meta: IInstalledHomepage = await res.json()
             await loadInstalled()
             props.onHomepageLoad(meta.id)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install homepage: ${err}`)
         } finally {

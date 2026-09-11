@@ -6,6 +6,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
+import { ERestartAction } from './extensionRestart'
 import { useKeyboard } from '../tools/useKeyboard'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
 
@@ -52,7 +53,7 @@ interface IThemeManagerDialogProps {
     onAssignmentsChange: (a: Record<string, string>) => void
     onThemeLoad: (id: string) => void
     onThemeUnload: (id: string) => void
-    onRestartRequired?: () => void
+    onRestartRequired?: (extension: string, action: ERestartAction) => void
 }
 
 const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeManagerDialogProps) => {
@@ -155,7 +156,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
             const meta: IInstalledTheme = await res.json()
             await loadInstalled()
             props.onThemeLoad(meta.id)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install ${theme.name}: ${err}`)
         } finally {
@@ -174,6 +175,9 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
             }
             props.onThemeUnload(t.id)
             await loadInstalled()
+            // Quitarla tampoco es inmediato: lo que se engancha al arrancar (su router, por ejemplo)
+            // sigue montado hasta que se reinicie, aunque ya no salga en la lista.
+            if (t.requiresRestart) props.onRestartRequired?.(t.id, ERestartAction.UNINSTALL)
         } catch (err) {
             setError(`Failed to uninstall ${t.name}: ${err}`)
         } finally {
@@ -195,7 +199,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
             const meta: IInstalledTheme = await res.json()
             await loadInstalled()
             props.onThemeLoad(meta.id)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
             setCustomUrl('')
         } catch (err) {
             setError(`Failed to install theme: ${err}`)
@@ -224,7 +228,7 @@ const ThemeManagerDialog: React.FC<IThemeManagerDialogProps> = (props: IThemeMan
             const meta: IInstalledTheme = await res.json()
             await loadInstalled()
             props.onThemeLoad(meta.id)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install theme: ${err}`)
         } finally {

@@ -7,18 +7,19 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
+import { ERestartAction } from './extensionRestart'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
 
 
 // tipos de la API (front-local, como hace ProviderDialog con su IProviderSchemaField)
-interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; marketplaceId?: string; marketplaceLabel?: string; website?: string; description?: string }
+interface IIdpConnectorInfo { id: string; label: string; kind: string; schema: IConfigFieldDef[]; installed: boolean; version?: string; installedFrom?: string; marketplaceId?: string; marketplaceLabel?: string; website?: string; description?: string; requiresRestart?: boolean }
 interface IIdpInstanceConfig { id: string; connectorId: string; label: string; enabled: boolean; config: Record<string, unknown> }
 interface IIdpConnectorManifestEntry { id: string; name: string; displayName?: string; version: string; description: string; website?: string; url: string; marketplaceId?: string; marketplaceLabel?: string }
-interface IIdpInstallResult { requiresRestart?: boolean }
+interface IIdpInstallResult { id: string; requiresRestart?: boolean }
 
 interface IIdpManagerDialogProps {
     onClose: () => void
-    onRestartRequired?: () => void
+    onRestartRequired?: (extension: string, action: ERestartAction) => void
 }
 
 const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDialogProps) => {
@@ -171,7 +172,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
             const meta: IIdpInstallResult = await res.json()
             await load()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         }
         catch (err) { setError(`Failed to install ${entry.name}: ${err}`) }
         finally { setInstallingId(undefined) }
@@ -184,7 +185,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
             const meta: IIdpInstallResult = await res.json()
             setCustomUrl(''); await load()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         }
         catch (err) { setError(`Failed to install connector: ${err}`) }
         finally { setInstallingCustom(false) }
@@ -196,7 +197,7 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
             const meta: IIdpInstallResult = await res.json()
             await load()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         }
         catch (err) { setError(`Failed to install connector: ${err}`) }
         finally { setInstallingFile(false); if (fileInputRef.current) fileInputRef.current.value = '' }
@@ -207,6 +208,8 @@ const IdpManagerDialog: React.FC<IIdpManagerDialogProps> = (props: IIdpManagerDi
             const res = await fetch(`${backendUrl}/idp/connectors/${c.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? `HTTP ${res.status}`) }
             await load()
+            // Quitarlo tampoco es inmediato: sigue registrado hasta que se reinicie el core.
+            if (c.requiresRestart) props.onRestartRequired?.(c.id, ERestartAction.UNINSTALL)
         }
         catch (err) { setError(`Failed to uninstall ${c.id}: ${err}`) }
         finally { setUninstallingId(undefined) }

@@ -7,6 +7,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
+import { ERestartAction } from './extensionRestart'
 import { useKeyboard } from '../tools/useKeyboard'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
 
@@ -52,7 +53,7 @@ interface IPackManagerDialogProps {
     onThemeUnload: (id: string) => void
     onHomepageLoad: (id: string) => void
     onHomepageUnload: (id: string) => void
-    onRestartRequired?: () => void
+    onRestartRequired?: (extension: string, action: ERestartAction) => void
 }
 
 const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManagerDialogProps) => {
@@ -163,7 +164,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
             const meta: IInstalledPack = await res.json()
             await loadInstalled()
             loadPackFrontAssets(meta)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         }
         catch (err) {
             setError(`Failed to install pack ${entry.displayName}: ${err}`)
@@ -184,6 +185,9 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
             }
             unloadPackFrontAssets(pack)
             await loadInstalled()
+            // Quitarla tampoco es inmediato: lo que se engancha al arrancar (su router, por ejemplo)
+            // sigue montado hasta que se reinicie, aunque ya no salga en la lista.
+            if (pack.requiresRestart) props.onRestartRequired?.(pack.id, ERestartAction.UNINSTALL)
         }
         catch (err) {
             setError(`Failed to uninstall pack ${pack.displayName}: ${err}`)
@@ -207,7 +211,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
             const meta: IInstalledPack = await res.json()
             await loadInstalled()
             loadPackFrontAssets(meta)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
             setCustomUrl('')
         }
         catch (err) {
@@ -238,7 +242,7 @@ const PackManagerDialog: React.FC<IPackManagerDialogProps> = (props: IPackManage
             const meta: IInstalledPack = await res.json()
             await loadInstalled()
             loadPackFrontAssets(meta)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         }
         catch (err) {
             setError(`Failed to install pack: ${err}`)

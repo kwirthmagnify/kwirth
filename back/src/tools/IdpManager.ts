@@ -31,6 +31,9 @@ interface IIdpConnectorInfo {
     marketplaceLabel?: string
     website?: string
     description?: string
+    // Hace falta en la LISTA, no solo al instalar: al desinstalar hay que poder avisar de que el
+    // conector sigue enganchado hasta que se reinicie el core.
+    requiresRestart?: boolean
 }
 
 // metadatos de un conector INSTALADO (persistidos en configmap; el codigo back.js va aparte)
@@ -61,6 +64,7 @@ interface IIdpConnectorMeta {
 // Lo que se sabe de un conector en runtime, para cruzarlo con su clase al listarlos en la UI.
 interface IConnectorRuntimeMeta {
     version?: string
+    requiresRestart?: boolean
     installedFrom?: string
     marketplaceId?: string
     marketplaceLabel?: string
@@ -112,7 +116,8 @@ export class IdpManager {
                     marketplaceId: m?.marketplaceId,
                     marketplaceLabel: m?.marketplaceLabel,
                     website: m?.website,
-                    description: m?.description
+                    description: m?.description,
+                    requiresRestart: m?.requiresRestart
                 })
             }
             catch (err) {
@@ -134,7 +139,7 @@ export class IdpManager {
         const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
         for (const m of index) {
             this.installedConnectorIds.add(m.id)
-            this.connectorMeta.set(m.id, { version: m.version, installedFrom: m.installedFrom, marketplaceId: m.marketplaceId, marketplaceLabel: m.marketplaceLabel, website: m.website, description: m.description })
+            this.connectorMeta.set(m.id, { version: m.version, requiresRestart: m.requiresRestart, installedFrom: m.installedFrom, marketplaceId: m.marketplaceId, marketplaceLabel: m.marketplaceLabel, website: m.website, description: m.description })
         }
     }
 
@@ -200,7 +205,7 @@ export class IdpManager {
             else index.push(meta)
             await this.configMaps.write(CONNECTORS_INDEX, index)
             this.installedConnectorIds.add(meta.id)
-            this.connectorMeta.set(meta.id, { version: meta.version, installedFrom: meta.installedFrom, marketplaceId: meta.marketplaceId, marketplaceLabel: meta.marketplaceLabel, website: meta.website, description: meta.description })
+            this.connectorMeta.set(meta.id, { version: meta.version, requiresRestart: meta.requiresRestart, installedFrom: meta.installedFrom, marketplaceId: meta.marketplaceId, marketplaceLabel: meta.marketplaceLabel, website: meta.website, description: meta.description })
 
             this.loadBackConnector(meta.id, backJs)
             logInfo(ELogComponent.AUTH, `IdP connector '${meta.id}' v${meta.version} installed`)
@@ -256,7 +261,11 @@ export class IdpManager {
         await this.configMaps.write(CONNECTORS_INDEX, index.filter(m => m.id !== connectorId))
         await this.configMaps.write(`kwirth-idp-connector-${connectorId}-meta`, null)
         await this.configMaps.write(`kwirth-idp-connector-${connectorId}-back`, null)
-        logInfo(ELogComponent.AUTH, `IdP connector '${connectorId}' uninstalled`)
+        // borra las instancias que dependian de este conector: dejarlas huerfanas haria que el login las
+        // ofreciera y fallaran con 'connector not available'
+        const orphans = (await this.listInstances()).filter(i => i.connectorId === connectorId)
+        for (const inst of orphans) await this.deleteInstance(inst.id)
+        logInfo(ELogComponent.AUTH, `IdP connector '${connectorId}' uninstalled${orphans.length ? ` (removed ${orphans.length} instance(s))` : ''}`)
     }
 
     // carga (registra) todos los conectores instalados desde configmap (en arranque)

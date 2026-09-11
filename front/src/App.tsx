@@ -25,6 +25,7 @@ import { SettingsUser } from './components/settings/SettingsUser'
 import { MenuTab, MenuTabOption } from './menus/MenuTab'
 import { MenuDrawer, MenuDrawerOption } from './menus/MenuDrawer'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxOkError, MsgBoxYesNo } from './tools/MsgBox'
+import { ERestartAction, restartNotice } from './components/extensionRestart'
 import { IChannelSettings, Settings } from './model/Settings'
 import { FirstTimeLogin } from './components/FirstTimeLogin'
 import { IWorkspace, IWorkspaceSummary } from './model/IWorkspace'
@@ -314,6 +315,16 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setHomepageConfig({})
         }
     }, [activeHomepageId])
+
+    /*
+        Aviso de reinicio, uno para los nueve managers de extensiones (docs no lo necesita: su guia se
+        sirve del tgz en cada peticion, no se engancha a nada al arrancar).
+
+        Antes cada dialogo llevaba el literal repetido en su linea, y decia 'installed' tambien cuando
+        se desinstalaba — porque desinstalar ni siquiera avisaba.
+    */
+    const onExtensionRestartRequired = (extension: string, action: ERestartAction) =>
+        setMsgBox(MsgBoxOkError('Kwirth server restart required', restartNotice(extension, action), setMsgBox))
 
     const onHomepageActivate = (id: string | undefined, config: Record<string, any>) => {
         if (id) {
@@ -2481,16 +2492,16 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showManageClusters && <ManageClusters onClose={onManageClustersClosed} clusters={clusters} notify={notify}/> }
                 { showApiSecurity && <ManageApiSecurity onClose={() => setShowApiSecurity(false)} /> }
                 { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} /> }
-                { showPluginManagerDialog && <PluginManagerDialog onClose={() => setShowPluginManagerDialog(false)} onPluginLoaded={loadPluginFront} onPluginUnloaded={unloadPluginFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showProviderManagerDialog && <ProviderManagerDialog onClose={() => setShowProviderManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showIdpManagerDialog && <IdpManagerDialog onClose={() => setShowIdpManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showSenderManagerDialog && <SenderManagerDialog onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showWebhookManagerDialog && <WebhookManagerDialog onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showThemeManagerDialog && <ThemeManagerDialog onClose={() => setShowThemeManagerDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} themeAssignments={themeAssignments} onAssignmentsChange={setThemeAssignments} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showHomepageManagerDialog && <HomepageManagerDialog onClose={() => setShowHomepageManagerDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showPluginManagerDialog && <PluginManagerDialog onClose={() => setShowPluginManagerDialog(false)} onPluginLoaded={loadPluginFront} onPluginUnloaded={unloadPluginFront} onRestartRequired={onExtensionRestartRequired} /> }
+                { showProviderManagerDialog && <ProviderManagerDialog onClose={() => setShowProviderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showIdpManagerDialog && <IdpManagerDialog onClose={() => setShowIdpManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showSenderManagerDialog && <SenderManagerDialog onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showWebhookManagerDialog && <WebhookManagerDialog onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showThemeManagerDialog && <ThemeManagerDialog onClose={() => setShowThemeManagerDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} themeAssignments={themeAssignments} onAssignmentsChange={setThemeAssignments} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onRestartRequired={onExtensionRestartRequired} /> }
+                { showHomepageManagerDialog && <HomepageManagerDialog onClose={() => setShowHomepageManagerDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={onExtensionRestartRequired} /> }
                 { showDocsManagerDialog && <DocsManagerDialog onClose={() => setShowDocsManagerDialog(false)} /> }
-                { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
-                { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={() => setMsgBox(MsgBoxOkError('Extension installed', 'This extension requires a Kwirth server restart to take effect.', setMsgBox))} /> }
+                { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={onExtensionRestartRequired} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} activeThemeName={activeThemeName} onThemeChange={setActiveThemeName} installedThemes={installedThemes} activeHomepageId={activeHomepageId} onHomepageChange={onHomepageChangeFromSettings} installedHomepages={installedHomepages} /> }
                 { homepageSetupId && (() => {

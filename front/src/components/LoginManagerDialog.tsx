@@ -8,6 +8,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
+import { ERestartAction } from './extensionRestart'
 import { useKeyboard } from '../tools/useKeyboard'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
 
@@ -42,7 +43,7 @@ interface IInstalledLogin {
 
 interface ILoginManagerDialogProps {
     onClose: () => void
-    onRestartRequired?: () => void
+    onRestartRequired?: (extension: string, action: ERestartAction) => void
 }
 
 const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginManagerDialogProps) => {
@@ -140,7 +141,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
             }
             const meta: IInstalledLogin = await res.json()
             await loadInstalled()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         }
         catch (err) {
             setError(`Failed to install ${entry.name}: ${err}`)
@@ -172,6 +173,8 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
                 throw new Error(body.error ?? `HTTP ${res.status}`)
             }
             await loadInstalled()
+            // Quitarlo tampoco es inmediato: sigue servido hasta que se reinicie el core.
+            if (login.requiresRestart) props.onRestartRequired?.(login.id, ERestartAction.UNINSTALL)
         }
         catch (err) {
             setError(`Failed to uninstall ${login.name}: ${err}`)
@@ -194,7 +197,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
             }
             const meta: IInstalledLogin = await res.json()
             await loadInstalled()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
             setCustomUrl('')
         }
         catch (err) {
@@ -224,7 +227,7 @@ const LoginManagerDialog: React.FC<ILoginManagerDialogProps> = (props: ILoginMan
             }
             const meta: IInstalledLogin = await res.json()
             await loadInstalled()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         }
         catch (err) {
             setError(`Failed to install login extension: ${err}`)

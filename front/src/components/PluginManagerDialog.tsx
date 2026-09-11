@@ -7,6 +7,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
+import { ERestartAction } from './extensionRestart'
 import { useKeyboard } from '../tools/useKeyboard'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx, dependencyList } from './extensionCardStyle'
 
@@ -53,7 +54,7 @@ interface IPluginManagerDialogProps {
     onClose: () => void
     onPluginLoaded: (id: string) => void
     onPluginUnloaded: (id: string) => void
-    onRestartRequired?: () => void
+    onRestartRequired?: (extension: string, action: ERestartAction) => void
 }
 
 const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPluginManagerDialogProps) => {
@@ -186,7 +187,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
             const meta: IInstalledPlugin = await res.json()
             await loadInstalled()
             props.onPluginLoaded(meta.id)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install ${plugin.name}: ${err}`)
         } finally {
@@ -205,6 +206,9 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
             }
             props.onPluginUnloaded(plugin.id)
             await loadInstalled()
+            // Quitarla tampoco es inmediato: lo que se engancha al arrancar (su router, por ejemplo)
+            // sigue montado hasta que se reinicie, aunque ya no salga en la lista.
+            if (plugin.requiresRestart) props.onRestartRequired?.(plugin.id, ERestartAction.UNINSTALL)
         } catch (err) {
             setError(`Failed to uninstall ${plugin.name}: ${err}`)
         } finally {
@@ -226,7 +230,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
             const meta: IInstalledPlugin = await res.json()
             await loadInstalled()
             props.onPluginLoaded(meta.id)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
             setCustomUrl('')
         } catch (err) {
             setError(`Failed to install plugin: ${err}`)
@@ -255,7 +259,7 @@ const PluginManagerDialog: React.FC<IPluginManagerDialogProps> = (props: IPlugin
             const meta: IInstalledPlugin = await res.json()
             await loadInstalled()
             props.onPluginLoaded(meta.id)
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install plugin: ${err}`)
         } finally {

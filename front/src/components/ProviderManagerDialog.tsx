@@ -8,6 +8,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
+import { ERestartAction } from './extensionRestart'
 import { useKeyboard } from '../tools/useKeyboard'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx, dependencyList } from './extensionCardStyle'
 
@@ -56,7 +57,7 @@ interface IInstalledProvider {
 
 interface IProviderManagerDialogProps {
     onClose: () => void
-    onRestartRequired?: () => void
+    onRestartRequired?: (extension: string, action: ERestartAction) => void
 }
 
 const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IProviderManagerDialogProps) => {
@@ -232,7 +233,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
             if (!res.ok) { const body = await res.json(); throw new Error(body.error ?? `HTTP ${res.status}`) }
             const meta: IInstalledProvider = await res.json()
             await loadInstalled()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install ${provider.name}: ${err}`)
         } finally {
@@ -250,6 +251,9 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
             const res = await fetch(`${backendUrl}/core/providers/${provider.id}`, addDeleteAuthorization(accessString))
             if (!res.ok) { const body = await res.json(); throw new Error(body.error ?? `HTTP ${res.status}`) }
             await loadInstalled()
+            // Quitarla tampoco es inmediato: lo que se engancha al arrancar (su router, por ejemplo)
+            // sigue montado hasta que se reinicie, aunque ya no salga en la lista.
+            if (provider.requiresRestart) props.onRestartRequired?.(provider.id, ERestartAction.UNINSTALL)
         } catch (err) {
             setError(`Failed to uninstall ${provider.name}: ${err}`)
         } finally {
@@ -268,7 +272,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
             const meta: IInstalledProvider = await res.json()
             setCustomUrl('')
             await loadInstalled()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install provider: ${err}`)
         } finally {
@@ -288,7 +292,7 @@ const ProviderManagerDialog: React.FC<IProviderManagerDialogProps> = (props: IPr
             if (!res.ok) { const body = await res.json(); throw new Error(body.error ?? `HTTP ${res.status}`) }
             const meta: IInstalledProvider = await res.json()
             await loadInstalled()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install provider: ${err}`)
         } finally {

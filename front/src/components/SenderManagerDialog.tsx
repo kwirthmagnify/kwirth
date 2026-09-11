@@ -11,6 +11,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
+import { ERestartAction } from './extensionRestart'
 import { useKeyboard } from '../tools/useKeyboard'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx, dependencyList } from './extensionCardStyle'
 
@@ -62,7 +63,7 @@ type ConfigValues = Record<string, any>
 
 interface ISenderManagerDialogProps {
     onClose: () => void
-    onRestartRequired?: () => void
+    onRestartRequired?: (extension: string, action: ERestartAction) => void
 }
 
 // Pagina general de senders: la del manager, y el respaldo cuando un sender no trae su propia referencia.
@@ -251,7 +252,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             const meta: IInstalledSender = await res.json()
             await loadInstalled()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install ${entry.displayName || entry.name}: ${err}`)
         } finally {
@@ -270,7 +271,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
             const meta: IInstalledSender = await res.json()
             setCustomUrl('')
             await loadInstalled()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install sender: ${err}`)
         } finally {
@@ -290,7 +291,7 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             const meta: IInstalledSender = await res.json()
             await loadInstalled()
-            if (meta.requiresRestart) props.onRestartRequired?.()
+            if (meta.requiresRestart) props.onRestartRequired?.(meta.id, ERestartAction.INSTALL)
         } catch (err) {
             setError(`Failed to install sender: ${err}`)
         } finally {
@@ -307,6 +308,9 @@ const SenderManagerDialog: React.FC<ISenderManagerDialogProps> = (props: ISender
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
             if (expandedId === sender.id) setExpandedId(undefined)
             await loadInstalled()
+            // Quitarla tampoco es inmediato: lo que se engancha al arrancar (su router, por ejemplo)
+            // sigue montado hasta que se reinicie, aunque ya no salga en la lista.
+            if (sender.requiresRestart) props.onRestartRequired?.(sender.id, ERestartAction.UNINSTALL)
         } catch (err) {
             setError(`Failed to uninstall ${sender.displayName ?? sender.id}: ${err}`)
         } finally {
