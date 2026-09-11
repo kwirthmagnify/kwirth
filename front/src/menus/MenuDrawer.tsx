@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Collapse, Divider, MenuItem, MenuList } from "@mui/material"
-import { ChevronRight, CreateNewFolderTwoTone, DeleteTwoTone, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpenTwoTone, FolderOpen, FolderZip, Home, Https, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, SaveAsTwoTone, SaveTwoTone, Send, Settings, SmartToy } from '@kwirthmagnify/kwirth-common-front/icons'
+import { ChevronRight, CreateNewFolder, Delete, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpen, FolderOpen, FolderZip, Home, Https, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, Save, SaveAs, Send, Settings, SmartToy } from '@kwirthmagnify/kwirth-common-front/icons'
 
 enum MenuDrawerOption {
     NewWorkspace,
@@ -72,11 +72,11 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
             </MenuItem>
             <Collapse in={workspacesOpen} timeout="auto" unmountOnExit>
                 <MenuList disablePadding>
-                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.NewWorkspace)}><CreateNewFolderTwoTone/>&nbsp;New workspace</MenuItem>
-                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.LoadWorkspace)}><FileOpenTwoTone/>&nbsp;Load workspace</MenuItem>
-                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.SaveWorkspace)}><SaveTwoTone/>&nbsp;Save workspace</MenuItem>
-                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.SaveWorkspaceAs)}><SaveAsTwoTone/>&nbsp;Save workspace as...</MenuItem>
-                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.DeleteWorkspace)}><DeleteTwoTone/>&nbsp;Delete workspace...</MenuItem>
+                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.NewWorkspace)}><CreateNewFolder/>&nbsp;New workspace</MenuItem>
+                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.LoadWorkspace)}><FileOpen/>&nbsp;Load workspace</MenuItem>
+                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.SaveWorkspace)}><Save/>&nbsp;Save workspace</MenuItem>
+                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.SaveWorkspaceAs)}><SaveAs/>&nbsp;Save workspace as...</MenuItem>
+                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.DeleteWorkspace)}><Delete/>&nbsp;Delete workspace...</MenuItem>
                     <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.ExportWorkspaces)}><ImportExport/>&nbsp;Export all workspaces</MenuItem>
                     <MenuItem sx={{ pl: 4 }} component='label'><input type="file" hidden accept=".kwirth.json" onChange={(event) => { setWorkspacesOpen(false); props.uploadSelected(event) }}/><ImportExport/>&nbsp;Import workspaces from file</MenuItem>
                 </MenuList>
