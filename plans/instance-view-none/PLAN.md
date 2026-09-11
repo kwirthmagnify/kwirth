@@ -38,16 +38,38 @@ Los scopes **no están atados a un canal**: `ResourceIdentifier` (`common/src/Ac
 `scopes`, `namespaces`, `groups`, `pods`, `containers` y ningún campo de canal. Cada canal traduce el
 nombre del scope con *su propia* escalera (`getChannelScopeLevel`).
 
-- **Lo bueno:** `none` ya aísla. Las escaleras de `log` (`['','filter','view','cluster']`) y `metrics`
-  (`['','snapshot','stream','cluster']`) no lo incluyen, así que un recurso con `scopes:'none'` da
-  nivel −1 ahí y **no concede nada**.
-- **Lo malo:** `none` es vocabulario **compartido**. Concederlo habilita de golpe *todos* los canales
-  que lo declaran (hoy `echo`, `agora`, `iter`, `provider-debug`). No se puede dar sugarless sin dar
-  los otros.
+- **`none` ya aísla entre canales de recursos.** Las escaleras de `log`
+  (`['','filter','view','cluster']`) y `metrics` (`['','snapshot','stream','cluster']`) no lo incluyen,
+  así que un recurso con `scopes:'none'` da nivel −1 ahí y **no concede nada**.
 
-Eso exigiría **scopes por canal**, que toca `AccessKey`, el editor de RBAC, todas las escaleras y la
-compatibilidad de las claves ya emitidas. **Fuera de alcance**, decisión explícita del usuario. Queda
-como punto del roadmap V2 del core.
+### CORRECCIÓN (2026-09-11): el scope NO es el gate de estos canales
+
+La primera versión de este plan —y el mensaje del commit `48c65392`— afirmaban que conceder `none`
+habilitaba de golpe `echo`, `agora`, `iter` y `provider-debug`. **Es falso**, por dos razones que solo
+se ven trazando el arranque de verdad:
+
+1. **El nivel exigido lo fija el front de cada canal, no la escalera.** El core compara
+   `haveLevel >= requestedLevel`, donde `requestedLevel` sale de `instanceConfig.scope`, que es lo que
+   devuelve el `getScope()` del canal (`AuthorizationManagement.checkAkr`, líneas 223-224).
+   `agora` e `iter` piden `EInstanceConfigScope.CLUSTER` (nivel 2), así que un usuario con `none`
+   (nivel 1) **no llega**. Solo `echo` y `provider-debug` piden `NONE`.
+
+2. **Y en el arranque de un canal cluster o autónomo el scope no se mira.** La rama de la view
+   `cluster` en `processStartInstanceConfig` llama a `addObject` **sin pasar por `checkAkr`**, y la del
+   canal autónomo tampoco. El scope solo se evalúa en el camino de **recursos** (dentro de la
+   resolución de pods) y en los endpoints HTTP (`validAuth`). El aviso de *"cluster-wide access key"*
+   es una línea de log, no una decisión de autorización.
+
+**El gate real es `loginKey.enabledChannels`** (`back/src/index.ts:1180`): la lista de canales que el
+usuario puede lanzar, `undefined` = todos. Y eso **ya es por canal**, que era justo la carencia que se
+temía.
+
+Consecuencia práctica: con `enabledChannels` poblado se concede sugarless sin conceder echo, agora ni
+iter. Con `enabledChannels` vacío el usuario puede lanzar cualquier canal, y el scope no lo impide para
+los de view `cluster`/`none`.
+
+Los scopes por canal siguen siendo un punto legítimo del roadmap V2 —el vocabulario compartido es real
+para el camino de recursos— pero **no son un bloqueo para este cambio** ni para sugarless.
 
 ---
 
