@@ -1,5 +1,5 @@
 import { IFileObject, ISpace, ISpaceMenuItem } from '@jfvilas/react-file-manager'
-import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, ManageSearch, PauseCircle, PauseCircleOutline, PlayCircle, PlayCircleOutline, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@kwirthmagnify/kwirth-common-front/icons'
+import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, ManageSearch, PauseCircle, PlayCircle, RestartAlt, Search, StopCircle, Subject, Terminal, VerifiedUser } from '@kwirthmagnify/kwirth-common-front/icons'
 import { Cluster, Config, Customize, Kubernetes, Network, Pod, Security, Settings, Storage } from '../icons/Icons'
 
 const spaces = new Map<string, ISpace>()
@@ -2845,12 +2845,12 @@ spaces.set('CronJob',
                 permission: true,
             },
             {   name: 'suspend',
-                icon: <PauseCircleOutline fontSize='small'/>,
+                icon: <PauseCircle fontSize='small'/>,
                 text: 'Suspend',
                 permission: true,
             },
             {   name: 'resume',
-                icon: <PlayCircleOutline fontSize='small'/>,
+                icon: <PlayCircle fontSize='small'/>,
                 text: 'Resume',
                 permission: true,
             },

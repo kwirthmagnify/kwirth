@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { IChannelObject, ENotifyLevel, MsgBoxOk } from '@kwirthmagnify/kwirth-common-front'
 import { EFilemanCommand, IFilemanMessage, IFilemanData } from './FilemanData'
 import { Box } from '@mui/material'
-import { AccountTree, Edit, InfoOutlined, Visibility, AccountTreeOutlined, HexagonOutlined, DataObjectOutlined } from '@mui/icons-material'
+import { AccountTree, Edit, Info, Visibility, HexagonOutlined, DataObjectOutlined } from '@mui/icons-material'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { IError, IFileManagerHandle, IFileObject } from '@jfvilas/react-file-manager'
 import { FileManager } from '@jfvilas/react-file-manager'
@@ -22,7 +22,7 @@ const addPostAuthorization = (accessString: string, body: string) => ({
 // ─── Inline icons for K8s kinds ────────────────────────────────────────────
 const makeIcon = (kind: string, size: number): JSX.Element => {
     const sx = { fontSize: size }
-    if (kind === 'Namespace') return <AccountTreeOutlined sx={sx} />
+    if (kind === 'Namespace') return <AccountTree sx={sx} />
     if (kind === 'Pod') return <HexagonOutlined sx={sx} />
     if (kind === 'Container') return <DataObjectOutlined sx={sx} />
     return <HexagonOutlined sx={sx} />
@@ -79,7 +79,7 @@ const FilemanTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     actions.set('file', [
         {
             title: 'File details',
-            icon: <InfoOutlined fontSize='small' color='info' />,
+            icon: <Info fontSize='small' color='info' />,
             onClick: async (files: IFileObject[]) => {
                 let info = `Details of file '${files[0].name}':<br/><br/><b>Name</b>: ${files[0].name}<br/><b>Path</b>: ${files[0].path}<br/><b>Last update</b>: ${files[0].data.updatedAt}<br/><b>Size (bytes)</b>: ${files[0].data.size}`
                 setMsgBox(MsgBoxOk('File info', info, setMsgBox))

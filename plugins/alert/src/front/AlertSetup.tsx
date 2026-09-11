@@ -2,14 +2,14 @@
 import { Autocomplete, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Select, SelectChangeEvent, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { IAlertConfig, AlertInstanceConfig, AlertConfig } from './AlertConfig'
-import { Warning, InfoOutlined } from '@mui/icons-material'
+import { Warning, Info } from '@mui/icons-material'
 import { EAlertSeverity, IAlertInstanceConfig, IAlertMetricRule, TAlertMetricOperator, TAlertTriggerMode } from './AlertTypes'
 
 // TextToolTip inlined from core FrontTools
 const TextToolTip: React.FC<{ name: string; help: React.ReactElement }> = ({ name, help }) => (
     <Box display="flex" alignItems="center" mt={2}>
         <Typography variant="body1">{name}&nbsp;</Typography>
-        <Tooltip title={help}><InfoOutlined fontSize="inherit" /></Tooltip>
+        <Tooltip title={help}><Info fontSize="inherit" /></Tooltip>
     </Box>
 )
 

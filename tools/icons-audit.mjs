@@ -70,11 +70,12 @@ for (const f of files) {
     }
 }
 
+// Orden alfabetico, y sin depender de como esten escritos los exports en el barrel
 const filas = icons.map(i => ({
     icono: i,
     code: [...uso.get(i).code].sort(),
     byName: [...uso.get(i).byName].sort()
-}))
+})).sort((a, b) => a.icono.localeCompare(b.icono))
 const sinUso = filas.filter(f => !f.code.length && !f.byName.length)
 const soloNombre = filas.filter(f => !f.code.length && f.byName.length)
 

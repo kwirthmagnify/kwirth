@@ -1,6 +1,6 @@
 ﻿import React, { useRef, useState } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, Menu, MenuItem, Select, Stack, Tab, Tabs, TextareaAutosize, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
-import { ScienceOutlined, Upload, Bolt, FileDownload, FileUpload, CheckCircle, HistoryOutlined, DeleteOutline } from '@mui/icons-material'
+import { Science, Upload, Bolt, FileDownload, FileUpload, CheckCircle, HistoryOutlined, DeleteOutline } from '@mui/icons-material'
 import { EK8sEvent, EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState, k8sEventsAvailable, kindsAvailable } from './PinocchioConfig'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { useKeyboard as _useKeyboard, HelpButton as _HelpButton } from '@kwirthmagnify/kwirth-common-front'
@@ -311,7 +311,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
         <Dialog open={true} PaperProps={{ sx: { width: '90vw', maxWidth: '1300px', height: '85vh' } }}>
             <DialogTitle sx={{ pb: 0 }}>
                 <Stack direction='row' alignItems='center' spacing={1}>
-                    <ScienceOutlined />
+                    <Science />
                     <Typography variant='h6' sx={{ flex: 1 }}>Playground</Typography>
                     <HelpButton docsUrl={docsUrl(props.clusterUrl)} section='user/06-playground' />
                 </Stack>

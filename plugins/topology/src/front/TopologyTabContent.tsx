@@ -6,7 +6,7 @@ import {
     Tooltip, Typography,
 } from '@mui/material'
 import {
-    CenterFocusStrong, Clear, ContentCopy, Delete, Hub, Info,
+    CenterFocusStrong, Close, ContentCopy, Delete, Hub, Info,
     PlayArrow, Refresh, Search, Stop, Terminal, Timeline, ZoomIn, ZoomOut,
 } from '@mui/icons-material'
 import {
@@ -208,7 +208,7 @@ const InfoResultPanel: React.FC<{ result: ITopologyInfoResult; onClose: () => vo
                     {result.kind === ETopologyQueryKind.ENDPOINTS ? 'Endpoints' : 'Ingress Rules'} — {result.name}
                 </Typography>
                 <IconButton size='small' onClick={onClose} sx={{ color: 'rgba(255,255,255,0.4)', p: 0 }}>
-                    <Clear fontSize='small' />
+                    <Close fontSize='small' />
                 </IconButton>
             </Stack>
             <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.4)' }}>{result.namespace}</Typography>
@@ -1198,7 +1198,7 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                             endAdornment: searchQuery
                                 ? <InputAdornment position='end'>
                                     <IconButton size='small' onClick={() => { setSearchQuery(''); setSearchFocused(false) }} sx={{ color: '#557' }}>
-                                        <Clear fontSize='small' />
+                                        <Close fontSize='small' />
                                     </IconButton>
                                   </InputAdornment>
                                 : null,

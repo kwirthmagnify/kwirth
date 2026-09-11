@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Card, CardContent, CardHeader, Chip, IconButton, InputAdornment, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
-import { ArrowDownward, ArrowUpward, Check, Clear, ContentCopy, DeleteSweep, ExpandLess, ExpandMore, Info, Search } from '@mui/icons-material'
+import { ArrowDownward, ArrowUpward, Check, Close, ContentCopy, DeleteSweep, ExpandLess, ExpandMore, Info, Search } from '@mui/icons-material'
 import { IProviderDebugData } from './ProviderDebugData'
 import { IProviderDebugConfig } from './ProviderDebugConfig'
 import { JsonBlock } from './JsonBlock'
@@ -222,7 +222,7 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
                                     // siempre presente y deshabilitado: si se renderiza en
                                     // condicional desaparece bajo el propio click que lo pulsa
                                     endAdornment: <InputAdornment position='end'>
-                                        <IconButton size='small' aria-label='Clear search' disabled={search === ''} onClick={() => { setSearch(''); setMatchPos(-1) }}><Clear fontSize='small' /></IconButton>
+                                        <IconButton size='small' aria-label='Clear search' disabled={search === ''} onClick={() => { setSearch(''); setMatchPos(-1) }}><Close fontSize='small' /></IconButton>
                                     </InputAdornment>
                                 }
                             }}

@@ -112,7 +112,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.21.tgz",
     "description": "File Manager channel plugin for Kwirth",
-    "icon": "FolderCopyTwoTone",
+    "icon": "FolderCopy",
     "website": "https://kwirthmagnify.dev"
   },
   {
@@ -240,7 +240,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.17.tgz",
     "description": "File Manager channel plugin for Kwirth",
-    "icon": "FolderCopyTwoTone",
+    "icon": "FolderCopy",
     "website": "https://kwirthmagnify.dev"
   },
   {
@@ -334,7 +334,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.12.tgz",
     "description": "File Manager channel plugin for Kwirth",
-    "icon": "FolderCopyTwoTone",
+    "icon": "FolderCopy",
     "website": "https://kwirthmagnify.dev"
   },
   {
@@ -505,7 +505,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.11.tgz",
     "description": "Fileman Kwirth plugin for in-container file management live",
-    "icon": "FolderCopyTwoTone"
+    "icon": "FolderCopy"
   },
   {
     "extensionType": "plugin",
@@ -609,7 +609,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.10.tgz",
     "description": "Fileman Kwirth plugin for in-container file management live",
-    "icon": "FolderCopyTwoTone"
+    "icon": "FolderCopy"
   },
   {
     "extensionType": "plugin",
@@ -709,7 +709,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.9.tgz",
     "description": "Fileman Kwirth plugin for in-container file management live",
-    "icon": "FolderCopyTwoTone"
+    "icon": "FolderCopy"
   },
   {
     "extensionType": "plugin",
@@ -856,7 +856,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.8.tgz",
     "description": "Fileman Kwirth plugin for in-container file management live",
-    "icon": "FolderCopyTwoTone"
+    "icon": "FolderCopy"
   },
   {
     "extensionType": "plugin",
@@ -1124,7 +1124,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.7.tgz",
     "description": "Fileman Kwirth plugin for in-container file management live",
-    "icon": "FolderCopyTwoTone"
+    "icon": "FolderCopy"
   },
   {
     "extensionType": "plugin",
@@ -1228,7 +1228,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.6.tgz",
     "description": "Fileman Kwirth plugin for in-container file management live",
-    "icon": "FolderCopyTwoTone"
+    "icon": "FolderCopy"
   },
   {
     "extensionType": "plugin",
@@ -1507,7 +1507,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.5.tgz",
     "description": "Fileman Kwirth plugin for in-container file management live",
-    "icon": "FolderCopyTwoTone"
+    "icon": "FolderCopy"
   },
   {
     "extensionType": "plugin",
@@ -1516,7 +1516,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.4.tgz",
     "description": "Fileman Kwirth plugin for in-container file management live",
-    "icon": "FolderCopyTwoTone"
+    "icon": "FolderCopy"
   },
   {
     "extensionType": "plugin",
@@ -1525,7 +1525,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.3.tgz",
     "description": "Fileman Kwirth plugin for in-container file management live",
-    "icon": "FolderCopyTwoTone"
+    "icon": "FolderCopy"
   },
   {
     "extensionType": "plugin",
@@ -1782,7 +1782,7 @@
     "name": "Fileman",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.18.tgz",
     "description": "File Manager channel plugin for Kwirth",
-    "icon": "FolderCopyTwoTone",
+    "icon": "FolderCopy",
     "website": "https://kwirthmagnify.dev"
   },
   {
