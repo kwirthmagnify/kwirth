@@ -286,20 +286,20 @@ export class TopologyChannel implements IChannel {
     channelId = 'topology'
 
     requirements: IChannelRequirements = {
-        accessString:  true,
-        clusterUrl:    true,
-        clusterInfo:   true,
-        exit:          false,
+        accessString: true,
+        clusterUrl: true,
+        clusterInfo: true,
+        exit: false,
         frontChannels: false,
-        metrics:       false,
+        metrics: false,
         notifications: false,
-        notifier:      true,
-        setup:         true,
-        settings:      false,
-        palette:       false,
-        userSettings:  false,
-        webSocket:     true,
-        backChannels:  false,
+        notifier: true,
+        setup: true,
+        settings: false,
+        palette: false,
+        userSettings: false,
+        webSocket: true,
+        backChannels: false,
     }
 
     getScope() { return EInstanceConfigScope.VIEW }
