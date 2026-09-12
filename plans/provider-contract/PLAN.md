@@ -155,3 +155,76 @@ que revisarlo caso por caso.
 **Relacionado:** el mismo hueco explica el aviso que ya se da al instalar estos providers, documentado en
 la guía de administración (`08-extending-kwirth`, *When a restart is needed*). Si esto se arregla, esa
 página hay que revisarla.
+
+### Validado el 2026-09-12: SIGUE PENDIENTE
+
+Revisado a petición del usuario, que lo creía arreglado. No lo está, y la prueba es de una línea:
+
+```ts
+// back/src/index.ts:1427
+let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi, {}, () => ri.clusterInfo.providers)
+```
+
+Ese `{}` es el objeto de callbacks. `ProviderApi` sigue declarando `onProviderInstalled?` y sigue
+disparándolo en `/install` y `/upload`, pero como nadie lo pasa queda `undefined` y no ocurre nada.
+`mountProviderConfigRouter` se sigue llamando desde los dos sitios de siempre (`:1484` arranque,
+`:1366` instalación de un plugin) y desde ningún otro.
+
+⚠️ **Por qué parecía arreglado.** Se instaló sugarless 0.2.0 del marketplace y funcionó — pero eso no
+lo desmiente: se instaló también el **plugin**, que declara `provider:sugarless:0.2.0` en
+`requiresExtension`, y esa ruta sí instancia el provider y sí monta su router. Y encima se reinició el
+core después. El síntoma solo aparece instalando un provider **solo** y sin reiniciar.
+
+### Diseño del arreglo
+
+**1. El callback, en `index.ts:1427`** — el `{}` pasa a llevar la implementación:
+
+```ts
+let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi, {
+    onProviderInstalled: async (id: string) => { await bringProviderUp(riRouter, ri, id, apiKeyApi) }
+}, () => ri.clusterInfo.providers)
+```
+
+**2. `bringProviderUp()`, nueva, junto a `mountProviderConfigRouter` (`index.ts:1227`).** No hay que
+inventar nada: es lo que ya hace el bucle de arranque de `:1464-1485`, en cinco pasos.
+
+| | |
+|---|---|
+| instanciar | `createProviderInstance(registeredProviders.get(id), ri.clusterInfo, ri.kwirthData, ri.providerStorage)` |
+| configurar | `providerManager.getConfig(id)` y, si trae algo, `providerInstance.configure(cfg)` |
+| arrancar | `startProvider()` y push a `ri.clusterInfo.providers` |
+| router público | si `providesRouter`: `riRouter.use(alias ?? '/<ri.id>/provider/<id>', provider.router)` y `started = true` |
+| configRouter | `mountProviderConfigRouter(riRouter, provider, apiKeyApi)` |
+
+**3. Los dos sitios que ya lo hacen, a usarla.** Ese bloque está hoy **copiado dos veces** (arranque
+`:1464` e instalación de plugin `:1341-1366`) y el arreglo lo dejaría en tres. Ahí está el valor real de
+extraerlo: que el arranque y la instalación en caliente no puedan volver a divergir, que es exactamente
+cómo nació este bug.
+
+### Tres detalles que muerden
+
+**El callback es síncrono y el trabajo no lo es.** `onProviderInstalled?: (id: string) => void`
+(`ProviderApi.ts:10`), pero `providerManager.getConfig()` se espera. Hay que ampliarlo a
+`(id: string) => void | Promise<void>` y **await**earlo en las dos rutas que lo disparan
+(`ProviderApi.ts:139` y `:153`). Si no, un fallo al montar se traga y `/install` responde `200` con el
+provider a medio levantar — peor que el bug actual, porque miente.
+
+**El orden de montaje tiene que funcionar.** Express recorre el stack en orden de registro, así que
+añadir rutas a `riRouter` *después* solo vale si no hay un catch-all detrás. Comprobado el 2026-09-12:
+el bucle de providers es lo último de `setupRoutes` y el estático del front va a nivel de `app`, después
+del dispatch. Funciona — pero es justo lo que haría que el arreglo pareciese no hacer nada.
+
+**`onProviderUninstalled` tiene el mismo hueco y NO se arregla igual.** También está declarado y sin
+implementar, pero desinstalar en caliente es otro problema: Express no sabe desmontar rutas, así que el
+router se queda colgado y el polling sigue corriendo. Exige un guardián en el propio handler, o
+reinicio. **No meterlo en el mismo cambio.**
+
+### Después del arreglo
+
+`requiresRestart: true` deja de ser necesario **por este motivo** en los providers dueños de su
+configuración, pero no se puede quitar en bloque: los que registran informers o consumen recursos del
+arranque lo siguen necesitando. Uno a uno. Y hay que repasar *When a restart is needed* de la guía de
+administración, que hoy documenta este aviso.
+
+**Estado: pendiente, sin empezar.** Decisión del usuario el 2026-09-12: se deja documentado y no se
+toca por ahora.
