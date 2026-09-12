@@ -62,5 +62,14 @@
     "description": "Custom login page for Magnify channel",
     "website": "https://github.com/kwirthmagnify/kwirth",
     "url": "https://registry.npmjs.org/@kwirthmagnify/login-magnify/-/login-magnify-0.1.1.tgz"
+  },
+  {
+    "extensionType": "login",
+    "id": "anonymous",
+    "version": "0.1.2",
+    "name": "Anonymous",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/login-anonymous/-/login-anonymous-0.1.2.tgz",
+    "description": "Auto-login extension for anonymous or demo access — no form shown, credentials configured from admin UI",
+    "website": "https://github.com/kwirthmagnify/kwirth"
   }
 ]

@@ -10,6 +10,14 @@
   {
     "extensionType": "provider",
     "id": "kafka",
+    "version": "0.1.11",
+    "name": "Kafka Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.1.11.tgz",
+    "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces"
+  },
+  {
+    "extensionType": "provider",
+    "id": "kafka",
     "version": "0.1.10",
     "name": "Kafka Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.1.10.tgz",
@@ -52,6 +60,15 @@
   {
     "extensionType": "provider",
     "id": "tick",
+    "version": "0.1.11",
+    "name": "Tick Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.11.tgz",
+    "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "provider",
+    "id": "tick",
     "version": "0.1.10",
     "name": "Tick Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.10.tgz",
@@ -83,6 +100,15 @@
     "name": "Trivy Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.8.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "provider",
+    "id": "validating",
+    "version": "0.1.13",
+    "name": "Validating Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.1.13.tgz",
+    "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks",
     "website": "https://kwirthmagnify.dev"
   },
   {

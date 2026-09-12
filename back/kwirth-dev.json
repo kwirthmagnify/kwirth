@@ -3,23 +3,13 @@
     "trivy": "../plugins/trivy/dist",
     "pinocchio": "../plugins/pinocchio/dist",
     "mirc": "../plugins/mirc/dist",
-    "alert": "../plugins/alert/dist",
     "censor": "../plugins/censor/dist",
-    "echo": "../plugins/echo/dist",
-    "fileman": "../plugins/fileman/dist",
-    "log": "../plugins/log/dist",
-    "news": "../plugins/news/dist",
-    "ops": "../plugins/ops/dist",
-    "topology": "../plugins/topology/dist",
     "montag": "../plugins/montag/dist",
     "excubitor": "../plugins/excubitor/dist",
     "iter": "../plugins/iter/dist",
     "situs": "../plugins/situs/dist"
   },
   "providers": {
-    "tick": "../providers/tick/dist",
-    "validating": "../providers/validating/dist",
-    "kafka": "../providers/kafka/dist",
     "otel": "../providers/otel/dist",
     "syslog": "../providers/syslog/dist",
     "trivy": "../providers/trivy/dist"
@@ -36,7 +26,6 @@
   },
   "webhooks": {},
   "logins": {
-    "anonymous": "../logins/anonymous/dist/anonymous.tgz",
     "excubitor": "../plugins/excubitor/login/dist/excubitor.tgz",
     "montag": "../plugins/montag/login/dist/montag.tgz",
     "iter": "../plugins/iter/login/dist/iter.tgz",

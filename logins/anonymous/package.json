@@ -2,7 +2,7 @@
     "name": "@kwirthmagnify/login-anonymous",
     "id": "anonymous",
     "displayName": "Anonymous",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "files": [
         "login.json",
         "background.png"
