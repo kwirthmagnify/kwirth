@@ -1,8 +1,5 @@
 {
   "plugins": {
-    "trivy": "../plugins/trivy/dist",
-    "pinocchio": "../plugins/pinocchio/dist",
-    "mirc": "../plugins/mirc/dist",
     "censor": "../plugins/censor/dist",
     "montag": "../plugins/montag/dist",
     "excubitor": "../plugins/excubitor/dist",
@@ -14,16 +11,7 @@
     "syslog": "../providers/syslog/dist",
     "trivy": "../providers/trivy/dist"
   },
-  "senders": {
-    "file": "../senders/file/dist",
-    "email-resend": "../senders/email-resend/dist",
-    "email-smtp": "../senders/email-smtp/dist",
-    "tee": "../senders/tee/dist",
-    "regex": "../senders/regex/dist",
-    "composite": "../senders/composite/dist",
-    "timed": "../senders/timed/dist",
-    "teams": "../senders/teams/dist"
-  },
+  "senders": {},
   "webhooks": {},
   "logins": {
     "excubitor": "../plugins/excubitor/login/dist/excubitor.tgz",

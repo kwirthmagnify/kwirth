@@ -185,6 +185,16 @@
   {
     "extensionType": "plugin",
     "id": "mirc",
+    "version": "0.1.13",
+    "name": "mIRC",
+    "displayName": "mIRC",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-mirc/-/kwirth-plugin-mirc-0.1.13.tgz",
+    "description": "mIRC channel plugin for Kwirth - cross-cluster direct messaging between connected users, with offline mailbox and WhatsApp-style delivery checks",
+    "icon": "Forum"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "mirc",
     "version": "0.1.12",
     "name": "mIRC",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-mirc/-/kwirth-plugin-mirc-0.1.12.tgz",
@@ -223,6 +233,17 @@
   {
     "extensionType": "plugin",
     "id": "pinocchio",
+    "version": "0.2.32",
+    "name": "Pinocchio",
+    "displayName": "Pinocchio",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.32.tgz",
+    "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
+    "icon": "AutoFixHigh",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "pinocchio",
     "version": "0.2.31",
     "name": "Pinocchio",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.31.tgz",
@@ -255,6 +276,17 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.18.tgz",
     "description": "Topology channel plugin for Kwirth - 3D visualization of Kubernetes cluster topology",
     "icon": "AccountTree",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "trivy",
+    "version": "0.2.26",
+    "name": "Trivy",
+    "displayName": "Trivy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.26.tgz",
+    "description": "Trivy security scanning channel plugin for Kwirth",
+    "icon": "VerifiedUser",
     "website": "https://kwirthmagnify.dev"
   },
   {
