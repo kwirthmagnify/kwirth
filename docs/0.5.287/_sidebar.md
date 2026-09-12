@@ -106,6 +106,7 @@
     * [Echo](/0.5.287/plugins/reference/echo)
     * [News](/0.5.287/plugins/reference/news)
     * [Provider Debug](/0.5.287/plugins/reference/provider-debug)
+  * [Autonomous plugins](/0.5.287/plugins/autonomous)
   * [Developing plugins](/0.5.287/plugins/developing)
 * [Providers](/0.5.287/providers/index)
   * [Developing providers](/0.5.287/providers/developing)

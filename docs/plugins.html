@@ -175,6 +175,11 @@
     <span class="hl">Plugin</span>  →  receives ClusterInfo, WebSocket session, senders, providers
   </div>
 
+  <h2>Autonomous plugins</h2>
+  <p>Not every plugin observes cluster resources. An <strong>autonomous plugin</strong> needs nothing from the cluster — no namespace, pod or container — so it opens directly, without asking the user to pick a scope. It is a regular plugin in every other respect.</p>
+  <p>This is what lets you <strong>embed a standalone JavaScript application</strong> — a game, a dashboard, a small tool, an external widget — as a Kwirth channel, and have it inherit the framework's services for free: <strong>authentication</strong>, <strong>RBAC</strong>, <strong>persistence</strong> (ConfigMaps / Secrets / PVC / files), the real-time <strong>WebSocket</strong>, providers, theming and notifications. Build the app once; ship it as a channel and let Kwirth handle sign-in, permissions and state.</p>
+  <p>A plugin declares itself autonomous by setting <code>cluster: false</code> and <code>resourced: false</code> in its back-channel data — its only view becomes <code>none</code>, and Kwirth starts it once with no resource selection.</p>
+
   <h2>Available plugins</h2>
   <div class="plugins-grid">
     <div class="plugin-card">

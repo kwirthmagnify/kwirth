@@ -34,4 +34,8 @@ Each card shows the plugin's **name**, **version**, a short **description** and 
 | 🧪 [Echo](echo) | Reference/demo channel for plugin authors | plugin |
 | 🧩 [Provider Debug](provider-debug) | Watch the raw events a provider emits | plugin |
 
+### Autonomous channels
+
+Most channels **observe cluster resources**, so opening one asks you to pick a cluster, namespace, pod or container. A few channels are **autonomous**: they need nothing from the cluster and open directly, without asking for a scope. Autonomous channels exist to bring **standalone applications** — games, dashboards, small tools, embedded widgets — into kwirth while reusing its sign-in, permissions and persistence. See [Autonomous plugins](/0.5.287/plugins/autonomous) for how they are built.
+
 > All channels share the same [lifecycle](../../user/05-channels): select resources → **ADD** → gear **▶ Start** → configure → read. Follow the links above for each channel's specific configuration and usage.
