@@ -112,6 +112,26 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
         }
     }
 
+    /*
+        Hueco de ancho FIJO para cada icono de la fila.
+
+        El del canal lo pinta cada plugin con getChannelIcon(), asi que uno trae una gota, otro un
+        engranaje y otro un pin, y cada uno ocupa lo que ocupa. Sin un ancho fijo, el nombre de la
+        pestaña empieza en una x distinta en cada linea y la lista sale desalineada.
+
+        24 px porque es el tamaño por defecto de un icono de MUI; el de la view se pide a 20 y se
+        centra dentro.
+    */
+    const iconSlotSx = {
+        width: 24,
+        minWidth: 24,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        lineHeight: 0
+    }
+
     const drawTabCard = (tabList:ITabSummary[], listType:EListType) => {
         return <>
             <Card>
@@ -151,13 +171,11 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
 
                             return <Stack key={listType+tab.name+tab.channel} direction={'row'} alignItems={'center'} flex={1}>
                                 <Tooltip title={channelAvailable ? tab.channel : `Channel '${tab.channel}' is not available — plugin may not be installed`}>
-                                    <span style={{ display: 'inline-flex', lineHeight: 0 }}>{channelIcon}</span>
+                                    <Box sx={iconSlotSx}>{channelIcon}</Box>
                                 </Tooltip>
                                 <Typography>&nbsp;</Typography>
                                 <Tooltip title={`View: ${tab.channelObject.view}`}>
-                                    <span style={{ display: 'inline-flex', lineHeight: 0 }}>
-                                        {viewIcon}
-                                    </span>
+                                    <Box sx={iconSlotSx}>{viewIcon}</Box>
                                 </Tooltip>
                                 <Typography>&nbsp;</Typography>
                                 <Tooltip title={disabled? `Cannot access cluster '${tab.channelObject.clusterName}'`: `'${tab.name}' on cluster '${tab.channelObject.clusterName}'`}>
