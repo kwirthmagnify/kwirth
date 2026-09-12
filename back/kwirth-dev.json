@@ -15,7 +15,6 @@
     "montag": "../plugins/montag/dist",
     "excubitor": "../plugins/excubitor/dist",
     "iter": "../plugins/iter/dist",
-    "asteroids": "../plugins/asteroids/dist",
     "spectrum": "../plugins/spectrum/dist"
   },
   "providers": {
@@ -71,7 +70,6 @@
     "kwirth": "bundle/docs/kwirth.tgz",
     "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
     "montag": "../plugins/montag/docs/montag.tgz",
-    "iter": "../plugins/iter/docs/iter.tgz",
-    "asteroids": "../plugins/asteroids/docs/asteroids.tgz"
+    "iter": "../plugins/iter/docs/iter.tgz"
   }
 }
