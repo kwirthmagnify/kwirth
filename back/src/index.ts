@@ -1394,19 +1394,19 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                                     next()
                                 })
                                 .get(async (req: Request, res: Response) => {
-                                    if (endpoint.methods.includes('GET')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res)
+                                    if (endpoint.methods.includes('GET')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                                     else res.status(405).send()
                                 })
                                 .post(async (req: Request, res: Response) => {
-                                    if (endpoint.methods.includes('POST')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res)
+                                    if (endpoint.methods.includes('POST')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                                     else res.status(405).send()
                                 })
                                 .put(async (req: Request, res: Response) => {
-                                    if (endpoint.methods.includes('PUT')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res)
+                                    if (endpoint.methods.includes('PUT')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                                     else res.status(405).send()
                                 })
                                 .delete(async (req: Request, res: Response) => {
-                                    if (endpoint.methods.includes('DELETE')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res)
+                                    if (endpoint.methods.includes('DELETE')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                                     else res.status(405).send()
                                 })
                             expressApp.use(`${envRootPath}/${activeRI.id}/channel/${channelData.id}/${endpoint.name}`, router)
@@ -1502,15 +1502,25 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
     return false
 }
 
-const processHttpChannelRequest = async (channel: IChannel, endpointName:string, aka:ApiKeyApi, req:Request, res:Response) : Promise<void> => {
+const processHttpChannelRequest = async (channel: IChannel, endpointName:string, aka:ApiKeyApi, req:Request, res:Response, requiresAccessKey:boolean) : Promise<void> => {
     try {
+        // Un endpoint declarado ANONIMO no puede exigir cabecera: lo cargan cosas que el navegador pide
+        // por URL (un <iframe src>, una imagen, una descarga directa), y esas no pueden mandar
+        // Authorization. Antes se pedia la clave siempre, asi que 'requiresAccessKey: false' no servia
+        // para nada: el router se saltaba su propia validacion y aqui se rechazaba igual con un 403.
+        if (!requiresAccessKey) {
+            channel.endpointRequest(endpointName, req, res, undefined)
+            return
+        }
+
         let accessKey = await AuthorizationManagement.getKey(req, res, aka)
         if (accessKey) {
             channel.endpointRequest(endpointName, req, res, accessKey)
         }
         else {
+            // getKey YA ha respondido (403). Aqui solo se registra: volver a responder lanzaba
+            // ERR_HTTP_HEADERS_SENT, que acababa en el catch intentando un tercer envio.
             logError(ELogComponent.CORE, 'Could not get accessKey processing an HTTP channel request')
-            res.status(400).send()
         }
     }
     catch (err) {
@@ -1538,27 +1548,27 @@ const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
                     })
                     .get( async (req:Request, res:Response) => {
                         if (endpoint.methods.includes('GET')) {
-                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res)
+                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                         }
                         else
                             res.status(405).send()
                     })
                     .post( async (req:Request, res:Response) => {
                         if (endpoint.methods.includes('POST')) {
-                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res)
+                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                         }
                         else
                             res.status(405).send()
                     })
                     .put( async (req:Request, res:Response) => {
                         if (endpoint.methods.includes('PUT'))
-                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res)
+                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                         else
                             res.status(405).send()
                     })
                     .delete( async (req:Request, res:Response) => {
                         if (endpoint.methods.includes('DELETE'))
-                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res)
+                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                         else
                             res.status(405).send()
                     })
