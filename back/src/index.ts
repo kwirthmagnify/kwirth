@@ -769,6 +769,15 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
             cluster para un canal que no va a mirar un solo pod es privilegio injustificado y ruido en
             la auditoria. Se pasan cadenas vacias y no '*all' porque el significado no es "todos los
             recursos" sino "ningun recurso".
+
+            La VIEW ELEGIDA DA IGUAL, y por eso no se valida. Aqui se entra por lo que el canal
+            declara, no por lo que el usuario seleccione, y se le entregan selectores vacios en todos
+            los casos: elegir 'cluster' en vez de 'none' no le da al canal ni un permiso mas.
+            Rechazar las demas views era gratuito, ademas de incoherente —'cluster' es MAS permisiva
+            que 'none', asi que quien puede lo mas podia lo menos— y el sintoma era pesimo: el core
+            contestaba al START con un SIGNAL de error que los canales no miraban, el canal se
+            guardaba una instancia vacia como si hubiera arrancado, y el fallo reaparecia mucho
+            despues disfrazado de otra cosa (en asteroids, al intentar guardar una puntuacion).
         */
         const channelData = ri.channels.get(instanceConfig.channel)?.getChannelData()
         if (channelData && !channelData.cluster && !channelData.resourced) {
@@ -778,8 +787,7 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
                 return
             }
             if (instanceConfig.view !== EInstanceConfigView.NONE) {
-                sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Channel '${instanceConfig.channel}' can only be started with the 'none' view`, instanceConfig, ri.channels)
-                return
+                logInfo(ELogComponent.CORE, `Autonomous channel '${instanceConfig.channel}' started with view '${instanceConfig.view}': the view is ignored and no resources are granted`)
             }
             instanceConfig.instance = uuid()
             sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, instanceConfig.channel, instanceConfig, 'Instance Config accepted')
