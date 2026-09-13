@@ -11,7 +11,7 @@ comparten con el resto de plugins con IA. Pinocchio los lee al arrancar el canal
 ## Estado
 
 - **0.2.31 (2026-09-07)** — paridad con el catálogo de providers del core. Ver
-  [test-metrics-history](../../plugins/pinocchio/docs/plan/test-metrics-history.md).
+  [test-metrics-history](../../plugins/pinocchio/docs/qa/test-metrics-history.md).
 - **2026-09-08** — guía de usuario + admin en `plugins/pinocchio/docs/guide/` (14 páginas + 12 capturas,
   docsify). `build.mjs` y `watch.mjs` empaquetan también `docs/pinocchio.tgz` (extensión `docs`), y el
   tarball está dado de alta en `back/kwirth-dev.json`. Capturas regenerables con

@@ -415,7 +415,7 @@ Y añade **`temperature` por versión**, que en Pinocchio sale del LLM y no se p
 - UI y logs en **inglés**; comentarios del código en español.
 - Diálogos: tamaño fijo, Cancel a la derecha, controles siempre visibles y `disabled`, confirmaciones
   con `setMsgBox`.
-- Cierre con **CL9** completo, incluido harness + e2e propios y su `docs/plan/test-metrics-history.md`.
+- Cierre con **CL9** completo, incluido harness + e2e propios y su `docs/qa/test-metrics-history.md`.
 
 ---
 

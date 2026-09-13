@@ -5,7 +5,8 @@
 > sobrescribe** — es un histórico.
 >
 > Vive en `docs/qa/`, la misma ruta que usa cada plugin (`<plugin>/docs/qa/test-metrics-history.md`) — junto
-> al PNG de evolución de cobertura (`test-metrics-coverage.png`). Para que el histórico esté siempre en el
+> a los dos PNG que se regeneran de él en cada cierre: evolución de la cobertura (`test-metrics-coverage.png`)
+> y tamaño de la suite (`test-metrics-tests.png`, tests que existen). Para que el histórico esté siempre en el
 > mismo sitio se mire el core o una extensión. Estuvo en `plans/` hasta el **2026-09-09** (por no publicar
 > datos de QA en el website; luego se decidió que publicarlos no importa), y en `docs/plan/` hasta el
 > **2026-09-13**, cuando se movió a `docs/qa/` (el sitio propio de los artefactos de QA).
