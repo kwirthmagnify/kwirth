@@ -67,6 +67,22 @@ test('START handshake: sends a flat START with the remote accessKey + config, re
     wss.close()
 })
 
+test('normalizes an http(s) URL to ws(s) (Kwirth stores cluster URLs as http/https)', { timeout: 8000 }, async () => {
+    const { wss, url } = await makeServer()          // url = ws://127.0.0.1:PORT
+    const httpUrl = url.replace(/^ws:/, 'http:')     // a Kwirth http endpoint (same host+port+path)
+    const connected = new Promise<void>((resolve) => { wss.on('connection', () => resolve()) })
+    const states: ERemoteConnState[] = []
+    const handle = openRemoteChannel(
+        { name: 'remote', url: httpUrl, accessString: 'AK' },
+        baseConfig(),
+        { onMessage: () => {}, onState: (s) => states.push(s) }
+    )
+    await connected   // the server accepted a connection -> the http:// URL was dialed as ws://
+    assert.ok(states.includes(ERemoteConnState.CONNECTED))
+    handle.close()
+    wss.close()
+})
+
 test('captures the instance from the START RESPONSE and stamps it on outgoing sends', { timeout: 8000 }, async () => {
     const { wss, url } = await makeServer()
     let serverSock: WebSocket | undefined

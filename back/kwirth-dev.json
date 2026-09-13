@@ -3,7 +3,8 @@
     "montag": "../plugins/montag/dist",
     "excubitor": "../plugins/excubitor/dist",
     "iter": "../plugins/iter/dist",
-    "situs": "../plugins/situs/dist"
+    "situs": "../plugins/situs/dist",
+    "agora": "../plugins/agora/dist"
   },
   "providers": {
     "otel": "../providers/otel/dist",
@@ -16,7 +17,8 @@
     "excubitor": "../plugins/excubitor/login/dist/excubitor.tgz",
     "montag": "../plugins/montag/login/dist/montag.tgz",
     "iter": "../plugins/iter/login/dist/iter.tgz",
-    "santander": "../logins/santander/dist/santander.tgz"
+    "santander": "../logins/santander/dist/santander.tgz",
+    "agora": "../plugins/agora/login/dist/agora.tgz"
   },
   "homepages": {},
   "themes": {
@@ -33,17 +35,13 @@
       }
     ]
   },
-  "idps": {
-    "gitlab-cloud": "../idps/gitlab-cloud/dist",
-    "gitlab-onprem": "../idps/gitlab-onprem/dist",
-    "github-cloud": "../idps/github-cloud/dist",
-    "github-onprem": "../idps/github-onprem/dist"
-  },
+  "idps": {},
   "docs": {
     "kwirth": "bundle/docs/kwirth.tgz",
     "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
     "montag": "../plugins/montag/docs/montag.tgz",
     "iter": "../plugins/iter/docs/iter.tgz",
-    "situs": "../plugins/situs/docs/situs.tgz"
+    "situs": "../plugins/situs/docs/situs.tgz",
+    "agora": "../plugins/agora/docs/agora.tgz"
   }
 }

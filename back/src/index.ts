@@ -1904,7 +1904,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             // Federación back-a-back (framework): abre un WS cliente hacia un cluster remoto y lo gestiona
             // (START con SU accessKey, reconexión con backoff, captura del instance). El WS crudo no se
             // expone; el plugin usa el handle. La implementación vive en tools/RemoteChannel.
-            openRemoteChannel: (endpoint, config, handlers) => openRemoteChannel(endpoint, config, handlers, (m) => logError(ELogComponent.CHANNEL, m)),
+            openRemoteChannel: (endpoint, config, handlers) => openRemoteChannel(endpoint, config, handlers, (m) => logError(ELogComponent.CHANNEL, m), (m) => logInfo(ELogComponent.CHANNEL, m)),
             // Lee el store de PERFIL de un usuario (ConfigMap kwirth-store-<userId>, clave '<group>-<key>')
             // y devuelve el valor ya parseado (el store guarda cada valor JSON-stringificado). Read-only,
             // tolerante a fallo. Ej.: readUserStore(userId, 'clusters', 'list') → IClusterEndpoint[].
