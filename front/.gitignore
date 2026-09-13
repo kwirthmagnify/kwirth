@@ -12,6 +12,7 @@
 /e2e/node_modules
 # e2e de plugins PRIVADOS (no deben referenciarse en el repo público; se versionan en su repo privado)
 /e2e/tests/private/
+/e2e/.playwright.private.config.ts
 
 # production
 /build
