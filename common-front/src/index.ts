@@ -82,6 +82,7 @@ export interface IChannelObject {
     userName?: string
     isDesktop: boolean
     isFullscreen?: boolean
+    kwirthVersion?: string   // version del core de Kwirth (para que el plugin la muestre; p.ej. en su drawer)
     channelId: string
     clusters?: IClusterSummary[]
     selectedClusterName?: string

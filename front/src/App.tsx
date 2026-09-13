@@ -1006,6 +1006,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const host = channelMode === EChannelMode.REMOTE ? resolveRemoteChannelHost(channelId, cluster.clusterInfo?.id ?? '', clusters) : undefined
         if (newTab.channel.requirements.clusterUrl) newTab.channelObject.clusterUrl = host?.url ?? cluster.url
         if (newTab.channel.requirements.clusterInfo) newTab.channelObject.clusterInfo = cluster.clusterInfo
+        newTab.channelObject.kwirthVersion = cluster.kwirthData?.version   // version del core, disponible para cualquier plugin (p.ej. su drawer)
         if (newTab.channel.requirements.accessString) newTab.channelObject.accessString = host?.accessString ?? cluster?.accessString
         if (newTab.channel.requirements.metrics) newTab.channelObject.metricsList = cluster.metricsList
         if (newTab.channel.requirements.frontChannels) newTab.channelObject.frontChannels = frontChannels
