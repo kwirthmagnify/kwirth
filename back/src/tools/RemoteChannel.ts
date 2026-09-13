@@ -32,6 +32,9 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
             retryTimer = undefined
             if (!closed) connect()
         }, delay)
+        // No mantener vivo el event loop solo por el timer de reconexión (evita que un test/proceso cuelgue
+        // al salir si queda una conexión reconectando).
+        if (typeof (retryTimer as unknown as { unref?: () => void }).unref === 'function') (retryTimer as unknown as { unref: () => void }).unref()
     }
 
     const connect = () => {
@@ -103,7 +106,9 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
             if (ws && ws.readyState === WebSocket.OPEN) {
                 // El comando debe llevar el instance QUE ESTE cluster asignó a su conexión (no el del home).
                 if (logInfo) logInfo(`[fedtrace] send ${wsUrl}: msgtype=${(msg as { msgtype?: string }).msgtype} instance=${instanceId || (msg as { instance?: string }).instance}`)
-                try { ws.send(JSON.stringify({ ...msg, instance: instanceId || msg.instance })) }
+                // The core requires an accessKey on EVERY command (not just the START), and re-validates it.
+                // Stamp the remote endpoint's key on every send, like the front's AgoraClient.cmd does.
+                try { ws.send(JSON.stringify({ ...msg, instance: instanceId || msg.instance, accessKey: endpoint.accessString })) }
                 catch (err) { if (logError) logError(`openRemoteChannel: cannot send to ${wsUrl}: ${err}`) }
             }
             else if (logInfo) logInfo(`[fedtrace] send DROPPED ${wsUrl}: socket not OPEN (readyState=${ws?.readyState}) msgtype=${(msg as { msgtype?: string }).msgtype}`)

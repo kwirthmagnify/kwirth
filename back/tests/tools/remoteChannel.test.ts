@@ -70,17 +70,22 @@ test('START handshake: sends a flat START with the remote accessKey + config, re
 test('normalizes an http(s) URL to ws(s) (Kwirth stores cluster URLs as http/https)', { timeout: 8000 }, async () => {
     const { wss, url } = await makeServer()          // url = ws://127.0.0.1:PORT
     const httpUrl = url.replace(/^ws:/, 'http:')     // a Kwirth http endpoint (same host+port+path)
-    const connected = new Promise<void>((resolve) => { wss.on('connection', () => resolve()) })
-    const states: ERemoteConnState[] = []
+    // Resolve on the CLIENT's CONNECTED (not the server 'connection' event, which fires slightly earlier —
+    // that race left states empty). Getting CONNECTED at all proves the http:// URL was dialed as ws://.
+    let resolveConnected: () => void = () => {}
+    const connected = new Promise<void>((r) => { resolveConnected = r })
     const handle = openRemoteChannel(
         { name: 'remote', url: httpUrl, accessString: 'AK' },
         baseConfig(),
-        { onMessage: () => {}, onState: (s) => states.push(s) }
+        { onMessage: () => {}, onState: (s) => { if (s === ERemoteConnState.CONNECTED) resolveConnected() } }
     )
-    await connected   // the server accepted a connection -> the http:// URL was dialed as ws://
-    assert.ok(states.includes(ERemoteConnState.CONNECTED))
-    handle.close()
-    wss.close()
+    try {
+        await connected
+    }
+    finally {
+        handle.close()
+        wss.close()
+    }
 })
 
 test('captures the instance from the START RESPONSE and stamps it on outgoing sends', { timeout: 8000 }, async () => {
@@ -107,6 +112,7 @@ test('captures the instance from the START RESPONSE and stamps it on outgoing se
     const seen = await cmd
     assert.equal(seen.action, EInstanceMessageAction.COMMAND)
     assert.equal(seen.instance, 'INST-123')
+    assert.equal(seen.accessKey, 'AK')   // the core requires an accessKey on every command; the connector stamps it
     handle.close()
     wss.close()
 })
