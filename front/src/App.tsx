@@ -1110,6 +1110,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
         if (newTab.channel.requirements.exit) newTab.channelObject.exit = () => {
             setBackendUrl(props.backendUrl)
+            setFullscreenTab(undefined)
             setLogged(false)
         }
         newTab.channelObject.stopChannel = () => stopTabChannel(newTab)
@@ -1853,6 +1854,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             removeTab(t)
         }
         tabs.current = []
+        selectedTab.current = undefined   // sin tabs no hay seleccion: evita renderizar el contenido del tab viejo (fantasma)
         setRefresh(Math.random())
     }
 
@@ -2161,6 +2163,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setCurrentWorkspaceName('untitled')
             setCurrentWorkspaceDescription('No description yet')
             clearTabs()
+            setFullscreenTab(undefined)   // no heredar el fullscreen del usuario anterior (salio sin limpiarlo)
             fetch(`${backendUrl}/core/license`, addGetAuthorization(as))
                 .then(r => r.ok ? r.json() : null)
                 .then(data => { if (data && data.customerId) setLicenseInfo(data) })
