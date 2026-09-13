@@ -2185,7 +2185,18 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const remaining = params.toString()
         window.history.replaceState({}, '', window.location.pathname + (remaining ? '?' + remaining : ''))
         if (ssoerror) {
-            setMsgBox(MsgBoxOkError('Login', `Single Sign-On failed (${ssoerror}).`, setMsgBox))
+            // motivos que emite el back en el callback del IdP (AuthApi); mensaje legible por cada uno
+            const ssoErrorMessages: Record<string, string> = {
+                unverified: 'Your email address is not verified by the identity provider.',
+                notfound: 'This account is not authorized to access Kwirth.',
+                idpmismatch: 'This account is registered with a different identity provider.',
+                callback: 'Sign-in could not be completed. Please try again.',
+                state: 'The sign-in request expired or was invalid. Please try again.',
+                unavailable: 'Single Sign-On is currently unavailable.',
+                issue: 'Your access key could not be issued. Please try again.'
+            }
+            const ssoMsg = ssoErrorMessages[ssoerror] ?? `Single Sign-On failed (${ssoerror}).`
+            setMsgBox(MsgBoxOkError('Login', ssoMsg, setMsgBox))
             return
         }
         (async () => {
@@ -2325,6 +2336,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                             ? <LoginExtensionPage slug={loginExtSlug} backendUrl={backendUrl} methods={props.authMethods} initialError={loginExtError} onClose={onLoginClosed} onNotFound={() => { const p = new URLSearchParams(window.location.search); p.delete('loginExt'); window.history.replaceState({}, '', window.location.pathname + (p.toString() ? '?' + p.toString() : '')); setLoginExtSlug(undefined) }} />
                             : <Login methods={props.authMethods} onClose={onLoginClosed} key={refresh} />
                         }
+                        { msgBox }
                     </SessionContext.Provider>
                 </div>
             )
