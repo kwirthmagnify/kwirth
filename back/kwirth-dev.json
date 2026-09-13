@@ -3,7 +3,6 @@
     "montag": "../plugins/montag/dist",
     "excubitor": "../plugins/excubitor/dist",
     "iter": "../plugins/iter/dist",
-    "situs": "../plugins/situs/dist",
     "agora": "../plugins/agora/dist"
   },
   "providers": {
@@ -41,7 +40,6 @@
     "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
     "montag": "../plugins/montag/docs/montag.tgz",
     "iter": "../plugins/iter/docs/iter.tgz",
-    "situs": "../plugins/situs/docs/situs.tgz",
     "agora": "../plugins/agora/docs/agora.tgz"
   }
 }
