@@ -621,8 +621,25 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 [EExtensionType.DOCS]:     `${backendUrl}/core/docs`,
                 [EExtensionType.IDP]:      `${backendUrl}/idp/connectors`,
             }
+            // Entrar por una extension de login es una puerta ESTRECHA: el usuario aterriza en la pagina de
+            // un login concreto y va derecho a su canal, sin marketplace y normalmente sin mas Kwirth que ese.
+            // Listarle ahi que hay version nueva del tema corporativo o de un sender no le sirve de nada, asi
+            // que el aviso se limita a lo suyo: el propio login y el plugin al que le redirige (si redirige).
+            // El canal de arranque ES el id del plugin (ver el poll de /core/plugins/<channelId>/version).
+            const relevantForLoginExt = (type: EExtensionType, id: string): boolean => {
+                if (!loginExtSlug) return true
+                switch (type) {
+                    case EExtensionType.LOGIN:
+                        return id === loginExtSlug
+                    case EExtensionType.PLUGIN:
+                        return user?.startChannel !== undefined && id === user.startChannel
+                    default:
+                        return false
+                }
+            }
             try {
-                const types = Object.values(EExtensionType)
+                // con un login de extension solo se consultan los dos tipos que pueden salir en el aviso
+                const types = loginExtSlug ? [EExtensionType.LOGIN, EExtensionType.PLUGIN] : Object.values(EExtensionType)
                 const [catalogs, installeds] = await Promise.all([
                     Promise.all(types.map(t => fetch(`${backendUrl}/core/marketplace/${t}`, addGetAuthorization(accessString)).then(r => r.ok ? r.json() : []).catch(() => []))),
                     Promise.all(types.map(t => fetch(ENDPOINTS[t], addGetAuthorization(accessString)).then(r => r.ok ? r.json() : []).catch(() => [])))
@@ -637,6 +654,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         if (inst.installedFrom === 'dev') continue
                         // los conectores bundled (idp) no traen version y no son actualizables
                         if (!inst.version) continue
+                        if (!relevantForLoginExt(type, inst.id)) continue
                         const latest = catalog.filter(m => m.id === inst.id).map(m => m.version).sort((a, b) => versionGreaterThan(a, b) ? -1 : 1)[0]
                         if (latest && versionGreaterThan(latest, inst.version)) updates.push(`${type} ${inst.id} ${inst.version}→${latest}`)
                     }
