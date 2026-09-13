@@ -11,6 +11,7 @@ import { getIconFromKind } from '../tools/Constants-React'
 import { clusterColor } from '../tools/clusterColor'
 import { Area, AreaChart } from 'recharts'
 import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
+import { getChannelIconSafe } from '../tools/ChannelTools'
 import { MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 
 // svg optimizer: https://jakearchibald.github.io/svgomg/ (optmizes size and removes namespaces)
@@ -141,9 +142,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                         tabList.map(tab => {
                             const channelClass = props.frontChannels.get(tab.channel)
                             const channelAvailable = !!channelClass
-                            let channelIcon: JSX.Element = channelAvailable
-                                ? new channelClass()!.getChannelIcon()
-                                : <HelpOutline sx={{ minWidth: '24px', color: 'warning.main' }} />
+                            const channelIcon: JSX.Element = getChannelIconSafe(channelClass)
 
                             let viewIcon = <></>
                             switch (tab.channelObject.view) {
@@ -301,7 +300,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                     props.clusters && props.cluster && frontChannels.split(',').map ((c,ci) => {
                                         const channelClass = props.frontChannels.get(c.trim())
                                         if (channelClass) {
-                                            let icon = new channelClass()!.getChannelIcon()
+                                            const icon = getChannelIconSafe(channelClass)
                                             const isChannelActive = props.clusters.find(c => c.name === props.cluster!.name)!.kwirthData!.channels.some((ch: any) => ch.id === c.trim())
                                             const colorToken = isChannelActive ? 'text.primary' : 'text.disabled';
                                             let newElement = React.cloneElement(icon, { fontSize: 'small', sx:{ color:colorToken } })

@@ -10,6 +10,7 @@ import { ITabObject } from '../model/ITabObject'
 import { getIconFromKind } from '../tools/Constants-React'
 import { TChannelConstructor } from '../channels/IChannel'
 import { resolveRemoteChannelHost } from '../tools/ChannelResolution'
+import { getChannelIconSafe } from '../tools/ChannelTools'
 
 // Indicador de canal remoto en el desplegable: 'R' en círculo. Verde = operativo (su Kwirth in-cluster
 // está conectado y se puede delegar); gris = no operativo (no hay host conectado, el ADD solo avisará).
@@ -555,14 +556,14 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                     renderValue={(v) => {
                         if (!v) return undefined
                         const cls = props.frontChannels?.get(v as string)
-                        const icon = cls ? React.cloneElement(new cls().getChannelIcon(), { sx: { fontSize: 14, verticalAlign: 'middle', mr: 0.5 } }) : null
+                        const icon = cls ? React.cloneElement(getChannelIconSafe(cls), { sx: { fontSize: 14, verticalAlign: 'middle', mr: 0.5 } }) : null
                         const cd = props.backChannels.find(x => x.id === v)
                         return <>{icon}<span>{v as string}</span>{cd?.mode === EChannelMode.REMOTE && <RemoteBadge operative={!!resolveRemoteChannelHost(cd.id, cluster.clusterInfo?.id ?? '', props.clusters)} />}</>
                     }}
                 >
                     { props.backChannels.filter(c => !props.enabledChannels?.length || props.enabledChannels.includes(c.id)).map(c => {
                         const cls = props.frontChannels?.get(c.id)
-                        const icon = cls ? React.cloneElement(new cls().getChannelIcon(), { sx: { fontSize: 18, mr: 0.5 } }) : null
+                        const icon = cls ? React.cloneElement(getChannelIconSafe(cls), { sx: { fontSize: 18, mr: 0.5 } }) : null
                         return (
                             <MenuItem key={c.id} value={c.id} disabled={!channelFitsView(c, view)}>
                                 <Stack direction='row' alignItems='center'>
