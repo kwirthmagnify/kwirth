@@ -1,6 +1,5 @@
 {
   "plugins": {
-    "censor": "../plugins/censor/dist",
     "montag": "../plugins/montag/dist",
     "excubitor": "../plugins/excubitor/dist",
     "iter": "../plugins/iter/dist",
