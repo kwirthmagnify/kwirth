@@ -198,6 +198,8 @@ The secret is stored encrypted by kwirth, outside the settings, exactly like the
 
 > **Credentials never follow a redirect to another host.** Registries commonly answer a download with a redirect to object storage bearing a pre-signed URL; forwarding the `Authorization` header there would hand your credential to a third party, and those endpoints usually reject the double authentication anyway.
 
+> **The credential has to keep working after the install.** kwirth keeps installed extensions in its own storage, but not everything ends up there: an artefact too large for it is fetched from its registry again when needed, and a documentation extension is unpacked to a local directory rather than stored, so it is downloaded again whenever that directory is not there. In Kubernetes that is **every restart**, because a new pod starts with an empty filesystem. So a registry password that is rotated, revoked or left to expire does not fail on the next install: it fails on the next **restart**, and the affected extension comes up missing. The kwirth log names it, with the URL and the HTTP status.
+
 ## What to configure next
 
 With the admin account secured and the master key set, continue with:

@@ -27,8 +27,10 @@ test('los manager dialogs siguen listando catalogo tras pasar por el back', asyn
         const dialog = page.getByRole('dialog').filter({ hasText: c.dialog })
         await dialog.waitFor({ timeout: 10000 })
 
-        // el catalogo tarda: se espera a que aparezca alguna tarjeta con version
-        const hasEntries = await dialog.getByText(/^v\d+\.\d+\.\d+$/).first().isVisible({ timeout: 15000 }).catch(() => false)
+        // El catalogo tarda: el dialogo no solo pinta lo instalado, tambien resuelve los manifests
+        // remotos (publico + privados) antes de tener tarjetas que enseñar. 15s bastaban con la maquina
+        // ociosa y flakeaban con ella cargada, y un rojo que depende de eso no es señal de nada.
+        const hasEntries = await dialog.getByText(/^v\d+\.\d+\.\d+$/).first().isVisible({ timeout: 40000 }).catch(() => false)
         if (!hasEntries) failures.push(`${c.menu}: no catalog entries`)
 
         const failedText = await dialog.getByText(/Failed to fetch/i).count()

@@ -13,7 +13,9 @@ test('Manage webhooks: lists the jira webhook and a config mints a routable URL'
 
     // El diálogo "Manage webhooks" está abierto y el dev webhook jira aparece instalado.
     await expect(page.getByText('Manage webhooks')).toBeVisible()
-    await expect(page.getByText('Jira Webhook')).toBeVisible()
+    // .first(): jira figura DOS veces desde que ademas de instalado esta publicado en el marketplace
+    // privado — una en 'Installed webhooks' y otra en 'Available webhooks'. Sin acotar, strict mode.
+    await expect(page.getByText('Jira Webhook').first()).toBeVisible()
 
     // Abrir la config del webhook jira (botón Configure ⚙ de su card).
     await page.getByRole('button', { name: 'Configure' }).first().click()

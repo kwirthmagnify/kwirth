@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { matchRegistry, basicHeader, bearerHeader, authHeader } from '../../src/tools/PackageRegistries'
+import { matchRegistry, basicHeader, bearerHeader, authHeader, packageHeaders, configurePackageRegistries } from '../../src/tools/PackageRegistries'
+import { IConfigMaps } from '../../src/tools/IConfigMap'
+import { ISecrets } from '../../src/tools/ISecrets'
 import { IPackageRegistry, EPackageRegistryAuthType } from '@kwirthmagnify/kwirth-common'
 
 // De donde se baja un paquete NO es el marketplace: el manifest solo lo lista, y su url puede apuntar a
@@ -99,4 +101,30 @@ test('en Bearer el username no pinta nada', () => {
 test('sin secreto guardado la cabecera no se inventa nada', () => {
     assert.equal(authHeader({ type: EPackageRegistryAuthType.BEARER }, undefined).Authorization, 'Bearer ')
     assert.equal(authHeader(undefined, 'tok').Authorization, undefined)
+})
+
+// ⚠️ packageHeaders() sale por `if (!deps) return {}` mientras nadie haya llamado a
+// configurePackageRegistries(). No es un detalle: una descarga hecha antes de ese momento va ANONIMA, y
+// contra un registro privado eso es un 401 — pero solo al arrancar, porque instalar lo mismo desde la UI
+// ocurre despues y si lleva credenciales. Paso de verdad: el core rehidrataba las extensiones instaladas
+// en prepareRunningInstance() y configuraba esto mas tarde, en setUpRoutes(), y las docs de service-flow
+// del Nexus fallaban con 401 en cada arranque.
+//
+// Estos dos tests fijan el contrato de las dos caras. El orden importa y por eso el 'sin configurar' va
+// primero: `deps` es estado de modulo y no hay forma de desconfigurarlo.
+
+test('sin configurar, packageHeaders NO manda credenciales (y la descarga saldria anonima)', async () => {
+    assert.deepEqual(await packageHeaders(TGZ), {})
+})
+
+test('configurado, packageHeaders inyecta la credencial del registro que sirve esa URL', async () => {
+    const registry = reg('nexus', NEXUS, true, { type: EPackageRegistryAuthType.BASIC, username: 'iriaoperae' })
+    const configMaps = { read: async () => ({ packageRegistries: [registry] }) } as unknown as IConfigMaps
+    const secrets = { readAllKeys: async () => ({ nexus: 'fake-stored-password' }) } as unknown as ISecrets
+
+    configurePackageRegistries(configMaps, secrets)
+
+    assert.deepEqual(await packageHeaders(TGZ), basicHeader('iriaoperae', 'fake-stored-password'))
+    // una URL que no sirve ese registro sigue bajando anonima aunque ya este todo configurado
+    assert.deepEqual(await packageHeaders('https://registry.npmjs.org/x/-/x-1.0.0.tgz'), {})
 })

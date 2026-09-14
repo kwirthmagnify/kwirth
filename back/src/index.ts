@@ -389,6 +389,14 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             }
         }
 
+        // Las credenciales de descarga se registran AQUI, en cuanto hay almacenamiento, y no al montar las
+        // rutas. El arranque es prepareRunningInstance() -> startRunningInstance() -> setUpRoutes(), y es
+        // prepareRunningInstance quien rehidrata las extensiones instaladas: si esto se configura en
+        // setUpRoutes, packageHeaders() sale por su `if (!deps) return {}` y esas descargas van ANONIMAS.
+        // Contra un registro privado eso es un 401 al arrancar, mientras instalar lo mismo desde la UI —ya
+        // con las rutas montadas— funciona. Paso de verdad con las docs de service-flow en el Nexus.
+        configurePackageRegistries(configMaps, secrets)
+
         let runningInstance:IRunningInstance = {
             id: uuid(),
             kwirthData: kwirthData,
@@ -1297,9 +1305,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         // Resolucion de marketplaces: el back descarga los manifests (publico + los configurados),
         // filtra por tipo y aplica la precedencia, para que la regla exista en un solo sitio.
         let marketplaceManager = new MarketplaceManager(ri.configMaps, ri.secrets)
-        // Los nueve managers que instalan extensiones solo reciben configMaps, asi que las credenciales
-        // de descarga se resuelven aqui una vez en vez de enhebrarlas por nueve constructores.
-        configurePackageRegistries(ri.configMaps, ri.secrets)
+        // configurePackageRegistries() ya se llamo en createRunningInstance(): tiene que estar puesto antes
+        // de que prepareRunningInstance() rehidrate nada, y esto corre despues.
         let marketplaceApi = new MarketplaceApi(marketplaceManager, apiKeyApi)
         riRouter.use(`/core/marketplace`, marketplaceApi.router)
         // Catálogo global de scopes RBAC (built-in del core + los que declaran los canales): lo consume el

@@ -18,6 +18,11 @@ test('login extensions: menu item opens LoginDialog', async ({ page }) => {
     await page.goto('about:blank')
 })
 
+// Cargar la pagina de una extension de login no es instantaneo: el core sirve su front y su fondo, y el
+// navegador los pinta. 5s bastaban en una maquina ociosa y flakeaban en una cargada — y un rojo que
+// depende de lo ocupado que este el equipo no es senal de nada, solo tapa los de verdad.
+const LOGIN_EXT_TIMEOUT = 20_000
+
 // ── 2. LoginExtensionPage renderiza con ?loginExt= ────────────────────────────
 test('login extensions: ?loginExt=magnify renders custom login page', async ({ page }) => {
     await page.goto('/?loginExt=magnify')
@@ -26,7 +31,7 @@ test('login extensions: ?loginExt=magnify renders custom login page', async ({ p
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 }).catch(() => {})
 
     // Tiene los campos de usuario y contraseña
-    await expect(page.getByLabel(/user/i)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByLabel(/user/i)).toBeVisible({ timeout: LOGIN_EXT_TIMEOUT })
     await expect(page.getByLabel(/password/i).first()).toBeVisible()
 
     await page.goto('about:blank')
@@ -36,7 +41,7 @@ test('login extensions: ?loginExt=magnify renders custom login page', async ({ p
 test('login extensions: extension page has Login and Change password buttons', async ({ page }) => {
     await page.goto('/?loginExt=magnify')
 
-    await expect(page.getByLabel(/user/i)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByLabel(/user/i)).toBeVisible({ timeout: LOGIN_EXT_TIMEOUT })
 
     const loginBtn = page.getByRole('button', { name: /^login$/i })
     const changePwdBtn = page.getByRole('button', { name: /change password/i })
@@ -62,7 +67,7 @@ test('login extensions: extension page has Login and Change password buttons', a
 test('login extensions: wrong credentials show error', async ({ page }) => {
     await page.goto('/?loginExt=magnify')
 
-    await expect(page.getByLabel(/user/i)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByLabel(/user/i)).toBeVisible({ timeout: LOGIN_EXT_TIMEOUT })
     await page.getByLabel(/user/i).fill('admin')
     await page.getByLabel(/password/i).first().fill('wrongpassword')
     await page.getByRole('button', { name: /^login$/i }).click()
@@ -81,8 +86,11 @@ test('login extensions: anonymous login shows config button', async ({ page }) =
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
 
-    // La extensión anonymous debe aparecer en la lista
-    await expect(dialog.getByText('Anonymous', { exact: true })).toBeVisible({ timeout: 5000 })
+    // La extensión anonymous debe aparecer en la lista.
+    // .first(): el diálogo lista DOS veces lo que está instalado y ademas publicado — una en 'Installed
+    // logins' y otra en 'Available logins'. Sin acotar, Playwright lo rechaza por strict mode. Aquí solo
+    // se comprueba que la extensión figura, y con la primera basta.
+    await expect(dialog.getByText('Anonymous', { exact: true }).first()).toBeVisible({ timeout: 5000 })
 
     // Debe haber al menos un botón de configuración (⚙)
     const settingsBtn = dialog.getByRole('button', { name: 'Configure' }).first()

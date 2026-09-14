@@ -1,5 +1,47 @@
 # Private Marketplace Manifests — Plan
 
+## Cierre del 2026-09-14 — las credenciales de descarga llegaban tarde al arranque
+
+Síntoma: en security-pro, cada arranque del core dejaba un `401` rehidratando las docs de service-flow
+desde el Nexus, mientras instalar cualquier cosa desde la UI funcionaba. Y no era la credencial: el
+registro estaba bien configurado, con su URL casando por prefijo y su secreto guardado bajo el id
+correcto.
+
+**La causa era de orden.** El arranque es `createRunningInstance()` → `prepareRunningInstance()` →
+`startRunningInstance()` → `setUpRoutes()`, y `configurePackageRegistries()` se llamaba en el último paso.
+Pero es `prepareRunningInstance()` quien rehidrata lo instalado, así que esas descargas salían por el
+`if (!deps) return {}` de `packageHeaders()` — **anónimas**. Contra un registro privado, 401. Instalar
+desde la UI ocurre después y por eso sí llevaba credenciales: de ahí la contradicción que despistaba.
+
+- La llamada se mueve a `createRunningInstance()`, justo donde se resuelven `configMaps` y `secrets`. Un
+  solo sitio, antes que todo, y cubre los tres modos (k8s, docker, desktop) y los tres puntos de llamada.
+- **No era solo docs.** Plugins, providers, senders, webhooks, themes y homepages tienen todos el camino
+  de *fetch from source on startup* para cuando el artefacto no cupo en el ConfigMap; también salía
+  anónimo. Docs era el caso visible porque no se guarda en el store: se desempaqueta a un directorio
+  local y `loadAll()` la vuelve a bajar cuando ese directorio no está (`if (fs.existsSync(destDir))
+  continue`). En Kubernetes eso es **cada arranque**, porque el pod nace con el filesystem vacío — de ahí
+  que en security-pro saliera el 401 siempre y en el dev local no se notara, con el `%TEMP%` ya poblado.
+- Harness: dos casos en `tests/tools/packageRegistries.test.ts` fijan las dos caras —sin configurar no
+  manda credenciales, configurado inyecta la del registro que sirve esa URL y solo esa—. El orden dentro
+  del fichero importa: `deps` es estado de módulo y no hay forma de desconfigurarlo.
+- Guía de admin: la credencial hace falta **en cada arranque**, no solo al instalar. Rotar la contraseña
+  del registro no rompe la siguiente instalación, rompe el siguiente reinicio.
+- ⚠️ **No hay e2e de esto.** Es cableado del arranque del back: el e2e va contra la SPA ya levantada y no
+  puede observar el orden en que el core se configuró. Cubierto por harness, y por QA manual borrando
+  `%TEMP%/kwirth-docs/provider/service-flow` y reiniciando el core (validado por el usuario 2026-09-14).
+
+### Salido de paso, pendiente
+
+- **`tools/icons-dist-check.mjs` da falsos positivos.** Busca `.NombreConMayuscula` en el bundle, así que
+  marca cualquier identificador de una librería bundleada que coincida con un nombre de icono de MUI:
+  `Camera` en topology es `THREE.PerspectiveCamera`, y los once de situs (`Map`, `Circle`, `Polyline`,
+  `Layers`…) son de Leaflet. Con esos falsos positivos la herramienta grita cuando no debe, que es casi
+  peor que no tenerla. Arreglo: contrastar solo contra la lista de iconos **podados**, no contra todo
+  nombre de MUI ausente del barrel.
+- **montag instalado (0.2.33) pide iconos podados** (`DeleteOutline`, `UploadFile`) y no se puede
+  actualizar: su **plugin** sigue sin publicar en el Nexus (`NEXUS-BASE-PENDING`). Solo migramos sus docs.
+  Entra en la migración pendiente de excubitor/montag/iter (plugin + login) y santander.
+
 ## Cierre del 2026-09-09 — el registro de paquetes se separa del marketplace
 
 **Un marketplace solo dice QUÉ existe; no aloja los paquetes.** La `url` de cada entrada puede apuntar a
