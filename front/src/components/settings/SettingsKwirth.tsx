@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
-import { Add, Delete, Refresh, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
+import { Add, Delete, Download, Refresh, Upload, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
@@ -25,6 +25,49 @@ interface IPackageRegistryRow extends IPackageRegistry {
     revealed?: boolean
 }
 
+// Formato del fichero de export/import. 'version' permite evolucionarlo sin romper ficheros antiguos, y
+// 'credentialsIncluded' dice si los tokens/contraseñas viajan dentro o se vaciaron al exportar.
+interface IKwirthSettingsExportFile {
+    kwirth: string
+    version: number
+    credentialsIncluded: boolean
+    settings: IKwirthSettings
+}
+
+const EXPORT_KIND = 'kwirth-settings'
+const EXPORT_VERSION = 1
+
+// Un item de la lista de export/import. La clave lleva el tipo delante para que un marketplace y un
+// registro con el mismo id no se pisen en el mismo Set.
+interface ISelectableItem {
+    key: string
+    label: string
+    detail: string
+}
+
+const GENERAL_KEY = 'general'
+const marketplaceKey = (id: string) => `marketplace:${id}`
+const registryKey = (id: string) => `registry:${id}`
+
+// Lo que se puede elegir de unos settings, sirvan de origen el formulario o un fichero importado.
+const settingsItems = (settings: IKwirthSettings): ISelectableItem[] => [
+    ...(settings.metricsInterval === undefined ? [] : [{
+        key: GENERAL_KEY,
+        label: 'Cluster metrics read interval',
+        detail: `${settings.metricsInterval} seconds`
+    }]),
+    ...(settings.marketplaces ?? []).map(m => ({
+        key: marketplaceKey(m.id),
+        label: m.label.trim() === '' ? m.id : m.label,
+        detail: m.url
+    })),
+    ...(settings.packageRegistries ?? []).map(r => ({
+        key: registryKey(r.id),
+        label: r.label.trim() === '' ? r.id : r.label,
+        detail: r.url
+    }))
+]
+
 interface ISettingsKwirthProps {
     onClose:(settings?:IKwirthSettings) => void
     clusterName?: string
@@ -39,6 +82,13 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [registries, setRegistries] = useState<IPackageRegistryRow[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const [exportOpen, setExportOpen] = useState(false)
+    const [exportSelected, setExportSelected] = useState<Set<string>>(new Set())
+    const [exportWithCredentials, setExportWithCredentials] = useState(false)
+    const [importData, setImportData] = useState<IKwirthSettingsExportFile|undefined>(undefined)
+    const [importSelected, setImportSelected] = useState<Set<string>>(new Set())
+    const [importResult, setImportResult] = useState<string|undefined>(undefined)
+    const importFileRef = React.useRef<HTMLInputElement>(null)
     const { backendUrl } = useContext(SessionContext) as SessionContextType
 
     // el dialogo se busca sus propios datos: pide a Kwirth los valores efectivos que rigen ahora mismo
@@ -138,6 +188,123 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             r.label.trim() !== '' &&
             (r.auth?.type !== EPackageRegistryAuthType.BASIC || (r.auth.username ?? '').trim() !== '')
         )
+
+    // Se exporta lo que hay EN EL FORMULARIO, no lo guardado: lo que ves es lo que te llevas, incluidos los
+    // cambios que aun no has aceptado. Y se exporta SOLO lo marcado, item a item.
+    const doExport = () => {
+        const chosenMarketplaces = marketplaces.filter(m => exportSelected.has(marketplaceKey(m.id)))
+        const chosenRegistries = registries.filter(r => exportSelected.has(registryKey(r.id)))
+        const payload: IKwirthSettingsExportFile = {
+            kwirth: EXPORT_KIND,
+            version: EXPORT_VERSION,
+            credentialsIncluded: exportWithCredentials,
+            settings: {
+                ...(exportSelected.has(GENERAL_KEY) ? { metricsInterval } : {}),
+                marketplaces: chosenMarketplaces.map(m => ({
+                    id: m.id,
+                    url: m.url.trim(),
+                    label: m.label.trim(),
+                    enabled: m.enabled,
+                    ...(m.manifestAuth ? { manifestAuth: {
+                        type: m.manifestAuth.type,
+                        ...(m.manifestAuth.username ? { username: m.manifestAuth.username } : {}),
+                        ...(exportWithCredentials && m.manifestAuth.token ? { token: m.manifestAuth.token } : {})
+                    } } : {})
+                })),
+                packageRegistries: chosenRegistries.map(r => ({
+                    id: r.id,
+                    url: r.url.trim(),
+                    label: r.label.trim(),
+                    enabled: r.enabled,
+                    ...(r.auth ? { auth: {
+                        type: r.auth.type,
+                        ...(r.auth.username ? { username: r.auth.username } : {}),
+                        ...(exportWithCredentials && r.auth.token ? { token: r.auth.token } : {}),
+                        ...(exportWithCredentials && r.auth.password ? { password: r.auth.password } : {})
+                    } } : {})
+                }))
+            }
+        }
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = 'kwirth-settings.json'
+        link.click()
+        URL.revokeObjectURL(link.href)
+        setExportOpen(false)
+    }
+
+    // El back entiende un secreto vacio como 'borralo'. Un fichero exportado SIN credenciales no debe por
+    // tanto tumbar las que ya hay: si la entrada importada no trae secreto y ya existia una con ese id, se
+    // conserva el que estuviera en el formulario. Para un id nuevo no hay nada que conservar.
+    const mergeMarketplace = (incoming: IMarketplace, current?: IMarketplaceRow): IMarketplaceRow => {
+        const token = incoming.manifestAuth?.token ?? current?.manifestAuth?.token
+        return {
+            ...incoming,
+            ...(incoming.manifestAuth ? { manifestAuth: { ...incoming.manifestAuth, ...(token ? { token } : {}) } } : {})
+        }
+    }
+
+    const mergeRegistry = (incoming: IPackageRegistry, current?: IPackageRegistryRow): IPackageRegistryRow => {
+        const token = incoming.auth?.token ?? current?.auth?.token
+        const password = incoming.auth?.password ?? current?.auth?.password
+        return {
+            ...incoming,
+            ...(incoming.auth ? { auth: { ...incoming.auth, ...(token ? { token } : {}), ...(password ? { password } : {}) } } : {})
+        }
+    }
+
+    // Leer el fichero NO importa nada todavia: abre la lista para que elijas que entra. Se premarca todo.
+    const openImport = async (file: File) => {
+        setError(''); setImportResult(undefined)
+        try {
+            const parsed = JSON.parse(await file.text()) as IKwirthSettingsExportFile
+            if (parsed?.kwirth !== EXPORT_KIND) throw new Error('not a Kwirth settings file')
+            if (!parsed.settings) throw new Error('no settings in the file')
+            setImportData(parsed)
+            setImportSelected(new Set(settingsItems(parsed.settings).map(i => i.key)))
+        }
+        catch (err) {
+            setError(`Invalid settings file: ${err instanceof Error ? err.message : err}`)
+        }
+    }
+
+    // Importar NO guarda: deja el formulario cargado para que lo revises y decidas con OK o Cancel. Fusiona
+    // por id —mismo id lo reemplaza, id nuevo se añade— para no perder marketplaces que el fichero no trae.
+    const doImport = () => {
+        if (!importData) return
+        const incomingMarketplaces = (importData.settings.marketplaces ?? []).filter(m => importSelected.has(marketplaceKey(m.id)))
+        const incomingRegistries = (importData.settings.packageRegistries ?? []).filter(r => importSelected.has(registryKey(r.id)))
+
+        let replaced = 0
+        setMarketplaces(prev => {
+            const byId = new Map(prev.map(m => [m.id, m]))
+            for (const m of incomingMarketplaces) {
+                if (byId.has(m.id)) replaced++
+                byId.set(m.id, mergeMarketplace(m, byId.get(m.id)))
+            }
+            return [...byId.values()]
+        })
+        setRegistries(prev => {
+            const byId = new Map(prev.map(r => [r.id, r]))
+            for (const r of incomingRegistries) {
+                if (byId.has(r.id)) replaced++
+                byId.set(r.id, mergeRegistry(r, byId.get(r.id)))
+            }
+            return [...byId.values()]
+        })
+        const general = importSelected.has(GENERAL_KEY) && importData.settings.metricsInterval !== undefined
+        if (general) setMetricsInterval(importData.settings.metricsInterval!)
+
+        const parts: string[] = []
+        if (general) parts.push('the metrics interval')
+        if (incomingMarketplaces.length) parts.push(`${incomingMarketplaces.length} marketplace(s)`)
+        if (incomingRegistries.length) parts.push(`${incomingRegistries.length} registry(ies)`)
+        setImportResult(`Imported ${parts.length ? parts.join(', ') : 'nothing'}${replaced ? ` (${replaced} replaced)` : ''}.`
+            + (importData.credentialsIncluded ? '' : ' The file carried no credentials, so the ones already set were kept.')
+            + ' Nothing is saved until you press OK.')
+        setImportData(undefined)
+    }
 
     const ok = async () => {
         setError('')
@@ -278,6 +445,47 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         )
     }
 
+    // La misma lista marcable sirve para elegir que se exporta y que se importa. 'note' solo lo usa el
+    // import, para avisar de que ese id ya existe y va a reemplazar al que hay.
+    const selectionList = (items: ISelectableItem[], selected: Set<string>, setSelected: (s: Set<string>) => void, note?: (item: ISelectableItem) => string|undefined) => {
+        const toggle = (key: string, checked: boolean) => {
+            const next = new Set(selected)
+            if (checked) next.add(key)
+            else next.delete(key)
+            setSelected(next)
+        }
+        return (<>
+            <FormControlLabel
+                label='Select all'
+                control={<Checkbox
+                    checked={selected.size === items.length && items.length > 0}
+                    indeterminate={selected.size > 0 && selected.size < items.length}
+                    onChange={(_e, checked) => setSelected(checked ? new Set(items.map(i => i.key)) : new Set())} />} />
+            <Box sx={{ maxHeight: 240, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1, py: 0.5 }}>
+                { items.length === 0 && <Typography variant='body2' color='text.secondary' sx={{ py: 1 }}>Nothing to choose from.</Typography> }
+                { items.map(item => {
+                    const warning = note?.(item)
+                    return (
+                        <FormControlLabel key={item.key} sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.5 }}
+                            control={<Checkbox size='small' checked={selected.has(item.key)} onChange={(_e, checked) => toggle(item.key, checked)} />}
+                            label={<Box>
+                                <Typography variant='body2'>{item.label}{warning && <Typography component='span' variant='caption' color='warning.main'> — {warning}</Typography>}</Typography>
+                                <Typography variant='caption' color='text.secondary'>{item.detail}</Typography>
+                            </Box>} />
+                    )
+                }) }
+            </Box>
+        </>)
+    }
+
+    const formItems = (): ISelectableItem[] => settingsItems({ metricsInterval, marketplaces, packageRegistries: registries })
+    const importItems = (): ISelectableItem[] => importData ? settingsItems(importData.settings) : []
+    const alreadyThere = (item: ISelectableItem): string|undefined => {
+        if (item.key === GENERAL_KEY) return 'overwrites the current value'
+        const existing = formItems().some(i => i.key === item.key)
+        return existing ? 'replaces the one already set' : undefined
+    }
+
     return (<>
         <Dialog open={true} fullWidth maxWidth='md' disableRestoreFocus={true}>
             <DialogTitleHelp section='guide/admin/02-initial-config?id=kwirth-settings' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Kwirth settings</DialogTitleHelp>
@@ -324,11 +532,77 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 </Box>
 
                 { loading && <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 2 }}><CircularProgress size={16} /><Typography variant='body2'>Reading current settings…</Typography></Stack> }
+                { importResult && <Alert severity='info' sx={{ mt: 2 }} onClose={() => setImportResult(undefined)}>{importResult}</Alert> }
                 { error!=='' && <Alert severity='error' sx={{ mt: 2 }}>{error}</Alert> }
             </DialogContent>
+            <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                <Stack direction='row' spacing={1}>
+                    <input ref={importFileRef} type='file' accept='.json,application/json' style={{ display: 'none' }}
+                        onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) openImport(f) }} />
+                    <Tooltip title='Export these settings to a JSON file'>
+                        <span><Button size='small' startIcon={<Download />} disabled={loading} onClick={() => { setExportWithCredentials(false); setExportSelected(new Set(formItems().map(i => i.key))); setExportOpen(true) }}>Export</Button></span>
+                    </Tooltip>
+                    <Tooltip title='Import settings from a JSON file'>
+                        <span><Button size='small' startIcon={<Upload />} disabled={loading} onClick={() => importFileRef.current?.click()}>Import</Button></span>
+                    </Tooltip>
+                </Stack>
+                <Stack direction='row' spacing={1}>
+                    <Button variant='outlined' onClick={ok} disabled={loading || error!=='' || metricsInterval<=0 || !rowsValid()}>OK</Button>
+                    <Button variant='outlined' onClick={() => props.onClose(undefined)}>Cancel</Button>
+                </Stack>
+            </DialogActions>
+        </Dialog>
+
+        {/* Export — se elige item a item, y aparte si las credenciales viajan dentro del fichero */}
+        <Dialog open={exportOpen} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '700px' } }}>
+            <DialogTitle>Export Kwirth settings</DialogTitle>
+            <DialogContent sx={{ pt: '16px !important', height: 420, overflowY: 'auto' }}>
+                <Stack spacing={1}>
+                    <Typography variant='body2'>
+                        Pick what goes into the file. It carries what is in the form right now, including changes you have not
+                        accepted yet.
+                    </Typography>
+                    { selectionList(formItems(), exportSelected, setExportSelected) }
+                    <FormControlLabel
+                        label='Include credentials'
+                        control={<Checkbox checked={exportWithCredentials} onChange={(_e, checked) => setExportWithCredentials(checked)} />} />
+                    {exportWithCredentials
+                        ? <Alert severity='warning'>
+                            Tokens and passwords will be written to the file in clear text. Treat it as a secret.
+                          </Alert>
+                        : <Alert severity='info'>
+                            Credentials are left out. Whoever imports the file keeps the ones already set, and has to type the
+                            missing ones.
+                          </Alert>
+                    }
+                </Stack>
+            </DialogContent>
             <DialogActions>
-                <Button variant='outlined' onClick={ok} disabled={loading || error!=='' || metricsInterval<=0 || !rowsValid()}>OK</Button>
-                <Button variant='outlined' onClick={() => props.onClose(undefined)}>Cancel</Button>
+                <Button variant='contained' disabled={exportSelected.size === 0} onClick={doExport}>Export</Button>
+                <Button onClick={() => setExportOpen(false)}>Cancel</Button>
+            </DialogActions>
+        </Dialog>
+
+        {/* Import — el fichero ya esta leido, aqui se elige que entra en el formulario */}
+        <Dialog open={importData !== undefined} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '700px' } }}>
+            <DialogTitle>Import Kwirth settings</DialogTitle>
+            <DialogContent sx={{ pt: '16px !important', height: 420, overflowY: 'auto' }}>
+                <Stack spacing={1}>
+                    <Typography variant='body2'>
+                        Pick what to bring in. Nothing is saved yet: the chosen items land in the form, and it is the OK of the
+                        settings dialog that writes them.
+                    </Typography>
+                    { selectionList(importItems(), importSelected, setImportSelected, alreadyThere) }
+                    { importData && !importData.credentialsIncluded &&
+                        <Alert severity='info'>
+                            The file was exported without credentials. Whatever is already set is kept, so nothing is lost.
+                        </Alert>
+                    }
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button variant='contained' disabled={importSelected.size === 0} onClick={doImport}>Import</Button>
+                <Button onClick={() => setImportData(undefined)}>Cancel</Button>
             </DialogActions>
         </Dialog>
     </>)
