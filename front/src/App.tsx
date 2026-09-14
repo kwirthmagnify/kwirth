@@ -685,9 +685,16 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (favWorkspaces) setFavWorkspaces(JSON.parse(favWorkspaces))
     },[logged, backendUrl])
 
+    // Scopes string of a stored cluster's access key (empty if missing/malformed) — so channels can validate
+    // their own scope (e.g. Agora needs agora$read) without seeing the whole key.
+    const clusterResources = (accessString?: string): string => {
+        try { return accessKeyDeserialize(accessString ?? '')?.resources ?? '' }
+        catch { return '' }
+    }
+
     useEffect( () => {
         clustersRef.current = clusters
-        const summary = clusters.map(c => ({ name: c.name, home: !!c.home }))
+        const summary = clusters.map(c => ({ name: c.name, home: !!c.home, reachable: c.home ? true : !!c.enabled, resources: clusterResources(c.accessString) }))
         console.log(`[fedtrace][clusters] summary pushed to tabs: ${JSON.stringify(summary)} (total=${clusters.length}, home=${clusters.filter(c => c.home).length})`)
         tabs.current.forEach(tab => {
             if (tab.channel.requirements.clusterManagement) tab.channelObject.clusters = summary
@@ -1091,7 +1098,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             }
         }
         if (newTab.channel.requirements.clusterManagement) {
-            newTab.channelObject.clusters = clustersRef.current.map(c => ({ name: c.name, home: !!c.home }))
+            newTab.channelObject.clusters = clustersRef.current.map(c => ({ name: c.name, home: !!c.home, reachable: c.home ? true : !!c.enabled, resources: clusterResources(c.accessString) }))
             newTab.channelObject.selectedClusterName = selectedClusterName
             newTab.channelObject.openClusterManager = () => setShowManageClusters(true)
             newTab.channelObject.selectCluster = (clusterName: string) => {
