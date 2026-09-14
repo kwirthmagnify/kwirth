@@ -26,6 +26,19 @@ test('config-inspection tools are in the catalog as READ (configmap/secret chang
     }
 })
 
+test('F5.6 describe tools are in the catalog as READ and implemented', () => {
+    const byName = new Map(toolInfoList.map(t => [t.name, t]))
+    for (const n of ['get_space_data', 'get_namespace_yaml', 'describe_service', 'describe_ingress', 'describe_controller', 'get_controller_yaml']) {
+        assert.ok(byName.has(n), `${n} should be in the catalog`)
+        assert.equal(byName.get(n).effect, EToolEffect.READ, `${n} must be READ (never mutates)`)
+        assert.ok(back.tools[n], `${n} must have an implementation in the tools object`)
+    }
+})
+
+test('every catalog tool name has an implementation (no dangling toolInfoList entry)', () => {
+    for (const t of toolInfoList) assert.ok(back.tools[t.name], `catalog tool '${t.name}' has no implementation`)
+})
+
 test('restart_deployment and delete_pod are in the catalog as WRITE (mutating)', () => {
     const byName = new Map(toolInfoList.map(t => [t.name, t]))
     for (const n of ['restart_deployment', 'delete_pod']) {

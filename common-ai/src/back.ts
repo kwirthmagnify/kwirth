@@ -403,6 +403,7 @@ export const tools = {
                 return {
                     namespaces: resp.items.map((ns: any) => ({
                         name: ns.metadata?.name,
+                        uid: ns.metadata?.uid,
                         status: ns.status?.phase,
                         labels: ns.metadata?.labels ?? {}
                     }))
@@ -456,19 +457,128 @@ export const tools = {
     }),
 
     get_space_data: tool({
-        description: 'Returns all resources in a specific Kubernetes namespace: pods (with restart count), deployments, services, configmap names.',
+        description: 'Describes a Kubernetes namespace (equivalent to kubectl describe namespace + a rollup): its status and labels, ResourceQuota usage (used vs hard) and LimitRange defaults, plus the resources in it — pods (with restart count), deployments, services and configmap names.',
         inputSchema: z.object({ namespace: z.string().describe('Name of the namespace to retrieve data for') }),
         execute: async ({ namespace }) => {
             ctx().trace('get_space_data', { namespace })
             try {
                 const c = ctx().clusterInfo
-                const [p, d, s, cm] = await Promise.all([c.coreApi.listNamespacedPod({ namespace }), c.appsApi.listNamespacedDeployment({ namespace }), c.coreApi.listNamespacedService({ namespace }), c.coreApi.listNamespacedConfigMap({ namespace })])
+                // ns/quota/limits are best-effort: a missing RBAC for them must not hide the core namespace rollup.
+                const [ns, p, d, s, cm, rq, lr] = await Promise.all([
+                    c.coreApi.readNamespace({ name: namespace }).catch(() => null),
+                    c.coreApi.listNamespacedPod({ namespace }),
+                    c.appsApi.listNamespacedDeployment({ namespace }),
+                    c.coreApi.listNamespacedService({ namespace }),
+                    c.coreApi.listNamespacedConfigMap({ namespace }),
+                    c.coreApi.listNamespacedResourceQuota({ namespace }).catch(() => ({ items: [] as any[] })),
+                    c.coreApi.listNamespacedLimitRange({ namespace }).catch(() => ({ items: [] as any[] }))
+                ])
                 return {
                     namespace,
+                    status: (ns as any)?.status?.phase,
+                    labels: (ns as any)?.metadata?.labels ?? {},
+                    resourceQuotas: (rq as any).items.map((q: any) => ({ name: q.metadata?.name, hard: q.status?.hard ?? q.spec?.hard ?? {}, used: q.status?.used ?? {} })),
+                    limitRanges: (lr as any).items.map((l: any) => ({ name: l.metadata?.name, limits: l.spec?.limits ?? [] })),
                     pods: p.items.map((x: any) => ({ name: x.metadata?.name, phase: x.status?.phase, nodeName: x.spec?.nodeName, ready: x.status?.conditions?.find((c: any) => c.type === 'Ready')?.status === 'True', restartCount: x.status?.containerStatuses?.reduce((sum: number, cs: any) => sum + cs.restartCount, 0) ?? 0 })),
                     deployments: d.items.map((x: any) => ({ name: x.metadata?.name, replicas: x.spec?.replicas, readyReplicas: x.status?.readyReplicas ?? 0, image: x.spec?.template?.spec?.containers?.[0]?.image })),
                     services: s.items.map((x: any) => ({ name: x.metadata?.name, type: x.spec?.type, clusterIP: x.spec?.clusterIP })),
                     configMaps: cm.items.map((x: any) => x.metadata?.name)
+                }
+            } catch (err: any) { return { error: err.message ?? String(err) } }
+        }
+    }),
+
+    get_namespace_yaml: tool({
+        description: 'Returns the full Kubernetes Namespace manifest (equivalent to kubectl get namespace -o yaml): complete metadata (uid, labels, annotations, creationTimestamp), spec (finalizers) and status. Use when you need a specific field the namespace summary doesn\'t include (e.g. its uid).',
+        inputSchema: z.object({ name: z.string().describe('Name of the namespace') }),
+        execute: async ({ name }) => {
+            ctx().trace('get_namespace_yaml', { name })
+            try { return await ctx().clusterInfo.coreApi.readNamespace({ name }) }
+            catch (err: any) { return { error: err.message ?? String(err) } }
+        }
+    }),
+
+    describe_service: tool({
+        description: 'Diagnostic summary of a Service (equivalent to kubectl describe service): type, clusterIP, ports, selector, sessionAffinity, external/loadBalancer, AND its live Endpoints — the pod IPs currently backing it (ready vs not-ready). Best tool to see WHY traffic isn\'t reaching pods (empty/not-ready endpoints = selector mismatch or unready pods).',
+        inputSchema: z.object({
+            namespace: z.string().describe('Namespace of the service'),
+            name: z.string().describe('Name of the service')
+        }),
+        execute: async ({ namespace, name }) => {
+            ctx().trace('describe_service', { namespace, name })
+            try {
+                const c = ctx().clusterInfo
+                const svc: any = await c.coreApi.readNamespacedService({ name, namespace })
+                const ep: any = await c.coreApi.readNamespacedEndpoints({ name, namespace }).catch(() => null)
+                const endpoints = (ep?.subsets ?? []).flatMap((ss: any) => [
+                    ...(ss.addresses ?? []).map((a: any) => ({ ip: a.ip, ready: true, targetRef: a.targetRef ? `${a.targetRef.kind}/${a.targetRef.name}` : undefined, ports: (ss.ports ?? []).map((p: any) => p.port) })),
+                    ...(ss.notReadyAddresses ?? []).map((a: any) => ({ ip: a.ip, ready: false, targetRef: a.targetRef ? `${a.targetRef.kind}/${a.targetRef.name}` : undefined, ports: (ss.ports ?? []).map((p: any) => p.port) }))
+                ])
+                return {
+                    name, namespace,
+                    type: svc.spec?.type, clusterIP: svc.spec?.clusterIP, externalIPs: svc.spec?.externalIPs ?? [],
+                    loadBalancer: svc.status?.loadBalancer?.ingress ?? [], sessionAffinity: svc.spec?.sessionAffinity,
+                    selector: svc.spec?.selector ?? {},
+                    ports: svc.spec?.ports?.map((p: any) => ({ name: p.name, port: p.port, targetPort: p.targetPort, nodePort: p.nodePort, protocol: p.protocol })) ?? [],
+                    endpoints,   // the pods actually behind the service right now (empty = nothing serving)
+                    endpointCount: endpoints.length
+                }
+            } catch (err: any) { return { error: err.message ?? String(err) } }
+        }
+    }),
+
+    describe_ingress: tool({
+        description: 'Diagnostic summary of an Ingress (equivalent to kubectl describe ingress): ingressClass, the routing rules (host → path → backend service:port), the default backend, TLS (hosts + secret), and the load-balancer address assigned by the controller. Use to see how external traffic is routed to services.',
+        inputSchema: z.object({
+            namespace: z.string().describe('Namespace of the ingress'),
+            name: z.string().describe('Name of the ingress')
+        }),
+        execute: async ({ namespace, name }) => {
+            ctx().trace('describe_ingress', { namespace, name })
+            try {
+                const ing: any = await ctx().clusterInfo.networkApi.readNamespacedIngress({ name, namespace })
+                const backend = (b: any) => b?.service ? `${b.service.name}:${b.service.port?.number ?? b.service.port?.name}` : (b?.resource ? `${b.resource.kind}/${b.resource.name}` : undefined)
+                return {
+                    name, namespace,
+                    ingressClass: ing.spec?.ingressClassName,
+                    defaultBackend: backend(ing.spec?.defaultBackend),
+                    rules: (ing.spec?.rules ?? []).flatMap((r: any) => (r.http?.paths ?? []).map((p: any) => ({ host: r.host, path: p.path, pathType: p.pathType, backend: backend(p.backend) }))),
+                    tls: (ing.spec?.tls ?? []).map((t: any) => ({ hosts: t.hosts, secretName: t.secretName })),
+                    loadBalancer: ing.status?.loadBalancer?.ingress ?? []
+                }
+            } catch (err: any) { return { error: err.message ?? String(err) } }
+        }
+    }),
+
+    describe_controller: tool({
+        description: 'Diagnostic summary of a workload controller (equivalent to kubectl describe deployment/statefulset/daemonset/replicaset): replica counts (desired/ready/available/updated), rollout strategy, conditions (Available/Progressing + reason — why it is not fully rolled out), selector, and its pod template (image, resources, probes). Parametrised by kind, so one call covers any controller type.',
+        inputSchema: z.object({
+            namespace: z.string().describe('Namespace of the controller'),
+            kind: z.enum(['Deployment', 'StatefulSet', 'DaemonSet', 'ReplicaSet']).describe('Controller kind'),
+            name: z.string().describe('Name of the controller')
+        }),
+        execute: async ({ namespace, kind, name }) => {
+            ctx().trace('describe_controller', { namespace, kind, name })
+            try {
+                const a = ctx().clusterInfo.appsApi
+                const obj: any = kind === 'StatefulSet' ? await a.readNamespacedStatefulSet({ name, namespace })
+                    : kind === 'DaemonSet' ? await a.readNamespacedDaemonSet({ name, namespace })
+                    : kind === 'ReplicaSet' ? await a.readNamespacedReplicaSet({ name, namespace })
+                    : await a.readNamespacedDeployment({ name, namespace })
+                const spec = obj.spec ?? {}, status = obj.status ?? {}
+                const tpl = spec.template?.spec ?? {}
+                const container = (ct: any) => ({ name: ct.name, image: ct.image, resources: ct.resources, livenessProbe: !!ct.livenessProbe, readinessProbe: !!ct.readinessProbe })
+                // DaemonSet reports scheduling counts; the others report replica counts.
+                const replicas = kind === 'DaemonSet'
+                    ? { desired: status.desiredNumberScheduled, current: status.currentNumberScheduled, ready: status.numberReady, available: status.numberAvailable, updated: status.updatedNumberScheduled }
+                    : { desired: spec.replicas, ready: status.readyReplicas ?? 0, available: status.availableReplicas ?? 0, updated: status.updatedReplicas ?? 0 }
+                return {
+                    kind, name, namespace,
+                    replicas,
+                    strategy: spec.strategy?.type ?? spec.updateStrategy?.type,
+                    conditions: (status.conditions ?? []).map((c: any) => ({ type: c.type, status: c.status, reason: c.reason, message: c.message })),
+                    selector: spec.selector?.matchLabels ?? {},
+                    template: { containers: (tpl.containers ?? []).map(container), initContainers: (tpl.initContainers ?? []).map(container), serviceAccount: tpl.serviceAccountName }
                 }
             } catch (err: any) { return { error: err.message ?? String(err) } }
         }
@@ -950,6 +1060,25 @@ export const tools = {
         }
     }),
 
+    get_controller_yaml: tool({
+        description: 'Returns the full manifest of a workload controller (equivalent to kubectl get <kind> -o yaml), for ANY kind — Deployment, StatefulSet, DaemonSet or ReplicaSet. Complete metadata (uid, labels, annotations), spec (pod template, strategy) and status. Use when you need a specific field the describe summary doesn\'t include.',
+        inputSchema: z.object({
+            namespace: z.string().describe('Namespace of the controller'),
+            kind: z.enum(['Deployment', 'StatefulSet', 'DaemonSet', 'ReplicaSet']).describe('Controller kind'),
+            name: z.string().describe('Name of the controller')
+        }),
+        execute: async ({ namespace, kind, name }) => {
+            ctx().trace('get_controller_yaml', { namespace, kind, name })
+            try {
+                const a = ctx().clusterInfo.appsApi
+                return kind === 'StatefulSet' ? await a.readNamespacedStatefulSet({ name, namespace })
+                    : kind === 'DaemonSet' ? await a.readNamespacedDaemonSet({ name, namespace })
+                    : kind === 'ReplicaSet' ? await a.readNamespacedReplicaSet({ name, namespace })
+                    : await a.readNamespacedDeployment({ name, namespace })
+            } catch (err: any) { return { error: err.message ?? String(err) } }
+        }
+    }),
+
     get_rollout_history: tool({
         description: 'Returns the rollout history (revisions) of a Deployment via its ReplicaSets: per revision the image(s), replicas and pod-template summary (env with inline VALUES and their configMap/secret source, resources, command). Use to see WHAT CHANGED recently — a new image tag, a changed inline env value, a resource/command change — that may have broken the pods. Compare the newest revision against the previous one. NOTE: a change to a ConfigMap/Secret VALUE does NOT create a revision — use get_workload_config_refs for that.',
         inputSchema: z.object({
@@ -1076,11 +1205,14 @@ export const toolInfoList: IToolInfo[] = [
     { name: 'get_node_data',             effect: EToolEffect.READ,  description: 'Returns configuration info about all Kubernetes nodes (name, IP). Configuration only — not workload or usage data.' },
     { name: 'get_cluster_data',          effect: EToolEffect.READ,  description: 'Returns general cluster info: name, flavour (AKS/EKS/GKE/k3s/k3d), total vCPUs, total memory, node count and readiness status.' },
     { name: 'get_workload_data',         effect: EToolEffect.READ,  description: 'Returns all workloads in the cluster: deployments, statefulsets, daemonsets, pods and services. Optionally filter by namespace.' },
-    { name: 'get_space_data',            effect: EToolEffect.READ,  description: 'Returns all resources in a specific Kubernetes namespace: pods (with restart count), deployments, services, configmap names.' },
+    { name: 'get_space_data',            effect: EToolEffect.READ,  description: 'Describes a namespace (kubectl describe namespace + rollup): status/labels, ResourceQuota (used vs hard), LimitRange, plus its pods (restart count), deployments, services and configmaps.' },
+    { name: 'get_namespace_yaml',        effect: EToolEffect.READ,  description: 'Full Namespace manifest (kubectl get namespace -o yaml): complete metadata (uid, labels, annotations, creationTimestamp), spec and status — for any field the summary omits (e.g. its uid).' },
     { name: 'get_service_yaml',          effect: EToolEffect.READ,  description: 'Returns the full Kubernetes Service manifest (equivalent to kubectl get service -o yaml) for a given namespace and service name.' },
+    { name: 'describe_service',          effect: EToolEffect.READ,  description: 'Diagnostic summary of a Service (kubectl describe service): type/clusterIP/ports/selector + its live Endpoints (the pod IPs backing it, ready vs not) — see why traffic isn\'t reaching pods.' },
     { name: 'list_services',             effect: EToolEffect.READ,  description: 'Lists all Services in the cluster with full details (type, clusterIP, ports, selector). Optionally filter by namespace.' },
     { name: 'list_ingresses',            effect: EToolEffect.READ,  description: 'Lists all Ingresses in the cluster (hosts, paths, TLS, backend services). Optionally filter by namespace.' },
     { name: 'get_ingress_yaml',          effect: EToolEffect.READ,  description: 'Returns the full Kubernetes Ingress manifest (equivalent to kubectl get ingress -o yaml) for a given namespace and ingress name.' },
+    { name: 'describe_ingress',          effect: EToolEffect.READ,  description: 'Diagnostic summary of an Ingress (kubectl describe ingress): ingressClass, rules (host → path → backend service:port), default backend, TLS, and the load-balancer address.' },
     { name: 'get_cluster_usage',         effect: EToolEffect.READ,  description: 'Returns current overall cluster resource usage: CPU%, memory%, network Mbps, total vCPUs and total memory GB.' },
     { name: 'get_node_usage',            effect: EToolEffect.READ,  description: 'Returns current CPU and memory usage for one node or all nodes from the latest metrics reading.' },
     { name: 'get_deployment_usage',      effect: EToolEffect.READ,  description: 'Returns current aggregated CPU and memory usage for all pods belonging to a specific deployment.' },
@@ -1105,6 +1237,8 @@ export const toolInfoList: IToolInfo[] = [
     { name: 'describe_pod',              effect: EToolEffect.READ,  description: 'Diagnostic summary of a pod (kubectl describe pod): per-container waiting/terminated reason + exitCode (OOMKilled/CrashLoop…), restart count, probes.' },
     { name: 'get_pod_yaml',              effect: EToolEffect.READ,  description: 'Full Pod manifest (kubectl get pod -o yaml): spec (env, volumes, resources, probes) and status.' },
     { name: 'get_deployment_yaml',       effect: EToolEffect.READ,  description: 'Full Deployment manifest (kubectl get deployment -o yaml): pod template (image, env, resources, probes) and strategy.' },
+    { name: 'describe_controller',       effect: EToolEffect.READ,  description: 'Diagnostic summary of a workload controller (kubectl describe deployment/statefulset/daemonset/replicaset): replica counts (desired/ready/available/updated), strategy, conditions (why not rolled out), selector, pod template. Parametrised by kind.' },
+    { name: 'get_controller_yaml',       effect: EToolEffect.READ,  description: 'Full manifest of any workload controller (kubectl get <kind> -o yaml): Deployment/StatefulSet/DaemonSet/ReplicaSet — complete metadata (uid, annotations), spec and status. Parametrised by kind, for any field the describe omits.' },
     { name: 'get_rollout_history',       effect: EToolEffect.READ,  description: 'Rollout revisions of a Deployment (via ReplicaSets): image + template per revision (env with inline values + configMap/secret source), to see what changed (new image/env/resource) that may have broken the pods.' },
     { name: 'get_configmap',             effect: EToolEffect.READ,  description: 'A ConfigMap\'s data (key→value) + lastModified. A ConfigMap value change does NOT create a rollout revision, so check it for a crash with no deployment change.' },
     { name: 'get_secret',                effect: EToolEffect.READ,  description: 'A Secret\'s keys + type + lastModified (VALUES REDACTED). Check whether a consumed Secret changed recently (no rollout revision is created by a value change).' },
