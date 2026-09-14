@@ -6,6 +6,13 @@ import { IInstanceConfig, IInstanceMessage, EInstanceMessageAction, EInstanceMes
 const BACKOFF_INITIAL_MS = 1000
 const BACKOFF_MAX_MS = 30000
 
+// Keepalive WS (ping/pong): un ingress/LB (p.ej. AKS) cierra las WS ociosas SIN frame de close, y el cliente
+// no se entera hasta que intenta ESCRIBIR (el send falla / cae con 1006 en pleno comando → el comando se
+// pierde). Pingeamos periódicamente para (a) mantener la conexión viva frente al idle-timeout del LB y (b)
+// detectar el corte pronto: si no llega el pong antes del siguiente tick, damos la conexión por muerta y
+// forzamos reconexión. 30s va holgado bajo los idle-timeouts típicos (AKS ~4min, ingress ~60s).
+const KEEPALIVE_MS = 30000
+
 // Cliente WebSocket Node (federación back-a-back). Espejo del openRemoteChannels del front (App.tsx) pero
 // SINGULAR (una conexión = un cluster remoto): abre un WS hacia el core remoto, lo arranca con un START
 // plano (SU accessKey, protocolo sin challenge) y entrega los frames por handlers.onMessage. Gestiona la
@@ -18,6 +25,13 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
     let instanceId = ''
     let backoffMs = BACKOFF_INITIAL_MS
     let retryTimer: ReturnType<typeof setTimeout> | undefined
+    let keepAliveTimer: ReturnType<typeof setInterval> | undefined
+    let awaitingPong = false   // se pingeó y aún no volvió el pong → si sigue así al próximo tick, está muerta
+
+    const stopKeepAlive = () => {
+        if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = undefined }
+        awaitingPong = false
+    }
 
     // Kwirth stores cluster URLs as http(s):// (as entered in "Manage clusters"); the WS lives at the SAME
     // host+port+path, only the scheme changes. The browser's WebSocket auto-upgrades http->ws / https->wss,
@@ -63,7 +77,23 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
                 if (logError) logError(`openRemoteChannel: cannot send START to ${wsUrl}: ${err}`)
             }
             handlers.onState(ERemoteConnState.CONNECTED)
+            // Arranca el keepalive: cada tick, si NO volvió el pong del ping anterior, la conexión está muerta
+            // (el LB la cerró sin avisar) → terminate() dispara 'close' → reconexión. Si volvió, pingeamos otra vez.
+            stopKeepAlive()
+            keepAliveTimer = setInterval(() => {
+                if (!sock || sock.readyState !== WebSocket.OPEN) return
+                if (awaitingPong) {
+                    if (logInfo) logInfo(`[fedtrace] ⚠ keepalive: no pong from ${wsUrl} in ${KEEPALIVE_MS}ms — connection dead, terminating to force reconnect`)
+                    try { sock.terminate() } catch { /* noop */ }
+                    return
+                }
+                awaitingPong = true
+                try { sock.ping() } catch { /* noop */ }
+            }, KEEPALIVE_MS)
+            if (typeof (keepAliveTimer as unknown as { unref?: () => void }).unref === 'function') (keepAliveTimer as unknown as { unref: () => void }).unref()
         })
+
+        sock.on('pong', () => { awaitingPong = false })   // el remoto sigue vivo
 
         sock.on('message', (data: Buffer) => {
             let msg: IInstanceMessage
@@ -90,6 +120,7 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
         })
 
         sock.on('close', (code: number, reason: Buffer) => {
+            stopKeepAlive()   // no seguir pingeando un socket cerrado
             if (logInfo) logInfo(`[fedtrace] CLOSE ${wsUrl}: code=${code} reason=${reason?.toString?.() ?? ''}`)
             if (closed) return
             handlers.onState(ERemoteConnState.RECONNECTING)
@@ -119,6 +150,7 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
         },
         close: () => {
             closed = true
+            stopKeepAlive()
             if (retryTimer) { clearTimeout(retryTimer); retryTimer = undefined }
             const sock = ws
             ws = undefined
