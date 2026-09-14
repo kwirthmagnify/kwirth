@@ -147,6 +147,7 @@
   * [Censor](/0.5.287/channels/censor)
   * [News](/0.5.287/channels/news)
 * [Security](/0.5.287/security)
+* [Persistence](/0.5.287/persistence)
 * [Common tasks](/0.5.287/commontasks)
 * [User management](/0.5.287/usermanagement)
 * [IdP integration](/0.5.287/idp/index)

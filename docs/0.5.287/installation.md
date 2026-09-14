@@ -71,6 +71,8 @@ If you need to change default kwirth configuration you may need to edit the YAML
 
 By default, kwirth running in Kubernetes stores all its configuration data (users, API keys, plugin settings, AI providers, etc.) in **Kubernetes Secrets and ConfigMaps** inside the same namespace. This is the recommended approach for most clusters.
 
+> This section covers **configuration** storage, which every kwirth needs. Extensions that accumulate *data* — histories, findings, audit trails — use a relational database instead, which is a separate and optional piece. The [Persistence](persistence) page explains both models side by side, and how to deploy and configure the database.
+
 However, some environments restrict Secret/ConfigMap write access, or you may prefer to keep all kwirth data in a mounted volume (e.g. a PersistentVolumeClaim). In that case you can switch the storage backend using the `KWIRTH_STORE` environment variable.
 
 | Value | Behaviour |
