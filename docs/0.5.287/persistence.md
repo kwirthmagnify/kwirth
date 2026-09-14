@@ -182,17 +182,24 @@ server or lower the `max` of the noisy ones.
 
 The core reads the SQL server from environment variables at startup:
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `KWIRTH_SQL_HOST` | `localhost` | Host of the Postgres server. In-cluster, the service name. |
-| `KWIRTH_SQL_PORT` | `5432` | Port. |
-| `KWIRTH_SQL_USER` | `postgres` | User kwirth connects as. **Needs `CREATEDB`** (see below). |
-| `KWIRTH_SQL_PASSWORD` | *(empty)* | Password. Keep it in a Secret, never in the Deployment. |
-| `KWIRTH_SQL_SSL` | `false` | `true` to connect over TLS. |
-| `KWIRTH_SQL_MAINTDB` | `postgres` | Maintenance database, used only to create, drop and list databases. |
-| `KWIRTH_SQL_CLIENT` | `pg` | Engine. Today only `pg`; the setting is there for future engines. |
+| Variable | Must you set it? | Default | Meaning |
+|---|---|---|---|
+| `KWIRTH_SQL_HOST` | **Yes**, unless Postgres runs on the same machine | `localhost` | Host of the Postgres server. |
+| `KWIRTH_SQL_USER` | **Yes**, in practice | `postgres` | User kwirth connects as. **Needs `CREATEDB`** (see below). |
+| `KWIRTH_SQL_PASSWORD` | **Yes**, in practice | *(empty)* | Password. Take it from a Secret, never write it in the Deployment. |
+| `KWIRTH_SQL_PORT` | Only if not standard | `5432` | Port. |
+| `KWIRTH_SQL_SSL` | Only if the server requires TLS | `false` | `true` to connect over TLS. |
+| `KWIRTH_SQL_MAINTDB` | Rarely | `postgres` | Maintenance database, used only to create, drop and list databases. |
+| `KWIRTH_SQL_CLIENT` | No | `pg` | Engine. Today only `pg`; the setting is there for future engines. |
 
-Two things are worth stressing:
+!> **Those defaults describe a Postgres running on the same machine as kwirth**, which is the case when you
+launch kwirth locally for development, and almost never the case anywhere else. In **Kubernetes**,
+`localhost` is the kwirth pod itself, so the host has to be the Service's DNS name —
+`kwirth-postgres.<namespace>.svc.cluster.local`, as in the example below. In **Docker**, it has to be a host
+the kwirth container can reach: a container name on the same Docker network, or `host.docker.internal`, but
+not `localhost`, which is the container.
+
+Two more things are worth stressing:
 
 !> **The user needs permission to create databases.** kwirth provisions one database per extension on demand,
 so the user in `KWIRTH_SQL_USER` must be able to `CREATE DATABASE`. A plain owner of a single pre-created
