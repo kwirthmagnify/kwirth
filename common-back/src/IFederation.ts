@@ -16,10 +16,14 @@ export interface IClusterEndpoint {
 }
 
 // Estado de una conexión remota gestionada por el core. Nunca string literals.
+// Progresión al establecerse: DOWN → RECONNECTING (buscando socket) → HANDSHAKING (socket abierto, pidiendo
+// instance al canal remoto) → CONNECTED (socket + instance = operativo). CONNECTED es el ÚNICO estado en el
+// que un comando llega de verdad al canal remoto.
 export enum ERemoteConnState {
-    CONNECTED = 'connected',
-    RECONNECTING = 'reconnecting',
-    DOWN = 'down'
+    CONNECTED = 'connected',         // socket abierto Y instance válido capturado → operativo
+    HANDSHAKING = 'handshaking',     // socket abierto pero SIN instance aún (canal remoto arrancando / re-handshake)
+    RECONNECTING = 'reconnecting',   // sin socket, reintentando con backoff
+    DOWN = 'down'                    // conexión cerrada / nunca establecida (terminal o sin credenciales)
 }
 
 // Callbacks que el plugin registra para consumir UNA conexión remota (versión singular: 1 bot = 1 sala =
