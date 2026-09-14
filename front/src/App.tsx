@@ -688,6 +688,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     useEffect( () => {
         clustersRef.current = clusters
         const summary = clusters.map(c => ({ name: c.name, home: !!c.home }))
+        console.log(`[fedtrace][clusters] summary pushed to tabs: ${JSON.stringify(summary)} (total=${clusters.length}, home=${clusters.filter(c => c.home).length})`)
         tabs.current.forEach(tab => {
             if (tab.channel.requirements.clusterManagement) tab.channelObject.clusters = summary
             if (tab.channel.requirements.multiCluster) tab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, home: !!c.home, id: c.id }))
@@ -839,6 +840,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 readClusterInfo(cluster, notify).then( () => { setChannelMessageAction({action : EChannelRefreshAction.REFRESH}) })
             }
             clusterList.push(srcCluster)
+            console.log(`[fedtrace][clusters] getClusters: home srcCluster name='${srcCluster.name}' home=${srcCluster.home} | full list: ${JSON.stringify(clusterList.map(c => ({ name: c.name, home: !!c.home })))}`)
             setClusters(clusterList)
             setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
         }

@@ -55,7 +55,7 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
             backoffMs = BACKOFF_INITIAL_MS
             // START plano con el accessKey del cluster remoto (mismo protocolo que el front: sin challenge).
             const start: IInstanceConfig = { ...config, action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.SIGNAL, instance: '', accessKey: endpoint.accessString }
-            if (logInfo) logInfo(`[fedtrace] OPEN ${wsUrl}: sending START (channel=${config.channel}, accessKey len=${endpoint.accessString?.length ?? 0})`)
+            if (logInfo) logInfo(`[fedtrace] ★ OPEN ${wsUrl}: sending START channel=${config.channel} view=${(config as { view?: string }).view} scope=${(config as { scope?: string }).scope} objects=${(config as { objects?: string }).objects} accessKeyLen=${endpoint.accessString?.length ?? 0}`)
             try {
                 sock.send(JSON.stringify(start))
             }
@@ -75,12 +75,16 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
                 if (logInfo) logInfo(`[fedtrace] recv ${wsUrl}: NON-JSON frame (${data.toString().slice(0, 120)})`)
                 return // frame no-JSON: se ignora
             }
-            if (logInfo) logInfo(`[fedtrace] recv ${wsUrl}: action=${(msg as { action?: string }).action} flow=${(msg as { flow?: string }).flow} msgtype=${(msg as { msgtype?: string }).msgtype} instance=${(msg as { instance?: string }).instance}`)
+            const mAny = msg as { action?: string; flow?: string; msgtype?: string; instance?: string; text?: string; signalMessage?: string }
+            if (logInfo) logInfo(`[fedtrace] recv ${wsUrl}: action=${mAny.action} flow=${mAny.flow} msgtype=${mAny.msgtype} instance=${mAny.instance} text='${mAny.text ?? mAny.signalMessage ?? ''}'`)
             // El back remoto asigna el instance en la RESPONSE del START; lo guardamos para poder ENVIAR
             // comandos que referencien un instance válido en ESE cluster (si no, el back lo descarta).
-            if (msg?.action === EInstanceMessageAction.START && msg?.flow === EInstanceMessageFlow.RESPONSE && msg?.instance) {
-                instanceId = msg.instance
-                if (logInfo) logInfo(`[fedtrace] captured instance=${instanceId} from START RESPONSE`)
+            if (msg?.action === EInstanceMessageAction.START && msg?.flow === EInstanceMessageFlow.RESPONSE) {
+                if (msg?.instance) {
+                    instanceId = msg.instance
+                    if (logInfo) logInfo(`[fedtrace] ★ REMOTE ASSIGNED instance=${instanceId} (START RESPONSE from ${wsUrl}, text='${mAny.text ?? ''}')`)
+                }
+                else if (logInfo) logInfo(`[fedtrace] ⚠ START RESPONSE with NO instance from ${wsUrl} (text='${mAny.text ?? ''}') — remote will reject our commands`)
             }
             handlers.onMessage(msg)
         })
@@ -105,7 +109,7 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
         send: (msg: IInstanceMessage) => {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 // El comando debe llevar el instance QUE ESTE cluster asignó a su conexión (no el del home).
-                if (logInfo) logInfo(`[fedtrace] send ${wsUrl}: msgtype=${(msg as { msgtype?: string }).msgtype} instance=${instanceId || (msg as { instance?: string }).instance}`)
+                if (logInfo) logInfo(`[fedtrace] ★ SEND command to ${wsUrl}: msgtype=${(msg as { msgtype?: string }).msgtype} instanceSent=${instanceId || (msg as { instance?: string }).instance || '<EMPTY>'} (remoteAssigned=${instanceId || '<none>'}, msg.instance=${(msg as { instance?: string }).instance || '<empty>'})`)
                 // The core requires an accessKey on EVERY command (not just the START), and re-validates it.
                 // Stamp the remote endpoint's key on every send, like the front's AgoraClient.cmd does.
                 try { ws.send(JSON.stringify({ ...msg, instance: instanceId || msg.instance, accessKey: endpoint.accessString })) }
