@@ -13,6 +13,14 @@ const BACKOFF_MAX_MS = 30000
 // forzamos reconexión. 30s va holgado bajo los idle-timeouts típicos (AKS ~4min, ingress ~60s).
 const KEEPALIVE_MS = 30000
 
+// Watchdog del START: el socket puede estar VIVO pero sin un instance válido en el back remoto —
+// (a) reconectamos a un core que ya acepta WS pero cuyo plugin/canal aún no arrancó (los plugins arrancan al
+// FINAL del boot del core) → el START no registra instance ("Access denied"/sin RESPONSE); (b) el canal
+// remoto se reinició con el socket vivo → su instance (solo en memoria del pod) desaparece y todo comando
+// responde "not been found for command". En ambos casos reenviamos el START hasta capturar un instance
+// válido; el keepalive no ayuda aquí porque el socket sigue abierto. 3s da margen al arranque del plugin.
+const START_RETRY_MS = 3000
+
 // Cliente WebSocket Node (federación back-a-back). Espejo del openRemoteChannels del front (App.tsx) pero
 // SINGULAR (una conexión = un cluster remoto): abre un WS hacia el core remoto, lo arranca con un START
 // plano (SU accessKey, protocolo sin challenge) y entrega los frames por handlers.onMessage. Gestiona la
@@ -27,10 +35,26 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
     let retryTimer: ReturnType<typeof setTimeout> | undefined
     let keepAliveTimer: ReturnType<typeof setInterval> | undefined
     let awaitingPong = false   // se pingeó y aún no volvió el pong → si sigue así al próximo tick, está muerta
+    let startAckTimer: ReturnType<typeof setTimeout> | undefined   // watchdog: reintenta el START hasta tener instance
 
     const stopKeepAlive = () => {
         if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = undefined }
         awaitingPong = false
+    }
+
+    const clearStartAck = () => { if (startAckTimer) { clearTimeout(startAckTimer); startAckTimer = undefined } }
+
+    // Envía el START plano (SU accessKey, protocolo sin challenge) y arma el watchdog: si en START_RETRY_MS no
+    // capturamos un instance válido (RESPONSE del START), reenvía. Se para en cuanto llega el instance.
+    const sendStart = () => {
+        if (closed || !ws || ws.readyState !== WebSocket.OPEN) return
+        const start: IInstanceConfig = { ...config, action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.SIGNAL, instance: '', accessKey: endpoint.accessString }
+        if (logInfo) logInfo(`[fedtrace] ★ START ${wsUrl}: channel=${config.channel} view=${(config as { view?: string }).view} (instance so far='${instanceId || '<none>'}')`)
+        try { ws.send(JSON.stringify(start)) }
+        catch (err) { if (logError) logError(`openRemoteChannel: cannot send START to ${wsUrl}: ${err}`) }
+        clearStartAck()
+        startAckTimer = setTimeout(() => { if (!instanceId) sendStart() }, START_RETRY_MS)
+        if (typeof (startAckTimer as unknown as { unref?: () => void }).unref === 'function') (startAckTimer as unknown as { unref: () => void }).unref()
     }
 
     // Kwirth stores cluster URLs as http(s):// (as entered in "Manage clusters"); the WS lives at the SAME
@@ -67,16 +91,14 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
 
         sock.on('open', () => {
             backoffMs = BACKOFF_INITIAL_MS
-            // START plano con el accessKey del cluster remoto (mismo protocolo que el front: sin challenge).
-            const start: IInstanceConfig = { ...config, action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.SIGNAL, instance: '', accessKey: endpoint.accessString }
+            instanceId = ''   // socket nuevo → el instance anterior (si lo hubo) ya no vale en el back remoto
             if (logInfo) logInfo(`[fedtrace] ★ OPEN ${wsUrl}: sending START channel=${config.channel} view=${(config as { view?: string }).view} scope=${(config as { scope?: string }).scope} objects=${(config as { objects?: string }).objects} accessKeyLen=${endpoint.accessString?.length ?? 0}`)
-            try {
-                sock.send(JSON.stringify(start))
-            }
-            catch (err) {
-                if (logError) logError(`openRemoteChannel: cannot send START to ${wsUrl}: ${err}`)
-            }
-            handlers.onState(ERemoteConnState.CONNECTED)
+            sendStart()   // arma el watchdog: reintenta hasta capturar un instance válido (el canal remoto puede no estar arrancado aún)
+            // El socket está abierto pero AÚN no somos operativos: sin instance válido en el back remoto, todo
+            // comando se descarta. HANDSHAKING (no CONNECTED): reportamos CONNECTED solo al capturar el instance
+            // (START RESPONSE) — así el consumidor (p.ej. la bolita de Agora) queda verde solo cuando el bot es
+            // alcanzable de verdad; mientras tanto el socket está arriba pero pidiendo instance.
+            handlers.onState(ERemoteConnState.HANDSHAKING)
             // Arranca el keepalive: cada tick, si NO volvió el pong del ping anterior, la conexión está muerta
             // (el LB la cerró sin avisar) → terminate() dispara 'close' → reconexión. Si volvió, pingeamos otra vez.
             stopKeepAlive()
@@ -112,15 +134,27 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
             if (msg?.action === EInstanceMessageAction.START && msg?.flow === EInstanceMessageFlow.RESPONSE) {
                 if (msg?.instance) {
                     instanceId = msg.instance
+                    clearStartAck()   // instance válido → deja de reintentar el START
+                    handlers.onState(ERemoteConnState.CONNECTED)   // ahora sí operativos: socket + instance
                     if (logInfo) logInfo(`[fedtrace] ★ REMOTE ASSIGNED instance=${instanceId} (START RESPONSE from ${wsUrl}, text='${mAny.text ?? ''}')`)
                 }
                 else if (logInfo) logInfo(`[fedtrace] ⚠ START RESPONSE with NO instance from ${wsUrl} (text='${mAny.text ?? ''}') — remote will reject our commands`)
+            }
+            // El back remoto perdió nuestro instance (su canal se reinició con el socket vivo: el instance solo
+            // vive en la memoria del pod) → responde "not been found for command". Re-hacemos el handshake sobre
+            // el MISMO socket para obtener uno fresco (el keepalive no lo caza: el socket sigue abierto).
+            else if (msg?.flow === EInstanceMessageFlow.RESPONSE && /not been found for command/i.test(mAny.text ?? mAny.signalMessage ?? '')) {
+                if (logInfo) logInfo(`[fedtrace] ⚠ remote lost our instance (${instanceId || '<empty>'}) at ${wsUrl} — re-STARTing the flow`)
+                instanceId = ''
+                handlers.onState(ERemoteConnState.HANDSHAKING)   // socket vivo pero ya sin instance → naranja, no verde
+                sendStart()
             }
             handlers.onMessage(msg)
         })
 
         sock.on('close', (code: number, reason: Buffer) => {
             stopKeepAlive()   // no seguir pingeando un socket cerrado
+            clearStartAck()   // no reintentar el START sobre un socket cerrado (el reconnect reenvía uno nuevo)
             if (logInfo) logInfo(`[fedtrace] CLOSE ${wsUrl}: code=${code} reason=${reason?.toString?.() ?? ''}`)
             if (closed) return
             handlers.onState(ERemoteConnState.RECONNECTING)
@@ -151,6 +185,7 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
         close: () => {
             closed = true
             stopKeepAlive()
+            clearStartAck()
             if (retryTimer) { clearTimeout(retryTimer); retryTimer = undefined }
             const sock = ws
             ws = undefined

@@ -42,11 +42,16 @@ function baseConfig(): IInstanceConfig {
     }
 }
 
-test('START handshake: sends a flat START with the remote accessKey + config, reports CONNECTED', { timeout: 8000 }, async () => {
+test('START handshake: sends a flat START with the remote accessKey + config; HANDSHAKING then CONNECTED once an instance is assigned', { timeout: 8000 }, async () => {
     const { wss, url } = await makeServer()
+    // Reply to the START with an instance so the connector reaches CONNECTED (socket up but no instance = only
+    // HANDSHAKING; green/CONNECTED requires the instance).
     const firstMsg = new Promise<Record<string, unknown>>((resolve) => {
         wss.on('connection', (sock: WebSocket) => {
-            sock.once('message', (data: Buffer) => resolve(JSON.parse(data.toString())))
+            sock.once('message', (data: Buffer) => {
+                sock.send(JSON.stringify({ action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.SIGNAL, channel: 'agora', instance: 'INST-1' }))
+                resolve(JSON.parse(data.toString()))
+            })
         })
     })
     const states: ERemoteConnState[] = []
@@ -62,7 +67,10 @@ test('START handshake: sends a flat START with the remote accessKey + config, re
     assert.equal(msg.instance, '')
     assert.equal(msg.accessKey, 'AK-REMOTE')          // el accessKey del cluster remoto, no el del config
     assert.equal(msg.channel, 'agora')                // los campos del config se preservan
-    assert.ok(states.includes(ERemoteConnState.CONNECTED))
+    await delay(100)                                  // deja llegar la RESPONSE del START
+    assert.ok(states.includes(ERemoteConnState.HANDSHAKING), 'socket abierto sin instance → HANDSHAKING')
+    assert.ok(states.includes(ERemoteConnState.CONNECTED), 'instance capturado → CONNECTED')
+    assert.ok(states.indexOf(ERemoteConnState.HANDSHAKING) < states.indexOf(ERemoteConnState.CONNECTED), 'HANDSHAKING precede a CONNECTED')
     handle.close()
     wss.close()
 })
@@ -70,8 +78,11 @@ test('START handshake: sends a flat START with the remote accessKey + config, re
 test('normalizes an http(s) URL to ws(s) (Kwirth stores cluster URLs as http/https)', { timeout: 8000 }, async () => {
     const { wss, url } = await makeServer()          // url = ws://127.0.0.1:PORT
     const httpUrl = url.replace(/^ws:/, 'http:')     // a Kwirth http endpoint (same host+port+path)
-    // Resolve on the CLIENT's CONNECTED (not the server 'connection' event, which fires slightly earlier —
-    // that race left states empty). Getting CONNECTED at all proves the http:// URL was dialed as ws://.
+    // Reply to the START with an instance so the connector reaches CONNECTED (green needs socket + instance).
+    wss.on('connection', (sock: WebSocket) => {
+        sock.once('message', () => sock.send(JSON.stringify({ action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.SIGNAL, channel: 'agora', instance: 'INST-1' })))
+    })
+    // Resolve on the CLIENT's CONNECTED. Getting CONNECTED at all proves the http:// URL was dialed as ws://.
     let resolveConnected: () => void = () => {}
     const connected = new Promise<void>((r) => { resolveConnected = r })
     const handle = openRemoteChannel(
@@ -145,6 +156,66 @@ test('reconnects after an unexpected close (RECONNECTING, then a fresh connectio
     await secondConnection   // espera la reconexión (~1s de backoff inicial)
     assert.ok(states.includes(ERemoteConnState.RECONNECTING))
     assert.ok(connectionCount >= 2)
+    handle.close()
+    wss.close()
+})
+
+test('re-STARTs the flow when the remote lost our instance ("not been found for command")', { timeout: 8000 }, async () => {
+    // Failure mode 1: the remote CHANNEL restarted with the socket still alive → its instance (only in the
+    // pod's memory) is gone, so every command answers "not been found for command". The keepalive can't catch
+    // it (the socket is open). The connector must re-handshake on the same socket to get a fresh instance.
+    const { wss, url } = await makeServer()
+    let starts = 0
+    let serverSock: WebSocket | undefined
+    const secondStart = new Promise<void>((resolve) => {
+        wss.on('connection', (sock: WebSocket) => {
+            serverSock = sock
+            sock.on('message', (data: Buffer) => {
+                const m = JSON.parse(data.toString())
+                if (m.action === EInstanceMessageAction.START) {
+                    starts++
+                    sock.send(JSON.stringify({ action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.SIGNAL, channel: 'agora', instance: `INST-${starts}` }))
+                    if (starts >= 2) resolve()   // the client re-STARTed after the error
+                }
+            })
+        })
+    })
+    const handle = openRemoteChannel({ name: 'r', url, accessString: 'AK' }, baseConfig(), { onMessage: () => {}, onState: () => {} })
+    await delay(120)   // first START/RESPONSE settles (INST-1 captured, watchdog cleared)
+    // The remote lost our instance → it replies with the core's stale-instance error.
+    serverSock!.send(JSON.stringify({ action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.SIGNAL, channel: 'agora', instance: '', text: "Instance 'INST-1' has not been found for command" }))
+    await secondStart
+    assert.ok(starts >= 2, 'the connector re-sends START to obtain a fresh instance')
+    handle.close()
+    wss.close()
+})
+
+test('START watchdog: keeps re-sending START until the remote assigns an instance (remote plugin still booting)', { timeout: 12000 }, async () => {
+    // Failure mode 2: after a full remote-core restart the client reconnects, but the core accepts WS BEFORE
+    // its plugins start (plugins boot last) → the first START gets no valid instance. The watchdog retries
+    // until the channel is up and finally assigns one.
+    const { wss, url } = await makeServer()
+    let starts = 0
+    const gotInstance = new Promise<void>((resolve) => {
+        wss.on('connection', (sock: WebSocket) => {
+            sock.on('message', (data: Buffer) => {
+                const m = JSON.parse(data.toString())
+                if (m.action === EInstanceMessageAction.START) {
+                    starts++
+                    if (starts >= 2) {   // channel "up" only by the retry: ignore the first START, answer the second
+                        sock.send(JSON.stringify({ action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.SIGNAL, channel: 'agora', instance: 'INST-late' }))
+                        resolve()
+                    }
+                }
+            })
+        })
+    })
+    const received: IInstanceMessage[] = []
+    const handle = openRemoteChannel({ name: 'r', url, accessString: 'AK' }, baseConfig(), { onMessage: (m) => received.push(m), onState: () => {} })
+    await gotInstance   // the second START needs one START_RETRY_MS (~3s)
+    await delay(120)
+    assert.ok(starts >= 2, 'the connector retries the START while no instance is assigned')
+    assert.ok(received.some(m => m.instance === 'INST-late'), 'the late instance is finally captured')
     handle.close()
     wss.close()
 })
