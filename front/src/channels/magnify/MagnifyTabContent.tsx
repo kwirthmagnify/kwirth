@@ -103,6 +103,11 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const [magnifyBoxHeight, setMagnifyBoxHeight] = useState(0)
     const magnifyBoxRef = useRef<HTMLDivElement | null>(null)
     const fileManagerRef = useRef<IFileManagerHandle>(null)
+    // Ref propio para el mensaje "canal no arrancado": su return es previo al layout
+    // principal (magnifyBoxRef no monta ahí), así que se mide con su propio ref para
+    // poder centrarlo VERTICALMENTE en el alto disponible.
+    const emptyRef = useRef<HTMLDivElement | null>(null)
+    const [emptyTop, setEmptyTop] = useState(0)
 
     const [msgBox, setMsgBox] = useState(<></>)
 
@@ -263,6 +268,10 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
         return () => observer.disconnect()
     }, [])
+
+    useLayoutEffect(() => {
+        if (emptyRef.current) setEmptyTop(emptyRef.current.getBoundingClientRect().top)
+    }, [magnifyData.started])
 
     useEffect(() => {
         props.channelObject.setPalette?.(magnifyData.userPreferences?.palette)
@@ -1413,7 +1422,12 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     }
 
     if (!magnifyData.started)
-        return <Box sx={{ p: 2 }}><Typography color='text.secondary'>Magnify not started. Start the channel (tab settings ⚙ → Start) to explore your cluster.</Typography></Box>
+        return (
+            <Box ref={emptyRef} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: `calc(100vh - ${emptyTop}px - 8px)`, px: 4 }}>
+                <Typography variant='h6' color='text.secondary' sx={{ mb: 1 }}>Magnify not started</Typography>
+                <Typography variant='body2' color='text.secondary' sx={{ maxWidth: 480 }}>Start the channel (tab settings ⚙ → Start) to explore your cluster.</Typography>
+            </Box>
+        )
 
     return <>
         { magnifyData.started &&
