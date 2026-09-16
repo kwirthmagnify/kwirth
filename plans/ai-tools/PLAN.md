@@ -119,35 +119,68 @@ Deja de ser el punto de partida y pasa a ser el primer cliente del runtime:
 
 Cada stream es un MVP usable y cierra con su CL9.
 
-### S1 · El runtime y el contrato, con los built-in migrados
+**El orden nace de una decisión (2026-09-17): primero el tipo de extensión, luego el core, luego el primer
+cliente.** La alternativa era empezar migrando las 43 y empaquetar al final, y tenía un defecto de fondo:
+obligaba a *adivinar* en el contrato tres cosas que solo sabe quien empaqueta y carga —cómo se registra un
+toolset cargado en caliente, cómo se referencia una tool sin ambigüedad y cómo se evitan colisiones de id—.
+Adivinarlas mal no se paga con un refactor: se paga migrando configuraciones ya guardadas en Kwirth de
+clientes. Construyendo el tipo primero, esas tres decisiones las toma quien las necesita.
 
-Contrato (`IAiTool`, `IAiToolset`, `ECapability`, `EToolSensitivity`), registro de toolsets, y **un único
-camino de invocación** con sus dos ganchos: autorizar y observar — de momento con política permisiva, para
-no cambiar comportamiento.
+### S1 · El tipo `aitoolset`, de punta a punta
 
-Las 43 se mueven a los ocho toolsets built-in. Al acabar, Kwirth se comporta **igual que hoy** pero con una
-sola forma de declarar, un solo sitio por el que se invoca y un test que ata tool y metadata.
+Contrato (`IAiTool`, `IAiToolset`, `ECapability`, `EToolSensitivity`), carga, registro, manager con su
+índice, entrada de manifest, soporte en `kwirth-dev.json` y bundled, y el diálogo del manager. Sería el
+**undécimo** tipo de extensión: hoy hay **10 tipos**, **12 managers** en el back y **10 diálogos** en el
+front, y un tipo nuevo arrastra toda esa cola.
+
+**Validado con dos toolsets reales, y hacen falta los dos**:
+
+- **`examples`** (`times_two`, `father_of`): recorre el camino entero —empaquetar, publicar, instalar,
+  registrar, invocar— con riesgo cero. Prueba la **mecánica**.
+- **`k8s-inventory`** (8 tools): prueba el **contrato**. Dos tools que reciben un número y devuelven otro no
+  dicen nada sobre si `ECapability` o `sensitivity` están bien planteados; ocho que necesitan contexto de
+  cluster, sí. Sin este segundo, el contrato se congela sin haberse ejercitado.
+
+Aquí se cierran las tres decisiones que lo condicionan todo hacia adelante:
+
+1. **La puerta del registro**, que es la de runtime — built-in e instalado se registran por la misma API.
+2. **La referencia cualificada a una tool** (`toolset/tool`). Hoy `IAgent.tools` es `string[]` plano y eso
+   **se persiste en la config de cada agente**; con toolsets de terceros, dos pueden traer `get_pod_logs`.
+3. **El espacio de nombres de los id de toolset**, para que un tercero no pueda chocar con un built-in.
+
+⚠️ Mientras S1 y S2 están en vuelo, **las 43 de hoy siguen funcionando por el camino viejo**. No hay
+big-bang: el camino antiguo muere en S3, cuando ya hay dónde aterrizar.
+
+### S2 · El core consume toolsets
+
+La cadena de resolución, el contexto por capacidades y **un único camino de invocación** con sus dos
+ganchos —autorizar y observar—, de momento permisivos. Se valida contra los toolsets de S1.
+
+Aquí muere el cajón de sastre: cada toolset recibe las capacidades que declaró, no los siete campos por si
+acaso.
+
+### S3 · Primer cliente: las 43
+
+Las 43 tools se reparten en los ocho toolsets built-in y se registran por la misma puerta. Mueren
+`toolInfoList`, `selectAgentToolNames()` y los cuatro lambdas `trace`. Al acabar, Kwirth se comporta igual
+que hoy y ya no queda camino viejo.
 
 **Riesgo**: el de toda migración masiva — una errata en un `name` rompe una tool en silencio. Lo cubren el
 test del invariante y `tsc`.
 
-### S2 · Contexto por capacidades
+### S4 · Autorización de verdad
 
-Partir `IToolContext`. Cada toolset declara lo que necesita y el host provisiona eso. Desaparece que las 43
-reciban `sourceRepos` para que lo use una.
+El gancho de S2 deja de ser permisivo: identidad y scopes de quien dispara, comprobados **al invocar**, con
+los argumentos delante — que es lo único que permite expresar "puedes borrar un pod en `dev` pero no en
+`prod`". `sensitivity` entra en juego aquí, no solo `effect`.
 
-### S3 · Autorización de verdad
+⚠️ Es el que más se parece a un agujero de seguridad, no a deuda técnica. Y **S1 no debería publicarse a un
+marketplace abierto sin esto**: un `aitoolset` es código que corre en el core con acceso al cluster.
 
-El gancho de S1 deja de ser permisivo: identidad y scopes de quien dispara, comprobados **al invocar**, con
-los argumentos delante. `sensitivity` entra aquí en juego, no solo `effect`.
+### S5 · Techo por plugin y selector por toolset
 
-⚠️ Es el que más se parece a un agujero de seguridad, no a deuda técnica.
-
-### S4 · Techo por plugin y selector por toolset
-
-La cadena de resolución completa, el `ToolSelector` agrupado por toolset marcando WRITE y sensibles, y el
-**diálogo común** de configuración de toolset: tercer hermano de `AiConfigProvider` y `AiConfigLlm` en
-`common-ai/src/front.tsx`.
+El `ToolSelector` agrupado por toolset marcando WRITE y sensibles, y el **diálogo común** de configuración:
+tercer hermano de `AiConfigProvider` y `AiConfigLlm` en `common-ai/src/front.tsx`.
 
 **El core pone el editor, el plugin guarda** — es la convención que ya siguen los otros dos:
 `common-ai/src/front.tsx` no tiene **ni un `fetch`**, son componentes controlados que devuelven el valor en
@@ -166,23 +199,10 @@ interface IAiConfigToolsetProps {
 ⚠️ **Si guarda el plugin, el techo vale lo que valga la puerta de su configuración.** Hay que comprobarlo
 plugin a plugin, no darlo por hecho.
 
-### S5 · Observación
+### S6 · Observación
 
 El camino único de invocación emite registros con duración, resultado y error. Los consumidores dejan de
 pasar lambdas.
-
-### S6 · `aitoolset` como tipo de extensión
-
-Empaquetado y distribución: un toolset instalable desde el marketplace. Sería el **undécimo** tipo, y
-arrastra la cola entera — entrada en `EExtensionType`, manager con índice en ConfigMap,
-instalar/desinstalar/rehidratar, `kwirth-dev.json`, bundled, manifest, diálogo de manager con sus cuatro
-vistas, documentación y guía. Hoy hay **10 tipos**, **12 managers** en el back y **10 diálogos** en el front.
-
-**Es el stream más caro del plan**, y su coste está en la superficie, no en el algoritmo. Va después de S1
-porque el empaquetado necesita el contrato cerrado.
-
-⚠️ Un `aitoolset` es **código que corre en el core con acceso al cluster**. Instalar uno de un tercero es
-darle lo que S3 intenta acotar: **S6 no debería cerrarse sin S3 hecho**.
 
 ### S7 · Coste en tokens
 
