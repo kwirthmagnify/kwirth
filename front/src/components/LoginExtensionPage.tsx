@@ -271,7 +271,9 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
                               </Button>
                             : <>
                                 <Button variant='outlined' fullWidth disabled={busy} endIcon={<ExpandMore />} onClick={e => setIdpAnchor(e.currentTarget)} sx={{ color: textColor, borderColor: textColor, justifyContent: 'space-between' }}>
-                                    {config.idpButton ?? 'Log in with...'}
+                                    {/* Con varios IdPs no se puede nombrar uno: el `{provider}` del idpButton (pensado para el
+                                        caso de 1 IdP, arriba) se sustituye por '…' → "Log in with …" + el menú lista cada IdP. */}
+                                    {(config.idpButton ?? 'Log in with {provider}').replace('{provider}', '…')}
                                 </Button>
                                 <Menu anchorEl={idpAnchor} open={Boolean(idpAnchor)} onClose={() => setIdpAnchor(null)} PaperProps={{ sx: { minWidth: idpAnchor?.offsetWidth } }}>
                                     {redirectMethods.map(m => (
