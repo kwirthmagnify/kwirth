@@ -172,6 +172,59 @@ explícita sobre de qué marketplaces se aceptan bundles.
 **Coste**: alto y en superficie, no en algoritmo. Depende de S1 (forma de la definición), S3 (permisos) y
 S6 (registro).
 
+### S8 · Diálogo común de toolset
+
+**Idea**: un diálogo de configuración de toolset **compartido por todos los plugins que usan IA**, igual
+que hoy lo son `AiConfigProvider` y `AiConfigLlm`. Tercer hermano en `common-ai/src/front.tsx`, servido
+por el global del core, consumido por los seis plugins sin que ninguno lo reimplemente.
+
+Es la cara visible de S7: sin él, la config de tools se queda en un JSON que nadie edita.
+
+**Reparto de responsabilidades: el core pone el editor, el plugin guarda.** No es una decisión nueva, es
+**la convención que ya siguen los otros dos** — `common-ai/src/front.tsx` no tiene **ni un `fetch`**. Los
+dos diálogos existentes son componentes controlados: reciben el valor por props y lo devuelven en
+`onClose(valor | undefined)`; pinocchio, por ejemplo, persiste los LLMs por su propio canal. S8 se limita
+a hacer lo mismo:
+
+```ts
+interface IAiConfigToolsetProps {
+    catalog: IToolBundle[]          // lo disponible, del core
+    config: IToolsetConfig          // el techo actual del plugin, que el plugin le pasa
+    readOnly?: boolean
+    onClose: (config: IToolsetConfig | undefined) => void
+}
+```
+
+Consecuencias, todas buenas:
+
+- **No hace falta clave de storage nueva en el core** ni endpoint por plugin. El techo vive en la
+  configuración del plugin, donde ya viven sus demás ajustes.
+- **El export/import sale casi gratis**: cada plugin ya exporta e importa su configuración en JSON, y el
+  techo pasa a ser un campo más de ella.
+- **El diálogo no necesita saber de qué plugin es.** Lo sabe el plugin, que es quien lo abre y quien
+  guarda.
+
+Y una consecuencia que conviene mirar de frente:
+
+⚠️ **Si guarda el plugin, el techo vale lo que valga la puerta de su configuración.** El "solo el admin
+puede levantar el techo" deja de ser una decisión centralizada y pasa a depender de cómo esté protegida la
+config de cada plugin. Hay que comprobar plugin a plugin, no darlo por hecho.
+
+📌 **Aparte, y sin relación con las tools**: hoy `/core/aiconfig` se protege solo con `validKey`, sin scope
+de admin, así que cualquier usuario con una key válida puede leer y escribir los providers de IA — **que
+llevan las API keys dentro**. Con el reparto de arriba esto ya no bloquea S8, pero queda anotado porque es
+un frente propio.
+
+**Forma del diálogo**: la misma pieza con dos lecturas.
+
+- **Editable**: bundles activos, tools desactivadas dentro de ellos y tools sueltas añadidas — las tres
+  capas de S7.
+- **Solo lectura** (`readOnly`): ver qué tiene disponible el plugin y por qué. Que un usuario pueda *ver*
+  el techo sin poder moverlo es lo que evita el "no sé por qué el agente no encuentra los logs".
+
+**Coste**: bajo. Es un selector agrupado con tres estados y sin persistencia propia. Depende de S7 para
+tener bundles que enseñar.
+
 ## Decidido (2026-09-16)
 
 - **El techo es POR PLUGIN.** A nivel global solo existe el catálogo de *tools disponibles*; la
