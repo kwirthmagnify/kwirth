@@ -8,5 +8,15 @@
     "description": "Harmless toy tools for trying out the AI toolset machinery end to end",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-playground/-/kwirth-aitoolset-playground-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "aitoolset",
+    "id": "k8s-inventory",
+    "name": "@kwirthmagnify/kwirth-aitoolset-k8s-inventory",
+    "displayName": "K8s Inventory",
+    "version": "0.1.0",
+    "description": "Read-only inventory of the Kubernetes cluster: namespaces, nodes, workloads, services and ingresses",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-inventory/-/kwirth-aitoolset-k8s-inventory-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
   }
 ]
