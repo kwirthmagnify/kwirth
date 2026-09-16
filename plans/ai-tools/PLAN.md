@@ -174,9 +174,34 @@ público (`@kwirthmagnify/kwirth-aitoolset-playground`).
 ⚠️ **El toolset de validación se llama `playground`, no `examples`**: se renombró al crearlo, y trae **sus
 propias** copias de `times_two` y `father_of` — las dos de juguete que hay en `common-ai` **no se tocaron**.
 
-⚠️ **Queda pendiente `k8s-inventory`**, el segundo toolset de validación, y con él lo que de verdad ejercita
-el contrato: `playground` valida la **mecánica** (empaquetar → publicar → instalar → registrar → invocar), no
-si `ECapability` y `sensitivity` están bien planteados. **El contrato sigue sin congelar hasta entonces.**
+#### El contrato de capabilities (2026-09-16, segundo cierre de S1)
+
+`k8s-inventory` 0.1.0 —8 tools de inventario, publicado— hizo su trabajo: destapó que **un `aitoolset`
+empaquetado no tenía forma de llegar al cluster**. Las 43 de hoy leen un `AsyncLocalStorage` privado de
+`common-ai` cuyo accesor **no se exporta**, y exportarlo habría repartido el saco entero (`saToken`, `token`,
+`senders`, `webhooks`, `dockerApi`, ~20 clientes de API) a cualquier paquete de terceros. `playground` no
+podía verlo: no necesita nada.
+
+Decisión, que es la que ya pedía este plan —*el toolset declara qué necesita y el host le da eso y nada más*—:
+
+- `execute(args)` pasa a **`execute(args, host)`**. Añadir un parámetro es compatible: una tool que solo usa
+  `args` sigue valiendo.
+- **`buildToolHost(requires, context)`** construye el host en UN solo sitio. Que el reparto viva ahí es lo que
+  hace cumplible la promesa: si cada sitio armara su objeto, bastaría con que uno fuera generoso para que
+  `ECapability` dejara de significar nada.
+- **`IK8sCapability` es una fachada**, no `ClusterInfo`: presta identidad del cluster, mapa de nodos y tres
+  clientes (`coreApi`, `appsApi`, `networkApi`). Ampliarla es una decisión consciente.
+- **`trace` no es capability**: va siempre, es el sobre de la invocación.
+- Los tipos de `@kubernetes/client-node` entran **solo como tipos** (peer opcional): nadie arrastra el SDK.
+
+**Resultado de la validación: la fachada fue SUFICIENTE.** Ninguna de las 8 necesitó nada fuera de su
+`requires`, y las 8 respondieron contra el cluster de dev (`verify.mjs`: 18 namespaces, 34 services, 5
+ingresses). Con eso, el contrato **queda ejercitado** y S1 cerrado.
+
+⚠️ **Sin endpoint de invocación en el core, a propósito.** Se valoró un `POST /core/aitoolsets/:id/tools/:name`
+con un botón *Try* en el gestor. Se descartó: el LLM nunca lo usaría —S2 invoca en proceso— y **autorizar al
+invocar es S4**; abrirlo antes con solo `validKey` dejaría ejecutar tools `write` sin techo. La llamada real
+se prueba con `verify.mjs`, que no deja superficie nueva. Se reconsidera en S4.
 
 ### S2 · El core consume toolsets
 
@@ -247,28 +272,38 @@ y `stopWhen: stepCountIs(15)` multiplica. Con el dato, decidir. **Sin la medida 
 - **La agrupación del selector ES el toolset** (2026-09-17). No hay taxonomía de familias aparte: tener las
   dos serían dos taxonomías paralelas sobre las mismas tools.
 
-### Reparto propuesto de las 43
+### Reparto de las 43 en 8 toolsets
 
-| `aitoolset` | N | Tools |
-|---|---|---|
-| `k8s-inventory` | 8 | `list_namespaces`, `get_cluster_data`, `get_node_data`, `get_workload_data`, `get_space_data`, `list_services`, `list_ingresses`, `get_workload_config_refs` |
-| `k8s-describe` | 11 | `describe_pod`, `describe_service`, `describe_ingress`, `describe_controller`, `get_pod_yaml`, `get_deployment_yaml`, `get_controller_yaml`, `get_service_yaml`, `get_ingress_yaml`, `get_namespace_yaml`, `get_rollout_history` |
-| `k8s-metrics` | 7 | `get_cluster_usage`, `get_node_usage`, `get_deployment_usage`, `get_prev_cluster_usage`, `get_prev_node_usage`, `get_prev_deployment_usage`, `get_prev_space_data` |
-| `k8s-observability` | 3 | `get_cluster_events`, `get_object_events`, `get_pod_logs` |
-| `k8s-secrets` | 3 | `get_configmap`, `get_secret`, `get_certificate_info` |
-| `k8s-ops` | 8 | **las 8 WRITE** |
-| `source-repos` | 1 | `get_source_file` |
-| `examples` | 2 | `times_two`, `father_of` |
+**Documentacion de consulta**: este es el mapa completo, con los nombres de las tools de cada categoria y
+la capability que necesita cada toolset. Se mantiene al dia segun se van creando.
 
-Suman 43. Tres observaciones:
+| # | `aitoolset` | Requires | N | Tools | Estado |
+|---|---|---|---|---|---|
+| 1 | `k8s-inventory` | `K8S` | 8 | `list_namespaces` · `get_cluster_data` · `get_node_data` · `get_workload_data` · `get_space_data` · `list_services` · `list_ingresses` · `get_workload_config_refs` | ✅ 0.1.0 publicado |
+| 2 | `k8s-describe` | `K8S` | 11 | `describe_pod` · `describe_service` · `describe_ingress` · `describe_controller` · `get_pod_yaml` · `get_deployment_yaml` · `get_controller_yaml` · `get_service_yaml` · `get_ingress_yaml` · `get_namespace_yaml` · `get_rollout_history` | ⬜ S3 |
+| 3 | `k8s-metrics` | `K8S` + `METRICS` | 7 | `get_cluster_usage` · `get_node_usage` · `get_deployment_usage` · `get_prev_cluster_usage` · `get_prev_node_usage` · `get_prev_deployment_usage` · `get_prev_space_data` | ⬜ S3 |
+| 4 | `k8s-observability` | `K8S` + `EVENTS` | 3 | `get_cluster_events` · `get_object_events` · `get_pod_logs` | ⬜ S3 |
+| 5 | `k8s-secrets` | `K8S` | 3 | `get_configmap` · `get_secret` · `get_certificate_info` | ⬜ S3 |
+| 6 | `k8s-ops` | `K8S` | 8 | `add_node` · `remove_node` · `stop_node` · `start_node` · `add_replica` · `remove_replica` · `restart_deployment` · `delete_pod` | ⬜ S3 |
+| 7 | `source-repos` | `REPOS` | 1 | `get_source_file` | ⬜ S3 |
+| 8 | `playground` | *(ninguna)* | 2 | `times_two` · `father_of` | ✅ 0.1.0 publicado |
+
+Suman 43. Cuatro observaciones que hacen que el reparto no sea arbitrario:
 
 - **`k8s-ops` es exactamente el conjunto WRITE.** Negar ese toolset a un plugin es negar toda la escritura,
-  sin depender de que nadie marque bien un flag.
+  sin depender de que nadie marque bien un flag tool por tool.
 - **`k8s-secrets` merece existir aunque sus tres tools sean READ.** Es el caso que justifica
   `sensitivity`: `get_secret` no modifica nada y expone todo.
-- **`examples` no debería estar en producción.** `times_two` devuelve `data * 2` y `father_of` devuelve la
-  cadena `'Julio'` para cualquier entrada. Hoy, con `autoTools`, se le ofrecen al modelo como las demás.
-  Aislarlas en un toolset que nadie activa es lo mínimo; borrarlas es lo honesto.
+- **`playground` es el `examples` que proponia este plan**, renombrado al crearlo. `times_two` devuelve
+  `data * 2` y `father_of` devuelve la cadena `'Julio'` para cualquier entrada. Hoy, con `autoTools`, se
+  le ofrecen al modelo como las demas. Aislarlas en un toolset que nadie activa es lo minimo; borrarlas es
+  lo honesto.
+- **El que no pide nada tambien informa**: `playground` con `requires: []` es la prueba de que la
+  declaracion significa algo — si recibiera cluster, el reparto por capability seria decorativo.
+
+⚠️ **Las 43 originales siguen en `common-ai` y NO se tocan** hasta S3: los toolsets nuevos llevan copias
+propias escritas contra el contrato nuevo. El camino viejo (`ctx()` sobre AsyncLocalStorage) muere cuando
+haya donde aterrizar, no antes.
 
 ## Preguntas abiertas
 
@@ -276,8 +311,11 @@ Suman 43. Tres observaciones:
    configurados.
 2. **Permisos** (S3): ¿basta un scope de cluster que ya exista, o hace falta uno propio de IA? ¿Y las
    destructivas piden confirmación humana, o solo permiso?
-3. **Capacidades** (S2): el catálogo inicial de `ECapability` — `k8s`, `metrics`, `events`, `repos` sale del
-   contexto de hoy, pero hay que validarlo contra las 43.
+3. **Capacidades** (S2): ~~el catálogo inicial de `ECapability`~~ **validado en parte (2026-09-16)**: las 8 de
+   `k8s-inventory` se sirven enteras con `K8S`, y la fachada no se quedó corta. Quedan por ejercitar
+   `METRICS`, `EVENTS` y `REPOS`, cada una al migrar su toolset (`k8s-metrics`, `k8s-observability`,
+   `source-repos`). ⚠️ `k8s-describe` y `k8s-ops` usarán clientes que la fachada **hoy no presta** (crd, rbac,
+   exec, logs): ampliarla es parte de esos toolsets, y cada ampliación es una decisión, no un trámite.
 4. **Dónde se guarda la observación** (S5): ¿solo log, o persistencia? Si persiste, store del core o SQL
    vía `common-sql`.
 5. **Procedencia de los toolsets** (S6): ¿de cualquier marketplace, o solo de los de confianza?
@@ -303,6 +341,10 @@ Suman 43. Tres observaciones:
 key válida puede leer y escribir los providers de IA, **que llevan las API keys dentro**. No bloquea este
 plan —el techo lo guarda el plugin— pero es un frente propio.
 
-📌 La **vista de lista** del gestor generico se ha validado con **un solo** `aitoolset` publicado
+~~📌 La **vista de lista** del gestor generico se ha validado con **un solo** `aitoolset` publicado
 (`playground`, QA del 2026-09-16). La alineacion de columnas solo se ve de verdad con varias filas de
-anchos distintos, asi que **hay que volver a revisarla** cuando haya mas toolsets en el catalogo.
+anchos distintos, asi que **hay que volver a revisarla** cuando haya mas toolsets en el catalogo.~~
+**HECHO el mismo 2026-09-16**, al publicar `k8s-inventory`: ya es un test de e2e que mide la X de la celda
+de version de cada fila del catalogo (y las dos filas traen distinto numero de chips, que es lo que
+descuadraria una maquetacion por fila). ⚠️ Se mide DENTRO de una seccion: instalados y disponibles son dos
+rejillas distintas y sus columnas no tienen por que coincidir.

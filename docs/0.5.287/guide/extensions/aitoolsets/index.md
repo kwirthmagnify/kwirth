@@ -35,6 +35,34 @@ The toolset itself also declares **what it needs from the host** (`requires`): c
 source repositories. kwirth provisions only what is declared, so a toolset that only does arithmetic never
 receives a Kubernetes client.
 
+## What a tool receives when it runs
+
+Each tool is called with its arguments **and a host object** built from its toolset's `requires`:
+
+```ts
+execute: async (args, host) => {
+    host.trace('list_namespaces', {})            // always available; it is not a capability
+    const cluster = host.k8s                     // only because the toolset declared ECapability.K8S
+    return await cluster.coreApi.listNamespace()
+}
+```
+
+| Declared | The tool receives |
+|---|---|
+| *(nothing)* | `host.trace` only |
+| `ECapability.K8S` | `host.k8s` — cluster name, flavour, vCPUs, memory, the node map, and the `CoreV1Api`, `AppsV1Api` and `NetworkingV1Api` clients |
+| `ECapability.METRICS` | `host.metrics` — the metric samples kwirth keeps in memory |
+| `ECapability.EVENTS` | `host.events` — the recent cluster-event buffer |
+| `ECapability.REPOS` | `host.repos` — source repository credentials |
+
+The Kubernetes clients are **the ones kwirth itself uses** — the same authenticated instances, not new
+connections. What a toolset does *not* get is equally deliberate: the other API clients kwirth holds, the
+service-account token, senders, webhooks and the Docker client stay out. The set can be widened later, but
+it is widened on purpose rather than handed over wholesale.
+
+> **A tool that needs a capability it was not given should say so.** If `host.k8s` is missing, fail with a
+> message that names the tool and the reason — an error deep inside a client call tells nobody anything.
+
 ## Built-in and installed toolsets
 
 Two kinds of toolset live side by side:
@@ -154,11 +182,16 @@ Point `kwirth-dev.json` at the build folder, as with any other extension:
 A toolset loaded this way shows a **`dev`** badge, cannot be uninstalled from the manager (the file governs it,
 not the dialog), and disappears when you remove it from `kwirth-dev.json` and restart the core.
 
-## Reference toolset
+## Available toolsets
 
-**Playground** (`@kwirthmagnify/kwirth-aitoolset-playground`) is a deliberately harmless toolset with two toy
-tools — `times_two` and `father_of`. It touches nothing, reads nothing and cannot break anything, so it is the
-one to install when you want to see how the machinery behaves end to end before writing your own.
+| Toolset | Tools | What it is for |
+|---|---|---|
+| **K8s Inventory** (`k8s-inventory`) | 8 | Read-only inventory of the cluster: namespaces, nodes, workloads, services, ingresses, and the ConfigMaps/Secrets a Deployment consumes. Needs `K8S`. |
+| **Playground** (`playground`) | 2 | Two harmless toy tools (`times_two`, `father_of`). Needs nothing. Install it to watch the machinery work end to end before writing your own. |
+
+`k8s-inventory` is also the worked example to read when writing one: every tool is `read`, and one of them —
+the one that lists the **Secrets** a Deployment consumes — is `read` but `internal`, which is exactly why
+effect and sensitivity are two separate fields.
 
 ---
 

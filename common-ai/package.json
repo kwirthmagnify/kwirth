@@ -1,6 +1,6 @@
 {
   "name": "@kwirthmagnify/kwirth-common-ai",
-  "version": "0.5.53",
+  "version": "0.5.54",
   "description": "Shared AI/LLM types and utilities for Kwirth AI plugins",
   "scripts": {
     "build": "del .\\dist\\* /s /q 2>nul & tsc",
@@ -56,7 +56,8 @@
     "zod": "^4.3.6"
   },
   "peerDependencies": {
-    "react": ">=18.0.0"
+    "react": ">=18.0.0",
+    "@kubernetes/client-node": ">=1.0.0"
   },
   "devDependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.42",
@@ -64,6 +65,15 @@
     "@mui/material": "7.1.2",
     "@types/node": "^25.9.1",
     "@types/react": "^18.3.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "@kubernetes/client-node": "^1.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@kubernetes/client-node": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   }
 }

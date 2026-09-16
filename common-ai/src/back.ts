@@ -1,4 +1,7 @@
-import { ILlm, ILlmModel, ILlmProvider, IAgent, EToolEffect, IAiToolInfo, IAiToolsetInfo, parseToolRef } from './index'
+import { ILlm, ILlmModel, ILlmProvider, IAgent, ECapability, EToolEffect, IAiToolInfo, IAiToolsetInfo, parseToolRef } from './index'
+// Solo TIPOS: se borran al compilar, asi que common-ai no arrastra el cliente de Kubernetes (~6,6 MB) a
+// ningun bundle. Por eso @kubernetes/client-node es peer opcional y no dependencia.
+import type { AppsV1Api, CoreV1Api, NetworkingV1Api } from '@kubernetes/client-node'
 
 interface ILogChannel {
     logInfo?: (msg: string) => void
@@ -400,10 +403,73 @@ const configRefsOfPodSpec = (spec: any): { kind: 'ConfigMap' | 'Secret'; name: s
 // lo que desinstalar seria adivinar—. Asi el que controla el ciclo de vida es el que abre la puerta.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
+// ── Lo que el host le presta a una tool ──────────────────────────────────────────────────────────────
+//
+// Una tool empaquetada NO puede leer el AsyncLocalStorage de aqui: `ctx()` es privado a proposito, y
+// exportarlo repartiria el saco entero (token de service account, senders, webhooks, docker...) a
+// cualquier paquete de terceros. En su lugar el host le pasa un `IToolHost` construido a partir de lo que
+// el toolset DECLARO en `requires`: quien no pide cluster no recibe cluster.
+//
+// ⚠️ Es una FACHADA, no el interior de Kwirth: se elige que se presta y con que nombre. `ClusterInfo`
+// tiene mas de veinte clientes de API ademas de credenciales; aqui se prestan tres clientes y la
+// identidad del cluster. Ampliarla es una decision consciente; ceder el objeto entero no lo seria.
+
+/** Un nodo del cluster, tal y como lo ve una tool. Compatible con el `INodeInfo` del core. */
+export interface IK8sNodeInfo {
+    name: string
+    ip: string
+    maxPods: number
+}
+
+/** Acceso a Kubernetes (`ECapability.K8S`). */
+export interface IK8sCapability {
+    /** Nombre del cluster tal y como lo conoce Kwirth. */
+    name: string
+    /** Sabor detectado: aks, eks, gke, k3s, k3d… */
+    flavour: string
+    vcpus: number
+    /** Memoria total del cluster, en bytes. */
+    memory: number
+    nodes: Map<string, IK8sNodeInfo>
+    coreApi: CoreV1Api
+    appsApi: AppsV1Api
+    networkApi: NetworkingV1Api
+}
+
+/** Metricas del cluster (`ECapability.METRICS`). */
+export interface IMetricsCapability {
+    /** Muestras de metricas que el core mantiene en memoria. */
+    samples: unknown[]
+}
+
+/** Eventos recientes del cluster (`ECapability.EVENTS`). */
+export interface IEventsCapability {
+    /** Buffer de eventos ({type, obj}) que el core va acumulando. */
+    recent: unknown[]
+}
+
+/** Credenciales de repositorios fuente (`ECapability.REPOS`). */
+export interface IReposCapability {
+    creds: ISourceRepoCred[]
+}
+
+/**
+ * Lo que recibe una tool al ejecutarse. Solo vienen rellenas las capabilities declaradas por su toolset:
+ * un `requires: []` recibe unicamente `trace`.
+ */
+export interface IToolHost {
+    /** Deja constancia de la invocacion. NO es una capability: se presta siempre, y no se declara. */
+    trace: (toolName: string, args: Record<string, unknown>) => void
+    k8s?: IK8sCapability
+    metrics?: IMetricsCapability
+    events?: IEventsCapability
+    repos?: IReposCapability
+}
+
 /** Una tool ejecutable: lo que viaja al front (IAiToolInfo) mas lo que hace falta para invocarla. */
 export interface IAiTool extends IAiToolInfo {
     inputSchema: z.ZodTypeAny
-    execute: (args: Record<string, unknown>) => Promise<unknown>
+    execute: (args: Record<string, unknown>, host: IToolHost) => Promise<unknown>
 }
 
 /** Un toolset ejecutable: su ficha (IAiToolsetInfo) con las tools de verdad dentro. */
@@ -454,6 +520,46 @@ export const listToolsetInfos = (): IAiToolsetInfo[] =>
         requires: t.requires,
         tools: t.tools.map(x => ({ name: x.name, description: x.description, effect: x.effect, sensitivity: x.sensitivity }))
     }))
+
+/**
+ * Construye el host de un toolset a partir del contexto del core, provisionando SOLO lo declarado.
+ *
+ * Que el reparto se haga aqui y no en cada llamada es lo que hace cumplible la promesa de `ECapability`:
+ * si cada sitio armara su propio objeto, bastaria con que uno se pasara de generoso para que la
+ * declaracion dejara de significar nada.
+ */
+export const buildToolHost = (requires: ECapability[], context: IToolContext): IToolHost => {
+    const host: IToolHost = { trace: context.trace }
+    const ci = context.clusterInfo
+    // Sin cluster no hay capability de cluster, aunque se declare: es preferible que la tool reciba
+    // 'undefined' y lo diga, a entregarle una fachada a medio montar que falle por dentro.
+    if (requires.includes(ECapability.K8S) && ci) {
+        host.k8s = {
+            name: ci.name,
+            flavour: ci.flavour,
+            vcpus: ci.vcpus,
+            memory: ci.memory,
+            nodes: context.nodes as Map<string, IK8sNodeInfo>,
+            coreApi: ci.coreApi,
+            appsApi: ci.appsApi,
+            networkApi: ci.networkApi
+        }
+    }
+    if (requires.includes(ECapability.METRICS)) host.metrics = { samples: context.clusterMetrics ?? [] }
+    if (requires.includes(ECapability.EVENTS)) host.events = { recent: context.clusterEvents ?? [] }
+    if (requires.includes(ECapability.REPOS)) host.repos = { creds: context.sourceRepos ?? [] }
+    return host
+}
+
+/**
+ * Invoca una tool por su referencia cualificada. Un unico camino de invocacion para built-in e
+ * instalado, con el host construido segun el `requires` de SU toolset.
+ */
+export const invokeToolRef = async (ref: string, args: Record<string, unknown>, context: IToolContext): Promise<unknown> => {
+    const resolved = resolveToolRef(ref)
+    if (!resolved) throw new Error(`[common-ai] unknown tool '${ref}'`)
+    return resolved.tool.execute(args, buildToolHost(resolved.toolset.requires, context))
+}
 
 /** Resuelve una referencia cualificada '<toolset>/<tool>' contra el registro. */
 export const resolveToolRef = (ref: string): { toolset: IAiToolset, tool: IAiTool } | undefined => {

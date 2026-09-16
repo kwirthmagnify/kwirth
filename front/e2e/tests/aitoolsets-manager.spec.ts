@@ -102,6 +102,29 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         await expect(dialog().getByText(TOOLSET).first()).toBeVisible()
     })
 
+    test('en la lista, las columnas de filas distintas quedan alineadas', async () => {
+        // La regla 6 del criterio de UI (plans/extension-managers-ui/PLAN.md) solo se puede comprobar con
+        // VARIAS filas: `extensionRowCells` devuelve celdas sueltas —no un contenedor por fila— justo para
+        // que compartan la rejilla. Con una sola fila cualquier maquetacion parece correcta, y por eso
+        // esto quedo anotado como pendiente hasta que hubo un segundo toolset en el catalogo.
+        //
+        // ⚠️ Se mide DENTRO del catalogo: lo instalado y lo disponible son dos rejillas distintas, y sus
+        // columnas no tienen por que coincidir entre si. Y las filas del catalogo traen distinto numero de
+        // chips ('dev active' solo en una), que es justo lo que descuadraria una maquetacion por fila.
+        await dialog().getByRole('button', { name: 'List view' }).click()
+        await expect(dialog().getByText('K8s Inventory').first()).toBeVisible({ timeout: 40000 })
+
+        const columnXs = await dialog().locator('.MuiSelect-select').evaluateAll(els => els.map(e => ({
+            version: (e.textContent ?? '').replace(/​/g, '').trim(),
+            left: Math.round(e.getBoundingClientRect().left)
+        })))
+
+        expect(columnXs.length, 'el catalogo deberia traer dos toolsets').toBeGreaterThan(1)
+        expect([...new Set(columnXs.map(c => c.left))], `columna de version desalineada: ${JSON.stringify(columnXs)}`).toHaveLength(1)
+
+        await dialog().getByRole('button', { name: 'Card view' }).click()
+    })
+
     test('todos los chips de una tarjeta miden lo mismo', async () => {
         // compactChip (MarketplaceBadge) es el tamaño comun de TODOS los chips de una tarjeta de
         // extension. Se comprueba de verdad porque a ojo no se distingue: un chip con mas contraste

@@ -11,7 +11,7 @@ import * as iso from '../dist/index.js'
 
 const {
     registerToolset, unregisterToolset, getToolset, listToolsets, listToolsetInfos,
-    resolveToolRef, isBuiltInToolsetId
+    resolveToolRef, isBuiltInToolsetId, buildToolHost, invokeToolRef
 } = back
 const { toolRef, parseToolRef, EToolEffect, EToolSensitivity, ECapability } = iso
 
@@ -115,4 +115,77 @@ test('las fichas que van al front NO llevan execute ni inputSchema', () => {
     assert.deepEqual(Object.keys(info.tools[0]).sort(), ['description', 'effect', 'name', 'sensitivity'])
 
     unregisterToolset('reg-info')
+})
+
+// ── reparto de capabilities ──────────────────────────────────────────────────────────────────────────
+//
+// La promesa de ECapability es "el host da lo declarado y NADA MAS". Se comprueba de verdad porque es una
+// promesa facil de romper sin enterarse: basta con que alguien arme el host a mano en otro sitio y sea
+// generoso. Si un dia un toolset sin declarar nada recibe cluster, estos tests caen.
+
+const fakeContext = (over = {}) => ({
+    origin: 'test',
+    nodes: new Map([['n1', { name: 'n1', ip: '10.0.0.1', maxPods: 110 }]]),
+    clusterInfo: {
+        name: 'k3d-test', flavour: 'k3d', vcpus: 4, memory: 8 * 1024 * 1024 * 1024,
+        coreApi: { listNamespace: async () => ({ items: [] }) },
+        appsApi: {}, networkApi: {},
+        saToken: 'NO-DEBE-SALIR', token: 'NO-DEBE-SALIR', senders: {}, webhooks: {}
+    },
+    clusterMetrics: [{ cpu: 1 }],
+    clusterEvents: [{ type: 'ADDED' }],
+    sourceRepos: [{ host: 'github.com', token: 'x' }],
+    trace: () => {},
+    ...over
+})
+
+test('solo se provisiona lo declarado en requires', () => {
+    const ctx = fakeContext()
+
+    const solo = buildToolHost([], ctx)
+    assert.deepEqual(Object.keys(solo), ['trace'])   // trace SIEMPRE, y nada mas
+
+    const k8s = buildToolHost([ECapability.K8S], ctx)
+    assert.ok(k8s.k8s)
+    assert.equal(k8s.metrics, undefined)
+    assert.equal(k8s.events, undefined)
+    assert.equal(k8s.repos, undefined)
+
+    const todo = buildToolHost([ECapability.K8S, ECapability.METRICS, ECapability.EVENTS, ECapability.REPOS], ctx)
+    assert.deepEqual(Object.keys(todo).sort(), ['events', 'k8s', 'metrics', 'repos', 'trace'])
+})
+
+test('la fachada de cluster NO deja pasar las credenciales del core', () => {
+    // clusterInfo lleva saToken, token, senders y webhooks. Un toolset de terceros no tiene por que verlos,
+    // y ceder el objeto entero seria justo el cajon de sastre que este contrato viene a cerrar.
+    const host = buildToolHost([ECapability.K8S], fakeContext())
+    assert.deepEqual(Object.keys(host.k8s).sort(), ['appsApi', 'coreApi', 'flavour', 'memory', 'name', 'networkApi', 'nodes', 'vcpus'])
+    assert.equal(JSON.stringify(host.k8s).includes('NO-DEBE-SALIR'), false)
+})
+
+test('sin cluster no se inventa la capability aunque se declare', () => {
+    // Mejor que la tool reciba undefined y lo diga, a darle una fachada a medio montar que reviente dentro.
+    const host = buildToolHost([ECapability.K8S], fakeContext({ clusterInfo: undefined }))
+    assert.equal(host.k8s, undefined)
+    assert.equal(typeof host.trace, 'function')
+})
+
+test('invocar por referencia construye el host del toolset que la trae', async () => {
+    let visto
+    registerToolset({
+        ...fakeToolset('inv-caps', []),
+        requires: [ECapability.METRICS],
+        tools: [{ ...fakeTool('peek'), execute: async (args, host) => { visto = host; return args.n } }]
+    })
+
+    const res = await invokeToolRef('inv-caps/peek', { n: 7 }, fakeContext())
+    assert.equal(res, 7)
+    assert.ok(visto.metrics)
+    assert.equal(visto.k8s, undefined)   // no lo declaro: no lo recibe
+
+    unregisterToolset('inv-caps')
+})
+
+test('invocar una referencia que no existe falla con el ref completo', async () => {
+    await assert.rejects(() => invokeToolRef('no-existe/nada', {}, fakeContext()), /no-existe\/nada/)
 })

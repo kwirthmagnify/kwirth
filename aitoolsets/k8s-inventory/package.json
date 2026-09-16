@@ -1,0 +1,27 @@
+{
+  "id": "k8s-inventory",
+  "name": "@kwirthmagnify/kwirth-aitoolset-k8s-inventory",
+  "publisher": "@kwirthmagnify",
+  "version": "0.1.0",
+  "displayName": "K8s Inventory",
+  "description": "Read-only inventory of the Kubernetes cluster: namespaces, nodes, workloads, services and ingresses",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.54"
+  },
+  "devDependencies": {
+    "@kubernetes/client-node": "^1.4.0",
+    "@types/node": "^20.12.13",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.4.0"
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
+}
