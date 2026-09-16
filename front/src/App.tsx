@@ -56,6 +56,8 @@ import { WebhookManagerDialog } from './components/WebhookManagerDialog'
 import { ThemeManagerDialog } from './components/ThemeManagerDialog'
 import { HomepageManagerDialog } from './components/HomepageManagerDialog'
 import { DocsManagerDialog } from './components/DocsManagerDialog'
+import { ExtensionManagerDialog } from './components/ExtensionManagerDialog'
+import { aiToolsetDescriptor } from './components/aiToolsetDescriptor'
 import { LoginManagerDialog } from './components/LoginManagerDialog'
 import { PackManagerDialog } from './components/PackManagerDialog'
 import { LoginExtensionPage } from './components/LoginExtensionPage'
@@ -285,6 +287,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showThemeManagerDialog, setShowThemeManagerDialog]=useState<boolean>(false)
     const [showHomepageManagerDialog, setShowHomepageManagerDialog]=useState<boolean>(false)
     const [showDocsManagerDialog, setShowDocsManagerDialog]=useState<boolean>(false)
+    const [showAiToolsetManagerDialog, setShowAiToolsetManagerDialog]=useState<boolean>(false)
     const [showLoginManagerDialog, setShowLoginManagerDialog]=useState<boolean>(false)
     const [showPackManagerDialog, setShowPackManagerDialog]=useState<boolean>(false)
     const [loginExtError, setLoginExtError]=useState<string|undefined>(undefined)
@@ -1951,6 +1954,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageDocs:
                 setShowDocsManagerDialog(true)
                 break
+            case MenuDrawerOption.ManageAiToolsets:
+                setShowAiToolsetManagerDialog(true)
+                break
             case MenuDrawerOption.ManageLogins:
                 setShowLoginManagerDialog(true)
                 break
@@ -2543,6 +2549,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showThemeManagerDialog && <ThemeManagerDialog onClose={() => setShowThemeManagerDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} themeAssignments={themeAssignments} onAssignmentsChange={setThemeAssignments} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onRestartRequired={onExtensionRestartRequired} /> }
                 { showHomepageManagerDialog && <HomepageManagerDialog onClose={() => setShowHomepageManagerDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={onExtensionRestartRequired} /> }
                 { showDocsManagerDialog && <DocsManagerDialog onClose={() => setShowDocsManagerDialog(false)} /> }
+                { showAiToolsetManagerDialog && <ExtensionManagerDialog descriptor={aiToolsetDescriptor} onClose={() => setShowAiToolsetManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={onExtensionRestartRequired} /> }
                 { showChannelSetup() }

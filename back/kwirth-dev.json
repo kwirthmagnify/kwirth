@@ -35,6 +35,9 @@
     ]
   },
   "idps": {},
+  "aitoolsets": {
+    "playground": "../aitoolsets/playground/dist"
+  },
   "docs": {
     "kwirth": "bundle/docs/kwirth.tgz",
     "excubitor": "../plugins/excubitor/docs/excubitor.tgz",

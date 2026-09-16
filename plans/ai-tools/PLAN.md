@@ -126,7 +126,7 @@ toolset cargado en caliente, cómo se referencia una tool sin ambigüedad y cóm
 Adivinarlas mal no se paga con un refactor: se paga migrando configuraciones ya guardadas en Kwirth de
 clientes. Construyendo el tipo primero, esas tres decisiones las toma quien las necesita.
 
-### S1 · El tipo `aitoolset`, de punta a punta
+### S1 · El tipo `aitoolset`, de punta a punta — ✅ CERRADO (CL9 2026-09-16)
 
 Contrato (`IAiTool`, `IAiToolset`, `ECapability`, `EToolSensitivity`), carga, registro, manager con su
 índice, entrada de manifest, soporte en `kwirth-dev.json` y bundled, y el diálogo del manager. Sería el
@@ -150,6 +150,33 @@ Aquí se cierran las tres decisiones que lo condicionan todo hacia adelante:
 
 ⚠️ Mientras S1 y S2 están en vuelo, **las 43 de hoy siguen funcionando por el camino viejo**. No hay
 big-bang: el camino antiguo muere en S3, cuando ya hay dónde aterrizar.
+
+🛑 **PARADA OBLIGATORIA antes de crear `AiToolsetManagerDialog`** (orden del usuario, 2026-09-17). Un
+diálogo de manager no se escribe a ojo: hay once managers y el criterio de UI —instalados/disponibles ×
+card/lista— vive en `plans/extension-managers-ui/PLAN.md`. Se para, se audita y se acuerda antes de
+escribir el componente.
+
+#### Cómo cerró S1 (2026-09-16)
+
+La parada se resolvió **no escribiendo** un `AiToolsetManagerDialog`: el usuario decidió construir un
+gestor **genérico dirigido por descriptor** (`ExtensionManagerDialog` + `extensionManagerModel` +
+`ExtensionCard`) que acabará sustituyendo a los diez a medida, y estrenarlo con `aitoolset` —el único tipo
+sin diálogo propio, así que estrenarlo no podía romper nada—. Detalle en
+`plans/extension-managers-ui/PLAN.md`.
+
+Entregado: contrato en `common-ai` (`EToolEffect`, `EToolSensitivity`, `ECapability`, `toolRef`/`parseToolRef`,
+`IAiToolInfo`/`IAiToolsetInfo`/`IToolsetConfig`), registro único con ids reservados en `common-ai/back`,
+`AiToolsetManager` (tgz · fichero · **carpeta** para dev · bundled · poda de dev huérfanos), `AiToolsetApi`
+(`/` instalado, `/catalog` registrado), cableado en `PackApi`/`ExtensionDeps`/`MarketplaceManager`, descriptor
+del tipo en el front, `aitoolsets/manifest.json` y el primer artefacto: **`playground` 0.1.0** publicado en npm
+público (`@kwirthmagnify/kwirth-aitoolset-playground`).
+
+⚠️ **El toolset de validación se llama `playground`, no `examples`**: se renombró al crearlo, y trae **sus
+propias** copias de `times_two` y `father_of` — las dos de juguete que hay en `common-ai` **no se tocaron**.
+
+⚠️ **Queda pendiente `k8s-inventory`**, el segundo toolset de validación, y con él lo que de verdad ejercita
+el contrato: `playground` valida la **mecánica** (empaquetar → publicar → instalar → registrar → invocar), no
+si `ECapability` y `sensitivity` están bien planteados. **El contrato sigue sin congelar hasta entonces.**
 
 ### S2 · El core consume toolsets
 
@@ -275,3 +302,7 @@ Suman 43. Tres observaciones:
 📌 Hoy `/core/aiconfig` se protege solo con `validKey`, **sin scope de admin**: cualquier usuario con una
 key válida puede leer y escribir los providers de IA, **que llevan las API keys dentro**. No bloquea este
 plan —el techo lo guarda el plugin— pero es un frente propio.
+
+📌 La **vista de lista** del gestor generico se ha validado con **un solo** `aitoolset` publicado
+(`playground`, QA del 2026-09-16). La alineacion de columnas solo se ve de verdad con varias filas de
+anchos distintos, asi que **hay que volver a revisarla** cuando haya mas toolsets en el catalogo.

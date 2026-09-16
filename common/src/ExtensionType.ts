@@ -14,5 +14,8 @@ export enum EExtensionType {
     DOCS = 'docs',
     LOGIN = 'login',
     PACK = 'pack',
-    WEBHOOK = 'webhook'
+    WEBHOOK = 'webhook',
+    // Conjunto tematico de tools para los modelos de IA. Es solo back: su front —el selector y el dialogo
+    // de configuracion— lo pone el core y lo comparten todos los plugins que usan IA.
+    AITOOLSET = 'aitoolset'
 }

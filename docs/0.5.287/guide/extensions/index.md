@@ -47,9 +47,17 @@ Swap the home landing dashboard. Bundled: **Clusterized**, **Avicii**, **Matrix*
 
 Replace the standard login dialog with a **custom-branded login page** tied to a specific channel. Install from `/?loginExt=<id>`. Includes per-login channel access enforcement. → **[Login extensions manual](logins/index)**
 
+## [Webhooks (inbound HTTP)](webhooks/index)
+
+Inbound HTTP endpoints — the counterpart of senders. An external system posts an event to kwirth and a channel consumes it. → **[Webhooks manual](webhooks/index)**
+
 ## [Documentation packages](docs/index)
 
 Self-contained docsify sites served directly by kwirth. The `core/kwirth` package (this guide) ships bundled. Additional packages can be installed from a URL, a local file or the registry. → **[Documentation packages manual](docs/index)**
+
+## [AI toolsets (tools for the LLM)](aitoolsets/index)
+
+Packaged groups of **tools** an LLM can call from an AI-enabled channel — list pods, read logs, query a repository. Installing one makes it **available**; each channel decides which toolsets it may use and which of their tools are switched off. → **[AI toolsets manual](aitoolsets/index)**
 
 ## [Packs (extension bundles)](packs/index)
 

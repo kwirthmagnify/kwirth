@@ -11,7 +11,10 @@ const CASES: { menu: string; dialog: RegExp }[] = [
     { menu: 'Providers',  dialog: /Manage providers/i },
     { menu: 'Senders',    dialog: /Manage senders/i },
     { menu: 'Themes',     dialog: /Manage themes/i },
-    { menu: 'Homepages',  dialog: /Manage homepages/i }
+    { menu: 'Homepages',  dialog: /Manage homepages/i },
+    // El unico que NO tiene dialogo a medida: lo sirve ExtensionManagerDialog. Entra aqui para que la
+    // regresion del catalogo cubra tambien al generico, que es quien acabara sirviendo a los demas.
+    { menu: 'AI toolsets', dialog: /Manage AI toolsets/i }
 ]
 
 test('los manager dialogs siguen listando catalogo tras pasar por el back', async ({ page }) => {
@@ -29,8 +32,10 @@ test('los manager dialogs siguen listando catalogo tras pasar por el back', asyn
 
         // El catalogo tarda: el dialogo no solo pinta lo instalado, tambien resuelve los manifests
         // remotos (publico + privados) antes de tener tarjetas que enseñar. 15s bastaban con la maquina
-        // ociosa y flakeaban con ella cargada, y un rojo que depende de eso no es señal de nada.
-        const hasEntries = await dialog.getByText(/^v\d+\.\d+\.\d+$/).first().isVisible({ timeout: 40000 }).catch(() => false)
+        // ociosa y flakeaban con ella cargada, y un rojo que depende de eso no es señal de nada. Se subio
+        // otra vez a 60s el 2026-09-16: con seis dialogos en la misma corrida (entro el generico) el de
+        // senders se paso de 40s con la maquina cargada.
+        const hasEntries = await dialog.getByText(/^v\d+\.\d+\.\d+$/).first().isVisible({ timeout: 60000 }).catch(() => false)
         if (!hasEntries) failures.push(`${c.menu}: no catalog entries`)
 
         const failedText = await dialog.getByText(/Failed to fetch/i).count()

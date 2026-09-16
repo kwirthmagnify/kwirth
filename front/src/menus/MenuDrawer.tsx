@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Collapse, Divider, MenuItem, MenuList } from "@mui/material"
-import { ChevronRight, CreateNewFolder, Delete, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpen, FolderOpen, FolderZip, Home, Https, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, Save, SaveAs, Send, Settings, SmartToy } from '@kwirthmagnify/kwirth-common-front/icons'
+import { ChevronRight, CreateNewFolder, Delete, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpen, FolderOpen, FolderZip, Home, Https, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, Save, SaveAs, Send, Settings, SmartToy, Construction } from '@kwirthmagnify/kwirth-common-front/icons'
 
 enum MenuDrawerOption {
     NewWorkspace,
@@ -24,6 +24,7 @@ enum MenuDrawerOption {
     ManageHomepages,
     ManageIdps,
     ManageDocs,
+    ManageAiToolsets,
     ManageLogins,
     ManagePacks,
     AiProviders,
@@ -103,6 +104,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageHomepages)}><Home />&nbsp;Homepages</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageIdps)}><Key />&nbsp;Identity providers</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageDocs)}><Description />&nbsp;Documentation</MenuItem>
+                            <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageAiToolsets)}><Construction />&nbsp;AI toolsets</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageLogins)}><LockPerson />&nbsp;Login extensions</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManagePacks)}><FolderZip />&nbsp;Packs</MenuItem>
                         </MenuList>

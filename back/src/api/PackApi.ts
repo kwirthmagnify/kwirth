@@ -8,6 +8,7 @@ import { HomepageManager } from '../tools/HomepageManager'
 import { IdpManager } from '../tools/IdpManager'
 import { LoginManager } from '../tools/LoginManager'
 import { DocsManager } from '../tools/DocsManager'
+import { AiToolsetManager } from '../tools/AiToolsetManager'
 import { WebhookManager } from '../tools/WebhookManager'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
@@ -34,6 +35,7 @@ interface IPackApiDeps {
     loginManager: LoginManager
     docsManager: DocsManager
     webhookManager: WebhookManager
+    aiToolsetManager: AiToolsetManager
     apiKeyApi: ApiKeyApi
     registeredChannels: Map<string, TChannelConstructor>
     registeredProviders: Map<string, TProviderConstructor>
@@ -76,7 +78,7 @@ export class PackApi {
     }
 
     private async installFromTgz(tgzPath: string, installedFrom: string): Promise<IPackMeta> {
-        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, registeredChannels, registeredProviders } = this.deps
+        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, registeredChannels, registeredProviders } = this.deps
         const extractDir = path.join(os.tmpdir(), `kwirth-pack-extract-${Date.now()}`)
         fs.mkdirSync(extractDir, { recursive: true })
         try {
@@ -101,7 +103,7 @@ export class PackApi {
             if (await packManager.isInstalled(packId)) throw new Error(`Pack '${packId}' is already installed`)
 
             // check no member extension is already installed (including dev)
-            const [installedPlugins, installedProviders, installedSenders, installedThemes, installedHomepages, installedIdps, installedLogins, installedDocs, installedWebhooks] = await Promise.all([
+            const [installedPlugins, installedProviders, installedSenders, installedThemes, installedHomepages, installedIdps, installedLogins, installedDocs, installedWebhooks, installedAiToolsets] = await Promise.all([
                 pluginManager.listInstalled(),
                 providerManager.listInstalled(),
                 senderManager.listInstalled(),
@@ -110,7 +112,8 @@ export class PackApi {
                 idpManager.listInstalledMeta(),
                 loginManager.listInstalled(),
                 docsManager.listInstalled(),
-                webhookManager.listInstalled()
+                webhookManager.listInstalled(),
+                aiToolsetManager.listInstalled()
             ])
 
             for (const ext of extensions) {
@@ -125,6 +128,7 @@ export class PackApi {
                     case EExtensionType.LOGIN:     exists = installedLogins.some(p => p.id === ext.id); break
                     case EExtensionType.DOCS:      exists = installedDocs.some(p => p.id === ext.id && p.targetType === ext.targetType); break
                     case EExtensionType.WEBHOOK:   exists = installedWebhooks.some(p => p.id === ext.id); break
+                    case EExtensionType.AITOOLSET: exists = installedAiToolsets.some(p => p.id === ext.id); break
                     default: throw new Error(`Unsupported extension type in pack: '${ext.extensionType}'`)
                 }
                 if (exists) throw new Error(`Cannot install pack: extension '${ext.extensionType}:${ext.id}' is already installed`)
@@ -141,7 +145,8 @@ export class PackApi {
                 idp:      installedIdps.map(p => ({ id: p.id, version: p.version })),
                 login:    installedLogins.map(p => ({ id: p.id, version: p.version })),
                 webhook:  installedWebhooks.map(p => ({ id: p.id, version: p.version })),
-                docs:     installedDocs.map(p => ({ id: p.id, version: p.version }))
+                docs:     installedDocs.map(p => ({ id: p.id, version: p.version })),
+                aitoolset: installedAiToolsets.map(p => ({ id: p.id, version: p.version }))
             }
             const allDepErrors: string[] = []
             let packRequiresRestart = false

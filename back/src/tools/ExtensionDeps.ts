@@ -15,6 +15,7 @@ export interface IInstalledIndex {
     // La documentacion se identifica por (targetType, id), pero como dependencia basta el id: quien
     // depende de una guia depende de la de SU extension, y ahi el par no aporta nada.
     docs: IInstalledRef[]
+    aitoolset: IInstalledRef[]
 }
 
 function semverGte(installed: string, required: string): boolean {

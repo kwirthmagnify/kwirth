@@ -17,7 +17,8 @@ const PUBLIC_FOLDER: Record<EExtensionType, string> = {
     [EExtensionType.LOGIN]: 'logins',
     [EExtensionType.PACK]: 'packs',
     [EExtensionType.DOCS]: 'docs',
-    [EExtensionType.IDP]: 'idps'
+    [EExtensionType.IDP]: 'idps',
+    [EExtensionType.AITOOLSET]: 'aitoolsets'
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000

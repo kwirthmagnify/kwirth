@@ -1,4 +1,4 @@
-import { ILlm, ILlmModel, ILlmProvider, IAgent } from './index'
+import { ILlm, ILlmModel, ILlmProvider, IAgent, EToolEffect, IAiToolInfo, IAiToolsetInfo, parseToolRef } from './index'
 
 interface ILogChannel {
     logInfo?: (msg: string) => void
@@ -298,12 +298,10 @@ const fetchSourceFile = async (cred: ISourceRepoCred, projectPath: string, ref: 
     return await resp.text()
 }
 
-// Effect of a tool: READ (safe, informational) or WRITE (has side effects on the cluster).
-// Dual purpose: hints the LLM, and gates authorization (Agora/readOnly filter out WRITE).
-export enum EToolEffect {
-    READ = 'read',
-    WRITE = 'write'
-}
+// EToolEffect vive ahora en el contrato isomorfo (./index): el front tambien tiene que saber que hace una
+// tool para poder marcarla en el selector, y hasta ahora no le llegaba. Se re-exporta para no romper a
+// quien lo importe desde aqui.
+export { EToolEffect } from './index'
 
 export interface IToolInfo {
     name: string
@@ -387,6 +385,83 @@ const configRefsOfPodSpec = (spec: any): { kind: 'ConfigMap' | 'Secret'; name: s
         add('Secret', v.secret?.secretName, `volume ${v.name}`)
     }
     return refs
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// Registro de toolsets (plan: plans/ai-tools/PLAN.md, S1)
+//
+// UNA SOLA PUERTA, a proposito: built-in e instalados entran por la MISMA funcion. Si los built-in
+// entraran por un camino privilegiado —un import y un push a un array— el dia que llegue el tipo de
+// extension habria que rehacer el registro entero, y ese es justo el retrabajo que este orden evita.
+//
+// Y NADIE SE AUTO-REGISTRA: un modulo de toolset solo EXPORTA su definicion, y quien la registra es el
+// host. Registrarse en el import convertiria el alta en un efecto secundario —el orden de carga pasaria a
+// importar, un modulo ajeno podria dar de alta lo que quisiera, y el manager no sabria que registro, con
+// lo que desinstalar seria adivinar—. Asi el que controla el ciclo de vida es el que abre la puerta.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Una tool ejecutable: lo que viaja al front (IAiToolInfo) mas lo que hace falta para invocarla. */
+export interface IAiTool extends IAiToolInfo {
+    inputSchema: z.ZodTypeAny
+    execute: (args: Record<string, unknown>) => Promise<unknown>
+}
+
+/** Un toolset ejecutable: su ficha (IAiToolsetInfo) con las tools de verdad dentro. */
+export interface IAiToolset extends Omit<IAiToolsetInfo, 'tools'> {
+    tools: IAiTool[]
+}
+
+const toolsetRegistry = new Map<string, IAiToolset>()
+
+// Los ids de los toolsets built-in del core estan RESERVADOS: un `aitoolset` de un tercero no puede
+// ocuparlos. Sin esta regla, instalar un toolset ajeno llamado 'k8s-inventory' obligaria a renombrar el
+// built-in, y con el se romperia todo techo y todo agente que lo tuviera configurado.
+const builtInToolsetIds = new Set<string>()
+
+export const isBuiltInToolsetId = (id: string): boolean => builtInToolsetIds.has(id)
+
+/**
+ * Registra un toolset. `builtIn` solo lo usa el core para los suyos: marca el id como reservado.
+ * Lanza si el id ya esta ocupado — registrar dos veces el mismo id es un error de empaquetado, no algo
+ * que deba resolverse en silencio pisando al primero.
+ */
+export const registerToolset = (toolset: IAiToolset, builtIn = false): void => {
+    // El id reservado se comprueba ANTES que el duplicado, y el orden importa: un built-in siempre esta
+    // registrado, asi que chocar con uno da SIEMPRE duplicado tambien. Al reves, quien instala un toolset
+    // ajeno leeria 'already registered' —que suena a que lo instalo dos veces— en vez de enterarse de que
+    // ese id es del core y no lo puede ocupar.
+    if (!builtIn && builtInToolsetIds.has(toolset.id)) throw new Error(`[common-ai] toolset id '${toolset.id}' is reserved by a built-in toolset`)
+    if (toolsetRegistry.has(toolset.id)) throw new Error(`[common-ai] toolset '${toolset.id}' already registered`)
+    toolsetRegistry.set(toolset.id, toolset)
+    if (builtIn) builtInToolsetIds.add(toolset.id)
+}
+
+/** Retira un toolset del registro (desinstalacion). Los built-in no se retiran. */
+export const unregisterToolset = (id: string): boolean =>
+    builtInToolsetIds.has(id) ? false : toolsetRegistry.delete(id)
+
+export const getToolset = (id: string): IAiToolset | undefined => toolsetRegistry.get(id)
+
+export const listToolsets = (): IAiToolset[] => [...toolsetRegistry.values()]
+
+/** Lo que se le manda al front: las fichas, sin inputSchema ni execute. */
+export const listToolsetInfos = (): IAiToolsetInfo[] =>
+    listToolsets().map(t => ({
+        id: t.id,
+        version: t.version,
+        displayName: t.displayName,
+        description: t.description,
+        requires: t.requires,
+        tools: t.tools.map(x => ({ name: x.name, description: x.description, effect: x.effect, sensitivity: x.sensitivity }))
+    }))
+
+/** Resuelve una referencia cualificada '<toolset>/<tool>' contra el registro. */
+export const resolveToolRef = (ref: string): { toolset: IAiToolset, tool: IAiTool } | undefined => {
+    const parsed = parseToolRef(ref)
+    if (!parsed) return undefined
+    const toolset = toolsetRegistry.get(parsed.toolsetId)
+    const tool = toolset?.tools.find(t => t.name === parsed.toolName)
+    return toolset && tool ? { toolset, tool } : undefined
 }
 
 export const tools = {

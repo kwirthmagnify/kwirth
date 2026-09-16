@@ -21,6 +21,8 @@ import { LoginApi } from './api/LoginApi'
 import { WebSocketServer } from 'ws'
 import { ManageKwirthApi } from './api/ManageKwirthApi'
 import { AiConfigApi } from './api/AiConfigApi'
+import { AiToolsetManager } from './tools/AiToolsetManager'
+import { AiToolsetApi } from './api/AiToolsetApi'
 import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
 import { ManageClusterApi } from './api/ManageClusterApi'
 import { AuthorizationManagement } from './tools/AuthorizationManagement'
@@ -178,6 +180,7 @@ let homepageManager: HomepageManager | undefined
 let loginManager: LoginManager | undefined
 let packManager: PackManager | undefined
 let docsManager: DocsManager | undefined
+let aiToolsetManager: AiToolsetManager | undefined
 const licenseManager = new LicenseManager()
 licenseManager.load()
 
@@ -1450,6 +1453,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let webhookApi = new WebhookApi(webhookManager, apiKeyApi)
             riRouter.use(`/core/webhooks`, webhookApi.router)
         }
+        if (aiToolsetManager) {
+            let aiToolsetApi = new AiToolsetApi(aiToolsetManager, apiKeyApi)
+            riRouter.use(`/core/aitoolsets`, aiToolsetApi.router)
+        }
         if (themeManager) {
             let themeApi = new ThemeApi(themeManager, apiKeyApi)
             riRouter.use(`/core/themes`, themeApi.router)
@@ -1462,8 +1469,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let loginExtensionApi = new LoginExtensionApi(loginManager, apiKeyApi)
             riRouter.use(`/core/logins`, loginExtensionApi.router)
         }
-        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager && webhookManager) {
-            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, apiKeyApi, registeredChannels, registeredProviders })
+        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager && webhookManager && aiToolsetManager) {
+            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, apiKeyApi, registeredChannels, registeredProviders })
             riRouter.use(`/core/packs`, packApi.router)
         }
         if (docsManager) {
@@ -1822,6 +1829,15 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
 
         if (!packManager) {
             packManager = new PackManager(runningInstance.configMaps)
+        }
+
+        if (!aiToolsetManager) {
+            aiToolsetManager = new AiToolsetManager(runningInstance.configMaps)
+            await aiToolsetManager.init()
+            const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
+            if (bundledExtensionsPath) await aiToolsetManager.installBundled(bundledExtensionsPath)
+            await aiToolsetManager.loadAll()
+            aiToolsetManager.loadDevAiToolsets()
         }
 
         if (!docsManager) {

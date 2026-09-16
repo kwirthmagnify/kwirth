@@ -24,7 +24,10 @@ const MANAGERS: { menu: string, title: RegExp, file: string }[] = [
     { menu: 'Senders',        title: /Manage senders/i,     file: 'manage-senders.png' },
     { menu: 'Themes',         title: /Manage themes/i,      file: 'manage-themes.png' },
     { menu: 'Homepages',      title: /Manage homepages/i,   file: 'manage-homepages.png' },
-    { menu: 'Identity providers', title: /identity provider/i, file: 'manage-idps.png' }
+    { menu: 'Identity providers', title: /identity provider/i, file: 'manage-idps.png' },
+    // El unico servido por el gestor GENERICO (ExtensionManagerDialog): la captura enseña que la UI es la
+    // misma que la de los demas, que es justo lo que promete la guia.
+    { menu: 'AI toolsets',    title: /Manage AI toolsets/i, file: 'manage-aitoolsets.png' }
 ]
 
 async function captureSession(page: Page): Promise<ISession> {
@@ -65,6 +68,17 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
         // No hace falta recargar: cada diálogo pide su catálogo al abrirse, y un marketplace
         // deshabilitado se excluye de la resolución en el back.
         if (privatesOff.length) await writeMarketplaces(page, s, privatesOff)
+
+        // El menu de familias, que es la primera imagen de "Extending kwirth". Se regenera aqui porque
+        // CADA tipo de extension nuevo lo cambia, y hecha a mano se quedaba vieja sin que nadie lo notara:
+        // la que habia no tenia ni el tipo `aitoolset`.
+        await dismissOpenDialogs(page)
+        await page.locator('header button').first().click({ force: true })
+        await page.getByRole('menuitem', { name: /Manage extensions/i }).click()
+        await page.waitForTimeout(600)
+        await page.screenshot({ path: `${MEDIA}/admin-manage-extensions.png` })
+        await page.keyboard.press('Escape')
+        await page.waitForTimeout(400)
 
         for (const m of MANAGERS) {
             await clickExtensionMenuItem(page, m.menu)

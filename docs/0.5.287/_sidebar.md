@@ -88,6 +88,7 @@
     * [Login extensions](/0.5.287/guide/extensions/logins/index)
       * [Anonymous](/0.5.287/guide/extensions/logins/anonymous)
       * [Magnify](/0.5.287/guide/extensions/logins/magnify)
+    * [AI toolsets](/0.5.287/guide/extensions/aitoolsets/index)
 * [Installation](/0.5.287/installation)
 * [How it works](/0.5.287/how)
 * [Data streaming](/0.5.287/datastreaming)
