@@ -1,0 +1,12 @@
+[
+  {
+    "extensionType": "aitoolset",
+    "id": "playground",
+    "name": "@kwirthmagnify/kwirth-aitoolset-playground",
+    "displayName": "Playground",
+    "version": "0.1.0",
+    "description": "Harmless toy tools for trying out the AI toolset machinery end to end",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-playground/-/kwirth-aitoolset-playground-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
+  }
+]
