@@ -216,7 +216,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
 
     const installedActions = (entry: TInstalled): IExtensionAction[] => {
         const actions = [...(d.actions?.(entry, EManagerSection.INSTALLED) ?? [])]
-        if (d.renderConfigDialog)
+        if (d.renderConfigDialog && (d.canConfigure?.(entry) ?? true))
             actions.push({ icon: <Settings fontSize='small' />, tooltip: 'Configure', onClick: () => setConfiguring(entry) })
         const verdict = d.canUninstall(entry)
         const key = d.keyOf(entry)

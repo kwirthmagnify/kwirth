@@ -67,19 +67,23 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
                 <Box sx={{ color: 'text.secondary', mt: 0.25, display: 'flex' }}>{model.icon ?? fallbackIcon}</Box>
                 <Box flex={1} minWidth={0}>
+                    {/* El boton de web va DENTRO de la fila del titulo, no como columna aparte del Stack
+                        exterior. Fuera se alineaba por arriba (`flex-start`) contra un chip de 20px siendo
+                        el de 30, asi que sus centros quedaban a 5px y se veia caido. Aqui lo centra la
+                        propia fila, sin margenes magicos. */}
                     <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
                         <Typography variant='body2' fontWeight='bold' component='span' sx={extensionCardTitleSx}>{model.name}</Typography>
                         <VersionControl version={model.version} versions={versions} onChange={onVersionChange} />
+                        <Tooltip title={model.website ? 'Open website' : 'No website available'}>
+                            <span style={{ marginLeft: 'auto' }}>
+                                <IconButton size='small' sx={{ mr: -0.5 }} disabled={!model.website} onClick={() => window.open(model.website!, '_blank', 'noopener')}>
+                                    <Launch fontSize='small' />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{model.description}</Typography>
                 </Box>
-                <Tooltip title={model.website ? 'Open website' : 'No website available'}>
-                    <span>
-                        <IconButton size='small' sx={{ mr: -0.5 }} disabled={!model.website} onClick={() => window.open(model.website!, '_blank', 'noopener')}>
-                            <Launch fontSize='small' />
-                        </IconButton>
-                    </span>
-                </Tooltip>
             </Stack>
             <Stack direction='row' alignItems='center' spacing={0.5} sx={{ mt: 1 }}>
                 <MarketplaceSourceIcon label={model.marketplaceLabel} installedFrom={model.installedFrom} />

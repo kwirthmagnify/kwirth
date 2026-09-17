@@ -90,6 +90,14 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     configCount?: (entry: TInstalled) => number | undefined
     /** Si existe, el generico pinta el engranaje y monta esto al pulsarlo. */
     renderConfigDialog?: (entry: TInstalled, onClose: () => void) => ReactNode
+    /**
+     * Si ESTA entrada se puede configurar. Sin esto, el engranaje es del TIPO y sale en todas.
+     *
+     * Lo necesita homepages: su dialogo de configuracion no lo pone el core, lo trae la propia homepage
+     * (`SetupDialog`), y solo tiene sentido en la que esta activa. Pintar un engranaje que abre la nada es
+     * peor que no pintarlo.
+     */
+    canConfigure?: (entry: TInstalled) => boolean
 
     /** Chips propios del tipo: 'active', 'enabled', 'Requires 2'… */
     extraChips?: (entry: TInstalled | TEntry, section: EManagerSection) => ReactNode[]

@@ -21,7 +21,6 @@ export interface IHomepageMeta {
     marketplaceId?: string
     marketplaceLabel?: string
     frontStored?: boolean
-    hasPreview?: boolean
     requiresRestart?: boolean
     requiresExtension?: string[]
 }
@@ -63,13 +62,6 @@ export class HomepageManager {
         try { return fs.readFileSync(path.join(dev.distPath, 'front.js'), 'utf-8') } catch { return undefined }
     }
 
-    getDevPreviewPng(id: string): Buffer | undefined {
-        const dev = this.devHomepages.get(id)
-        if (!dev) return undefined
-        const p = path.join(dev.distPath, 'preview.png')
-        try { return fs.existsSync(p) ? fs.readFileSync(p) : undefined } catch { return undefined }
-    }
-
     loadDevHomepages(): void {
         const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
         if (!fs.existsSync(devConfigPath)) return
@@ -95,7 +87,6 @@ export class HomepageManager {
             meta.version = pkg.version ?? 'dev'
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
-            meta.hasPreview = fs.existsSync(path.join(absPath, 'preview.png'))
         } catch {}
         this.devHomepages.set(id, { distPath: absPath, meta })
         if (!this.installedIds.includes(id)) this.installedIds.push(id)
@@ -107,7 +98,7 @@ export class HomepageManager {
         const devMetas = Array.from(this.devHomepages.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, hasPreview: fs.existsSync(path.join(dev.distPath, 'preview.png')) }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website }
             } catch { return dev.meta }
         })
         const devIds = new Set(devMetas.map(m => m.id))
@@ -166,16 +157,6 @@ export class HomepageManager {
 
             await this.configMaps.write(`kwirth-homepage-${meta.id}`, { meta, code: meta.frontStored ? frontCompressed : undefined, compressed: true })
 
-            const previewPath = path.join(tmpDir, 'preview.png')
-            if (fs.existsSync(previewPath)) {
-                const previewBuf = fs.readFileSync(previewPath)
-                const previewB64 = previewBuf.toString('base64')
-                if (previewB64.length <= CONFIGMAP_SIZE_LIMIT) {
-                    await this.configMaps.write(`kwirth-homepage-${meta.id}-preview`, { data: previewB64 })
-                    meta.hasPreview = true
-                }
-            }
-
             const index = (await this.configMaps.read('kwirth-homepages-index', []) as IHomepageMeta[]) || []
             const existingIdx = index.findIndex(t => t.id === meta.id)
             if (existingIdx >= 0) index[existingIdx] = meta
@@ -217,6 +198,8 @@ export class HomepageManager {
         this.installedIds = this.installedIds.filter(i => i !== id)
         await this.configMaps.write('kwirth-homepages-index', index.filter(t => t.id !== id))
         await this.configMaps.write(`kwirth-homepage-${id}`, null)
+        // Se sigue borrando la clave del preview aunque la funcionalidad ya no exista: puede haber
+        // quedado escrita por una instalacion anterior, y desinstalar tiene que dejarlo todo limpio.
         await this.configMaps.write(`kwirth-homepage-${id}-preview`, null)
         const cacheFile = path.join(os.tmpdir(), `kwirth-homepage-${id}-front.js`)
         if (fs.existsSync(cacheFile)) fs.rmSync(cacheFile)
@@ -230,12 +213,6 @@ export class HomepageManager {
         if (!data.code) return undefined
         if (data.compressed) return zlib.gunzipSync(Buffer.from(data.code, 'base64')).toString('utf-8')
         return data.code
-    }
-
-    async getPreviewPng(id: string): Promise<Buffer | undefined> {
-        const data = await this.configMaps.read(`kwirth-homepage-${id}-preview`) as { data?: string } | null
-        if (!data?.data) return undefined
-        return Buffer.from(data.data, 'base64')
     }
 
     private async fetchJsFromSource(meta: IHomepageMeta): Promise<string | undefined> {

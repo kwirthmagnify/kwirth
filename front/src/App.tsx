@@ -54,7 +54,7 @@ import { IdpManagerDialog } from './components/IdpManagerDialog'
 import { SenderManagerDialog } from './components/SenderManagerDialog'
 import { WebhookManagerDialog } from './components/WebhookManagerDialog'
 import { makeThemeDescriptor } from './components/ThemeDescriptor'
-import { HomepageManagerDialog } from './components/HomepageManagerDialog'
+import { makeHomepageDescriptor } from './components/HomepageDescriptor'
 import { DocsManagerDialog } from './components/DocsManagerDialog'
 import { ExtensionManagerDialog } from './components/ExtensionManagerDialog'
 import { aiToolsetDescriptor } from './components/AiToolsetDescriptor'
@@ -2549,7 +2549,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showThemeManagerDialog && <ExtensionManagerDialog
                     descriptor={makeThemeDescriptor({ activeThemeName, assignments: themeAssignments, onAssignmentsChange: setThemeAssignments, onThemeLoad: loadThemeFront, onThemeUnload: unloadThemeFront })}
                     onClose={() => setShowThemeManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
-                { showHomepageManagerDialog && <HomepageManagerDialog onClose={() => setShowHomepageManagerDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={onExtensionRestartRequired} /> }
+                { showHomepageManagerDialog && <ExtensionManagerDialog
+                    descriptor={makeHomepageDescriptor({ activeHomepageId, onActivate: onHomepageActivate, onHomepageLoad: loadHomepageFront, onHomepageUnload: unloadHomepageFront })}
+                    onClose={() => setShowHomepageManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showDocsManagerDialog && <DocsManagerDialog onClose={() => setShowDocsManagerDialog(false)} /> }
                 { showAiToolsetManagerDialog && <ExtensionManagerDialog descriptor={aiToolsetDescriptor} onClose={() => setShowAiToolsetManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
