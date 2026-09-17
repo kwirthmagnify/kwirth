@@ -1,5 +1,5 @@
 import { IConfigMaps } from './IConfigMap'
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
 import { TChannelConstructor } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
@@ -13,7 +13,10 @@ import { downloadFile, packageHeaders } from './PackageRegistries'
 
 export interface IPluginMeta {
     id: string
+    /** El nombre del PAQUETE: con scope y todo, '@iriaoperae/kwirth-plugin-montag'. */
     name: string
+    /** El nombre HUMANO, que es el que se enseña. */
+    displayName?: string
     version: string
     description: string
     icon?: string
@@ -28,6 +31,14 @@ export interface IPluginMeta {
     frontStored?: boolean
     requiresRestart?: boolean
     requiresExtension?: string[]
+    /*
+        El plugin DECLARA que acepta configuracion de instalacion, y con que campos.
+
+        Sin esto el gestor no tenia forma de saberlo —la configuracion es JSON libre, la lee el plugin en
+        runtime— y enseñaba la rueda dentada en TODOS, incluidos los que no leen ninguna configuracion:
+        se abria un editor que no servia para nada. Un plugin que no lo declara no tiene rueda.
+    */
+    configSchema?: IConfigFieldDef[]
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -103,10 +114,15 @@ export class PluginManager {
         try {
             const pkg = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
             meta.name = pkg.name ?? id
+            // Sin esto un plugin de dev se enseñaba con el nombre del paquete —scope incluido— porque el
+            // front cae en `name` cuando no hay displayName. Los instalados desde un tgz no lo notaban:
+            // su meta ES el package.json entero y el displayName venia dentro.
+            meta.displayName = pkg.displayName
             meta.version = pkg.version ?? 'dev'
             meta.description = pkg.description ?? ''
             meta.icon = pkg.icon
             meta.website = pkg.website
+            if (Array.isArray(pkg.configSchema)) meta.configSchema = pkg.configSchema
         } catch {}
 
         this.devPlugins.set(id, { distPath: absPath, meta })

@@ -4,6 +4,7 @@ import { Launch } from '@kwirthmagnify/kwirth-common-front/icons'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
 import { IExtensionAction, IExtensionCardModel } from './extensionManagerModel'
+import { resolveExtensionIcon } from './extensionIcon'
 
 /*
     Las DOS vistas de una extension —tarjeta y fila— en un solo sitio, para los once tipos y las dos
@@ -24,7 +25,19 @@ interface IExtensionViewProps {
     /** Presente solo en el catalogo: convierte la version en un Select (regla 3). */
     versions?: string[]
     onVersionChange?: (v: string) => void
+    /*
+        Los chips van en DOS grupos, y no es decoracion:
+
+          · `chips`, a la izquierda con la procedencia — DE DONDE vino esto (dev, fichero local, via pack,
+            Kwirth, el marketplace).
+          · `statusChips`, a la derecha pegados a los botones — COMO esta esto ahora ('3 configs',
+            'enabled', 'active', 'installed').
+
+        Mezclarlos deja una fila de chips donde no se distingue el origen del estado, y el estado es lo que
+        se mira antes de pulsar un boton: por eso viaja con ellos.
+    */
     chips?: React.ReactNode[]
+    statusChips?: React.ReactNode[]
     /** Control propio del tipo (un Select, un switch…), justo antes de los botones. */
     inlineControl?: React.ReactNode
     actions: IExtensionAction[]
@@ -63,12 +76,12 @@ const ActionButtons: React.FC<{ actions: IExtensionAction[] }> = ({ actions }) =
 </>)
 
 /** Vista de tarjeta. Altura fija (extensionCardSx): una que crece estira toda su fila del grid. */
-const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, versions, onVersionChange, chips, inlineControl, actions }) => {
+const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, versions, onVersionChange, chips, statusChips, inlineControl, actions }) => {
     const theme = useTheme()
     return (
         <Box sx={{ ...extensionCardSx, background: gradientFor(model.name, theme.palette.mode === 'dark') }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
-                <Box sx={{ color: 'text.secondary', mt: 0.25, display: 'flex' }}>{model.icon ?? fallbackIcon}</Box>
+                <Box sx={{ color: 'text.secondary', mt: 0.25, display: 'flex' }}>{model.icon ?? resolveExtensionIcon(model.iconName, fallbackIcon)}</Box>
                 <Box flex={1} minWidth={0}>
                     {/* El boton de web va DENTRO de la fila del titulo, no como columna aparte del Stack
                         exterior. Fuera se alineaba por arriba (`flex-start`) contra un chip de 20px siendo
@@ -94,6 +107,7 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
                 <MarketplaceBadge label={model.marketplaceLabel} installedFrom={model.installedFrom} />
                 {chips}
                 <Box sx={{ flex: 1, minWidth: 0 }} />
+                {statusChips}
                 {inlineControl}
                 <ActionButtons actions={actions} />
             </Stack>
@@ -108,9 +122,9 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
 */
 const extensionRowCells = (
     key: string,
-    { model, fallbackIcon, versions, onVersionChange, chips, inlineControl, actions }: IExtensionViewProps
+    { model, fallbackIcon, versions, onVersionChange, chips, statusChips, inlineControl, actions }: IExtensionViewProps
 ): React.ReactNode[] => [
-    <Box key={`${key}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}>{model.icon ?? fallbackIcon}</Box>,
+    <Box key={`${key}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}>{model.icon ?? resolveExtensionIcon(model.iconName, fallbackIcon)}</Box>,
     <Box key={`${key}-name`} sx={{ py: 1, minWidth: 0 }}>
         <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model.name}</Typography>
         {model.subtitle && <Typography variant='caption' color='text.disabled' display='block' noWrap>{model.subtitle}</Typography>}
@@ -120,6 +134,7 @@ const extensionRowCells = (
         <MarketplaceBadge label={model.marketplaceLabel} installedFrom={model.installedFrom} />
     </Box>,
     <Box key={`${key}-chips`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>{chips}</Box>,
+    <Box key={`${key}-status`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>{statusChips}</Box>,
     <Box key={`${key}-ver`} sx={{ justifySelf: 'end', py: 1 }}>
         <VersionControl version={model.version} versions={versions} onChange={onVersionChange} />
     </Box>,
@@ -130,6 +145,6 @@ const extensionRowCells = (
 ]
 
 /** Columnas del grid de la vista de lista. Debe casar con extensionRowCells. */
-const EXTENSION_ROW_COLUMNS = 'auto 1fr auto auto auto auto'
+const EXTENSION_ROW_COLUMNS = 'auto 1fr auto auto auto auto auto'
 
 export { ExtensionCard, extensionRowCells, EXTENSION_ROW_COLUMNS }

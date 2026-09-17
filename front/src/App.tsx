@@ -48,11 +48,11 @@ import { getIconFromKind } from './tools/Constants-React'
 import { ContextSelector } from './components/common/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
-import { PluginManagerDialog } from './components/extensions/PluginManagerDialog'
-import { ProviderManagerDialog } from './components/extensions/ProviderManagerDialog'
+import { makePluginDescriptor } from './components/extensions/PluginDescriptor'
+import { providerDescriptor } from './components/extensions/ProviderDescriptor'
 import { IdpManagerDialog } from './components/extensions/IdpManagerDialog'
 import { SenderManagerDialog } from './components/extensions/SenderManagerDialog'
-import { WebhookManagerDialog } from './components/extensions/WebhookManagerDialog'
+import { webhookDescriptor } from './components/extensions/WebhookDescriptor'
 import { makeThemeDescriptor } from './components/extensions/ThemeDescriptor'
 import { makeHomepageDescriptor } from './components/extensions/HomepageDescriptor'
 import { makeDocsDescriptor } from './components/extensions/DocsDescriptor'
@@ -2587,11 +2587,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showManageClusters && <ManageClusters onClose={onManageClustersClosed} clusters={clusters} notify={notify}/> }
                 { showApiSecurity && <ManageApiSecurity onClose={() => setShowApiSecurity(false)} /> }
                 { showUserSecurity && <ManageUserSecurity onClose={() => setShowUserSecurity(false)} /> }
-                { showPluginManagerDialog && <PluginManagerDialog onClose={() => setShowPluginManagerDialog(false)} onPluginLoaded={loadPluginFront} onPluginUnloaded={unloadPluginFront} onRestartRequired={onExtensionRestartRequired} /> }
-                { showProviderManagerDialog && <ProviderManagerDialog onClose={() => setShowProviderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showPluginManagerDialog && <ExtensionManagerDialog
+                    descriptor={makePluginDescriptor({ onPluginLoaded: loadPluginFront, onPluginUnloaded: unloadPluginFront })}
+                    onClose={() => setShowPluginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showProviderManagerDialog && <ExtensionManagerDialog descriptor={providerDescriptor} onClose={() => setShowProviderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showIdpManagerDialog && <IdpManagerDialog onClose={() => setShowIdpManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showSenderManagerDialog && <SenderManagerDialog onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
-                { showWebhookManagerDialog && <WebhookManagerDialog onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showWebhookManagerDialog && <ExtensionManagerDialog descriptor={webhookDescriptor} onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showThemeManagerDialog && <ExtensionManagerDialog
                     descriptor={makeThemeDescriptor({ activeThemeName, assignments: themeAssignments, onAssignmentsChange: setThemeAssignments, onThemeLoad: onThemeInstalled, onThemeUnload: onThemeUninstalled, saveAssignments: saveThemeAssignments })}
                     onClose={() => setShowThemeManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }

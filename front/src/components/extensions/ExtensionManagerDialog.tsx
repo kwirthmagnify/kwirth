@@ -8,7 +8,7 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } fro
 import { MarketplaceBadge, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { ERestartAction } from './extensionRestart'
 import { useKeyboard } from '../../tools/useKeyboard'
-import { EChipIcon, EManagerSection, IExtensionAction, IExtensionChip, IExtensionManagerDescriptor } from './extensionManagerModel'
+import { EChipIcon, EManagerSection, IExtensionAction, IExtensionChip, IExtensionManagerDescriptor, IExtensionRequirement } from './extensionManagerModel'
 import { ExtensionCard, extensionRowCells, EXTENSION_ROW_COLUMNS } from './ExtensionCard'
 
 /*
@@ -30,12 +30,25 @@ interface IMinimalEntry {
     marketplaceId?: string
     marketplaceLabel?: string
     requiresRestart?: boolean
+    /*
+        Dependencias entre extensiones, tal y como vienen en el manifest. Las puede declarar CUALQUIER
+        tipo —aunque hasta ahora solo las miraban plugins y providers, cada uno con su copia—, asi que las
+        entiende el generico: `requires` bloquea instalar si falta, `uses` solo se informa.
+    */
+    requires?: IExtensionRequirement[]
+    uses?: IExtensionRequirement[]
 }
 
 interface IExtensionManagerDialogProps<TInstalled extends IMinimalEntry, TEntry extends IMinimalEntry> {
     descriptor: IExtensionManagerDescriptor<TInstalled, TEntry>
     onClose: () => void
     onRestartRequired?: (extension: string, action: ERestartAction) => void
+}
+
+/** Lo minimo para juzgar un requisito: que hay instalado de ese tipo y con que version. */
+interface IVersionedRef {
+    id: string
+    version: string
 }
 
 /** Un plugin instalado, que es lo que ofrece el selector de plugins. */
@@ -103,6 +116,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Selector de plugins: la lista de plugins se pide UNA vez para todo el diálogo, no una por tarjeta.
+    const [crossInstalled, setCrossInstalled] = useState<Record<string, IVersionedRef[]>>({})
     const [plugins, setPlugins] = useState<IInstalledPluginRef[]>([])
     const [pluginSel, setPluginSel] = useState<Record<string, string[]>>({})
     const [pluginSelError, setPluginSelError] = useState<Record<string, string>>({})
@@ -111,7 +125,8 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         try {
             const res = await fetch(`${backendUrl}${d.endpoints.installed}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
-            setInstalled(await res.json())
+            const data = await res.json() as TInstalled[]
+            setInstalled(d.filterInstalled ? data.filter(d.filterInstalled) : data)
             await d.loadExtraData?.()
         }
         catch (err) {
@@ -128,7 +143,9 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         try {
             const res = await fetch(`${backendUrl}/core/marketplace/${d.extensionType}${refresh ? '?refresh=true' : ''}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
-            setAvailable(await res.json())
+            const entradas = await res.json() as TEntry[]
+            setAvailable(entradas)
+            await loadRequirementTargets(entradas)
         }
         catch {
             setAvailable([])   // un catalogo vacio no es un error: puede no haber manifest de este tipo
@@ -136,6 +153,43 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         finally {
             setLoadingManifest(false)
         }
+    }
+
+    /*
+        Lo instalado de OTROS tipos, para poder decir si se cumplen los requisitos de una entrada del
+        catalogo. Solo se pide lo que haga falta: si nada declara requisitos, no se pide nada.
+    */
+    const loadRequirementTargets = async (entradas: TEntry[]) => {
+        const tipos = new Set(entradas.flatMap(e => [...(e.requires ?? []), ...(e.uses ?? [])]).map(r => r.extensionType).filter(t => t !== d.extensionType))
+        if (tipos.size === 0) return
+        const resultados: Record<string, IVersionedRef[]> = {}
+        await Promise.all([...tipos].map(async t => {
+            try {
+                const r = await fetch(`${backendUrl}/core/${t}s`, addGetAuthorization(accessString))
+                if (r.ok) resultados[t] = await r.json()
+            }
+            catch { /* si no se puede saber, el requisito se da por no cumplido y se dice en el tooltip */ }
+        }))
+        setCrossInstalled(resultados)
+    }
+
+    /** Un requisito se cumple si esta instalado y con version suficiente. */
+    const requirementMet = (req: IExtensionRequirement): boolean => {
+        const lista: IVersionedRef[] = req.extensionType === d.extensionType
+            ? installed.map(e => ({ id: d.keyOf(e), version: e.version }))
+            : (crossInstalled[req.extensionType] ?? [])
+        const encontrado = lista.find(x => x.id === req.id)
+        return Boolean(encontrado) && (encontrado!.version === req.minVersion || versionGreaterThan(encontrado!.version, req.minVersion))
+    }
+
+    /** Las dependencias en texto, para los tooltips: 'plugin log ≥0.5.0, sender email ≥0.1.0'. */
+    const dependencyList = (deps: IExtensionRequirement[]): string =>
+        deps.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')
+
+    /** Lo que falta para poder instalar esa entrada, ya redactado para el tooltip. */
+    const requirementsBlocking = (entry: TEntry): string | undefined => {
+        const faltan = (entry.requires ?? []).filter(r => !requirementMet(r))
+        return faltan.length === 0 ? undefined : `Requires: ${dependencyList(faltan)}`
     }
 
     const loadPluginSelector = async () => {
@@ -326,20 +380,32 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         return undefined
     }
 
-    const installedChips = (entry: TInstalled): React.ReactNode[] => {
+    /*
+        Los chips se reparten en dos grupos (ver IExtensionViewProps): a la izquierda DE DONDE vino, a la
+        derecha COMO esta. El estado —'3 configs', 'enabled', 'active', 'installed'— viaja pegado a los
+        botones porque es lo que se mira justo antes de pulsarlos.
+    */
+    const originChips = (entry: TInstalled): React.ReactNode[] => {
+        const src = sourceChip(d.toModel(entry).installedFrom)
+        return src ? [renderChip(src, 'src')] : []
+    }
+
+    const installedStatusChips = (entry: TInstalled): React.ReactNode[] => {
         const chips = [...(d.extraChips?.(entry, EManagerSection.INSTALLED) ?? [])]
         const n = d.configCount?.(entry)
         if (n !== undefined && n > 0) chips.push({ label: `${n} config${n > 1 ? 's' : ''}`, color: 'primary', variant: 'outlined' })
-        const src = sourceChip(d.toModel(entry).installedFrom)
-        if (src) chips.push(src)
-        return chips.map((c, i) => renderChip(c, `chip-${i}`))
+        return chips.map((c, i) => renderChip(c, `status-${i}`))
     }
 
-    const availableChips = (key: string, entry: TEntry): React.ReactNode[] => {
+    const availableStatusChips = (key: string, entry: TEntry): React.ReactNode[] => {
         const chips = [...(d.extraChips?.(entry, EManagerSection.AVAILABLE) ?? [])]
+        // Que necesita y que aprovecha, con el detalle en el tooltip: en la tarjeta no cabe la lista, pero
+        // sin el numero no hay forma de saber que una extension arrastra a otras.
+        if (entry.requires?.length) chips.push({ label: `Requires ${entry.requires.length}`, variant: 'outlined', tooltip: `Requires: ${dependencyList(entry.requires)}` })
+        if (entry.uses?.length) chips.push({ label: `Uses ${entry.uses.length}`, variant: 'outlined', tooltip: `Uses: ${dependencyList(entry.uses)}` })
         if (isDevInstalled(key)) chips.push({ label: 'dev active', variant: 'outlined', color: 'warning' })
         else if (isInstalled(key)) chips.push({ label: 'installed', color: 'success', icon: EChipIcon.ACTIVE })
-        return chips.map((c, i) => renderChip(c, `chip-${i}`))
+        return chips.map((c, i) => renderChip(c, `status-${i}`))
     }
 
     const installedActions = (entry: TInstalled): IExtensionAction[] => {
@@ -359,7 +425,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     }
 
     const availableActions = (key: string, entry: TEntry): IExtensionAction[] => {
-        const blocked = d.installBlockedReason?.(entry)
+        const blocked = requirementsBlocking(entry) ?? d.installBlockedReason?.(entry)
         const already = isInstalled(key)
         return [
             ...(d.actions?.(entry, EManagerSection.AVAILABLE) ?? []),
@@ -422,7 +488,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                             ? <Box sx={cardGridSx}>
                                 {shownInstalled.map(entry => (
                                     <ExtensionCard key={d.keyOf(entry)} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
-                                        chips={installedChips(entry)} inlineControl={pluginControl(entry)}
+                                        chips={originChips(entry)} statusChips={installedStatusChips(entry)} inlineControl={pluginControl(entry)}
                                         actions={installedActions(entry)} />
                                 ))}
                               </Box>
@@ -430,7 +496,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                                 {shownInstalled.flatMap((entry, i, arr) => {
                                     const key = d.keyOf(entry)
                                     return [
-                                        ...extensionRowCells(key, { model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />, chips: installedChips(entry), inlineControl: pluginControl(entry), actions: installedActions(entry) }),
+                                        ...extensionRowCells(key, { model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />, chips: originChips(entry), statusChips: installedStatusChips(entry), inlineControl: pluginControl(entry), actions: installedActions(entry) }),
                                         ...(i < arr.length - 1 ? [separator(key)] : [])
                                     ]
                                 })}
@@ -442,7 +508,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                         <TextField size='small' fullWidth placeholder='https://...' value={customUrl} onChange={e => setCustomUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') installFromUrl() }} />
                         <Tooltip title='Install from URL'>
                             <span>
-                                <IconButton size='small' color='primary' disabled={installingCustom || !customUrl.trim()} onClick={installFromUrl}>
+                                <IconButton size='small' aria-label='Install from URL' color='primary' disabled={installingCustom || !customUrl.trim()} onClick={installFromUrl}>
                                     {installingCustom ? <CircularProgress size={16} /> : <Download fontSize='small' />}
                                 </IconButton>
                             </span>
@@ -463,7 +529,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                         <TextField size='small' placeholder='Filter…' value={availableFilter} onChange={e => setAvailableFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
                         <Tooltip title='Refresh catalog'>
                             <span>
-                                <IconButton size='small' sx={{ width: 30, height: 30 }} onClick={() => fetchManifest(true)} disabled={loadingManifest}>
+                                <IconButton size='small' aria-label='Refresh catalog' sx={{ width: 30, height: 30 }} onClick={() => fetchManifest(true)} disabled={loadingManifest}>
                                     {loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' />}
                                 </IconButton>
                             </span>
@@ -480,7 +546,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                                         <ExtensionCard key={key} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
                                             versions={grouped[key].map(e => e.version)}
                                             onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [key]: v }))}
-                                            chips={availableChips(key, entry)} actions={availableActions(key, entry)} />
+                                            statusChips={availableStatusChips(key, entry)} actions={availableActions(key, entry)} />
                                     )
                                 })}
                               </Box>
@@ -492,7 +558,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                                             model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />,
                                             versions: grouped[key].map(e => e.version),
                                             onVersionChange: v => setSelectedVersions(prev => ({ ...prev, [key]: v })),
-                                            chips: availableChips(key, entry), actions: availableActions(key, entry)
+                                            statusChips: availableStatusChips(key, entry), actions: availableActions(key, entry)
                                         }),
                                         ...(i < arr.length - 1 ? [separator(key)] : [])
                                     ]

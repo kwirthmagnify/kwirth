@@ -315,3 +315,44 @@ Los ficheros de extensiones estaban sueltos entre los de la aplicación. Quedan 
 `extensions/` (el genérico, la tarjeta, el modelo, los 5 descriptores y los 6 managers que faltan),
 `common/` (ContextSelector, ResourceSelector, PickList, RenameTab, UseEnvironment), `login/` (Login,
 LoginExtensionPage, FirstTimeLogin) y las que ya existían (`security/`, `settings/`, `workspace/`).
+
+## Segunda tanda: webhook, provider y plugin (2026-09-17)
+
+Van **diez de once**; queda IdP. Lo que cada uno enseño:
+
+- **webhook** — el primero con CONFIGURACIONES CON NOMBRE. Su gestor (lista + formulario + New/Clone/
+  Delete) sale a `ExtensionConfigsDialog`, comun con senders, que habla los mismos endpoints bajo su
+  `basePath`. Lo propio del tipo, la URL de ingesta con su token, entra por `perConfigPanel`.
+- **provider** — se configura de DOS formas y las dos siguen vivas: el formulario por schema que pinta el
+  core (config unica) y la UI que trae el propio provider (`hasFront`), que es quien tiene sus
+  configuraciones y su endpoint. Ademas filtra los providers DE CORE, que no son extensiones.
+- **plugin** — casi todo lo suyo resulto ser de todos: `requires`/`uses` y el icono declarado por la
+  extension los entiende ahora el generico para los once tipos.
+
+### Lo que subio al generico en esta tanda
+
+| Capacidad | Por que |
+|---|---|
+| `requires` / `uses` | Los declara cualquier extension; solo los miraban plugins y providers, con dos copias. El generico bloquea instalar con el motivo y pinta los chips. |
+| `iconName` | Cualquier extension puede traer su icono (nombre del set curado o SVG saneado). |
+| `filterInstalled` | Providers: su endpoint devuelve tambien los del core, que no son extensiones. |
+| `subtitle`, `uninstallTooltip` | Packs: decir que trae y avisar de que quitarlo se lleva a sus miembros. |
+| Chips en DOS grupos | Procedencia a la izquierda, ESTADO a la derecha pegado a los botones ('3 configs', 'enabled', 'active', 'installed'). Es lo que se mira justo antes de pulsar. |
+
+### Tres fallos reales encontrados por el camino
+
+1. **Los botones de accion no tenian nombre accesible.** MUI no puede etiquetar un boton deshabilitado y
+   por eso el Tooltip envuelve en un `span`, pero el boton interior tiene que llevar su `aria-label`
+   igual. Afectaba a los once.
+2. **La rueda dentada de plugins salia en TODOS**, incluidos los que no leen ninguna configuracion de
+   instalacion: se abria un editor JSON que no hacia nada. Ahora el plugin lo declara con `configSchema`
+   en su package.json, el back lo propaga y el gestor la ofrece solo en esos. Ningun plugin del repo usaba
+   esa configuracion, asi que apagarla no dejo a nadie sin acceso.
+3. **Un plugin de DEV se enseñaba con el nombre del paquete** —scope incluido— porque `registerDevPlugin`
+   no copiaba `displayName`. Los instalados desde un tgz no lo notaban: su meta ES el package.json entero.
+
+### Backlog
+
+- `ExtensionConfigsDialog` no envia los campos vacios al guardar, asi que vaciar uno no lo borra: hay que
+  borrar la configuracion entera. Se conservo tal cual —lo comparten webhooks y senders, los dos en uso—,
+  al contrario que en `ExtensionConfigDialog` (config unica), donde si se corrigio.

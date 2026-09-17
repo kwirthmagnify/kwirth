@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Button, CircularProgress, Dialog, DialogActions, DialogContent, IconButton, MenuItem, Stack, TextField, Typography } from '@mui/material'
+import { Button, CircularProgress, Dialog, DialogActions, DialogContent, FormControlLabel, IconButton, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material'
 import { Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
@@ -27,14 +27,23 @@ interface IExtensionConfigDialogProps {
     title: string
     /** Seccion de la guia para el boton de ayuda. */
     helpSection?: string
-    schema: IConfigFieldDef[]
+    /*
+        El formulario, de una de las dos formas en que los tipos lo tienen:
+          · `schema`, cuando la metadata de la extension ya lo trae (logins)
+          · `schemaEndpoint`, cuando hay que pedirlo (providers, en <id>/schema)
+    */
+    schema?: IConfigFieldDef[]
+    schemaEndpoint?: string
     /** Ruta del back, relativa al backendUrl: GET para leer y PUT para guardar. */
     endpoint: string
+    /** Que decir cuando la extension no tiene nada configurable. */
+    emptyText?: string
     onClose: () => void
 }
 
 const ExtensionConfigDialog: React.FC<IExtensionConfigDialogProps> = (props: IExtensionConfigDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
+    const [schema, setSchema] = useState<IConfigFieldDef[]>(props.schema ?? [])
     const [values, setValues] = useState<Record<string, string>>({})
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
     const [saving, setSaving] = useState(false)
@@ -42,33 +51,38 @@ const ExtensionConfigDialog: React.FC<IExtensionConfigDialogProps> = (props: IEx
 
     useEffect(() => {
         const cargar = async () => {
-            let cfg: Record<string, unknown> = {}
-            try {
-                const res = await fetch(`${backendUrl}${props.endpoint}`, addGetAuthorization(accessString))
-                if (res.ok) cfg = await res.json()
-            }
-            catch { /* sin configuracion guardada todavia: el formulario sale vacio */ }
+            const [cfgRes, schemaRes] = await Promise.all([
+                fetch(`${backendUrl}${props.endpoint}`, addGetAuthorization(accessString)).catch(() => undefined),
+                props.schemaEndpoint
+                    ? fetch(`${backendUrl}${props.schemaEndpoint}`, addGetAuthorization(accessString)).catch(() => undefined)
+                    : Promise.resolve(undefined)
+            ])
+            // Sin configuracion guardada todavia el formulario sale con los defaults del schema.
+            const cfg: Record<string, unknown> = cfgRes?.ok ? await cfgRes.json() : {}
+            const campos = schemaRes?.ok ? await schemaRes.json() as IConfigFieldDef[] : (props.schema ?? [])
+            setSchema(campos)
+
             const vals: Record<string, string> = {}
-            // Sin valor guardado se cae al 'default' que declare el campo, que para eso esta.
-            for (const field of props.schema) {
+            for (const field of campos) {
                 const guardado = cfg[field.name]
                 vals[field.name] = guardado !== undefined ? String(guardado) : (field.default !== undefined ? String(field.default) : '')
             }
             setValues(vals)
         }
         cargar()
-    }, [backendUrl, accessString, props.endpoint, props.schema])
+    }, [backendUrl, accessString, props.endpoint, props.schemaEndpoint, props.schema])
 
     const save = async () => {
         setSaving(true)
         setError(undefined)
         try {
             const body: Record<string, unknown> = {}
-            for (const field of props.schema) {
+            for (const field of schema) {
                 const val = values[field.name] ?? ''
                 if (field.type === 'number') {
                     if (val !== '') body[field.name] = Number(val)
                 }
+                else if (field.type === 'boolean') body[field.name] = val === 'true'
                 else body[field.name] = val
             }
             const res = await fetch(`${backendUrl}${props.endpoint}`, addPutAuthorization(accessString, JSON.stringify(body)))
@@ -80,6 +94,15 @@ const ExtensionConfigDialog: React.FC<IExtensionConfigDialogProps> = (props: IEx
     }
 
     const field = (f: IConfigFieldDef) => {
+        // Un booleano es un interruptor, no un campo de texto con 'true' dentro.
+        if (f.type === 'boolean') {
+            return (
+                <FormControlLabel key={f.name} label={f.label}
+                    control={<Switch size='small' checked={values[f.name] === 'true'}
+                        onChange={e => setValues(v => ({ ...v, [f.name]: String(e.target.checked) }))} />} />
+            )
+        }
+
         const esSecreto = f.type === 'password'
         const comun = {
             key: f.name,
@@ -123,12 +146,14 @@ const ExtensionConfigDialog: React.FC<IExtensionConfigDialogProps> = (props: IEx
             }
             <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
-                    {props.schema.map(f => field(f))}
+                    {schema.length === 0
+                        ? <Typography variant='body2' color='text.secondary'>{props.emptyText ?? 'Nothing to configure.'}</Typography>
+                        : schema.map(f => field(f))}
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={save} disabled={saving}>{saving ? <CircularProgress size={16} /> : 'SAVE'}</Button>
+                <Button onClick={save} disabled={saving || schema.length === 0}>{saving ? <CircularProgress size={16} /> : 'SAVE'}</Button>
                 <Button onClick={props.onClose}>CANCEL</Button>
             </DialogActions>
         </Dialog>

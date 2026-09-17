@@ -29,6 +29,12 @@ export interface IExtensionCardModel {
     marketplaceLabel?: string
     icon?: ReactNode             // si el tipo no lo da, el generico usa el icono del tipo
     /*
+        El icono que declara la propia extension en su package.json: el nombre de uno del set curado, o un
+        SVG en crudo para que pueda traer el suyo. Lo resuelve el generico (ver extensionIcon), que ademas
+        SANEA el SVG: viene de una extension que puede haberse instalado desde un marketplace ajeno.
+    */
+    iconName?: string
+    /*
         Una linea mas bajo la descripcion. La necesita `pack`, que es el unico tipo que CONTIENE otras
         extensiones y tiene que decir cuales ('2 plugins, 1 theme'). Va en una linea y con elipsis: un pack
         con muchos tipos creceria y se comeria la fila de procedencia y acciones.
@@ -108,6 +114,19 @@ export interface IPluginSelectorSpec<TInstalled> {
     save: (entry: TInstalled, pluginIds: string[]) => Promise<void>
 }
 
+/**
+ * Una dependencia entre extensiones, tal y como viene en el manifest.
+ *
+ * `requires` es obligatoria —sin ella la extension no funciona, asi que no se deja instalar— y `uses` es
+ * opcional: si esta, se aprovecha. Las declaraba cualquier extension, pero solo las miraban plugins y
+ * providers, cada uno con su copia. Ahora las entiende el generico para los ONCE tipos.
+ */
+export interface IExtensionRequirement {
+    extensionType: EExtensionType
+    id: string
+    minVersion: string
+}
+
 /*
     Lo que aporta un tipo de extension. Todo lo opcional es una CAPACIDAD: si no se declara, el generico
     simplemente no pinta esa parte.
@@ -149,6 +168,14 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
      * avisarlo ANTES de pulsar, no despues.
      */
     uninstallTooltip?: string
+
+    /*
+        Que entradas de lo instalado SON de este gestor.
+
+        Lo necesita `provider`: su endpoint devuelve tambien los providers del core (events, metrics), que
+        no son extensiones — no se instalan ni se desinstalan, y pintarlos invita a intentar quitarlos.
+    */
+    filterInstalled?: (entry: TInstalled) => boolean
 
     keyOf: (entry: TInstalled | TEntry) => string
     toModel: (entry: TInstalled | TEntry) => IExtensionCardModel
