@@ -3,7 +3,9 @@
     "montag": "../plugins/montag/dist",
     "excubitor": "../plugins/excubitor/dist",
     "iter": "../plugins/iter/dist",
-    "agora": "../plugins/agora/dist"
+    "situs": "../plugins/situs/dist",
+    "agora": "../plugins/agora/dist",
+    "pinocchio": "../plugins/pinocchio/dist"
   },
   "providers": {
     "otel": "../providers/otel/dist",
@@ -36,13 +38,18 @@
   },
   "idps": {},
   "aitoolsets": {
-    "playground": "../aitoolsets/playground/dist"
+    "k8s-inventory": "../aitoolsets/k8s-inventory/dist",
+    "k8s-describe": "../aitoolsets/k8s-describe/dist",
+    "k8s-observability": "../aitoolsets/k8s-observability/dist",
+    "k8s-metrics": "../aitoolsets/k8s-metrics/dist",
+    "k8s-secrets": "../aitoolsets/k8s-secrets/dist"
   },
   "docs": {
     "kwirth": "bundle/docs/kwirth.tgz",
     "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
     "montag": "../plugins/montag/docs/montag.tgz",
     "iter": "../plugins/iter/docs/iter.tgz",
+    "situs": "../plugins/situs/docs/situs.tgz",
     "agora": "../plugins/agora/docs/agora.tgz"
   }
 }
