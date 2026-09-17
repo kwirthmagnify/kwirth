@@ -475,6 +475,31 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (activeThemeName === id) setActiveThemeName(undefined)
     }
 
+    /*
+        Instalar un tema o una homepage cambia DOS cosas, y hasta ahora solo se hacia una: se cargaba su
+        front en caliente, pero la LISTA de instalados se leia unicamente al hacer login. De esa lista sale
+        el desplegable de User Settings, asi que un tema recien instalado no aparecia ahi hasta volver a
+        entrar. Se relee en los dos caminos que instalan y desinstalan: el gestor de extensiones y el de packs.
+    */
+    const refreshInstalledThemes = () => {
+        fetch(`${backendUrl}/core/themes`, addGetAuthorization(accessString))
+            .then(r => r.json())
+            .then((themes: { id: string, name: string, displayName?: string }[]) => setInstalledThemes(themes))
+            .catch(err => console.log(`[themes] failed to refresh installed themes: ${err}`))
+    }
+
+    const refreshInstalledHomepages = () => {
+        fetch(`${backendUrl}/core/homepages`, addGetAuthorization(accessString))
+            .then(r => r.json())
+            .then((homepages: { id: string, name: string, displayName?: string }[]) => setInstalledHomepages(homepages))
+            .catch(err => console.log(`[homepages] failed to refresh installed homepages: ${err}`))
+    }
+
+    const onThemeInstalled = (id: string) => { loadThemeFront(id); refreshInstalledThemes() }
+    const onThemeUninstalled = (id: string) => { unloadThemeFront(id); refreshInstalledThemes() }
+    const onHomepageInstalled = (id: string) => { loadHomepageFront(id); refreshInstalledHomepages() }
+    const onHomepageUninstalled = (id: string) => { unloadHomepageFront(id); refreshInstalledHomepages() }
+
     useEffect(() => {
         const ids = Array.from(frontChannels.keys())
         if (ids.length === 0) return
@@ -2547,15 +2572,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showSenderManagerDialog && <SenderManagerDialog onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showWebhookManagerDialog && <WebhookManagerDialog onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showThemeManagerDialog && <ExtensionManagerDialog
-                    descriptor={makeThemeDescriptor({ activeThemeName, assignments: themeAssignments, onAssignmentsChange: setThemeAssignments, onThemeLoad: loadThemeFront, onThemeUnload: unloadThemeFront })}
+                    descriptor={makeThemeDescriptor({ activeThemeName, assignments: themeAssignments, onAssignmentsChange: setThemeAssignments, onThemeLoad: onThemeInstalled, onThemeUnload: onThemeUninstalled })}
                     onClose={() => setShowThemeManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showHomepageManagerDialog && <ExtensionManagerDialog
-                    descriptor={makeHomepageDescriptor({ activeHomepageId, onActivate: onHomepageActivate, onHomepageLoad: loadHomepageFront, onHomepageUnload: unloadHomepageFront })}
+                    descriptor={makeHomepageDescriptor({ activeHomepageId, onActivate: onHomepageActivate, onHomepageLoad: onHomepageInstalled, onHomepageUnload: onHomepageUninstalled })}
                     onClose={() => setShowHomepageManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showDocsManagerDialog && <DocsManagerDialog onClose={() => setShowDocsManagerDialog(false)} /> }
                 { showAiToolsetManagerDialog && <ExtensionManagerDialog descriptor={aiToolsetDescriptor} onClose={() => setShowAiToolsetManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
-                { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={onExtensionRestartRequired} /> }
+                { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={onThemeInstalled} onThemeUnload={onThemeUninstalled} onHomepageLoad={onHomepageInstalled} onHomepageUnload={onHomepageUninstalled} onRestartRequired={onExtensionRestartRequired} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} activeThemeName={activeThemeName} onThemeChange={setActiveThemeName} installedThemes={installedThemes} activeHomepageId={activeHomepageId} onHomepageChange={onHomepageChangeFromSettings} installedHomepages={installedHomepages} /> }
                 { homepageSetupId && (() => {
