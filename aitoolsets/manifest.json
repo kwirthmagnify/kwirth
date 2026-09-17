@@ -18,5 +18,15 @@
     "description": "Read-only inventory of the Kubernetes cluster: namespaces, nodes, workloads, services and ingresses",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-inventory/-/kwirth-aitoolset-k8s-inventory-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "aitoolset",
+    "id": "k8s-observability",
+    "name": "@kwirthmagnify/kwirth-aitoolset-k8s-observability",
+    "displayName": "K8s Observability",
+    "version": "0.1.0",
+    "description": "Recent cluster events and container logs: what happened and what the pod said",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-observability/-/kwirth-aitoolset-k8s-observability-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
   }
 ]
