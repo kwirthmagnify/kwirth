@@ -33,6 +33,8 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const messagesEndRef = useRef<HTMLSpanElement | null>(null)
     const [isAtBottom, setIsAtBottom] = useState(true)
     const [pinocchioBoxTop, setPinocchioBoxTop] = useState(0)
+    const emptyRef = useRef<HTMLDivElement | null>(null)
+    const [emptyTop, setEmptyTop] = useState(0)
     const [showPlayground, setShowPlayground] = useState(false)
     const playgroundStartIndex = useRef<number | null>(null)
     const [showConfigTrigger, setShowConfigTrigger] = useState(false)
@@ -55,6 +57,17 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     useEffect(() => {
         if (pinocchioBoxRef.current) setPinocchioBoxTop(pinocchioBoxRef.current.getBoundingClientRect().top)
     })
+
+    // Altura dinámica del estado vacío (patrón de altura del proyecto, igual que Agora e Iter): el padre no da
+    // altura fija, así que medimos el borde superior real del contenedor para poder centrar verticalmente. Se
+    // remide al arrancar/parar el canal, que es cuando este bloque se monta o desmonta.
+    useEffect(() => {
+        const update = () => { if (emptyRef.current) setEmptyTop(emptyRef.current.getBoundingClientRect().top) }
+        update()
+        const ro = new ResizeObserver(update)
+        ro.observe(document.body)
+        return () => ro.disconnect()
+    }, [pinocchioData.started])
 
     useEffect(() => {
         if (isAtBottom && pinocchioBoxRef.current) {
@@ -329,8 +342,17 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
+    // Canal no arrancado: estado vacío CENTRADO verticalmente (mismo patrón que Agora e Iter). Antes no se
+    // pintaba nada y la pestaña quedaba en blanco, sin decirle al usuario que tiene que arrancar el canal.
+    if (!pinocchioData.started)
+        return (
+            <Stack ref={emptyRef} alignItems='center' justifyContent='center' spacing={1} sx={{ height: `calc(100vh - ${emptyTop}px - 8px)`, px: 4, textAlign: 'center' }}>
+                <Typography variant='h6' color='text.secondary'>Pinocchio not started</Typography>
+                <Typography variant='body2' color='text.secondary'>Start the channel (tab settings ⚙ → Start) to see the analyses.</Typography>
+            </Stack>
+        )
+
     return <>
-        { pinocchioData.started &&
         <Card sx={{display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', marginTop: '8px',minHeight: 0}}>
             <CardHeader title={
                 <Stack direction={'row'} alignItems={'center'}>
@@ -349,7 +371,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     </Box>
                 </Box>
             </CardContent>
-        </Card>}
+        </Card>
         { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} docsUrl={docsUrl(props.channelObject.clusterUrl)} onClose={pinocchioConfigClose} />}
         { showConfigLlm && <AiConfigLlm llms={pinocchioData.config.llms} providers={pinocchioData.providers} onClose={aiConfigLlmClose} />}
         { showConfigProvider && <AiConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onLoadModels={aiLoadModels} onClose={pinocchioConfigProviderClose} />}
