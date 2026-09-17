@@ -25,6 +25,10 @@
   anterior deja estado en la aplicación (el DOM de Kwirth es compartido entre pestañas y diálogos). No es
   un fallo del producto, pero enmascara los de verdad — un rojo que aparece según el orden no sirve de
   señal. Hace falta que cada spec deje la aplicación como la encontró.
+- **`webhookManager` › *tokens + configs survive a restart* falla A VECES en la corrida completa y pasa
+  siempre en solitario** (visto el 2026-09-17, 4 pasadas sueltas en verde). Mismo patrón que el de
+  `help-popup`: estado que deja otro test antes. Un rojo que aparece según el orden no sirve de señal,
+  y este vigila que la persistencia de webhooks sobreviva a un reinicio — no es un test menor.
 - **La suite completa tarda ~15 minutos**, y Playwright no vuelca nada hasta el final, así que no se puede
   seguir el avance. Demasiado para usarla dentro del ciclo de trabajo: hoy se acaba corriendo por grupos.
 - ~~**Ningún spec regenera capturas sin querer.**~~ **HECHO 2026-09-07:** `capture-*.spec.ts` queda fuera de

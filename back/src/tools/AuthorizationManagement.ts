@@ -237,41 +237,17 @@ export class AuthorizationManagement {
         return valid
     }
 
-    public static validAuth = (req:Request, res:Response, channels:Map<string, IChannel>, reqScope:string, instanceConfig: IInstanceConfig, namespace:string, controller:string, pod:string, container:string): boolean => {
-        if (!req.headers.authorization) return false
-        
-        let key = req.headers.authorization.replaceAll('Bearer ','').trim()
-        let accessKey = accessKeyDeserialize(key)
-        let resId = parseResource(accessKey.resources)
-    
-        if (resId.scopes === 'cluster') return true
-        
-        let haveLevel = AuthorizationManagement.getScopeLevel(channels, instanceConfig.channel, resId.scopes, Number.MIN_VALUE)
-        let requestedLevel = AuthorizationManagement.getScopeLevel(channels, instanceConfig.channel, instanceConfig.scope, Number.MAX_VALUE)
-        if (haveLevel < requestedLevel) {
-            logInfo(ELogComponent.AUTH, 'Insufficient scope level')
-            return false
-        }
-        if ((namespace !== '') && (namespace !== resId.namespaces)) {
-            logInfo(ELogComponent.AUTH, 'Insufficient namespace capabilities')
-            return false
-        }
-        if ((controller !== '') && (controller !== resId.groups)) {
-            logInfo(ELogComponent.AUTH, 'Insufficient controller capabilities')
-            return false
-        }
-        if ((pod !== '') && (pod !== resId.pods)) {
-            logInfo(ELogComponent.AUTH, 'Insufficient pod capabilities')
-            return false
-        }
-        if ((container !== '') && (container !== resId.containers)) {
-            logInfo(ELogComponent.AUTH, 'Insufficient container capabilities')
-            return false
-        }
-        logInfo(ELogComponent.AUTH, 'Authorized!')
-        return true
-    }
-    
+    /*
+        Aqui vivia `validAuth`, que NO la llamaba nadie y ademas estaba mal: evaluaba solo el PRIMER
+        recurso de la accessKey (usaba `parseResource`, singular) y comprobaba `scopes === 'cluster'` por
+        igualdad exacta, asi que una clave 'cluster,view' no entraba por el atajo de admin.
+
+        Se borra en vez de arreglarse (2026-09-17). Una funcion muerta que PARECE el control de permisos y
+        esta mal implementada es una trampa: el dia que alguien la llame creyendo que autoriza, autorizara
+        de menos o de mas sin que nadie lo note. Quien autoriza de verdad es `checkAkr`, justo encima, que
+        si recorre todos los recursos y aplica OR entre ellos.
+    */
+
     public static getValidValues = (values:string[], regexes:string[]): string[] => {
         let result:string[] = []
         try {
