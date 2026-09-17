@@ -1,4 +1,4 @@
-import { ILlm, ILlmModel, ILlmProvider, IAgent, ECapability, EToolEffect, IAiToolInfo, IAiToolsetInfo, parseToolRef } from './index'
+import { ILlm, ILlmModel, ILlmProvider, IAgent, ECapability, EToolEffect, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, parseToolRef, toolRef } from './index'
 // Solo TIPOS: se borran al compilar, asi que common-ai no arrastra el cliente de Kubernetes (~6,6 MB) a
 // ningun bundle. Por eso @kubernetes/client-node es peer opcional y no dependencia.
 import type { AppsV1Api, CoreV1Api, NetworkingV1Api } from '@kubernetes/client-node'
@@ -8,7 +8,7 @@ interface ILogChannel {
     logWarning?: (msg: string) => void
     logError?: (msg: string) => void
 }
-import { LanguageModel, tool, generateText, stepCountIs, Output } from 'ai'
+import { LanguageModel, tool, dynamicTool, ToolSet, generateText, stepCountIs, Output } from 'ai'
 import { z } from 'zod'
 import { AsyncLocalStorage } from 'async_hooks'
 import { exec } from 'child_process'
@@ -568,6 +568,166 @@ export const resolveToolRef = (ref: string): { toolset: IAiToolset, tool: IAiToo
     const toolset = toolsetRegistry.get(parsed.toolsetId)
     const tool = toolset?.tools.find(t => t.name === parsed.toolName)
     return toolset && tool ? { toolset, tool } : undefined
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// Resolucion de tools para un cliente (plan: plans/ai-tools/PLAN.md, S2)
+//
+// De "estos toolsets, en este orden" a "estas tools, listas para el LLM". Un solo camino, con sus dos
+// ganchos: autorizar antes y observar despues. Hoy permisivos — los llenan S4 y S6 — pero el sitio ya
+// existe, que es lo que evita que cada plugin se invente el suyo.
+//
+// ⚠️ PRECEDENCIA (decision del usuario, 2026-09-17). Dos toolsets pueden traer una tool con el mismo
+// nombre y NO se renombra ninguna: manda el orden de `activeToolsets`. El nombre que ve el modelo es
+// siempre el corto, porque los proveedores solo aceptan [a-zA-Z0-9_-] y una referencia cualificada
+// ('toolset/tool') no pasaria el filtro.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Una tool que SI se le ofrece al modelo. */
+export interface IEffectiveTool {
+    /** El nombre corto: lo que viaja al LLM. */
+    name: string
+    /** La referencia cualificada: lo que se persiste. */
+    ref: string
+    toolsetId: string
+    tool: IAiTool
+}
+
+/** Una tool que existe pero NO se ofrece, porque otro toolset de mas precedencia trae ese nombre. */
+export interface IShadowedTool {
+    name: string
+    ref: string
+    toolsetId: string
+    /** Quien la tapa. El editor tiene que decirlo: si no, apagar esta parece hacer algo y no hace nada. */
+    shadowedBy: string
+}
+
+export interface IToolResolution {
+    effective: IEffectiveTool[]
+    shadowed: IShadowedTool[]
+    /** Toolsets asignados que no estan registrados (desinstalados, o nunca instalados). */
+    missing: string[]
+}
+
+/**
+ * Aplica el techo de un cliente sobre el registro. Pura: ni ejecuta ni toca el contexto, asi que el
+ * editor puede llamarla para PINTAR lo mismo que se va a ejecutar.
+ *
+ * Una tool apagada no tapa: se apaga una referencia concreta ('ts1/td'), no un nombre, asi que si `ts1/td`
+ * esta apagada y `ts2` trae otra `td`, aflora la de `ts2`.
+ */
+export const resolveTools = (config: IToolsetConfig): IToolResolution => {
+    const disabled = new Set(config.disabledTools)
+    const effective: IEffectiveTool[] = []
+    const shadowed: IShadowedTool[] = []
+    const missing: string[] = []
+    const taken = new Map<string, string>()   // nombre corto → toolset que lo sirve
+
+    for (const toolsetId of config.activeToolsets) {
+        const toolset = toolsetRegistry.get(toolsetId)
+        if (!toolset) {
+            // No se calla: un techo que nombra algo que no esta instalado es una config rota, y el
+            // sintoma sin esto seria "el agente responde peor" sin que nadie sepa por que.
+            missing.push(toolsetId)
+            continue
+        }
+        for (const tool of toolset.tools) {
+            const ref = toolRef(toolsetId, tool.name)
+            if (disabled.has(ref)) continue
+            const owner = taken.get(tool.name)
+            if (owner) {
+                shadowed.push({ name: tool.name, ref, toolsetId, shadowedBy: owner })
+                continue
+            }
+            taken.set(tool.name, toolsetId)
+            effective.push({ name: tool.name, ref, toolsetId, tool })
+        }
+    }
+    return { effective, shadowed, missing }
+}
+
+/** Una invocacion concreta, tal y como la ven los dos ganchos. */
+export interface IToolInvocation {
+    ref: string
+    toolsetId: string
+    toolName: string
+    args: Record<string, unknown>
+}
+
+export interface IToolAuthorization {
+    allowed: boolean
+    /** Por que no. Viaja al modelo, asi que se escribe para que pueda decidir otra cosa. */
+    reason?: string
+}
+
+/** Como acabo una invocacion. `ms` incluido: una tool lenta es un problema aunque devuelva bien. */
+export interface IToolOutcome {
+    ok: boolean
+    result?: unknown
+    error?: string
+    ms: number
+    /** Si no llego a ejecutarse por el gancho de autorizacion. */
+    denied?: boolean
+}
+
+export interface IAgentToolHooks {
+    /** ANTES de ejecutar. Sin gancho, se permite todo: hoy el techo lo pone la seleccion (S4 lo llena). */
+    authorize?: (invocation: IToolInvocation, tool: IAiTool) => IToolAuthorization | Promise<IToolAuthorization>
+    /** DESPUES, pase lo que pase. No puede romper la invocacion (S6 lo llena). */
+    observe?: (invocation: IToolInvocation, outcome: IToolOutcome) => void
+}
+
+/**
+ * Las tools listas para pasarselas al SDK de IA, ya resueltas por precedencia y con los dos ganchos
+ * puestos. La clave del objeto es el nombre CORTO, que es lo unico que el proveedor acepta.
+ */
+export const buildAgentTools = (
+    config: IToolsetConfig,
+    context: IToolContext,
+    hooks: IAgentToolHooks = {}
+): ToolSet => {
+    const { effective } = resolveTools(config)
+    const entries = effective.map(e => {
+        const invocationOf = (args: Record<string, unknown>): IToolInvocation =>
+            ({ ref: e.ref, toolsetId: e.toolsetId, toolName: e.name, args })
+
+        // `dynamicTool` y no `tool`: el esquema de una tool empaquetada no se conoce en compilacion, y el
+        // helper tipado infiere `never` para un ZodTypeAny generico.
+        return [e.name, dynamicTool({
+            description: e.tool.description,
+            inputSchema: e.tool.inputSchema,
+            execute: async (rawArgs: unknown) => {
+                const args = (rawArgs ?? {}) as Record<string, unknown>
+                const invocation = invocationOf(args)
+                const started = Date.now()
+
+                const verdict = hooks.authorize ? await hooks.authorize(invocation, e.tool) : { allowed: true }
+                if (!verdict.allowed) {
+                    // Se devuelve como DATO, no como excepcion: una excepcion corta la conversacion, y lo
+                    // que queremos es que el modelo sepa que esa via esta cerrada y pruebe otra.
+                    const denial = { error: `tool '${e.name}' not allowed${verdict.reason ? `: ${verdict.reason}` : ''}` }
+                    hooks.observe?.(invocation, { ok: false, error: denial.error, ms: Date.now() - started, denied: true })
+                    return denial
+                }
+
+                const host = buildToolHost(getToolset(e.toolsetId)?.requires ?? [], context)
+                try {
+                    // El runWithToolContext envuelve tambien a las tools escritas contra el contrato VIEJO
+                    // (las que leen ctx()). Es lo que permite migrar las 43 paquete a paquete en S3 en vez
+                    // de tener que reescribirlas todas antes de poder usar este camino.
+                    const result = await runWithToolContext(context, () => e.tool.execute(args, host))
+                    hooks.observe?.(invocation, { ok: true, result, ms: Date.now() - started })
+                    return result
+                }
+                catch (err) {
+                    const message = err instanceof Error ? err.message : String(err)
+                    hooks.observe?.(invocation, { ok: false, error: message, ms: Date.now() - started })
+                    return { error: message }
+                }
+            }
+        })] as const
+    })
+    return Object.fromEntries(entries)
 }
 
 export const tools = {

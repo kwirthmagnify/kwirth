@@ -14,7 +14,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-ai": "^0.5.54"
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.55"
   },
   "devDependencies": {
     "@kubernetes/client-node": "^1.4.0",

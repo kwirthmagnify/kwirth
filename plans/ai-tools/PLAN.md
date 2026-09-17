@@ -203,7 +203,7 @@ con un botón *Try* en el gestor. Se descartó: el LLM nunca lo usaría —S2 in
 invocar es S4**; abrirlo antes con solo `validKey` dejaría ejecutar tools `write` sin techo. La llamada real
 se prueba con `verify.mjs`, que no deja superficie nueva. Se reconsidera en S4.
 
-### S2 · El core consume toolsets
+### S2 · El core consume toolsets — ✅ CERRADO (CL9 2026-09-17)
 
 La cadena de resolución, el contexto por capacidades y **un único camino de invocación** con sus dos
 ganchos —autorizar y observar—, de momento permisivos. Se valida contra los toolsets de S1.
@@ -211,14 +211,43 @@ ganchos —autorizar y observar—, de momento permisivos. Se valida contra los 
 Aquí muere el cajón de sastre: cada toolset recibe las capacidades que declaró, no los siete campos por si
 acaso.
 
-### S3 · Primer cliente: las 43
+**Entregado** (`common-ai@0.5.55`):
 
-Las 43 tools se reparten en los ocho toolsets built-in y se registran por la misma puerta. Mueren
-`toolInfoList`, `selectAgentToolNames()` y los cuatro lambdas `trace`. Al acabar, Kwirth se comporta igual
-que hoy y ya no queda camino viejo.
+| Pieza | Qué hace |
+|---|---|
+| `buildToolHost(requires, context)` | El reparto por capability. *(Se adelantó en el 2.º CL9 de S1, al construir `k8s-inventory`)* |
+| `resolveTools(config)` | **Pura**: de la lista ordenada a `{ effective, shadowed, missing }`. Pura a propósito, para que el **editor pinte exactamente lo que se va a ejecutar** en vez de reimplementar la regla |
+| `buildAgentTools(config, context, hooks)` | Las tools listas para el SDK de IA, con nombre corto, con los dos ganchos puestos |
+| `invokeToolRef(ref, args, context)` | Invocación suelta por referencia cualificada |
+
+Decisiones que quedaron fijadas aquí:
+
+- **Precedencia** en lugar de renombrado (ver *Precedencia entre toolsets*, arriba).
+- **Un error de tool viaja como DATO, no como excepción.** Una excepción corta la conversación; un
+  `{ error }` deja al modelo enterarse de que esa vía está cerrada y probar otra. Lo mismo con una
+  denegación, que además se distingue en la observación (`denied: true`) de un fallo de verdad.
+- **`buildAgentTools` envuelve la ejecución en `runWithToolContext`.** Cuesta una línea y es lo que permite
+  migrar los ocho paquetes de S3 **de uno en uno**: una tool escrita contra el contrato viejo (las que leen
+  `ctx()`) funciona por el camino nuevo sin tocarla. Hay un test que lo fija con una de las 43 de verdad.
+- **Un toolset asignado que no está instalado se reporta** (`missing`), no se ignora.
+
+⚠️ **Lo que S2 NO hace**: no toca ningún plugin. Quien rellena hoy la lista ordenada es `autoTools`; que un
+admin elija cuáles y en qué orden es **S5**, y el editor donde se ve el tapado es **S8**.
+
+### S3 · Las 43, empaquetadas en ocho `aitoolset`
+
+Los ocho toolsets se publican como **paquetes**, cada uno con su versión, su harness y su CL9. Al acabar,
+Kwirth se comporta igual que hoy y mueren `toolInfoList`, `selectAgentToolNames()` y los cuatro lambdas
+`trace`.
+
+Hecho: `k8s-inventory` (8) y `playground` (2). Quedan **6 paquetes / 33 tools**.
 
 **Riesgo**: el de toda migración masiva — una errata en un `name` rompe una tool en silencio. Lo cubren el
-test del invariante y `tsc`.
+harness de cada paquete (el de `k8s-inventory` fija nombres, efecto y sensibilidad) y `tsc`.
+
+⚠️ **Y uno nuevo que trae el empaquetado**: si los toolsets no viajan en la imagen, un Kwirth sin red se
+queda sin tools. Por eso la decisión de 2026-09-17 incluye **bundled** para los que deban estar siempre, y
+`requiresExtension` para el resto.
 
 ### S4 · Autorización de verdad
 
@@ -265,12 +294,69 @@ y `stopWhen: stepCountIs(15)` multiplica. Con el dato, decidir. **Sin la medida 
 
 - **El techo es POR PLUGIN.** A nivel global solo existe qué toolsets hay instalados.
 - **Un plugin sin config no tiene tools.** Denegar por defecto, no heredar.
-- **Las 43 se reparten en `aitoolset` temáticos**, *built-in* pero toolsets.
+- **Las 43 se reparten en `aitoolset` temáticos.** ⚠️ **Rectificado el 2026-09-17**: no son *built-in*, son
+  **paquetes independientes como cualquier otra extensión**. Algunos viajarán **bundled** en la imagen (para
+  que un Kwirth recién instalado los tenga sin red) y otros se declararán como **dependencia** del plugin que
+  los necesite (`requiresExtension` en su `package.json`). Decisión del usuario.
+
+  Consecuencias, que no son menores:
+  - **No hay ids reservados para estos ocho.** La maquinaria de built-in sigue existiendo, pero estos no la
+    usan: `k8s-inventory` ya publicado **no choca con nada** y se queda tal cual.
+  - **Cada uno hay que escribirlo contra el contrato nuevo** (`execute(args, host)`): un paquete no puede
+    leer el `ctx()` privado de `common-ai`. Ya no vale "registrar sin reescribir".
+  - **El camino viejo muere cuando los ocho estén publicados**, no antes.
 - **El tipo de extensión se llama `aitoolset`** (2026-09-17), minúscula y una palabra, como el resto de
   `EExtensionType`.
 - **No hay tools sueltas** (2026-09-17): para gestionar una tool sola, un toolset de una tool.
 - **La agrupación del selector ES el toolset** (2026-09-17). No hay taxonomía de familias aparte: tener las
   dos serían dos taxonomías paralelas sobre las mismas tools.
+- 🔴 **Los choques de nombre se resuelven por PRECEDENCIA, no renombrando** (2026-09-17, decisión del
+  usuario). Ver abajo.
+
+### Precedencia entre toolsets (2026-09-17)
+
+Dos toolsets pueden traer una tool con el mismo nombre. No se renombra ninguna: **manda el orden en que
+están asignados al plugin**.
+
+```
+instalados: ts1(ta tb tc td)  ts2(tf td tg)  ts3(...)
+asignados al plugin: [ts1, ts2]        ← el ORDEN es configuración, no adorno
+
+efectivas: ta tb tc td(ts1) tf tg      ← td de ts2 queda TAPADA
+```
+
+Por qué así y no cualificando el nombre de cara al modelo: el nombre que viaja al LLM tiene que casar
+`^[a-zA-Z0-9_-]{1,64}$` —una barra no pasa el filtro del proveedor— y cualificar las 43 (`k8s_obs__get_pod_logs`)
+cambiaría el comportamiento de los agentes de hoy, cuyos prompts las nombran, sin ganar nada.
+
+**Dos nombres distintos, y no se mezclan**:
+
+| | Quién lo usa | Ejemplo |
+|---|---|---|
+| Referencia cualificada | Lo que se PERSISTE: techo del plugin, tools apagadas, agentes | `k8s-observability/get_pod_logs` |
+| Nombre para el modelo | Lo que viaja al LLM en cada petición | `get_pod_logs` |
+
+**Desactivar una tool NO mata el nombre: deja aflorar la siguiente.** La precedencia se calcula sobre las
+tools HABILITADAS, porque se apaga una referencia concreta (`ts1/td`), no un nombre. Para que `td`
+desaparezca del todo hay que apagar las dos.
+
+```
+asignados: [ts1, ts2]   apagada: ts1/td
+efectivas: ta tb tc  td(ts2)  tf tg        ← aflora la de ts2
+```
+
+🔴 **Todo esto tiene que VERSE en el editor** (S8) — es la parte que el usuario marcó como importante, y sin
+ella la precedencia es una trampa:
+
+- Una tool tapada se muestra **marcada como tapada, y por quién**. Si no, el admin apaga `ts2/td` creyendo
+  que hace algo, y no hacía nada: ya estaba tapada.
+- Reordenar los toolsets **cambia qué código se ejecuta**, así que el editor debe decirlo al reordenar.
+- Al apagar una tool que estaba tapando a otra, hay que avisar de que **aflora la de abajo**.
+- La traza de cada invocación registra **qué toolset la sirvió**, no solo el nombre de la tool.
+
+⚠️ **Riesgo asumido**: si un toolset publica una versión nueva que añade una tool con un nombre que ya
+servía otro de menor precedencia, el tapado cambia **sin que nadie toque la configuración**. Es el precio de
+la precedencia; se compensa haciéndolo visible, no evitándolo.
 
 ### Reparto de las 43 en 8 toolsets
 

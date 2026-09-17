@@ -22,8 +22,8 @@ const commonAiBack = require('@kwirthmagnify/kwirth-common-ai/back')
 globalThis.__kwirth_back__ = { kwirthCommonAi: commonAi, kwirthCommonAiBack: commonAiBack }
 
 const toolset = require('./dist/back.js').default
-const { buildToolHost } = commonAiBack
-const { ECapability } = commonAi
+const { buildToolHost, registerToolset, unregisterToolset, resolveTools, buildAgentTools } = commonAiBack
+const { ECapability, EToolEffect, EToolSensitivity } = commonAi
 
 const kc = new KubeConfig()
 kc.loadFromDefault()
@@ -105,5 +105,61 @@ else {
 
 // Que la traza llegue no es un detalle: es lo que permitira ver que tools llamo el modelo y con que.
 console.log(`\ntrazas recibidas: ${traced.length} (${traced.map(t => t.tool).join(', ')})`)
-console.log(failures ? `\n${failures} tool(s) con error` : '\nlas 8 tools han respondido desde el cluster')
+
+// ── S2: la cadena de resolucion, con un toolset de verdad y el cluster de verdad ────────────────────
+//
+// El harness de common-ai prueba la precedencia con toolsets de pega. Aqui se comprueba con uno real y
+// datos reales, que es lo que el plan pide para cerrar S2: resolver, tapar, denegar y observar.
+console.log(`\n== S2: resolucion y precedencia ==`)
+
+// Un segundo toolset que trae un 'list_namespaces' PROPIO, solo para forzar el solape.
+registerToolset({
+    id: 'verify-shadow', version: '0.0.1', displayName: 'shadow', description: 'solo para verificar',
+    requires: [],
+    tools: [{
+        name: 'list_namespaces', description: 'impostora', effect: EToolEffect.READ,
+        sensitivity: EToolSensitivity.PUBLIC, inputSchema: {},
+        execute: async () => ({ namespaces: ['NO-DEBERIA-VERSE'] })
+    }]
+})
+registerToolset(toolset)
+
+const mostrar = (etiqueta, cfg) => {
+    const r = resolveTools(cfg)
+    const quienSirve = r.effective.find(e => e.name === 'list_namespaces')?.toolsetId ?? 'nadie'
+    console.log(`${etiqueta.padEnd(44)} list_namespaces -> ${quienSirve.padEnd(14)} tapadas: ${r.shadowed.map(x => x.ref).join(',') || '-'}`)
+}
+
+mostrar('[k8s-inventory, verify-shadow]', { activeToolsets: ['k8s-inventory', 'verify-shadow'], disabledTools: [] })
+mostrar('[verify-shadow, k8s-inventory]', { activeToolsets: ['verify-shadow', 'k8s-inventory'], disabledTools: [] })
+mostrar('[k8s-inv, shadow] sin k8s-inv/list_namespaces', { activeToolsets: ['k8s-inventory', 'verify-shadow'], disabledTools: ['k8s-inventory/list_namespaces'] })
+
+// Y ahora, ejecutar por el camino unico con los dos ganchos puestos.
+const observado = []
+const agentTools = buildAgentTools(
+    { activeToolsets: ['k8s-inventory', 'verify-shadow'], disabledTools: [] },
+    context,
+    {
+        authorize: (inv) => inv.toolName === 'get_space_data'
+            ? { allowed: false, reason: 'denegada a proposito para ver el gancho' }
+            : { allowed: true },
+        observe: (inv, outcome) => observado.push(`${inv.ref.padEnd(40)} ${(outcome.denied ? 'DENEGADA' : outcome.ok ? 'ok' : 'ERROR').padEnd(9)} ${outcome.ms}ms`)
+    }
+)
+
+const viaAgente = await agentTools.list_namespaces.execute({}, {})
+const denegada = await agentTools.get_space_data.execute({ namespace: ns }, {})
+
+console.log(`\nlist_namespaces por el camino unico: ${viaAgente.namespaces?.length} namespaces`)
+console.log(`get_space_data: ${denegada.error}`)
+console.log('observado:')
+for (const o of observado) console.log(`  ${o}`)
+
+if (JSON.stringify(viaAgente).includes('NO-DEBERIA-VERSE')) { console.error('\nATENCION: la impostora ha ganado, la precedencia NO se aplica'); failures++ }
+if (!denegada.error) { console.error('\nATENCION: la tool denegada se ha ejecutado igual'); failures++ }
+
+unregisterToolset('verify-shadow')
+unregisterToolset('k8s-inventory')
+
+console.log(failures ? `\n${failures} fallo(s)` : `\nlas 8 tools responden desde el cluster, y la cadena de S2 resuelve, tapa, deniega y observa`)
 process.exit(failures ? 1 : 0)

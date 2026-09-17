@@ -94,15 +94,39 @@ Installing from a URL or a local file works exactly as in the other families: pa
 
 ## Where tools are switched on
 
-Installing a toolset makes it **available**; it does not give it to anybody. Each AI-enabled channel decides
-which toolsets it may use and may switch off individual tools inside them:
+Installing a toolset makes it **available**; it does not give it to anybody. Each AI-enabled channel is
+assigned an **ordered list** of toolsets, and may switch off individual tools inside them:
 
 ```
-effective tools = (union of the enabled toolsets) − (tools disabled inside them)
+effective tools = (the assigned toolsets, in order) − (the tools switched off)
+                  with the first toolset that provides a name winning it
 ```
 
-So the granularity you get is: **pick a toolset, then turn off the tools you don't want**. A channel with no
-configuration has **no** tools.
+So the granularity you get is: **pick the toolsets, order them, then turn off the tools you don't want**. A
+channel with no configuration has **no** tools.
+
+### When two toolsets bring the same tool name
+
+Nothing is renamed. **The order decides**: the first assigned toolset that provides a name is the one that
+serves it, and the other one is *shadowed*.
+
+```
+ts1 provides:  ta tb tc td          assigned to the channel:  [ts1, ts2]
+ts2 provides:  tf td tg
+
+the channel gets:  ta tb tc  td (from ts1)  tf tg
+                             ↑ ts2's td is shadowed
+```
+
+**Switching a tool off does not kill the name — it lets the next one surface.** You switch off a specific
+tool of a specific toolset, not a name. Switch off `ts1/td` and the channel gets `ts2`'s `td` instead; to
+lose `td` altogether, switch it off in both.
+
+> **The order is configuration, not decoration.** Reordering the list changes *which code runs* for a
+> shadowed name. Two consequences worth knowing: a tool shown as shadowed is doing nothing, so switching it
+> off changes nothing; and if a toolset later publishes a version that adds a name another toolset was
+> serving, the shadowing changes **without anyone editing the configuration**. Every invocation is traced
+> with the toolset that served it, precisely so this is never a guess.
 
 ## Packaging a toolset
 
