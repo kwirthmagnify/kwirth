@@ -1,4 +1,4 @@
-import { IAiToolset, registerToolset, unregisterToolset, isBuiltInToolsetId, getToolset } from '@kwirthmagnify/kwirth-common-ai/back'
+import { IAiToolset, registerToolset, unregisterToolset, isBuiltInToolsetId, getToolset, setToolsetGrants, getToolsetGrants } from '@kwirthmagnify/kwirth-common-ai/back'
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { downloadFile, packageHeaders } from './PackageRegistries'
@@ -37,6 +37,19 @@ export interface IAiToolsetMeta {
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 const INDEX_KEY = 'kwirth-aitoolsets-index'
 
+/*
+    A que plugins se le ha concedido cada toolset (plan: "El techo en dos fases", fase 1).
+
+    Se guarda en el CORE y no en el plugin, al reves que el orden de precedencia: el toolset es una
+    extension del core, y la lista de invitados es justo lo que el plugin no debe poder decidir.
+
+    Un solo ConfigMap con el mapa entero { toolsetId: [pluginId, ...] }: son cuatro lineas de datos y
+    tenerlas juntas permite responder de una lectura a "¿quien puede escribir en el cluster por IA?".
+*/
+const GRANTS_KEY = 'kwirth-aitoolsets-grants'
+
+type TToolsetGrants = Record<string, string[]>
+
 interface IDevAiToolset {
     tgzPath: string
     meta: IAiToolsetMeta
@@ -60,6 +73,44 @@ export class AiToolsetManager {
 
     async init(): Promise<void> {
         this.cachedIndex = (await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || []
+    }
+
+    // ── Concesiones ─────────────────────────────────────────────────────────────
+
+    /** El mapa completo, tal y como esta guardado. */
+    async listGrants(): Promise<TToolsetGrants> {
+        return ((await this.configMaps.read(GRANTS_KEY, {})) as TToolsetGrants) || {}
+    }
+
+    /**
+     * Vuelca las concesiones guardadas al registro.
+     *
+     * Hay que llamarlo DESPUES de cargar los toolsets: el registro es memoria, asi que en cada arranque
+     * las concesiones hay que volver a ponerlas o todo quedaria concedido a nadie — que es seguro, pero
+     * dejaria de funcionar lo que el admin configuro.
+     */
+    async applyGrants(): Promise<void> {
+        const grants = await this.listGrants()
+        for (const [toolsetId, plugins] of Object.entries(grants)) {
+            setToolsetGrants(toolsetId, plugins)
+        }
+        const total = Object.values(grants).reduce((n, p) => n + p.length, 0)
+        logInfo(ELogComponent.CORE, `AI toolset grants applied: ${Object.keys(grants).length} toolset(s), ${total} grant(s)`)
+    }
+
+    /** Concede un toolset a una lista de plugins (reemplaza la anterior) y lo persiste. */
+    async setGrants(toolsetId: string, pluginIds: string[]): Promise<string[]> {
+        if (!getToolset(toolsetId)) throw new Error(`AI toolset '${toolsetId}' is not registered`)
+
+        const grants = await this.listGrants()
+        // Una lista vacia se GUARDA como vacia en vez de borrar la entrada: "se lo hemos quitado a todos"
+        // y "nunca se toco" se ven igual en el ConfigMap, pero no significan lo mismo al auditar.
+        grants[toolsetId] = [...new Set(pluginIds)]
+        await this.configMaps.write(GRANTS_KEY, grants)
+        setToolsetGrants(toolsetId, grants[toolsetId])
+
+        logInfo(ELogComponent.CORE, `AI toolset '${toolsetId}' granted to: ${grants[toolsetId].join(', ') || '(nobody)'}`)
+        return getToolsetGrants(toolsetId)
     }
 
     async listInstalled(): Promise<IAiToolsetMeta[]> {
@@ -251,6 +302,14 @@ export class AiToolsetManager {
 
     async uninstall(id: string): Promise<void> {
         if (isBuiltInToolsetId(id)) throw new Error(`AI toolset '${id}' is built-in and cannot be uninstalled`)
+
+        // Tambien la concesion GUARDADA: unregisterToolset limpia la del registro (memoria), pero si la
+        // persistida sobreviviera, reinstalar el toolset resucitaria permisos que nadie volvio a conceder.
+        const grants = await this.listGrants()
+        if (grants[id]) {
+            delete grants[id]
+            await this.configMaps.write(GRANTS_KEY, grants)
+        }
 
         unregisterToolset(id)
         await this.configMaps.write(`kwirth-aitoolset-${id}-meta`, null)

@@ -96,6 +96,15 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     /** Acciones propias: abrir la guia, abrir la pagina de login… */
     actions?: (entry: TInstalled | TEntry, section: EManagerSection) => IExtensionAction[]
 
+    /**
+     * Un control propio del tipo, a la izquierda de los botones de accion.
+     *
+     * No todo cabe en un boton ni en un chip: ThemeManagerDialog lleva ahi un `Select multiple` para
+     * asignar el tema a plugins, y los aitoolset uno igual para conceder quien puede usarlos. Es UN sitio
+     * en la tarjeta y en la fila, no dos maquetaciones distintas.
+     */
+    inlineControl?: (entry: TInstalled | TEntry, section: EManagerSection) => ReactNode
+
     /** Si devuelve un motivo, instalar queda deshabilitado y el motivo va al tooltip (dependencias sin cumplir). */
     installBlockedReason?: (entry: TEntry) => string | undefined
 

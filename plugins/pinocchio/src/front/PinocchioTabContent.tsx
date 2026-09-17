@@ -169,6 +169,22 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         </>)
     }
 
+    /** Refresca el catalogo de tools que puede ofrecer este canal (cambia al conceder/revocar toolsets). */
+    const pedirToolsDisponibles = () => {
+        let msg:IPinocchioMessage = {
+            channel: 'pinocchio',
+            msgtype: 'pinocchiomessage',
+            id: '1',
+            accessKey: props.channelObject.accessString!,
+            instance: props.channelObject.instanceId,
+            command: EPinocchioCommand.TOOLSAVAILABLE,
+            action: EInstanceMessageAction.COMMAND,
+            flow: EInstanceMessageFlow.REQUEST,
+            type: EInstanceMessageType.DATA
+        }
+        props.channelObject.webSocket?.send(JSON.stringify(msg))
+    }
+
     const pinocchioConfigClose = (config:IPinocchioConfig|undefined) => {
         if (config) {
             pinocchioData.config = config
@@ -334,6 +350,10 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 setShowConfigLlm(true)
                 break
             case 'trigger':
+                // Se vuelve a pedir la lista de tools ANTES de abrir: se pedia una sola vez al arrancar el
+                // canal, asi que conceder un toolset con el canal abierto no se veia — el selector seguia
+                // ofreciendo lo de antes, y el admin creia que su concesion no habia servido de nada.
+                pedirToolsDisponibles()
                 setShowConfigTrigger(true)
                 break
             case 'importexport':

@@ -289,14 +289,15 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                             ? <Box sx={cardGridSx}>
                                 {shownInstalled.map(entry => (
                                     <ExtensionCard key={d.keyOf(entry)} model={d.toModel(entry)} fallbackIcon={d.icon}
-                                        chips={installedChips(entry)} actions={installedActions(entry)} />
+                                        chips={installedChips(entry)} inlineControl={d.inlineControl?.(entry, EManagerSection.INSTALLED)}
+                                        actions={installedActions(entry)} />
                                 ))}
                               </Box>
                             : <Box sx={listGridSx}>
                                 {shownInstalled.flatMap((entry, i, arr) => {
                                     const key = d.keyOf(entry)
                                     return [
-                                        ...extensionRowCells(key, { model: d.toModel(entry), fallbackIcon: d.icon, chips: installedChips(entry), actions: installedActions(entry) }),
+                                        ...extensionRowCells(key, { model: d.toModel(entry), fallbackIcon: d.icon, chips: installedChips(entry), inlineControl: d.inlineControl?.(entry, EManagerSection.INSTALLED), actions: installedActions(entry) }),
                                         ...(i < arr.length - 1 ? [separator(key)] : [])
                                     ]
                                 })}

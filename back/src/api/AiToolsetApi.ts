@@ -51,6 +51,30 @@ export class AiToolsetApi {
             }
         })
 
+        // ── Concesiones: que plugins pueden usar cada toolset ───────────────────────────────────────
+        //
+        // El mapa entero de una lectura: la pregunta que hay que poder responder rapido es "¿quien puede
+        // escribir en el cluster por IA?", y esa se contesta mirando quien tiene concedido k8s-ops.
+        this.router.get('/grants', async (_req: Request, res: Response) => {
+            try { res.json(await this.manager.listGrants()) }
+            catch (err) { res.status(500).json({ error: String(err) }) }
+        })
+
+        // Conceder es un acto de ADMIN, no de cualquiera con una key valida: da acceso a tools que tocan
+        // el cluster. Es la unica ruta de este API que exige scope de admin.
+        this.router.put('/grants/:id', async (req: Request, res: Response) => {
+            if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
+            try {
+                const plugins = req.body?.plugins
+                if (!Array.isArray(plugins) || plugins.some(p => typeof p !== 'string')) {
+                    return void res.status(400).json({ error: 'plugins must be an array of plugin ids' })
+                }
+                res.json({ toolsetId: req.params.id, plugins: await this.manager.setGrants(req.params.id, plugins) })
+            }
+            catch (err) { res.status(400).json({ error: String(err) }) }
+        })
+
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {

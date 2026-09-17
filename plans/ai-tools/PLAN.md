@@ -385,7 +385,9 @@ y `stopWhen: stepCountIs(15)` multiplica. Con el dato, decidir. **Sin la medida 
 
 ## Decidido
 
-- **El techo es POR PLUGIN.** A nivel global solo existe qué toolsets hay instalados.
+- ~~**El techo es POR PLUGIN.** A nivel global solo existe qué toolsets hay instalados.~~
+  ⚠️ **Rectificado el 2026-09-17 (decisión del usuario): el techo se concede DESDE EL TOOLSET.** Ver
+  *El techo en dos fases*, abajo.
 - **Un plugin sin config no tiene tools.** Denegar por defecto, no heredar.
 - **Las 43 se reparten en `aitoolset` temáticos.** ⚠️ **Rectificado el 2026-09-17**: no son *built-in*, son
   **paquetes independientes como cualquier otra extensión**. Algunos viajarán **bundled** en la imagen (para
@@ -507,6 +509,47 @@ haya donde aterrizar, no antes.
    - denegar en silencio y documentarlo como paso obligatorio de la actualización.
 
    ⚠️ En dev da igual —el estado se borra—, pero hay Kwirth en producción de clientes con agora y pinocchio.
+
+## El techo en dos fases (2026-09-17, decisión del usuario)
+
+El orden del plan era S4 (autorización) y luego S5 (techo). Se invierte, y con razón: **autorizar sin techo
+es autorizar en el vacío**.
+
+### Fase 1 — el techo, sin permisos
+
+| Dónde | Quién | Qué decide |
+|---|---|---|
+| Config del **aitoolset**, en su gestor | Admin | **Qué plugins pueden usarlo.** La lista de invitados |
+| Config del **plugin**, dentro del canal | Quien configura el canal | **Orden y precedencia** entre los concedidos, y apagar tools sueltas |
+
+```
+efectivas = (toolsets que me han invitado) ∩ (los que tengo activos, en MI orden) − (tools apagadas)
+```
+
+Dentro de eso, **todo permitido**: en fase 1 no hay RBAC.
+
+**Por qué se concede desde el toolset y no desde el plugin**: `k8s-ops` es la cosa peligrosa, y así se
+gobierna en **un solo sitio**. Cuando alguien pregunte *"¿quién puede escribir en el cluster por IA?"*, la
+respuesta está en una pantalla, no repartida entre los canales que haya instalados.
+
+🔴 **Por defecto no lo usa nadie** (decisión del usuario). Instalar un toolset lo deja disponible pero sin
+invitados. Instalar `k8s-ops` no puede dar escritura a nadie por accidente; el precio es acordarse de
+conceder, o parecerá que no funciona.
+
+**Consecuencias asumidas:**
+
+- **El tipo `aitoolset` pasa a tener configuración.** Hoy su descriptor NO declara `renderConfigDialog` a
+  propósito, y hay un e2e que afirma *"un tipo sin diálogo de configuración no enseña engranaje"*. Ese test
+  cae, y está bien que caiga.
+- **La lista de invitados la guarda el CORE**, no el plugin: el toolset es una extensión del core. Al revés
+  que el orden, que lo guarda el plugin con su configuración.
+- **La concesión vive en el REGISTRO**, no en la llamada. Si el plugin construyera su propia lista, podría
+  pedir lo que no se le ha concedido: quien resuelve tiene que filtrar por el solicitante.
+
+### Fase 2 — RBAC
+
+Lo de S4: accessKeys, scopes y el par *aitoolset + tool* como unidad de permiso. Y las cuentas de servicio,
+abajo.
 
 ## Cuentas de servicio — un frente propio, no de este plan (2026-09-17)
 

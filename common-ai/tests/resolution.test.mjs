@@ -290,3 +290,94 @@ test('🔴 las tools que se le pasan al SDK NO son dinamicas', async () => {
 
     limpiar('sdk-ts')
 })
+
+// ── la concesion: quien puede usar cada toolset (fase 1 del techo) ───────────────────────────────────
+//
+// Se concede DESDE el toolset, no desde el plugin: `k8s-ops` es lo peligroso y se gobierna en un solo
+// sitio. Y por defecto no lo usa nadie — instalar no es conceder.
+
+const { setToolsetGrants, getToolsetGrants, isToolsetGrantedTo } = back
+
+test('🔴 por defecto un toolset recien registrado no lo puede usar NADIE', () => {
+    // Instalar k8s-ops no puede dar escritura a nadie por accidente.
+    registerToolset(fakeToolset('grant-nuevo', ['ta']))
+
+    assert.deepEqual(getToolsetGrants('grant-nuevo'), [])
+    assert.equal(isToolsetGrantedTo('grant-nuevo', 'pinocchio'), false)
+
+    const r = resolveTools({ activeToolsets: ['grant-nuevo'], disabledTools: [] }, 'pinocchio')
+    assert.deepEqual(r.effective, [])
+    assert.deepEqual(r.notGranted, ['grant-nuevo'])
+
+    limpiar('grant-nuevo')
+})
+
+test('concedido a un plugin, ese lo ve y los demas no', () => {
+    registerToolset(fakeToolset('grant-uno', ['ta', 'tb']))
+    setToolsetGrants('grant-uno', ['pinocchio'])
+
+    const dePinocchio = resolveTools({ activeToolsets: ['grant-uno'], disabledTools: [] }, 'pinocchio')
+    const deAgora = resolveTools({ activeToolsets: ['grant-uno'], disabledTools: [] }, 'agora')
+
+    assert.deepEqual(dePinocchio.effective.map(e => e.name), ['ta', 'tb'])
+    assert.deepEqual(dePinocchio.notGranted, [])
+    assert.deepEqual(deAgora.effective, [])
+    assert.deepEqual(deAgora.notGranted, ['grant-uno'])
+
+    limpiar('grant-uno')
+})
+
+test('"no concedido" y "no instalado" se reportan POR SEPARADO', () => {
+    // Al admin hay que mandarlo al sitio correcto: uno se arregla instalando, el otro concediendo.
+    registerToolset(fakeToolset('grant-dos', ['ta']))
+    setToolsetGrants('grant-dos', ['otro-plugin'])
+
+    const r = resolveTools({ activeToolsets: ['grant-dos', 'ni-instalado'], disabledTools: [] }, 'pinocchio')
+
+    assert.deepEqual(r.notGranted, ['grant-dos'])
+    assert.deepEqual(r.missing, ['ni-instalado'])
+
+    limpiar('grant-dos')
+})
+
+test('🔴 un plugin NO puede servirse lo que no le han concedido', () => {
+    // Aunque lo pida explicitamente en su config: el filtro esta del lado que el plugin no controla.
+    registerToolset({ ...fakeToolset('grant-ops'), tools: [fakeTool('borrar')] })
+    setToolsetGrants('grant-ops', ['otro'])
+
+    const tools = buildAgentTools({ activeToolsets: ['grant-ops'], disabledTools: [] }, fakeContext(), {}, 'pinocchio')
+    assert.deepEqual(Object.keys(tools), [])
+
+    limpiar('grant-ops')
+})
+
+test('sin solicitante NO se filtra: es el core pintando, no ejecutando', () => {
+    // El editor necesita ver el catalogo entero para poder ofrecerlo; quien ejecuta siempre se identifica.
+    registerToolset(fakeToolset('grant-pintar', ['ta']))
+
+    const paraPintar = resolveTools({ activeToolsets: ['grant-pintar'], disabledTools: [] })
+    assert.deepEqual(paraPintar.effective.map(e => e.name), ['ta'])
+
+    limpiar('grant-pintar')
+})
+
+test('reordenar la concesion la REEMPLAZA, no la acumula', () => {
+    registerToolset(fakeToolset('grant-reem', ['ta']))
+    setToolsetGrants('grant-reem', ['a', 'b'])
+    setToolsetGrants('grant-reem', ['c'])
+
+    assert.deepEqual(getToolsetGrants('grant-reem'), ['c'])
+    limpiar('grant-reem')
+})
+
+test('desinstalar se lleva la concesion por delante', () => {
+    // Si quedara huerfana, reinstalar el toolset resucitaria permisos que nadie ha vuelto a conceder.
+    registerToolset(fakeToolset('grant-vuelve', ['ta']))
+    setToolsetGrants('grant-vuelve', ['pinocchio'])
+    unregisterToolset('grant-vuelve')
+
+    registerToolset(fakeToolset('grant-vuelve', ['ta']))
+    assert.deepEqual(getToolsetGrants('grant-vuelve'), [], 'la concesion no puede sobrevivir a la desinstalacion')
+
+    limpiar('grant-vuelve')
+})

@@ -554,7 +554,31 @@ const toolsetRegistry = new Map<string, IAiToolset>()
 // built-in, y con el se romperia todo techo y todo agente que lo tuviera configurado.
 const builtInToolsetIds = new Set<string>()
 
+/*
+    Quien puede usar cada toolset (plan: "El techo en dos fases", fase 1).
+
+    ⚠️ La concesion vive AQUI, en el registro, y no en la llamada. Si cada plugin armara su propia lista de
+    toolsets, podria pedir los que no se le han concedido: el filtro tiene que estar del lado que el plugin
+    no controla. El registro lo puebla el core, y un paquete de terceros no puede tocarlo.
+
+    Y por defecto NO lo usa nadie (decision del usuario, 2026-09-17): instalar un toolset lo deja
+    disponible, no concedido. Instalar `k8s-ops` no puede dar escritura a nadie por accidente.
+*/
+const toolsetGrants = new Map<string, Set<string>>()   // toolsetId → plugins invitados
+
 export const isBuiltInToolsetId = (id: string): boolean => builtInToolsetIds.has(id)
+
+/** Concede un toolset a una lista de plugins. Reemplaza la concesion anterior; `[]` se la quita a todos. */
+export const setToolsetGrants = (toolsetId: string, pluginIds: string[]): void => {
+    toolsetGrants.set(toolsetId, new Set(pluginIds))
+}
+
+/** A quien esta concedido un toolset. Vacio = a nadie, que es el estado por defecto. */
+export const getToolsetGrants = (toolsetId: string): string[] => [...(toolsetGrants.get(toolsetId) ?? [])]
+
+/** Si ESE plugin puede usar ESE toolset. */
+export const isToolsetGrantedTo = (toolsetId: string, pluginId: string): boolean =>
+    toolsetGrants.get(toolsetId)?.has(pluginId) ?? false
 
 /**
  * Registra un toolset. `builtIn` solo lo usa el core para los suyos: marca el id como reservado.
@@ -573,8 +597,13 @@ export const registerToolset = (toolset: IAiToolset, builtIn = false): void => {
 }
 
 /** Retira un toolset del registro (desinstalacion). Los built-in no se retiran. */
-export const unregisterToolset = (id: string): boolean =>
-    builtInToolsetIds.has(id) ? false : toolsetRegistry.delete(id)
+export const unregisterToolset = (id: string): boolean => {
+    if (builtInToolsetIds.has(id)) return false
+    // La concesion se va con el toolset: dejarla huerfana haria que reinstalarlo resucitara permisos que
+    // nadie ha vuelto a conceder.
+    toolsetGrants.delete(id)
+    return toolsetRegistry.delete(id)
+}
 
 export const getToolset = (id: string): IAiToolset | undefined => toolsetRegistry.get(id)
 
@@ -677,6 +706,14 @@ export interface IToolResolution {
     shadowed: IShadowedTool[]
     /** Toolsets asignados que no estan registrados (desinstalados, o nunca instalados). */
     missing: string[]
+    /**
+     * Toolsets que SI estan instalados pero que a este plugin no se le han concedido.
+     *
+     * Se reporta aparte de `missing` a proposito: "no esta instalado" lo arregla el admin instalandolo, y
+     * "no te lo han concedido" lo arregla concediendolo. Meterlos en el mismo saco manda al admin a buscar
+     * en el sitio equivocado.
+     */
+    notGranted: string[]
 }
 
 /**
@@ -686,11 +723,12 @@ export interface IToolResolution {
  * Una tool apagada no tapa: se apaga una referencia concreta ('ts1/td'), no un nombre, asi que si `ts1/td`
  * esta apagada y `ts2` trae otra `td`, aflora la de `ts2`.
  */
-export const resolveTools = (config: IToolsetConfig): IToolResolution => {
+export const resolveTools = (config: IToolsetConfig, requesterId?: string): IToolResolution => {
     const disabled = new Set(config.disabledTools)
     const effective: IEffectiveTool[] = []
     const shadowed: IShadowedTool[] = []
     const missing: string[] = []
+    const notGranted: string[] = []
     const taken = new Map<string, string>()   // nombre corto → toolset que lo sirve
 
     for (const toolsetId of config.activeToolsets) {
@@ -699,6 +737,13 @@ export const resolveTools = (config: IToolsetConfig): IToolResolution => {
             // No se calla: un techo que nombra algo que no esta instalado es una config rota, y el
             // sintoma sin esto seria "el agente responde peor" sin que nadie sepa por que.
             missing.push(toolsetId)
+            continue
+        }
+        // La concesion se comprueba AQUI y no la aporta quien llama: el plugin no puede concederse a si
+        // mismo lo que el admin no le dio. Sin `requesterId` no se filtra — es el caso del core
+        // resolviendo para PINTAR (el editor), no para ejecutar.
+        if (requesterId !== undefined && !isToolsetGrantedTo(toolsetId, requesterId)) {
+            notGranted.push(toolsetId)
             continue
         }
         for (const tool of toolset.tools) {
@@ -713,7 +758,7 @@ export const resolveTools = (config: IToolsetConfig): IToolResolution => {
             effective.push({ name: tool.name, ref, toolsetId, tool })
         }
     }
-    return { effective, shadowed, missing }
+    return { effective, shadowed, missing, notGranted }
 }
 
 /** Una invocacion concreta, tal y como la ven los dos ganchos. */
@@ -754,9 +799,14 @@ export interface IAgentToolHooks {
 export const buildAgentTools = (
     config: IToolsetConfig,
     context: IToolContext,
-    hooks: IAgentToolHooks = {}
+    hooks: IAgentToolHooks = {},
+    /**
+     * Quien pide las tools. Sin esto no se filtra por concesion, asi que un plugin DEBE pasar su id: es lo
+     * que impide que se sirva a si mismo un toolset que no le han concedido.
+     */
+    requesterId?: string
 ): ToolSet => {
-    const { effective } = resolveTools(config)
+    const { effective } = resolveTools(config, requesterId)
     const entries = effective.map(e => {
         const invocationOf = (args: Record<string, unknown>): IToolInvocation =>
             ({ ref: e.ref, toolsetId: e.toolsetId, toolName: e.name, args })

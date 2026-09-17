@@ -25,6 +25,8 @@ interface IExtensionViewProps {
     versions?: string[]
     onVersionChange?: (v: string) => void
     chips?: React.ReactNode[]
+    /** Control propio del tipo (un Select, un switch…), justo antes de los botones. */
+    inlineControl?: React.ReactNode
     actions: IExtensionAction[]
 }
 
@@ -58,7 +60,7 @@ const ActionButtons: React.FC<{ actions: IExtensionAction[] }> = ({ actions }) =
 </>)
 
 /** Vista de tarjeta. Altura fija (extensionCardSx): una que crece estira toda su fila del grid. */
-const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, versions, onVersionChange, chips, actions }) => {
+const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, versions, onVersionChange, chips, inlineControl, actions }) => {
     const theme = useTheme()
     return (
         <Box sx={{ ...extensionCardSx, background: gradientFor(model.name, theme.palette.mode === 'dark') }}>
@@ -84,6 +86,7 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
                 <MarketplaceBadge label={model.marketplaceLabel} installedFrom={model.installedFrom} />
                 {chips}
                 <Box sx={{ flex: 1, minWidth: 0 }} />
+                {inlineControl}
                 <ActionButtons actions={actions} />
             </Stack>
         </Box>
@@ -97,7 +100,7 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
 */
 const extensionRowCells = (
     key: string,
-    { model, fallbackIcon, versions, onVersionChange, chips, actions }: IExtensionViewProps
+    { model, fallbackIcon, versions, onVersionChange, chips, inlineControl, actions }: IExtensionViewProps
 ): React.ReactNode[] => [
     <Box key={`${key}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}>{model.icon ?? fallbackIcon}</Box>,
     <Typography key={`${key}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{model.name}</Typography>,
@@ -109,7 +112,8 @@ const extensionRowCells = (
     <Box key={`${key}-ver`} sx={{ justifySelf: 'end', py: 1 }}>
         <VersionControl version={model.version} versions={versions} onChange={onVersionChange} />
     </Box>,
-    <Box key={`${key}-actions`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
+    <Box key={`${key}-actions`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        {inlineControl}
         <ActionButtons actions={actions} />
     </Box>
 ]

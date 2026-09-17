@@ -1838,6 +1838,10 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             if (bundledExtensionsPath) await aiToolsetManager.installBundled(bundledExtensionsPath)
             await aiToolsetManager.loadAll()
             aiToolsetManager.loadDevAiToolsets()
+            // DESPUES de cargar: el registro es memoria, asi que las concesiones hay que volver a
+            // aplicarlas en cada arranque o todo quedaria concedido a nadie — seguro, pero dejaria de
+            // funcionar lo que el admin configuro.
+            await aiToolsetManager.applyGrants()
         }
 
         if (!docsManager) {

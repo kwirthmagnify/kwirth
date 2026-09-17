@@ -50,6 +50,9 @@ interface IModelInvocation {
 /** Tope de lo que se vuelca de un resultado de tool en la traza. */
 const TRAZA_MAX = 400
 
+/** Con este id se identifica el canal al pedir tools: es el que el admin ve al conceder un toolset. */
+const PINOCCHIO_ID = 'pinocchio'
+
 export class PinocchioChannel {
     readonly channelId = 'pinocchio'
     readonly requirements = {
@@ -295,13 +298,23 @@ export class PinocchioChannel {
                 const detalle = bruto.length > TRAZA_MAX ? `${bruto.slice(0, TRAZA_MAX)}… (${bruto.length} chars)` : bruto
                 this.backChannelObject.logTrace?.(`[pinocchio] tool ${invocation.ref} (${outcome.ms}ms) ${detalle}`)
             }
-        })
+        // ⚠️ El ultimo argumento es QUIEN pide. Sin el, la resolucion no filtra por concesion y el plugin
+        // se serviria toolsets que el admin no le ha concedido. No es cosmetico: es el techo.
+        }, PINOCCHIO_ID)
 
         // Traza de diagnostico: sin esto, "el modelo no llamo a ninguna tool" y "no le ofrecimos
         // ninguna" se ven exactamente igual — que es justo lo que despisto en el QA de S3.
         // Con el trigger y la version delante no hay que adivinar CUAL de las versiones habilitadas es la
         // que se esta resolviendo, que es lo que confundio el QA: varias versiones, y solo una tocada.
-        this.backChannelObject.logTrace?.(`[pinocchio] ${trigger.id}/${version.id}: auto=${!!version.autoTools} marcadas=${version.tools?.length ?? 0} -> toolsets [${techo.activeToolsets.join(', ') || 'ninguno'}] = ${Object.keys(tools).length} tools ofrecidas`)
+        // Lo NEGADO se traza igual de alto que lo concedido: "no me lo han concedido" y "no esta
+        // instalado" son las dos causas de que un agente responda peor, y sin decirlo no hay forma de
+        // distinguirlas desde fuera.
+        const resolucion = resolveTools(techo, PINOCCHIO_ID)
+        const pegas = [
+            resolucion.notGranted.length ? `SIN CONCEDER [${resolucion.notGranted.join(', ')}]` : '',
+            resolucion.missing.length ? `SIN INSTALAR [${resolucion.missing.join(', ')}]` : ''
+        ].filter(Boolean).join(' ')
+        this.backChannelObject.logTrace?.(`[pinocchio] ${trigger.id}/${version.id}: auto=${!!version.autoTools} marcadas=${version.tools?.length ?? 0} -> ${Object.keys(tools).length} tools ofrecidas ${pegas || `[${techo.activeToolsets.join(', ') || 'ninguno'}]`}`)
 
         let providerOptions: Record<string, unknown> = {}
         let errorPath = ''
@@ -550,9 +563,11 @@ export class PinocchioChannel {
                         flow: EInstanceMessageFlow.RESPONSE,
                         type: EInstanceMessageType.DATA,
                         instance: instance.instanceId,
-                        // Del registro, y ya resueltas: si dos toolsets traen el mismo nombre, el
-                        // selector debe ofrecer la que de verdad se ejecutaria, no las dos.
-                        toolsAvailable: resolveTools({ activeToolsets: listToolsets().map(t => t.id), disabledTools: [] })
+                        // Del registro, ya resueltas y filtradas por lo CONCEDIDO: ofrecer una tool que
+                        // luego no se va a poder usar es peor que no ofrecerla — el usuario la marca, se
+                        // va tan tranquilo, y el agente nunca la llama.
+                        // Y si dos toolsets traen el mismo nombre, se ofrece la que de verdad correria.
+                        toolsAvailable: resolveTools({ activeToolsets: listToolsets().map(t => t.id), disabledTools: [] }, PINOCCHIO_ID)
                             .effective.map(e => ({ name: e.name, description: e.tool.description, effect: e.tool.effect }))
                     }
                     webSocket.send(JSON.stringify(msgToolsAvailable))
