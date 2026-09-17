@@ -67,10 +67,17 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         // deshabilitado), asi que se busca por ahi y no por el nombre accesible del boton.
         // Puede haber varios en el catalogo: unos instalados y otros no. Basta con que los que SI lo
         // estan tengan el boton muerto — y que haya al menos uno, o el test no probaria nada.
+        //
+        // ⚠️ El motivo distingue quien lo carga: a una extension de DEV no se le puede decir "desinstala
+        // primero" porque no se desinstala — se quita de kwirth-dev.json. Lo traia ThemeManagerDialog y lo
+        // heredo el generico al migrarlo, asi que aqui se aceptan los dos motivos.
         await expect(dialog().getByText('dev active').first()).toBeVisible({ timeout: 40000 })
-        const yaInstalados = dialog().locator('span[aria-label^="Already installed"] button')
+        const yaInstalados = dialog().locator('span[aria-label^="Already installed"] button, span[aria-label^="A dev version"] button')
         expect(await yaInstalados.count(), 'ningun toolset del catalogo consta como instalado').toBeGreaterThan(0)
         for (let i = 0; i < await yaInstalados.count(); i++) await expect(yaInstalados.nth(i)).toBeDisabled()
+
+        // Y el de dev lo dice con SU motivo, no con el generico
+        await expect(dialog().locator('span[aria-label="A dev version is already loaded"]').first()).toBeVisible()
     })
 
     test('el veredicto de canUninstall se ve y bloquea el boton', async () => {
@@ -123,10 +130,12 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         await dialog().getByRole('button', { name: 'List view' }).click()
         await expect(dialog().locator('.MuiSelect-select').first()).toBeVisible({ timeout: 40000 })
 
-        const columnXs = await dialog().locator('.MuiSelect-select').evaluateAll(els => els.map(e => ({
-            version: (e.textContent ?? '').replace(/​/g, '').trim(),
-            left: Math.round(e.getBoundingClientRect().left)
-        })))
+        // ⚠️ Solo los Select de VERSION. En la seccion de instalados hay otro Select —el de concesion— que
+        // vive en otra columna: meterlos en el mismo saco hacia fallar la medida por comparar peras con
+        // manzanas. Se distinguen por su contenido, que es un numero de version.
+        const columnXs = await dialog().locator('.MuiSelect-select').evaluateAll(els => els
+            .map(e => ({ version: (e.textContent ?? '').replace(/​/g, '').trim(), left: Math.round(e.getBoundingClientRect().left) }))
+            .filter(c => /^\d+\.\d+\.\d+$/.test(c.version)))
 
         expect(columnXs.length, 'el catalogo deberia traer dos toolsets').toBeGreaterThan(1)
         expect([...new Set(columnXs.map(c => c.left))], `columna de version desalineada: ${JSON.stringify(columnXs)}`).toHaveLength(1)

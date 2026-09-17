@@ -98,23 +98,5 @@ export class ThemeApi {
             }
         })
 
-        this.router.get('/:id/preview', async (req: Request, res: Response) => {
-            try {
-                if (this.themeManager.isDevTheme(req.params.id)) {
-                    const buf = this.themeManager.getDevPreviewPng(req.params.id)
-                    if (!buf) return void res.status(404).end()
-                    res.setHeader('Content-Type', 'image/png')
-                    res.setHeader('Cache-Control', 'no-store')
-                    return res.send(buf)
-                }
-                const buf = await this.themeManager.getPreviewPng(req.params.id)
-                if (!buf) return void res.status(404).end()
-                res.setHeader('Content-Type', 'image/png')
-                res.setHeader('Cache-Control', 'public, max-age=3600')
-                res.send(buf)
-            } catch (err) {
-                res.status(500).json({ error: String(err) })
-            }
-        })
     }
 }

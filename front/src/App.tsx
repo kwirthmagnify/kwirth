@@ -53,11 +53,11 @@ import { ProviderManagerDialog } from './components/ProviderManagerDialog'
 import { IdpManagerDialog } from './components/IdpManagerDialog'
 import { SenderManagerDialog } from './components/SenderManagerDialog'
 import { WebhookManagerDialog } from './components/WebhookManagerDialog'
-import { ThemeManagerDialog } from './components/ThemeManagerDialog'
+import { makeThemeDescriptor } from './components/ThemeDescriptor'
 import { HomepageManagerDialog } from './components/HomepageManagerDialog'
 import { DocsManagerDialog } from './components/DocsManagerDialog'
 import { ExtensionManagerDialog } from './components/ExtensionManagerDialog'
-import { aiToolsetDescriptor } from './components/aiToolsetDescriptor'
+import { aiToolsetDescriptor } from './components/AiToolsetDescriptor'
 import { LoginManagerDialog } from './components/LoginManagerDialog'
 import { PackManagerDialog } from './components/PackManagerDialog'
 import { LoginExtensionPage } from './components/LoginExtensionPage'
@@ -2546,7 +2546,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showIdpManagerDialog && <IdpManagerDialog onClose={() => setShowIdpManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showSenderManagerDialog && <SenderManagerDialog onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showWebhookManagerDialog && <WebhookManagerDialog onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
-                { showThemeManagerDialog && <ThemeManagerDialog onClose={() => setShowThemeManagerDialog(false)} activeThemeName={activeThemeName} onActivate={setActiveThemeName} themeAssignments={themeAssignments} onAssignmentsChange={setThemeAssignments} onThemeLoad={loadThemeFront} onThemeUnload={unloadThemeFront} onRestartRequired={onExtensionRestartRequired} /> }
+                { showThemeManagerDialog && <ExtensionManagerDialog
+                    descriptor={makeThemeDescriptor({ activeThemeName, assignments: themeAssignments, onAssignmentsChange: setThemeAssignments, onThemeLoad: loadThemeFront, onThemeUnload: unloadThemeFront })}
+                    onClose={() => setShowThemeManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showHomepageManagerDialog && <HomepageManagerDialog onClose={() => setShowHomepageManagerDialog(false)} activeHomepageId={activeHomepageId} onActivate={onHomepageActivate} onHomepageLoad={loadHomepageFront} onHomepageUnload={unloadHomepageFront} onRestartRequired={onExtensionRestartRequired} /> }
                 { showDocsManagerDialog && <DocsManagerDialog onClose={() => setShowDocsManagerDialog(false)} /> }
                 { showAiToolsetManagerDialog && <ExtensionManagerDialog descriptor={aiToolsetDescriptor} onClose={() => setShowAiToolsetManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }

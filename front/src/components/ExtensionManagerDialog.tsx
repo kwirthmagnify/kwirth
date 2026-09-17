@@ -237,7 +237,12 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
             ...(d.actions?.(entry, EManagerSection.AVAILABLE) ?? []),
             {
                 icon: installingKey === key ? <CircularProgress size={16} /> : <Download fontSize='small' />,
-                tooltip: already ? 'Already installed — uninstall first' : blocked ?? 'Install',
+                // ⚠️ A una extension de DEV no se le puede decir "desinstala primero": no se desinstala,
+                // se quita de kwirth-dev.json. El consejo generico mandaba al usuario a pulsar una papelera
+                // que esta deshabilitada. Lo traia ThemeManagerDialog y lo hereda el generico al migrarlo.
+                tooltip: isDevInstalled(key) ? 'A dev version is already loaded'
+                    : already ? 'Already installed — uninstall first'
+                        : blocked ?? 'Install',
                 disabled: already || !!blocked || installingKey === key,
                 color: 'primary',
                 onClick: () => installFromCatalog(entry)

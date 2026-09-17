@@ -14,9 +14,6 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
     ...(meta.website ? { website: meta.website } : {})
 , requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? [] }, null, 2))
 
-if (fs.existsSync('preview.png')) {
-    fs.copyFileSync('preview.png', path.join('dist', 'preview.png'))
-}
 
 const frontCtx = await esbuild.context({
     entryPoints: ['src/front/index.ts'],
