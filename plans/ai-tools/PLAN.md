@@ -303,7 +303,33 @@ en las dos, **a sabiendas y anotado aquí**.
 Orden de borrado, cuando toque: primero el cableado de cada plugin, después `tools`, `toolInfoList`,
 `selectAgentToolNames()` y los cuatro lambdas `trace`.
 
-### S4 · Autorización de verdad
+### S4 · Autorización de verdad — DISEÑADO, sin empezar (2026-09-17)
+
+**Decidido con el usuario:**
+
+| Qué | Decisión |
+|---|---|
+| Contra qué se comprueba | **Los scopes que ya existen**, sin taxonomía paralela: `read`→`view`, `write`→`restart`, y `cluster` lo pasa todo (como hace hoy `validAuth`) |
+| Lo sensible (`sensitivity: secret`) | Exige **`cluster`**, es decir admin. **Cero scopes nuevos**: añadir uno luego es trivial, quitar uno ya concedido no |
+| Por qué no scopes propios de IA | Un `ai$write` concedido a quien no tiene `restart` convertiría a la IA en **vía de escalado de privilegios**: podría hacer por el modelo lo que no puede hacer a mano |
+| De dónde sale el namespace | De los **argumentos** de la tool, que es lo que permite "puede borrar en dev pero no en prod" |
+| Sin nadie delante | Ver *Cuentas de servicio*, más abajo: frente propio |
+
+**Rebanadas, en orden:**
+
+1. **S4.1 · Arreglar la evaluación de permisos.** `validAuth` usa `parseResource` (singular): **solo evalúa
+   el PRIMER recurso** de la clave, mientras su hermana `hasScope` los recorre todos. Y comprueba
+   `resId.scopes === 'cluster'` por igualdad exacta, así que `'cluster,view'` no entra por el atajo de
+   admin. 🔴 **Es el camino por el que pasa todo Kwirth** y arreglarlo **amplía permisos**: una clave
+   `view:prod:::;restart:dev:::` hoy no puede reiniciar en dev, y después sí. Correcto, pero hay que verlo
+   en el QA con una clave de varias entradas.
+2. **S4.2 · La identidad llega al invocar.** No hay que inventar transporte: `IInstanceConfig.accessKey` ya
+   viaja en cada comando. Falta llevarla al contexto de tools y dejarla **ausente** cuando la invocación
+   es automática.
+3. **S4.3 · La política en el gancho.** Es donde se aplica la tabla de arriba.
+4. **S4.4 · Sin nadie delante.** Bloqueado por el análisis de cuentas de servicio.
+
+---
 
 El gancho de S2 deja de ser permisivo: identidad y scopes de quien dispara, comprobados **al invocar**, con
 los argumentos delante — que es lo único que permite expresar "puedes borrar un pod en `dev` pero no en
@@ -481,6 +507,44 @@ haya donde aterrizar, no antes.
    - denegar en silencio y documentarlo como paso obligatorio de la actualización.
 
    ⚠️ En dev da igual —el estado se borra—, pero hay Kwirth en producción de clientes con agora y pinocchio.
+
+## Cuentas de servicio — un frente propio, no de este plan (2026-09-17)
+
+Al diseñar S4 apareció la pregunta que el plan no contemplaba: **¿quién autoriza una invocación cuando no
+hay nadie conectado?** Un trigger de pinocchio salta porque un pod cambió; una regla proactiva de Agora,
+porque llegó un evento. No hay usuario, no hay `accessKey`, no hay a quién preguntarle.
+
+La idea del usuario: **dar a los canales que lo necesiten una cuenta de servicio — que en Kwirth no es un
+concepto nuevo, es simplemente una `accessKey`**. Y al mirarlo de cerca, tiene más alcance del que parece:
+
+**1. No es un tema de IA.** Todo lo que corre sin nadie delante tiene el mismo problema: las reglas
+proactivas de Agora, los escaneos de Excubitor, los senders, los webhooks, la federación. Si esto se
+resuelve dentro del plan de tools, se resuelve para una esquina y se reinventa tres veces más.
+
+**2. Media pieza ya existe.** `AccessKey.type` admite `'volatile'` (de sesión), `'permanent'` (persistida)
+y `'bearer:…'`; y una `ApiKey` ya tiene descripción, caducidad (`expire`/`days`) y `enabledChannels`, que
+permite acotarla a un canal. Una cuenta de servicio sería una **permanent con dueño declarado**, validada
+viva contra la lista de keys — y así se hereda revocación y caducidad sin inventar nada.
+
+**3. Lo que hay que decidir, y no es poco:**
+
+- **Dónde se configura**: ¿por canal, por instancia, por versión de trigger? Un mismo canal puede querer
+  identidades distintas para `dev` y para `prod`.
+- **Qué pasa al caducar.** La clave expira a las 3:00 y la automatización se para. ¿En silencio? ¿Avisando
+  a quién?
+- **Qué se audita.** Hoy la traza dice `[pinocchio] tool k8s-describe/get_deployment_yaml`. Con cuenta de
+  servicio tiene que decir **en nombre de quién** se hizo, o no hay forma de responder "¿quién borró ese
+  pod?".
+- 🔴 **Export/import.** La configuración de los plugins se exporta e importa. Si la cuenta de servicio vive
+  dentro de esa configuración, **una credencial viaja en un JSON** entre entornos. Esto hay que cerrarlo
+  antes de escribir una línea.
+- **Federación**: una `accessKey` es de un cluster. Una acción federada necesitaría una por cluster.
+- **Confirmación humana**: aun con cuenta de servicio válida, ¿una tool destructiva se ejecuta sola o pide
+  que alguien diga que sí? (es la segunda mitad de la pregunta abierta 2).
+
+**Estado**: pendiente de análisis propio, fuera de este plan. Hasta que exista, **S4 se puede hacer sin
+ella**: la mitad "hay un usuario delante" es independiente y ya tiene todo lo que necesita — el `accessKey`
+viaja en `IInstanceConfig`, así que la identidad ya llega al canal.
 
 ## Lo que este plan NO hace
 
