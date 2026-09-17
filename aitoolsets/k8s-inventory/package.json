@@ -2,7 +2,7 @@
   "id": "k8s-inventory",
   "name": "@kwirthmagnify/kwirth-aitoolset-k8s-inventory",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "K8s Inventory",
   "description": "Read-only inventory of the Kubernetes cluster: namespaces, nodes, workloads, services and ingresses",
   "type": "module",

@@ -27,9 +27,16 @@ Every tool carries, besides its name and description, two independent pieces of 
 | `effect` | `read` · `write` | Whether the tool only observes, or changes something. |
 | `sensitivity` | `public` · `internal` · `secret` | How dangerous the **result** is, regardless of the effect. |
 
-They are two different axes on purpose, and confusing them is how dangerous tools get treated as harmless:
-reading a Kubernetes **Secret** is a `read` — it changes nothing — and it is still the most sensitive thing a
-tool can do in a cluster. One axis says *what it touches*, the other *what it reveals*.
+They are two different axes on purpose, and confusing them is how dangerous tools get treated as harmless.
+One axis says *what it touches*, the other *what it reveals* — and the real toolsets show how far apart they
+can be:
+
+- Every tool in **K8s Ops** is `write` and **`public`**: deleting a pod changes the cluster and its answer
+  reveals nothing. All the danger is in the effect.
+- **`get_configmap`** is `read` and **`secret`**: it changes nothing and returns the raw values — and a
+  ConfigMap is exactly where credentials end up when somebody skips the Secret.
+- **`get_secret`**, despite the name, is only `internal`: it returns the **keys** and when they last changed.
+  It never returns the values.
 
 The toolset itself also declares **what it needs from the host** (`requires`): cluster access, metrics, events,
 source repositories. kwirth provisions only what is declared, so a toolset that only does arithmetic never
@@ -208,14 +215,28 @@ not the dialog), and disappears when you remove it from `kwirth-dev.json` and re
 
 ## Available toolsets
 
-| Toolset | Tools | What it is for |
-|---|---|---|
-| **K8s Inventory** (`k8s-inventory`) | 8 | Read-only inventory of the cluster: namespaces, nodes, workloads, services, ingresses, and the ConfigMaps/Secrets a Deployment consumes. Needs `K8S`. |
-| **Playground** (`playground`) | 2 | Two harmless toy tools (`times_two`, `father_of`). Needs nothing. Install it to watch the machinery work end to end before writing your own. |
+| Toolset | Tools | Needs | What it is for |
+|---|---|---|---|
+| **K8s Inventory** (`k8s-inventory`) | 7 | `K8S` | What there is: namespaces, nodes, workloads, services, ingresses, and the ConfigMaps/Secrets a Deployment consumes. |
+| **K8s Describe** (`k8s-describe`) | 12 | `K8S` | What is wrong with one object: `describe` and full manifests for pods, controllers, services, ingresses and namespaces, plus the rollout history. |
+| **K8s Observability** (`k8s-observability`) | 3 | `K8S` + `EVENTS` | What happened and what the pod said: recent cluster events and container logs. |
+| **K8s Metrics** (`k8s-metrics`) | 7 | `K8S` + `METRICS` | How much it consumes, now and over the recent readings — cluster, node, deployment or namespace. |
+| **K8s Config & Secrets** (`k8s-secrets`) | 3 | `K8S` | The configuration a workload really consumes: ConfigMap data, Secret keys (never values) and TLS certificate details. |
+| **K8s Ops** (`k8s-ops`) | 8 | `K8S` | 🔴 **The write operations**: scale, restart, delete a pod, manage nodes. Every tool here changes the cluster. |
+| **Source Repos** (`source-repos`) | 1 | `REPOS` | Reads a source file from GitHub or GitLab at a given revision, to inspect the code actually running. |
+| **Playground** (`playground`) | 2 | *(nothing)* | Two harmless toy tools (`times_two`, `father_of`). Install it to watch the machinery work end to end before writing your own. |
 
-`k8s-inventory` is also the worked example to read when writing one: every tool is `read`, and one of them —
-the one that lists the **Secrets** a Deployment consumes — is `read` but `internal`, which is exactly why
-effect and sensitivity are two separate fields.
+Together they are the 43 tools kwirth has always had, now split so they can be granted separately. Two of
+them deserve a second look before you hand them out:
+
+- **K8s Ops is exactly the write set.** Denying a channel this toolset denies it *all* writing, in one move,
+  without depending on anyone getting a per-tool flag right.
+- **Source Repos is the only one that talks outside the cluster** and the only one that needs credentials of
+  its own — which is why it declares `REPOS` and nothing else does.
+
+> **Where to start reading.** `k8s-inventory` is the worked example for writing your own: every tool is
+> `read`, the package is small, and one of them (`get_workload_config_refs`) is `read` but `internal`,
+> which shows why effect and sensitivity are separate fields.
 
 ---
 

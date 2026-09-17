@@ -232,15 +232,50 @@ Decisiones que quedaron fijadas aquí:
 - **Un toolset asignado que no está instalado se reporta** (`missing`), no se ignora.
 
 ⚠️ **Lo que S2 NO hace**: no toca ningún plugin. Quien rellena hoy la lista ordenada es `autoTools`; que un
-admin elija cuáles y en qué orden es **S5**, y el editor donde se ve el tapado es **S8**.
+admin elija cuáles y en qué orden es **S5**, y el editor donde se ve el tapado es **S5**.
 
-### S3 · Las 43, empaquetadas en ocho `aitoolset`
+### S3 · Las 43, empaquetadas en ocho `aitoolset` — ✅ CERRADO (CL9 2026-09-17)
 
 Los ocho toolsets se publican como **paquetes**, cada uno con su versión, su harness y su CL9. Al acabar,
 Kwirth se comporta igual que hoy y mueren `toolInfoList`, `selectAgentToolNames()` y los cuatro lambdas
 `trace`.
 
-Hecho: `k8s-inventory` (8) y `playground` (2). Quedan **6 paquetes / 33 tools**.
+**Hecho, los ocho.** Seis públicos en npm y **dos privados** en el Nexus (`@iriaoperae`), por decisión del
+usuario: `k8s-ops` porque son las ocho de escritura, y `source-repos` porque lee código fuente.
+
+| Toolset | Tools | Registro |
+|---|---|---|
+| `k8s-inventory` 0.2.0 | 7 | npm público |
+| `k8s-describe` 0.2.0 | 12 | npm público |
+| `k8s-observability` 0.1.0 | 3 | npm público |
+| `k8s-metrics` 0.1.0 | 7 | npm público |
+| `k8s-secrets` 0.1.0 | 3 | npm público |
+| `k8s-ops` 0.1.0 | 8 | 🔒 Nexus `@iriaoperae` |
+| `source-repos` 0.1.0 | 1 | 🔒 Nexus `@iriaoperae` |
+| `playground` 0.1.0 | 2 | npm público |
+
+**Pinocchio es el primer cliente**: mueren en su back `toolInfoList`, el catálogo `tools` y los cuatro
+lambdas de traza; en su sitio, `buildAgentTools` + el gancho `observe`. Declara en `requiresExtension` los
+cinco toolsets de lectura — ni `k8s-ops` ni `source-repos`, que se instalan y activan a mano.
+
+#### Lo que corrigió el QA (2026-09-17)
+
+1. **`get_space_data` estaba en el paquete equivocado** (lo cazó el usuario). Describe UN namespace, así que
+   es de `k8s-describe`. La pista estaba a la vista: su pareja `get_namespace_yaml` ya vivía allí.
+2. **`get_secret` NO devuelve los valores**, solo las claves — es deliberado y viene de las 43 originales.
+   El que devuelve datos en crudo es `get_configmap`, y un ConfigMap es donde acaban las contraseñas de
+   quien no quiso usar un Secret. La sensibilidad va al revés de lo que decía este plan: `get_configmap` es
+   `SECRET`, `get_secret` es `INTERNAL`.
+3. 🔴 **`dynamicTool` cambiaba el comportamiento.** En el SDK, `tool(t) => t` (solo tipos) pero
+   `dynamicTool(t) => {...t, type:'dynamic'}` (marca en runtime). Lo use en S2 para esquivar una fricción de
+   tipos, y con `Output.object` la invocación acababa en `AI_NoOutputGeneratedError`: la tool se ejecuta,
+   devuelve, y la respuesta estructurada no llega. Ahora se construye un objeto plano, con un test que lo fija.
+4. 🔴 **Tools + salida estructurada no funcionan juntas en Google.** El proveedor manda `responseSchema`
+   junto a las `functionDeclarations` y Gemini se queda sin generar respuesta. **No es de S3** —el camino
+   viejo hacía lo mismo— pero nunca se había dado, porque esa versión no tenía tools activas. Se arregla en
+   pinocchio con el patrón que ya usaba su Playground: **fase 1 con tools y texto libre, fase 2 sin tools con
+   el esquema**. ⚠️ Cuando se cablee el segundo plugin, ese patrón debe subir a `common-ai` en vez de
+   copiarse.
 
 **Riesgo**: el de toda migración masiva — una errata en un `name` rompe una tool en silencio. Lo cubren el
 harness de cada paquete (el de `k8s-inventory` fija nombres, efecto y sensibilidad) y `tsc`.
@@ -248,6 +283,25 @@ harness de cada paquete (el de `k8s-inventory` fija nombres, efecto y sensibilid
 ⚠️ **Y uno nuevo que trae el empaquetado**: si los toolsets no viajan en la imagen, un Kwirth sin red se
 queda sin tools. Por eso la decisión de 2026-09-17 incluye **bundled** para los que deban estar siempre, y
 `requiresExtension` para el resto.
+
+#### Cuándo se borran las 43 de `common-ai` (2026-09-17)
+
+**No se borran al empaquetarlas.** El camino viejo se mantiene hasta que los plugins estén cableados al
+nuevo; borrar antes dejaría a pinocchio, censor y compañía sin tools en cuanto se publique el primer
+paquete.
+
+🔴 **Mientras tanto, las 43 quedan CONGELADAS.** Una tool migrada existe dos veces —en `common-ai` y en su
+paquete— y esa ventana solo es segura si nadie toca la copia vieja:
+
+- Un arreglo o una mejora va **solo al paquete**.
+- Si se parchean las dos, divergen y nadie sabrá cuál es la buena.
+- Si se parchea solo la vieja, el arreglo se tira a la basura el día que se borre.
+
+La única excepción es un fallo grave en producción que no pueda esperar al cableado; y entonces se arregla
+en las dos, **a sabiendas y anotado aquí**.
+
+Orden de borrado, cuando toque: primero el cableado de cada plugin, después `tools`, `toolInfoList`,
+`selectAgentToolNames()` y los cuatro lambdas `trace`.
 
 ### S4 · Autorización de verdad
 
@@ -286,6 +340,19 @@ El camino único de invocación emite registros con duración, resultado y error
 pasar lambdas.
 
 ### S7 · Coste en tokens
+
+📌 **Medido en el QA de S3 (2026-09-17), con datos reales de un cluster en uso:**
+
+- **Arrancar UN pod dispara ~10 análisis completos.** Cada evento de k8s (`ADDED` + varios `MODIFIED` +
+  `DELETED`) dispara el trigger, y además **por cada versión habilitada**. Medido: ~7.000 tokens de entrada
+  y ~2.500 de salida por análisis → unos **95.000 tokens por arranque de pod**.
+- **`Auto` manda las 32 definiciones de tools en cada análisis**, y en el caso medido el modelo **no llamó a
+  ninguna**: el prompt del trigger ya lleva el manifest dentro, así que no necesita preguntar nada.
+- **Con tools activas se pagan DOS llamadas** (fases 1 y 2), no una.
+
+Es decir: `Auto` en un trigger que se dispara con cada evento es caro y, según el prompt, puede no aportar
+nada. Donde `Auto` gana es cuando el prompt NO trae los datos y el modelo tiene que ir a buscarlos. Esto es
+munición directa para este stream: el techo por plugin (S5) es lo que permite acotarlo.
 
 Medir cuánto cuesta el catálogo completo frente a un toolset — cada tool entra en **cada** paso del agente,
 y `stopWhen: stepCountIs(15)` multiplica. Con el dato, decidir. **Sin la medida no se decide nada.**
@@ -345,7 +412,7 @@ asignados: [ts1, ts2]   apagada: ts1/td
 efectivas: ta tb tc  td(ts2)  tf tg        ← aflora la de ts2
 ```
 
-🔴 **Todo esto tiene que VERSE en el editor** (S8) — es la parte que el usuario marcó como importante, y sin
+🔴 **Todo esto tiene que VERSE en el editor** (S5) — es la parte que el usuario marcó como importante, y sin
 ella la precedencia es una trampa:
 
 - Una tool tapada se muestra **marcada como tapada, y por quién**. Si no, el admin apaga `ts2/td` creyendo

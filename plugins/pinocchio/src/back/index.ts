@@ -2,9 +2,10 @@ import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKey
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
-import { buildModel, loadModels, IToolContext, tools as kwirthTools, toolInfoList, runWithToolContext } from '@kwirthmagnify/kwirth-common-ai/back'
+import { buildModel, loadModels, IToolContext, buildAgentTools, listToolsets, resolveTools } from '@kwirthmagnify/kwirth-common-ai/back'
+import { IToolsetConfig } from '@kwirthmagnify/kwirth-common-ai'
 import { Request, Response } from 'express'
-import { generateText, Output, stepCountIs, z } from '@kwirthmagnify/kwirth-common-ai/back'
+import { generateText, Output, stepCountIs, z, LanguageModel, ToolSet } from '@kwirthmagnify/kwirth-common-ai/back'
 
 const _ = require('lodash')
 const nunjucks = require('nunjucks')
@@ -45,6 +46,9 @@ interface IModelInvocation {
     tools: any
     toolContext: IToolContext
 }
+
+/** Tope de lo que se vuelca de un resultado de tool en la traza. */
+const TRAZA_MAX = 400
 
 export class PinocchioChannel {
     readonly channelId = 'pinocchio'
@@ -131,6 +135,93 @@ export class PinocchioChannel {
         return ['', 'none', 'cluster'].indexOf(scope)
     }
 
+    /**
+     * El techo de tools de una version, en el modelo del registro.
+     *
+     * ⚠️ `version.tools` guarda nombres CORTOS ('get_pod_logs'), que es lo que hay persistido en las
+     * configuraciones de los clientes. Aqui se traducen a config de toolsets SIN tocar lo guardado: se
+     * activan los toolsets que aportan alguna de las elegidas y se apagan el resto de sus tools. Migrar
+     * lo persistido a referencias cualificadas es de S5, cuando exista el editor.
+     */
+    toolsetConfig = (version: IConfigTriggerVersion): IToolsetConfig => {
+        if (version.autoTools) return { activeToolsets: listToolsets().map(t => t.id), disabledTools: [] }
+
+        const elegidas = new Set(version.tools ?? [])
+        const activeToolsets: string[] = []
+        const disabledTools: string[] = []
+        for (const toolset of listToolsets()) {
+            if (!toolset.tools.some(t => elegidas.has(t.name))) continue
+            activeToolsets.push(toolset.id)
+            for (const t of toolset.tools) {
+                if (!elegidas.has(t.name)) disabledTools.push(`${toolset.id}/${t.name}`)
+            }
+        }
+        return { activeToolsets, disabledTools }
+    }
+
+    /**
+     * Genera una salida ESTRUCTURADA pudiendo usar tools.
+     *
+     * ⚠️ No se puede pedir tools y esquema de respuesta en la MISMA llamada: el proveedor de Google manda
+     * `responseSchema` junto a las `functionDeclarations`, y entonces la tool se ejecuta, devuelve, y la
+     * respuesta estructurada no llega nunca — `AI_NoOutputGeneratedError`. Se destapo al activar `Auto`
+     * en un trigger (QA de S3, 2026-09-17); antes ninguna version con tools usaba salida estructurada.
+     *
+     * El propio Playground de este canal ya sorteaba lo mismo con dos fases. Aqui se hace igual, pero
+     * cerrando con el esquema:
+     *
+     *   fase 1 — CON tools, texto libre: el modelo recoge lo que necesite del cluster
+     *   fase 2 — SIN tools, con `Output.object`: redacta el JSON a partir de lo recogido
+     *
+     * Sin tools se hace UNA sola llamada, como siempre: la segunda fase solo se paga cuando hace falta.
+     */
+    generateStructured = async <T>(params: {
+        model: LanguageModel,
+        temperature: number,
+        providerOptions: Record<string, unknown>,
+        system: string,
+        prompt: string,
+        tools: ToolSet,
+        steps: number,
+        schema: z.ZodType<T>
+    }): Promise<{ output: T, usage: { inputTokens?: number, outputTokens?: number } }> => {
+        const { model, temperature, system, prompt, tools, steps, schema } = params
+        const output = Output.object({ schema }) as never
+        // El canal construye providerOptions como Record<string, unknown> (lo hace en buildModelInvocation
+        // y viene de antes); el SDK pide JSONObject. Un solo casteo aqui, en vez de uno en cada llamada.
+        const providerOptions = params.providerOptions as never
+
+        if (Object.keys(tools ?? {}).length === 0) {
+            const solo = await generateText({ model, temperature, providerOptions, output, system, prompt })
+            return { output: solo.output as T, usage: solo.usage }
+        }
+
+        const fase1 = await generateText({ model, temperature, providerOptions, tools, stopWhen: stepCountIs(steps), system, prompt })
+
+        const recogido: string[] = []
+        for (const step of fase1.steps) {
+            for (const r of (step as unknown as { toolResults?: { toolName: string, output: unknown }[] }).toolResults ?? []) {
+                recogido.push(`${r.toolName}: ${JSON.stringify(r.output)}`)
+            }
+        }
+        this.backChannelObject.logTrace?.(`[pinocchio] fase 1: ${fase1.steps.length} paso(s), ${recogido.length} resultado(s) de tool -> fase 2 sin tools`)
+
+        // Lo recogido va al prompt de la fase 2. Si el modelo no llamo a nada pero dijo algo, se usa su
+        // texto: tirarlo obligaria a rehacer el analisis desde cero.
+        const promptFinal = recogido.length > 0
+            ? `${prompt}\n\nInformation gathered from tools:\n${recogido.join('\n')}`
+            : (fase1.text ? `${prompt}\n\nPreliminary analysis:\n${fase1.text}` : prompt)
+
+        const fase2 = await generateText({ model, temperature, providerOptions, output, system, prompt: promptFinal })
+        return {
+            output: fase2.output as T,
+            usage: {
+                inputTokens: (fase1.usage.inputTokens ?? 0) + (fase2.usage.inputTokens ?? 0),
+                outputTokens: (fase1.usage.outputTokens ?? 0) + (fase2.usage.outputTokens ?? 0)
+            }
+        }
+    }
+
     buildModelInvocation = async (trigger: IConfigTrigger, version: IConfigTriggerVersion, event: IEventsProviderEvent|IBusinessProviderEvent|unknown) : Promise<IModelInvocation|undefined> => {
         let prompt
         let llm = this.pinocchioConfig.llms.find(l => l.id === version.llm)
@@ -187,15 +278,30 @@ export class PinocchioChannel {
             clusterMetrics: this.clusterMetrics,
             trace: (toolName, args) => this.backChannelObject.logTrace?.(`[pinocchio] tool ${toolName} ${JSON.stringify(args)}`)
         }
-        const toolNames = version.autoTools ? toolInfoList.map(t => t.name) : (version.tools ?? [])
-        const tools = Object.fromEntries(toolNames.filter(n => n in kwirthTools).map(n => {
-            const t = (kwirthTools as any)[n]
-            return [n, { ...t, execute: async (args: any, opts: any) => {
-                const result = await t.execute(args, opts)
-                this.backChannelObject.logTrace?.(`[pinocchio] tool ${n} response: ${JSON.stringify(result)}`)
-                return result
-            }}]
-        }))
+        // Las tools ya no se cogen de common-ai: salen del REGISTRO de toolsets (plan S2/S3). Pinocchio
+        // dice que quiere y el core resuelve precedencia, apagadas y capacidades.
+        //
+        // `autoTools` sigue significando lo mismo que hasta ahora —partir de todo lo disponible— solo que
+        // "todo" es ahora "todos los toolsets instalados", no las 43 compiladas dentro del core.
+        const techo = this.toolsetConfig(version)
+        const tools = buildAgentTools(techo, toolContext, {
+            // Lo que antes hacia un lambda envolviendo cada execute. La traza ahora lleva la referencia
+            // CUALIFICADA: con precedencia, el nombre corto no dice que codigo corrio.
+            observe: (invocation, outcome) => {
+                // El resultado se RECORTA en la traza: un get_*_yaml vuelca el manifest entero con sus
+                // managedFields y deja el log inservible. Al modelo le llega completo; aqui solo el
+                // principio, que es para lo que sirve una traza — ver que se llamo y que devolvio algo.
+                const bruto = outcome.ok ? JSON.stringify(outcome.result) : `ERROR ${outcome.error}`
+                const detalle = bruto.length > TRAZA_MAX ? `${bruto.slice(0, TRAZA_MAX)}… (${bruto.length} chars)` : bruto
+                this.backChannelObject.logTrace?.(`[pinocchio] tool ${invocation.ref} (${outcome.ms}ms) ${detalle}`)
+            }
+        })
+
+        // Traza de diagnostico: sin esto, "el modelo no llamo a ninguna tool" y "no le ofrecimos
+        // ninguna" se ven exactamente igual — que es justo lo que despisto en el QA de S3.
+        // Con el trigger y la version delante no hay que adivinar CUAL de las versiones habilitadas es la
+        // que se esta resolviendo, que es lo que confundio el QA: varias versiones, y solo una tocada.
+        this.backChannelObject.logTrace?.(`[pinocchio] ${trigger.id}/${version.id}: auto=${!!version.autoTools} marcadas=${version.tools?.length ?? 0} -> toolsets [${techo.activeToolsets.join(', ') || 'ninguno'}] = ${Object.keys(tools).length} tools ofrecidas`)
 
         let providerOptions: Record<string, unknown> = {}
         let errorPath = ''
@@ -251,20 +357,18 @@ export class PinocchioChannel {
                         if (!model) return
 
                         this.broadcastMessage(`Received business event ${JSON.stringify(businessEvent.last.event)}`)
-                        const { output, usage, steps } = await runWithToolContext(toolContext!, () => generateText({
+                        const { output } = await this.generateStructured({
                             model,
-                            temperature,
-                            stopWhen: stepCountIs(version.steps || 15),
-                            tools,
-                            providerOptions,
-                            output: Output.object({
-                                schema: z.object({
-                                    response: z.string().describe('response to the question'),
-                                }),
+                            temperature: temperature ?? 0,
+                            providerOptions: providerOptions ?? {},
+                            tools: tools ?? {},
+                            steps: version.steps || 15,
+                            schema: z.object({
+                                response: z.string().describe('response to the question'),
                             }),
                             system: "Use the tools provided to find information, and once you have the data, format your final response strictly as a JSON object according to the schema.",
                             prompt: prompt||'Hi AI, how are you?',
-                        }))
+                        })
                         this.broadcastMessage(JSON.stringify(output.response))
                     }
                     catch (err:any) {
@@ -300,14 +404,13 @@ export class PinocchioChannel {
                             if (!model) return
 
                             try {
-                                const { output, usage } = await runWithToolContext(toolContext!, () => generateText({
+                                const { output, usage } = await this.generateStructured({
                                     model,
-                                    temperature,
-                                    stopWhen: stepCountIs(version.steps || 15),
-                                    tools,
-                                    providerOptions,
-                                    output: Output.object({
-                                        schema: z.object({
+                                    temperature: temperature ?? 0,
+                                    providerOptions: providerOptions ?? {},
+                                    tools: tools ?? {},
+                                    steps: version.steps || 15,
+                                    schema: z.object({
                                             resource: z.object({
                                                 kind:z.string(),
                                                 name:z.string(),
@@ -343,11 +446,10 @@ export class PinocchioChannel {
                                                 })
                                             ),
                                             hardened_yaml: z.string().min(1)
-                                        }),
                                     }),
                                     system: system||'You are a very polite AI system',
                                     prompt: prompt||'Hi AI, how are you?',
-                                }))
+                                })
 
                                 let analysis:IAnalysis = {
                                     text: `${eventsEvent.type} ${eventsEvent.obj.kind} '${eventsEvent.obj.metadata.name}' in namespace '${eventsEvent.obj.metadata.namespace}' [LLM:${llmProviderId}/${llmModelId}, IN:${usage.inputTokens}, OUT:${usage.outputTokens}]`,
@@ -448,7 +550,10 @@ export class PinocchioChannel {
                         flow: EInstanceMessageFlow.RESPONSE,
                         type: EInstanceMessageType.DATA,
                         instance: instance.instanceId,
-                        toolsAvailable: toolInfoList
+                        // Del registro, y ya resueltas: si dos toolsets traen el mismo nombre, el
+                        // selector debe ofrecer la que de verdad se ejecutaria, no las dos.
+                        toolsAvailable: resolveTools({ activeToolsets: listToolsets().map(t => t.id), disabledTools: [] })
+                            .effective.map(e => ({ name: e.name, description: e.tool.description, effect: e.tool.effect }))
                     }
                     webSocket.send(JSON.stringify(msgToolsAvailable))
                     break
@@ -537,7 +642,7 @@ export class PinocchioChannel {
                 activeTools = Object.fromEntries(selectedNames.map(n => [n, tools[n]]))
             }
 
-            const { text: phase1Text, usage: usage1, steps } = await runWithToolContext(toolContext!, () => generateText({
+            const { text: phase1Text, usage: usage1, steps } = await generateText({
                 model,
                 temperature,
                 stopWhen: stepCountIs(version.steps || 15),
@@ -545,7 +650,7 @@ export class PinocchioChannel {
                 providerOptions,
                 system: version.system || 'You are a helpful assistant.',
                 prompt: effectivePrompt
-            }))
+            })
 
             const toolLines: string[] = []
             for (const step of steps) {

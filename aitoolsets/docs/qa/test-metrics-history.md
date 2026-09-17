@@ -1,0 +1,26 @@
+# AI toolsets — histórico de métricas de test
+
+> Registro **incremental** de la suite de tests de los `aitoolset`, una fila por **CL9 / cierre de
+> stream**. Se **añade** una fila arriba en cada cierre (punto 2 de la checklist CL9); **no se
+> sobrescribe**.
+>
+> ⚠️ **Un histórico para toda la familia, no uno por paquete.** La regla general es que cada extensión
+> lleve el suyo en `<ext>/docs/qa/`, y aquí se hace una excepción a conciencia: los ocho toolsets son
+> **un solo entregable** (el reparto de las 43), se construyen y se cierran juntos, y siete ficheros con
+> una fila cada uno no dirían más que esta tabla — dirían lo mismo, siete veces. Si algún toolset toma
+> vida propia (versiones sueltas, su propio ciclo), se le saca su histórico entonces.
+>
+> **Cómo se obtiene cada dato:**
+> - **Harness** = suma de `npm test` en cada `aitoolsets/<toolset>/`. Corren contra el `dist` construido
+>   —lo mismo que carga el core— con clientes de Kubernetes **falsos**: la suite tiene que pasar en una
+>   máquina sin cluster.
+> - **Cobertura** = `node --test --experimental-test-coverage` sobre el `dist/back.js` de cada paquete.
+> - **e2e** = no tienen e2e propio: no pintan UI. Lo que se ve en pantalla lo cubre el core
+>   (`aitoolsets-manager.spec.ts` para el gestor, `pinocchio-toolsets.spec.ts` para el consumo).
+> - ⚠️ **La llamada real al cluster NO está en el harness**, a propósito: la prueba `node verify.mjs` de
+>   cada paquete de lectura, a mano. **`k8s-ops` no tiene `verify.mjs`** y no es un olvido: verificarlo
+>   contra un cluster de verdad significaría borrar pods y parar nodos.
+
+| Fecha | Cierre | Harness | Paquetes | verify.mjs | Notas |
+|---|---|---|---|---|---|
+| 2026-09-17 | S3: las 43 repartidas en ocho paquetes | **98** ✅ | 8 publicados (6 públicos + 2 privados) | inventory **8/8**, observability **3/3**, describe **12/12** contra k3d-kwirth | Reparto: `k8s-inventory` 7 · `k8s-describe` 12 · `k8s-observability` 3 · `k8s-metrics` 7 · `k8s-secrets` 3 · `k8s-ops` 8 · `source-repos` 1 · `playground` 2 = **43**. Todos escritos contra el contrato nuevo (`execute(args, host)`), con `defineTool` infiriendo los argumentos desde el propio esquema — sin eso, 30 tools serían 30 sitios con `String(args.namespace)` donde el compilador no ayuda. **`k8s-ops` y `source-repos` son PRIVADOS** (Nexus, scope `@iriaoperae`); el resto, npm público. ⚠️ Dos correcciones sobre lo que decía el plan: **`get_space_data` estaba en el paquete equivocado** (lo cazó el usuario) — describe UN namespace, así que es de `k8s-describe`, no de `k8s-inventory`; y **`get_secret` NO devuelve los valores**, solo las claves, así que el sensible de verdad es `get_configmap`, que sí devuelve los datos en crudo. ⚠️ Gotcha caro: un toolset construido contra un `common-ai` **más nuevo que el que sirve el core** no carga (`defineTool is not a function`), y el síntoma es una tarjeta instalada **sin contador de tools** — que es justo lo que la decisión de sacar el `toolCount` del registro venía a enseñar. |

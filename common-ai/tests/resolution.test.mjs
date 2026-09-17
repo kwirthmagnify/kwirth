@@ -270,3 +270,23 @@ test('una tool escrita contra el contrato VIEJO tambien funciona por este camino
 
     limpiar('viejo-ts')
 })
+
+// ── como se le entregan las tools al SDK ─────────────────────────────────────────────────────────────
+
+test('🔴 las tools que se le pasan al SDK NO son dinamicas', async () => {
+    // Parece un detalle y no lo es. En el SDK:
+    //     tool(t)        => t                          (solo ayuda de tipos)
+    //     dynamicTool(t) => { ...t, type: 'dynamic' }  (marca la tool en RUNTIME)
+    // Una tool marcada como dinamica se trata por otro camino y, combinada con Output.object, la
+    // invocacion acaba en AI_NoOutputGeneratedError: la tool se ejecuta, devuelve, y la respuesta
+    // estructurada nunca llega. Lo detecto el QA de S3 con pinocchio, que usa salida estructurada.
+    registerToolset({ ...fakeToolset('sdk-ts'), tools: [fakeTool('plana')] })
+
+    const tools = buildAgentTools({ activeToolsets: ['sdk-ts'], disabledTools: [] }, fakeContext())
+
+    assert.equal(tools.plana.type, undefined, "la tool no debe llevar marca 'dynamic'")
+    assert.equal(typeof tools.plana.execute, 'function')
+    assert.ok(tools.plana.inputSchema, 'el esquema tiene que viajar tal cual')
+
+    limpiar('sdk-ts')
+})

@@ -1,0 +1,27 @@
+{
+  "id": "k8s-metrics",
+  "name": "@kwirthmagnify/kwirth-aitoolset-k8s-metrics",
+  "publisher": "@kwirthmagnify",
+  "version": "0.1.0",
+  "displayName": "K8s Metrics",
+  "description": "Resource usage of the cluster, its nodes, a deployment or a namespace, now and over the recent readings",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.58"
+  },
+  "devDependencies": {
+    "@kubernetes/client-node": "^1.4.0",
+    "@types/node": "^20.12.13",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.4.0"
+  },
+  "requiresRestart": false,
+  "requiresExtension": []
+}

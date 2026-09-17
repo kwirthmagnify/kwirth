@@ -1,4 +1,4 @@
-import { ILlm, ILlmModel, ILlmProvider, IAgent, ECapability, EToolEffect, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, parseToolRef, toolRef } from './index'
+import { ILlm, ILlmModel, ILlmProvider, IAgent, ECapability, EToolEffect, EToolSensitivity, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, parseToolRef, toolRef } from './index'
 // Solo TIPOS: se borran al compilar, asi que common-ai no arrastra el cliente de Kubernetes (~6,6 MB) a
 // ningun bundle. Por eso @kubernetes/client-node es peer opcional y no dependencia.
 import type { AppsV1Api, CoreV1Api, NetworkingV1Api } from '@kubernetes/client-node'
@@ -8,7 +8,7 @@ interface ILogChannel {
     logWarning?: (msg: string) => void
     logError?: (msg: string) => void
 }
-import { LanguageModel, tool, dynamicTool, ToolSet, generateText, stepCountIs, Output } from 'ai'
+import { LanguageModel, tool, Tool, ToolSet, generateText, stepCountIs, Output } from 'ai'
 import { z } from 'zod'
 import { AsyncLocalStorage } from 'async_hooks'
 import { exec } from 'child_process'
@@ -242,7 +242,10 @@ const inferZod = (value: unknown): z.ZodTypeAny => {
 }
 
 // Re-export AI SDK symbols so plugins can use them without bundling the SDK
+// Se re-exportan tambien los TIPOS que necesita quien escriba un helper alrededor de generateText: sin
+// LanguageModel y ToolSet, un plugin no puede tipar sus propias funciones y acaba con 'any'.
 export { generateText, Output, stepCountIs, tool } from 'ai'
+export type { LanguageModel, ToolSet } from 'ai'
 export { z } from 'zod'
 
 export const zodFromExample = (example: Record<string, unknown>): z.ZodObject<Record<string, z.ZodTypeAny>> => {
@@ -436,16 +439,64 @@ export interface IK8sCapability {
     networkApi: NetworkingV1Api
 }
 
+// Una muestra de metricas, tal y como la ve una tool. Es una FACHADA del modelo del core
+// (back/src/providers/metrics/IMetricsModel.ts), no una copia: se tipan los campos que se prestan y punto.
+// El modelo real trae ademas swap, filesystem, interfaces de red, procesos y los mapas de metricas
+// crudas; ampliar esto es una decision consciente, igual que con el cluster.
+
+export interface IMetricsPodSample {
+    podRef?: { name?: string, namespace?: string }
+    cpu?: { usageNanoCores?: number }
+    memory?: { workingSetBytes?: number }
+}
+
+export interface IMetricsNodeSample {
+    name?: string
+    timestamp?: number
+    summary?: {
+        cpu?: { usageNanoCores?: number }
+        memory?: { workingSetBytes?: number }
+        network?: { rxBytes?: number, txBytes?: number }
+        pods?: IMetricsPodSample[]
+    }
+}
+
+export interface IMetricsSample {
+    /** Segundos entre lecturas. Sin esto, una serie de numeros no dice a que ritmo pasa el tiempo. */
+    metricsInterval?: number
+    cluster: {
+        vcpus: number
+        memory: number
+        /** Porcentajes, 0-100. */
+        cpuUsage: number
+        memoryUsage: number
+        txmbps: number
+        rxmbps: number
+    }
+    nodes: IMetricsNodeSample[]
+}
+
 /** Metricas del cluster (`ECapability.METRICS`). */
 export interface IMetricsCapability {
-    /** Muestras de metricas que el core mantiene en memoria. */
-    samples: unknown[]
+    /** Muestras que el core mantiene en memoria. La mas reciente, al final. */
+    samples: IMetricsSample[]
+}
+
+/**
+ * Un elemento del buffer de eventos del core: el tipo de cambio y el objeto tal y como vino de la API.
+ * `obj` se deja generico a proposito —ahi caben Events de kube y objetos de cualquier kind— pero tipado
+ * como objeto, no como `any`: quien lo lea tiene que mirar el `kind` antes de creerse nada.
+ */
+export interface IClusterEvent {
+    /** ADDED | MODIFIED | DELETED para cambios de objeto; los Event de kube tambien viajan aqui. */
+    type?: string
+    obj?: Record<string, any>
 }
 
 /** Eventos recientes del cluster (`ECapability.EVENTS`). */
 export interface IEventsCapability {
-    /** Buffer de eventos ({type, obj}) que el core va acumulando. */
-    recent: unknown[]
+    /** Buffer que el core va acumulando. El mas reciente, al final. */
+    recent: IClusterEvent[]
 }
 
 /** Credenciales de repositorios fuente (`ECapability.REPOS`). */
@@ -476,6 +527,25 @@ export interface IAiTool extends IAiToolInfo {
 export interface IAiToolset extends Omit<IAiToolsetInfo, 'tools'> {
     tools: IAiTool[]
 }
+
+/**
+ * Declara una tool infiriendo el tipo de sus argumentos DESDE su propio `inputSchema`.
+ *
+ * Sin esto, `execute` recibe `Record<string, unknown>` y cada tool acaba llena de `String(args.namespace)`
+ * y castings sueltos: treinta tools asi son treinta sitios donde equivocarse en silencio, y el compilador
+ * no puede ayudar. Con esto, el esquema es la unica fuente de verdad y `args` viene tipado.
+ *
+ * El registro sigue guardando el tipo suelto (`IAiTool`): quien lo invoca no conoce el esquema, y ahi la
+ * comprobacion la hace zod en tiempo de ejecucion, como debe ser.
+ */
+export const defineTool = <S extends z.ZodTypeAny>(definition: {
+    name: string
+    description: string
+    effect: EToolEffect
+    sensitivity: EToolSensitivity
+    inputSchema: S
+    execute: (args: z.infer<S>, host: IToolHost) => Promise<unknown>
+}): IAiTool => definition as unknown as IAiTool
 
 const toolsetRegistry = new Map<string, IAiToolset>()
 
@@ -545,8 +615,8 @@ export const buildToolHost = (requires: ECapability[], context: IToolContext): I
             networkApi: ci.networkApi
         }
     }
-    if (requires.includes(ECapability.METRICS)) host.metrics = { samples: context.clusterMetrics ?? [] }
-    if (requires.includes(ECapability.EVENTS)) host.events = { recent: context.clusterEvents ?? [] }
+    if (requires.includes(ECapability.METRICS)) host.metrics = { samples: (context.clusterMetrics ?? []) as IMetricsSample[] }
+    if (requires.includes(ECapability.EVENTS)) host.events = { recent: (context.clusterEvents ?? []) as IClusterEvent[] }
     if (requires.includes(ECapability.REPOS)) host.repos = { creds: context.sourceRepos ?? [] }
     return host
 }
@@ -691,9 +761,15 @@ export const buildAgentTools = (
         const invocationOf = (args: Record<string, unknown>): IToolInvocation =>
             ({ ref: e.ref, toolsetId: e.toolsetId, toolName: e.name, args })
 
-        // `dynamicTool` y no `tool`: el esquema de una tool empaquetada no se conoce en compilacion, y el
-        // helper tipado infiere `never` para un ZodTypeAny generico.
-        return [e.name, dynamicTool({
+        // ⚠️ Un objeto PLANO, no `dynamicTool`. Parece equivalente y no lo es:
+        //     tool(t)        => t                            (solo ayuda de tipos, no toca nada)
+        //     dynamicTool(t) => { ...t, type: 'dynamic' }     (marca la tool en RUNTIME)
+        // Una tool marcada como dinamica la trata el SDK por otro camino, y con `Output.object` la
+        // ejecucion acaba en AI_NoOutputGeneratedError: la tool corre, devuelve, y la respuesta
+        // estructurada no se genera. Se uso `dynamicTool` para esquivar una friccion de tipos —el helper
+        // `tool()` infiere `never` con un ZodTypeAny generico— y el precio fue cambiar el comportamiento.
+        // El casteo es la forma honesta: lo que el SDK necesita es exactamente este objeto.
+        return [e.name, {
             description: e.tool.description,
             inputSchema: e.tool.inputSchema,
             execute: async (rawArgs: unknown) => {
@@ -725,7 +801,7 @@ export const buildAgentTools = (
                     return { error: message }
                 }
             }
-        })] as const
+        } as unknown as Tool] as const
     })
     return Object.fromEntries(entries)
 }

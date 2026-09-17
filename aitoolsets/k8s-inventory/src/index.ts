@@ -10,7 +10,10 @@ import { ECapability, EToolEffect, EToolSensitivity } from '@kwirthmagnify/kwirt
     `sensitivity` estan bien planteados: no piden nada al host, no leen nada y no distinguen un `read`
     inocuo de uno peligroso. Estas ocho si.
 
-    Son copias PROPIAS de ocho de las 43 que hay en common-ai, que NO se tocan: viven por el camino viejo
+    ⚠️ `get_space_data` estuvo aquí hasta el 2026-09-17 y se movió a `k8s-describe`: describe UN namespace,
+    y eso es lo que hace aquel paquete, no este. Aquí se responde "qué hay", allí "qué le pasa a esto".
+
+    Son copias PROPIAS de siete de las 43 que hay en common-ai, que NO se tocan: viven por el camino viejo
     (`ctx()` sobre AsyncLocalStorage) hasta S3. Aqui se escriben contra el contrato nuevo —lo que recibe
     cada tool es un `IToolHost` con SOLO lo declarado en `requires`— que es lo que hay que validar antes
     de congelarlo.
@@ -80,7 +83,7 @@ const nsFilter = (namespace: unknown): string | undefined =>
 
 const k8sInventory: IAiToolset = {
     id: 'k8s-inventory',
-    version: '0.1.0',
+    version: '0.2.0',
     displayName: 'K8s Inventory',
     description: 'Read-only inventory of the Kubernetes cluster: namespaces, nodes, workloads, services and ingresses',
     requires: [ECapability.K8S],
@@ -170,47 +173,6 @@ const k8sInventory: IAiToolset = {
                         daemonSets: ds.items.map(x => ({ name: x.metadata?.name, namespace: x.metadata?.namespace, desired: x.status?.desiredNumberScheduled, ready: x.status?.numberReady })),
                         pods: p.items.map(x => ({ name: x.metadata?.name, namespace: x.metadata?.namespace, nodeName: x.spec?.nodeName, phase: x.status?.phase, ready: x.status?.conditions?.find(c2 => c2.type === 'Ready')?.status === 'True' })),
                         services: svc.items.map(x => ({ name: x.metadata?.name, namespace: x.metadata?.namespace, type: x.spec?.type, clusterIP: x.spec?.clusterIP }))
-                    }
-                }
-                catch (err) { return failed(err) }
-            }
-        },
-        {
-            name: 'get_space_data',
-            description: 'Describes a Kubernetes namespace (equivalent to kubectl describe namespace plus a rollup): its status and labels, ResourceQuota usage (used vs hard) and LimitRange defaults, plus the resources in it — pods (with restart count), deployments, services and configmap names.',
-            effect: EToolEffect.READ,
-            sensitivity: EToolSensitivity.PUBLIC,
-            inputSchema: z.object({ namespace: z.string().describe('Name of the namespace to retrieve data for') }),
-            execute: async (args, host) => {
-                const namespace = String(args.namespace)
-                const c = k8s(host, 'get_space_data', { namespace })
-                try {
-                    // ns/quota/limits son best-effort: que falte el RBAC de uno no puede ocultar el resto.
-                    const [ns, p, d, s, cm, rq, lr] = await Promise.all([
-                        c.coreApi.readNamespace({ name: namespace }).catch(() => undefined),
-                        c.coreApi.listNamespacedPod({ namespace }),
-                        c.appsApi.listNamespacedDeployment({ namespace }),
-                        c.coreApi.listNamespacedService({ namespace }),
-                        c.coreApi.listNamespacedConfigMap({ namespace }),
-                        c.coreApi.listNamespacedResourceQuota({ namespace }).catch(() => ({ items: [] })),
-                        c.coreApi.listNamespacedLimitRange({ namespace }).catch(() => ({ items: [] }))
-                    ])
-                    return {
-                        namespace,
-                        status: ns?.status?.phase,
-                        labels: ns?.metadata?.labels ?? {},
-                        resourceQuotas: rq.items.map(q => ({ name: q.metadata?.name, hard: q.status?.hard ?? q.spec?.hard ?? {}, used: q.status?.used ?? {} })),
-                        limitRanges: lr.items.map(l => ({ name: l.metadata?.name, limits: l.spec?.limits ?? [] })),
-                        pods: p.items.map(x => ({
-                            name: x.metadata?.name,
-                            phase: x.status?.phase,
-                            nodeName: x.spec?.nodeName,
-                            ready: x.status?.conditions?.find(c2 => c2.type === 'Ready')?.status === 'True',
-                            restartCount: x.status?.containerStatuses?.reduce((sum, cs) => sum + cs.restartCount, 0) ?? 0
-                        })),
-                        deployments: d.items.map(x => ({ name: x.metadata?.name, replicas: x.spec?.replicas, readyReplicas: x.status?.readyReplicas ?? 0, image: x.spec?.template?.spec?.containers?.[0]?.image })),
-                        services: s.items.map(x => ({ name: x.metadata?.name, type: x.spec?.type, clusterIP: x.spec?.clusterIP })),
-                        configMaps: cm.items.map(x => x.metadata?.name)
                     }
                 }
                 catch (err) { return failed(err) }

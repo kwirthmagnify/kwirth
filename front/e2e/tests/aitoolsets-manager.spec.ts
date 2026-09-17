@@ -11,11 +11,13 @@ import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
       · un tipo que NO declara dialogo de configuracion no enseña engranaje
       · los chips de una tarjeta comparten tamaño (mezclar tamaños se ve desordenado)
 
-    NO destructivo: solo abre el dialogo, filtra y cambia de vista. No instala ni desinstala nada. El
-    toolset `playground` que se espera encontrar viene declarado en kwirth-dev.json.
+    NO destructivo: solo abre el dialogo, filtra y cambia de vista. No instala ni desinstala nada.
+
+    ⚠️ El spec NO nombra ningun toolset concreto, y eso es deliberado: la primera version daba por hecho
+    que el instalado era `playground` y se puso roja el dia que el entorno paso a tener los de Kubernetes.
+    Lo que se comprueba es el COMPORTAMIENTO del gestor con lo que haya instalado, sea lo que sea.
 */
 
-const TOOLSET = 'Playground'
 const DIALOG = /Manage AI toolsets/i
 
 interface IChipSeen { text: string, height: number, font: string }
@@ -50,26 +52,32 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
     })
 
     test('lo instalado sale con su version y el numero REAL de tools', async () => {
-        await expect(dialog().getByText(TOOLSET).first()).toBeVisible({ timeout: 20000 })
-        await expect(dialog().getByText('v0.1.0').first()).toBeVisible()
         // El contador no lo dice el paquete: lo cuenta el back sobre el REGISTRO, asi que un back.js que
-        // no cargue se veria sin chip en vez de mentir con el numero que traia el manifest.
-        await expect(dialog().getByText(/^2 tools$/)).toBeVisible()
+        // no cargue se veria SIN chip en vez de mentir con el numero que traia el manifest. Por eso se
+        // exige que haya chip y que el numero sea > 0.
+        await expect(dialog().getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 20000 })
+        const chips = await dialog().getByText(/^\d+ tools?$/).allTextContents()
+        expect(chips.length, 'ningun toolset instalado enseña su contador de tools').toBeGreaterThan(0)
+        for (const c of chips) expect(Number(c.replace(/\D/g, '')), `contador vacio: ${c}`).toBeGreaterThan(0)
     })
 
     test('el catalogo publico sirve el toolset y no deja reinstalarlo', async () => {
         // Esta en dev, asi que el catalogo tiene que decirlo y el boton de instalar tiene que estar muerto.
         // ⚠️ El aria-label lo lleva el <span> que envuelve al IconButton (MUI no puede etiquetar un boton
         // deshabilitado), asi que se busca por ahi y no por el nombre accesible del boton.
-        await expect(dialog().getByText('dev active')).toBeVisible({ timeout: 40000 })
-        await expect(dialog().locator('span[aria-label^="Already installed"] button')).toBeDisabled()
+        // Puede haber varios en el catalogo: unos instalados y otros no. Basta con que los que SI lo
+        // estan tengan el boton muerto — y que haya al menos uno, o el test no probaria nada.
+        await expect(dialog().getByText('dev active').first()).toBeVisible({ timeout: 40000 })
+        const yaInstalados = dialog().locator('span[aria-label^="Already installed"] button')
+        expect(await yaInstalados.count(), 'ningun toolset del catalogo consta como instalado').toBeGreaterThan(0)
+        for (let i = 0; i < await yaInstalados.count(); i++) await expect(yaInstalados.nth(i)).toBeDisabled()
     })
 
     test('el veredicto de canUninstall se ve y bloquea el boton', async () => {
         // Un toolset de dev lo gobierna kwirth-dev.json: desinstalarlo desde aqui dejaria el indice
         // diciendo una cosa y el arranque volviendolo a poner. El descriptor lo prohibe y el generico
         // tiene que enseñar el MOTIVO, no solo desactivar el boton.
-        await expect(dialog().locator('span[aria-label="Dev toolsets cannot be uninstalled"] button')).toBeDisabled()
+        await expect(dialog().locator('span[aria-label="Dev toolsets cannot be uninstalled"] button').first()).toBeDisabled()
     })
 
     test('un tipo sin dialogo de configuracion no enseña engranaje', async () => {
@@ -86,20 +94,21 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         await filters.first().fill('no-existe-este-toolset')
         await expect(dialog().getByText('No AI toolsets installed.')).toBeVisible()
         // el catalogo sigue entero: el filtro de arriba no es global
-        await expect(dialog().getByText('dev active')).toBeVisible()
+        await expect(dialog().getByText('dev active').first()).toBeVisible()
 
         await filters.first().fill('')
-        await expect(dialog().getByText(/^2 tools$/)).toBeVisible()
+        await expect(dialog().getByText(/^\d+ tools?$/).first()).toBeVisible()
     })
 
     test('la vista de lista enseña lo mismo que la de tarjetas', async () => {
+        const enTarjetas = await dialog().getByText(/^\d+ tools?$/).allTextContents()
+
         await dialog().getByRole('button', { name: 'List view' }).click()
-        await expect(dialog().getByText(TOOLSET).first()).toBeVisible()
-        await expect(dialog().getByText(/^2 tools$/)).toBeVisible()
-        await expect(dialog().getByText('v0.1.0').first()).toBeVisible()
+        await expect(dialog().getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible()
+        expect(await dialog().getByText(/^\d+ tools?$/).allTextContents()).toEqual(enTarjetas)
 
         await dialog().getByRole('button', { name: 'Card view' }).click()
-        await expect(dialog().getByText(TOOLSET).first()).toBeVisible()
+        await expect(dialog().getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible()
     })
 
     test('en la lista, las columnas de filas distintas quedan alineadas', async () => {
@@ -112,7 +121,7 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         // columnas no tienen por que coincidir entre si. Y las filas del catalogo traen distinto numero de
         // chips ('dev active' solo en una), que es justo lo que descuadraria una maquetacion por fila.
         await dialog().getByRole('button', { name: 'List view' }).click()
-        await expect(dialog().getByText('K8s Inventory').first()).toBeVisible({ timeout: 40000 })
+        await expect(dialog().locator('.MuiSelect-select').first()).toBeVisible({ timeout: 40000 })
 
         const columnXs = await dialog().locator('.MuiSelect-select').evaluateAll(els => els.map(e => ({
             version: (e.textContent ?? '').replace(/​/g, '').trim(),

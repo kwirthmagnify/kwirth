@@ -77,10 +77,13 @@ const fakeHost = (over = {}) => {
 
 // ── el contrato ──────────────────────────────────────────────────────────────────────────────────────
 
-test('el toolset declara lo que necesita y sus ocho tools', () => {
+test('el toolset declara lo que necesita y sus siete tools', () => {
     assert.equal(toolset.id, 'k8s-inventory')
     assert.deepEqual(toolset.requires, [commonAi.ECapability.K8S])
-    assert.equal(toolset.tools.length, 8)
+    assert.equal(toolset.tools.length, 7)
+    // get_space_data se fue a k8s-describe el 2026-09-17: describe UN namespace, y eso es de aquel
+    // paquete. Si vuelve a aparecer aqui, es que alguien ha deshecho la decision sin querer.
+    assert.equal(toolset.tools.find(t => t.name === 'get_space_data'), undefined)
     // Ninguna escribe: es un inventario. Si alguna dejara de ser READ, este test lo para.
     assert.deepEqual([...new Set(toolset.tools.map(t => t.effect))], [commonAi.EToolEffect.READ])
 })
@@ -101,9 +104,9 @@ test('sin capability de cluster, la tool lo dice en vez de reventar por dentro',
 test('toda invocacion deja traza, con sus argumentos', async () => {
     const { host, traced } = fakeHost()
     await tool('list_namespaces').execute({}, host)
-    await tool('get_space_data').execute({ namespace: 'kube-system' }, host)
+    await tool('list_services').execute({ namespace: 'kube-system' }, host)
 
-    assert.deepEqual(traced.map(t => t.tool), ['list_namespaces', 'get_space_data'])
+    assert.deepEqual(traced.map(t => t.tool), ['list_namespaces', 'list_services'])
     assert.deepEqual(traced[1].args, { namespace: 'kube-system' })
 })
 
@@ -153,18 +156,6 @@ test('un fallo del cluster vuelve como dato, no como excepcion', async () => {
     const { host } = fakeHost()
     host.k8s.coreApi.listNamespace = async () => { throw new Error('403 forbidden') }
     assert.deepEqual(await tool('list_namespaces').execute({}, host), { error: '403 forbidden' })
-})
-
-test('get_space_data sobrevive a que falten quotas y limitranges', async () => {
-    // Suele ser falta de RBAC para ESOS recursos. Que no haya no puede ocultar el resto del namespace.
-    const { host } = fakeHost()
-    host.k8s.coreApi.listNamespacedResourceQuota = async () => { throw new Error('forbidden') }
-    host.k8s.coreApi.listNamespacedLimitRange = async () => { throw new Error('forbidden') }
-
-    const res = await tool('get_space_data').execute({ namespace: 'kube-system' }, host)
-    assert.equal(res.error, undefined)
-    assert.deepEqual(res.resourceQuotas, [])
-    assert.equal(res.namespace, 'kube-system')
 })
 
 // ── referencias de configuracion ─────────────────────────────────────────────────────────────────────

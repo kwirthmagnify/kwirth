@@ -21,12 +21,32 @@
   },
   {
     "extensionType": "aitoolset",
+    "id": "k8s-inventory",
+    "name": "@kwirthmagnify/kwirth-aitoolset-k8s-inventory",
+    "displayName": "K8s Inventory",
+    "version": "0.1.0",
+    "description": "Read-only inventory of the Kubernetes cluster: namespaces, nodes, workloads, services and ingresses",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-inventory/-/kwirth-aitoolset-k8s-inventory-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "aitoolset",
     "id": "k8s-describe",
     "name": "@kwirthmagnify/kwirth-aitoolset-k8s-describe",
     "displayName": "K8s Describe",
     "version": "0.2.0",
     "description": "Diagnostic detail of a single object: describe and full manifests for pods, controllers, services, ingresses and namespaces",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-describe/-/kwirth-aitoolset-k8s-describe-0.2.0.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "aitoolset",
+    "id": "k8s-describe",
+    "name": "@kwirthmagnify/kwirth-aitoolset-k8s-describe",
+    "displayName": "K8s Describe",
+    "version": "0.1.0",
+    "description": "Diagnostic detail of a single object: describe and full manifests for pods, controllers, services and ingresses",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-describe/-/kwirth-aitoolset-k8s-describe-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"
   },
   {
