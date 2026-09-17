@@ -267,3 +267,9 @@ síntoma: lo que se reportó como "en providers pasa X" era X en cuatro, nueve o
 `front/e2e/tests/capture-managers.spec.ts` las regenera. **Desactiva temporalmente los marketplaces
 privados** (snapshot + restauración literal): la guía es pública y el catálogo del entorno de desarrollo
 trae las extensiones de pago. Un cambio de UI en estos diálogos invalida esas capturas — punto 4 del CL9.
+
+## Backlog
+
+- **`SettingsUser`: los `InputLabel` de Theme y Homepage no están asociados a su `Select`** (sin
+  `id`/`htmlFor`), así que los combos no tienen nombre accesible y hay que localizarlos por su
+  `FormControl`. Detectado al escribir `settings-installed-lists.spec.ts` (2026-09-17).
