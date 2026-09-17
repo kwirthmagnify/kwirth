@@ -109,6 +109,31 @@ Decisiones que conviene no volver a discutir:
 
 **Pendiente**: migrar los diez a medida, de uno en uno y comparando capturas.
 
+#### Lo que le falta al generico para poder servir a THEMES (2026-09-17)
+
+Se comparo tarjeta a tarjeta con `ThemeManagerDialog` y el generico ya cubre todo menos una cosa:
+
+| Pieza de la tarjeta de themes | Generico |
+|---|---|
+| Asignacion a plugins (`Select multiple`) | ✅ `inlineControl` (añadido al hacer la concesion de `aitoolset`) |
+| Chip `active` / `dev` / `installed` | ✅ `extraChips` |
+| Procedencia (icono + chip de marketplace) | ✅ de serie |
+| Version: `Select` en catalogo, chip en instalado | ✅ de serie |
+| Desinstalar con su motivo (`dev`, `via pack`) | ✅ `canUninstall` |
+| **Fondo de la tarjeta** | ❌ el generico pinta siempre el degradado por nombre |
+
+🔴 **No se resuelve con un `previewUrl` de themes.** Lo que hace falta es un **atributo de FONDO genérico**
+en `IExtensionCardModel`: que cualquier extension pueda decidir que se pinta detras de su tarjeta, y que la
+imagen de preview de un tema sea **el primer caso de uso**, no el contrato. Si se mete como `previewUrl`,
+el dia que otro tipo quiera un fondo propio habra que inventarse un segundo atributo.
+
+⚠️ **Y ojo con el alcance real**: la imagen de preview de los temas **estaba en el roadmap y nunca llego a
+montarse** (existe el endpoint `/core/themes/:id/preview` y el `build.mjs` copia `preview.png` si lo hay,
+pero no es una funcionalidad terminada). Asi que migrar themes NO es solo trasladar lo que hay: hay que
+decidir si el fondo se termina o se deja como esta.
+
+**No se construye ahora** (decision del usuario, 2026-09-17): se anota porque hara falta.
+
 ## Pendiente: un diálogo genérico y cards estándar
 
 **El criterio escrito no basta, y hay evidencia de sobra.** Once copias del mismo diálogo significan que
