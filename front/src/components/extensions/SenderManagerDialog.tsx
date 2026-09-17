@@ -6,13 +6,13 @@ import {
     Select, Stack, Switch, TextField, Tooltip, Typography, useTheme
 } from '@mui/material'
 import { Add, CheckCircle, CloudQueue, ContentCopy, Delete, Download, Upload, FolderOpen, Https, Link, Launch, Refresh, Send, Settings, ViewList, ViewModule, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
-import { SessionContext, SessionContextType } from '../model/SessionContext'
+import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../tools/AuthorizationManagement'
+import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { ERestartAction } from './extensionRestart'
-import { useKeyboard } from '../tools/useKeyboard'
+import { useKeyboard } from '../../tools/useKeyboard'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx, dependencyList } from './extensionCardStyle'
 
 

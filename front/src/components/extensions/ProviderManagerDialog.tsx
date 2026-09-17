@@ -3,13 +3,13 @@ import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, InputAdornment, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { CheckCircle, CloudQueue, Delete, Download, Factory, FolderOpen, Https, Link, Launch, Refresh, Settings, Visibility, VisibilityOff, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 
-import { SessionContext, SessionContextType } from '../model/SessionContext'
+import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
+import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../../tools/AuthorizationManagement'
 import { versionGreaterThan, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { ERestartAction } from './extensionRestart'
-import { useKeyboard } from '../tools/useKeyboard'
+import { useKeyboard } from '../../tools/useKeyboard'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx, dependencyList } from './extensionCardStyle'
 
 declare global { interface Window { __kwirth_providers__: Record<string, any> } }

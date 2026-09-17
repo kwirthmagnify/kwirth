@@ -12,8 +12,11 @@ const CASES: { menu: string; dialog: RegExp }[] = [
     { menu: 'Senders',    dialog: /Manage senders/i },
     { menu: 'Themes',     dialog: /Manage themes/i },
     { menu: 'Homepages',  dialog: /Manage homepages/i },
-    // El unico que NO tiene dialogo a medida: lo sirve ExtensionManagerDialog. Entra aqui para que la
-    // regresion del catalogo cubra tambien al generico, que es quien acabara sirviendo a los demas.
+    { menu: 'Login extensions', dialog: /Manage login extensions/i },
+    { menu: 'Documentation',    dialog: /Manage documentation/i },
+    { menu: 'Packs',            dialog: /Manage extension packs/i },
+    // Los que ya sirve ExtensionManagerDialog. Entran aqui para que la regresion del catalogo cubra
+    // tambien al generico, que es quien acabara sirviendo a los demas.
     { menu: 'AI toolsets', dialog: /Manage AI toolsets/i }
 ]
 
@@ -35,7 +38,10 @@ test('los manager dialogs siguen listando catalogo tras pasar por el back', asyn
         // ociosa y flakeaban con ella cargada, y un rojo que depende de eso no es señal de nada. Se subio
         // otra vez a 60s el 2026-09-16: con seis dialogos en la misma corrida (entro el generico) el de
         // senders se paso de 40s con la maquina cargada.
-        const hasEntries = await dialog.getByText(/^v\d+\.\d+\.\d+$/).first().isVisible({ timeout: 60000 }).catch(() => false)
+        // ⚠️ Se mira el BOTON de instalar, no un chip 'v0.0.0': ese chip es de lo INSTALADO — en el
+        // catalogo la version va en un Select. Buscarlo daba por bueno un catalogo vacio siempre que
+        // hubiera algo instalado, y se cayo con packs, que en un entorno puede no tener nada puesto.
+        const hasEntries = await dialog.locator('span[aria-label$="nstall"] button').first().isVisible({ timeout: 60000 }).catch(() => false)
         if (!hasEntries) failures.push(`${c.menu}: no catalog entries`)
 
         const failedText = await dialog.getByText(/Failed to fetch/i).count()

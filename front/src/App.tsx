@@ -9,15 +9,15 @@ import { Cluster, IClusterInfo } from './model/Cluster'
 import { resolveRemoteChannelHost } from './tools/ChannelResolution'
 
 // components
-import { RenameTab } from './components/RenameTab'
+import { RenameTab } from './components/common/RenameTab'
 import { SaveWorkspace } from './components/workspace/SaveWorkspace'
 import { SelectWorkspace }  from './components/workspace/SelectWorkspace'
 import { WorkspacePickerDialog } from './components/workspace/WorkspacePickerDialog'
 import { ManageApiSecurity } from './components/security/ManageApiSecurity'
-import { Login } from './components/Login'
+import { Login } from './components/login/Login'
 import { ManageClusters } from './components/ManageClusters'
 import { ManageUserSecurity } from './components/security/ManageUserSecurity'
-import { ResourceSelector, IResourceSelected } from './components/ResourceSelector'
+import { ResourceSelector, IResourceSelected } from './components/common/ResourceSelector'
 import { TabContent } from './components/TabContent'
 import { SettingsKwirth } from './components/settings/SettingsKwirth'
 import { IKwirthSettings, IMarketplaceEntry } from '@kwirthmagnify/kwirth-common'
@@ -25,13 +25,13 @@ import { SettingsUser } from './components/settings/SettingsUser'
 import { MenuTab, MenuTabOption } from './menus/MenuTab'
 import { MenuDrawer, MenuDrawerOption } from './menus/MenuDrawer'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxOkError, MsgBoxYesNo } from './tools/MsgBox'
-import { ERestartAction, restartNotice } from './components/extensionRestart'
+import { ERestartAction, restartNotice } from './components/extensions/extensionRestart'
 import { IChannelSettings, Settings } from './model/Settings'
-import { FirstTimeLogin } from './components/FirstTimeLogin'
+import { FirstTimeLogin } from './components/login/FirstTimeLogin'
 import { IWorkspace, IWorkspaceSummary } from './model/IWorkspace'
 
 import { SessionContext } from './model/SessionContext'
-import { addGetAuthorization, addDeleteAuthorization, addPostAuthorization } from './tools/AuthorizationManagement'
+import { addGetAuthorization, addDeleteAuthorization, addPostAuthorization, addPutAuthorization } from './tools/AuthorizationManagement'
 import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse, EExtensionType, EChannelMode } from '@kwirthmagnify/kwirth-common'
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
@@ -45,22 +45,22 @@ import { createChannelInstance } from './tools/ChannelTools'
 import { clusterColor } from './tools/clusterColor'
 import { MenuNotification, INotification } from '@kwirthmagnify/kwirth-common-front'
 import { getIconFromKind } from './tools/Constants-React'
-import { ContextSelector } from './components/ContextSelector'
+import { ContextSelector } from './components/common/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/About'
-import { PluginManagerDialog } from './components/PluginManagerDialog'
-import { ProviderManagerDialog } from './components/ProviderManagerDialog'
-import { IdpManagerDialog } from './components/IdpManagerDialog'
-import { SenderManagerDialog } from './components/SenderManagerDialog'
-import { WebhookManagerDialog } from './components/WebhookManagerDialog'
-import { makeThemeDescriptor } from './components/ThemeDescriptor'
-import { makeHomepageDescriptor } from './components/HomepageDescriptor'
-import { DocsManagerDialog } from './components/DocsManagerDialog'
-import { ExtensionManagerDialog } from './components/ExtensionManagerDialog'
-import { aiToolsetDescriptor } from './components/AiToolsetDescriptor'
-import { LoginManagerDialog } from './components/LoginManagerDialog'
-import { PackManagerDialog } from './components/PackManagerDialog'
-import { LoginExtensionPage } from './components/LoginExtensionPage'
+import { PluginManagerDialog } from './components/extensions/PluginManagerDialog'
+import { ProviderManagerDialog } from './components/extensions/ProviderManagerDialog'
+import { IdpManagerDialog } from './components/extensions/IdpManagerDialog'
+import { SenderManagerDialog } from './components/extensions/SenderManagerDialog'
+import { WebhookManagerDialog } from './components/extensions/WebhookManagerDialog'
+import { makeThemeDescriptor } from './components/extensions/ThemeDescriptor'
+import { makeHomepageDescriptor } from './components/extensions/HomepageDescriptor'
+import { makeDocsDescriptor } from './components/extensions/DocsDescriptor'
+import { ExtensionManagerDialog } from './components/extensions/ExtensionManagerDialog'
+import { makeAiToolsetDescriptor } from './components/extensions/AiToolsetDescriptor'
+import { loginDescriptor } from './components/extensions/LoginDescriptor'
+import { makePackDescriptor } from './components/extensions/PackDescriptor'
+import { LoginExtensionPage } from './components/login/LoginExtensionPage'
 import { IHomepageExtension, ERemoteConnState } from '@kwirthmagnify/kwirth-common-front'
 import { AiConfigProvider, AiConfigLlm } from '@kwirthmagnify/kwirth-common-ai/front'
 import { ILlmProvider, ILlm, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
@@ -493,6 +493,27 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             .then(r => r.json())
             .then((homepages: { id: string, name: string, displayName?: string }[]) => setInstalledHomepages(homepages))
             .catch(err => console.log(`[homepages] failed to refresh installed homepages: ${err}`))
+    }
+
+    /*
+        Persistencia de los dos selectores de plugins del gestor de extensiones. Antes cada control se
+        buscaba la vida por su cuenta dentro de su descriptor; ahora el generico pinta el control y la
+        sesion (que es quien tiene accessString) se encarga de leer y escribir.
+    */
+    const saveThemeAssignments = async (a: Record<string, string>) => {
+        const res = await fetch(`${backendUrl}/core/themes/assignments`, addPutAuthorization(accessString, JSON.stringify(a)))
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    }
+
+    const loadToolsetGrants = async (): Promise<Record<string, string[]>> => {
+        const res = await fetch(`${backendUrl}/core/aitoolsets/grants`, addGetAuthorization(accessString))
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return await res.json()
+    }
+
+    const saveToolsetGrants = async (toolsetId: string, pluginIds: string[]) => {
+        const res = await fetch(`${backendUrl}/core/aitoolsets/grants/${toolsetId}`, addPutAuthorization(accessString, JSON.stringify({ plugins: pluginIds })))
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
     }
 
     const onThemeInstalled = (id: string) => { loadThemeFront(id); refreshInstalledThemes() }
@@ -2572,15 +2593,17 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showSenderManagerDialog && <SenderManagerDialog onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showWebhookManagerDialog && <WebhookManagerDialog onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showThemeManagerDialog && <ExtensionManagerDialog
-                    descriptor={makeThemeDescriptor({ activeThemeName, assignments: themeAssignments, onAssignmentsChange: setThemeAssignments, onThemeLoad: onThemeInstalled, onThemeUnload: onThemeUninstalled })}
+                    descriptor={makeThemeDescriptor({ activeThemeName, assignments: themeAssignments, onAssignmentsChange: setThemeAssignments, onThemeLoad: onThemeInstalled, onThemeUnload: onThemeUninstalled, saveAssignments: saveThemeAssignments })}
                     onClose={() => setShowThemeManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showHomepageManagerDialog && <ExtensionManagerDialog
                     descriptor={makeHomepageDescriptor({ activeHomepageId, onActivate: onHomepageActivate, onHomepageLoad: onHomepageInstalled, onHomepageUnload: onHomepageUninstalled })}
                     onClose={() => setShowHomepageManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
-                { showDocsManagerDialog && <DocsManagerDialog onClose={() => setShowDocsManagerDialog(false)} /> }
-                { showAiToolsetManagerDialog && <ExtensionManagerDialog descriptor={aiToolsetDescriptor} onClose={() => setShowAiToolsetManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
-                { showLoginManagerDialog && <LoginManagerDialog onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
-                { showPackManagerDialog && <PackManagerDialog onClose={() => setShowPackManagerDialog(false)} onPluginLoad={loadPluginFront} onPluginUnload={unloadPluginFront} onThemeLoad={onThemeInstalled} onThemeUnload={onThemeUninstalled} onHomepageLoad={onHomepageInstalled} onHomepageUnload={onHomepageUninstalled} onRestartRequired={onExtensionRestartRequired} /> }
+                { showDocsManagerDialog && <ExtensionManagerDialog descriptor={makeDocsDescriptor(backendUrl)} onClose={() => setShowDocsManagerDialog(false)} /> }
+                { showAiToolsetManagerDialog && <ExtensionManagerDialog descriptor={makeAiToolsetDescriptor({ loadGrants: loadToolsetGrants, saveGrants: saveToolsetGrants })} onClose={() => setShowAiToolsetManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showLoginManagerDialog && <ExtensionManagerDialog descriptor={loginDescriptor} onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showPackManagerDialog && <ExtensionManagerDialog
+                    descriptor={makePackDescriptor({ onPluginLoad: loadPluginFront, onPluginUnload: unloadPluginFront, onThemeLoad: onThemeInstalled, onThemeUnload: onThemeUninstalled, onHomepageLoad: onHomepageInstalled, onHomepageUnload: onHomepageUninstalled })}
+                    onClose={() => setShowPackManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showChannelSetup() }
                 { showSettingsUser && <SettingsUser onClose={onSettingsUserClosed} settings={userSettingsRef.current} activeThemeName={activeThemeName} onThemeChange={setActiveThemeName} installedThemes={installedThemes} activeHomepageId={activeHomepageId} onHomepageChange={onHomepageChangeFromSettings} installedHomepages={installedHomepages} /> }
                 { homepageSetupId && (() => {

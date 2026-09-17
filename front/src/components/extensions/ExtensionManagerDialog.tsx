@@ -1,14 +1,14 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { CheckCircle, Delete, Download, FolderOpen, Refresh, Settings, ViewList, ViewModule } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
-import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../tools/AuthorizationManagement'
+import { SessionContext, SessionContextType } from '../../model/SessionContext'
+import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../../tools/AuthorizationManagement'
 import { MarketplaceBadge, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { ERestartAction } from './extensionRestart'
-import { useKeyboard } from '../tools/useKeyboard'
-import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor } from './extensionManagerModel'
+import { useKeyboard } from '../../tools/useKeyboard'
+import { EChipIcon, EManagerSection, IExtensionAction, IExtensionChip, IExtensionManagerDescriptor } from './extensionManagerModel'
 import { ExtensionCard, extensionRowCells, EXTENSION_ROW_COLUMNS } from './ExtensionCard'
 
 /*
@@ -38,6 +38,47 @@ interface IExtensionManagerDialogProps<TInstalled extends IMinimalEntry, TEntry 
     onRestartRequired?: (extension: string, action: ERestartAction) => void
 }
 
+/** Un plugin instalado, que es lo que ofrece el selector de plugins. */
+interface IInstalledPluginRef {
+    id: string
+    displayName?: string
+}
+
+/*
+    El selector de plugins de una entrada (ver IPluginSelectorSpec).
+
+    ⚠️ Vive FUERA del diálogo a proposito. Definido dentro, cada render crearia un tipo de componente nuevo
+    y React lo desmontaria y volveria a montar: el desplegable se cerraria solo al escribir en el filtro.
+*/
+const PluginMultiSelect: React.FC<{
+    plugins: IInstalledPluginRef[]
+    selected: string[]
+    tooltip: string
+    emptyLabel: string
+    error?: string
+    onChange: (pluginIds: string[]) => void
+}> = ({ plugins, selected, tooltip, emptyLabel, error, onChange }) => (
+    <Tooltip title={error || tooltip}>
+        <Select multiple size='small' displayEmpty value={selected} error={Boolean(error)}
+            onChange={e => onChange(e.target.value as string[])}
+            // El texto de vacio se pinta, no se deja en blanco: "no lo usa nadie" es el estado por
+            // defecto y es justo lo que explica que una extension recien instalada "no haga nada".
+            renderValue={sel => (sel as string[]).length === 0
+                ? <em style={{ fontSize: '0.7rem', opacity: 0.5 }}>{emptyLabel}</em>
+                : (sel as string[]).join(', ')}
+            sx={{ height: 22, fontSize: '0.7rem', minWidth: 110, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+            {/* Con casilla: sin ella un desplegable no parece de seleccion multiple y nadie prueba a
+                marcar dos. Mismo criterio que el ToolSelector de common-ai. */}
+            {plugins.map(p => (
+                <MenuItem key={p.id} value={p.id} sx={{ fontSize: '0.7rem', py: 0.25 }}>
+                    <Checkbox size='small' checked={selected.includes(p.id)} sx={{ p: 0.5 }} />
+                    {p.displayName || p.id}
+                </MenuItem>
+            ))}
+        </Select>
+    </Tooltip>
+)
+
 const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends IMinimalEntry>(
     props: IExtensionManagerDialogProps<TInstalled, TEntry>
 ) => {
@@ -60,6 +101,11 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const [configuring, setConfiguring] = useState<TInstalled | undefined>()
     const [error, setError] = useState<string | undefined>()
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    // Selector de plugins: la lista de plugins se pide UNA vez para todo el diálogo, no una por tarjeta.
+    const [plugins, setPlugins] = useState<IInstalledPluginRef[]>([])
+    const [pluginSel, setPluginSel] = useState<Record<string, string[]>>({})
+    const [pluginSelError, setPluginSelError] = useState<Record<string, string>>({})
 
     const loadInstalled = async () => {
         try {
@@ -92,7 +138,53 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         }
     }
 
-    useEffect(() => { loadInstalled(); fetchManifest() }, [])
+    const loadPluginSelector = async () => {
+        const spec = d.pluginSelector
+        if (!spec) return
+        try {
+            const [pl, sel] = await Promise.all([
+                fetch(`${backendUrl}/core/plugins`, addGetAuthorization(accessString)).then(r => r.json() as Promise<IInstalledPluginRef[]>),
+                spec.load()
+            ])
+            setPlugins(pl)
+            setPluginSel(sel)
+        }
+        catch (err) { setError(`Failed to load plugins: ${err}`) }
+    }
+
+    const changePluginSel = async (entry: TInstalled, pluginIds: string[]) => {
+        const spec = d.pluginSelector
+        if (!spec) return
+        const key = d.keyOf(entry)
+        const anterior = pluginSel[key] ?? []
+        setPluginSel(s => ({ ...s, [key]: pluginIds }))   // optimista: el desplegable responde al momento
+        try {
+            await spec.save(entry, pluginIds)
+            setPluginSelError(e => { const { [key]: _quitado, ...resto } = e; return resto })
+        }
+        catch (err) {
+            // Se deshace: dejar la UI diciendo que esta guardado cuando el back no lo guardo es peor que
+            // el propio fallo — quien lo cambio se iria creyendo que el cambio esta puesto.
+            setPluginSel(s => ({ ...s, [key]: anterior }))
+            setPluginSelError(e => ({ ...e, [key]: `Could not save: ${err}` }))
+        }
+    }
+
+    const pluginControl = (entry: TInstalled) => {
+        const spec = d.pluginSelector
+        if (!spec || plugins.length === 0) return undefined
+        const key = d.keyOf(entry)
+        return <PluginMultiSelect
+            plugins={plugins}
+            selected={pluginSel[key] ?? []}
+            tooltip={spec.tooltip}
+            emptyLabel={spec.emptyLabel ?? 'No plugin'}
+            error={pluginSelError[key]}
+            onChange={ids => changePluginSel(entry, ids)}
+        />
+    }
+
+    useEffect(() => { loadInstalled(); fetchManifest(); loadPluginSelector() }, [])
 
     // ── catalogo agrupado por clave, versiones de mas nueva a mas vieja ─────────
     const grouped = available.reduce((acc, e) => {
@@ -199,19 +291,55 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     }
 
     // ── chips y acciones por seccion ────────────────────────────────────────────
+    const TypeIcon = d.icon
+
+    const chipIcon = (icon?: EChipIcon): React.ReactElement | undefined => {
+        switch (icon) {
+            case EChipIcon.ACTIVE: return <CheckCircle />
+            case EChipIcon.FILE: return <FolderOpen />
+            case EChipIcon.TYPE: return <TypeIcon />
+            default: return undefined
+        }
+    }
+
+    const renderChip = (chip: IExtensionChip, key: string): React.ReactNode => {
+        const el = <Chip key={key} label={chip.label} size='small' color={chip.color ?? 'default'}
+            variant={chip.variant ?? 'filled'} icon={chipIcon(chip.icon)} sx={compactChip} />
+        return chip.tooltip ? <Tooltip key={key} title={chip.tooltip}>{el}</Tooltip> : el
+    }
+
+    /*
+        DE DONDE vino lo instalado. Lo pone el generico para los once tipos: estaba copiado diálogo a
+        diálogo —misma tabla, mismos colores— y lo unico que cambiaba era el icono del chip 'Kwirth', que
+        es el icono del propio tipo.
+
+        Una URL suelta no pinta nada a proposito: la direccion recortada llenaba la fila sin decir gran
+        cosa, y ya la da el tooltip del icono de procedencia (MarketplaceSourceIcon).
+    */
+    const sourceChip = (installedFrom?: string): IExtensionChip | undefined => {
+        if (!installedFrom) return undefined
+        if (installedFrom === 'dev') return { label: 'dev', variant: 'outlined', color: 'warning' }
+        if (installedFrom === 'bundled') return { label: 'bundled', variant: 'outlined' }
+        if (installedFrom === 'local') return { label: 'Local file', variant: 'outlined', icon: EChipIcon.FILE }
+        if (installedFrom.startsWith('pack:')) return { label: 'via pack', variant: 'outlined', color: 'secondary', tooltip: `Installed by pack '${installedFrom.slice(5)}'` }
+        if (installedFrom.includes('github.com/kwirthmagnify')) return { label: 'Kwirth', variant: 'outlined', color: 'primary', icon: EChipIcon.TYPE }
+        return undefined
+    }
+
     const installedChips = (entry: TInstalled): React.ReactNode[] => {
         const chips = [...(d.extraChips?.(entry, EManagerSection.INSTALLED) ?? [])]
         const n = d.configCount?.(entry)
-        if (n !== undefined && n > 0)
-            chips.push(<Chip key='cfg' label={`${n} config${n > 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' sx={compactChip} />)
-        return chips
+        if (n !== undefined && n > 0) chips.push({ label: `${n} config${n > 1 ? 's' : ''}`, color: 'primary', variant: 'outlined' })
+        const src = sourceChip(d.toModel(entry).installedFrom)
+        if (src) chips.push(src)
+        return chips.map((c, i) => renderChip(c, `chip-${i}`))
     }
 
     const availableChips = (key: string, entry: TEntry): React.ReactNode[] => {
         const chips = [...(d.extraChips?.(entry, EManagerSection.AVAILABLE) ?? [])]
-        if (isDevInstalled(key)) chips.push(<Chip key='dev' label='dev active' size='small' variant='outlined' color='warning' sx={compactChip} />)
-        else if (isInstalled(key)) chips.push(<Chip key='inst' label='installed' color='success' size='small' icon={<CheckCircle />} sx={compactChip} />)
-        return chips
+        if (isDevInstalled(key)) chips.push({ label: 'dev active', variant: 'outlined', color: 'warning' })
+        else if (isInstalled(key)) chips.push({ label: 'installed', color: 'success', icon: EChipIcon.ACTIVE })
+        return chips.map((c, i) => renderChip(c, `chip-${i}`))
     }
 
     const installedActions = (entry: TInstalled): IExtensionAction[] => {
@@ -222,7 +350,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         const key = d.keyOf(entry)
         actions.push({
             icon: uninstallingKey === key ? <CircularProgress size={16} /> : <Delete fontSize='small' />,
-            tooltip: verdict.allowed ? 'Uninstall' : (verdict.reason ?? 'Cannot be uninstalled'),
+            tooltip: verdict.allowed ? (d.uninstallTooltip ?? 'Uninstall') : (verdict.reason ?? 'Cannot be uninstalled'),
             disabled: !verdict.allowed || uninstallingKey === key,
             color: 'error',
             onClick: () => uninstall(entry)
@@ -275,9 +403,9 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
             {d.helpSection
                 ? <DialogTitleHelp section={d.helpSection} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{d.icon}{d.title}</Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TypeIcon fontSize='small' />{d.title}</Box>
                   </DialogTitleHelp>
-                : <DialogTitle><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{d.icon}{d.title}</Box></DialogTitle>
+                : <DialogTitle><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TypeIcon fontSize='small' />{d.title}</Box></DialogTitle>
             }
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
@@ -293,8 +421,8 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                         : viewMode === 'card'
                             ? <Box sx={cardGridSx}>
                                 {shownInstalled.map(entry => (
-                                    <ExtensionCard key={d.keyOf(entry)} model={d.toModel(entry)} fallbackIcon={d.icon}
-                                        chips={installedChips(entry)} inlineControl={d.inlineControl?.(entry, EManagerSection.INSTALLED)}
+                                    <ExtensionCard key={d.keyOf(entry)} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
+                                        chips={installedChips(entry)} inlineControl={pluginControl(entry)}
                                         actions={installedActions(entry)} />
                                 ))}
                               </Box>
@@ -302,7 +430,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                                 {shownInstalled.flatMap((entry, i, arr) => {
                                     const key = d.keyOf(entry)
                                     return [
-                                        ...extensionRowCells(key, { model: d.toModel(entry), fallbackIcon: d.icon, chips: installedChips(entry), inlineControl: d.inlineControl?.(entry, EManagerSection.INSTALLED), actions: installedActions(entry) }),
+                                        ...extensionRowCells(key, { model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />, chips: installedChips(entry), inlineControl: pluginControl(entry), actions: installedActions(entry) }),
                                         ...(i < arr.length - 1 ? [separator(key)] : [])
                                     ]
                                 })}
@@ -349,7 +477,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                                 {shownKeys.map(key => {
                                     const entry = selectedEntry(key)
                                     return (
-                                        <ExtensionCard key={key} model={d.toModel(entry)} fallbackIcon={d.icon}
+                                        <ExtensionCard key={key} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
                                             versions={grouped[key].map(e => e.version)}
                                             onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [key]: v }))}
                                             chips={availableChips(key, entry)} actions={availableActions(key, entry)} />
@@ -361,7 +489,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                                     const entry = selectedEntry(key)
                                     return [
                                         ...extensionRowCells(key, {
-                                            model: d.toModel(entry), fallbackIcon: d.icon,
+                                            model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />,
                                             versions: grouped[key].map(e => e.version),
                                             onVersionChange: v => setSelectedVersions(prev => ({ ...prev, [key]: v })),
                                             chips: availableChips(key, entry), actions: availableActions(key, entry)

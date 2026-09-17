@@ -1,5 +1,5 @@
 import { Stack, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List , ListItemButton , ListItem } from '@mui/material'
-import { PickListConfig } from '../model/PickListConfig'
+import { PickListConfig } from '../../model/PickListConfig'
 
 interface IPickListProps {
     config:PickListConfig

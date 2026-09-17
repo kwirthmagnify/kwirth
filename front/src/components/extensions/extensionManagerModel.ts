@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ComponentType, ReactNode } from 'react'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 
 /*
@@ -28,7 +28,43 @@ export interface IExtensionCardModel {
     installedFrom?: string
     marketplaceLabel?: string
     icon?: ReactNode             // si el tipo no lo da, el generico usa el icono del tipo
+    /*
+        Una linea mas bajo la descripcion. La necesita `pack`, que es el unico tipo que CONTIENE otras
+        extensiones y tiene que decir cuales ('2 plugins, 1 theme'). Va en una linea y con elipsis: un pack
+        con muchos tipos creceria y se comeria la fila de procedencia y acciones.
+    */
+    subtitle?: string
 }
+
+/*
+    Iconos que puede llevar un chip. Es un enum corto y cerrado a proposito: el descriptor DECLARA chips,
+    no los pinta, y asi no necesita importar iconos ni ser un .tsx.
+*/
+export enum EChipIcon {
+    /** Marca de "esto es lo que esta puesto ahora": el tema activo, la homepage activa. */
+    ACTIVE = 'active',
+    /** Viene de un fichero suelto del disco. */
+    FILE = 'file',
+    /** El icono del propio tipo de extension, el que declara el descriptor. */
+    TYPE = 'type'
+}
+
+/** Un chip DECLARADO. El generico lo pinta; el tipo solo dice que quiere decir. */
+export interface IExtensionChip {
+    label: string
+    color?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+    variant?: 'filled' | 'outlined'
+    icon?: EChipIcon
+    tooltip?: string
+}
+
+/**
+ * El icono de un tipo de extension: el COMPONENTE, no un elemento ya montado.
+ *
+ * Asi el generico decide el tamaño segun donde lo pinte (tarjeta, fila, chip de procedencia) y el
+ * descriptor se queda sin JSX.
+ */
+export type TExtensionIcon = ComponentType<{ fontSize?: 'inherit' | 'small' | 'medium' | 'large' }>
 
 /** Una accion propia de un tipo, mas alla de instalar/desinstalar/configurar. */
 export interface IExtensionAction {
@@ -43,6 +79,33 @@ export interface IExtensionAction {
 export interface IUninstallVerdict {
     allowed: boolean
     reason?: string
+}
+
+/*
+    "Que plugins van con esta extension", que resulta ser la misma pregunta en varios tipos:
+
+      · themes     → que canales usan este tema
+      · aitoolset  → que canales pueden usar este toolset (la concesion de la fase 1)
+
+    Se escribio dos veces por separado —ThemeAssignSelector y GrantSelector— y las dos copias eran el mismo
+    `Select multiple` con casillas, el mismo placeholder y el mismo alto. Peor: cada TARJETA pedia
+    `/core/plugins` por su cuenta, asi que abrir el diálogo con doce instaladas eran doce peticiones
+    identicas. Al subirlo aqui, el generico pide la lista UNA vez y el tipo solo dice de donde se lee y
+    donde se guarda.
+
+    El mapa de `load` va de CLAVE DE ENTRADA a ids de plugin, no al reves: es como se pinta (cada tarjeta
+    pregunta por lo suyo) y como lo devuelve el back de aitoolsets. Themes lo tiene invertido —un plugin
+    tiene UN tema— y es el descriptor quien lo da la vuelta, que para eso conoce su formato.
+*/
+export interface IPluginSelectorSpec<TInstalled> {
+    /** Que significa el control, para el tooltip: 'Plugins using this theme'… */
+    tooltip: string
+    /** Que poner cuando no hay ninguno. Por defecto 'No plugin'. */
+    emptyLabel?: string
+    /** Clave de entrada → ids de plugin asociados. */
+    load: () => Promise<Record<string, string[]>>
+    /** Persistir la nueva seleccion de ESA entrada. Si lanza, el generico deshace y enseña el motivo. */
+    save: (entry: TInstalled, pluginIds: string[]) => Promise<void>
 }
 
 /*
@@ -69,7 +132,7 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     */
     helpSection?: string
     /** Icono del tipo, el que se pinta cuando la entrada no trae uno propio. */
-    icon: ReactNode
+    icon: TExtensionIcon
 
     /** Rutas del back. El generico no las adivina: IdP, por ejemplo, no cuelga de /core/<plural>. */
     endpoints: {
@@ -78,6 +141,14 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
         upload: string
         remove: (entry: TInstalled) => string
     }
+
+    /**
+     * Que dice el boton de desinstalar cuando SE PUEDE. Por defecto 'Uninstall'.
+     *
+     * Lo necesita `pack`: quitarlo se lleva por delante todas las extensiones que trajo, y eso hay que
+     * avisarlo ANTES de pulsar, no despues.
+     */
+    uninstallTooltip?: string
 
     keyOf: (entry: TInstalled | TEntry) => string
     toModel: (entry: TInstalled | TEntry) => IExtensionCardModel
@@ -99,19 +170,22 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
      */
     canConfigure?: (entry: TInstalled) => boolean
 
-    /** Chips propios del tipo: 'active', 'enabled', 'Requires 2'… */
-    extraChips?: (entry: TInstalled | TEntry, section: EManagerSection) => ReactNode[]
+    /*
+        Chips propios del tipo: 'active', 'enabled', 'Requires 2'…
+
+        ⚠️ La PROCEDENCIA no entra aqui: los chips de dev / fichero local / via pack / Kwirth los pone el
+        generico para todos los tipos. Estaban copiados uno por diálogo y solo se diferenciaban en el icono
+        del chip 'Kwirth', que no es mas que el icono del tipo.
+    */
+    extraChips?: (entry: TInstalled | TEntry, section: EManagerSection) => IExtensionChip[]
     /** Acciones propias: abrir la guia, abrir la pagina de login… */
     actions?: (entry: TInstalled | TEntry, section: EManagerSection) => IExtensionAction[]
 
     /**
-     * Un control propio del tipo, a la izquierda de los botones de accion.
-     *
-     * No todo cabe en un boton ni en un chip: ThemeManagerDialog lleva ahi un `Select multiple` para
-     * asignar el tema a plugins, y los aitoolset uno igual para conceder quien puede usarlos. Es UN sitio
-     * en la tarjeta y en la fila, no dos maquetaciones distintas.
+     * El selector de plugins de lo instalado, a la izquierda de los botones de accion. Es UN sitio en la
+     * tarjeta y en la fila, no dos maquetaciones distintas.
      */
-    inlineControl?: (entry: TInstalled | TEntry, section: EManagerSection) => ReactNode
+    pluginSelector?: IPluginSelectorSpec<TInstalled>
 
     /** Si devuelve un motivo, instalar queda deshabilitado y el motivo va al tooltip (dependencias sin cumplir). */
     installBlockedReason?: (entry: TEntry) => string | undefined

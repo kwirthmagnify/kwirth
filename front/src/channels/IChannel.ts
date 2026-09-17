@@ -6,7 +6,7 @@ import {
     EChannelRefreshAction, ENotifyLevel,
     IChannelMessageAction, IChannelSettings, IChannelRequirements
 } from '@kwirthmagnify/kwirth-common-front'
-import { IResourceSelected } from '../components/ResourceSelector'
+import { IResourceSelected } from '../components/common/ResourceSelector'
 import { IClusterInfo } from '../model/Cluster'
 import { INotification } from '@kwirthmagnify/kwirth-common-front'
 import { BackChannelData } from '@kwirthmagnify/kwirth-common'

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { sha256 as sha256js } from 'js-sha256'
 import { Box, Button, CircularProgress, Menu, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { ExpandMore } from '@kwirthmagnify/kwirth-common-front/icons'
-import { addPostAuthorization } from '../tools/AuthorizationManagement'
+import { addPostAuthorization } from '../../tools/AuthorizationManagement'
 import { EAuthMethodKind, IAuthMethod, ILoginResponse, IUser, parseResources } from '@kwirthmagnify/kwirth-common'
 
 interface ILoginExtensionPageProps {

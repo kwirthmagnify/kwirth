@@ -1,16 +1,16 @@
 import React, { useState } from 'react'
 import { Box, Button, Checkbox, FormControl, InputLabel, ListSubheader, MenuItem, Select, SelectChangeEvent, Stack, SxProps, TextField, Tooltip, Typography } from '@mui/material'
-import { clusterColor } from '../tools/clusterColor'
-import { Cluster } from '../model/Cluster'
-import { MsgBoxOkError } from '../tools/MsgBox'
+import { clusterColor } from '../../tools/clusterColor'
+import { Cluster } from '../../model/Cluster'
+import { MsgBoxOkError } from '../../tools/MsgBox'
 
-import { addGetAuthorization } from '../tools/AuthorizationManagement'
+import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { BackChannelData, EChannelMode, EClusterType, EInstanceConfigView, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
-import { ITabObject } from '../model/ITabObject'
-import { getIconFromKind } from '../tools/Constants-React'
-import { TChannelConstructor } from '../channels/IChannel'
-import { resolveRemoteChannelHost } from '../tools/ChannelResolution'
-import { getChannelIconSafe } from '../tools/ChannelTools'
+import { ITabObject } from '../../model/ITabObject'
+import { getIconFromKind } from '../../tools/Constants-React'
+import { TChannelConstructor } from '../../channels/IChannel'
+import { resolveRemoteChannelHost } from '../../tools/ChannelResolution'
+import { getChannelIconSafe } from '../../tools/ChannelTools'
 
 // Indicador de canal remoto en el desplegable: 'R' en círculo. Verde = operativo (su Kwirth in-cluster
 // está conectado y se puede delegar); gris = no operativo (no hay host conectado, el ADD solo avisará).

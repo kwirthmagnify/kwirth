@@ -1,10 +1,10 @@
 import React, { useState, useContext } from 'react'
-import { SessionContext, SessionContextType } from '../model/SessionContext'
+import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { Button, Dialog, DialogActions, DialogContent, Typography} from '@mui/material'
 import { AccessKey, accessKeySerialize, ApiKey } from '@kwirthmagnify/kwirth-common'
-import { addPostAuthorization } from '../tools/AuthorizationManagement'
-import { MsgBoxOk } from '../tools/MsgBox'
+import { addPostAuthorization } from '../../tools/AuthorizationManagement'
+import { MsgBoxOk } from '../../tools/MsgBox'
 import { v4 as uuid } from 'uuid'
 
 const copy = require('clipboard-copy')

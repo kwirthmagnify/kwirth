@@ -50,8 +50,11 @@ const VersionControl: React.FC<{ version: string, versions?: string[], onChange?
 const ActionButtons: React.FC<{ actions: IExtensionAction[] }> = ({ actions }) => (<>
     {actions.map((a, i) => (
         <Tooltip key={i} title={a.tooltip}>
+            {/* El aria-label va tambien en el BOTON, no solo en el span que le pone el Tooltip: MUI no
+                puede etiquetar un boton deshabilitado y por eso envuelve, pero sin esto el boton se queda
+                sin nombre accesible y un lector de pantalla no sabe decir que hace. */}
             <span>
-                <IconButton size='small' color={a.color ?? 'inherit'} disabled={a.disabled} onClick={a.onClick}>
+                <IconButton size='small' aria-label={a.tooltip} color={a.color ?? 'inherit'} disabled={a.disabled} onClick={a.onClick}>
                     {a.icon}
                 </IconButton>
             </span>
@@ -83,6 +86,7 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
                         </Tooltip>
                     </Stack>
                     <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{model.description}</Typography>
+                    {model.subtitle && <Typography variant='caption' color='text.disabled' display='block' noWrap>{model.subtitle}</Typography>}
                 </Box>
             </Stack>
             <Stack direction='row' alignItems='center' spacing={0.5} sx={{ mt: 1 }}>
@@ -107,7 +111,10 @@ const extensionRowCells = (
     { model, fallbackIcon, versions, onVersionChange, chips, inlineControl, actions }: IExtensionViewProps
 ): React.ReactNode[] => [
     <Box key={`${key}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}>{model.icon ?? fallbackIcon}</Box>,
-    <Typography key={`${key}-name`} variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', py: 1 }}>{model.name}</Typography>,
+    <Box key={`${key}-name`} sx={{ py: 1, minWidth: 0 }}>
+        <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model.name}</Typography>
+        {model.subtitle && <Typography variant='caption' color='text.disabled' display='block' noWrap>{model.subtitle}</Typography>}
+    </Box>,
     <Box key={`${key}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
         <MarketplaceSourceIcon label={model.marketplaceLabel} installedFrom={model.installedFrom} />
         <MarketplaceBadge label={model.marketplaceLabel} installedFrom={model.installedFrom} />

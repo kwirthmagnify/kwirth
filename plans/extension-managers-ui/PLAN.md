@@ -273,3 +273,45 @@ trae las extensiones de pago. Un cambio de UI en estos diálogos invalida esas c
 - **`SettingsUser`: los `InputLabel` de Theme y Homepage no están asociados a su `Select`** (sin
   `id`/`htmlFor`), así que los combos no tienen nombre accesible y hay que localizarlos por su
   `FormControl`. Detectado al escribir `settings-installed-lists.spec.ts` (2026-09-17).
+
+## Estado de la migración (2026-09-17)
+
+**Migrados al genérico (5):** `aitoolset` (el estreno, sin diálogo previo), `theme` (523 líneas),
+`homepage` (518), `login` (624) y `docs` (488). **Pendientes (6):** plugins, providers, senders, webhooks,
+IdP y packs — los dos últimos siguen siendo los candidatos a no migrar.
+
+### Lo que la migración le fue enseñando al genérico
+
+Cada tipo migrado destapó una copia que no se había visto al medir, y el criterio fue siempre el mismo:
+si aparece en **dos** tipos, sube al genérico y el descriptor pasa a DECLARARLO.
+
+| Lo que se subió | Dónde estaba copiado | Qué declara ahora el tipo |
+|---|---|---|
+| `pluginSelector` | `ThemeAssignSelector` + `GrantSelector` de aitoolsets | `tooltip`, `load`, `save` |
+| Chips de procedencia (dev / fichero local / via pack / Kwirth) | themes, homepages, logins, docs | nada: sale del `installedFrom` |
+| `ExtensionConfigDialog` (formulario de `configSchema`) | logins, senders, providers, webhooks, IdP | `schema` y el endpoint |
+| `canConfigure` | homepages (engranaje por tarjeta, no por tipo) | cuándo se puede configurar esa entrada |
+
+Dos efectos que no eran el objetivo pero importan:
+
+- **Una petición en vez de N.** Cada tarjeta pedía `/core/plugins` por su cuenta para pintar su selector;
+  con doce instaladas eran doce peticiones idénticas. Ahora la lista se pide una vez por diálogo.
+- **Los descriptores son `.ts`, no `.tsx`.** `extraChips` devuelve chips declarados (`{label, color,
+  icon}`) e `icon` es el COMPONENTE, no un elemento montado, así que el descriptor no importa iconos ni
+  maqueta nada. Un descriptor son datos; quien pinta es el genérico. Las dos excepciones se resuelven con
+  `createElement` y están comentadas: homepages monta el `SetupDialog` que trae la propia extensión, y
+  logins y docs montan su acción de abrir pestaña.
+
+### Un arreglo de fondo que salió de migrar logins
+
+El formulario de configuración **omitía los campos vacíos** al guardar, así que un valor ya guardado no se
+podía borrar: se vaciaba el campo, se guardaba, y el back seguía con el de antes. Es el mismo antipatrón
+que la regla de secretos del proyecto prohíbe en el back, colado en el front. `ExtensionConfigDialog`
+envía todos los campos; solo omite un número vacío, porque no hay número que mandar.
+
+### Organización de `front/src/components`
+
+Los ficheros de extensiones estaban sueltos entre los de la aplicación. Quedan en cuatro carpetas:
+`extensions/` (el genérico, la tarjeta, el modelo, los 5 descriptores y los 6 managers que faltan),
+`common/` (ContextSelector, ResourceSelector, PickList, RenameTab, UseEnvironment), `login/` (Login,
+LoginExtensionPage, FirstTimeLogin) y las que ya existían (`security/`, `settings/`, `workspace/`).

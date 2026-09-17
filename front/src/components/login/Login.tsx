@@ -2,9 +2,9 @@ import React, { useState, useContext } from 'react'
 import { sha256 } from 'js-sha256'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Menu, MenuItem, Stack, TextField, Typography} from '@mui/material'
 import { ExpandMore } from '@kwirthmagnify/kwirth-common-front/icons'
-import { MsgBoxOkError, MsgBoxOkWarning } from '../tools/MsgBox'
-import { SessionContext, SessionContextType } from '../model/SessionContext'
-import { addPostAuthorization } from '../tools/AuthorizationManagement'
+import { MsgBoxOkError, MsgBoxOkWarning } from '../../tools/MsgBox'
+import { SessionContext, SessionContextType } from '../../model/SessionContext'
+import { addPostAuthorization } from '../../tools/AuthorizationManagement'
 import { EAuthMethodKind, IAuthMethod, ILoginResponse, IUser } from '@kwirthmagnify/kwirth-common'
 
 interface ILoginProps {

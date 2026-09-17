@@ -1,6 +1,6 @@
 import React, { useState, ChangeEvent } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material'
-import { ITabObject } from '../model/ITabObject'
+import { ITabObject } from '../../model/ITabObject'
 
 interface IRenameTabProps {
     onClose:(a:string|undefined) => void
