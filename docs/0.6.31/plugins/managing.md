@@ -1,0 +1,98 @@
+# Managing plugins
+
+## Enabling and disabling plugins
+
+Kwirth lets you control which plugins are active at startup. Plugins can be individually enabled or disabled via the kwirth configuration. This is useful to reduce the attack surface in production or to deploy lightweight kwirth instances focused on a specific use case.
+
+![manageplugins](../_media/manage-plugins.png ':class=imageclass80')
+
+When a plugin is disabled, both its back endpoint and its entry in the front channel registry are removed, so users will not see the corresponding channel option in the resource selector.
+
+## Managing plugins at runtime
+
+Kwirth supports **hot plugin management**: you can install, update or remove plugins on a running instance without modifying source code, without rebuilding, and without restarting kwirth.
+
+Plugins are stored as Kubernetes ConfigMaps and loaded dynamically at startup and on demand. The frontend injects each plugin's JavaScript as a `<script>` tag at runtime and registers it automatically.
+
+### Plugin Manager UI
+
+The easiest way to manage plugins is through the built-in Plugin Manager, accessible from the kwirth settings menu (or from the **User Preferences** panel inside the Magnify channel).
+
+![plugininstall](../_media/plugin-install.png ':class=imageclass80')
+
+The dialog shows the curated plugin registry (fetched from the kwirth manifest) with the available plugins, their versions, and descriptions. To install a plugin, click **Install** — kwirth downloads the package, stores it in Kubernetes ConfigMaps, and activates it immediately. No restart required.
+
+#### Choosing a specific version
+
+When a plugin has more than one published version in the catalog, a version dropdown appears on its card. Select the version you want before clicking **Install**. This is useful for pinning a known-good version or rolling back after an update.
+
+#### Dependency requirements
+
+Plugins can declare dependencies on other components. If a plugin requires a specific sender, provider, or another plugin (at a minimum version), the Plugin Manager displays those requirements as chips under the plugin description:
+
+```
+Requires: kwirth-common-ai (provider) ≥0.5.18
+```
+
+The **Install** button is automatically disabled when any requirement is not satisfied. Hovering over the disabled button shows a tooltip listing the missing or outdated components. Install the required components first and then return to install this plugin.
+
+The requirement check compares installed versions using kwirth's standard version comparison (`versionGreaterThan`), so patch and minor updates satisfy a minimum-version requirement as expected.
+
+### Installing from a URL
+
+You can install any plugin that is published as a `.tgz` bundle by sending a POST request to the kwirth API:
+
+```bash
+curl -X POST https://<kwirth-host>/plugins/install \
+  -H "Authorization: Bearer <access-key>" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.1.3.tgz"}'
+```
+
+The URL can point to any accessible HTTP/HTTPS server — npm registry, a private registry, an internal artifact store, or a plain file server.
+
+### Installing from a file upload
+
+If your kwirth instance has no internet access, you can upload a plugin `.tgz` bundle directly:
+
+```bash
+curl -X POST https://<kwirth-host>/plugins/upload \
+  -H "Authorization: Bearer <access-key>" \
+  -H "Content-Type: application/octet-stream" \
+  --data-binary @my-plugin-0.1.0.tgz
+```
+
+### Uninstalling a plugin
+
+```bash
+curl -X DELETE https://<kwirth-host>/plugins/<plugin-id> \
+  -H "Authorization: Bearer <access-key>"
+```
+
+The plugin is removed from the ConfigMaps and unregistered from the active channel list immediately.
+
+### Plugin bundle format
+
+A plugin is a standard `.tgz` archive containing exactly two files:
+
+```
+kwirth-plugin-<id>-<version>.tgz
+└── package/
+    ├── package.json   ← metadata: id, name, version, description, icon
+    ├── back.js        ← compiled backend channel code
+    └── front.js       ← compiled frontend React channel code
+```
+
+Both `back.js` and `front.js` are self-contained compiled bundles — no `node_modules` needed.
+
+### Hot-reload for development
+
+When developing a custom plugin locally, you can avoid the install/upload cycle by pointing kwirth at your local build output via `kwirth-dev.json` in the backend working directory:
+
+```json
+{
+  "my-plugin": "../my-plugin/dist"
+}
+```
+
+Kwirth watches the `back.js` and `front.js` files in those paths and reloads them automatically whenever they change. This gives you a fast edit → save → test loop without touching the running kwirth instance.
