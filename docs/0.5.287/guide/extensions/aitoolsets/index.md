@@ -247,16 +247,18 @@ not the dialog), and disappears when you remove it from `kwirth-dev.json` and re
 
 ## Available toolsets
 
+Each one has its own page, with the full list of its tools and the effect and sensitivity of every one:
+
 | Toolset | Tools | Needs | What it is for |
 |---|---|---|---|
-| **K8s Inventory** (`k8s-inventory`) | 7 | `K8S` | What there is: namespaces, nodes, workloads, services, ingresses, and the ConfigMaps/Secrets a Deployment consumes. |
-| **K8s Describe** (`k8s-describe`) | 12 | `K8S` | What is wrong with one object: `describe` and full manifests for pods, controllers, services, ingresses and namespaces, plus the rollout history. |
-| **K8s Observability** (`k8s-observability`) | 3 | `K8S` + `EVENTS` | What happened and what the pod said: recent cluster events and container logs. |
-| **K8s Metrics** (`k8s-metrics`) | 7 | `K8S` + `METRICS` | How much it consumes, now and over the recent readings — cluster, node, deployment or namespace. |
-| **K8s Config & Secrets** (`k8s-secrets`) | 3 | `K8S` | The configuration a workload really consumes: ConfigMap data, Secret keys (never values) and TLS certificate details. |
-| **K8s Ops** (`k8s-ops`) | 8 | `K8S` | 🔴 **The write operations**: scale, restart, delete a pod, manage nodes. Every tool here changes the cluster. |
-| **Source Repos** (`source-repos`) | 1 | `REPOS` | Reads a source file from GitHub or GitLab at a given revision, to inspect the code actually running. |
-| **Playground** (`playground`) | 2 | *(nothing)* | Two harmless toy tools (`times_two`, `father_of`). Install it to watch the machinery work end to end before writing your own. |
+| **[K8s Inventory](k8s-inventory)** (`k8s-inventory`) | 7 | `K8S` | What there is: namespaces, nodes, workloads, services, ingresses, and the ConfigMaps/Secrets a Deployment consumes. |
+| **[K8s Describe](k8s-describe)** (`k8s-describe`) | 12 | `K8S` | What is wrong with one object: `describe` and full manifests for pods, controllers, services, ingresses and namespaces, plus the rollout history. |
+| **[K8s Observability](k8s-observability)** (`k8s-observability`) | 3 | `K8S` + `EVENTS` | What happened and what the pod said: recent cluster events and container logs. |
+| **[K8s Metrics](k8s-metrics)** (`k8s-metrics`) | 7 | `K8S` + `METRICS` | How much it consumes, now and over the recent readings — cluster, node, deployment or namespace. |
+| **[K8s Config & Secrets](k8s-secrets)** (`k8s-secrets`) | 3 | `K8S` | The configuration a workload really consumes: ConfigMap data, Secret keys (never values) and TLS certificate details. |
+| **[K8s Ops](k8s-ops)** (`k8s-ops`) | 8 | `K8S` | 🔴 **The write operations**: scale, restart, delete a pod, manage nodes. Every tool here changes the cluster. |
+| **[Source Repos](source-repos)** (`source-repos`) | 1 | `REPOS` | Reads a source file from GitHub or GitLab at a given revision, to inspect the code actually running. |
+| **[Playground](playground)** (`playground`) | 2 | *(nothing)* | Two harmless toy tools (`times_two`, `father_of`). Install it to watch the machinery work end to end before writing your own. |
 
 Together they are the 43 tools kwirth has always had, now split so they can be granted separately. Two of
 them deserve a second look before you hand them out:
