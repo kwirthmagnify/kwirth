@@ -16,6 +16,7 @@ const CASES: { menu: string; dialog: RegExp }[] = [
     { menu: 'Documentation',    dialog: /Manage documentation/i },
     { menu: 'Packs',            dialog: /Manage extension packs/i },
     { menu: 'Webhooks',         dialog: /Manage webhooks/i },
+    { menu: 'Identity providers', dialog: /Identity providers/i },
     // Los que ya sirve ExtensionManagerDialog. Entran aqui para que la regresion del catalogo cubra
     // tambien al generico, que es quien acabara sirviendo a los demas.
     { menu: 'AI toolsets', dialog: /Manage AI toolsets/i }
