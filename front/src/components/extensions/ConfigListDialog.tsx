@@ -13,7 +13,7 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } fro
     Gestor de las N CONFIGURACIONES CON NOMBRE de una extension: la lista a la izquierda, el formulario de
     la seleccionada a la derecha.
 
-    No es el formulario de ExtensionConfigDialog, que edita LA configuracion de una extension (un login, un
+    No es el formulario de ConfigFormDialog, que edita LA configuracion de una extension (un login, un
     provider). Aqui una misma extension tiene varias configuraciones independientes —un sender con dos
     destinos, un webhook con una entrada por sistema que le llama— y cada una tiene nombre, se clona y se
     borra por separado. De ahi el chip 'N configs' de la tarjeta.
@@ -38,7 +38,7 @@ interface IPerConfigPanelProps {
     configName: string
 }
 
-interface IExtensionConfigsDialogProps {
+interface IConfigListDialogProps {
     title: string
     helpSection?: string
     /** Ruta del back de ESA extension, p.ej. '/core/webhooks/jira'. */
@@ -47,7 +47,7 @@ interface IExtensionConfigsDialogProps {
     perConfigPanel?: React.ComponentType<IPerConfigPanelProps>
 }
 
-const ExtensionConfigsDialog: React.FC<IExtensionConfigsDialogProps> = (props: IExtensionConfigsDialogProps) => {
+const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
 
     const [schema, setSchema] = useState<IConfigFieldDef[]>([])
@@ -310,5 +310,5 @@ const ExtensionConfigsDialog: React.FC<IExtensionConfigsDialogProps> = (props: I
     )
 }
 
-export { ExtensionConfigsDialog }
+export { ConfigListDialog }
 export type { IPerConfigPanelProps }

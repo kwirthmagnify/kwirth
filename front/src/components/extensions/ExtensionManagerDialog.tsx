@@ -25,7 +25,11 @@ import { ExtensionCard, extensionRowCells, EXTENSION_ROW_COLUMNS } from './Exten
 // Lo minimo que el generico necesita de cualquier entrada instalada o de catalogo. Cada tipo tiene su
 // forma; el generico solo mira esto y deja el resto al descriptor.
 interface IMinimalEntry {
-    version: string
+    /*
+        Opcional porque no todo lo instalado la tiene: un conector de IdP bundled viene dentro de Kwirth y
+        no lleva version propia. En el CATALOGO siempre esta — es lo que se elige en el desplegable.
+    */
+    version?: string
     url?: string
     marketplaceId?: string
     marketplaceLabel?: string
@@ -126,8 +130,18 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
             const res = await fetch(`${backendUrl}${d.endpoints.installed}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data = await res.json() as TInstalled[]
+            /*
+                Los datos del TIPO se cargan ANTES de pintar lo instalado, no despues.
+
+                Al reves se veia un parpadeo: el primer render llegaba con esos datos todavia vacios —en
+                IdP, todos los conectores como 'not configured'— y un segundo render los corregia unos
+                milisegundos despues. Pintando lo instalado al final, el chip sale bien a la primera.
+
+                No se deja que un fallo aqui tumbe la lista: sin los datos del tipo se pinta igual, con
+                los chips en su estado por defecto.
+            */
+            if (d.loadExtraData) await d.loadExtraData().catch(() => undefined)
             setInstalled(d.filterInstalled ? data.filter(d.filterInstalled) : data)
-            await d.loadExtraData?.()
         }
         catch (err) {
             setError(`Failed to load installed ${d.noun.plural}: ${err}`)
@@ -176,7 +190,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     /** Un requisito se cumple si esta instalado y con version suficiente. */
     const requirementMet = (req: IExtensionRequirement): boolean => {
         const lista: IVersionedRef[] = req.extensionType === d.extensionType
-            ? installed.map(e => ({ id: d.keyOf(e), version: e.version }))
+            ? installed.filter(e => e.version).map(e => ({ id: d.keyOf(e), version: e.version! }))
             : (crossInstalled[req.extensionType] ?? [])
         const encontrado = lista.find(x => x.id === req.id)
         return Boolean(encontrado) && (encontrado!.version === req.minVersion || versionGreaterThan(encontrado!.version, req.minVersion))
@@ -246,7 +260,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         ;(acc[k] ||= []).push(e)
         return acc
     }, {} as Record<string, TEntry[]>)
-    Object.values(grouped).forEach(g => g.sort((a, b) => versionGreaterThan(a.version, b.version) ? -1 : 1))
+    Object.values(grouped).forEach(g => g.sort((a, b) => versionGreaterThan(a.version ?? '', b.version ?? '') ? -1 : 1))
 
     const selectedEntry = (key: string): TEntry => {
         const group = grouped[key]
@@ -553,7 +567,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                                     const entry = selectedEntry(key)
                                     return (
                                         <ExtensionCard key={key} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
-                                            versions={grouped[key].map(e => e.version)}
+                                            versions={grouped[key].map(e => e.version ?? '')}
                                             onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [key]: v }))}
                                             statusChips={availableStatusChips(key, entry)} actions={availableActions(key, entry)} />
                                     )
@@ -565,7 +579,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                                     return [
                                         ...extensionRowCells(key, {
                                             model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />,
-                                            versions: grouped[key].map(e => e.version),
+                                            versions: grouped[key].map(e => e.version ?? ''),
                                             onVersionChange: v => setSelectedVersions(prev => ({ ...prev, [key]: v })),
                                             statusChips: availableStatusChips(key, entry), actions: availableActions(key, entry)
                                         }),

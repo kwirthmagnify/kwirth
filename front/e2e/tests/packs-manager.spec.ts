@@ -20,9 +20,11 @@ const DIALOG = /Manage extension packs/i
 
 test.describe.configure({ mode: 'serial' })
 
-/** Lo que trae un pack, en la linea de debajo del nombre: '2 plugins, 1 theme' o 'plugin, theme'. */
+/** Lo que trae un pack: 'Includes: 2 plugins, 1 theme' instalado, 'Includes: plugin, theme' en catalogo.
+    El prefijo va en la comprobacion: sin el, la linea caia bajo una descripción recortada y se leia
+    como su continuación. */
 const TIPOS = '(plugin|theme|homepage|sender|provider|webhook|login|docs|aitoolset|idp)'
-const MIEMBROS = new RegExp(`^(\\d+ )?${TIPOS}s?(, (\\d+ )?${TIPOS}s?)*$`)
+const MIEMBROS = new RegExp(`^Includes: (\\d+ )?${TIPOS}s?(, (\\d+ )?${TIPOS}s?)*$`)
 
 test.describe('gestor generico de extensiones: packs', () => {
     let page: Page
@@ -69,7 +71,7 @@ test.describe('gestor generico de extensiones: packs', () => {
         expect(await dialog().locator('span[aria-label="Uninstall"] button').count(), 'usa el tooltip generico: no avisa de lo que borra').toBe(0)
 
         // Y lo instalado cuenta lo que hay DENTRO, que es distinto de lo que promete el catalogo.
-        await expect(dialog().getByText(/^\d+ \w+(s)?(, \d+ \w+(s)?)*$/).first()).toBeVisible()
+        await expect(dialog().getByText(/^Includes: \d+ \w+(s)?(, \d+ \w+(s)?)*$/).first()).toBeVisible()
 
         // Los miembros estan instalados de verdad, no solo el pack: es lo que hacia dudar de migrarlo.
         const miembros = await page.evaluate(async () => {

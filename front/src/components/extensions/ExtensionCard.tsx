@@ -2,9 +2,10 @@ import React from 'react'
 import { Box, Chip, IconButton, MenuItem, Select, Stack, Tooltip, Typography, useTheme } from '@mui/material'
 import { Launch } from '@kwirthmagnify/kwirth-common-front/icons'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
-import { extensionCardSx, extensionCardDescriptionSx, extensionCardTitleSx } from './extensionCardStyle'
+import { extensionCardSx, extensionCardDescriptionSx, extensionCardDescriptionOneLineSx, extensionCardTitleSx } from './extensionCardStyle'
 import { IExtensionAction, IExtensionCardModel } from './extensionManagerModel'
 import { resolveExtensionIcon } from './extensionIcon'
+import { TruncatedText } from './TruncatedText'
 
 /*
     Las DOS vistas de una extension —tarjeta y fila— en un solo sitio, para los once tipos y las dos
@@ -43,6 +44,16 @@ interface IExtensionViewProps {
     actions: IExtensionAction[]
 }
 
+/*
+    Alto de la fila del titulo. Lo marca su control mas alto, que es el boton de la web (30px), y se fija
+    para que el ICONO del tipo pueda centrarse con el nombre: sin una altura conocida, el icono se alinea
+    contra un bloque que incluye descripcion y subtitulo, y queda descolgado.
+*/
+const TITLE_ROW_HEIGHT = 30
+
+/** Una linea con elipsis, para nombres y subtitulos. */
+const ONE_LINE_SX = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+
 // Fondo de la tarjeta: un degradado derivado del nombre, para que cada extension sea reconocible de un
 // vistazo sin depender de que traiga icono. Los diez lo hacian ya, cada uno con su variante.
 const gradientFor = (name: string, dark: boolean): string => {
@@ -52,13 +63,18 @@ const gradientFor = (name: string, dark: boolean): string => {
     return `linear-gradient(315deg, hsla(${hue}, 75%, 58%, ${dark ? 0.07 : 0.12}) 0%, hsla(${hue}, 55%, 42%, ${dark ? 0.14 : 0.26}) 100%)`
 }
 
-const VersionControl: React.FC<{ version: string, versions?: string[], onChange?: (v: string) => void }> = ({ version, versions, onChange }) =>
-    versions
-        ? <Select size='small' value={version} onChange={e => onChange?.(e.target.value)}
+const VersionControl: React.FC<{ version: string, versions?: string[], onChange?: (v: string) => void }> = ({ version, versions, onChange }) => {
+    if (versions) {
+        return <Select size='small' value={version} onChange={e => onChange?.(e.target.value)}
             sx={{ height: 24, fontSize: '0.75rem', minWidth: 80, '& .MuiSelect-select': { py: 0, px: 1 } }}>
             {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
-          </Select>
-        : <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
+        </Select>
+    }
+    // Sin version no hay chip: no todo lo instalado la tiene —un conector de IdP bundled viene dentro de
+    // Kwirth— y un chip que solo dice 'v' es peor que no ponerlo.
+    if (!version) return null
+    return <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
+}
 
 const ActionButtons: React.FC<{ actions: IExtensionAction[] }> = ({ actions }) => (<>
     {actions.map((a, i) => (
@@ -81,25 +97,33 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
     return (
         <Box sx={{ ...extensionCardSx, background: gradientFor(model.name, theme.palette.mode === 'dark') }}>
             <Stack direction='row' alignItems='flex-start' spacing={1.5}>
-                <Box sx={{ color: 'text.secondary', mt: 0.25, display: 'flex' }}>{model.icon ?? resolveExtensionIcon(model.iconName, fallbackIcon)}</Box>
+                {/* El icono se centra con la FILA DEL TITULO, no con el bloque entero: alineado arriba
+                    quedaba mas alto que el nombre, y centrado con todo el bloque se hundia hasta la
+                    descripcion. La fila del titulo mide lo que su control mas alto (el boton de web). */}
+                <Box sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', height: TITLE_ROW_HEIGHT }}>
+                    {model.icon ?? resolveExtensionIcon(model.iconName, fallbackIcon)}
+                </Box>
                 <Box flex={1} minWidth={0}>
                     {/* El boton de web va DENTRO de la fila del titulo, no como columna aparte del Stack
                         exterior. Fuera se alineaba por arriba (`flex-start`) contra un chip de 20px siendo
                         el de 30, asi que sus centros quedaban a 5px y se veia caido. Aqui lo centra la
                         propia fila, sin margenes magicos. */}
-                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%' }}>
-                        <Typography variant='body2' fontWeight='bold' component='span' sx={extensionCardTitleSx}>{model.name}</Typography>
+                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%', height: TITLE_ROW_HEIGHT }}>
+                        <Box sx={extensionCardTitleSx}>
+                            <TruncatedText text={model.name} variant='body2' fontWeight='bold' sx={ONE_LINE_SX} />
+                        </Box>
                         <VersionControl version={model.version} versions={versions} onChange={onVersionChange} />
                         <Tooltip title={model.website ? 'Open website' : 'No website available'}>
                             <span style={{ marginLeft: 'auto' }}>
-                                <IconButton size='small' sx={{ mr: -0.5 }} disabled={!model.website} onClick={() => window.open(model.website!, '_blank', 'noopener')}>
+                                <IconButton size='small' aria-label='Open website' sx={{ mr: -0.5 }} disabled={!model.website} onClick={() => window.open(model.website!, '_blank', 'noopener')}>
                                     <Launch fontSize='small' />
                                 </IconButton>
                             </span>
                         </Tooltip>
                     </Stack>
-                    <Typography variant='caption' color='text.secondary' display='block' sx={extensionCardDescriptionSx}>{model.description}</Typography>
-                    {model.subtitle && <Typography variant='caption' color='text.disabled' display='block' noWrap>{model.subtitle}</Typography>}
+                    <TruncatedText text={model.description} variant='caption' color='text.secondary'
+                        sx={model.subtitle ? extensionCardDescriptionOneLineSx : extensionCardDescriptionSx} />
+                    {model.subtitle && <TruncatedText text={model.subtitle} variant='caption' color='text.disabled' sx={{ ...ONE_LINE_SX, mt: 0.25 }} />}
                 </Box>
             </Stack>
             <Stack direction='row' alignItems='center' spacing={0.5} sx={{ mt: 1 }}>
@@ -126,8 +150,8 @@ const extensionRowCells = (
 ): React.ReactNode[] => [
     <Box key={`${key}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}>{model.icon ?? resolveExtensionIcon(model.iconName, fallbackIcon)}</Box>,
     <Box key={`${key}-name`} sx={{ py: 1, minWidth: 0 }}>
-        <Typography variant='body2' fontWeight='bold' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model.name}</Typography>
-        {model.subtitle && <Typography variant='caption' color='text.disabled' display='block' noWrap>{model.subtitle}</Typography>}
+        <TruncatedText text={model.name} variant='body2' fontWeight='bold' sx={ONE_LINE_SX} />
+        {model.subtitle && <TruncatedText text={model.subtitle} variant='caption' color='text.disabled' sx={ONE_LINE_SX} />}
     </Box>,
     <Box key={`${key}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
         <MarketplaceSourceIcon label={model.marketplaceLabel} installedFrom={model.installedFrom} />

@@ -2,7 +2,7 @@ import React from 'react'
 import { Extension } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement, IExtensionVerdict } from './extensionManagerModel'
-import { PluginConfigDialog } from './PluginConfigDialog'
+import { ConfigJsonDialog } from './ConfigJsonDialog'
 
 /*
     Descriptor del tipo `plugin` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
@@ -97,7 +97,13 @@ const makePluginDescriptor = (deps: IPluginDescriptorDeps): IExtensionManagerDes
     canConfigure: p => (p.configSchema?.length ?? 0) > 0
         ? { allowed: true }
         : { allowed: false, reason: 'This plugin takes no installation config' },
-    renderConfigDialog: (p, onClose) => React.createElement(PluginConfigDialog, { pluginId: p.id, onClose }),
+    renderConfigDialog: (p, onClose) => React.createElement(ConfigJsonDialog, {
+        title: `Configure ${p.displayName || p.id}`,
+        hint: 'Installation config (JSON) for this plugin — read by the plugin at runtime.',
+        endpoint: `/core/plugins/${p.id}/config`,
+        exportName: p.id,
+        onClose
+    }),
 
     // El canal se carga y se descarga en caliente: sin esto habria que recargar la pagina para usar un
     // plugin recien instalado.

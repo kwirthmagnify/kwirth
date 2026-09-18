@@ -3,7 +3,8 @@ import { Dialog, DialogContent, Typography } from '@mui/material'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
 /*
-    El diálogo de configuracion que trae el PROPIO provider en su front.js.
+    La configuracion que trae la PROPIA extension en su front.js. Es una de las cuatro formas de
+    configurar una extension (ver ConfigFormDialog); hoy la usan los providers.
 
     Un provider basico se configura con un formulario que pinta el core a partir de su schema. Uno
     complejo —sugarless, syslog, service-flow— tiene varias configuraciones con nombre, listas y pruebas
@@ -29,7 +30,7 @@ interface ILoadedProvider {
 const loadedProvider = (id: string): ILoadedProvider | undefined =>
     (window as unknown as { __kwirth_providers__?: Record<string, ILoadedProvider> }).__kwirth_providers__?.[id]
 
-const ProviderFrontDialog: React.FC<{ providerId: string, onClose: () => void }> = ({ providerId, onClose }) => {
+const ConfigFrontDialog: React.FC<{ providerId: string, onClose: () => void }> = ({ providerId, onClose }) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const [cargado, setCargado] = useState(false)
     const [error, setError] = useState<string | undefined>()
@@ -63,4 +64,4 @@ const ProviderFrontDialog: React.FC<{ providerId: string, onClose: () => void }>
     return <ConfigDialog onClose={onClose} backendUrl={backendUrl} accessString={accessString} />
 }
 
-export { ProviderFrontDialog }
+export { ConfigFrontDialog }

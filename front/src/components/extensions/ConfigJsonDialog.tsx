@@ -5,17 +5,30 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
 /*
-    La configuracion de instalacion de un plugin: JSON libre que el plugin lee en runtime.
+    Una configuracion en JSON LIBRE, con exportar e importar. Es una de las cuatro formas de configurar
+    una extension (ver ConfigFormDialog).
 
-    Se edita en crudo, con exportar e importar, y no con un formulario: es un requisito del proyecto para
-    los componentes que llevan configuracion (plugins, senders, providers), porque asi se puede llevar la
-    misma configuracion de un Kwirth a otro sin volver a teclearla.
+    Se edita en crudo y no con un formulario porque es un requisito del proyecto para los componentes que
+    llevan configuracion: asi la misma configuracion se lleva de un Kwirth a otro sin volver a teclearla.
 
-    ⚠️ Que un plugin ACEPTE configuracion lo dice el propio plugin con `configSchema` en su package.json;
-    esta pantalla solo sale en esos. El schema todavia no se usa para pintar campos —el editor es libre—
-    pero es lo que distingue un plugin configurable de uno que no lo es.
+    Hoy la usan los plugins, cuya configuracion de instalacion la lee el plugin en runtime y el core no
+    interpreta. ⚠️ Que un plugin ACEPTE configuracion lo dice el propio plugin con `configSchema` en su
+    package.json, y el gestor solo deja viva la rueda en esos; el schema todavia no se usa para pintar
+    campos, pero es lo que distingue un plugin configurable de uno que no lo es.
 */
-const PluginConfigDialog: React.FC<{ pluginId: string, onClose: () => void }> = ({ pluginId, onClose }) => {
+interface IConfigJsonDialogProps {
+    /** Titulo del diálogo, ya redactado por quien lo abre. */
+    title: string
+    /** Que es esta configuracion, en una linea, para quien la ve por primera vez. */
+    hint: string
+    /** Ruta del back, relativa al backendUrl: GET para leer y PUT para guardar. */
+    endpoint: string
+    /** Nombre del fichero al exportar, sin extension. */
+    exportName: string
+    onClose: () => void
+}
+
+const ConfigJsonDialog: React.FC<IConfigJsonDialogProps> = ({ title, hint, endpoint, exportName, onClose }) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const [texto, setTexto] = useState('')
     const [busy, setBusy] = useState(false)
@@ -25,7 +38,7 @@ const PluginConfigDialog: React.FC<{ pluginId: string, onClose: () => void }> = 
         const cargar = async () => {
             setBusy(true)
             try {
-                const res = await fetch(`${backendUrl}/core/plugins/${pluginId}/config`, addGetAuthorization(accessString))
+                const res = await fetch(`${backendUrl}${endpoint}`, addGetAuthorization(accessString))
                 const cfg = res.ok ? await res.json() : {}
                 setTexto(JSON.stringify(cfg ?? {}, null, 2))
             }
@@ -33,7 +46,7 @@ const PluginConfigDialog: React.FC<{ pluginId: string, onClose: () => void }> = 
             finally { setBusy(false) }
         }
         cargar()
-    }, [backendUrl, accessString, pluginId])
+    }, [backendUrl, accessString, endpoint])
 
     const guardar = async () => {
         setError(undefined)
@@ -47,7 +60,7 @@ const PluginConfigDialog: React.FC<{ pluginId: string, onClose: () => void }> = 
         }
         setBusy(true)
         try {
-            const res = await fetch(`${backendUrl}/core/plugins/${pluginId}/config`, addPutAuthorization(accessString, JSON.stringify(parsed)))
+            const res = await fetch(`${backendUrl}${endpoint}`, addPutAuthorization(accessString, JSON.stringify(parsed)))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             onClose()
         }
@@ -59,7 +72,7 @@ const PluginConfigDialog: React.FC<{ pluginId: string, onClose: () => void }> = 
         const blob = new Blob([texto], { type: 'application/json' })
         const a = document.createElement('a')
         a.href = URL.createObjectURL(blob)
-        a.download = `${pluginId}-config.json`
+        a.download = `${exportName}-config.json`
         a.click()
         URL.revokeObjectURL(a.href)
     }
@@ -75,9 +88,9 @@ const PluginConfigDialog: React.FC<{ pluginId: string, onClose: () => void }> = 
 
     return (
         <Dialog open={true} slotProps={{ paper: { sx: { width: 560, maxWidth: '95vw' } } }}>
-            <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Configure {pluginId}</DialogTitleHelp>
+            <DialogTitleHelp section='guide/extensions/plugins/index?id=managing-channel-plugins' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>{title}</DialogTitleHelp>
             <DialogContent>
-                <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>Installation config (JSON) for this plugin — read by the plugin at runtime.</Typography>
+                <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>{hint}</Typography>
                 <TextField multiline minRows={8} fullWidth value={texto} onChange={e => setTexto(e.target.value)} disabled={busy}
                     slotProps={{ input: { sx: { fontFamily: 'monospace', fontSize: 12 } } }} />
                 {error && <Typography variant='caption' color='error' sx={{ display: 'block', mt: 1 }}>{error}</Typography>}
@@ -94,4 +107,4 @@ const PluginConfigDialog: React.FC<{ pluginId: string, onClose: () => void }> = 
     )
 }
 
-export { PluginConfigDialog }
+export { ConfigJsonDialog }

@@ -3,7 +3,7 @@ import { Button, CircularProgress, Divider, IconButton, InputAdornment, Stack, T
 import { CheckCircle, ContentCopy, Refresh } from '@kwirthmagnify/kwirth-common-front/icons'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization } from '../../tools/AuthorizationManagement'
-import { IPerConfigPanelProps } from './ExtensionConfigsDialog'
+import { IPerConfigPanelProps } from './ConfigListDialog'
 
 /*
     La URL de ingesta de una configuracion de webhook, que es lo unico que webhooks añade al gestor comun

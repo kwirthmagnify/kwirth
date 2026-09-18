@@ -7,7 +7,11 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
 /*
-    El formulario de configuracion de una extension, montado a partir de su `configSchema`.
+    UNA configuracion, en formulario, montado a partir del `configSchema` de la extension.
+
+    Es una de las cuatro formas que tiene una extension de configurarse, y los ficheros se llaman por esa
+    forma: ConfigFormDialog (esta), ConfigListDialog (varias con nombre), ConfigJsonDialog (JSON libre) y
+    ConfigFrontDialog (la pinta la propia extension).
 
     Estaba copiado en CINCO diálogos de gestión (logins, senders, providers, webhooks e IdP) con las mismas
     tres ramas —texto, secreto con ojo, desplegable— y la misma carga y guardado contra
@@ -22,7 +26,7 @@ import { addGetAuthorization, addPutAuthorization } from '../../tools/Authorizat
     seguia con el de antes. Un numero vacio si se omite, porque no hay numero que mandar.
 */
 
-interface IExtensionConfigDialogProps {
+interface IConfigFormDialogProps {
     /** Titulo completo, p.ej. 'Configure — Corporate login'. */
     title: string
     /** Seccion de la guia para el boton de ayuda. */
@@ -41,7 +45,7 @@ interface IExtensionConfigDialogProps {
     onClose: () => void
 }
 
-const ExtensionConfigDialog: React.FC<IExtensionConfigDialogProps> = (props: IExtensionConfigDialogProps) => {
+const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const [schema, setSchema] = useState<IConfigFieldDef[]>(props.schema ?? [])
     const [values, setValues] = useState<Record<string, string>>({})
@@ -160,4 +164,4 @@ const ExtensionConfigDialog: React.FC<IExtensionConfigDialogProps> = (props: IEx
     )
 }
 
-export { ExtensionConfigDialog }
+export { ConfigFormDialog }

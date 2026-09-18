@@ -45,12 +45,24 @@ export const extensionCardTitleSx: SxProps<Theme> = {
     whiteSpace: 'nowrap'
 }
 
-// Dos líneas y elipsis. Sin esto, la descripción manda sobre la altura de toda la fila.
-export const extensionCardDescriptionSx: SxProps<Theme> = {
+// Elipsis a las N líneas. Sin esto, la descripción manda sobre la altura de toda la fila.
+const clampSx = (lineas: number): SxProps<Theme> => ({
     mt: 0.5,
     display: '-webkit-box',
-    WebkitLineClamp: 2,
+    WebkitLineClamp: lineas,
     WebkitBoxOrient: 'vertical',
     overflow: 'hidden',
     textOverflow: 'ellipsis'
-}
+})
+
+/** Lo normal: dos líneas para la descripción. */
+export const extensionCardDescriptionSx = clampSx(2)
+
+/*
+    Una sola línea, cuando la tarjeta lleva ademas subtitulo (hoy, los packs con lo que traen dentro).
+
+    Con las dos líneas de siempre, el subtitulo caia pegado a una descripción CORTADA y se leia como su
+    continuación: 'Censor pack for Kwirth — LLM-based log noise filtering channel plus its…' seguido de
+    'plugin, login' parecia mas texto de la descripción, no la lista de lo que trae el pack.
+*/
+export const extensionCardDescriptionOneLineSx = clampSx(1)

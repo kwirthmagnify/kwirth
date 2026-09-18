@@ -2,7 +2,7 @@ import React from 'react'
 import { Https } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
-import { ExtensionConfigsDialog } from './ExtensionConfigsDialog'
+import { ConfigListDialog } from './ConfigListDialog'
 import { WebhookUrlPanel } from './WebhookUrlPanel'
 
 /*
@@ -91,7 +91,7 @@ const webhookDescriptor: IExtensionManagerDescriptor<IInstalledWebhook, IWebhook
     // recibe nada, y eso se lee de un vistazo.
     configCount: w => w.configNames.length,
 
-    renderConfigDialog: (w, onClose) => React.createElement(ExtensionConfigsDialog, {
+    renderConfigDialog: (w, onClose) => React.createElement(ConfigListDialog, {
         title: `Configure: ${w.displayName ?? w.id}`,
         helpSection: HELP,
         basePath: `/core/webhooks/${w.id}`,

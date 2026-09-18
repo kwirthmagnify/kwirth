@@ -74,10 +74,15 @@ const toModel = (e: IInstalledPack | IPackManifestEntry): IExtensionCardModel =>
     website: e.website,
     installedFrom: (e as IInstalledPack).installedFrom,
     marketplaceLabel: e.marketplaceLabel,
-    // Instalado se sabe lo que hay DENTRO; del catalogo, solo que tipos promete traer.
+    /*
+        Que trae el pack. Lleva 'Includes:' delante a proposito: sin el, la linea caia debajo de una
+        descripción recortada y se leia como su continuación en vez de como la lista de lo que trae.
+
+        Instalado se sabe lo que hay DENTRO; del catalogo, solo que tipos promete traer.
+    */
     subtitle: (e as IInstalledPack).extensions
-        ? membersSummary((e as IInstalledPack).extensions)
-        : (e as IPackManifestEntry).extensionTypes?.join(', ')
+        ? `Includes: ${membersSummary((e as IInstalledPack).extensions)}`
+        : ((e as IPackManifestEntry).extensionTypes?.length ? `Includes: ${(e as IPackManifestEntry).extensionTypes!.join(', ')}` : undefined)
 })
 
 // Un pack se quita entero, venga de donde venga: no hay packs de dev ni packs instalados por otro pack.

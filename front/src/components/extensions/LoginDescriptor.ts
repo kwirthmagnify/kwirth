@@ -2,7 +2,7 @@ import React from 'react'
 import { Launch, LockPerson } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
-import { ExtensionConfigDialog } from './ExtensionConfigDialog'
+import { ConfigFormDialog } from './ConfigFormDialog'
 
 /*
     Descriptor del tipo `login` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
@@ -98,7 +98,7 @@ const loginDescriptor: IExtensionManagerDescriptor<IInstalledLogin, ILoginManife
     canConfigure: l => (l.configSchema?.length ?? 0) > 0
         ? { allowed: true }
         : { allowed: false, reason: 'This login extension has no settings' },
-    renderConfigDialog: (l, onClose) => React.createElement(ExtensionConfigDialog, {
+    renderConfigDialog: (l, onClose) => React.createElement(ConfigFormDialog, {
         title: `Configure — ${l.displayName || l.name}`,
         helpSection: 'guide/extensions/logins/index?id=runtime-configuration',
         schema: l.configSchema ?? [],

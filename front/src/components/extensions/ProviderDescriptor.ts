@@ -2,8 +2,8 @@ import React from 'react'
 import { Factory } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement, IExtensionVerdict } from './extensionManagerModel'
-import { ExtensionConfigDialog } from './ExtensionConfigDialog'
-import { ProviderFrontDialog } from './ProviderFrontDialog'
+import { ConfigFormDialog } from './ConfigFormDialog'
+import { ConfigFrontDialog } from './ConfigFrontDialog'
 
 /*
     Descriptor del tipo `provider` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
@@ -103,8 +103,8 @@ const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProvi
     renderConfigDialog: (p, onClose) => p.hasFront
         // Lo pinta la extension, no el core: el provider trae su propia UI porque sus configuraciones no
         // caben en un formulario plano (varias con nombre, listas, pruebas de conexion…).
-        ? React.createElement(ProviderFrontDialog, { providerId: p.id, onClose })
-        : React.createElement(ExtensionConfigDialog, {
+        ? React.createElement(ConfigFrontDialog, { providerId: p.id, onClose })
+        : React.createElement(ConfigFormDialog, {
             title: `Configure: ${p.displayName ?? p.id}`,
             helpSection: HELP,
             schemaEndpoint: `/core/providers/${p.id}/schema`,
