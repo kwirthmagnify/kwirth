@@ -1,6 +1,6 @@
 import { Extension } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { IExtensionManagerDescriptor, IExtensionCardModel, IUninstallVerdict } from './extensionManagerModel'
+import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
 
 /*
     Descriptor del tipo `pack` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
@@ -81,7 +81,7 @@ const toModel = (e: IInstalledPack | IPackManifestEntry): IExtensionCardModel =>
 })
 
 // Un pack se quita entero, venga de donde venga: no hay packs de dev ni packs instalados por otro pack.
-const canUninstall = (): IUninstallVerdict => ({ allowed: true })
+const canUninstall = (): IExtensionVerdict => ({ allowed: true })
 
 /** Recorre los miembros del pack aplicando a cada uno lo suyo segun su tipo. */
 const forEachMember = (pack: IInstalledPack, deps: IPackDescriptorDeps, cargar: boolean) => {

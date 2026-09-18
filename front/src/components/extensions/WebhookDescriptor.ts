@@ -1,7 +1,7 @@
 import React from 'react'
 import { Https } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { IExtensionManagerDescriptor, IExtensionCardModel, IUninstallVerdict } from './extensionManagerModel'
+import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
 import { ExtensionConfigsDialog } from './ExtensionConfigsDialog'
 import { WebhookUrlPanel } from './WebhookUrlPanel'
 
@@ -63,7 +63,7 @@ const toModel = (e: IInstalledWebhook | IWebhookManifestEntry): IExtensionCardMo
     marketplaceLabel: e.marketplaceLabel
 })
 
-const canUninstall = (w: IInstalledWebhook): IUninstallVerdict => {
+const canUninstall = (w: IInstalledWebhook): IExtensionVerdict => {
     if (w.installedFrom === 'dev') return { allowed: false, reason: 'Dev webhooks cannot be uninstalled' }
     if (w.installedFrom?.startsWith('pack:')) return { allowed: false, reason: 'Installed via pack — uninstall the pack instead' }
     return { allowed: true }

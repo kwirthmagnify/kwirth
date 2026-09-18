@@ -70,13 +70,22 @@ test.describe('gestor generico de extensiones: plugins', () => {
             configuracion de instalacion, y abria un editor JSON que no hacia nada. Ahora la declara el
             plugin (configSchema en su package.json) y el gestor la ofrece solo en esos.
         */
+        /*
+            ⚠️ La rueda NO desaparece: se queda visible y deshabilitada con el motivo, que es la regla de
+            UI del proyecto. Lo que se cuenta es cuantas estan VIVAS.
+        */
         const configurables = delBack.filter(p => (p.configSchema?.length ?? 0) > 0)
-        const engranajes = await dialog().locator('button[aria-label="Configure"]').count()
-        expect(engranajes, `hay ${engranajes} ruedas y solo ${configurables.length} plugins declaran configuracion`).toBe(configurables.length)
+        const vivas = await dialog().locator('button[aria-label="Configure"]:not([disabled])').count()
+        expect(vivas, `hay ${vivas} ruedas vivas y solo ${configurables.length} plugins declaran configuracion`).toBe(configurables.length)
 
-        // Y si alguno la declara, la suya tiene que abrir su editor.
+        // Y la que esta muerta tiene que DECIR por que, en vez de no responder sin mas.
+        if (configurables.length < delBack.length) {
+            await expect(dialog().locator('span[aria-label="This plugin takes no installation config"] button').first()).toBeDisabled()
+        }
+
+        // Si alguno la declara, la suya abre su editor.
         if (configurables.length > 0) {
-            await dialog().locator('button[aria-label="Configure"]').first().click()
+            await dialog().locator('button[aria-label="Configure"]:not([disabled])').first().click()
             await expect(page.locator('.MuiDialog-root')).toHaveCount(2, { timeout: 15000 })
             await page.getByRole('button', { name: /cancel/i }).last().click()
         }

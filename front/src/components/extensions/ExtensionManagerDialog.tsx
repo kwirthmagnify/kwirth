@@ -410,8 +410,17 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
 
     const installedActions = (entry: TInstalled): IExtensionAction[] => {
         const actions = [...(d.actions?.(entry, EManagerSection.INSTALLED) ?? [])]
-        if (d.renderConfigDialog && (d.canConfigure?.(entry) ?? true))
-            actions.push({ icon: <Settings fontSize='small' />, tooltip: 'Configure', onClick: () => setConfiguring(entry) })
+        if (d.renderConfigDialog) {
+            // Visible y deshabilitado con el motivo, nunca escondido: una extension sin configuracion
+            // tiene que DECIR que no la tiene, no dejar el hueco donde estaria la rueda de las demas.
+            const verdict = d.canConfigure?.(entry) ?? { allowed: true }
+            actions.push({
+                icon: <Settings fontSize='small' />,
+                tooltip: verdict.allowed ? 'Configure' : (verdict.reason ?? 'No configuration available'),
+                disabled: !verdict.allowed,
+                onClick: () => setConfiguring(entry)
+            })
+        }
         const verdict = d.canUninstall(entry)
         const key = d.keyOf(entry)
         actions.push({

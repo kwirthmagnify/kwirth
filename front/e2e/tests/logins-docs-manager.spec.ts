@@ -76,10 +76,12 @@ test.describe('gestores migrados al generico: logins y docs', () => {
         const dialog = await abrir('Login extensions', LOGINS)
         await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
 
-        const engranajes = await dialog.locator('span[aria-label="Configure"] button').count()
+        // La rueda se queda visible y deshabilitada en los que no declaran nada (regla de UI del
+        // proyecto), asi que lo que distingue una tarjeta de otra es cuantas estan VIVAS.
+        const vivas = await dialog.locator('button[aria-label="Configure"]:not([disabled])').count()
         const instalados = await dialog.locator('span[aria-label^="Uninstall"] button, span[aria-label^="Dev login"] button, span[aria-label^="Installed via pack"] button').count()
         expect(instalados, 'no hay logins instalados con los que comprobar nada').toBeGreaterThan(0)
-        expect(engranajes, 'el engranaje sale en TODOS: se estaria pintando por tipo y no por tarjeta').toBeLessThan(instalados + 1)
+        expect(vivas, 'todas las ruedas estan vivas: se estaria ofreciendo por tipo y no por tarjeta').toBeLessThan(instalados + 1)
         await dismissOpenDialogs(page)
     })
 

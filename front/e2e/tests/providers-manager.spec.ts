@@ -26,6 +26,7 @@ interface IProviderRef {
     displayName?: string
     core?: boolean
     hasFront?: boolean
+    hasSchema?: boolean
     configNames?: string[]
 }
 
@@ -117,19 +118,32 @@ test.describe('gestor generico de extensiones: providers', () => {
         await dialog().waitFor({ timeout: 40000 })
     })
 
-    test('un provider sin front se configura con el formulario del core', async () => {
-        const sinFront = delBack.find(p => !p.core && !p.hasFront)
-        test.skip(!sinFront, 'ningun provider basico en este entorno')
+    test('un provider con schema se configura con el formulario del core', async () => {
+        const conSchema = delBack.find(p => !p.core && !p.hasFront && p.hasSchema)
+        test.skip(!conSchema, 'ningun provider con schema del core en este entorno')
 
-        const nombre = sinFront!.displayName ?? sinFront!.id
+        const nombre = conSchema!.displayName ?? conSchema!.id
         await gearDe(nombre).click()
 
         // El formulario lo pinta el core a partir del schema del provider, y se titula con su nombre.
         const cfg = page.getByRole('dialog').filter({ hasText: `Configure: ${nombre}` })
         await expect(cfg).toBeVisible({ timeout: 20000 })
-        // Sin nada configurable tiene que DECIRLO, no quedarse en blanco.
-        const campos = await cfg.locator('input, .MuiSelect-select').count()
-        if (campos === 0) await expect(cfg.getByText('This provider has no configurable options.')).toBeVisible()
         await cfg.getByRole('button', { name: /cancel/i }).click()
+    })
+
+    test('🔴 el que no se configura de ninguna forma tiene la rueda muerta, y lo dice', async () => {
+        /*
+            Hay providers que no traen front NI declaran schema: para esos la rueda no lleva a ningun
+            sitio. Su diálogo a medida ya la dejaba muerta con 'No configuration available', y al migrar
+            se perdio: salia viva y abria un formulario vacio.
+
+            La rueda NO desaparece — se queda visible y deshabilitada, que es la regla de UI del proyecto.
+        */
+        const sinNada = delBack.filter(p => !p.core && !p.hasFront && !p.hasSchema)
+        test.skip(sinNada.length === 0, 'todos los providers de este entorno se configuran de alguna forma')
+
+        const muertas = dialog().locator('span[aria-label="No configuration available"] button')
+        expect(await muertas.count(), `${sinNada.length} providers no se configuran y ninguna rueda lo dice`).toBe(sinNada.length)
+        await expect(muertas.first()).toBeDisabled()
     })
 })

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Extension } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
-import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement, IUninstallVerdict } from './extensionManagerModel'
+import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement, IExtensionVerdict } from './extensionManagerModel'
 import { PluginConfigDialog } from './PluginConfigDialog'
 
 /*
@@ -69,7 +69,7 @@ const toModel = (e: IInstalledPlugin | IPluginManifestEntry): IExtensionCardMode
     iconName: e.icon
 })
 
-const canUninstall = (p: IInstalledPlugin): IUninstallVerdict => {
+const canUninstall = (p: IInstalledPlugin): IExtensionVerdict => {
     if (p.installedFrom === 'dev') return { allowed: false, reason: 'Dev plugins cannot be uninstalled' }
     if (p.installedFrom === 'bundled') return { allowed: false, reason: 'Built-in plugins cannot be uninstalled' }
     if (p.installedFrom?.startsWith('pack:')) return { allowed: false, reason: 'Installed via pack — uninstall the pack instead' }
@@ -92,8 +92,11 @@ const makePluginDescriptor = (deps: IPluginDescriptorDeps): IExtensionManagerDes
     toModel,
     canUninstall,
 
-    // La rueda dentada, solo en los plugins que declaran configuracion. El resto no tiene nada que abrir.
-    canConfigure: p => (p.configSchema?.length ?? 0) > 0,
+    // La rueda dentada, viva solo en los plugins que declaran configuracion. En los demas se queda
+    // deshabilitada diciendo por que: antes salia activa en todos y abria un editor que no hacia nada.
+    canConfigure: p => (p.configSchema?.length ?? 0) > 0
+        ? { allowed: true }
+        : { allowed: false, reason: 'This plugin takes no installation config' },
     renderConfigDialog: (p, onClose) => React.createElement(PluginConfigDialog, { pluginId: p.id, onClose }),
 
     // El canal se carga y se descarga en caliente: sin esto habria que recargar la pagina para usar un

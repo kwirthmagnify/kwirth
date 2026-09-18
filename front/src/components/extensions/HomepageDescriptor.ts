@@ -1,7 +1,7 @@
 import React from 'react'
 import { Home } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { EChipIcon, EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IUninstallVerdict } from './extensionManagerModel'
+import { EChipIcon, EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
 
 /*
     Descriptor del tipo `homepage` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
@@ -87,7 +87,7 @@ const toModel = (e: IInstalledHomepage | IHomepageManifestEntry): IExtensionCard
     marketplaceLabel: e.marketplaceLabel
 })
 
-const canUninstall = (h: IInstalledHomepage): IUninstallVerdict => {
+const canUninstall = (h: IInstalledHomepage): IExtensionVerdict => {
     if (h.installedFrom === 'dev') return { allowed: false, reason: 'Dev homepages cannot be uninstalled' }
     if (h.installedFrom?.startsWith('pack:')) return { allowed: false, reason: 'Installed via pack — uninstall the pack instead' }
     return { allowed: true }
@@ -114,9 +114,16 @@ const makeHomepageDescriptor = (deps: IHomepageDescriptorDeps): IExtensionManage
             ? [{ label: 'active', color: 'primary', icon: EChipIcon.ACTIVE }]
             : [],
 
-    // El engranaje es de la TARJETA, no del tipo: solo la homepage activa se reconfigura, y solo si su
-    // extension trae dialogo. Para las demas no hay nada que abrir.
-    canConfigure: h => deps.activeHomepageId === h.id && Boolean(loadedHomepage(h.id)?.SetupDialog),
+    /*
+        El engranaje es de la TARJETA, no del tipo: solo la homepage activa se reconfigura, y solo si su
+        extension trae dialogo. Se distinguen los dos motivos a proposito — uno es definitivo y el otro
+        dice QUE HACER para poder configurarla.
+    */
+    canConfigure: h => {
+        if (!loadedHomepage(h.id)?.SetupDialog) return { allowed: false, reason: 'This homepage has no settings' }
+        if (deps.activeHomepageId !== h.id) return { allowed: false, reason: 'Only the active homepage can be configured' }
+        return { allowed: true }
+    },
 
     renderConfigDialog: (h, onClose) => {
         const SetupDialog = loadedHomepage(h.id)?.SetupDialog

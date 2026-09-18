@@ -1,6 +1,6 @@
 import { Construction } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IUninstallVerdict } from './extensionManagerModel'
+import { EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
 
 /*
     Descriptor del tipo `aitoolset` (plan: plans/ai-tools/PLAN.md) y PRIMER cliente del gestor generico.
@@ -44,7 +44,7 @@ const toModel = (e: IAiToolsetEntry): IExtensionCardModel => ({
 
 // Un toolset built-in del core no se instala ni se desinstala: viene dentro. Y uno de dev lo gobierna
 // kwirth-dev.json, no el diálogo.
-const canUninstall = (e: IAiToolsetEntry): IUninstallVerdict => {
+const canUninstall = (e: IAiToolsetEntry): IExtensionVerdict => {
     if (e.installedFrom === 'dev') return { allowed: false, reason: 'Dev toolsets cannot be uninstalled' }
     if (e.installedFrom === 'bundled') return { allowed: false, reason: 'Built-in toolsets cannot be uninstalled' }
     if (e.installedFrom?.startsWith('pack:')) return { allowed: false, reason: 'Installed via pack — uninstall the pack instead' }

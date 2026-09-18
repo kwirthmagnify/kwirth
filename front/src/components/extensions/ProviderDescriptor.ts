@@ -1,7 +1,7 @@
 import React from 'react'
 import { Factory } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement, IUninstallVerdict } from './extensionManagerModel'
+import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement, IExtensionVerdict } from './extensionManagerModel'
 import { ExtensionConfigDialog } from './ExtensionConfigDialog'
 import { ProviderFrontDialog } from './ProviderFrontDialog'
 
@@ -49,6 +49,8 @@ interface IInstalledProvider {
     configNames?: string[]
     /** Trae su propia UI de configuracion en front.js. */
     hasFront?: boolean
+    /** Declara un schema, y entonces el formulario lo pinta el core. */
+    hasSchema?: boolean
     /** Provider del core (events, metrics): viene dentro de Kwirth, no es una extension. */
     core?: boolean
     requiresRestart?: boolean
@@ -63,7 +65,7 @@ const toModel = (e: IInstalledProvider | IProviderManifestEntry): IExtensionCard
     marketplaceLabel: e.marketplaceLabel
 })
 
-const canUninstall = (p: IInstalledProvider): IUninstallVerdict => {
+const canUninstall = (p: IInstalledProvider): IExtensionVerdict => {
     if (p.installedFrom === 'dev') return { allowed: false, reason: 'Dev providers cannot be uninstalled' }
     if (p.installedFrom?.startsWith('pack:')) return { allowed: false, reason: 'Installed via pack — uninstall the pack instead' }
     return { allowed: true }
@@ -91,6 +93,12 @@ const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProvi
     filterInstalled: p => !p.core,
 
     configCount: p => p.configNames?.length,
+
+    // Hay providers que no se configuran de ninguna de las dos formas —ni traen front ni declaran
+    // schema— y para esos la rueda no lleva a ningun sitio.
+    canConfigure: p => (p.hasFront || p.hasSchema)
+        ? { allowed: true }
+        : { allowed: false, reason: 'No configuration available' },
 
     renderConfigDialog: (p, onClose) => p.hasFront
         // Lo pinta la extension, no el core: el provider trae su propia UI porque sus configuraciones no

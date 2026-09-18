@@ -1,7 +1,7 @@
 import React from 'react'
 import { Description, Launch } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor, IExtensionCardModel, IUninstallVerdict } from './extensionManagerModel'
+import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
 
 /*
     Descriptor del tipo `docs` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
@@ -55,7 +55,7 @@ const toModel = (e: IDocsMeta | IDocsManifestEntry): IExtensionCardModel => ({
     marketplaceLabel: e.marketplaceLabel
 })
 
-const canUninstall = (d: IDocsMeta): IUninstallVerdict => {
+const canUninstall = (d: IDocsMeta): IExtensionVerdict => {
     // La documentacion del core viene DENTRO de la imagen: no hay nada que borrar, y si se borrara Kwirth
     // se quedaria sin ayuda.
     if (d.installedFrom === 'bundled') return { allowed: false, reason: 'Bundled documentation cannot be uninstalled' }

@@ -81,8 +81,13 @@ export interface IExtensionAction {
     color?: 'primary' | 'error' | 'inherit'
 }
 
-/** Si una entrada instalada se puede quitar, y por que no. El motivo se enseña en el tooltip. */
-export interface IUninstallVerdict {
+/**
+ * Si una accion se puede hacer sobre una entrada, y por que no.
+ *
+ * El motivo no es un adorno: la regla de UI del proyecto es que un control se queda visible y
+ * deshabilitado, nunca escondido, asi que quien lo ve necesita leer por que no puede pulsarlo.
+ */
+export interface IExtensionVerdict {
     allowed: boolean
     reason?: string
 }
@@ -179,7 +184,7 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
 
     keyOf: (entry: TInstalled | TEntry) => string
     toModel: (entry: TInstalled | TEntry) => IExtensionCardModel
-    canUninstall: (entry: TInstalled) => IUninstallVerdict
+    canUninstall: (entry: TInstalled) => IExtensionVerdict
 
     /** Datos extra que el tipo necesita y el generico desconoce (las instancias de IdP, los plugins de themes). */
     loadExtraData?: () => Promise<void>
@@ -189,13 +194,16 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     /** Si existe, el generico pinta el engranaje y monta esto al pulsarlo. */
     renderConfigDialog?: (entry: TInstalled, onClose: () => void) => ReactNode
     /**
-     * Si ESTA entrada se puede configurar. Sin esto, el engranaje es del TIPO y sale en todas.
+     * Si ESTA entrada tiene configuracion. Sin esto, el engranaje sale vivo en todas las del tipo.
      *
-     * Lo necesita homepages: su dialogo de configuracion no lo pone el core, lo trae la propia homepage
-     * (`SetupDialog`), y solo tiene sentido en la que esta activa. Pintar un engranaje que abre la nada es
-     * peor que no pintarlo.
+     * Que el TIPO se configure no quiere decir que se configuren todas sus extensiones: un provider se
+     * configura si trae front propio o declara schema, un plugin o un login si declaran configSchema, y
+     * una homepage solo la activa que traiga SetupDialog.
+     *
+     * El engranaje se queda VISIBLE y deshabilitado con el motivo. Esconderlo deja a quien mira
+     * preguntandose si esa extension se configurara en otro sitio.
      */
-    canConfigure?: (entry: TInstalled) => boolean
+    canConfigure?: (entry: TInstalled) => IExtensionVerdict
 
     /*
         Chips propios del tipo: 'active', 'enabled', 'Requires 2'…

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Launch, LockPerson } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
-import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor, IExtensionCardModel, IUninstallVerdict } from './extensionManagerModel'
+import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
 import { ExtensionConfigDialog } from './ExtensionConfigDialog'
 
 /*
@@ -50,7 +50,7 @@ const toModel = (e: IInstalledLogin | ILoginManifestEntry): IExtensionCardModel 
     marketplaceLabel: e.marketplaceLabel
 })
 
-const canUninstall = (l: IInstalledLogin): IUninstallVerdict => {
+const canUninstall = (l: IInstalledLogin): IExtensionVerdict => {
     if (l.installedFrom === 'dev') return { allowed: false, reason: 'Dev login extensions cannot be uninstalled' }
     if (l.installedFrom?.startsWith('pack:')) return { allowed: false, reason: 'Installed via pack — uninstall the pack instead' }
     return { allowed: true }
@@ -94,8 +94,10 @@ const loginDescriptor: IExtensionManagerDescriptor<IInstalledLogin, ILoginManife
           }]
         : [],
 
-    // El engranaje es de la TARJETA: solo lo enseñan los logins que declaran configuracion.
-    canConfigure: l => (l.configSchema?.length ?? 0) > 0,
+    // El engranaje es de la TARJETA: solo esta vivo en los logins que declaran configuracion.
+    canConfigure: l => (l.configSchema?.length ?? 0) > 0
+        ? { allowed: true }
+        : { allowed: false, reason: 'This login extension has no settings' },
     renderConfigDialog: (l, onClose) => React.createElement(ExtensionConfigDialog, {
         title: `Configure — ${l.displayName || l.name}`,
         helpSection: 'guide/extensions/logins/index?id=runtime-configuration',

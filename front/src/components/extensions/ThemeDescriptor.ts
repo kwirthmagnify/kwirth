@@ -1,6 +1,6 @@
 import { Palette } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
-import { EChipIcon, EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IUninstallVerdict } from './extensionManagerModel'
+import { EChipIcon, EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
 
 /*
     Descriptor del tipo `theme` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
@@ -69,7 +69,7 @@ const toModel = (e: IInstalledTheme | IThemeManifestEntry): IExtensionCardModel 
     marketplaceLabel: e.marketplaceLabel
 })
 
-const canUninstall = (t: IInstalledTheme): IUninstallVerdict => {
+const canUninstall = (t: IInstalledTheme): IExtensionVerdict => {
     if (t.installedFrom === 'dev') return { allowed: false, reason: 'Dev themes cannot be uninstalled' }
     if (t.installedFrom?.startsWith('pack:')) return { allowed: false, reason: 'Installed via pack — uninstall the pack instead' }
     return { allowed: true }
