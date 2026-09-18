@@ -156,6 +156,57 @@ de su evento en su propio `common` (D9) y su `getSubscriptionHelp()` (RF6).
 
 ---
 
+## F5 — `iter` como productor de **estado** — ⬜ pendiente
+
+**MVP de la fase**: el mapa de negocio de `iter` —qué workload sirve a qué servicio de negocio, con
+su criticidad, su owner y sus dependencias declaradas— queda disponible in-process para cualquier
+canal que se suscriba. Es información que hoy solo existe dentro de `iter` y que ningún otro plugin
+puede aprovechar.
+
+⚠️ **Esta fase no es "otro productor más": es el primero de una clase distinta, y conviene verlo
+antes de diseñar F1.**
+
+**1 · No hay punto de emisión que reutilizar.** El argumento que abarata F2 es F8: *Agora ya tiene el
+fan-out montado para federación, así que el pluvider es una tercera puerta en el mismo punto de
+emisión*. En `iter` **eso no existe**: solo mantiene websockets hacia sus propios fronts
+([iter/src/back/index.ts:47](../../plugins/iter/src/back/index.ts#L47)). El punto de emisión hay que
+construirlo.
+
+**2 · Emite estado, no eventos.** Agora, Censor y Montag empujan **sucesos** (una alerta, una línea
+de log): quien llega tarde se ha perdido lo anterior, y da igual. `iter` publica un **grafo
+versionado**: un consumidor que se suscribe necesita **el mapa entero**, no los cambios desde que
+llegó. Con push puro y sin más, un consumidor que arranque después de `iter` no vería nada hasta la
+siguiente edición del mapa — que puede ser semanas.
+
+**3 · Pero NO necesita el `ask()` de la Fase 2.** El patrón correcto para estado es **snapshot al
+suscribirse + delta al promocionar versión**, y eso es push puro, dentro del MVP. Hay precedente
+directo en el core: `EventsProvider.addSubscriber(c, { kinds, syncInstances })`, donde
+`syncInstances` significa exactamente *"mándame el estado actual al suscribirme"* — y el propio
+`iter` **ya lo usa como consumidor** ([iter:77](../../plugins/iter/src/back/index.ts#L77)).
+
+**Consecuencia para F1**, y es el motivo de anotar esto ahora y no cuando toque: el contrato de
+`S1.1` debe dejar sitio a que un pluvider **entregue estado inicial en `addSubscriber`**, no solo a
+que empuje eventos después. Si F1 se cierra pensando únicamente en productores de sucesos, esta fase
+obliga a reabrirlo.
+
+### S5.1 — Punto de emisión del mapa
+
+`iter` mantiene la lista de suscriptores in-process y emite cuando el mapa cambia de versión
+(promoción staging → producción, §28 de su PRD). El payload lo publica en su propio `common` (D9).
+
+### S5.2 — Snapshot en `addSubscriber`
+
+Al suscribirse, el consumidor recibe el mapa vigente completo. Filtro de suscripción y forma del
+evento, en `getSubscriptionHelp()` (RF6).
+
+### S5.3 — Verificar el caso `SINGLE` / desktop
+
+Q7 y F11 aplican: si `iter` resultara `SINGLE`, en desktop y docker no se instancia localmente y
+**no habría pluvider al que suscribirse**. Hay que comprobarlo y decidir qué ve el consumidor en ese
+caso, igual que con Agora.
+
+---
+
 ## Fase 2 (fuera de este PLAN)
 
 Lo que el PRD §9 deja fuera del MVP, en este orden de interés:
