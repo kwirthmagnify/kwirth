@@ -30,6 +30,28 @@ const MANAGERS: { menu: string, title: RegExp, file: string }[] = [
     { menu: 'AI toolsets',    title: /Manage AI toolsets/i, file: 'manage-aitoolsets.png' }
 ]
 
+/*
+    Nombres de CLIENTE que no pueden aparecer en una guía PÚBLICA. El entorno de desarrollo tiene instaladas
+    extensiones hechas para clientes concretos (un tema con su marca, por ejemplo), y salían con su nombre en
+    las imágenes publicadas. No se desinstalan — el entorno es del usuario y desinstalar sería destructivo —:
+    se reetiquetan en el DOM justo antes de disparar la captura, igual que las capturas de Agora hacen con los
+    nombres de cluster reales. La imagen sigue siendo fiel a lo que hace el producto; lo único que cambia es a
+    quién pertenece el ejemplo.
+*/
+const RELABEL: Record<string, string> = { Santander: 'Acme Bank' }
+
+/** Reemplaza, en los nodos de TEXTO del documento, cada nombre de cliente por su alias de demo. */
+const relabelCustomers = (pairs: Record<string, string>) => {
+    const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    const nodes: Text[] = []
+    while (tw.nextNode()) nodes.push(tw.currentNode as Text)
+    for (const n of nodes) {
+        let v = n.nodeValue ?? ''
+        for (const [real, alias] of Object.entries(pairs)) v = v.split(real).join(alias)
+        if (v !== n.nodeValue) n.nodeValue = v
+    }
+}
+
 async function captureSession(page: Page): Promise<ISession> {
     const found: ISession = { auth: '', backend: '' }
     page.on('request', req => {
@@ -86,6 +108,7 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
             await dialog.waitFor({ timeout: 10000 })
             // dar tiempo a que resuelva el catalogo: si no, se captura el spinner
             await page.waitForTimeout(2500)
+            await page.evaluate(relabelCustomers, RELABEL)
             await dialog.screenshot({ path: `${MEDIA}/${m.file}` })
 
             // la vista de lista tambien va a la guia: es la mitad de la pantalla que mas derivaba
@@ -96,6 +119,8 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
                 // de la captura. Se aparta el raton y se le da tiempo a desaparecer antes de disparar.
                 await page.mouse.move(0, 0)
                 await page.waitForTimeout(1200)
+                // Otra vez: cambiar de vista vuelve a montar las filas con los nombres reales.
+                await page.evaluate(relabelCustomers, RELABEL)
                 await dialog.screenshot({ path: `${MEDIA}/${m.file.replace('.png', '-list.png')}` })
             }
             await dismissOpenDialogs(page)
