@@ -595,6 +595,22 @@ viaja en `IInstanceConfig`, así que la identidad ya llega al canal.
 - No cambia la persistencia de providers ni de modelos, que es única y funciona.
 - No añade tools nuevas. Va de cómo se declaran, se empaquetan, se eligen, se autorizan y se observan.
 
+## Pendiente: website y documentación del core (petición del usuario, 2026-09-18)
+
+`aitoolset` es un **tipo de extensión nuevo** y de los relevantes, y hoy no está ni en el website ni en la
+documentación del core. Hay que documentarlo en los dos sitios, **respetando el alineado de versiones**:
+
+- **Documentación del core** → `docs/0.5.287/` (la carpeta versionada vigente; ver
+  [[project_kwirth_docs_terminology]]: *Website* = el HTML de la raíz de `docs/`, *Docu* = el markdown
+  versionado). Como mínimo: qué es un toolset, cómo se instala, y **qué significa conceder** — que una
+  extensión de IA no trae sus herramientas dentro, sino que se le conceden, y sin concesión no tiene ninguna.
+- **Website** → la raíz de `docs/`, donde se enumeran los tipos de extensión.
+- ⚠️ Al tocar la docu del core hay que **regenerar su tgz** (`build-docs-tgz.js` + reiniciar el back) o se
+  seguirá sirviendo la vieja.
+
+La guía de **Agora** ya lo cubre desde su lado (`admin/09-toolsets.md`, en `plugin/agora@0.1.55`): qué se
+concede, qué pierde el bot sin cada toolset, y los dos cerrojos que hacen falta para una escritura.
+
 ## Anotado aparte
 
 📌 Hoy `/core/aiconfig` se protege solo con `validKey`, **sin scope de admin**: cualquier usuario con una
@@ -608,3 +624,76 @@ anchos distintos, asi que **hay que volver a revisarla** cuando haya mas toolset
 de version de cada fila del catalogo (y las dos filas traen distinto numero de chips, que es lo que
 descuadraria una maquetacion por fila). ⚠️ Se mide DENTRO de una seccion: instalados y disponibles son dos
 rejillas distintas y sus columnas no tienen por que coincidir.
+
+## Retirada de las 43 viejas · paso 1: Agora migrado (2026-09-18)
+
+**Decisión del usuario: dos pasos, y no se borra nada hasta validar Agora en uso real.** Las 43 tools,
+`toolInfoList`, `selectAgentToolNames`, `runAgent` e `IAgent` siguen en `common-ai` como red de seguridad.
+
+### Agora era el ÚNICO consumidor
+
+Verificado con `rg --no-ignore` sobre plugins, providers, senders, webhooks, logins, themes, homepages,
+irq, iria y marketplace — incluidos los de pago, que `.gitignore` deja fuera de una búsqueda normal.
+Censor, montag, situs, iter y excubitor solo usan lo que se queda (`buildModel`, `loadModels`,
+`generateText`, `generateVision`, `zodFromExample`).
+
+### Qué cambia en Agora
+
+`runAgent` se sustituye por `src/back/bot/agentRuntime.ts`, que conserva su contrato para que los tres
+bots cambien una línea. Dos decisiones:
+
+- **`autoTools` pasa a ser "todos los toolsets CONCEDIDOS a Agora"**, no las 43 compiladas. Sin concesión
+  no hay tools, así que se traza distinguiendo `SIN CONCEDER` de `SIN INSTALAR`: son las dos causas de
+  que un bot conteste peor y desde fuera se ven igual.
+- **`readOnly` deniega por EFECTO al invocar**, no quitando paquetes de la lista. `selectAgentToolNames`
+  filtraba al construir, y eso solo valía con el catálogo dentro del core: con toolsets instalables, un
+  paquete de terceros puede traer escrituras y una lista de paquetes prohibidos se queda corta.
+
+### El mapeo, calculado (no supuesto)
+
+Las 43 caben exactamente en los 8 toolsets, sin solapes: k8s-describe 12, k8s-inventory 7, k8s-metrics 7,
+k8s-observability 3, k8s-ops 8 (las 8 WRITE), k8s-secrets 3, playground 2 (`times_two`, `father_of`) y
+source-repos 1. Para que Agora se comporte como hoy: las seis de lectura siempre, y `k8s-ops` solo para
+el cluster-agent cuando el invocador tiene `agora$write`.
+
+### 🔴 Dos bloqueantes de entorno, detectados al preparar el QA
+
+1. **`kwirth-dev.json` solo carga 5 toolsets**: faltan `source-repos` y `k8s-ops` (los dos privados, con
+   su `dist/` ya construido). `source-repos` NO es opcional para Agora: su prompt proactivo ORDENA leer
+   el código (`get_source_file THAT file and quote`), así que sin él el bot pierde una capacidad que hoy
+   tiene y el prompt le sigue pidiendo.
+2. **No hay ninguna concesión**: `/core/aitoolsets/grants` devuelve `{"k8s-inventory": []}`. Sin conceder
+   a `agora`, sus bots se quedan con CERO tools.
+
+### Cadencia de métricas, de paso (inciso del usuario)
+
+Había dos números ciegos al `metricsInterval` del provider: un anillo de 100 muestras y un freno de 30 s
+para puntuar anomalías. Con el provider a 15 s se tiraba **la mitad** de las muestras del detector —que
+aprende con cada una— y la ventana del bot duraba 25 minutos u 8 horas según la configuración del
+cluster. Ahora Agora **mide** el hueco entre muestras (no puede preguntárselo al provider: su `/config`
+exige accessKey) y de ahí salen las dos: ventana de 30 minutos en tiempo, y se puntúan todas las muestras
+salvo que el provider baje de 15 s.
+
+**Estado (2026-09-18): QA manual VALIDADO 7/7 por el usuario y CL9 de Agora en curso (`plugin/agora@0.1.55`).**
+211/211 en los tests de Agora, cobertura 90,72 % / 82,82 % / 90,58 %, `tsc` limpio.
+
+Lo que el QA en vivo produjo, más allá de confirmar la migración:
+
+1. **La alerta que no se pierde.** `if (!t || t === PROACTIVE_SILENT) return` trataba igual dos cosas
+   distintas: que el bot **decida** callar (benigno, sigue callando) y que **no conteste**, donde la alerta
+   existía y nadie se enteraba. Ahora esto último publica la alerta **en crudo** con el motivo, distinguiendo
+   "sin toolsets concedidos" (con qué hacer) de "el modelo no contestó". Mismo trato en las de métricas: el
+   detector ya hizo su trabajo y sus números no dependen del LLM.
+2. **Cadencia de métricas medida** (inciso del usuario) — ver más abajo.
+3. **Enlaces legibles** en la burbuja de Agora, local al plugin para no cambiar los de otros.
+4. **Los tres e2e rojos eran de entorno, no regresiones**, y quedan arreglados: estaban escritos para un
+   Kwirth **mono-cluster** (con federación, *Add bot* abre un selector, y en `home` el botón sigue estando
+   para bots de OTROS clusters) y para una UI anterior (`Source repos` vive en la pestaña **Repositories**
+   desde 0.1.46; el campo *Guide URL* se eliminó al hacer de la documentación un tipo de extensión).
+
+**Anotado del QA, sin resolver:** con los 7 toolsets concedidos y 41 tools ofrecidas, una alerta concreta
+(`FailedCreate` de un Job de trivy) volvió **vacía**. Ya no se pierde, pero no sabemos por qué calló el
+modelo; instrumentarlo (`finishReason`, pasos consumidos, `toolCalls`) está en el backlog de Agora.
+
+**Sigue pendiente el paso 2**: el borrado de las 43 viejas, en commit aparte, ahora ya con Agora validado en
+uso real.

@@ -42,7 +42,9 @@
     "k8s-describe": "../aitoolsets/k8s-describe/dist",
     "k8s-observability": "../aitoolsets/k8s-observability/dist",
     "k8s-metrics": "../aitoolsets/k8s-metrics/dist",
-    "k8s-secrets": "../aitoolsets/k8s-secrets/dist"
+    "k8s-secrets": "../aitoolsets/k8s-secrets/dist",
+    "k8s-ops": "../aitoolsets/k8s-ops/dist",
+    "source-repos": "../aitoolsets/source-repos/dist"
   },
   "docs": {
     "kwirth": "bundle/docs/kwirth.tgz",
