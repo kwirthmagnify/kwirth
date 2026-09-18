@@ -36,17 +36,25 @@ Every family uses the same manager UI, so once you learn one you know them all:
 
 | Element | What it does |
 |---|---|
-| **Installed *(family)*** | The extensions currently installed. Each card shows the **name**, **version** badge, a short **description**, and its **source** — an npm/registry URL, or a **`dev`** badge for one loaded in local development mode. |
+| **Installed *(family)*** | The extensions currently installed, each with its **name**, **version** and a short **description**. |
+| **Origin chip** (left) | Where this copy came from: a **cloud** icon for the public catalog, a **padlock** for a private marketplace (the chip names it), or **`dev`** for one loaded from a local development build. |
+| **State chips** (right) | What the extension has *now* rather than where it came from — for example **`N configs`** when it holds several named configurations, or **`via pack`** when a pack owns it. |
 | **Filter** | Narrow the list by name. |
-| **Card / List view** | Toggle between card grid and compact list. |
-| **Per-item icons** | **Open website** (extension homepage), **Settings ⚙** (configure it — providers/senders/IdPs open a typed form; **plugins** open a generic **JSON installation-config editor**), and **delete/uninstall** (🗑). |
+| **Card / List view** | Toggle between card grid and compact list. The list view is the one to use when you have many of a family: same information, one row each. |
+| **Per-item icons** | **Open website**, **Settings ⚙** and **delete/uninstall** (🗑). |
+| **Settings ⚙** | Opens whatever *that* extension declares: a typed form, a list of named configurations, a free JSON editor, or a UI the extension brings itself. **The gear is greyed out when the extension has nothing to configure** — and its tooltip says so, instead of opening an empty dialog. |
 | **Install *(family)*** | Add a new one: paste a package **URL** and download it, or **BROWSE…** for a local package file. |
-| **Available *(family)*** | A browsable catalog of extensions you can install with one click. |
+| **Available *(family)*** | A browsable catalog of extensions you can install with one click. Already-installed ones are marked as such. |
+
+> **When an extension needs another one.** Some extensions declare what they **require** (for example a plugin
+> that only works with a given provider) and what they merely **use**. The manager resolves those against what
+> you actually have installed and shows them on the card, so a plugin that will not work until you install its
+> provider says so *before* you wonder why it does nothing.
 
 ## Install, configure, remove
 
 1. **Install** — from **Available** click an item, or paste its URL / **BROWSE…** a file under **Install**.
-2. **Configure** — click **⚙ Settings** on the card. Providers, senders and identity providers show a **typed form** (fill the fields and **enable** it); **plugins** open a **JSON installation-config editor** for that plugin's install-time config. Configuration (including secrets, shown masked) is stored in Kubernetes secrets/configmaps.
+2. **Configure** — click **⚙ Settings** on the card. What opens depends on what the extension declares: a **typed form** (one set of fields), a **list of named configurations** (several destinations, several accounts — with a shared *base configuration* when the extension has settings common to all of them, and export/import to carry them to another kwirth), a **JSON editor**, or a **UI the extension provides itself**. If the gear is **greyed out**, that extension has nothing to configure — it is not a failure. Configuration (including secrets, shown masked behind an eye toggle) is stored in Kubernetes secrets/configmaps.
 3. **Enable / disable** — many extensions have an enabled toggle in their settings; disabled ones stay installed but inactive.
 4. **Remove** — click the delete icon on the card.
 

@@ -87,22 +87,54 @@ manager would list something that does not work.
 Open **☰ → Manage extensions → AI toolsets**.
 
 ![AI toolsets manager](../../../_media/guide/manage-aitoolsets.png)
+*Each card carries the number of tools it really loaded and the selector saying **who may use it** — here
+every toolset has been granted to one plugin. A new installation starts the other way round: toolsets
+present, selectors empty, nothing reachable by anybody.*
 
 The layout is the one every extension family uses — see [Extending kwirth](../../admin/08-extending-kwirth) for
-the common flow. Two details are specific to this family:
+the common flow. Three details are specific to this family:
 
 | Element | What it shows |
 |---|---|
 | **tools chip** | How many tools the toolset actually **brought into the running core**, not how many its package claims. A toolset whose code failed to load shows **no** chip rather than an inflated number. |
-| **No ⚙ settings** | A toolset has nothing to configure at install time. **Which** toolsets a channel may use, and which of their tools are switched off, is decided per channel — not here. |
+| **plugin selector** | **Who may use this toolset.** Empty means nobody: an installed toolset that has been granted to no one is inert. This is the only decision taken in this dialog. |
+| **No ⚙ settings** | A toolset has nothing to configure at install time. *Which* of the granted toolsets a channel actually uses, in what order, and which of their tools are switched off, is decided per channel — not here. |
 
 Installing from a URL or a local file works exactly as in the other families: paste the package URL and click
 ⬇, or use **Browse…** to upload a `.tgz`.
 
+## Granting: installing is not giving
+
+Installing a toolset and **granting** it are two different acts, and keeping them apart is the whole point of
+the design. Installing puts the tools in the building; granting hands someone the key.
+
+| | Where | Who decides | Answers |
+|---|---|---|---|
+| **Grant** | this dialog, the selector on each card | an **admin** — the only route of this API that demands the `admin` scope | *may this plugin use this toolset at all?* |
+| **Configuration** | inside each channel | whoever configures that channel | *of what it may use, what does it use, in what order, and with which tools switched off?* |
+
+A plugin needs **both**. The grant is the ceiling and the configuration is what is picked from underneath it:
+a channel that asks for a toolset nobody granted it simply does not receive those tools, and the core traces
+the fact rather than failing silently.
+
+> **The question this answers.** *"Who can change my cluster through an LLM?"* is a question you must be able
+> to answer in seconds, and here you answer it by looking at **who has been granted `k8s-ops`** — one line,
+> one dialog. That is why the grants are held per toolset and not scattered across each channel's settings.
+
+Two consequences worth knowing before you grant:
+
+- **A freshly installed AI channel has no tools.** It can reason and write prose, but it cannot see your
+  cluster until someone grants it a toolset. This is deliberate — capability is given, never assumed — but it
+  means granting is part of setting up such a channel, and a plugin that suddenly answers worse after an
+  upgrade is usually a plugin whose grants nobody has set.
+- **Revoking is immediate and needs no restart.** Take the grant away and the next bot run is offered fewer
+  tools. Nothing is cached behind your back.
+
 ## Where tools are switched on
 
-Installing a toolset makes it **available**; it does not give it to anybody. Each AI-enabled channel is
-assigned an **ordered list** of toolsets, and may switch off individual tools inside them:
+Installing a toolset makes it **available** and granting it makes it **reachable** by one plugin. What the
+channel then *uses* is the third step: each AI-enabled channel is assigned an **ordered list** of toolsets —
+picked from those granted to it — and may switch off individual tools inside them:
 
 ```
 effective tools = (the assigned toolsets, in order) − (the tools switched off)

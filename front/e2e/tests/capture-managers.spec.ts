@@ -19,7 +19,7 @@ interface ISession { auth: string; backend: string }
 
 /** Cada manager, con el nombre de su entrada de menú, el título de su diálogo y el fichero destino. */
 const MANAGERS: { menu: string, title: RegExp, file: string }[] = [
-    { menu: 'Plugins',        title: /Manage plugins/i,     file: 'admin-plugins-manage.png' },
+    { menu: 'Plugins',        title: /Manage channel plugins/i, file: 'admin-plugins-manage.png' },
     { menu: 'Providers',      title: /Manage providers/i,   file: 'manage-providers.png' },
     { menu: 'Senders',        title: /Manage senders/i,     file: 'manage-senders.png' },
     { menu: 'Themes',         title: /Manage themes/i,      file: 'manage-themes.png' },
@@ -92,6 +92,9 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
             const listToggle = dialog.getByRole('button', { name: /list view/i }).first()
             if (await listToggle.count() > 0) {
                 await listToggle.click()
+                // El puntero se queda sobre el boton y MUI acaba pintando su tooltip ('List view') ENCIMA
+                // de la captura. Se aparta el raton y se le da tiempo a desaparecer antes de disparar.
+                await page.mouse.move(0, 0)
                 await page.waitForTimeout(1200)
                 await dialog.screenshot({ path: `${MEDIA}/${m.file.replace('.png', '-list.png')}` })
             }

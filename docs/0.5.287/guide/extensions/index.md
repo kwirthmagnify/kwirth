@@ -57,7 +57,7 @@ Self-contained docsify sites served directly by kwirth. The `core/kwirth` packag
 
 ## [AI toolsets (tools for the LLM)](aitoolsets/index)
 
-Packaged groups of **tools** an LLM can call from an AI-enabled channel — list pods, read logs, query a repository. Installing one makes it **available**; each channel decides which toolsets it may use and which of their tools are switched off. → **[AI toolsets manual](aitoolsets/index)**
+Packaged groups of **tools** an LLM can call from an AI-enabled channel — list pods, read logs, query a repository. Installing one makes it **available**, an admin **grants** it to the plugins that may use it, and each channel then picks from what it was granted and switches off the tools it doesn't want. A channel with nothing granted has **no** tools at all. → **[AI toolsets manual](aitoolsets/index)**
 
 ## [Packs (extension bundles)](packs/index)
 
