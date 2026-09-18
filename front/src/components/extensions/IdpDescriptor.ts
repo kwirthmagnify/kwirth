@@ -102,9 +102,17 @@ const makeIdpDescriptor = (deps: IIdpDescriptorDeps): IExtensionManagerDescripto
     toModel,
     canUninstall,
 
+    /*
+        ⚠️ El mapa se sustituye ENTERO al final, y no se vacia antes de pedir los datos.
+
+        Vaciandolo primero quedaba un hueco —el tiempo de la peticion— en el que cualquier repintado
+        pintaba todos los conectores como 'not configured'. Se veia al guardar la configuracion de un IdP:
+        el chip daba un salto por un estado intermedio que no existia.
+    */
     loadExtraData: async () => {
-        instancias = {}
-        for (const inst of await deps.loadInstances()) instancias[inst.id] = inst
+        const mapa: Record<string, IIdpInstance> = {}
+        for (const inst of await deps.loadInstances()) mapa[inst.id] = inst
+        instancias = mapa
     },
 
     /*

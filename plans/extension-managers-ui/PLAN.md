@@ -356,3 +356,52 @@ Van **diez de once**; queda IdP. Lo que cada uno enseño:
 - `ExtensionConfigsDialog` no envia los campos vacios al guardar, asi que vaciar uno no lo borra: hay que
   borrar la configuracion entera. Se conservo tal cual —lo comparten webhooks y senders, los dos en uso—,
   al contrario que en `ExtensionConfigDialog` (config unica), donde si se corrigio.
+
+## Cerrado: los ONCE migrados (2026-09-18)
+
+`ExtensionManagerDialog` es el unico diálogo de gestión que queda. Los once tipos —plugin, provider,
+sender, webhook, login, docs, theme, homepage, pack, idp y aitoolset— entran por descriptor.
+
+Los dos que el plan marcaba como candidatos a NO migrar resultaron migrables:
+
+- **pack** contiene otras extensiones y hay que cargar el front de cada miembro: cabe entero en
+  `onInstalled` / `onUninstalled`, recorriendo lo que trae.
+- **idp** tiene dos entidades, conector e instancia, pero la relacion es 1:1 y comparten id: en la
+  pantalla se comporta como una extension y su configuracion.
+
+### Las cuatro formas de configurar
+
+Los diálogos de configuracion se llaman por la FORMA, no por quien los usa, y los comparten los tipos:
+
+| Diálogo | Que es | Quien lo usa |
+|---|---|---|
+| `ConfigFormDialog` | una configuracion, formulario por schema | login, provider con schema |
+| `ConfigListDialog` | varias con nombre, con base comun y export/import | webhook, sender |
+| `ConfigJsonDialog` | JSON libre con export/import | plugin |
+| `ConfigFrontDialog` | la pinta la propia extension | provider, sender |
+
+`IdpConfigDialog` es el unico propio de un tipo: su interruptor de encendido y sus secretos, que se piden
+de verdad a /idp/export al revelarlos, no encajan en ninguna de las cuatro.
+
+### Lo ultimo que subio al generico, migrando senders
+
+- **Configuracion BASE**: los campos que el schema marca `common` son de la extension y no de cada
+  configuracion —el servidor de correo es uno y los destinatarios son varios—, y se editan aparte. El
+  documento que guarda el back es `{ ...comunes, configs: [...] }`, asi que guardar la base manda el
+  documento entero: mandar solo los comunes borraria las configuraciones.
+- **Exportar e importar** configuraciones eligiendo cuales, con la base marcada aparte porque suele
+  llevar credenciales. Importar NO borra: añade y sobreescribe por nombre.
+- **Ayuda propia**: si la extension publica su pagina de referencia, la ayuda lleva alli. Se comprueba de
+  verdad con un HEAD al .md, asi que publicarla la enlaza sola.
+
+### Organizacion de `front/src/components`
+
+Sin ficheros sueltos, siete carpetas: `extensions/`, `home/`, `login/`, `common/`, `security/`,
+`settings/`, `workspace/`.
+
+### Cobertura
+
+43 e2e verdes y 5 saltados (entornos sin conectores bundled, sin providers con schema del core, sin
+dependencias declaradas en la version actual del catalogo, y el `loginExt=anonymous` conocido). Los
+specs que ya existian —`webhooks.spec.ts`, `provider-http-pull-push.spec.ts`, `login-extensions.spec.ts`—
+pasan SIN TOCARLOS, que es la prueba de que el comportamiento se conserva.

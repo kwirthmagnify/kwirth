@@ -1,8 +1,8 @@
 import React, { useRef } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Stack, Typography} from '@mui/material'
-import { VERSION } from '../version'
+import { VERSION } from '../../version'
 import { useAsync } from 'react-use'
-import { useKeyboard } from '../tools/useKeyboard'
+import { useKeyboard } from '../../tools/useKeyboard'
 
 interface IAboutProps {
     onClose: () => void

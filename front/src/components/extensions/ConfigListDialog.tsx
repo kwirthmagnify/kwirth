@@ -1,13 +1,14 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import {
-    Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Divider, FormControl,
-    IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography
+    Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, Divider, FormControl,
+    FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Switch, TextField,
+    Tooltip, Typography
 } from '@mui/material'
-import { Add, ContentCopy, Delete, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Add, ContentCopy, Delete, Download, Settings, Upload, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
-import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../../tools/AuthorizationManagement'
+import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
 /*
     Gestor de las N CONFIGURACIONES CON NOMBRE de una extension: la lista a la izquierda, el formulario de
@@ -23,6 +24,11 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } fro
       GET  <basePath>/configs         { configs: [...] }
       POST <basePath>/configs         crear o actualizar (el nombre va dentro)
       DEL  <basePath>/configs/<name>
+
+    El documento que guarda el back es `{ ...camposComunes, configs: [...] }`. Los campos COMUNES son los
+    que el schema marca con `common`: pertenecen a la extension y no a cada configuracion — el servidor de
+    correo es uno, y los destinatarios son varios. Se editan aparte, en su propia pantalla, y solo aparece
+    si el schema declara alguno.
 
     Lo que sea PROPIO de un tipo entra por `perConfigPanel`, que se pinta bajo el formulario y solo para
     configuraciones ya guardadas: webhooks enseña ahi la URL de ingesta con su token.
@@ -41,8 +47,16 @@ interface IPerConfigPanelProps {
 interface IConfigListDialogProps {
     title: string
     helpSection?: string
+    /*
+        Pagina de ayuda PROPIA de esta extension, si existe. Se comprueba de verdad —un HEAD al .md— y si
+        no esta, se usa `helpSection`. Asi publicar la referencia de un sender la enlaza sola, sin tocar
+        el front ni mantener una lista aparte de quien la tiene.
+    */
+    preferredHelpSection?: string
     /** Ruta del back de ESA extension, p.ej. '/core/webhooks/jira'. */
     basePath: string
+    /** Nombre del fichero al exportar, sin extension. Sin esto no se ofrece exportar ni importar. */
+    exportName?: string
     onClose: () => void
     perConfigPanel?: React.ComponentType<IPerConfigPanelProps>
 }
@@ -65,6 +79,22 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     const [deleting, setDeleting] = useState<string | undefined>()
     const [revealed, setRevealed] = useState<Set<string>>(new Set())
 
+    // Los campos COMUNES de la extension, que no son de ninguna configuracion en concreto.
+    const [base, setBase] = useState<TConfigValues>({})
+    const [baseOpen, setBaseOpen] = useState(false)
+    const [savingBase, setSavingBase] = useState(false)
+    const [ayuda, setAyuda] = useState(props.helpSection)
+
+    // Exportar e importar: que configuraciones entran, y si va tambien la base.
+    const [exportOpen, setExportOpen] = useState(false)
+    const [exportSel, setExportSel] = useState<Set<string>>(new Set())
+    const [exportBase, setExportBase] = useState(true)
+    const [importOpen, setImportOpen] = useState(false)
+    const [importData, setImportData] = useState<{ configs: TConfigValues[], base: TConfigValues }>({ configs: [], base: {} })
+    const [importSel, setImportSel] = useState<Set<string>>(new Set())
+    const [importBase, setImportBase] = useState(true)
+    const importFileRef = useRef<HTMLInputElement>(null)
+
     const reload = async () => {
         setLoading(true)
         try {
@@ -73,8 +103,10 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                 fetch(`${backendUrl}${props.basePath}/schema`, addGetAuthorization(accessString))
             ])
             if (!configsRes.ok) throw new Error(`HTTP ${configsRes.status}`)
-            const data = await configsRes.json()
-            setConfigs(Array.isArray(data.configs) ? data.configs : [])
+            // El documento trae las configuraciones y, al mismo nivel, los campos comunes.
+            const { configs: guardadas, ...comunes } = await configsRes.json()
+            setConfigs(Array.isArray(guardadas) ? guardadas : [])
+            setBase(comunes)
             if (schemaRes.ok) setSchema(await schemaRes.json())
         }
         catch (err) { setError(`Failed to load configs: ${err}`) }
@@ -82,6 +114,102 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     }
 
     useEffect(() => { reload() }, [props.basePath])
+
+    /*
+        La ayuda apunta a la pagina de ESTA extension si existe. Se comprueba con un HEAD en vez de
+        mantener una lista: publicar la referencia de un sender la enlaza sola.
+    */
+    useEffect(() => {
+        const propia = props.preferredHelpSection
+        if (!propia) return
+        const comprobar = async () => {
+            try {
+                const res = await fetch(`${backendUrl}/core/docs/core/kwirth/${propia}.md`, { method: 'HEAD' })
+                if (res.ok) setAyuda(propia)
+            }
+            catch { /* sin pagina propia se queda la general, que es la que ya estaba puesta */ }
+        }
+        comprobar()
+    }, [backendUrl, props.preferredHelpSection])
+
+    /** Los campos comunes, que son de la extension y no de cada configuracion. */
+    const camposComunes = schema.filter(f => f.common)
+
+    /*
+        La base se guarda con el documento ENTERO: el back recibe los comunes y las configuraciones
+        juntos, asi que mandar solo los comunes borraria las configuraciones.
+    */
+    const guardarBase = async () => {
+        setSavingBase(true)
+        setError(undefined)
+        try {
+            const comunes: TConfigValues = {}
+            for (const f of camposComunes) {
+                const v = base[f.name]
+                if (v === undefined || v === '') continue
+                if (f.type === 'number') comunes[f.name] = Number(v)
+                else if (f.type === 'boolean') comunes[f.name] = Boolean(v)
+                else comunes[f.name] = v
+            }
+            const res = await fetch(`${backendUrl}${props.basePath}/configs`, addPutAuthorization(accessString, JSON.stringify({ ...comunes, configs })))
+            if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
+            setBaseOpen(false)
+            await reload()
+        }
+        catch (err) { setError(`Save failed: ${err}`) }
+        finally { setSavingBase(false) }
+    }
+
+    const baseValida = (): boolean => camposComunes.filter(f => f.required).every(f => {
+        const v = base[f.name]
+        return v !== undefined && v !== '' && v !== false
+    })
+
+    // ── llevarse las configuraciones a otro Kwirth ──────────────────────────────
+    const exportar = () => {
+        const elegidas = configs.filter(c => exportSel.has(c.name))
+        const comunes = exportBase ? base : {}
+        const blob = new Blob([JSON.stringify({ ...comunes, configs: elegidas }, null, 2)], { type: 'application/json' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = `kwirth-${props.exportName}-configs.json`
+        a.click()
+        URL.revokeObjectURL(a.href)
+        setExportOpen(false)
+    }
+
+    const abrirImportacion = async (file: File) => {
+        try {
+            const { configs: leidas, ...comunes } = JSON.parse(await file.text())
+            const lista = Array.isArray(leidas) ? leidas as TConfigValues[] : []
+            setImportData({ configs: lista, base: comunes })
+            setImportSel(new Set(lista.map(c => c.name)))
+            setImportBase(Object.keys(comunes).length > 0)
+            setImportOpen(true)
+        }
+        catch (err) { setError(`Import failed: ${err}`) }
+        finally { if (importFileRef.current) importFileRef.current.value = '' }
+    }
+
+    /*
+        Importar NO borra lo que hay: las configuraciones elegidas se añaden a las existentes, y una con
+        el mismo nombre se sobreescribe. Traer un fichero no puede llevarse por delante configuraciones
+        que no estaban en el.
+    */
+    const confirmarImportacion = async () => {
+        setImportOpen(false)
+        setError(undefined)
+        try {
+            const elegidas = importData.configs.filter(c => importSel.has(c.name))
+            const restantes = configs.filter(c => !elegidas.some(e => e.name === c.name))
+            const comunes = importBase ? { ...base, ...importData.base } : base
+            const res = await fetch(`${backendUrl}${props.basePath}/configs`, addPutAuthorization(accessString, JSON.stringify({ ...comunes, configs: [...restantes, ...elegidas] })))
+            if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
+            await reload()
+            setError(`Imported ${elegidas.length} config(s)`)
+        }
+        catch (err) { setError(`Import failed: ${err}`) }
+    }
 
     const editar = (cfg: TConfigValues) => {
         setEditingName(cfg.name)
@@ -183,9 +311,16 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         return n
     })
 
-    const campo = (f: IConfigFieldDef) => {
-        const value = values[f.name] ?? (f.type === 'boolean' ? false : '')
-        const onChange = (val: unknown) => setValues(prev => ({ ...prev, [f.name]: val }))
+    /*
+        Un campo del schema. Recibe de DONDE lee y a donde escribe porque los mismos campos se pintan en
+        dos sitios: la configuracion seleccionada y la base comun de la extension.
+    */
+    const campo = (f: IConfigFieldDef, valores: TConfigValues = values, escribir?: (name: string, val: unknown) => void) => {
+        const value = valores[f.name] ?? (f.type === 'boolean' ? false : '')
+        const onChange = (val: unknown) => {
+            if (escribir) escribir(f.name, val)
+            else setValues(prev => ({ ...prev, [f.name]: val }))
+        }
 
         if (f.type === 'boolean') {
             return (
@@ -232,14 +367,23 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
 
     const PerConfigPanel = props.perConfigPanel
 
-    return (
+    return (<>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '860px', height: '600px' } }}>
-            <DialogTitleHelp section={props.helpSection ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>{props.title}</DialogTitleHelp>
+            <DialogTitleHelp section={ayuda ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>{props.title}</DialogTitleHelp>
             <DialogContent sx={{ display: 'flex', gap: 2, p: '16px !important', overflow: 'hidden', height: '100%' }}>
 
                 {/* Izquierda: las configuraciones que hay */}
                 <Box sx={{ width: 190, display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
+                    <Stack direction='row' alignItems='center' justifyContent='space-between'>
+                        <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
+                        {/* Lo comun a todas las configuraciones se edita aparte, y el acceso solo aparece
+                            si la extension declara algun campo asi. */}
+                        {camposComunes.length > 0 && (
+                            <Tooltip title='Edit base configuration'>
+                                <IconButton size='small' aria-label='Edit base configuration' onClick={() => setBaseOpen(true)}><Settings sx={{ fontSize: 16 }} /></IconButton>
+                            </Tooltip>
+                        )}
+                    </Stack>
                     <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
                         {loading
                             ? <Box sx={{ p: 1 }}><CircularProgress size={16} /></Box>
@@ -303,11 +447,121 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                     }
                 </Box>
             </DialogContent>
-            <DialogActions sx={{ justifyContent: 'flex-end', px: 2 }}>
+            <DialogActions sx={{ justifyContent: props.exportName ? 'space-between' : 'flex-end', px: 2 }}>
+                {props.exportName && <Stack direction='row' spacing={1}>
+                    <input ref={importFileRef} type='file' accept='.json' style={{ display: 'none' }}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) abrirImportacion(f) }} />
+                    <Tooltip title='Export configs to JSON'>
+                        <span>
+                            <Button size='small' startIcon={<Download />} disabled={configs.length === 0}
+                                onClick={() => { setExportSel(new Set(configs.map(c => c.name))); setExportOpen(true) }}>Export</Button>
+                        </span>
+                    </Tooltip>
+                    <Tooltip title='Import configs from JSON'>
+                        <Button size='small' startIcon={<Upload />} onClick={() => importFileRef.current?.click()}>Import</Button>
+                    </Tooltip>
+                </Stack>}
                 <Button onClick={props.onClose}>Close</Button>
             </DialogActions>
         </Dialog>
-    )
+
+        {/* Lo comun a todas las configuraciones: el servidor de correo es uno, los destinatarios varios. */}
+        {baseOpen && (
+            <Dialog open maxWidth='sm' fullWidth>
+                <DialogTitleHelp section={ayuda ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Base configuration</DialogTitleHelp>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        {camposComunes.map(f => campo(f, base, (name, val) => setBase(prev => ({ ...prev, [name]: val }))))}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button variant='contained' disabled={savingBase || !baseValida()} onClick={guardarBase}>
+                        {savingBase ? <CircularProgress size={14} /> : 'Save'}
+                    </Button>
+                    {/* Cancelar recarga: lo tecleado y no guardado no puede quedarse en pantalla como si
+                        estuviera puesto. */}
+                    <Button onClick={() => { setBaseOpen(false); reload() }}>Cancel</Button>
+                </DialogActions>
+            </Dialog>
+        )}
+
+        {/* Que se lleva uno al exportar. La base va aparte a proposito: suele llevar credenciales. */}
+        {exportOpen && (
+            <Dialog open maxWidth='xs' fullWidth>
+                <DialogTitleHelp section={ayuda ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Export configs</DialogTitleHelp>
+                <DialogContent>
+                    <Stack spacing={0.5} sx={{ pt: 0.5 }}>
+                        <FormControlLabel label={<Typography variant='body2' fontWeight='bold'>Select all</Typography>}
+                            control={<Checkbox size='small'
+                                checked={exportSel.size === configs.length && configs.length > 0}
+                                indeterminate={exportSel.size > 0 && exportSel.size < configs.length}
+                                onChange={e => setExportSel(e.target.checked ? new Set(configs.map(c => c.name)) : new Set())} />} />
+                        <Divider />
+                        {configs.map(cfg => (
+                            <FormControlLabel key={cfg.name}
+                                label={<Box>
+                                    <Typography variant='body2'>{cfg.name}</Typography>
+                                    {cfg.description && <Typography variant='caption' color='text.secondary'>{cfg.description}</Typography>}
+                                </Box>}
+                                control={<Checkbox size='small' checked={exportSel.has(cfg.name)}
+                                    onChange={e => setExportSel(prev => {
+                                        const n = new Set(prev)
+                                        if (e.target.checked) n.add(cfg.name)
+                                        else n.delete(cfg.name)
+                                        return n
+                                    })} />} />
+                        ))}
+                        {Object.keys(base).length > 0 && <>
+                            <Divider />
+                            <FormControlLabel label={<Typography variant='body2' color='text.secondary'>Include base configuration</Typography>}
+                                control={<Checkbox size='small' checked={exportBase} onChange={e => setExportBase(e.target.checked)} />} />
+                        </>}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button variant='contained' disabled={exportSel.size === 0} onClick={exportar}>Export ({exportSel.size})</Button>
+                    <Button onClick={() => setExportOpen(false)}>Cancel</Button>
+                </DialogActions>
+            </Dialog>
+        )}
+
+        {/* Y que entra al importar. Lo que no se elige NO se toca: importar añade y sobreescribe por
+            nombre, nunca se lleva por delante configuraciones que no venian en el fichero. */}
+        {importOpen && (
+            <Dialog open maxWidth='xs' fullWidth>
+                <DialogTitleHelp section={ayuda ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Import configs</DialogTitleHelp>
+                <DialogContent>
+                    <Stack spacing={0.5} sx={{ pt: 0.5 }}>
+                        {importData.configs.length === 0
+                            ? <Typography variant='body2' color='text.secondary'>The file carries no configs.</Typography>
+                            : importData.configs.map(cfg => (
+                                <FormControlLabel key={cfg.name}
+                                    label={<Box>
+                                        <Typography variant='body2'>{cfg.name}</Typography>
+                                        {configs.some(c => c.name === cfg.name) && <Typography variant='caption' color='warning.main'>replaces an existing one</Typography>}
+                                    </Box>}
+                                    control={<Checkbox size='small' checked={importSel.has(cfg.name)}
+                                        onChange={e => setImportSel(prev => {
+                                            const n = new Set(prev)
+                                            if (e.target.checked) n.add(cfg.name)
+                                            else n.delete(cfg.name)
+                                            return n
+                                        })} />} />
+                            ))}
+                        {Object.keys(importData.base).length > 0 && <>
+                            <Divider />
+                            <FormControlLabel label={<Typography variant='body2' color='text.secondary'>Include base configuration</Typography>}
+                                control={<Checkbox size='small' checked={importBase} onChange={e => setImportBase(e.target.checked)} />} />
+                        </>}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button variant='contained' disabled={importSel.size === 0 && !importBase} onClick={confirmarImportacion}>Import</Button>
+                    <Button onClick={() => setImportOpen(false)}>Cancel</Button>
+                </DialogActions>
+            </Dialog>
+        )}
+    </>)
 }
 
 export { ConfigListDialog }

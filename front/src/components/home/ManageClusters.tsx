@@ -1,12 +1,12 @@
 import React, { useContext, useState } from 'react'
-import { useKeyboard } from '../tools/useKeyboard'
+import { useKeyboard } from '../../tools/useKeyboard'
 import { Button, Dialog, DialogActions, DialogContent, List, ListItem, ListItemButton, Stack, TextField, Typography} from '@mui/material'
-import { SessionContext, SessionContextType } from '../model/SessionContext'
+import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { Cluster } from '../model/Cluster'
-import { MsgBoxButtons, MsgBoxOk, MsgBoxWaitCancel, MsgBoxYesNo } from '../tools/MsgBox'
-import { addGetAuthorization } from '../tools/AuthorizationManagement'
-import { ENotifyLevel, readClusterInfo } from '../tools/Global'
+import { Cluster } from '../../model/Cluster'
+import { MsgBoxButtons, MsgBoxOk, MsgBoxWaitCancel, MsgBoxYesNo } from '../../tools/MsgBox'
+import { addGetAuthorization } from '../../tools/AuthorizationManagement'
+import { ENotifyLevel, readClusterInfo } from '../../tools/Global'
 import { KwirthData } from '@kwirthmagnify/kwirth-common'
 
 interface IManageClustersProps {

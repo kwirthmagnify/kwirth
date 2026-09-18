@@ -4,7 +4,7 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
 /*
     La configuracion que trae la PROPIA extension en su front.js. Es una de las cuatro formas de
-    configurar una extension (ver ConfigFormDialog); hoy la usan los providers.
+    configurar una extension (ver ConfigFormDialog), y la usan providers y senders.
 
     Un provider basico se configura con un formulario que pinta el core a partir de su schema. Uno
     complejo —sugarless, syslog, service-flow— tiene varias configuraciones con nombre, listas y pruebas
@@ -12,43 +12,55 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
     con el SetupDialog de una homepage.
 
     ⚠️ El script se vuelve a cargar cada vez que se abre, con la marca de tiempo en la URL: si no, tras
-    actualizar el provider seguiria montandose la UI vieja que quedo en la global, y el usuario estaria
+    actualizar la extension seguiria montandose la UI vieja que quedo en la global, y se estaria
     configurando una version que ya no esta instalada.
 */
 
-/** Lo que el core le pasa a la UI del provider: con esto habla con su propio back. */
-interface IProviderConfigDialogProps {
+/** Lo que el core le pasa a la UI de la extension: con esto habla con su propio back. */
+interface IExtensionConfigDialogProps {
     onClose: () => void
     backendUrl: string
     accessString: string
 }
 
-interface ILoadedProvider {
-    ConfigDialog?: React.ComponentType<IProviderConfigDialogProps>
+interface ILoadedExtensionFront {
+    ConfigDialog?: React.ComponentType<IExtensionConfigDialogProps>
 }
 
-const loadedProvider = (id: string): ILoadedProvider | undefined =>
-    (window as unknown as { __kwirth_providers__?: Record<string, ILoadedProvider> }).__kwirth_providers__?.[id]
+interface IConfigFrontDialogProps {
+    extensionId: string
+    /** Donde deja su UI la extension al cargarse: '__kwirth_providers__', '__kwirth_senders__'… */
+    globalName: string
+    /** Ruta del front.js, relativa al backendUrl: '/core/providers/<id>/front'. */
+    frontPath: string
+    /** Como se llama este tipo en el mensaje de error, en singular. */
+    noun: string
+    onClose: () => void
+}
 
-const ConfigFrontDialog: React.FC<{ providerId: string, onClose: () => void }> = ({ providerId, onClose }) => {
+const registro = (globalName: string): Record<string, ILoadedExtensionFront> | undefined =>
+    (window as unknown as Record<string, Record<string, ILoadedExtensionFront> | undefined>)[globalName]
+
+const ConfigFrontDialog: React.FC<IConfigFrontDialogProps> = ({ extensionId, globalName, frontPath, noun, onClose }) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const [cargado, setCargado] = useState(false)
     const [error, setError] = useState<string | undefined>()
 
     useEffect(() => {
-        const anterior = document.getElementById(`kwirth-provider-front-${providerId}`)
+        const scriptId = `kwirth-front-${globalName}-${extensionId}`
+        const anterior = document.getElementById(scriptId)
         if (anterior) anterior.remove()
-        const globals = (window as unknown as { __kwirth_providers__?: Record<string, ILoadedProvider> }).__kwirth_providers__
-        if (globals) delete globals[providerId]
+        const globals = registro(globalName)
+        if (globals) delete globals[extensionId]
 
         const script = document.createElement('script')
-        script.id = `kwirth-provider-front-${providerId}`
-        script.src = `${backendUrl}/core/providers/${providerId}/front?t=${Date.now()}`
+        script.id = scriptId
+        script.src = `${backendUrl}${frontPath}?t=${Date.now()}`
         script.crossOrigin = 'anonymous'
         script.onload = () => setCargado(true)
-        script.onerror = () => setError(`Failed to load UI for provider "${providerId}"`)
+        script.onerror = () => setError(`Failed to load UI for ${noun} "${extensionId}"`)
         document.head.appendChild(script)
-    }, [providerId, backendUrl])
+    }, [extensionId, globalName, frontPath, noun, backendUrl])
 
     if (error) {
         return (
@@ -58,7 +70,7 @@ const ConfigFrontDialog: React.FC<{ providerId: string, onClose: () => void }> =
         )
     }
 
-    const ConfigDialog = cargado ? loadedProvider(providerId)?.ConfigDialog : undefined
+    const ConfigDialog = cargado ? registro(globalName)?.[extensionId]?.ConfigDialog : undefined
     if (!ConfigDialog) return null
 
     return <ConfigDialog onClose={onClose} backendUrl={backendUrl} accessString={accessString} />

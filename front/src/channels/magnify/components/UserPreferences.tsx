@@ -4,7 +4,7 @@ import { ExpandMore } from '@kwirthmagnify/kwirth-common-front/icons'
 import { allKinds, IKind, MagnifyUserPreferences } from './MagnifyUserPreferences'
 import { IFileObject } from '@jfvilas/react-file-manager'
 import { IChannelObject } from '../../IChannel'
-import { About } from '../../../components/About'
+import { About } from '../../../components/home/About'
 import { useKeyboard } from '../../../tools/useKeyboard'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 

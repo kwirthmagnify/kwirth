@@ -103,7 +103,13 @@ const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProvi
     renderConfigDialog: (p, onClose) => p.hasFront
         // Lo pinta la extension, no el core: el provider trae su propia UI porque sus configuraciones no
         // caben en un formulario plano (varias con nombre, listas, pruebas de conexion…).
-        ? React.createElement(ConfigFrontDialog, { providerId: p.id, onClose })
+        ? React.createElement(ConfigFrontDialog, {
+            extensionId: p.id,
+            globalName: '__kwirth_providers__',
+            frontPath: `/core/providers/${p.id}/front`,
+            noun: 'provider',
+            onClose
+        })
         : React.createElement(ConfigFormDialog, {
             title: `Configure: ${p.displayName ?? p.id}`,
             helpSection: HELP,

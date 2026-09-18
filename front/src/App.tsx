@@ -15,10 +15,10 @@ import { SelectWorkspace }  from './components/workspace/SelectWorkspace'
 import { WorkspacePickerDialog } from './components/workspace/WorkspacePickerDialog'
 import { ManageApiSecurity } from './components/security/ManageApiSecurity'
 import { Login } from './components/login/Login'
-import { ManageClusters } from './components/ManageClusters'
+import { ManageClusters } from './components/home/ManageClusters'
 import { ManageUserSecurity } from './components/security/ManageUserSecurity'
-import { ResourceSelector, IResourceSelected } from './components/common/ResourceSelector'
-import { TabContent } from './components/TabContent'
+import { ResourceSelector, IResourceSelected } from './components/home/ResourceSelector'
+import { TabContent } from './components/home/TabContent'
 import { SettingsKwirth } from './components/settings/SettingsKwirth'
 import { IKwirthSettings, IMarketplaceEntry } from '@kwirthmagnify/kwirth-common'
 import { SettingsUser } from './components/settings/SettingsUser'
@@ -39,7 +39,7 @@ import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAc
 import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 import { getMetricsNames, ENotifyLevel, readClusterInfo } from './tools/Global'
-import { Homepage } from './components/Homepage'
+import { Homepage } from './components/home/Homepage'
 import { DEFAULTLASTTABS, IColors, TABSELECTEDCOLORS, TABUNSELECTEDCOLORS } from './tools/Constants'
 import { createChannelInstance } from './tools/ChannelTools'
 import { clusterColor } from './tools/clusterColor'
@@ -47,11 +47,11 @@ import { MenuNotification, INotification } from '@kwirthmagnify/kwirth-common-fr
 import { getIconFromKind } from './tools/Constants-React'
 import { ContextSelector } from './components/common/ContextSelector'
 import { v4 as uuid } from 'uuid'
-import { About } from './components/About'
+import { About } from './components/home/About'
 import { makePluginDescriptor } from './components/extensions/PluginDescriptor'
 import { providerDescriptor } from './components/extensions/ProviderDescriptor'
-import { IdpManagerDialog } from './components/extensions/IdpManagerDialog'
-import { SenderManagerDialog } from './components/extensions/SenderManagerDialog'
+import { makeIdpDescriptor } from './components/extensions/IdpDescriptor'
+import { senderDescriptor } from './components/extensions/SenderDescriptor'
 import { webhookDescriptor } from './components/extensions/WebhookDescriptor'
 import { makeThemeDescriptor } from './components/extensions/ThemeDescriptor'
 import { makeHomepageDescriptor } from './components/extensions/HomepageDescriptor'
@@ -503,6 +503,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const saveThemeAssignments = async (a: Record<string, string>) => {
         const res = await fetch(`${backendUrl}/core/themes/assignments`, addPutAuthorization(accessString, JSON.stringify(a)))
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    }
+
+    const loadIdpInstances = async () => {
+        const res = await fetch(`${backendUrl}/idp`, addGetAuthorization(accessString))
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return await res.json()
     }
 
     const loadToolsetGrants = async (): Promise<Record<string, string[]>> => {
@@ -2591,8 +2597,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     descriptor={makePluginDescriptor({ onPluginLoaded: loadPluginFront, onPluginUnloaded: unloadPluginFront })}
                     onClose={() => setShowPluginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showProviderManagerDialog && <ExtensionManagerDialog descriptor={providerDescriptor} onClose={() => setShowProviderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
-                { showIdpManagerDialog && <IdpManagerDialog onClose={() => setShowIdpManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
-                { showSenderManagerDialog && <SenderManagerDialog onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showIdpManagerDialog && <ExtensionManagerDialog descriptor={makeIdpDescriptor({ loadInstances: loadIdpInstances })} onClose={() => setShowIdpManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showSenderManagerDialog && <ExtensionManagerDialog descriptor={senderDescriptor} onClose={() => setShowSenderManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showWebhookManagerDialog && <ExtensionManagerDialog descriptor={webhookDescriptor} onClose={() => setShowWebhookManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showThemeManagerDialog && <ExtensionManagerDialog
                     descriptor={makeThemeDescriptor({ activeThemeName, assignments: themeAssignments, onAssignmentsChange: setThemeAssignments, onThemeLoad: onThemeInstalled, onThemeUnload: onThemeUninstalled, saveAssignments: saveThemeAssignments })}

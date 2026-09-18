@@ -1,4 +1,4 @@
-import { IChannel, IChannelObject, IContentProps } from '../channels/IChannel'
+import { IChannel, IChannelObject, IContentProps } from '../../channels/IChannel'
 
 interface ITabContentProps {
     channel?:IChannel
