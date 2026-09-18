@@ -243,3 +243,20 @@ Dos salidas:
   providers; `ClusterInfo.addSubscriber` discrimina por el prefijo `plugin:` y resuelve contra el
   registro de pluviders. No por los ids —que con el prefijo no colisionan— sino porque un pluvider no
   debe pasar por la maquinaria de providers. **PLAN cerrado y validado.**
+
+## Correccion de F1/D15 (2026-09-18, al implementar S1.4)
+
+Al abrir el camino de `requirements.providers` resulta que **F1/D15 estaba a medias**. Se dijo que el
+core, ante un provider declarado y no registrado, "loguea `Required provider '<id>' is not registered`
+y sigue". El `logError` existe ([index.ts](../../back/src/index.ts)), pero es **inalcanzable por
+construccion**: `requiredProviders` se construye iterando `registeredProviders.keys()`, de modo que el
+`registeredProviders.get(provId)` de la linea siguiente **siempre encuentra**.
+
+Lo que de verdad pasaba: si un canal declaraba un provider inexistente, **en el arranque no se
+reportaba nada**. El unico aviso llegaba despues, y solo si el canal intentaba suscribirse, desde
+`ClusterInfo.addSubscriber`.
+
+No cambia la decision —la dependencia blanda sigue siendo el comportamiento de hoy: no rompe nada—,
+solo **donde** se avisaba, que era en ningun sitio. S1.4 lo arregla para los dos mundos: ahora se
+recorre lo que los canales PIDEN, no lo que hay registrado, y se reporta lo ausente con el nivel que
+le toca a cada uno.

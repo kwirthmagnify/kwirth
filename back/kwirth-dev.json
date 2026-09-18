@@ -5,7 +5,8 @@
     "iter": "../plugins/iter/dist",
     "situs": "../plugins/situs/dist",
     "agora": "../plugins/agora/dist",
-    "pinocchio": "../plugins/pinocchio/dist"
+    "pinocchio": "../plugins/pinocchio/dist",
+    "provider-debug": "../plugins/provider-debug/dist"
   },
   "providers": {
     "otel": "../providers/otel/dist",

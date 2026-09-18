@@ -4,6 +4,7 @@ import Docker from 'dockerode'
 import { DockerTools } from '../tools/DockerTools'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
+import { isPluviderId, TPluviderChannel } from '../providers/Pluvider'
 import { IChannel } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
 
@@ -51,6 +52,11 @@ export class ClusterInfo {
     public saToken!: ServiceAccountToken
     public token: string|undefined   // needed just for connecting to kubelet and extract metrics
     public providers!: IProvider[]
+    /*
+        Registro de PLUVIDERS: canales que ademas producen. Separado de 'providers' a proposito — ver
+        el porque en providers/Pluvider.ts. La clave es el id compuesto ('plugin:<channelId>').
+    */
+    public pluviders: Map<string, TPluviderChannel> = new Map()
     public senders?: ISenderAccess
     public webhooks?: IWebhookAccess
     public vcpus: number = 0
@@ -58,7 +64,26 @@ export class ClusterInfo {
     public type: EClusterType = EClusterType.KUBERNETES
     public flavour: string ='unknown'
 
+    /*
+        Un id con prefijo ('plugin:agora') apunta a un pluvider y se resuelve contra su registro; sin
+        prefijo, a un provider y el camino es el de siempre.
+
+        La ausencia se trata distinto en cada caso: un provider declarado en 'requirements' que no
+        esta registrado es una mala configuracion (error), mientras que un pluvider ausente es un
+        escenario legitimo —su plugin puede no estar instalado— y el consumidor sigue funcionando sin
+        el (warning).
+    */
     addSubscriber = (providerId: string, c:IChannel, data:any) => {
+        if (isPluviderId(providerId)) {
+            let pluv = this.pluviders.get(providerId)
+            if (pluv) {
+                pluv.addSubscriber(c, data)
+                logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' added to pluvider '${providerId}'`)
+            }
+            else
+                logWarning(ELogComponent.PROVIDER, `Cannot subscribe channel '${c.getChannelData().id}' to pluvider '${providerId}' (its plugin is not installed or not running here)`)
+            return
+        }
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {
             prov.addSubscriber(c,data)
@@ -73,6 +98,16 @@ export class ClusterInfo {
     }
 
     removeSubscriber = (providerId: string, c:IChannel) => {
+        if (isPluviderId(providerId)) {
+            let pluv = this.pluviders.get(providerId)
+            if (pluv) {
+                pluv.removeSubscriber(c)
+                logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' removed from pluvider '${providerId}'`)
+            }
+            else
+                logWarning(ELogComponent.PROVIDER, `Cannot remove subscription of channel '${c.getChannelData().id}' from pluvider '${providerId}' (its plugin is not installed or not running here)`)
+            return
+        }
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {
             prov.removeSubscriber(c)

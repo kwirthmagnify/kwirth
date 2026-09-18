@@ -50,9 +50,11 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
             ? catalogue.map(e => ({
                 id: e.id,
                 state: e.running ? EProviderDebugProviderState.RUNNING : EProviderDebugProviderState.NOT_RUNNING,
-                help: e.subscriptionHelp
+                help: e.subscriptionHelp,
+                pluvider: e.pluvider,
+                description: e.description
             }))
-            : (data?.providers ?? []).map(p => ({ id: p.id, state: EProviderDebugProviderState.UNKNOWN, help: p.help }))
+            : (data?.providers ?? []).map(p => ({ id: p.id, state: EProviderDebugProviderState.UNKNOWN, help: p.help, pluvider: p.pluvider, description: p.description }))
 
         // el provider ya configurado se mantiene aunque haya desaparecido del catálogo
         if (providerId && !source.some(o => o.id === providerId)) source.push({ id: providerId, state: EProviderDebugProviderState.UNKNOWN })
@@ -161,6 +163,14 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
                                 <MenuItem key={o.id} value={o.id}>
                                     <Stack direction='row' spacing={1} alignItems='center'>
                                         <Typography variant='body2'>{o.id}</Typography>
+                                        {/* Un pluvider viene de un plugin, no es una extension aparte: se marca para que
+                                            se vea de donde sale, y se acompaña de lo que dice producir. */}
+                                        {o.pluvider &&
+                                            <Chip label='plugin' size='small' variant='outlined' color='info' sx={{ fontSize: '0.65rem', height: 18 }} />
+                                        }
+                                        {o.description &&
+                                            <Typography variant='caption' color='text.secondary' noWrap>{o.description}</Typography>
+                                        }
                                         {o.state === EProviderDebugProviderState.NOT_RUNNING &&
                                             <Chip label='not running' size='small' variant='outlined' color='warning' sx={{ fontSize: '0.65rem', height: 18 }} />
                                         }
@@ -169,8 +179,10 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
                             ))}
                         </Select>
                         <Typography variant='caption' color='text.secondary'>
+                            {/* Las dos clases de productor no arrancan por el mismo motivo, y decir solo lo
+                                del provider deja pensando que a un pluvider hay que requerirlo desde algun sitio. */}
                             {catalogueLoaded
-                                ? 'A provider only runs when some channel requires it. Only the ones marked as running can be subscribed to.'
+                                ? 'A provider only runs when some channel requires it. The ones marked as plugin are pluviders: they run because their plugin is installed and hosted here, so nobody has to require them. Only the ones not marked as "not running" can be subscribed to.'
                                 : 'Could not read the provider catalogue from the core — showing only what this channel already knows.'
                             }
                         </Typography>

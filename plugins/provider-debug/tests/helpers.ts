@@ -82,7 +82,46 @@ export class FakeProvider implements IProvider {
     dataOf(c: IProviderSubscriber): unknown { return this.subscribers.get(c) }
 }
 
-export const makeClusterInfo = (providers: FakeProvider[]) => ({ providers })
+/**
+ * Pluvider falso: un plugin que además produce. A diferencia de un provider NO tiene 'id' propio
+ * (el core se lo compone como 'plugin:<channelId>' y lo usa como clave del registro), ni routers, ni
+ * nada de la maquinaria de providers. Lo único que comparte es la pareja addSubscriber/removeSubscriber
+ * — que es justo lo que hace que se pueda depurar igual que un provider.
+ */
+export class FakePluvider {
+    /** el id compuesto por el core; aquí solo sirve para construir el registro, como hace él */
+    readonly id: string
+    readonly description: string
+    subscribers: Map<IProviderSubscriber, unknown> = new Map()
+    getSubscriptionHelp?: () => IProviderDebugSubscriptionHelp
+
+    constructor(id: string, description = 'lo que produce este plugin') {
+        this.id = id
+        this.description = description
+    }
+
+    getPluviderData = () => ({ description: this.description, eventTypeName: 'IFakeAlert' })
+
+    withHelp(help: IProviderDebugSubscriptionHelp): FakePluvider {
+        this.getSubscriptionHelp = () => help
+        return this
+    }
+
+    addSubscriber = async (c: IProviderSubscriber, data: unknown) => { this.subscribers.set(c, data ?? {}) }
+    removeSubscriber = async (c: IProviderSubscriber) => { this.subscribers.delete(c) }
+    startProvider = async () => {}
+    stopProvider = async () => {}
+
+    /** dispara un evento a todos los subscribers, con el id compuesto como origen */
+    emit(event: unknown): void {
+        for (const subscriber of this.subscribers.keys()) subscriber.processProviderEvent(this.id, event)
+    }
+}
+
+export const makeClusterInfo = (providers: FakeProvider[], pluviders: FakePluvider[] = []) => ({
+    providers,
+    pluviders: new Map(pluviders.map(p => [p.id, p]))
+})
 
 export const makeBackObj = () => {
     const logs: string[] = []

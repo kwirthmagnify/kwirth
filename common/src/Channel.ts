@@ -68,4 +68,17 @@ interface IBackChannelRequirements {
     instances?: EChannelInstances   // default MULTI; SINGLE = one back per cluster (home = in-cluster)
 }
 
-export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, EChannelInstances, EChannelMode, IBackChannelRequirements }
+/*
+    Prefijo del id con el que se referencia a un PLUVIDER: un plugin que ademas produce informacion
+    y la expone in-process, para que otros plugins se suscriban a ella.
+
+    El id completo es '<PLUVIDER_ID_PREFIX><channelId>' y lo compone SIEMPRE el core, para que el
+    autor del plugin no pueda equivocarse con el prefijo. Un consumidor lo usa igual que el de un
+    provider, tanto en 'requirements.providers' como en 'addSubscriber'.
+
+    Vive en common porque el front tambien lo necesita, para distinguir un pluvider de un provider
+    instalado cuando los enseña.
+*/
+const PLUVIDER_ID_PREFIX = 'plugin:'
+
+export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, EChannelInstances, EChannelMode, IBackChannelRequirements, PLUVIDER_ID_PREFIX }

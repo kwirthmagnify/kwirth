@@ -1,6 +1,18 @@
 import React from 'react'
 import { Box, Chip, Tooltip } from '@mui/material'
-import { CloudQueue, FolderOpen, Https, Link, Terminal } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CloudQueue, Extension, FolderOpen, Https, Link, Terminal } from '@kwirthmagnify/kwirth-common-front/icons'
+
+/*
+    Procedencia de un PLUVIDER: no viene de ningun marketplace, viene de un plugin instalado, y su
+    'installedFrom' es su propio id ('plugin:agora'). Se marca con la misma convencion que 'pack:<id>'.
+
+    Sin este caso caeria en el fallback del marketplace publico y se anunciaria como servido por el,
+    que es falso — y con un plugin de pago lo anunciaria ademas como OSS.
+*/
+const PLUGIN_SOURCE_PREFIX = 'plugin:'
+
+const hostingPluginOf = (installedFrom?: string): string | undefined =>
+    installedFrom?.startsWith(PLUGIN_SOURCE_PREFIX) ? installedFrom.substring(PLUGIN_SOURCE_PREFIX.length) : undefined
 
 // El marketplace publico no tiene id ni label propios: en el catalogo se representa con label undefined.
 // Pero una extension YA INSTALADA necesita constancia de que vino de EL y no de una url pegada a mano, asi
@@ -55,6 +67,17 @@ const isPlainUrl = (installedFrom?: string): boolean =>
     && !installedFrom!.includes('github.com/kwirthmagnify')
 
 const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceBadgeProps) => {
+    // Lo que publica un plugin lleva el nombre de SU plugin: es lo unico que dice de donde ha salido, y
+    // es donde hay que ir para instalarlo, actualizarlo o quitarlo.
+    const hostingPlugin = hostingPluginOf(props.installedFrom)
+    if (hostingPlugin) {
+        return (
+            <Tooltip title={`Published by the '${hostingPlugin}' plugin — it is not installed on its own, it comes and goes with it`}>
+                <Chip label={hostingPlugin} size='small' variant='outlined' color='primary' sx={compact} />
+            </Tooltip>
+        )
+    }
+
     if (comesFromNoMarketplace(props.label, props.installedFrom)) return null
 
     // Lo que viene DENTRO de Kwirth no lo sirve el marketplace publico. Etiquetarlo 'Kwirth' anunciaba
@@ -90,6 +113,17 @@ const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceB
     local). Antes estaba duplicado en linea en los 10 dialogos de gestion de extensiones.
 */
 const MarketplaceSourceIcon: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceBadgeProps) => {
+    // Viene de un plugin: el icono es el de una extension, no el de un origen de descarga — porque no
+    // se ha descargado de ningun sitio, lo publica algo que ya esta instalado.
+    const hostingPlugin = hostingPluginOf(props.installedFrom)
+    if (hostingPlugin) {
+        return (
+            <Tooltip title={`Published by the '${hostingPlugin}' plugin — manage it from the plugins manager`}>
+                <Box sx={{ color: 'primary.main', display: 'flex', alignItems: 'center', mr: 0.75 }}><Extension fontSize='small' /></Box>
+            </Tooltip>
+        )
+    }
+
     // La CONSOLA es de dev y solo de dev. Un fichero local y una url pegada a mano tampoco vienen de un
     // marketplace, pero no son lo mismo: cada uno lleva su icono, o el de dev deja de significar dev.
     if (comesFromNoMarketplace(props.label, props.installedFrom)) {

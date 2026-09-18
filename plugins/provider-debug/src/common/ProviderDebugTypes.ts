@@ -28,13 +28,21 @@ export interface IProviderDebugSubscriptionHelp {
     fields?: IProviderDebugSubscriptionField[]
 }
 
-/** Un provider vivo en el core, tal y como lo ve el canal. */
+/** Un productor vivo en el core (provider o pluvider), tal y como lo ve el canal. */
 export interface IProviderDebugProviderInfo {
     id: string
     providesRouter: boolean
     routerAlias?: string
-    /** presente solo si el provider implementa getSubscriptionHelp() */
+    /** presente solo si el productor implementa getSubscriptionHelp() */
     help?: IProviderDebugSubscriptionHelp
+    /**
+     * true si no es un provider sino un PLUVIDER: un plugin que ademas produce y expone su
+     * informacion in-process. Su id lleva el prefijo 'plugin:' y no se puede instalar ni desinstalar
+     * por separado — se va con su plugin.
+     */
+    pluvider?: boolean
+    /** Que produce, en una linea. Solo lo traen los pluviders (de su getPluviderData). */
+    description?: string
 }
 
 /**
@@ -49,11 +57,15 @@ export enum EProviderDebugProviderState {
     UNKNOWN = 'unknown'           // el endpoint no respondió; no se sabe
 }
 
-/** Una entrada de la Select del setup: el provider más lo que sabemos de él. */
+/** Una entrada de la Select del setup: el productor más lo que sabemos de él. */
 export interface IProviderDebugProviderOption {
     id: string
     state: EProviderDebugProviderState
     help?: IProviderDebugSubscriptionHelp
+    /** true si es un pluvider: un plugin que además produce. */
+    pluvider?: boolean
+    /** qué produce, en una línea. Solo la traen los pluviders. */
+    description?: string
 }
 
 /** Una fila de GET /core/providers, con solo lo que a este plugin le interesa. */
@@ -62,6 +74,13 @@ export interface IProviderDebugCatalogueEntry {
     running?: boolean
     core?: boolean
     subscriptionHelp?: IProviderDebugSubscriptionHelp
+    /**
+     * true si la fila no es un provider sino un PLUVIDER. El endpoint los sirve en la misma lista a
+     * propósito —quien consume no tiene por qué saber que hay dos clases— pero aquí se marcan, para
+     * que quien depura vea de dónde sale cada uno.
+     */
+    pluvider?: boolean
+    description?: string
 }
 
 /** Un evento tal y como llegó a processProviderEvent, sin transformar. */

@@ -35,7 +35,14 @@ D7 sacó de él).
 **MVP de la fase**: un canal de prueba expone eventos y otro canal los recibe in-process, sin que
 ninguno publique nada por HTTP.
 
-### S1.1 — Contrato en `common-back`
+### S1.1 — Contrato en `common-back` — *código escrito, checks técnicos verdes*
+
+> **Entregado (2026-09-18)**: `PLUVIDER_ID_PREFIX` en [common/src/Channel.ts](../../common/src/Channel.ts),
+> `IPluvider<TSub>` + `IPluviderData` en [common-back/src/IPluvider.ts](../../common-back/src/IPluvider.ts),
+> exportado desde el index. `tsc --noEmit` **limpio** en `common` y en `common-back`. Sin colisión de
+> miembros entre `IChannel` y `IPluvider` (conjuntos disjuntos, verificado nombre a nombre).
+> **Pendiente**: publicar `@kwirthmagnify/kwirth-common-back` para que un plugin pueda compilar contra
+> el contrato, y la checklist de cierre.
 
 - Declaración explícita del plugin como pluvider (nada de duck-typing sobre `addSubscriber`), con el
   subconjunto push de `IProvider` que debe implementar: `addSubscriber`, `removeSubscriber`,
@@ -47,7 +54,22 @@ ninguno publique nada por HTTP.
 
 **Checks**: `tsc --noEmit` limpio en `common-back`; el contrato compila desde un plugin de ejemplo.
 
-### S1.2 — Registro y resolución
+### S1.2 — Registro y resolución — *código escrito, checks técnicos verdes*
+
+> **Entregado (2026-09-18)**: [back/src/providers/Pluvider.ts](../../back/src/providers/Pluvider.ts)
+> (`TPluviderChannel`, `isPluvider`, `pluviderId`, `isPluviderId`); registro `pluviders` en
+> [ClusterInfo](../../back/src/model/ClusterInfo.ts) con `addSubscriber`/`removeSubscriber`
+> discriminando por prefijo; alta del registro en [index.ts](../../back/src/index.ts) al instanciar
+> canales y en la instalación en caliente, y baja al desinstalar.
+> `tsc --noEmit` limpio y **suite del back 275/275** (10 tests nuevos en
+> [back/tests/model/pluviderResolution.test.ts](../../back/tests/model/pluviderResolution.test.ts),
+> antes 265).
+> **Nota**: `updateSubscriber` de `ClusterInfo` sigue vacío (`//+++ review how to implement`) también
+> para providers. Implementarlo es un frente propio que afecta a los dos mundos, así que no se toca
+> aquí — queda en el backlog.
+> **Publicado para desbloquear**: `@kwirthmagnify/kwirth-common@0.5.50` y
+> `@kwirthmagnify/kwirth-common-back@0.5.46` (el back consume los paquetes del registro, no del
+> workspace: sin publicar, `IPluvider` no existía para el core).
 
 - Registro de pluviders poblado tras instanciar los canales.
 - `ClusterInfo.addSubscriber` resuelve `plugin:<x>` contra ese registro
@@ -58,7 +80,24 @@ ninguno publique nada por HTTP.
 **Checks**: tests de back para los cuatro casos — pluvider existe / no existe / provider existe /
 provider no existe. Verificar que el camino de providers no cambia de comportamiento.
 
-### S1.3 — Orden de arranque (RF7)
+### S1.3 — Orden de arranque (RF7) — *código escrito, checks técnicos verdes*
+
+> **Entregado (2026-09-18)**: `startPluviders()` en
+> [back/src/providers/Pluvider.ts](../../back/src/providers/Pluvider.ts), llamada desde
+> [index.ts](../../back/src/index.ts) justo después de la fase de providers y antes de que
+> `startRunningInstance()` arranque los canales. Mismo orden en la instalación en caliente
+> (`startProvider()` antes de `startChannel()`), y `stopProvider()` simétrico al desinstalar.
+> La fase se extrajo a función **para poder testearla**: estaba enterrada en una función de `index.ts`
+> que no es testeable unitariamente.
+> `tsc --noEmit` limpio y **suite del back 280/280** (5 tests nuevos en
+> [back/tests/providers/pluviderStart.test.ts](../../back/tests/providers/pluviderStart.test.ts),
+> antes 275).
+> **Limitación honesta de la cobertura**: los tests verifican que la fase arranca a todos, que uno que
+> revienta no tumba a los demás ni propaga, y que **espera** a cada `startProvider()`. Lo que NO
+> cubren es el orden *respecto a los canales*, que es estructural: se valida en el arranque real, en
+> F2.
+> **Decisión de S1.3 cerrada**: dentro de la fase **no se ordena**. Un pluvider que consuma de otro
+> puede perderse los primeros eventos; se asume y se documenta, antes que montar un grafo.
 
 - Tres fases fijas: providers → pluviders → plugins
   ([index.ts:1721-1780](../../back/src/index.ts#L1721-L1780)).
@@ -72,7 +111,21 @@ provider no existe. Verificar que el camino de providers no cambia de comportami
 **Checks**: test que verifica que un consumidor encuentra su pluvider al arrancar; regresión de que
 los providers `events` y `metrics` siguen levantándose y sirviendo igual.
 
-### S1.4 — Dependencia blanda (RF4 / D15)
+### S1.4 — Dependencia blanda (RF4 / D15) — *código escrito, checks técnicos verdes*
+
+> **Entregado (2026-09-18)**: `findMissingSubscriptionTargets()` en
+> [back/src/providers/Pluvider.ts](../../back/src/providers/Pluvider.ts), llamada desde
+> [index.ts](../../back/src/index.ts) al calcular los providers requeridos. Recorre lo que los canales
+> **piden**, no lo que hay registrado, y separa lo ausente en dos listas: providers (→ `logError`,
+> mala configuración) y pluviders (→ `logWarning`, ausencia legítima).
+> `tsc --noEmit` limpio y **suite del back 288/288** (8 tests nuevos en
+> [back/tests/providers/pluviderSoftDependency.test.ts](../../back/tests/providers/pluviderSoftDependency.test.ts),
+> antes 280).
+> **Hallazgo**: el `logError` de provider no registrado que ya existía era **inalcanzable** —
+> `requiredProviders` se construye iterando `registeredProviders.keys()`, así que el `get()` siguiente
+> siempre encuentra. Es decir, hasta ahora un provider declarado y no registrado **no se reportaba en
+> el arranque**; solo al intentar suscribirse. Corregido en [DECISIONS.md](./DECISIONS.md) y arreglado
+> aquí para los dos mundos. El `else` muerto se deja como está: quitarlo es otro frente.
 
 - Productor ausente → el consumidor arranca y funciona.
 - Nivel **warning** cuando el que falta es un pluvider; `logError` intacto cuando es un provider
@@ -83,11 +136,46 @@ correcto.
 
 ---
 
-## F2 — Agora, primer productor
+## F2 — Agora, primer productor — *MVP VALIDADO EN VIVO (2026-09-18)*
 
 **MVP de la fase**: una alerta proactiva real de Agora llega a otro plugin in-process.
 
-### S2.1 — Agora se declara pluvider y engancha su fan-out
+> ✅ **Validado por el usuario contra el dev**: `provider-debug` se suscribió a `plugin:agora` y
+> recibió una alerta proactiva **real**, la misma que salió por Agora. Criterio de aceptación 1
+> cumplido, y sin que Agora publique ningún endpoint nuevo.
+>
+> Para llegar ahí hubo que meter `provider-debug` en `back/kwirth-dev.json` y reconstruir su dist: el
+> core lo estaba cargando como **extensión instalada**, con un `back.js` anterior, y por eso la
+> suscripción fallaba con el mensaje antiguo (`Provider ... is not running`).
+
+### S2.1 / S2.2 — Agora se declara pluvider, engancha su fan-out y publica su ayuda — *código escrito, checks técnicos verdes*
+
+> **Entregado (2026-09-18)**: `AgoraChannel implements IChannel, IPluvider`
+> ([plugins/agora/src/back/index.ts](../../plugins/agora/src/back/index.ts)). Segunda lista de
+> destinatarios (`pluviderSubscribers`) en el **mismo** `pushAlertToSubscribers`, con la misma
+> `IAgoraAlert`. Sin filtro en el MVP (D17), y `getSubscriptionHelp()` explicando qué se recibe, que
+> el tipo es `IAgoraAlert` y que Agora es SINGLE.
+> `tsc --noEmit` limpio y **suite de Agora 220/220** (9 tests nuevos en
+> [plugins/agora/tests/back/pluvider.test.ts](../../plugins/agora/tests/back/pluvider.test.ts)).
+> Regresión de federación verde: `ALERT_SUBSCRIBE`, el push al socket remoto y el drop al desconectar
+> siguen pasando.
+>
+> **Tres cosas del camino**:
+> - El guard de `pushAlertToSubscribers` cortaba si no había **sockets** suscritos. Había que
+>   cambiarlo o el caso normal —nadie federado y un plugin local escuchando— no habría entregado nada.
+>   Hay un test dedicado a eso.
+> - El id de origen (`plugin:agora`) se escribe **literal** en el plugin en vez de importar
+>   `PLUVIDER_ID_PREFIX` de common: un export nuevo de common no existe en el runtime del plugin hasta
+>   que el core se reconstruye, y un `undefined` ahí dejaría el evento sin origen.
+> - `startProvider()` de Agora no levanta nada: el motor proactivo se construye en el constructor y la
+>   producción cuelga de las suscripciones a `events`/`metrics` que se hacen en `startChannel`. Funciona
+>   porque el consumidor también se suscribe en **su** `startChannel`, o sea en la misma fase.
+>   Matiza RF7 y está comentado en el código.
+> - `plugins/agora` tenía un conflicto de peer deps **preexistente** (react 18 vs react-dom 19, y
+>   `react-dom` ni siquiera instalado): la actualización a `common-back@0.5.46` se hizo con
+>   `--legacy-peer-deps`, autorizado por el usuario.
+
+### S2.1 (original) — Agora se declara pluvider y engancha su fan-out
 
 - Agora **ya tiene** el punto de emisión y la lista de suscriptores: `alertSubscribers`,
   `onAlertSubscribe`, `pushAlertToSubscribers`
@@ -133,7 +221,56 @@ Tres momentos, **dos direcciones**:
 **Checks**: criterio de aceptación 3 — instalar en los **dos** órdenes posibles y ver el aviso en
 ambos, con las dos extensiones direccionables (`XX` y `plugin:XX`).
 
-### S3.2 — Visibilidad (RF9)
+### S3.2 — Visibilidad (RF9) — *back de `provider-debug` adelantado en F2*
+
+> **Entregado (2026-09-18, parte back)**: `provider-debug` es el **primer consumidor** de pluviders.
+> Los lista en su catálogo marcados con `pluvider: true` y su `description`, resuelve la suscripción
+> por prefijo contra `clusterInfo.pluviders`, y da un mensaje propio cuando el pluvider no está (el de
+> provider se deja **intacto**). Tipo `ISubscribable` para lo único que necesita de un productor —
+> `addSubscriber`/`removeSubscriber`—, sea provider o pluvider.
+> **Suite de provider-debug 40/40** (9 nuevos en
+> [tests/back/pluvider.test.ts](../../plugins/provider-debug/tests/back/pluvider.test.ts) + `FakePluvider`
+> en los helpers).
+> Detalle que sale gratis y merece quedar dicho: `provider-debug` **no declara nada** en
+> `requirements.providers` y aun así depura pluviders, porque un pluvider existe por estar su plugin
+> instalado, no porque alguien lo requiera.
+> **Front de `provider-debug` hecho (2026-09-18)**: en el desplegable, un pluvider lleva chip `plugin`
+> y su descripción al lado; el chip `not running` sigue siendo el que marca lo que no se puede usar.
+> Y se corrigió el texto de ayuda, que decía *«A provider only runs when some channel requires it»* —
+> cierto para un provider, **falso para un pluvider**, que corre porque su plugin está instalado.
+> `tsc` limpio, suite 40/40, dist reconstruido.
+>
+> **Gestor de providers hecho (2026-09-18)**. Decisión del usuario: **se ven ahí, como ayuda**, pero
+> ni desinstalables ni configurables — la configuración, si hiciera falta, es la de su plugin. Todo
+> **declarado en el descriptor**, así que llega a las ONCE vistas sin tocar ninguna maquetación:
+> - chip `pluvider` con tooltip, `canUninstall`/`canConfigure` denegados **con su motivo** (control
+>   visible y deshabilitado, que es la norma del proyecto), y sin contador de configs.
+> - **Nombre y versión son los del plugin**, resueltos vía `PluginManager` (`getPluginInfo`): un
+>   pluvider no se nombra ni se versiona aparte. Antes se pintaba `vplugin`, de un literal que puse yo.
+> - **Procedencia**: `installedFrom: 'plugin:<id>'`, con la misma convención que el `pack:<id>` que ya
+>   existía. En [MarketplaceBadge.tsx](../../front/src/components/extensions/MarketplaceBadge.tsx) eso
+>   da icono de **extensión** y chip con el **nombre del plugin**. ⚠️ Sin este caso caía en el fallback
+>   y se anunciaba como servido por el **marketplace público** — falso, y con un plugin de pago lo
+>   habría anunciado como OSS.
+> - Subtítulo: `Subscribe with id: plugin:agora`, porque al llamarse ya como su plugin el id deja de
+>   verse, y es lo que hace falta para suscribirse.
+> - **Suite del back 297/297**.
+>
+> **Corrección (2026-09-18), tras probarlo el usuario**: `plugin:agora` no aparecía en el desplegable.
+> El motivo no era el pluvider: **el front de `provider-debug` no usa el catálogo del websocket** —
+> puebla la lista con `GET /core/providers` ([ProviderDebugSetup.tsx:33-44](../../plugins/provider-debug/src/front/ProviderDebugSetup.tsx#L33-L44))
+> y el catálogo del canal es solo el plan B. Y ese endpoint no conocía los pluviders.
+>
+> **Decisión del usuario: transparencia.** Quien CONSUME productores sigue pidiendo `/core/providers`
+> y no tiene que saber que existen pluviders. Así que se sirven en **la misma lista**, marcados con
+> `pluvider: true` + `hostedBy` para el único que sí necesita distinguirlos: el gestor de extensiones,
+> porque un pluvider no se instala ni se desinstala por separado.
+> - [ProviderApi.ts](../../back/src/api/ProviderApi.ts): los pluviders vivos entran en `GET /core/providers`.
+> - [ProviderDescriptor.ts](../../front/src/components/extensions/ProviderDescriptor.ts):
+>   `filterInstalled: p => !p.core && !p.pluvider`. **Una línea, y en el único punto de filtrado** —
+>   no hay que tocar ninguna de las ONCE vistas del gestor.
+> - **Suite del back 294/294** (6 nuevos en
+>   [tests/api/providerApiPluviders.test.ts](../../back/tests/api/providerApiPluviders.test.ts), antes 288).
 
 - El pluvider aparece como productor en el gestor de extensiones y en `provider-debug`, distinguible
   de un provider instalado y marcado como **no desinstalable por separado** (se va con su plugin).
@@ -144,6 +281,23 @@ ambos, con las dos extensiones direccionables (`XX` y `plugin:XX`).
   código (criterio de aceptación 5).
 
 **Checks**: e2e sobre `provider-debug` y sobre el gestor; criterios de aceptación 4 y 5.
+
+### S3.3 — Documentación: website + docu 0.6.31
+
+El pluvider es **del core**, así que se documenta en los dos sitios:
+
+- **Website** (HTML en la raíz de `docs/`): el concepto vive entre
+  [docs/plugins.html](../../docs/plugins.html) y [docs/providers.html](../../docs/providers.html) —
+  decidir si va en uno, en otro o en los dos.
+- **Docu versionada `docs/0.6.31/`**: encaja en `plugins/autonomous.md` (que ya trata el plugin con
+  back autónomo, que es justo el productor típico), `plugins/developing.md` y
+  `providers/developing.md`, más lo que toque en `developing/back.md`.
+- ⚠️ Editar el markdown **no basta**: hay que regenerar el tgz con `build-docs-tgz.js` y reiniciar el
+  back, o se sigue sirviendo la guía vieja.
+
+**Checks**: la documentación explica el **funcionamiento** —por qué un pluvider no pasa por la
+maquinaria de providers, por qué el id lleva prefijo, y qué pasa cuando el productor no está— y no
+solo describe pantallas.
 
 ---
 
@@ -224,6 +378,7 @@ Lo que el PRD §9 deja fuera del MVP, en este orden de interés:
 - Punto 2: e2e + `test-metrics-history.md` + los 2 PNG generados con
   `node tools/gen-coverage-chart.mjs`.
 - Punto 4: la guía. Esto es una capacidad **para autores de extensiones**, así que va a la
-  documentación del core (`docs/<version>/guide/`), y editar el markdown **no basta**: hay que
-  regenerar el tgz con `build-docs-tgz.js` y reiniciar el back, o se sigue sirviendo la vieja.
+  documentación del core, que **ahora está en `docs/0.6.31/`** (guía en `docs/0.6.31/guide/`), más el
+  website de la raíz de `docs/` — ver S3.3. Editar el markdown **no basta**: hay que regenerar el tgz
+  con `build-docs-tgz.js` y reiniciar el back, o se sigue sirviendo la vieja.
 - Mis trazas de depuración se retiran al terminar el PLAN completo, no al cerrar cada stream.

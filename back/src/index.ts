@@ -71,6 +71,7 @@ import { Application } from 'express-serve-static-core'
 import * as crypto from 'crypto'
 
 import { createProviderInstance, IProvider, IProviderStorage, TProviderConstructor } from './providers/IProvider'
+import { findMissingSubscriptionTargets, isPluvider, pluviderId, startPluviders } from './providers/Pluvider'
 import { buildProviderStorage } from './tools/ProviderStorage'
 import { EventsProvider } from './providers/events/EventsProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
@@ -1384,6 +1385,21 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             if (providerInstance) mountProviderConfigRouter(riRouter, providerInstance, activeRI.apiKeyApi)
                         }
                         activeRI.channels.set(id, channelInstance)
+                        // Instalacion en caliente: si el plugin recien instalado ademas produce, queda
+                        // registrado como pluvider antes de arrancar el canal.
+                        if (isPluvider(channelInstance)) {
+                            const pluvId = pluviderId(id)
+                            activeRI.clusterInfo.pluviders.set(pluvId, channelInstance)
+                            logInfo(ELogComponent.CORE, `Channel '${id}' is also a pluvider, registered as '${pluvId}': ${channelInstance.getPluviderData().description}`)
+                            // Mismo orden que en el arranque: la produccion se levanta antes que el canal.
+                            try {
+                                await channelInstance.startProvider()
+                                logInfo(ELogComponent.CORE, `Pluvider '${pluvId}' started`)
+                            }
+                            catch (err) {
+                                logError(ELogComponent.CORE, `Pluvider '${pluvId}' failed to start: ${err}`)
+                            }
+                        }
                         channelInstance.startChannel()
                         if ((channelInstance as any).providesRouter && (channelInstance as any).router) {
                             const alias = (channelInstance as any).routerAlias
@@ -1432,6 +1448,16 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                 const activeRI = runningInstances.find(r => r.active)
                 if (activeRI) {
                     activeRI.channels.delete(id)
+                    // Simetrico al alta: si el plugin producia, se para su produccion antes de sacarlo
+                    // del registro. Los suscriptores dejan de recibir, que es lo que toca — su plugin
+                    // ya no esta.
+                    const pluvId = pluviderId(id)
+                    const pluv = activeRI.clusterInfo.pluviders.get(pluvId)
+                    if (pluv) {
+                        void pluv.stopProvider().catch(err => logError(ELogComponent.CORE, `Pluvider '${pluvId}' failed to stop: ${err}`))
+                        logInfo(ELogComponent.CORE, `Pluvider '${pluvId}' stopped`)
+                    }
+                    activeRI.clusterInfo.pluviders.delete(pluvId)
                     activeRI.kwirthData.channels = activeRI.kwirthData.channels.filter(c => c.id !== id)
                 }
                 logInfo(ELogComponent.CORE, `Plugin channel '${id}' removed from active instance`)
@@ -1442,7 +1468,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         if (providerManager) {
             // El getter se evalua en cada peticion (no se congela el array): los providers se arrancan
             // y se paran en caliente al instalar o desinstalar plugins.
-            let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi, {}, () => ri.clusterInfo.providers)
+            let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi, {}, () => ri.clusterInfo.providers, () => ri.clusterInfo.pluviders,
+                async (pluginId: string) => (await pluginManager?.listInstalled())?.find(p => p.id === pluginId))
             riRouter.use(`/core/providers`, providerApi.router)
         }
         if (senderManager) {
@@ -1693,6 +1720,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
 
         // we create and instantiate channels, but we don't start them, because we need to start the providers first
+        localClusterInfo.pluviders.clear()
         for(let channelId of requiredChannels) {
             let channelConstructor = registeredChannels.get(channelId)
             if (channelConstructor) {
@@ -1707,6 +1735,15 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     }
                     else {
                         runningInstance.channels.set(channelId, channelInstance!)
+                        // Un canal que ademas produce (pluvider) queda registrado aqui, para que
+                        // cualquier otro canal pueda suscribirse a el por su id compuesto. Un canal
+                        // anunciado como REMOTE no pasa por aqui: no se instancia en este Kwirth, asi
+                        // que tampoco hay pluvider al que suscribirse.
+                        if (isPluvider(channelInstance)) {
+                            const pluvId = pluviderId(channelId)
+                            localClusterInfo.pluviders.set(pluvId, channelInstance)
+                            logInfo(ELogComponent.CORE, `Channel '${channelId}' is also a pluvider, registered as '${pluvId}': ${channelInstance.getPluviderData().description}`)
+                        }
                     }
                 }
                 else
@@ -1725,6 +1762,25 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.requirements.providers.includes(provId)}, false)
             if (required) requiredProviders.push(provId)
             logInfo(ELogComponent.CORE, `  '${provId}' required: ${required}`)
+        }
+
+        /*
+            Lo de arriba recorre lo REGISTRADO; esto recorre lo que los canales PIDEN, que no es lo
+            mismo: un id pedido y no disponible no se reportaba en el arranque, solo al intentar
+            suscribirse.
+
+            Y la ausencia se trata distinto segun que falte: un provider declarado y no registrado es
+            una mala configuracion (error), mientras que un pluvider ausente es legitimo —su plugin
+            puede no estar instalado, o ser un canal SINGLE anunciado aqui como remoto— y el
+            consumidor sigue adelante sin el (warning). Esa es la dependencia blanda.
+        */
+        const requestedIds = Array.from(runningInstance.channels.values()).flatMap(c => c.requirements.providers)
+        const missing = findMissingSubscriptionTargets(requestedIds, Array.from(registeredProviders.keys()), localClusterInfo.pluviders)
+        for (const provId of missing.missingProviders) {
+            logError(ELogComponent.CORE, `Required provider '${provId}' is not registered`)
+        }
+        for (const pluvId of missing.missingPluviders) {
+            logWarning(ELogComponent.CORE, `Pluvider '${pluvId}' is required by a channel but is not available here (its plugin is not installed, or is not hosted by this Kwirth)`)
         }
 
         
@@ -1780,6 +1836,9 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             }
         }
 
+        // Fase de PLUVIDERS: entre la de providers (arriba) y la de canales, que ocurre despues en
+        // startRunningInstance(). El detalle y el porque del orden, en providers/Pluvider.ts.
+        await startPluviders(localClusterInfo.pluviders)
     }
     catch (err) {
         logError(ELogComponent.CORE, 'Error setting up kubernetes requirements')

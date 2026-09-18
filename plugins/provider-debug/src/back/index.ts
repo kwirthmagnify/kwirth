@@ -10,6 +10,29 @@ interface IProviderWithHelp extends IProvider {
     getSubscriptionHelp?(): IProviderDebugSubscriptionHelp
 }
 
+/**
+ * Prefijo del id de un PLUVIDER: un plugin que además produce y expone su información in-process.
+ * Se escribe literal en vez de importar PLUVIDER_ID_PREFIX de common porque un export nuevo de
+ * common no existe en el runtime de un plugin hasta que el core se reconstruye con esa versión.
+ */
+const PLUVIDER_PREFIX = 'plugin:'
+
+/**
+ * Lo único que este canal necesita de un productor para depurarlo, sea un provider o un pluvider.
+ * Los dos publican la misma pareja de métodos; lo demás (routers, config, ciclo de vida) no pinta
+ * nada aquí.
+ */
+interface ISubscribable {
+    addSubscriber(c: IProviderSubscriber, data: unknown): Promise<void> | void
+    removeSubscriber(c: IProviderSubscriber): Promise<void> | void
+}
+
+/** Un pluvider, tal y como lo ve este canal: lo suscribible más lo que sabe contar de sí mismo. */
+interface IPluviderLike extends ISubscribable {
+    getPluviderData?(): { description: string, eventTypeName?: string }
+    getSubscriptionHelp?(): IProviderDebugSubscriptionHelp
+}
+
 interface ISocketEntry {
     ws: WebSocket
     lastRefresh: number
@@ -28,7 +51,8 @@ interface IInstance {
      * se pisarían. Con un proxy por instancia cada una tiene su entrada y su propio payload.
      */
     subscriber?: IProviderSubscriber
-    provider?: IProvider
+    /** El productor al que se suscribió esta instancia: un provider o un pluvider, da igual cuál. */
+    provider?: ISubscribable
 }
 
 class ProviderDebugChannel implements IChannel {
@@ -38,6 +62,10 @@ class ProviderDebugChannel implements IChannel {
      * declara aquí, así que este canal se limita a depurar los que ya están en marcha por
      * cuenta de otros plugins. Declarar providers concretos los arrancaría como efecto
      * colateral de tener instalado un depurador, que es justo lo que no queremos.
+     *
+     * Con los PLUVIDERS el problema ni se plantea: un pluvider existe porque su plugin está
+     * instalado y corriendo, no porque alguien lo declare. Así que se pueden depurar sin
+     * declarar nada y sin arrancar nada de rebote.
      */
     readonly requirements: IBackChannelRequirements = { storage: false, providers: [] }
     clusterInfo: any
@@ -185,9 +213,20 @@ class ProviderDebugChannel implements IChannel {
 
     // ---- suscripción a un provider en marcha ---------------------------------
     private subscribe = (socket: ISocketEntry, instance: IInstance, rawSubscriptionData: string): void => {
-        const provider: IProvider | undefined = (this.clusterInfo.providers as IProvider[] | undefined)?.find(p => p.id === instance.providerId)
+        // Un id con prefijo es un pluvider y vive en su propio registro; sin prefijo, un provider de
+        // toda la vida. Los dos se suscriben igual, que es justo la gracia del asunto.
+        const isPluvider = instance.providerId.startsWith(PLUVIDER_PREFIX)
+        const provider: ISubscribable | undefined = isPluvider
+            ? (this.clusterInfo.pluviders as Map<string, IPluviderLike> | undefined)?.get(instance.providerId)
+            : (this.clusterInfo.providers as IProvider[] | undefined)?.find(p => p.id === instance.providerId)
         if (!provider) {
-            this.sendSignalMessage(socket.ws, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, `Provider '${instance.providerId}' is not running`)
+            // El mensaje de un provider no vale para un pluvider: un provider parado es un provider
+            // que nadie arrancó, mientras que un pluvider ausente suele ser un plugin que ni está
+            // instalado aquí. El de provider se deja intacto.
+            const text = isPluvider
+                ? `Pluvider '${instance.providerId}' is not available (its plugin is not installed, or is not hosted by this Kwirth)`
+                : `Provider '${instance.providerId}' is not running`
+            this.sendSignalMessage(socket.ws, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, text)
             return
         }
 
@@ -241,7 +280,7 @@ class ProviderDebugChannel implements IChannel {
      * a la defensiva: ni existir es un error, ni lo es que reviente. Un provider mal escrito no
      * puede tumbar el catálogo del resto.
      */
-    private helpOf = (provider: IProviderWithHelp): IProviderDebugSubscriptionHelp | undefined => {
+    private helpOf = (provider: { getSubscriptionHelp?(): IProviderDebugSubscriptionHelp }, id: string): IProviderDebugSubscriptionHelp | undefined => {
         if (typeof provider.getSubscriptionHelp !== 'function') return undefined
         try {
             const help = provider.getSubscriptionHelp()
@@ -249,7 +288,23 @@ class ProviderDebugChannel implements IChannel {
             return help
         }
         catch (err) {
-            this.backChannelObject.logWarning?.(`Provider '${provider.id}' failed to report its subscription help: ${String(err)}`)
+            this.backChannelObject.logWarning?.(`'${id}' failed to report its subscription help: ${String(err)}`)
+            return undefined
+        }
+    }
+
+    /**
+     * Un pluvider no tiene 'id' propio (el core se lo compone), ni routers, ni nada de la maquinaria
+     * de providers: lo que sabe contar de sí mismo es su getPluviderData(), y se lee igual de a la
+     * defensiva que la ayuda de suscripción.
+     */
+    private pluviderDescriptionOf = (pluvider: IPluviderLike, id: string): string | undefined => {
+        if (typeof pluvider.getPluviderData !== 'function') return undefined
+        try {
+            return pluvider.getPluviderData()?.description
+        }
+        catch (err) {
+            this.backChannelObject.logWarning?.(`Pluvider '${id}' failed to report its data: ${String(err)}`)
             return undefined
         }
     }
@@ -257,7 +312,7 @@ class ProviderDebugChannel implements IChannel {
     private sendProviders = (socket: ISocketEntry, instance: IInstance): void => {
         const running: IProviderWithHelp[] = (this.clusterInfo.providers as IProviderWithHelp[] | undefined) ?? []
         const providers: IProviderDebugProviderInfo[] = running.map(p => {
-            const help = this.helpOf(p)
+            const help = this.helpOf(p, p.id)
             return {
                 id: p.id,
                 providesRouter: p.providesRouter,
@@ -265,6 +320,21 @@ class ProviderDebugChannel implements IChannel {
                 ...(help ? { help } : {})
             }
         })
+
+        // Los pluviders se listan junto a los providers: para quien depura son lo mismo — algo a lo
+        // que suscribirse — y van marcados para que se vea de dónde sale cada uno.
+        const pluviders = (this.clusterInfo.pluviders as Map<string, IPluviderLike> | undefined) ?? new Map<string, IPluviderLike>()
+        for (const [pluvId, pluv] of pluviders) {
+            const help = this.helpOf(pluv, pluvId)
+            const description = this.pluviderDescriptionOf(pluv, pluvId)
+            providers.push({
+                id: pluvId,
+                providesRouter: false,
+                pluvider: true,
+                ...(description ? { description } : {}),
+                ...(help ? { help } : {})
+            })
+        }
         const msg: IProviderDebugMessageResponse = {
             msgtype: 'providerdebugmessageresponse',
             channel: this.channelId,

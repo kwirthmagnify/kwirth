@@ -53,6 +53,15 @@ interface IInstalledProvider {
     hasSchema?: boolean
     /** Provider del core (events, metrics): viene dentro de Kwirth, no es una extension. */
     core?: boolean
+    /**
+     * PLUVIDER: no es un provider sino un plugin que ademas produce y expone su informacion
+     * in-process. Se sirve en la misma lista para que quien CONSUME providers no tenga que saber que
+     * existen dos clases, pero aqui no pinta nada: no se instala ni se desinstala por separado, va y
+     * viene con su plugin.
+     */
+    pluvider?: boolean
+    /** id del plugin que aloja el pluvider (el 'agora' de 'plugin:agora'). Solo en pluviders. */
+    hostedBy?: string
     requiresRestart?: boolean
 }
 
@@ -62,10 +71,20 @@ const toModel = (e: IInstalledProvider | IProviderManifestEntry): IExtensionCard
     description: e.description,
     website: e.website,
     installedFrom: (e as IInstalledProvider).installedFrom,
-    marketplaceLabel: e.marketplaceLabel
+    marketplaceLabel: e.marketplaceLabel,
+    /*
+        Un pluvider se llama como su plugin ('Agora'), asi que su ID deja de verse — y el id es justo lo
+        que hace falta para suscribirse a el. Va de subtitulo. De que plugin sale ya lo dice el chip de
+        procedencia, asi que repetirlo aqui seria gastar la unica linea disponible en decir dos veces lo
+        mismo.
+    */
+    ...((e as IInstalledProvider).pluvider ? { subtitle: `Subscribe with id: ${e.id}` } : {})
 })
 
 const canUninstall = (p: IInstalledProvider): IExtensionVerdict => {
+    // Un pluvider se lista aqui como AYUDA —para que se vea a que se puede uno suscribir— pero no es
+    // una extension instalada: viene y se va con su plugin.
+    if (p.pluvider) return { allowed: false, reason: `Provided by the '${p.hostedBy}' plugin — uninstall that plugin instead` }
     if (p.installedFrom === 'dev') return { allowed: false, reason: 'Dev providers cannot be uninstalled' }
     if (p.installedFrom?.startsWith('pack:')) return { allowed: false, reason: 'Installed via pack — uninstall the pack instead' }
     return { allowed: true }
@@ -90,15 +109,36 @@ const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProvi
     canUninstall,
 
     // Los providers del core no son extensiones: pintarlos aqui invita a intentar quitarlos.
+    //
+    // Los PLUVIDERS si se pintan, a proposito: quien entra aqui viene a ver a que productores puede
+    // suscribirse, y dejarlos fuera obligaria a saber de antemano que existen. Lo que no se puede es
+    // gestionarlos desde aqui, y de eso se encargan canUninstall y canConfigure.
     filterInstalled: p => !p.core,
 
-    configCount: p => p.configNames?.length,
+    // Un pluvider no lleva configuraciones propias: si necesita alguna, la lleva su plugin.
+    configCount: p => p.pluvider ? undefined : p.configNames?.length,
+
+    /*
+        Chips propios: marcar que una fila es un pluvider y no un provider. Sin esto, un 'plugin:agora'
+        en la lista solo se distingue por el prefijo del id, que es mucho pedir.
+    */
+    extraChips: e => ('pluvider' in e && e.pluvider)
+        ? [{
+            label: 'pluvider',
+            color: 'primary' as const,
+            variant: 'outlined' as const,
+            tooltip: `Not an installed provider: it is the '${(e as IInstalledProvider).hostedBy}' plugin also publishing what it produces, so other plugins can subscribe to it`
+        }]
+        : [],
 
     // Hay providers que no se configuran de ninguna de las dos formas —ni traen front ni declaran
-    // schema— y para esos la rueda no lleva a ningun sitio.
-    canConfigure: p => (p.hasFront || p.hasSchema)
-        ? { allowed: true }
-        : { allowed: false, reason: 'No configuration available' },
+    // schema— y para esos la rueda no lleva a ningun sitio. Un pluvider nunca se configura aqui: su
+    // configuracion, si la necesita, es la de su plugin.
+    canConfigure: p => p.pluvider
+        ? { allowed: false, reason: `Configured from the '${p.hostedBy}' plugin, if it needs any configuration` }
+        : (p.hasFront || p.hasSchema)
+            ? { allowed: true }
+            : { allowed: false, reason: 'No configuration available' },
 
     renderConfigDialog: (p, onClose) => p.hasFront
         // Lo pinta la extension, no el core: el provider trae su propia UI porque sus configuraciones no
