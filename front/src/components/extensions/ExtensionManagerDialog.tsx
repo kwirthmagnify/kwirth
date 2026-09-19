@@ -75,16 +75,31 @@ const PluginMultiSelect: React.FC<{
     emptyLabel: string
     error?: string
     onChange: (pluginIds: string[]) => void
-}> = ({ plugins, selected, tooltip, emptyLabel, error, onChange }) => (
-    <Tooltip title={error || tooltip}>
+}> = ({ plugins, selected, tooltip, emptyLabel, error, onChange }) => {
+    // Mientras el desplegable esta abierto NO hay tooltip: se pinta encima de la lista y tapa las primeras
+    // opciones. Con el titulo vacio, MUI no lo muestra — mas simple que controlarlo con `open`.
+    const [abierto, setAbierto] = useState(false)
+    // Con varios seleccionados el valor no cabe, asi que el tooltip lo lleva entero: el desplegable es de
+    // ancho FIJO y lo que sobra se recorta.
+    const titulo = error || (selected.length > 0 ? <><b>{selected.join(', ')}</b><br />{tooltip}</> : tooltip)
+    return (
+    <Tooltip title={abierto ? '' : titulo} disableInteractive>
         <Select multiple size='small' displayEmpty value={selected} error={Boolean(error)}
+            onOpen={() => setAbierto(true)} onClose={() => setAbierto(false)}
             onChange={e => onChange(e.target.value as string[])}
             // El texto de vacio se pinta, no se deja en blanco: "no lo usa nadie" es el estado por
             // defecto y es justo lo que explica que una extension recien instalada "no haga nada".
             renderValue={sel => (sel as string[]).length === 0
                 ? <em style={{ fontSize: '0.7rem', opacity: 0.5 }}>{emptyLabel}</em>
                 : (sel as string[]).join(', ')}
-            sx={{ height: 22, fontSize: '0.7rem', minWidth: 110, '& .MuiSelect-select': { py: 0, px: 1 } }}>
+            // ⚠️ Ancho FIJO, no minWidth: con minWidth el desplegable crece con cada plugin concedido y
+            // descuadra la tarjeta — y las tarjetas de una rejilla no cambian de tamaño por su contenido.
+            sx={{
+                // flexShrink 0: sin el, encoge cuando el chip vecino es mas ancho ('12 tools' vs '3 tools')
+                // y las tarjetas dejan de alinear entre si.
+                height: 22, fontSize: '0.7rem', width: 110, minWidth: 110, maxWidth: 110, flexShrink: 0,
+                '& .MuiSelect-select': { py: 0, px: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+            }}>
             {/* Con casilla: sin ella un desplegable no parece de seleccion multiple y nadie prueba a
                 marcar dos. Mismo criterio que el ToolSelector de common-ai. */}
             {plugins.map(p => (
@@ -95,7 +110,8 @@ const PluginMultiSelect: React.FC<{
             ))}
         </Select>
     </Tooltip>
-)
+    )
+}
 
 const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends IMinimalEntry>(
     props: IExtensionManagerDialogProps<TInstalled, TEntry>
