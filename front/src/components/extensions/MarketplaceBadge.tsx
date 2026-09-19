@@ -1,6 +1,7 @@
 import React from 'react'
 import { Box, Chip, Tooltip } from '@mui/material'
-import { CloudQueue, Extension, FolderOpen, Https, Link, Terminal } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CloudQueue, FolderOpen, Https, Link, Terminal } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Extension } from '../../icons'
 
 /*
     Procedencia de un PLUVIDER: no viene de ningun marketplace, viene de un plugin instalado, y su
