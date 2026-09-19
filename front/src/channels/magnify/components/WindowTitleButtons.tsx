@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material'
-import { Close, Fullscreen, FullscreenExit, HorizontalRule, PinDrop, Place, MoreVert, West, East } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Close, FullscreenExit, Place, MoreVert, East } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Fullscreen } from '../../../icons'
+import { HorizontalRule, PinDrop, West } from '../icons'
 
 interface IWindowTitleButtonsProps {
     id: string

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Popover, List, ListItem, ListItemText, IconButton, Typography, Box, Divider, Chip, Button, Stack } from '@mui/material'
-import { Close as CloseIcon, NotificationsOff as NotificationsOffIcon, DeleteSweep, Notifications as NotificationsIcon } from './kwirthicons'
+import { Close as CloseIcon, DeleteSweep, Notifications as NotificationsIcon } from './kwirthicons'
+import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
 import { ENotifyLevel } from '@kwirthmagnify/kwirth-common'
 
 // Campana de notificaciones COMPARTIDA (antes vivía en el app del core). El array `notifications` lo gestiona el

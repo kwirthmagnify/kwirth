@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Collapse, Divider, MenuItem, MenuList } from "@mui/material"
-import { ChevronRight, CreateNewFolder, Delete, Description, Edit, ExpandMore, ExitToApp, Extension, Factory, FileOpen, FolderOpen, FolderZip, Home, Https, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, Save, SaveAs, Send, Settings, SmartToy, Construction } from '@kwirthmagnify/kwirth-common-front/icons'
+import { ChevronRight, Delete, Description, Edit, ExpandMore, ExitToApp, FolderOpen, Home, Https, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, Save, SaveAs, Send, Settings, SmartToy, Construction } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Extension, Factory } from '../icons'
+import { CreateNewFolder, FolderZip } from './icons'
 
 enum MenuDrawerOption {
     NewWorkspace,
@@ -74,7 +76,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
             <Collapse in={workspacesOpen} timeout="auto" unmountOnExit>
                 <MenuList disablePadding>
                     <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.NewWorkspace)}><CreateNewFolder/>&nbsp;New workspace</MenuItem>
-                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.LoadWorkspace)}><FileOpen/>&nbsp;Load workspace</MenuItem>
+                    <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.LoadWorkspace)}><FolderOpen/>&nbsp;Load workspace</MenuItem>
                     <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.SaveWorkspace)}><Save/>&nbsp;Save workspace</MenuItem>
                     <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.SaveWorkspaceAs)}><SaveAs/>&nbsp;Save workspace as...</MenuItem>
                     <MenuItem sx={{ pl: 4 }} onClick={() => selectWorkspace(MenuDrawerOption.DeleteWorkspace)}><Delete/>&nbsp;Delete workspace...</MenuItem>

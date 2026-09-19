@@ -1,4 +1,4 @@
-import { Extension } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Extension } from '../../icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
 

@@ -1,5 +1,7 @@
 import { IFileObject, ISpace, ISpaceMenuItem } from '@jfvilas/react-file-manager'
-import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, EditOff, FolderCopy, HomeRepairService, Info, Iso, ManageSearch, Pause, PlayArrow, RestartAlt, Search, Stop, Subject, Terminal, VerifiedUser } from '@kwirthmagnify/kwirth-common-front/icons'
+import { AccountTree, Add, BarChart, CheckCircle, Delete, DeleteSweep, Edit, FolderCopy, Info, Pause, PlayArrow, RestartAlt, Search, Stop, Subject, Terminal, VerifiedUser } from '@kwirthmagnify/kwirth-common-front/icons'
+import { EditOff } from '../icons'
+import { HomeRepairService, Iso, ManageSearch } from '../icons'
 import { Cluster, Config, Customize, Kubernetes, Network, Pod, Security, Settings, Storage } from '../icons/Icons'
 
 const spaces = new Map<string, ISpace>()

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Extension } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Extension } from '../../icons'
 import { EExtensionType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement, IExtensionVerdict } from './extensionManagerModel'
 import { ConfigJsonDialog } from './ConfigJsonDialog'

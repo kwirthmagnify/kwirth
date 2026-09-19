@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Chip, Collapse, Divider, FormControl, FormControlLabel, IconButton, List, ListItem, ListItemIcon, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, Tooltip, Typography } from '@mui/material'
-import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteSweep, Download as DownloadIcon, ExpandLess, ExpandMore, Key, Memory, MoreVert as MoreVertIcon, Settings, SmartToy, SwapVert } from '@mui/icons-material'
+import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteSweep, Download as DownloadIcon, ExpandLess, ExpandMore, Key, Memory, MoreVert as MoreVertIcon, Settings, SmartToy, ImportExport as SwapVert } from '@mui/icons-material'
 import { cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'

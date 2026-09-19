@@ -1,6 +1,8 @@
 import React from 'react'
 import { Collapse, Menu, MenuItem, MenuList, Typography } from '@mui/material'
-import { Check, Pause, PlayArrow, Delete, Stop, ExpandLess, ExpandMore, DriveFileRenameOutline, KeyboardArrowLeft, KeyboardArrowRight, KeyboardDoubleArrowLeft, KeyboardDoubleArrowRight, Info, FactCheck, Fullscreen } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Check, Pause, PlayArrow, Delete, Stop, ExpandLess, ExpandMore, DriveFileRenameOutline, Info, FactCheck } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Fullscreen } from '../icons'
+import { KeyboardArrowLeft, KeyboardArrowRight, KeyboardDoubleArrowLeft, KeyboardDoubleArrowRight } from './icons'
 import { ITabObject } from '../model/ITabObject'
 import { BackChannelData } from '@kwirthmagnify/kwirth-common'
 

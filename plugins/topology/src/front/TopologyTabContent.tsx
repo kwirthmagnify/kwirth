@@ -6,9 +6,10 @@ import {
     Tooltip, Typography,
 } from '@mui/material'
 import {
-    CenterFocusStrong, Close, ContentCopy, Delete, Hub, Info,
-    PlayArrow, Refresh, Search, Stop, Terminal, Timeline, ZoomIn, ZoomOut,
-} from '@mui/icons-material'
+    Close, ContentCopy, Delete, Hub, Info,
+    PlayArrow, Refresh, Search, Stop, Terminal, Timeline,
+} from '@kwirthmagnify/kwirth-common-front/icons'
+import { CenterFocusStrong, ZoomIn, ZoomOut } from './icons'
 import {
     ETopologyNodeKind, ETopologyNodeStatus, ETopologyQueryKind,
     ICanvasState, ITopologyData, ITopologyInfoResult, ITopologyNode,
