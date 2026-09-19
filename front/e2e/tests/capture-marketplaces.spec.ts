@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
 
 // Captura de la imagen de la guía para la pestaña "Marketplaces" (docs/_media/guide). Tema oscuro.
 // Ejecutar a mano: playwright test capture-marketplaces.spec.ts
@@ -14,7 +14,8 @@ import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 // estado del formulario mientras dura la captura.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-const MEDIA = 'C:/github/aisdkvercel/kwirth/docs/0.5.287/_media/guide'
+// Las capturas van a la documentacion VIVA: ver GUIDE_MEDIA en helpers.ts.
+const MEDIA = GUIDE_MEDIA
 
 const dlg = (page: Page) => page.locator('[role="dialog"]').last()
 

@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
 
 // Captura de la imagen de la guía para "Kwirth settings" (docs/_media/guide). Tema oscuro.
 // Ejecutar a mano: playwright test capture-kwirth-settings.spec.ts
 // No destructivo: solo abre el diálogo y lo cierra con Cancel, no guarda nada.
 
-const MEDIA = 'C:/github/aisdkvercel/kwirth/docs/0.5.287/_media/guide'
+// Las capturas van a la documentacion VIVA: ver GUIDE_MEDIA en helpers.ts.
+const MEDIA = GUIDE_MEDIA
 
 test('capture kwirth-settings (dark)', async ({ page }) => {
     // mismo encuadre que la imagen que sustituye, para no romper el ritmo visual de la guía

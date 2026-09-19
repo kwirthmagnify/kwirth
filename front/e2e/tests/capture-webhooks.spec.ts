@@ -1,10 +1,11 @@
 import { test } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickExtensionMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
 
 // Captura de las imágenes de la guía de webhooks (docs/_media/guide). Tema oscuro.
 // Ejecutar a mano: playwright test capture-webhooks.spec.ts. Requiere el dev con el dev webhook jira.
 
-const MEDIA = 'C:/github/aisdkvercel/kwirth/docs/0.5.287/_media/guide'
+// Las capturas van a la documentacion VIVA: ver GUIDE_MEDIA en helpers.ts.
+const MEDIA = GUIDE_MEDIA
 const CFG = 'default'
 
 test('capture manage-webhooks + webhook-config (dark)', async ({ page }) => {

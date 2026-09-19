@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickExtensionMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
 
 /*
     Regenera la captura del dialogo del provider http-pull-push para la guia (docs/_media/guide).
@@ -11,7 +11,8 @@ import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
     el estado original al terminar.
 */
 
-const MEDIA = 'C:/github/aisdkvercel/kwirth/docs/0.5.287/_media/guide'
+// Las capturas van a la documentacion VIVA: ver GUIDE_MEDIA en helpers.ts.
+const MEDIA = GUIDE_MEDIA
 const CONFIG_PATH = '/core/providerconfig/http-pull-push/configs'
 
 // Conexion de ejemplo para la captura: nombres y urls neutros, sin datos del entorno real.

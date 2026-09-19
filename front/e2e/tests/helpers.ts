@@ -1,4 +1,6 @@
 import { Page } from '@playwright/test'
+import { readdirSync } from 'fs'
+import path from 'path'
 
 export const USER = process.env.KWIRTH_E2E_USER ?? 'admin'
 export const PASS = process.env.KWIRTH_E2E_PASS ?? ''
@@ -81,3 +83,37 @@ export async function pickLastCombo(page: Page, option: string): Promise<void> {
     const n = await page.getByRole('combobox').count()
     await pickCombo(page, n - 1, option)
 }
+
+/*
+    ── Dónde van las capturas de la guía ────────────────────────────────────────────────────────────
+
+    A la carpeta de la versión VIVA de la documentación, resuelta igual que en
+    `back/scripts/build-docs-tgz.js`: la `docs/<x.y.z>` más alta. Cada spec de captura tenía la ruta
+    clavada a una versión concreta, y envejeció en silencio: al publicarse una versión nueva de la
+    documentación, las corridas seguían escribiendo sobre la ANTIGUA mientras la guía viva enseñaba
+    capturas viejas — en verde, porque un spec de captura no comprueba nada, solo escribe ficheros.
+*/
+const DOCS = path.resolve(__dirname, '..', '..', '..', 'docs')
+
+/** La `docs/<x.y.z>` más alta que haya en el repo. */
+export const liveDocsVersion = (): string =>
+    readdirSync(DOCS, { withFileTypes: true })
+        .filter(d => d.isDirectory() && /^\d+\.\d+\.\d+$/.test(d.name))
+        .map(d => d.name)
+        .sort((a, b) => {
+            const pa = a.split('.').map(Number)
+            const pb = b.split('.').map(Number)
+            return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2]
+        })
+        .pop() ?? ''
+
+/** Carpeta de imágenes de la guía viva. Barras normales: se interpola en rutas de captura. */
+export const GUIDE_MEDIA = path.join(DOCS, liveDocsVersion(), '_media', 'guide').replace(/\\/g, '/')
+
+/*
+    Regenerar UNA captura sin arrastrar las demás: `CAPTURE_ONLY=aitoolsets`. Sin la variable se
+    regeneran todas, como siempre. Hace falta porque un cierre normal cambia una sola pantalla, y
+    rehacer un puñado de imágenes para actualizar una deja diffs que nadie ha mirado.
+*/
+const ONLY = process.env.CAPTURE_ONLY ?? ''
+export const capturePedida = (file: string): boolean => !ONLY || file.includes(ONLY)

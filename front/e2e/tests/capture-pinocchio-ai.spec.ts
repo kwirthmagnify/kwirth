@@ -1,5 +1,5 @@
 import { test } from '@playwright/test'
-import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
+import { login, dismissOpenDialogs, pickCombo, pickLastCombo, GUIDE_MEDIA } from './helpers'
 
 // Captura de las imagenes de AI config de la guia (docs/_media/guide), desde el canal pinocchio. Tema
 // oscuro. Ejecutar a mano: playwright test capture-pinocchio-ai.spec.ts
@@ -7,7 +7,8 @@ import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 // Requiere el dev con al menos un provider de tipo openai-compat en el AI config de Kwirth: la captura
 // del dialogo de providers documenta justo eso (Name / Type / Base URL / Load models).
 
-const MEDIA = 'C:/github/aisdkvercel/kwirth/docs/0.5.287/_media/guide'
+// Las capturas van a la documentacion VIVA: ver GUIDE_MEDIA en helpers.ts.
+const MEDIA = GUIDE_MEDIA
 const COMPAT_PROVIDER = 'HUAWEI'
 
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })

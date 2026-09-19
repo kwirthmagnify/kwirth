@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { readdirSync } from 'fs'
+import path from 'path'
 import { login, openChannelPicker, openTabMenu } from './helpers'
 
 // Capturas para la guía (docs/0.5.287/_media/guide/). Tema OSCURO y 1600x900, como el resto.
@@ -6,7 +8,26 @@ import { login, openChannelPicker, openTabMenu } from './helpers'
 // el websocket abierto y el teardown de Playwright se queda colgado con ellos activos.
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
 
-const MEDIA = '../../../docs/0.5.287/_media/guide'
+/*
+    La guia de este plugin vive en el arbol de documentacion del CORE, y las capturas van a la
+    version VIVA: la `docs/<x.y.z>` mas alta, resuelta igual que en `back/scripts/build-docs-tgz.js`.
+    Estuvo clavada a una version concreta y envejecio en silencio — se escribia sobre la documentacion
+    antigua mientras la guia viva enseñaba capturas viejas, y el spec pasaba en verde porque una
+    captura no comprueba nada: solo escribe ficheros.
+*/
+const DOCS = path.resolve(__dirname, '..', '..', '..', '..', 'docs')
+const liveDocsVersion = (): string =>
+    readdirSync(DOCS, { withFileTypes: true })
+        .filter(d => d.isDirectory() && /^\d+\.\d+\.\d+$/.test(d.name))
+        .map(d => d.name)
+        .sort((a, b) => {
+            const pa = a.split('.').map(Number)
+            const pb = b.split('.').map(Number)
+            return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2]
+        })
+        .pop() ?? ''
+
+const MEDIA = path.join(DOCS, liveDocsVersion(), '_media', 'guide').replace(/\\/g, '/')
 
 test('capture', async ({ page }) => {
     await page.setViewportSize({ width: 1600, height: 900 })

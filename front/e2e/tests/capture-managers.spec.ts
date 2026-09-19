@@ -1,7 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
-import { readdirSync } from 'fs'
-import path from 'path'
+import { login, clickExtensionMenuItem, dismissOpenDialogs, GUIDE_MEDIA, capturePedida } from './helpers'
 
 // Regenera las capturas de los diálogos de gestión de extensiones para la guía (docs/_media/guide).
 // Ejecutar a mano: playwright test capture-managers.spec.ts
@@ -15,33 +13,9 @@ import path from 'path'
 // Ademas asi las imagenes muestran lo que ve un Kwirth recien instalado, que es de lo que habla la guia.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-/*
-    Las capturas van a la carpeta de la version VIVA de la documentacion, resuelta igual que en
-    `back/scripts/build-docs-tgz.js`: la `docs/<x.y.z>` mas alta. Estuvo fija a una version concreta y
-    envejecio en silencio — se seguian regenerando imagenes sobre la documentacion ANTIGUA mientras la
-    guia viva enseñaba capturas viejas, y nadie se enteraba porque el spec pasaba en verde.
-*/
-const DOCS = path.resolve(__dirname, '..', '..', '..', 'docs')
-const liveDocsVersion = (): string =>
-    readdirSync(DOCS, { withFileTypes: true })
-        .filter(d => d.isDirectory() && /^\d+\.\d+\.\d+$/.test(d.name))
-        .map(d => d.name)
-        .sort((a, b) => {
-            const pa = a.split('.').map(Number)
-            const pb = b.split('.').map(Number)
-            return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2]
-        })
-        .pop() ?? ""
-
-const MEDIA = path.join(DOCS, liveDocsVersion(), '_media', 'guide').replace(/\\/g, '/')
-
-/*
-    Regenerar UNA captura sin arrastrar las demas: `CAPTURE_ONLY=aitoolsets`. Sin la variable se
-    regeneran todas, como siempre. Hace falta porque un cierre normal cambia una sola pantalla, y
-    rehacer siete imagenes para actualizar una deja seis diffs que nadie ha mirado.
-*/
-const ONLY = process.env.CAPTURE_ONLY ?? ''
-const pedida = (file: string): boolean => !ONLY || file.includes(ONLY)
+// Las capturas van a la documentacion VIVA, y CAPTURE_ONLY permite pedir una sola: ver helpers.ts.
+const MEDIA = GUIDE_MEDIA
+const pedida = capturePedida
 
 interface ISession { auth: string; backend: string }
 
