@@ -160,6 +160,19 @@ correcto.
 > Regresión de federación verde: `ALERT_SUBSCRIBE`, el push al socket remoto y el drop al desconectar
 > siguen pasando.
 >
+> **Filtro por clase de alerta (2026-09-18, pedido por el usuario)**: `EAgoraAlertKind` en el `common`
+> de Agora con `artifacts` (reglas proactivas sobre eventos del cluster) y `metrics` (el detector de
+> anomalías), y suscripción `{ kinds: EAgoraAlertKind[] }`. Vacío = todas, **incluidas las que se
+> añadan en el futuro**: un consumidor escrito hoy no se queda fuera de una clase nueva sin enterarse.
+> Y en cualquier caso solo llega lo que el **administrador** tenga activado — sin reglas proactivas no
+> hay alertas de `artifacts` por mucho que se pidan. Las cuatro emisiones quedaron etiquetadas
+> (2 proactivas, 2 de métricas).
+> El campo `kind` de `IAgoraAlert` es **opcional a propósito**: ese mismo mensaje viaja por federación
+> a otros clusters, y un Agora anterior no lo manda — ausente significa "no se sabe", no "ninguna".
+> Una clase desconocida en la suscripción **se descarta** en vez de entrar en el filtro: si entrara,
+> la suscripción no casaría con nada y el consumidor se quedaría mudo.
+> **Suite de Agora 225/225** (14 en total en el fichero del pluvider), federación verde.
+>
 > **Tres cosas del camino**:
 > - El guard de `pushAlertToSubscribers` cortaba si no había **sockets** suscritos. Había que
 >   cambiarlo o el caso normal —nadie federado y un plugin local escuchando— no habría entregado nada.
@@ -206,7 +219,23 @@ y las alertas siguen llegando a las salas.
 **MVP de la fase**: el usuario ve qué pluviders hay, de quién son, y el core le avisa de las
 coincidencias de nombre.
 
-### S3.1 — Avisos de coincidencia (RF8 / D16)
+### S3.1 — Avisos de coincidencia (RF8 / D16) — *código escrito, checks técnicos verdes*
+
+> **Entregado (2026-09-18)**: `findNameCollisions()` y `warnNameCollisions()` en
+> [back/src/providers/Pluvider.ts](../../back/src/providers/Pluvider.ts), llamadas desde los **tres
+> momentos** y en las **dos direcciones**:
+> - arranque del core, tras poblar el registro ([index.ts](../../back/src/index.ts));
+> - al instalar un **plugin** que resulta ser pluvider y choca con un provider ya registrado;
+> - al instalar un **provider** que choca con un pluvider ya presente — tanto por
+>   `POST /install` como por `POST /upload` ([ProviderApi.ts](../../back/src/api/ProviderApi.ts)),
+>   porque subir el tgz a mano instala igual.
+>
+> El aviso dice **qué hacer**, no solo que hay un choque: *subscribe to `agora` for the provider and to
+> `plugin:agora` for the plugin*. **Nunca rechaza** una instalación: las dos extensiones pueden ser de
+> terceros y el usuario no controlar ninguna.
+> **Suite del back 305/305** (8 nuevos en
+> [tests/providers/pluviderNameCollision.test.ts](../../back/tests/providers/pluviderNameCollision.test.ts),
+> antes 297).
 
 Tres momentos, **dos direcciones**:
 
@@ -282,7 +311,25 @@ ambos, con las dos extensiones direccionables (`XX` y `plugin:XX`).
 
 **Checks**: e2e sobre `provider-debug` y sobre el gestor; criterios de aceptación 4 y 5.
 
-### S3.3 — Documentación: website + docu 0.6.31
+### S3.3 — Documentación: website + docu 0.6.31 — *escrita*
+
+> **Entregado (2026-09-18)**:
+> - **Página propia del concepto**: [docs/0.6.31/plugins/pluviders.md](../../docs/0.6.31/plugins/pluviders.md)
+>   — el problema, por qué no basta un provider, el mecanismo (con diagrama del punto de emisión y sus
+>   tres puertas), cómo se declara, cómo se consume, la dependencia blanda y su diferencia de severidad,
+>   el identificador y las colisiones, el orden de arranque en tres fases con sus dos consecuencias,
+>   qué se ve en la UI **y por qué**, y las limitaciones (`SINGLE`/REMOTE, in-process).
+> - **Enlazada** desde el sidebar (bajo *Autonomous plugins*), desde `plugins/autonomous.md`,
+>   `plugins/developing.md`, `providers/index.md` y `providers/developing.md` — este último con un
+>   aviso al principio: si la información la produce el plugin que estás escribiendo, un provider
+>   aparte duplicaría el trabajo.
+> - **Website**: sección nueva en [docs/plugins.html](../../docs/plugins.html) y en
+>   [docs/providers.html](../../docs/providers.html).
+> - **tgz regenerado** con `back/scripts/build-docs-tgz.js` (v0.6.31, 440 ficheros, la página dentro).
+>   ⚠️ Falta **reiniciar el back** para que se sirva la nueva.
+> - Diagrama ASCII verificado por código: bordes en las columnas 22 y 55, ramas en 27/37/47.
+
+### S3.3 (original) — Documentación: website + docu 0.6.31
 
 El pluvider es **del core**, así que se documenta en los dos sitios:
 
@@ -301,7 +348,40 @@ solo describe pantallas.
 
 ---
 
-## F4 — Censor y Montag como productores
+## F4 — Montag como productor — *código escrito, checks técnicos verdes*
+
+> **Alcance recortado por el usuario (2026-09-18)**: **Censor se queda fuera**. Solo Montag, y lo que
+> publica son sus **issues**.
+>
+> **Entregado**: `MontagChannel implements IPluvider`
+> ([plugins/montag/src/back/index.ts](../../plugins/montag/src/back/index.ts)), con el tipo público
+> `IMontagIssueEvent` en su `common` (runnerKey, text, explanation, tags y **timestamp**, que en la
+> pestaña Issues se pierde). La entrega se engancha en el **mismo bucle** que ya repartía cada issue al
+> front y, si el runner tiene sender, al sender: es una tercera puerta, no un pipeline nuevo.
+> **Filtro por config** (pedido por el usuario): la suscripción lleva `{ configs: string[] }`, nombres
+> de config cuyos issues se quieren. Vacío o ausente = todas — deliberado: una suscripción incompleta
+> acaba recibiendo de más, que se nota, en vez de caer en un silencio inexplicable. Cada suscriptor
+> tiene su lista, re-suscribirse la **reemplaza**, y lo que llega se **sanea** (viene de otro plugin).
+> Por eso el evento lleva `configName` suelto además de `runnerKey`: filtrar no debe obligar a parsear
+> una cadena.
+> `tsc --noEmit` limpio y **suite de Montag 65/65** (16 nuevos en
+> [tests/back/MontagPluvider.test.ts](../../plugins/montag/tests/back/MontagPluvider.test.ts)).
+>
+> **Hallazgo de funcionamiento, a raíz de una pregunta del usuario**: los issues solo fluyen mientras
+> una sesión **analiza**, y la sesión que abre el tab de Montag es **efímera** — `removeConnection` la
+> para en cuanto el front se desconecta. El **autostart no ayuda**: el propio código dice que solo
+> aplica a esa sesión efímera. Para consumo desatendido hace falta una **sesión con nombre**
+> (`ephemeral: false`), que además se restaura al arrancar el canal. Recogido en `getSubscriptionHelp()`
+> y en la guía, porque es la causa número uno de "me he suscrito y no llega nada".
+> **Guía**: [admin/06-issues-for-other-plugins.md](../../plugins/montag/docs/guide/admin/06-issues-for-other-plugins.md)
+> y su entrada en el sidebar. ⚠️ **Falta regenerar `montag.tgz`** — y hay que decidir antes si eso
+> arrastra bump de versión del plugin.
+>
+> **Confirmación de diseño**: Montag declara `providesRouter = true` y tiene router propio. Es
+> exactamente el escenario de la colisión que motivó `publications[]` (D2) — y **no ocurre**, porque un
+> pluvider no entra en `clusterInfo.providers` (D18). El registro aparte se paga solo.
+
+## F4 (original) — Censor y Montag como productores
 
 **MVP de la fase**: los mensajes de log ya filtrados salen por la puerta in-process (CU2, CU3).
 
@@ -382,3 +462,61 @@ Lo que el PRD §9 deja fuera del MVP, en este orden de interés:
   website de la raíz de `docs/` — ver S3.3. Editar el markdown **no basta**: hay que regenerar el tgz
   con `build-docs-tgz.js` y reiniciar el back, o se sigue sirviendo la vieja.
 - Mis trazas de depuración se retiran al terminar el PLAN completo, no al cerrar cada stream.
+
+---
+
+## Ajustes posteriores (2026-09-18/19)
+
+Todo esto sale de probarlo en vivo, y una parte son fallos que los tests no cubrían.
+
+### 🐛 El registro se quedaba con la instancia vieja tras un hot-reload
+
+**Síntoma**: la pestaña Form de `provider-debug` no se habilitaba aunque el pluvider ya publicara sus
+`fields`. **Causa**: en el hot-reload de un plugin de dev el core crea una instancia nueva del canal y
+la mete en `ri.channels`, pero **el registro de pluviders seguía apuntando a la anterior**. El core le
+pedía el `getSubscriptionHelp()` a un objeto que ya nadie usaba, y servía lo que decía el código
+anterior. Peor aún: los suscriptores quedaban enganchados a una instancia muerta.
+
+Arreglado con `rebindPluvider()` ([Pluvider.ts](../../back/src/providers/Pluvider.ts)): para la vieja,
+da de alta la nueva y arranca su producción, todo antes de `startChannel()`. Extraído a función **para
+poder testearlo**, porque este camino falló sin que ningún test se enterara — 7 casos nuevos, incluido
+quitar `getPluviderData` y recargar (el registro tiene que quedar limpio).
+**Límite conocido, ahora avisado en el log**: los suscriptores de la instancia anterior **no se pueden
+migrar**; hay que recargar también al consumidor.
+
+### Filtros de suscripción en los dos productores
+
+- **Montag**: `{ configs: string[] }` — analiza varias configs a la vez, así que el consumidor dice de
+  cuáles quiere los issues. Vacío = **todas las activas** (una config inactiva no tiene runner y no
+  produce nada, así que no hay más "todas" que esa).
+- **Agora**: `{ alerts: EAgoraAlertType[] }` — `artifacts` (reglas proactivas) y `metrics` (detector de
+  anomalías). Vacío = todos, **incluidos los que se añadan en el futuro**. Y solo llega lo que el
+  **administrador** tenga activado.
+- Nombrado: se descartó `kinds` por sonar a Kubernetes. Renombrado en los **tres** sitios —`alerts` en
+  la suscripción, `alertType` en el evento, `EAgoraAlertType` en el enum—, sin tocar los `kind`
+  legítimos de Agora (`EAgoraMemberKind`, `EK8sChangeType`, los triggers).
+
+### El ejemplo de suscripción se construye con estado REAL
+
+`getSubscriptionHelp()` es un método de la **instancia**, así que puede mirar lo que está pasando.
+Montag devuelve como ejemplo las configs que **están analizando ahora mismo**, sacadas de sus runners
+vivos (no del storage: una config guardada sin runner no entrega nada). Si no hay ninguna, cae a
+nombres de muestra **y lo dice**. Así `USE EXAMPLE` deja en el formulario la instalación del usuario,
+no un ejemplo de manual.
+**Es una propiedad del contrato que conviene contar en la documentación**: cualquier pluvider puede
+construir su ayuda con su estado vivo.
+
+### Diálogo de setup de `provider-debug`
+
+- 🐛 **No se podía volver a Form desde JSON**: el `Tab` estaba envuelto en `<Tooltip><span>`, y `Tabs`
+  inyecta el `onChange` **clonando sus hijos directos** — envuelto, nunca lo recibía. Venía de antes
+  del pluvider.
+- **Tres pestañas**: Overview (la que se abre al elegir productor, con la descripción y el
+  `USE EXAMPLE`), Form y JSON. `USE EXAMPLE` rellena el payload y **salta a Form** — el formulario y el
+  JSON editan el mismo estado, así que no hay dos sitios que sincronizar.
+- Todo lo del productor va **encuadrado** y titulado con su id: ni la descripción ni los campos son del
+  diálogo, y cambian por completo al elegir otro.
+- El cuadro **ocupa el alto disponible** (el diálogo es de alto fijo y se reparte por flex; el selector
+  y Max events con `flexShrink: 0` para que su texto de ayuda no se comprima), y las pestañas quedan
+  **deshabilitadas sin productor elegido**.
+- El estado "canal no arrancado" pasa a ser el de Agora e Iter: titular + instrucción, **centrado**.

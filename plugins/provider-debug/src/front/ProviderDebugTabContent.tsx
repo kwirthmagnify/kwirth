@@ -184,8 +184,24 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
         )
     }
 
+    /*
+        Canal no arrancado: estado vacío CENTRADO verticalmente, el mismo patrón que Agora e Iter —
+        titular en h6 y la instrucción debajo en body2.
+
+        Para ocupar el alto hacen falta las dos cosas, porque el padre puede comportarse de dos maneras:
+        'flex: 1' lo estira cuando el padre es un contenedor flex (que es lo que espera la Card del
+        render normal), y el 'minHeight' medido —top real del contenedor restado al viewport— lo
+        sostiene cuando no lo es. Solo con la altura calculada el bloque se quedaba corto.
+
+        El boxRef es el mismo que usa la lista de eventos: solo uno de los dos está montado a la vez.
+    */
     if (!data.started) {
-        return <Box sx={{ p: 2 }}><Typography color='text.secondary'>Provider Debug not started. Start the channel (tab settings ⚙ → Start) to subscribe to a provider and watch its raw events.</Typography></Box>
+        return (
+            <Stack ref={boxRef} alignItems='center' justifyContent='center' spacing={1} sx={{ flex: 1, width: '100%', minHeight: `calc(100vh - ${boxTop}px - 8px)`, px: 4, textAlign: 'center' }}>
+                <Typography variant='h6' color='text.secondary'>Provider Debug not started</Typography>
+                <Typography variant='body2' color='text.secondary' sx={{ maxWidth: 480 }}>Start the channel (tab settings ⚙ → Start) to subscribe to a provider and watch its raw events.</Typography>
+            </Stack>
+        )
     }
 
     // Se resuelven una sola vez por render: 'matches' recorre todo el buffer.

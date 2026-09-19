@@ -1,6 +1,6 @@
 import { IChannel, IPluvider } from '@kwirthmagnify/kwirth-common-back'
 import { PLUVIDER_ID_PREFIX } from '@kwirthmagnify/kwirth-common'
-import { ELogComponent, logError, logInfo } from '../tools/Logging'
+import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
 
 /*
     Un PLUVIDER es un canal que ADEMAS produce: expone in-process la informacion que ya genera, para
@@ -31,6 +31,36 @@ export const pluviderId = (channelId: string): string => PLUVIDER_ID_PREFIX + ch
 export const isPluviderId = (id: string): boolean => id.startsWith(PLUVIDER_ID_PREFIX)
 
 /*
+    Nombres que existen a la vez como provider y como pluvider: un provider 'agora' y un plugin 'agora'
+    que ademas produce, o sea 'plugin:agora'.
+
+    Tecnicamente NO hay ambiguedad —viven en registros distintos y cada uno se direcciona con su propio
+    id, que es justo para lo que esta el prefijo— pero para una persona que lee una lista o escribe una
+    suscripcion si son faciles de confundir. Por eso se avisa. Y solo se avisa: nunca se rechaza una
+    instalacion por esto, entre otras cosas porque las dos extensiones pueden ser de terceros y el
+    usuario no controlar ninguna de las dos.
+
+    Se devuelve el nombre PELADO ('agora'), que es la parte que de verdad coincide.
+*/
+export const findNameCollisions = (pluviderIds: string[], providerIds: string[]): string[] =>
+    pluviderIds
+        .filter(isPluviderId)
+        .map(id => id.substring(PLUVIDER_ID_PREFIX.length))
+        .filter(name => providerIds.includes(name))
+
+/*
+    Avisa de cada coincidencia. 'when' dice en que momento se detecto, porque el mismo choque se reporta
+    en tres: al instalar el plugin, al instalar el provider y en cada arranque del core.
+*/
+export const warnNameCollisions = (pluviderIds: string[], providerIds: string[], when: string): string[] => {
+    const collisions = findNameCollisions(pluviderIds, providerIds)
+    for (const name of collisions) {
+        logWarning(ELogComponent.CORE, `Name collision (${when}): there is a provider '${name}' and a plugin '${name}' that also publishes as '${pluviderId(name)}'. Both stay usable and nothing is blocked — subscribe to '${name}' for the provider and to '${pluviderId(name)}' for the plugin — but the names are easy to mix up.`)
+    }
+    return collisions
+}
+
+/*
     De todo lo que los canales PIDEN en 'requirements.providers', que es lo que de verdad no esta
     disponible. No es lo mismo que recorrer lo registrado: un id pedido y no registrado no aparecia
     por ningun lado hasta que alguien intentaba suscribirse a el.
@@ -56,6 +86,31 @@ export const findMissingSubscriptionTargets = (
         }
     }
     return { missingProviders, missingPluviders }
+}
+
+/*
+    Rehace el registro cuando la INSTANCIA de un canal se sustituye — hoy solo pasa en el hot-reload de
+    un plugin de dev, pero el problema es el mismo siempre: el registro guarda la instancia, no la
+    clase, asi que sustituir una sin tocar el registro deja al core hablando con un objeto que ya nadie
+    usa. Sirve su descripcion, su ayuda de suscripcion y su filtro TAL Y COMO ERAN, que es justo lo que
+    hace que un cambio recien recargado parezca no haber surtido efecto.
+
+    Los suscriptores vivos se quedan en la instancia anterior y no se pueden migrar: quien estuviera
+    escuchando tiene que volver a suscribirse. Por eso se avisa.
+*/
+export const rebindPluvider = async (pluviders: Map<string, TPluviderChannel>, pluvId: string, newInstance: IChannel): Promise<void> => {
+    const old = pluviders.get(pluvId)
+    if (old) {
+        try { await old.stopProvider() }
+        catch (err) { logError(ELogComponent.CORE, `Pluvider '${pluvId}' failed to stop while being replaced: ${err}`) }
+        pluviders.delete(pluvId)
+    }
+    if (!isPluvider(newInstance)) return
+    pluviders.set(pluvId, newInstance)
+    try { await newInstance.startProvider() }
+    catch (err) { logError(ELogComponent.CORE, `Pluvider '${pluvId}' failed to start after being replaced: ${err}`) }
+    if (old) logWarning(ELogComponent.CORE, `Pluvider '${pluvId}' was replaced — its subscribers were left on the previous instance and must subscribe again`)
+    else logInfo(ELogComponent.CORE, `Pluvider '${pluvId}' registered`)
 }
 
 /*

@@ -16,6 +16,12 @@ Kwirth currently ships with the following providers:
   - **[HTTP Pull-Push](reference/http-pull-push)**. Polls remote HTTP endpoints on a schedule and pushes each result to the subscribing channels — for data sources that cannot push into kwirth by themselves.
   - **[Sample](reference/sample)**. Reference implementation for provider developers. Use it as a starting point for building custom providers.
 
+## Providers and pluviders
+
+A provider is the right tool when the information **belongs to nobody in particular**: cluster events, metrics, a CRD being watched. But some information is the **product of a plugin's own work** — a bot that investigated an incident, a filter the user configured — and extracting that into a separate provider would mean duplicating the work in two processes.
+
+For those, a plugin can publish what it produces **in-process**, keeping a single instance and a single copy of the work. Such a plugin is called a **pluvider**, it is addressed with a `plugin:` prefix (`plugin:agora`), and a channel subscribes to it exactly as it subscribes to any provider. See [Pluviders](/0.6.31/plugins/pluviders).
+
 ## Architecture
 Providers is one of the data-streaming subsystems inside kwirth, and it is very easy to understand. The provider subsystem offers a decoupling layer between the Kubernetes API and the channel subsystem, which adds these benefits:
 

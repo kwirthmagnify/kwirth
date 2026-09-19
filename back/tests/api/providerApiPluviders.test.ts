@@ -11,7 +11,7 @@ import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { IPluviderHostInfo, ProviderApi, TProviderApiEntry } from '../../src/api/ProviderApi'
 import { ProviderManager } from '../../src/tools/ProviderManager'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
-import { IProvider } from '../../src/providers/IProvider'
+import { IProvider, IProviderSubscriptionHelp } from '../../src/providers/IProvider'
 import { TPluviderChannel } from '../../src/providers/Pluvider'
 
 const memConfigMaps = (): IConfigMaps => ({
@@ -34,7 +34,7 @@ const fakeProvider = (id: string): IProvider => ({
     apiKeyApi: undefined
 } as unknown as IProvider)
 
-const fakePluvider = (description: string, help?: { usage: string, example: Record<string, unknown> }, broken = false): TPluviderChannel => ({
+const fakePluvider = (description: string, help?: IProviderSubscriptionHelp, broken = false): TPluviderChannel => ({
     getPluviderData: () => {
         if (broken) throw new Error('getPluviderData ha reventado')
         return { description, eventTypeName: 'IFakeAlert' }
@@ -126,6 +126,27 @@ test('la ayuda de suscripcion de un pluvider viaja igual que la de un provider',
     close()
 
     assert.deepEqual(list.find(e => e.id === 'plugin:agora')?.subscriptionHelp, help)
+})
+
+test('la ayuda viaja ENTERA: usage, example y fields', async () => {
+    /*
+        Este es el camino que usa de verdad el formulario de provider-debug: lee GET /core/providers,
+        no el catalogo del websocket. Si 'fields' se perdiera por el camino, la pestaña Form quedaria
+        deshabilitada y el usuario tendria que escribir el JSON a mano sin saber que campos admite.
+    */
+    const help = {
+        usage: 'subscribe with the configs you care about',
+        example: { configs: ['payments', 'orders'] },
+        fields: [{ name: 'configs', type: 'string[]' as const, required: false, description: 'Config names. Empty means all.' }]
+    }
+    const { list, close } = await serve([], new Map([['plugin:montag', fakePluvider('issues', help)]]))
+    close()
+
+    const got = list.find(e => e.id === 'plugin:montag')?.subscriptionHelp
+    assert.deepEqual(got?.example, { configs: ['payments', 'orders'] })
+    assert.equal(got?.fields?.length, 1)
+    assert.equal(got?.fields?.[0].name, 'configs')
+    assert.equal(got?.fields?.[0].type, 'string[]')
 })
 
 test('un pluvider sin ayuda se lista igual, simplemente sin ella', async () => {

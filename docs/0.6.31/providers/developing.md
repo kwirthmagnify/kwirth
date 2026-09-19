@@ -1,5 +1,11 @@
 # Developing a provider
 
+> **Is a provider what you need?** If the information you want to distribute is produced by a **plugin
+> you are already writing** — the result of its own work, not an external source anyone could read —
+> then a separate provider would duplicate that work in a second process. Your plugin can publish it
+> in-process instead, keeping one instance: see [Pluviders](/0.6.31/plugins/pluviders). A provider
+> remains the right tool when the information belongs to nobody in particular.
+
 When developing a new provider you must implement this interface (exported by
 `@kwirthmagnify/kwirth-common-back`):
 

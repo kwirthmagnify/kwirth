@@ -117,6 +117,7 @@
     * [News](/0.6.31/plugins/reference/news)
     * [Provider Debug](/0.6.31/plugins/reference/provider-debug)
   * [Autonomous plugins](/0.6.31/plugins/autonomous)
+  * [Pluviders](/0.6.31/plugins/pluviders)
   * [Developing plugins](/0.6.31/plugins/developing)
 * [Providers](/0.6.31/providers/index)
   * [Developing providers](/0.6.31/providers/developing)

@@ -71,7 +71,7 @@ import { Application } from 'express-serve-static-core'
 import * as crypto from 'crypto'
 
 import { createProviderInstance, IProvider, IProviderStorage, TProviderConstructor } from './providers/IProvider'
-import { findMissingSubscriptionTargets, isPluvider, pluviderId, startPluviders } from './providers/Pluvider'
+import { findMissingSubscriptionTargets, isPluvider, pluviderId, rebindPluvider, startPluviders, warnNameCollisions } from './providers/Pluvider'
 import { buildProviderStorage } from './tools/ProviderStorage'
 import { EventsProvider } from './providers/events/EventsProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
@@ -1391,6 +1391,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             const pluvId = pluviderId(id)
                             activeRI.clusterInfo.pluviders.set(pluvId, channelInstance)
                             logInfo(ELogComponent.CORE, `Channel '${id}' is also a pluvider, registered as '${pluvId}': ${channelInstance.getPluviderData().description}`)
+                            // El plugin recien instalado puede llamarse igual que un provider que ya
+                            // estaba. No se rechaza —son direccionables por separado— pero se avisa.
+                            warnNameCollisions([pluvId], [...registeredProviders.keys()], `installing plugin '${id}'`)
                             // Mismo orden que en el arranque: la produccion se levanta antes que el canal.
                             try {
                                 await channelInstance.startProvider()
@@ -1690,6 +1693,10 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     const newInstance = createChannelInstance(ChannelClass, ri.clusterInfo, ri.backChannelObject)
                     if (newInstance) {
                         ri.channels.set(id, newInstance)
+                        // La instancia se acaba de sustituir, asi que el registro de pluviders apunta a la
+                        // vieja: hay que rehacerlo ANTES de startChannel, o el core seguiria sirviendo lo
+                        // que decia el codigo anterior. El porque, en providers/Pluvider.ts.
+                        void rebindPluvider(ri.clusterInfo.pluviders, pluviderId(id), newInstance)
                         // Re-run startChannel so the fresh instance re-subscribes to providers (events/metrics),
                         // re-arms its timers and reloads its config — otherwise a hot-reload leaves the new
                         // instance handling sockets but deaf to cluster events until a full core restart. Safe
@@ -1839,6 +1846,11 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         // Fase de PLUVIDERS: entre la de providers (arriba) y la de canales, que ocurre despues en
         // startRunningInstance(). El detalle y el porque del orden, en providers/Pluvider.ts.
         await startPluviders(localClusterInfo.pluviders)
+
+        // Tercer momento del aviso de coincidencia de nombres: cada arranque. Los otros dos son al
+        // instalar el plugin y al instalar el provider, porque cualquiera de los dos puede llegar el
+        // segundo y el usuario tiene que enterarse igual.
+        warnNameCollisions([...localClusterInfo.pluviders.keys()], [...registeredProviders.keys()], 'at startup')
     }
     catch (err) {
         logError(ELogComponent.CORE, 'Error setting up kubernetes requirements')

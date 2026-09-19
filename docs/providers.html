@@ -173,6 +173,10 @@
     <span class="hl2">Kwirth channels &amp; senders</span>  (alerts, email, log files, ...)
   </div>
 
+  <h2>Providers and pluviders</h2>
+  <p>A provider is the right tool when the information <strong>belongs to nobody in particular</strong>: cluster events, metrics, a CRD being watched. But some information is the <strong>product of a plugin's own work</strong> — a bot that investigated an incident, a filter the user configured — and extracting that into a separate provider would mean duplicating the work in a second process.</p>
+  <p>For those, a plugin can publish what it produces <strong>in-process</strong>, keeping a single instance and a single copy of the work. Such a plugin is called a <strong>pluvider</strong>: it is addressed with a <code>plugin:</code> prefix (<code>plugin:agora</code>), and a channel subscribes to it exactly as it subscribes to any provider. See <a href="plugins.html">Plugins</a>.</p>
+
   <h2>Available providers</h2>
   <div class="cards-grid">
     <div class="card">

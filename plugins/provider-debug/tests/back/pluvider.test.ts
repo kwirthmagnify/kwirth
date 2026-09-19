@@ -42,6 +42,24 @@ describe('catalogo con pluviders', () => {
         assert.deepEqual(ws.providersCatalogue()?.[0].help, help)
     })
 
+    test('la ayuda viaja ENTERA: el ejemplo y los campos llegan al catalogo', async () => {
+        // de esto vive el dialogo de setup: el ejemplo alimenta el boton USE EXAMPLE y los campos
+        // deciden si la pestaña Form esta disponible o hay que escribir el JSON a mano
+        const help = {
+            usage: 'subscribe with the configs you care about',
+            example: { configs: ['payments', 'orders'] },
+            fields: [{ name: 'configs', type: 'string[]' as const, required: false, description: 'Config names. Empty means all.' }]
+        }
+        const channel = makeChannel([], [new FakePluvider('plugin:montag').withHelp(help)])
+        const ws = new MockWs()
+        await start(channel, ws, 'i1', '')
+
+        const got = ws.providersCatalogue()?.[0].help
+        assert.deepEqual(got?.example, { configs: ['payments', 'orders'] })
+        assert.equal(got?.fields?.length, 1)
+        assert.equal(got?.fields?.[0].type, 'string[]')
+    })
+
     test('sin pluviders el catalogo es el de siempre: no se inventa nada', async () => {
         const channel = makeChannel([new FakeProvider('events')])
         const ws = new MockWs()

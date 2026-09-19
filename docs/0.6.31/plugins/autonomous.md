@@ -33,7 +33,7 @@ Because an autonomous plugin is a first-class channel, it keeps every service th
 - **RBAC** — access is authorized against the user's scopes; declare your own from `getChannelScopeLevel()` so admins can grant them (see [Security](/0.6.31/security)).
 - **Persistence** — set `requirements.storage = true` and keep per-user / per-instance state in kwirth's own stores (ConfigMaps, Secrets, a PVC or files) — no external database.
 - **Real-time transport** — the multiplexed WebSocket is available (`requirements.webSocket`), so your app can push and receive live data.
-- **Providers** — subscribe to any [provider](/0.6.31/providers/index) to feed the app external data.
+- **Providers** — subscribe to any [provider](/0.6.31/providers/index) to feed the app external data. And if your plugin *produces* information worth sharing, it can publish it in-process for other plugins to subscribe to: see [Pluviders](/0.6.31/plugins/pluviders).
 - **UI integration** — theming / palette, notifications, the settings and setup dialogs — the same as any other channel.
 
 ## Minimal skeleton
@@ -81,6 +81,7 @@ On the **front**, implement the channel as usual with its `IChannelRequirements`
 
 ## Related
 
+- [Pluviders](/0.6.31/plugins/pluviders) — a plugin with an always-running back end can also publish what it produces to other plugins
 - [Developing plugins](/0.6.31/plugins/developing)
 - [Managing plugins](/0.6.31/plugins/managing)
 - [Providers](/0.6.31/providers/index)

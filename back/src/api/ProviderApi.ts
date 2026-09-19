@@ -1,7 +1,7 @@
 import { Router, Request, Response, raw } from 'express'
 import { ProviderManager } from '../tools/ProviderManager'
 import { IProvider, IProviderFieldDef, IProviderSubscriptionHelp, TProviderConstructor } from '../providers/IProvider'
-import { TPluviderChannel } from '../providers/Pluvider'
+import { TPluviderChannel, warnNameCollisions } from '../providers/Pluvider'
 import { IProviderMeta } from '../tools/ProviderManager'
 import { ELogComponent, logError, logInfo } from '../tools/Logging'
 import { ApiKeyApi } from './ApiKeyApi'
@@ -214,6 +214,9 @@ export class ProviderApi {
                 const meta = await this.providerManager.install(url, this.registeredProviders, undefined, marketplaceId, marketplaceLabel)
                 this.callbacks.onProviderInstalled?.(meta.id)
                 logInfo(ELogComponent.CORE, `Provider installed via API: ${meta.id} v${meta.version}`)
+                // La otra direccion del aviso: el provider recien instalado puede llamarse igual que un
+                // plugin que ya publica como pluvider. Se avisa, no se rechaza.
+                warnNameCollisions([...this.getPluviders().keys()], [meta.id], `installing provider '${meta.id}'`)
                 res.json(meta)
             } catch (err) {
                 logError(ELogComponent.CORE, `Provider install error: ${err}`)
@@ -228,6 +231,8 @@ export class ProviderApi {
                 const meta = await this.providerManager.installFromBuffer(req.body, this.registeredProviders)
                 this.callbacks.onProviderInstalled?.(meta.id)
                 logInfo(ELogComponent.CORE, `Provider installed via upload: ${meta.id} v${meta.version}`)
+                // Subir el tgz a mano instala igual que hacerlo desde el marketplace: mismo aviso.
+                warnNameCollisions([...this.getPluviders().keys()], [meta.id], `installing provider '${meta.id}'`)
                 res.json(meta)
             } catch (err) {
                 logError(ELogComponent.CORE, `Provider upload error: ${err}`)

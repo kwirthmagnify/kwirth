@@ -181,6 +181,11 @@
   <p>This is what lets you <strong>embed a standalone JavaScript application</strong> — a game, a dashboard, a small tool, an external widget — as a Kwirth channel, and have it inherit the framework's services for free: <strong>authentication</strong>, <strong>RBAC</strong>, <strong>persistence</strong> (ConfigMaps / Secrets / PVC / files), the real-time <strong>WebSocket</strong>, providers, theming and notifications. Build the app once; ship it as a channel and let Kwirth handle sign-in, permissions and state.</p>
   <p>A plugin declares itself autonomous by setting <code>cluster: false</code> and <code>resourced: false</code> in its back-channel data — its only view becomes <code>none</code>, and Kwirth starts it once with no resource selection.</p>
 
+  <h2>Pluviders: a plugin that also publishes</h2>
+  <p>Some plugins run a <strong>back end of their own</strong>, always started, that produces genuinely valuable information — proactive alerts raised after investigating an incident, log messages already filtered down to what matters, an enriched picture of external traffic. Until now that information could only reach one place: that plugin's own front end.</p>
+  <p>A <strong>pluvider</strong> is a plugin that also publishes what it produces <strong>in-process</strong>, so any other plugin in the same Kwirth can subscribe to it — exactly the way channels already subscribe to the <code>events</code> or <code>metrics</code> providers. It is not a provider packaged next to a plugin: it is the <strong>same class, the same instance and the same information</strong>, reaching one more door.</p>
+  <p>Producers are addressed with a <code>plugin:</code> prefix (<code>plugin:agora</code>) and consumed with no new API at all — a channel subscribes to a pluvider exactly as it subscribes to a provider. The dependency is <strong>soft</strong>: if the producing plugin is not installed, the consumer still starts and still works.</p>
+
   <h2>Available plugins</h2>
   <div class="plugins-grid">
     <div class="plugin-card">
