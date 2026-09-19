@@ -24,10 +24,15 @@ test.describe.configure({ mode: 'serial' })
 interface IProviderRef {
     id: string
     displayName?: string
+    name?: string
+    version?: string
     core?: boolean
     hasFront?: boolean
     hasSchema?: boolean
     configNames?: string[]
+    /** PLUVIDER: un plugin que además produce. Se lista aquí, pero no se gestiona desde aquí. */
+    pluvider?: boolean
+    hostedBy?: string
 }
 
 test.describe('gestor generico de extensiones: providers', () => {
@@ -66,7 +71,10 @@ test.describe('gestor generico de extensiones: providers', () => {
         // events y metrics vienen dentro de Kwirth. Si salieran, la papelera invitaria a quitar algo que
         // no se puede quitar, y el contador de instalados mentiria.
         const core = delBack.filter(p => p.core)
-        const extensiones = delBack.filter(p => !p.core)
+        // Los PLUVIDERS tampoco cuentan como instalados: se pintan (quien entra aquí viene a ver a qué
+        // puede suscribirse) pero no se instalan ni se desinstalan — vienen y se van con su plugin, así
+        // que no aportan papelera.
+        const extensiones = delBack.filter(p => !p.core && !p.pluvider)
         expect(core.length, 'el back no devuelve ningun provider de core: el test no probaria nada').toBeGreaterThan(0)
 
         await expect(dialog().getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
@@ -76,6 +84,42 @@ test.describe('gestor generico de extensiones: providers', () => {
         for (const p of core) {
             await expect(dialog().getByText(p.displayName ?? p.id, { exact: true }), `'${p.id}' es de core y no debe salir`).toHaveCount(0)
         }
+    })
+
+    /*
+        PLUVIDERS: un plugin que además produce y publica su información in-process. Se sirven en la
+        MISMA lista que los providers —quien consume no tiene por qué saber que hay dos clases— y por eso
+        se pintan aquí: quien abre este diálogo viene a ver a qué puede suscribirse, y esconderlos
+        obligaría a saber de antemano que existen. Lo que NO se puede es gestionarlos desde aquí.
+    */
+    test('un pluvider se pinta, marcado, con el nombre y la version de SU plugin', async () => {
+        const pluviders = delBack.filter(p => p.pluvider)
+        test.skip(pluviders.length === 0, 'ningun plugin publica como pluvider en este entorno')
+
+        for (const p of pluviders) {
+            const nombre = p.displayName ?? p.name ?? p.id
+            await expect(dialog().getByText(nombre, { exact: true }).first(),
+                `'${p.id}' no aparece en el gestor`).toBeVisible({ timeout: 60000 })
+            // no se versiona aparte: lleva la version de su plugin, no una inventada
+            expect(p.version, `'${p.id}' deberia traer la version de su plugin`).toMatch(/^\d+\.\d+\.\d+$/)
+        }
+        // el chip que lo distingue de un provider instalado
+        await expect(dialog().getByText('pluvider', { exact: true }).first()).toBeVisible()
+    })
+
+    test('un pluvider no se puede desinstalar ni configurar desde aqui, y dice por que', async () => {
+        // La norma del proyecto es control VISIBLE y deshabilitado con su motivo, nunca escondido: quien
+        // lo ve tiene que poder leer por que no puede pulsarlo.
+        const pluvider = delBack.find(p => p.pluvider)
+        test.skip(!pluvider, 'ningun plugin publica como pluvider en este entorno')
+
+        const host = pluvider!.hostedBy
+        await expect(dialog().getByText(`Subscribe with id: ${pluvider!.id}`).first(),
+            'el subtitulo tiene que dar el id con el que suscribirse').toBeVisible()
+        await expect(dialog().locator(`[aria-label*="uninstall that plugin instead"]`).first(),
+            `desinstalar deberia estar denegado remitiendo al plugin '${host}'`).toBeVisible()
+        await expect(dialog().locator(`[aria-label*="Configured from the '${host}' plugin"]`).first(),
+            'configurar deberia remitir al plugin').toBeVisible()
     })
 
     test('el chip de configs dice lo que dice el provider', async () => {
@@ -139,7 +183,9 @@ test.describe('gestor generico de extensiones: providers', () => {
 
             La rueda NO desaparece — se queda visible y deshabilitada, que es la regla de UI del proyecto.
         */
-        const sinNada = delBack.filter(p => !p.core && !p.hasFront && !p.hasSchema)
+        // Un PLUVIDER tampoco se configura, pero su rueda dice otra cosa —remite a su plugin— así que
+        // tiene su propio test y no cuenta aquí.
+        const sinNada = delBack.filter(p => !p.core && !p.pluvider && !p.hasFront && !p.hasSchema)
         test.skip(sinNada.length === 0, 'todos los providers de este entorno se configuran de alguna forma')
 
         const muertas = dialog().locator('span[aria-label="No configuration available"] button')

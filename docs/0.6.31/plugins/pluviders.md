@@ -121,6 +121,40 @@ This is deliberate. A plugin that enriches itself with Montag's filtered logs sh
 
 Like providers, **each pluvider decides** whether it filters and what shape the filter takes — there is no common contract for it, and there never was for providers either (`events` takes `{ kinds, syncInstances }`, `metrics` takes booleans, `tick` takes nothing at all). Whatever your pluvider expects, describe it in `getSubscriptionHelp()`.
 
+The two producers that ship today show the two shapes a filter tends to take:
+
+| Pluvider | Payload | What it filters by |
+|---|---|---|
+| `plugin:agora` | `{ alerts: ['artifacts', 'metrics'] }` | the **kind** of alert: proactive rules on cluster events, or the metric anomaly detector |
+| `plugin:montag` | `{ configs: ['payments', 'orders'] }` | **which configs**' issues you want, because Montag analyses several at once |
+
+Both treat an **empty list as "everything"**, and that is worth copying. The alternative — empty meaning "nothing" — turns an incomplete subscription into a silence nobody can explain; this way the odd case is receiving too much, which is noticed immediately. In Agora's case "everything" also covers **kinds added in the future**, so a consumer written today does not quietly miss a new one.
+
+Two more things worth stealing from them:
+
+- **Sanitise what arrives.** The payload comes from another plugin. Agora drops values that are not a known kind instead of letting them into the filter: a filter that matches nothing would leave the subscriber silent with no explanation.
+- **What the user enabled still wins.** A subscriber can ask for `artifacts` all it likes; with no proactive rules configured, Agora produces none. Say so in your help, or people will think their filter is broken.
+
+### Build the help with live state
+
+`getSubscriptionHelp()` is a method on the **instance**, not a static description, so it can look at what is actually happening. Montag uses this: its example carries the configs that are **analysing right now**, read from its live runners.
+
+```ts
+getSubscriptionHelp = (): IProviderSubscriptionHelp => {
+    const analysing = this.analysingConfigNames()
+    return {
+        usage: '…',
+        // real names if there are any, sample ones otherwise — and the field says which it is
+        example: { configs: analysing.length > 0 ? analysing : ['payments', 'orders'] },
+        fields: [ /* … */ ]
+    }
+}
+```
+
+The difference is not cosmetic: in Provider Debug, **USE EXAMPLE** then leaves the user's own installation in the form instead of names from a manual, ready to subscribe. If there is nothing live to offer, fall back to sample names **and say so** — an empty example would not even explain the shape.
+
+Read it from memory rather than from storage where you can: `getSubscriptionHelp()` is synchronous, and live state is also more honest — a config saved but not running produces nothing, so offering it would be a lie.
+
 ## The identifier
 
 A pluvider is always addressed with the prefix `plugin:`, and **the core composes the id** from the channel id — the plugin author never writes it, so the prefix cannot be mistyped:

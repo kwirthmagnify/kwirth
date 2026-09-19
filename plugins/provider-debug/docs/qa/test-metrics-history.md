@@ -1,0 +1,15 @@
+# Provider Debug — histórico de métricas de test
+
+> Registro **incremental** de la suite de tests, una fila por **CL9 / tag**. Se **añade** una fila arriba en
+> cada cierre (punto 2 de la checklist CL9); **no se sobrescribe** — es un histórico.
+>
+> **Cómo se obtiene cada dato:**
+> - **Harness** = nº de tests que reporta `npm test` (`node --test`).
+> - **Cobertura** = `COVERAGE=1 npm test` (Node `--experimental-test-coverage` con sourcemaps a `src/`). ⚠️ Es
+>   sobre los módulos que el harness **carga** (back del canal + common), **no** el 100% del código: los
+>   componentes React (`.tsx`) los cubre el e2e (no medido numéricamente).
+> - **e2e** = nº de spec files (`e2e/tests/*.spec.ts`) y nº de casos `test()`.
+
+| Fecha | Versión / tag | Harness | Cobertura (líneas / ramas / funcs) | e2e (specs / casos) | Notas |
+|---|---|---|---|---|---|
+| 2026-09-19 | `plugin/provider-debug@0.1.3` | **41** | **97.47% / 91.19% / 89.74%** | 3 / 28 | **Depurar PLUVIDERS y rediseño del diálogo de setup.** Un pluvider —un plugin que además publica su información in-process— se lista, se configura y se depura **igual que un provider**: el canal resuelve por el prefijo `plugin:` contra el registro de pluviders en vez de contra `clusterInfo.providers`, y para quien depura la diferencia es solo un chip. El catálogo los marca con `pluvider: true` y su descripción, y el mensaje de "no disponible" es propio: un pluvider ausente suele ser un plugin que ni está instalado, no un provider que nadie arrancó. **Diálogo de setup rehecho en tres pestañas** (Overview / Form / JSON) dentro de un cuadro titulado con el id del productor —ni la descripción ni los campos son del diálogo, los declara el productor—, con `USE EXAMPLE` en Overview rellenando el payload y saltando a Form; form y JSON editan el MISMO estado, así que no hay dos sitios que sincronizar. 🐛 **Bug anterior al pluvider**: el `Tab` de Form estaba envuelto en un `Tooltip`, así que no era hijo directo de `Tabs` y no recibía su `onChange` — se salía a JSON y no se podía volver. 🐛 **Dos e2e atados al inventario**: exigían `kafka` y `otel` por id y se pusieron rojos el día que kafka dejó de estar instalado; ahora comprueban que la lista llega poblada y con el estado resuelto, sin nombrar extensiones instaladas. El caso "provider parado" se salta cuando el entorno no tiene ninguno (no se puede provocar desde la UI; la lógica la cubre el harness). Añadido soporte `COVERAGE=1` al runner, que no lo tenía. ⚠️ **La medición cambió en este punto**: hasta aquí el informe promediaba un bundle por fichero de test, cada uno con su propia copia del src y su parcela cubierta, así que daba muy por debajo de lo real. Desde ahora COVERAGE=1 genera un entry único (una sola copia del src) y el número es la UNIÓN. El salto respecto a la fila anterior es de medición, no de tests. |

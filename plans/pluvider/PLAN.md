@@ -520,3 +520,82 @@ construir su ayuda con su estado vivo.
   y Max events con `flexShrink: 0` para que su texto de ayuda no se comprima), y las pestañas quedan
   **deshabilitadas sin productor elegido**.
 - El estado "canal no arrancado" pasa a ser el de Agora e Iter: titular + instrucción, **centrado**.
+
+---
+
+## Cierre CL9 (2026-09-19)
+
+**QA manual validado por el usuario (punto 3, el gate): todos los pasos.**
+
+### Punto 1 — harness
+
+| | Tests |
+|---|---|
+| back (core) | 313/313 |
+| agora | 225/225 |
+| montag | 68/68 |
+| provider-debug | 41/41 |
+
+### Punto 2 — e2e y métricas
+
+**e2e nuevos (8)**: 6 en `provider-debug` (`02-pluviders.spec.ts`) y 2 en el gestor de providers del core
+(`front/e2e/tests/providers-manager.spec.ts`). **No se escribieron en Agora ni Montag a propósito**: el
+pluvider no tiene superficie en su propio front — se ve en provider-debug y en el gestor —, y ponerles
+specs que navegan por otro plugin sería colocarlos donde no viven.
+
+**e2e ajenos arreglados (5+3)**: el rediseño del diálogo obligó a adaptar 5 (el estado vacío pasó a dos
+elementos, el editor JSON vive ahora en su pestaña, cambió el texto de ayuda), y **3 estaban mal de
+antes**: dos se ataban a `kafka` por id y se pusieron rojos el día que dejó de estar instalado, y uno
+contaba pluviders como si fueran extensiones instalables.
+
+🔴 **La cobertura estaba MAL MEDIDA, y el hallazgo vale más que el número.** El runner bundlea *un
+fichero por test*, y cada bundle arrastra su **propia copia del `src`**. El informe los trata como
+ficheros distintos y hace la **media** de esas copias en vez de la unión: cada test cubría bien su
+parcela y sumaba ~1.800 líneas ajenas sin tocar. El bundle del pluvider de Montag lo delataba —
+**21% de líneas con 95% de ramas**.
+
+Arreglado con un **entry único** cuando `COVERAGE=1` (una sola copia del `src`); sin la variable, la
+ejecución sigue siendo un proceso por fichero, que aísla mejor.
+
+| | Medido antes | **Real** |
+|---|---|---|
+| Montag | 38.41 / 59.51 / 48.64 | **77.44 / 80.61 / 85.19** |
+| Agora | 74.28 / 83.24 / 76.72 | **93.91 / 86.87 / 94.13** |
+| provider-debug | 90.70 / 85.98 / 80.00 | **97.47 / 91.19 / 89.74** |
+
+No hizo falta escribir un solo test: el código ya estaba cubierto. Históricos y los 6 PNG regenerados,
+con la nota de que el salto es **de medición, no de tests**.
+
+⚠️ **Deuda conocida en Agora**: al medir con entry único, 2 de los 225 fallan
+(`listRoomsForMember`, `insertMessage + listBacklog`). No es el código: `setupPgTest` aísla por
+`agoratest_<suffix>_<pid>` pero guarda el consumidor en una **variable de entorno global**, así que en
+un solo proceso el último import pisa a los demás. Con `npm test` normal siguen pasando 225/225 — el
+rojo solo aparece al medir. Decisión del usuario: dejarlo así y anotar el arreglo del aislamiento.
+
+### Punto 4 — guía
+
+- Core: la página del concepto se **completó** con lo que faltaba (se escribió antes de que existieran
+  los filtros): la tabla de payloads de los dos productores, por qué lista vacía = todo, sanear lo que
+  llega, que lo que el administrador tenga activado manda, y **construir la ayuda con estado vivo**.
+- `plugins/montag/docs/guide/admin/06-issues-for-other-plugins.md` (nueva).
+- `plugins/agora/docs/guide/admin/10-alerts-for-other-plugins.md` (nueva), con su entrada de sidebar.
+
+### Puntos 7-9 — commit, tag y push
+
+⚠️ **Agora y Montag no se pueden commitear en este repo**: `plugins/agora/` y `plugins/montag/` están
+excluidos en `.gitignore` y en `.git/info/exclude` (guardarraíl anti-fuga). Su código, sus tests, sus
+guías, sus métricas y el `BACKLOG.md` de otra sesión van por su repo privado + Nexus + manifest.
+**Sin bump de versión no hay tag**: ninguna de las tres extensiones ha cambiado de versión en este
+cierre.
+
+## Backlog que deja este trabajo
+
+- **Aislamiento de BD en los tests de Agora**: `AGORA_DB_CONSUMER` es una variable de entorno global;
+  debería resolverse por fichero en runtime para que la suite se pueda ejecutar en un solo proceso.
+- **`updateSubscriber` de `ClusterInfo` sigue vacío** (`//+++ review how to implement`), también para
+  providers. Es un frente propio que afecta a los dos mundos.
+- **Fase 2 del pluvider**, fuera del MVP por decisión: `ask()` (la cara de consulta, para Situs),
+  `publications[]` (separar la publicación en un array con kind/router/alias) y el **descubrimiento en
+  runtime** de qué pluviders hay (Q9).
+- **Q7**: qué ve un consumidor donde el productor no está hospedado (hoy: warning y sigue).
+- Publicación privada pendiente de Agora y Montag, con el **lockstep** de versión y el `montag.tgz`.

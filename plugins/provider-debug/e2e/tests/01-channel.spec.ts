@@ -81,10 +81,19 @@ const selectProvider = async (providerId: string): Promise<void> => {
     await page.locator(`li[data-value="${providerId}"]`).click()
 }
 
+/** El editor JSON vive en su pestaña: elegir productor abre Overview, así que hay que ir a él. */
+const openJsonTab = async (): Promise<void> => {
+    await page.getByRole('tab', { name: 'JSON' }).click()
+    await expect(page.getByLabel('Subscription payload (JSON)')).toBeVisible()
+}
+
 const startWith = async (providerId: string, payload = ''): Promise<void> => {
     await openSetup()
     if (providerId) await selectProvider(providerId)
-    if (payload) await page.getByLabel('Subscription payload (JSON)').fill(payload)
+    if (payload) {
+        await openJsonTab()
+        await page.getByLabel('Subscription payload (JSON)').fill(payload)
+    }
     await page.getByRole('button', { name: 'OK' }).click()
     await page.waitForTimeout(2500)
 }
@@ -95,28 +104,41 @@ const statusChip = (label: string) => page.locator('.MuiChip-root').filter({ has
 const METRICS_PAYLOAD = '{"pod":true,"container":true,"machine":true}'
 const eventsArrived = () => expect(page.getByText(/Events: [1-9]\d* \/ 200/)).toBeVisible({ timeout: 90000 })
 
+// El estado vacío pasó a ser el mismo patrón que Agora e Iter: titular y instrucción en DOS
+// elementos (antes era una sola frase), centrado en el área de contenido.
 test('the tab explains that the channel must be started', async () => {
-    await expect(page.getByText(/Provider Debug not started\. Start the channel/)).toBeVisible()
+    await expect(page.getByText('Provider Debug not started', { exact: true })).toBeVisible()
+    await expect(page.getByText(/Start the channel .* to subscribe to a provider/)).toBeVisible()
 })
 
 
 // GET /core/providers es la vista completa del core, así que todo lo de la Select (ids, estado y
 // ayuda) está disponible SIN haber arrancado el canal ni una vez. Estos tests van antes del primer
 // Start a propósito: si alguien vuelve a atar la Select al catálogo por websocket, se ponen rojos.
-test('before any start the select offers installed and core providers, already flagged', async () => {
+/*
+    No se nombra ningún provider INSTALADO a propósito. La versión anterior exigía 'kafka' y 'otel' por
+    id, y se puso roja el día que kafka dejó de estar instalado en el entorno — un fallo que no decía
+    nada del canal, solo del inventario de quien corría el test. Lo que aquí importa es que la lista
+    llega poblada y con el estado resuelto, no QUÉ hay instalado.
+
+    Los de core sí se nombran: 'events' y 'metrics' los registra el core en código, así que están
+    siempre pase lo que pase con las extensiones.
+*/
+test('before any start the select offers core providers and resolves their state', async () => {
     await openSetup()
     await providerSelect().click()
 
-    // instalados
-    await expect(page.locator('li[data-value="kafka"]')).toBeVisible()
-    await expect(page.locator('li[data-value="otel"]')).toBeVisible()
     // de core: no son extensiones, los sirve el mismo endpoint marcados como core
     await expect(page.locator('li[data-value="events"]')).toBeVisible()
     await expect(page.locator('li[data-value="metrics"]')).toBeVisible()
-    // y el estado ya viene resuelto, sin arrancar nada
-    await expect(page.locator('li[data-value="kafka"]')).toContainText('not running')
+    // y además de los dos de core hay productores instalados: si la Select volviera a colgar del
+    // catálogo por websocket, sin arrancar el canal solo estaría la opción vacía
+    expect(await page.locator('li[data-value]:not([data-value=""])').count()).toBeGreaterThan(2)
+
+    // el estado ya viene resuelto sin arrancar nada: 'metrics' corre —lo requiere el canal de
+    // métricas— así que no lleva la marca
     await expect(page.locator('li[data-value="metrics"]')).not.toContainText('not running')
-    await expect(page.getByText(/Only the ones marked as running can be subscribed to/)).toBeVisible()
+    await expect(page.getByText(/Only the ones not marked as "not running" can be subscribed to/)).toBeVisible()
 
     await closeSetup()
 })
@@ -150,6 +172,8 @@ test('the example button fills the payload', async () => {
 test('the generated form writes into the payload', async () => {
     await openSetup()
     await selectProvider('events')
+    // Elegir productor abre Overview: el formulario está en su propia pestaña.
+    await page.getByRole('tab', { name: 'Form' }).click()
     await page.getByLabel(/^kinds/).fill('Pod, Event')
 
     await page.getByRole('tab', { name: 'JSON' }).click()
@@ -177,16 +201,43 @@ test('starting without a provider lists the providers currently running', async 
     await expect(page.getByText('Events: 0 / 200')).toBeVisible()
 })
 
+/*
+    Se busca en la lista CUÁL está parado en vez de nombrar uno: cuál lo esté depende de qué haya
+    instalado y de qué canales corran, y atarlo a un id concreto es lo que puso rojo este fichero
+    cuando kafka dejó de estar instalado.
+*/
 test('a provider that is not running is reported instead of failing silently', async () => {
-    await startWith('kafka')
+    await openSetup()
+    await providerSelect().click()
+    const stopped = page.locator('li[data-value]').filter({ hasText: 'not running' }).first()
 
-    await expect(page.getByText("Provider 'kafka' is not running")).toBeVisible()
+    /*
+        Puede no haber NINGUNO parado: un provider corre si algún canal lo requiere o si publica
+        router, así que en un Kwirth donde todo lo instalado está en uso este caso no existe y no hay
+        forma de provocarlo desde la UI (la Select solo ofrece lo que hay).
+
+        Se salta en vez de fallar, y se cierra el diálogo antes: los tests comparten página, y dejarlo
+        abierto rompería al siguiente. La lógica del aviso está cubierta por el harness del back
+        (tests/back/pluvider.test.ts y ProviderDebugChannel.test.ts), esto solo era el recorrido real.
+    */
+    if (await stopped.count() === 0) {
+        await closeSetup()
+        test.skip(true, 'no hay ningún provider instalado que no esté corriendo en este Kwirth')
+    }
+
+    const stoppedId = await stopped.getAttribute('data-value')
+    await stopped.click()
+    await page.getByRole('button', { name: 'OK' }).click()
+    await page.waitForTimeout(2500)
+
+    await expect(page.getByText(`Provider '${stoppedId}' is not running`)).toBeVisible()
     await expect(page.getByText('Events: 0 / 200')).toBeVisible()
 })
 
 test('a malformed subscription payload blocks the dialog instead of reaching the back', async () => {
     await openSetup()
     await selectProvider('otel')
+    await openJsonTab()
     await page.getByLabel('Subscription payload (JSON)').fill('{ not json')
 
     await expect(page.getByText('Not valid JSON')).toBeVisible()
