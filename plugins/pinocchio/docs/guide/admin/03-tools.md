@@ -53,6 +53,7 @@ envía al front al arrancar, así que el selector siempre muestra lo que el back
 | `get_configmap` / `get_secret` | Datos de un ConfigMap / claves de un Secret (**valores redactados**). Un cambio de valor no genera revisión de rollout: por eso hay que mirarlos aparte. |
 | `get_workload_config_refs` | Qué ConfigMaps y Secrets consume un Deployment, con su fecha de última modificación. |
 | `get_source_file` | Trae un fichero de un repo Git (GitHub/GitLab) en una ref, para seguir un stack trace hasta el fichero:línea culpable. |
+| `compare_revisions` | Qué entró entre dos revisiones de un repo Git: commits y ficheros tocados. Para explicar una regresión que llegó con un deploy — el diff solo si se pide, y avisa cuando el rango es tan ancho que ha tenido que recortar. |
 | `get_certificate_info` | Detalles del certificado TLS de un host: emisor, validez, SANs, huella. |
 
 ### Lectura — uso de recursos

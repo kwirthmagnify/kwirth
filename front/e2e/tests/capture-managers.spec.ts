@@ -1,5 +1,7 @@
 import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { readdirSync } from 'fs'
+import path from 'path'
 
 // Regenera las capturas de los diálogos de gestión de extensiones para la guía (docs/_media/guide).
 // Ejecutar a mano: playwright test capture-managers.spec.ts
@@ -13,7 +15,33 @@ import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 // Ademas asi las imagenes muestran lo que ve un Kwirth recien instalado, que es de lo que habla la guia.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-const MEDIA = 'C:/github/aisdkvercel/kwirth/docs/0.5.287/_media/guide'
+/*
+    Las capturas van a la carpeta de la version VIVA de la documentacion, resuelta igual que en
+    `back/scripts/build-docs-tgz.js`: la `docs/<x.y.z>` mas alta. Estuvo fija a una version concreta y
+    envejecio en silencio — se seguian regenerando imagenes sobre la documentacion ANTIGUA mientras la
+    guia viva enseñaba capturas viejas, y nadie se enteraba porque el spec pasaba en verde.
+*/
+const DOCS = path.resolve(__dirname, '..', '..', '..', 'docs')
+const liveDocsVersion = (): string =>
+    readdirSync(DOCS, { withFileTypes: true })
+        .filter(d => d.isDirectory() && /^\d+\.\d+\.\d+$/.test(d.name))
+        .map(d => d.name)
+        .sort((a, b) => {
+            const pa = a.split('.').map(Number)
+            const pb = b.split('.').map(Number)
+            return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2]
+        })
+        .pop() ?? ""
+
+const MEDIA = path.join(DOCS, liveDocsVersion(), '_media', 'guide').replace(/\\/g, '/')
+
+/*
+    Regenerar UNA captura sin arrastrar las demas: `CAPTURE_ONLY=aitoolsets`. Sin la variable se
+    regeneran todas, como siempre. Hace falta porque un cierre normal cambia una sola pantalla, y
+    rehacer siete imagenes para actualizar una deja seis diffs que nadie ha mirado.
+*/
+const ONLY = process.env.CAPTURE_ONLY ?? ''
+const pedida = (file: string): boolean => !ONLY || file.includes(ONLY)
 
 interface ISession { auth: string; backend: string }
 
@@ -94,15 +122,17 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
         // El menu de familias, que es la primera imagen de "Extending kwirth". Se regenera aqui porque
         // CADA tipo de extension nuevo lo cambia, y hecha a mano se quedaba vieja sin que nadie lo notara:
         // la que habia no tenia ni el tipo `aitoolset`.
-        await dismissOpenDialogs(page)
-        await page.locator('header button').first().click({ force: true })
-        await page.getByRole('menuitem', { name: /Manage extensions/i }).click()
-        await page.waitForTimeout(600)
-        await page.screenshot({ path: `${MEDIA}/admin-manage-extensions.png` })
-        await page.keyboard.press('Escape')
-        await page.waitForTimeout(400)
+        if (pedida('admin-manage-extensions.png')) {
+            await dismissOpenDialogs(page)
+            await page.locator('header button').first().click({ force: true })
+            await page.getByRole('menuitem', { name: /Manage extensions/i }).click()
+            await page.waitForTimeout(600)
+            await page.screenshot({ path: `${MEDIA}/admin-manage-extensions.png` })
+            await page.keyboard.press('Escape')
+            await page.waitForTimeout(400)
+        }
 
-        for (const m of MANAGERS) {
+        for (const m of MANAGERS.filter(x => pedida(x.file))) {
             await clickExtensionMenuItem(page, m.menu)
             const dialog = page.getByRole('dialog').filter({ hasText: m.title })
             await dialog.waitFor({ timeout: 10000 })
