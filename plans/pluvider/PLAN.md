@@ -1,5 +1,15 @@
 # Pluvider — PLAN
 
+## Estado (2026-09-19) — **MVP ENTREGADO Y EN PRODUCCIÓN; el plan sigue VIVO**
+
+F1 a F4 escritas, validadas y cerradas con su CL9: el core sabe qué es un pluvider, **Agora** publica
+sus alertas proactivas y **Montag** sus issues, y se consumen desde `provider-debug` y se ven en el
+gestor de providers. Validado en vivo: una alerta real de Agora llegó a otro plugin in-process.
+
+**No se cierra** porque queda la **fase 2**, fuera del MVP por decisión: `ask()` (la cara de consulta),
+`publications[]` (separar la publicación en un array) y el descubrimiento en runtime. Más la
+publicación privada pendiente de Agora y Montag. Detalle al final, en *Backlog que deja este trabajo*.
+
 > Producto: [PRD.md](./PRD.md) (cerrado y validado 2026-09-18). Decisiones y hechos verificados:
 > [DECISIONS.md](./DECISIONS.md) (D1–D16, F1–F12).
 >

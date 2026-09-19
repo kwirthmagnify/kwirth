@@ -11,6 +11,11 @@ Por eso cada uno abre con una cabecera de estado. **Al cerrar o mover un tema, s
 es lo único que hay que mantener, y es lo que evita que un plan terminado siga diciendo "sin empezar" dos
 meses después — que es exactamente lo que pasaba antes de escribir este índice.
 
+> **Mantener este índice es el punto 6 de la checklist de cierre**, no una tarea aparte: al cerrar un
+> stream se actualiza el plan y, **si ha quedado completo**, se marca cerrado y su fila se mueve de
+> *Vivos* a *Cerrados*. Este índice cubre los planes del **core**; los de la suite y los productos de
+> pago van al índice **privado**, y nada de aquel entra aquí.
+
 ## Vivos
 
 | plan | de qué va | qué queda |
@@ -20,7 +25,7 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 | [provider-debug](provider-debug/PLAN.md) | canal para ver en crudo lo que emite un provider | la fase de front |
 | [pinocchio](pinocchio/PLAN.md) | backlog del plugin | se vacía por partes, sin fecha |
 | [geppetto](geppetto/PRD.md) | analizador LLM de propósito general (PRD) | la decisión 6; sin código todavía |
-| [pluvider](pluvider/PLAN.md) · [PRD](pluvider/PRD.md) | un plugin que además expone su información in-process | en curso |
+| [pluvider](pluvider/PLAN.md) · [PRD](pluvider/PRD.md) | un plugin que además expone su información in-process | MVP en producción (agora y montag publican, provider-debug consume); queda la fase 2: `ask()`, `publications[]` y el descubrimiento en runtime |
 | [gate](gate/PRD.md) | la pantalla de acceso como extensión programable | borrador |
 
 ## Cerrados
