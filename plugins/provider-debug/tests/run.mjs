@@ -59,5 +59,5 @@ const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String)
 // (mismo patrón que montag y agora). Sin la variable, el runner se comporta igual que siempre.
 const covArgs = process.env.COVERAGE ? ['--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**'] : []
 try { execFileSync('node', ['--test', ...covArgs, ...bundled], { stdio: 'inherit' }) }
-catch { process.exit(1) }
+catch { if (process.env.COVERAGE) rmSync(ALL_ENTRY, { force: true }); process.exit(1) }
 finally { if (process.env.COVERAGE) rmSync(ALL_ENTRY, { force: true }) }
