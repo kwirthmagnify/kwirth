@@ -1,7 +1,13 @@
 # Geppetto — analizador LLM de propósito general · PRD
 
+> **ESTADO — VIVO**. Decisiones 1–5 cerradas (2026-09-10); sigue abierta la 6 (adjuntos en Teams).
+> No se ha escrito código.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+>
 > Plugin de Kwirth. Documento de definición de producto (previo a diseño técnico y código).
-> Estado: **decisiones 1–5 cerradas (2026-09-10); abierta la 6 (adjuntos en Teams)**.
+>
 > Plugin **libre** (público, npm + manifest público).
 > Origen: al revisar Pinocchio (2026-09-10) se confirmó que su formato de salida está embebido en el
 > código y que su UI está casada con un esquema de seguridad. En vez de diluir Pinocchio, se separa:

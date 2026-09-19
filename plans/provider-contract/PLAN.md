@@ -1,5 +1,10 @@
 # Provider Contract — provider-owned configuration — Plan
 
+> **ESTADO — SIN EMPEZAR** (decisión del usuario, 2026-09-12): se deja documentado y no se toca.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 ## Status (2026-09-06) — DONE, PUBLISHED AND VALIDATED LIVE
 
 Core changes that let a **provider own its own configuration** — serve it, validate it and persist it —

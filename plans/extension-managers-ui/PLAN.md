@@ -1,5 +1,11 @@
 # Diálogos de gestión de extensiones — criterio de UI
 
+> **ESTADO — CERRADO** (2026-09-18). Entregado: los **once** gestores de extensiones son un único diálogo
+> genérico dirigido por descriptor, así que un cambio de UI se hace una vez y llega a todas las familias.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 Los **once** diálogos de gestión (plugins, providers, senders, themes, homepages, IdP, logins, webhooks,
 packs, documentación) enseñan lo mismo con distinto contenido, así que tienen que **verse igual**. Cada vez
 que uno se toca de forma aislada, aparece deriva: durante meses la mitad tenía una cosa y la otra mitad

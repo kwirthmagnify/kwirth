@@ -1,6 +1,12 @@
 # Plan de trabajo: Guía de Usuario y Administrador de Kwirth
 
-> Estado: **borrador para revisión**. No se ha escrito documentación todavía.
+> **ESTADO — CERRADO**. Entregado: la guía de usuario y administrador, que vive en
+> `docs/<versión>/guide/` (`user/` + `admin/`) y se sirve como paquete de documentación desde el propio
+> Kwirth. Se mantiene viva con cada cambio: la última entrada es de 2026-09-18.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+>
 > Entregable: nueva sección **"User & Admin Guide"** dentro de la docu versionada.
 > Idioma del entregable: **inglés** (coherente con el resto de `docs/0.5.287/`).
 > Idioma de este plan: español.

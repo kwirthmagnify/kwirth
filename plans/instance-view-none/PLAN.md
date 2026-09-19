@@ -1,8 +1,14 @@
 # View `none` — canales que no necesitan el clúster · PLAN
 
+> **ESTADO — CERRADO** (implementado el 2026-09-11). Entregado: la view `none`, para canales que no
+> necesitan que se elija nada del clúster.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+>
 > Cambio de **core**. Afecta al contrato de canales y al selector de recursos, que usan todos los
 > canales, así que tiene superficie de regresión propia.
-> Estado: **decisiones cerradas 2026-09-11**, implementación pendiente.
+>
 > Origen: al construir un canal privado cuyos datos vienen de una API externa se constató que un canal que no
 > necesita **nada** del clúster no tiene forma de arrancarse sin pedir acceso de clúster.
 

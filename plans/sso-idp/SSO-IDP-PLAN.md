@@ -1,6 +1,13 @@
 # Plan detallado: Autenticación vía IdP externo (SSO) como extensión
 
-> Estado: **borrador para revisión**. No se ha escrito código.
+> **ESTADO — CERRADO** (último commit del área: 2026-09-13). Entregado: el tipo de extensión `idp` y
+> **seis conectores instalables** en `idps/` — Google (OIDC), GitLab cloud y self-managed, GitHub cloud
+> y Enterprise, Entra ID —, con mapeo de claims y validación de issuer multi-tenant. Documentado en
+> `docs/<versión>/guide/extensions/idps/` y en el changelog de 0.6.31.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+>
 > Primer proveedor objetivo: **Google / Gmail (OIDC)**.
 > Modelo: **IdP como categoría de extensión** (como plugins/providers/senders), configurable desde el front.
 

@@ -1,5 +1,12 @@
 # Login Extensions — Plan
 
+> **ESTADO — CERRADO** (último commit del área: 2026-09-12). Entregado: el tipo de extensión `login` y
+> cinco páginas de acceso instalables en `logins/`, con marca propia y la capacidad de **limitar qué
+> canales** ven sus usuarios (el admin nunca queda fuera).
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 ## Overview
 
 New extension type `login` that allows customizing the Kwirth login page. Each extension provides a background image and a configuration file with positioning and text overrides. Multiple login extensions can coexist, each accessible at its own URL slug.

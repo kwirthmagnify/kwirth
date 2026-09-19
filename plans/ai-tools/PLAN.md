@@ -1,5 +1,13 @@
 # Sistema de tools de IA — Plan
 
+> **ESTADO — VIVO** (última entrada: 2026-09-18). Hecho: S1–S3, el tipo de extensión `aitoolset`, las 43
+> tools repartidas en ocho paquetes y **Agora migrado** al runtime de toolsets (`plugin/agora@0.1.55`,
+> QA validado 7/7). Pendiente: **S4–S7** y **retirar las 43 tools viejas** de `common-ai`, que siguen ahí
+> como red de seguridad.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 Las tools que el core ofrece a los modelos viven hoy en `common-ai/src/back.ts`: **43 tools** en un fichero
 de **1.308 líneas**, consumidas por seis plugins (agora, censor, montag, pinocchio, excubitor, iter) más el
 front del core.

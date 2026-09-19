@@ -1,5 +1,11 @@
 # Provider Debug — plan
 
+> **ESTADO — VIVO**. La fase de back está hecha (el canal muestra en crudo lo que emite un provider).
+> Pendiente la del front.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 Plugin de canal para inspeccionar qué emite realmente un provider. Público, open-source,
 `plugins/provider-debug`, id `provider-debug`.
 

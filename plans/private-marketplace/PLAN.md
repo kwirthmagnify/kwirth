@@ -1,5 +1,13 @@
 # Private Marketplace Manifests — Plan
 
+> **ESTADO — CERRADO** (último commit del área: 2026-09-16). Entregado: varios marketplaces, incluidos
+> privados, con el **manifest autenticado aparte de los paquetes** —que es lo que de verdad necesita un
+> registro privado delante de un CDN—, hosts GitLab / GitHub / Azure DevOps, y la procedencia visible en
+> cada gestor de extensiones.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 ## Cierre del 2026-09-14 — las credenciales de descarga llegaban tarde al arranque
 
 Síntoma: en security-pro, cada arranque del core dejaba un `401` rehidratando las docs de service-flow

@@ -1,5 +1,13 @@
 # Iconos: limpieza del barrel
 
+> **ESTADO — VIVO** (última entrada: 2026-09-19). Hecho: el barrel pasa de **125 a 84** iconos y queda el
+> criterio de que lo que usa uno solo vive en uno solo (`<sitio>/icons.tsx`), incluida la identidad de un
+> plugin como SVG en su `package.json`. Pendiente: `CallSplit` y `Speed`, que un sender pide **por nombre**
+> desde su back y resuelve el core; y el alias `/icons` que falta en 26 `build.mjs`.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 Backlog del tema "aligerar iconos". El inventario vivo está en [ICONS-AUDIT.md](ICONS-AUDIT.md),
 que se regenera con `node tools/icons-audit.mjs`.
 

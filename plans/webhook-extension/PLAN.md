@@ -1,5 +1,12 @@
 # Webhook Extension Type — Plan
 
+> **ESTADO — CERRADO** (último commit del área: 2026-09-04). Entregado: el tipo de extensión `webhook`,
+> la contraparte de entrada de los senders — un sistema externo empuja eventos a Kwirth por HTTP —, con
+> registro de tokens, configuraciones con nombre y entrega por **par estricto** (webhook, configuración).
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 ## Status (2026-08-30) — SHIPPED & VALIDATED (webhook + full ticketing block)
 
 The `webhook` extension type is **live and validated end-to-end**, and the Excubitor ticketing integration

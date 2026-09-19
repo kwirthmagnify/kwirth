@@ -1,5 +1,12 @@
 # HTTP Pull-Push Provider — Plan
 
+> **ESTADO — CERRADO** (último commit del área: 2026-09-11). Entregado: `providers/http-pull-push`, que
+> sondea endpoints HTTP y empuja el resultado a sus suscriptores, publicando además `getSubscriptionHelp`
+> para que el consumidor sepa qué payload mandar.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 New **OSS** provider `http-pull-push`: polls remote HTTP endpoints on a schedule and pushes each result to
 the channels subscribed to it. It is the **pull** counterpart of Business/OTLP, for data sources that cannot
 push into Kwirth by themselves.

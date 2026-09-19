@@ -1,6 +1,12 @@
 # Plan — business provider → instalable + convenio de endpoint `/provider/{alias}`
 
-> Estado: **redacción** (sin empezar). Tarea OSS, **independiente de Agora**.
+> **ESTADO — CERRADO** (último commit del área: 2026-09-09). Entregado: `providers/business/` como
+> provider **instalable** fuera del core, y el convenio de routers en `/provider/{alias}`. Aparece en el
+> catálogo y en el changelog de 0.6.31.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+>
 > Objetivo: sacar el provider `business` del core a `providers/business/` (instalable, patrón kafka)
 > y migrar el convenio de montaje de routers aliased a `/provider/{alias}` (externo, sin `ri.id`).
 

@@ -1,5 +1,12 @@
 # Plan — ops/trivy declaran sus scopes RBAC (getScopeCatalog)
 
+> **ESTADO — CERRADO** (último commit del área: 2026-07-08). Entregado: `ops` y `trivy` declaran sus
+> propios scopes RBAC y se retiró del core la lista heredada. Es la primera aplicación de
+> [plugin-scopes](../plugin-scopes/PLAN.md).
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 ## ✅ HECHO (2026-07-08)
 - **ops** (0.2.16): `EOpsScope` + `OPS_SCOPES` en `src/common/OpsTypes.ts`; `getScopeCatalog()` en canal
   back y front; ladder y `checkAssetScope` usan el enum. Scopes declarados = **solo los enforced**:

@@ -1,5 +1,12 @@
 # In-place Extension Upgrade — Plan
 
+> **ESTADO — SIN EMPEZAR** (2026-09-04). La **detección** sí existe —Kwirth avisa de qué extensiones
+> tienen versión nueva—, pero no hay forma de actualizar desde la UI: el único camino sigue siendo
+> desinstalar y reinstalar, que se lleva por delante la configuración guardada.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 ## Status (2026-09-04) — NOT STARTED
 
 Detection is done; acting on it is not. Kwirth now tells the user which installed extensions have a

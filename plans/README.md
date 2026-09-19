@@ -1,0 +1,62 @@
+# Planes del core
+
+Qué hay aquí y en qué estado está, sin tener que abrir veinte ficheros.
+
+Un plan **no se borra nunca**: es append-only, y su valor cuando el trabajo termina es contar **por qué**
+se hizo así — las decisiones, lo que se descartó y los sustos que aparecieron por el camino. Lo que un plan
+*no* cuenta es cómo funciona el producto hoy: para eso están el código y la guía. Si un plan contradice lo
+que ves en el producto, **gana el producto**.
+
+Por eso cada uno abre con una cabecera de estado. **Al cerrar o mover un tema, se actualiza esa cabecera**;
+es lo único que hay que mantener, y es lo que evita que un plan terminado siga diciendo "sin empezar" dos
+meses después — que es exactamente lo que pasaba antes de escribir este índice.
+
+## Vivos
+
+| plan | de qué va | qué queda |
+|---|---|---|
+| [ai-tools](ai-tools/PLAN.md) | las tools de IA como extensión instalable (`aitoolset`) | S4–S7 y retirar las 43 tools viejas de `common-ai` |
+| [icons](icons/PLAN.md) | aligerar el barrel de iconos | los dos que un sender pide por nombre, y el alias `/icons` en 26 `build.mjs` |
+| [provider-debug](provider-debug/PLAN.md) | canal para ver en crudo lo que emite un provider | la fase de front |
+| [pinocchio](pinocchio/PLAN.md) | backlog del plugin | se vacía por partes, sin fecha |
+| [geppetto](geppetto/PRD.md) | analizador LLM de propósito general (PRD) | la decisión 6; sin código todavía |
+| [pluvider](pluvider/PLAN.md) · [PRD](pluvider/PRD.md) | un plugin que además expone su información in-process | en curso |
+| [gate](gate/PRD.md) | la pantalla de acceso como extensión programable | borrador |
+
+## Cerrados
+
+Terminados y en producción. Se consultan para saber **por qué** algo es como es.
+
+| plan | entregado |
+|---|---|
+| [sso-idp](sso-idp/SSO-IDP-PLAN.md) | el tipo `idp` y seis conectores SSO instalables |
+| [login-extensions](login-extensions/PLAN.md) | el tipo `login`: páginas de acceso con marca y canales limitados |
+| [webhook-extension](webhook-extension/PLAN.md) | el tipo `webhook`: la entrada de eventos, contraparte de los senders |
+| [private-marketplace](private-marketplace/PLAN.md) | marketplaces privados, con el manifest autenticado aparte de los paquetes |
+| [plugin-scopes](plugin-scopes/PLAN.md) | cada plugin publica sus scopes RBAC en runtime |
+| [ops-trivy-scopes](ops-trivy-scopes/PLAN.md) | la primera aplicación de lo anterior |
+| [channel-start-rbac](channel-start-rbac/PLAN.md) | el arranque de canal gateado por la API key que lo pide |
+| [instance-view-none](instance-view-none/PLAN.md) | la view `none`, para canales que no necesitan el clúster |
+| [business-provider](business-provider/PLAN.md) | `business` fuera del core, instalable, y `/provider/{alias}` |
+| [http-pull-push](http-pull-push/PLAN.md) | el provider que sondea HTTP y empuja a sus suscriptores |
+| [extension-managers-ui](extension-managers-ui/PLAN.md) | los once gestores de extensiones en un único diálogo |
+| [user-admin-guide](user-admin-guide/USER-ADMIN-GUIDE-PLAN.md) | la guía de usuario y administrador |
+
+## Sin empezar
+
+Documentados a propósito, para no volver a pensarlos desde cero el día que toquen.
+
+| plan | por qué está parado |
+|---|---|
+| [provider-contract](provider-contract/PLAN.md) | decisión del usuario (2026-09-12): se deja escrito y no se toca |
+| [extension-upgrade](extension-upgrade/PLAN.md) | la detección de versión nueva existe; actualizar desde la UI, no |
+| shell [1](shell/prd-1-shell-extension.md) · [2](shell/prd-2-channel-variants.md) · [3](shell/prd-3-dashboard-shell.md) | tres PRD encadenados: el tipo `shell`, las variantes de presentación de un canal y el dashboard |
+
+## Lo que no es un plan
+
+- [icons/ICONS-AUDIT.md](icons/ICONS-AUDIT.md) — inventario **generado**: `node tools/icons-audit.mjs`.
+- [pluvider/DECISIONS.md](pluvider/DECISIONS.md) — las decisiones que sostienen ese plan.
+- [user-admin-guide/GUIDE-REVIEW-2026-07.md](user-admin-guide/GUIDE-REVIEW-2026-07.md) — una revisión puntual
+  de coherencia entre código y documentación.
+
+> Los planes de las **extensiones** no están aquí: viven en el `docs/plan/` de cada una, junto a su código.

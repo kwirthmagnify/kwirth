@@ -1,5 +1,12 @@
 # Plan — Scopes RBAC expuestos por los plugins (dinámicos, no hardcodeados)
 
+> **ESTADO — CERRADO** (último commit del área: 2026-07-08). Entregado: cada plugin publica sus scopes en
+> runtime (`getScopeCatalog` → `back/src/tools/ScopeCatalog.ts`) y el front los lee de `GET /core/scopes`,
+> en vez de llevar la lista dentro. Añadir un canal con permisos propios ya no toca el core.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+
 ## Problema
 Hoy el editor de seguridad (`front/src/components/security/ResourceEditor.tsx`) tiene un **enum fijo** `allScopes`
 con los scopes seleccionables, incluyendo scopes de plugins **hardcodeados** (`ops$get`, `ops$execute`,

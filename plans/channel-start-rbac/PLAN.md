@@ -1,8 +1,14 @@
 # RBAC del arranque de canales · PLAN
 
+> **ESTADO — CERRADO** (implementado el 2026-09-02). Entregado: el arranque de un canal se gatea por los
+> canales habilitados en la API key que lo pide, no solo por la pantalla que lo ofrece.
+> Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
+> Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
+> es append-only —, se marca.
+>
 > Cambio de **core** más auditoría de los 16 plugins. Afecta a la autorización, así que su riesgo no es
 > romper una pantalla: es dejar usuarios fuera o dejar puertas abiertas.
-> Estado: **decisiones cerradas 2026-09-11**, implementación **después del canal que lo destapó**.
+>
 > Origen: al cablear la view `none` se preguntó si un usuario sin scopes puede arrancar un canal. La
 > respuesta es **sí**, y no solo el nuevo.
 
