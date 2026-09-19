@@ -1,6 +1,6 @@
 # Sistema de tools de IA — Plan
 
-> **ESTADO — VIVO** (última entrada: 2026-09-18). Hecho: S1–S3, el tipo de extensión `aitoolset`, las 43
+> **ESTADO — VIVO** (última entrada: 2026-09-19). Hecho: S1–S3, el tipo de extensión `aitoolset`, las 43
 > tools repartidas en ocho paquetes y **Agora migrado** al runtime de toolsets (`plugin/agora@0.1.55`,
 > QA validado 7/7). Pendiente: **S4–S7** y **retirar las 43 tools viejas** de `common-ai`, que siguen ahí
 > como red de seguridad.
@@ -705,3 +705,43 @@ modelo; instrumentarlo (`finishReason`, pasos consumidos, `toolCalls`) está en 
 
 **Sigue pendiente el paso 2**: el borrado de las 43 viejas, en commit aparte, ahora ya con Agora validado en
 uso real.
+
+## La concesión se perdía al reinstalar un toolset (2026-09-19)
+
+Salió en el QA de `compare_revisions` (`source-repos@0.2.0`), y es un fallo de **este** plan: nace de la
+Fase 1 del techo, donde se decidió que la concesión viviera en el registro y no en la llamada.
+
+El síntoma era contradictorio, que es lo que lo hizo caro de leer: la tarjeta del gestor decía *concedido
+a `agora`* y el runtime, a la vez, `SIN CONCEDER [los siete]`, con el bot sin una sola tool. Ninguna de las
+dos mentía — **miraban sitios distintos**:
+
+| | dónde vive | quién la escribe |
+|---|---|---|
+| concesión **persistida** | ConfigMap `kwirth-aitoolsets-grants` | `setGrants` (y `uninstall`, que la borra) |
+| concesión **efectiva** | un `Map` en memoria del registro de `common-ai` | `setToolsetGrants`, desde `setGrants` y `applyGrants` |
+
+Y en medio, `unregisterToolset()`, que **se lleva la concesión consigo**. Eso es lo correcto al
+DESINSTALAR —si no, reinstalar resucitaría permisos que nadie volvió a conceder—, pero `install()` lo
+llama también para poder **reemplazar** un toolset ya registrado. Consecuencia: **actualizar un toolset lo
+revocaba en silencio**, sin tocar lo persistido. En dev pasaba en CADA arranque, porque
+`loadDevAiToolsets()` lanza un IIFE `async` que `index.ts` no espera y termina **después** de
+`applyGrants()`, borrando justo lo que este acababa de aplicar.
+
+**Arreglado en `install()`, que es quien rompe**: `restoreGrants()` repone desde lo persistido tras
+re-registrar. Se descartó la alternativa de esperar a `loadDevAiToolsets()` en el arranque: cerraba la
+carrera de dev pero dejaba vivo el caso de actualizar desde el marketplace, que es el que le toca al
+usuario final. Con la reparación en `install()`, el orden del arranque deja de importar.
+
+Tres cautelas, todas con test: solo repone **lo ya guardado** (instalar sigue sin conceder nada a nadie,
+decisión del 2026-09-17), solo si el toolset **quedó registrado** (un id que no llega a registrarse no
+debe dejar concesiones huérfanas), y **desinstalar sigue revocando**. Verificados en rojo desactivando el
+fix. Documentado en la guía del core (`docs/0.6.31/…/aitoolsets/index.md`), que ya explicaba conceder y
+revocar pero no decía qué pasa al **actualizar**.
+
+**De paso, `pinocchio-toolsets.spec.ts` llevaba rojo y no por un bug.** El selector sale de
+`resolveTools(…, 'pinocchio')`, así que sin concesión llega vacío aunque todo funcione; el día que los
+toolsets se concedieron a `agora`, el test se puso rojo **culpando al registro** (*"¿no hay toolsets
+instalados?"*), que estaba perfecto. Un e2e no puede depender de cómo tenga configurado su dev quien lo
+corre: ahora **se concede lo que necesita y lo restaura** (snapshot del mapa por la API, tomándole
+prestada al front la autorización de su primera petición a `/core/`), y su mensaje distingue *no
+instalado* de *no concedido*.

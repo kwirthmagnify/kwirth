@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { AiToolsetManager, staleDevAiToolsets, IAiToolsetMeta } from '../../src/tools/AiToolsetManager'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
-import { registerToolset, getToolset, listToolsets } from '@kwirthmagnify/kwirth-common-ai/back'
+import { registerToolset, getToolset, listToolsets, isToolsetGrantedTo, getToolsetGrants } from '@kwirthmagnify/kwirth-common-ai/back'
 import { EToolEffect, EToolSensitivity, ECapability } from '@kwirthmagnify/kwirth-common-ai'
 import tar from 'tar'
 import os from 'os'
@@ -155,6 +155,61 @@ test('reinstalar encima reemplaza en vez de chocar con el registro', async () =>
     assert.equal(after, 1)   // reemplaza, no duplica ni revienta
 
     await mgr.uninstall('test-reinstall')
+    fs.rmSync(tgz, { force: true })
+})
+
+// ── concesiones ──────────────────────────────────────────────────────────────────────────────────────
+
+test('instalar por primera vez no concede el toolset a nadie', async () => {
+    // Instalar deja DISPONIBLE, no concedido: instalar `k8s-ops` no puede dar escritura por accidente.
+    const mgr = new AiToolsetManager(fakeConfigMaps())
+    await mgr.init()
+    const tgz = await makeToolsetTgz('test-nogrants')
+    await mgr.install(tgz, 'local')
+
+    assert.deepEqual(getToolsetGrants('test-nogrants'), [])
+
+    await mgr.uninstall('test-nogrants')
+    fs.rmSync(tgz, { force: true })
+})
+
+test('reinstalar NO revoca la concesion que el admin ya dio', async () => {
+    // Reinstalar pasa por `unregisterToolset` para poder reemplazar, y ese se lleva la concesion con el
+    // toolset. Sin reponerla, actualizar un toolset —o releer el dist de un dev en cada arranque— la
+    // revocaba en silencio, y las dos mitades se contradecian: la tarjeta seguia diciendo a quien estaba
+    // concedido (lo persistido, que instalar no toca) mientras el runtime respondia SIN CONCEDER.
+    const mgr = new AiToolsetManager(fakeConfigMaps())
+    await mgr.init()
+
+    const tgz = await makeToolsetTgz('test-grants')
+    await mgr.install(tgz, 'dev')
+    await mgr.setGrants('test-grants', ['agora'])
+
+    await mgr.install(tgz, 'dev')   // el rebuild de un dev, o una version nueva del marketplace
+
+    assert.equal(isToolsetGrantedTo('test-grants', 'agora'), true, 'la concesion no sobrevivio a la reinstalacion')
+    assert.deepEqual(getToolsetGrants('test-grants'), ['agora'])
+    // y el registro en memoria y lo guardado dicen lo mismo, que es justo lo que se rompia
+    assert.deepEqual((await mgr.listGrants())['test-grants'], ['agora'])
+
+    await mgr.uninstall('test-grants')
+    fs.rmSync(tgz, { force: true })
+})
+
+test('desinstalar SI se lleva la concesion, y tambien la guardada', async () => {
+    // La otra mitad de la regla: reinstalar conserva, desinstalar revoca. Dejarla huerfana haria que
+    // reinstalar resucitara permisos que nadie ha vuelto a conceder.
+    const mgr = new AiToolsetManager(fakeConfigMaps())
+    await mgr.init()
+
+    const tgz = await makeToolsetTgz('test-grants-gone')
+    await mgr.install(tgz, 'local')
+    await mgr.setGrants('test-grants-gone', ['agora'])
+    await mgr.uninstall('test-grants-gone')
+
+    assert.equal(isToolsetGrantedTo('test-grants-gone', 'agora'), false)
+    assert.equal((await mgr.listGrants())['test-grants-gone'], undefined)
+
     fs.rmSync(tgz, { force: true })
 })
 

@@ -98,6 +98,22 @@ export class AiToolsetManager {
         logInfo(ELogComponent.CORE, `AI toolset grants applied: ${Object.keys(grants).length} toolset(s), ${total} grant(s)`)
     }
 
+    /**
+     * Devuelve al registro la concesion que `unregisterToolset` se lleva por delante al REEMPLAZAR un
+     * toolset. Lo persistido es la verdad: la instalacion no toca el ConfigMap de concesiones.
+     *
+     * Solo repone lo que YA estaba guardado —instalar sigue sin conceder nada a nadie— y solo si el
+     * toolset quedo registrado: un id que no llego a registrarse (el paquete y el modulo dicen ids
+     * distintos) no debe dejar una concesion huerfana detras.
+     */
+    private async restoreGrants(toolsetId: string): Promise<void> {
+        if (!getToolset(toolsetId)) return
+        const plugins = (await this.listGrants())[toolsetId]
+        if (!plugins?.length) return
+        setToolsetGrants(toolsetId, plugins)
+        logInfo(ELogComponent.CORE, `AI toolset '${toolsetId}' grants restored after reinstall: ${plugins.join(', ')}`)
+    }
+
     /** Concede un toolset a una lista de plugins (reemplaza la anterior) y lo persiste. */
     async setGrants(toolsetId: string, pluginIds: string[]): Promise<string[]> {
         if (!getToolset(toolsetId)) throw new Error(`AI toolset '${toolsetId}' is not registered`)
@@ -276,6 +292,13 @@ export class AiToolsetManager {
             // chocar: registerToolset revienta si el id esta ocupado, asi que se retira primero.
             unregisterToolset(meta.id)
             this.loadBackToolset(meta.id, backJs)
+            // ⚠️ `unregisterToolset` se lleva la concesion con el toolset, y al DESINSTALAR eso es lo
+            // correcto. Reinstalar no: actualizar un toolset —o releer el dist de un dev en cada arranque—
+            // no puede revocarle en silencio a los plugins lo que el admin les dio. El sintoma sin esto es
+            // de los caros, porque las dos mitades se contradicen: la tarjeta sigue enseñando a quien esta
+            // concedido (vive en el ConfigMap, que instalar no toca) mientras el runtime responde SIN
+            // CONCEDER y el bot se queda sin tools hasta el siguiente arranque.
+            await this.restoreGrants(meta.id)
 
             logInfo(ELogComponent.CORE, `AI toolset '${meta.id}' v${meta.version} installed`)
             return meta

@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test'
+import { test, expect, Page, APIRequestContext } from '@playwright/test'
 import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 
 /*
@@ -6,29 +6,99 @@ import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
     REGISTRO de toolsets instalados (plan: plans/ai-tools/PLAN.md, S3).
 
     El cambio no se ve: la misma lista de tools, con los mismos nombres. Por eso el test no comprueba
-    "que hay tools" —eso pasaba también antes— sino que la lista ES la de los toolsets instalados:
+    "que hay tools" —eso pasaba también antes— sino que la lista ES la de los toolsets que Pinocchio
+    tiene a su alcance:
 
-      · están las de los toolsets que SÍ están instalados (k8s-describe, k8s-observability…)
-      · NO está `delete_pod`, que vive en `k8s-ops` y no está instalado
-      · NO está `times_two`, que vive en `playground` y tampoco lo está
+      · están las de los toolsets concedidos a `pinocchio` (k8s-describe, k8s-observability)
+      · NO está `delete_pod`, que vive en `k8s-ops` y NO se le concede
+      · NO está `times_two`, que vive en `playground` y ni siquiera está instalado
 
     Con el camino viejo las tres aparecían siempre, porque venían todas del mismo sitio. Si alguna
     reaparece, es que se ha vuelto a colar el catálogo compilado.
 
-    NO destructivo: abre el canal, mira el selector y cancela. No guarda configuración.
+    ⚠️ **La concesión se la da el propio test, y la devuelve como estaba.** La lista del selector sale de
+    `resolveTools(…, 'pinocchio')`, así que sin concesión llega VACÍA aunque los toolsets estén instalados
+    y todo funcione. La primera versión del test daba por hecho el estado del entorno, y el día que los
+    toolsets se concedieron a otro plugin —a `agora`— se puso rojo sin que nada se hubiera roto: el
+    síntoma era "0 tools" y el mensaje culpaba al registro, que estaba perfecto. Un test no puede depender
+    de cómo tenga configurado su dev quien lo corra.
+
+    NO destructivo: hace snapshot de las concesiones, concede lo justo, y restaura al terminar. Abre el
+    canal, mira el selector y cancela. No guarda configuración del canal.
 */
 
 test.describe.configure({ mode: 'serial' })
+
+/** Lo que el test necesita ver. `k8s-ops` queda FUERA a propósito: es la mitad negativa de la prueba. */
+const NECESARIOS = ['k8s-describe', 'k8s-observability']
+const PINOCCHIO = 'pinocchio'
+
+type TGrants = Record<string, string[]>
+
+/*
+    El front firma cada llamada al back con su accessString, y el test no tiene forma de fabricarse una:
+    se la toma prestada de la primera petición que salga hacia `/core/`. Registrar esto ANTES del login es
+    lo que lo hace fiable — la app empieza a llamar al back en cuanto entra.
+*/
+interface IBackAccess {
+    base: string
+    auth: string
+}
+
+const espiarAcceso = (page: Page): IBackAccess => {
+    const acceso: IBackAccess = { base: '', auth: '' }
+    page.on('request', req => {
+        if (acceso.auth) return
+        const auth = req.headers()['authorization']
+        const i = req.url().indexOf('/core/')
+        if (auth && i > 0) {
+            acceso.base = req.url().slice(0, i)
+            acceso.auth = auth
+        }
+    })
+    return acceso
+}
+
+const leerGrants = async (api: APIRequestContext, acc: IBackAccess): Promise<TGrants> => {
+    const res = await api.get(`${acc.base}/core/aitoolsets/grants`, { headers: { authorization: acc.auth } })
+    expect(res.ok(), `no se pudieron leer las concesiones (${res.status()})`).toBeTruthy()
+    return await res.json() as TGrants
+}
+
+const escribirGrant = async (api: APIRequestContext, acc: IBackAccess, toolsetId: string, plugins: string[]): Promise<void> => {
+    const res = await api.put(`${acc.base}/core/aitoolsets/grants/${toolsetId}`, {
+        headers: { authorization: acc.auth, 'content-type': 'application/json' },
+        data: { plugins }
+    })
+    // Conceder exige scope admin: si el usuario del e2e no lo tiene, mejor decirlo que dar 0 tools.
+    expect(res.ok(), `no se pudo conceder '${toolsetId}' (${res.status()}): ¿el usuario del e2e es admin?`).toBeTruthy()
+}
 
 test.describe('pinocchio: las tools salen del registro de toolsets', () => {
     let page: Page
     let herramientas: string[] = []
     let rotulo = ''
+    /** Lo que había antes de tocar nada, para dejarlo igual. */
+    let original: TGrants = {}
+    let tocados: string[] = []
+    /** La autorizacion prestada, capturada en el login y valida toda la sesion. */
+    let acceso: IBackAccess
 
     test.beforeAll(async ({ browser }) => {
         page = await browser.newPage()
+        acceso = espiarAcceso(page)
         await login(page)
         await dismissOpenDialogs(page)
+        expect(acceso.auth, 'no se pudo tomar prestada la autorizacion del front').not.toEqual('')
+
+        // ── la concesion, antes de abrir nada: el canal pide su lista de tools al arrancar ──
+        original = await leerGrants(page.request, acceso)
+        for (const id of NECESARIOS) {
+            const actuales = original[id] ?? []
+            if (actuales.includes(PINOCCHIO)) continue
+            await escribirGrant(page.request, acceso, id, [...actuales, PINOCCHIO])
+            tocados.push(id)
+        }
 
         await page.getByRole('button', { name: 'ADD', exact: true }).click({ force: true })
         await page.waitForTimeout(800)
@@ -70,30 +140,36 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
     })
 
     test.afterAll(async () => {
+        // Las concesiones vuelven EXACTAMENTE a como estaban, aunque el test haya petado a medias: son
+        // config del usuario, no del test.
+        for (const id of tocados) {
+            await escribirGrant(page.request, acceso, id, original[id] ?? []).catch(() => {})
+        }
         await dismissOpenDialogs(page).catch(() => {})
         await page?.close()
     })
 
     test('el catalogo que ofrece no esta vacio', async () => {
-        // Si el registro estuviera vacio, pinocchio se quedaria sin tools — que es exactamente el sintoma
-        // de "un plugin sin toolsets no tiene tools", y hay que distinguirlo de un fallo al pintar.
-        expect(herramientas.length, 'no hay ninguna tool disponible: ¿no hay toolsets instalados?').toBeGreaterThan(0)
+        // Dos causas distintas para el mismo sintoma, y el mensaje tiene que distinguirlas: sin registro no
+        // hay tools, y con registro pero sin concesion tampoco — pero se arreglan en sitios diferentes.
+        expect(herramientas.length, `no hay ninguna tool disponible: los toolsets ${NECESARIOS.join(', ')} estan instalados pero ¿llego la concesion a '${PINOCCHIO}'?`).toBeGreaterThan(0)
         // Y el rotulo del selector existe (vacio si no hay ninguna marcada, 'all (N)' con autoTools)
         expect(typeof rotulo).toBe('string')
     })
 
-    test('las tools que ofrece son las de los toolsets INSTALADOS', async () => {
+    test('las tools que ofrece son las de los toolsets CONCEDIDOS', async () => {
         const texto = herramientas.join(' ')
-        // De k8s-describe y de k8s-observability, los dos instalados en este entorno
+        // De k8s-describe y de k8s-observability, los dos que el test se concede
         expect(texto, 'falta describe_pod (k8s-describe)').toContain('describe_pod')
         expect(texto, 'falta get_pod_logs (k8s-observability)').toContain('get_pod_logs')
     })
 
-    test('NO ofrece las de los toolsets que no estan instalados', async () => {
-        // delete_pod es de k8s-ops (privado, escritura) y times_two de playground. Con el camino viejo
-        // salían las dos, porque venían compiladas dentro del core junto a las demás.
+    test('NO ofrece las de los toolsets que no estan a su alcance', async () => {
+        // `delete_pod` es de k8s-ops (escritura): puede estar INSTALADO, pero el test no se lo concede, y
+        // la resolucion filtra por concesion. `times_two` es de playground, que ni siquiera esta instalado.
+        // Con el camino viejo salian las dos, porque venian compiladas dentro del core junto a las demas.
         const texto = herramientas.join(' ')
-        expect(texto, 'delete_pod no deberia estar: k8s-ops no esta instalado').not.toContain('delete_pod')
+        expect(texto, 'delete_pod no deberia estar: k8s-ops no esta concedido a pinocchio').not.toContain('delete_pod')
         expect(texto, 'times_two no deberia estar: playground no esta instalado').not.toContain('times_two')
     })
 })

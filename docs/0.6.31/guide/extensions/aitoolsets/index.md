@@ -121,7 +121,7 @@ the fact rather than failing silently.
 > to answer in seconds, and here you answer it by looking at **who has been granted `k8s-ops`** — one line,
 > one dialog. That is why the grants are held per toolset and not scattered across each channel's settings.
 
-Two consequences worth knowing before you grant:
+Three consequences worth knowing before you grant:
 
 - **A freshly installed AI channel has no tools.** It can reason and write prose, but it cannot see your
   cluster until someone grants it a toolset. This is deliberate — capability is given, never assumed — but it
@@ -129,6 +129,10 @@ Two consequences worth knowing before you grant:
   upgrade is usually a plugin whose grants nobody has set.
 - **Revoking is immediate and needs no restart.** Take the grant away and the next bot run is offered fewer
   tools. Nothing is cached behind your back.
+- **Updating a toolset keeps its grants; uninstalling clears them.** Installing a newer version of a toolset
+  —or rebuilding one you are developing— leaves untouched who may use it: the grant belongs to the toolset
+  *id*, not to the version you happened to install. Uninstalling is the opposite and does clear it, so that
+  installing something again later never resurrects permissions nobody re-granted.
 
 ## Where tools are switched on
 
