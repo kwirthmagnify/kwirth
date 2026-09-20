@@ -3,6 +3,7 @@ import { SettingsApi } from '../api/SettingsApi'
 import { IConfigMaps } from './IConfigMap'
 import { ISecrets } from './ISecrets'
 import fs from 'fs'
+import path from 'path'
 import https from 'https'
 import http from 'http'
 
@@ -117,4 +118,18 @@ export const downloadFile = (url: string, destPath: string, headers: THeaders = 
         }).on('error', err => { cleanup(); reject(err) })
     })
     return download(url, headers, 0)
+}
+
+// Lee un fichero de un tarball ya extraido, mirando en los DOS sitios donde puede estar: un tgz hecho
+// con `npm publish` lo mete todo dentro de 'package/', y los que armamos a mano (docs, logins) llevan las
+// entradas en la raiz.
+//
+// ⚠️ El install() de cada manager ya probaba las dos rutas, pero la RECUPERACION no, y ahi es donde duele:
+// un back.js que no cabe en el ConfigMap no se guarda, asi que se vuelve a bajar del origen EN CADA
+// ARRANQUE. Mirando solo la raiz, la extension se instala bien y desaparece al primer reinicio. Lo canto
+// el provider 'trivy' (15,8 MB de bundle) con un ENOENT sobre /tmp/kwirth-provider-trivy-src-*/back.js.
+export const readTarballFile = (extractDir: string, filename: string): string|undefined => {
+    const found = [path.join(extractDir, filename), path.join(extractDir, 'package', filename)]
+        .find(candidate => fs.existsSync(candidate))
+    return found ? fs.readFileSync(found, 'utf-8') : undefined
 }

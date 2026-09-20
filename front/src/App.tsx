@@ -720,6 +720,31 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
         checkExtensionUpdates()
 
+        /*
+            Si el contenedor anterior del core murio de mala manera, avisar: el log que lo explica esta en
+            el About, y solo mientras el kubelet lo guarde.
+
+            El aviso se da UNA VEZ por reinicio, no en cada recarga de la SPA: se recuerda la marca de
+            tiempo de aquella muerte, que no cambia hasta que haya otra. Sin eso, quien abre Kwirth diez
+            veces al dia veria diez avisos del mismo reinicio y dejaria de leerlos.
+        */
+        const checkPreviousContainer = async () => {
+            if (!hasAdminScope()) return
+            try {
+                const response = await fetch(`${backendUrl}/managekwirth/previouslog`, addGetAuthorization(accessString))
+                if (!response.ok) return
+                const previous = await response.json() as { abnormal?: boolean, termination?: { exitCode?: number, reason?: string, finishedAt?: string } }
+                if (!previous.abnormal) return
+                const seenKey = 'kwirth.previouslog.notified'
+                const stamp = previous.termination?.finishedAt ?? ''
+                if (localStorage.getItem(seenKey) === stamp) return
+                localStorage.setItem(seenKey, stamp)
+                const reason = previous.termination?.reason ? ` (${previous.termination.reason})` : ''
+                notify(undefined, ENotifyLevel.WARNING, `Kwirth restarted after an abnormal exit: code ${previous.termination?.exitCode}${reason}. Its log is in About`)
+            } catch {}
+        }
+        checkPreviousContainer()
+
 
         // load user tabs
         const uid = user?.id ?? ''

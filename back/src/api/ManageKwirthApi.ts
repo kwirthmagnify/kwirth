@@ -3,6 +3,7 @@ import { AppsV1Api, BatchV1Api, CoreV1Api } from '@kubernetes/client-node'
 import { KwirthData } from '@kwirthmagnify/kwirth-common'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
+import { getPreviousContainerLog } from '../tools/PreviousContainerLog'
 
 export class ManageKwirthApi {
     public router = express.Router()
@@ -31,7 +32,25 @@ export class ManageKwirthApi {
                     console.log(err)
                 }
             })
-        
+
+        /*
+            Log del contenedor anterior, leido al arrancar (ver PreviousContainerLog).
+
+            🔴 SOLO admin, y no por prudencia generica: esto entrega trazas internas del core —nombres de
+            recursos, rutas, mensajes de error de extensiones—, o sea justo lo que no tiene que ver un
+            usuario cualquiera que entra a mirar sus logs. El front tampoco ofrece el boton sin ese scope,
+            pero quien manda es esta comprobacion.
+        */
+        this.router.route('/previouslog')
+            .all( async (req:Request, res:Response, next) => {
+                if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
+                if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
+                next()
+            })
+            .get( async (_req:Request, res:Response) => {
+                res.status(200).json(getPreviousContainerLog())
+            })
+
     }
 
     restartController = async (coreApi:CoreV1Api, appsApi:AppsV1Api, batchApi: BatchV1Api, namespace:string, controllerTypeName:string): Promise<void> => {

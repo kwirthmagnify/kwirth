@@ -6,7 +6,7 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
-import { downloadFile, packageHeaders } from './PackageRegistries'
+import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 
 export interface ISenderMeta {
     id: string
@@ -111,7 +111,8 @@ export class SenderManager implements ISenderAccess {
         try {
             await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
             await (await import('tar')).x({ file: tmpTgz, cwd: tmpDir })
-            const content = fs.readFileSync(path.join(tmpDir, 'front.js'), 'utf-8')
+            const content = readTarballFile(tmpDir, 'front.js')
+            if (!content) return undefined
             fs.writeFileSync(cacheFile, content)
             return content
         } catch { return undefined } finally {
@@ -438,7 +439,8 @@ export class SenderManager implements ISenderAccess {
         try {
             await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
             await tar.x({ file: tmpTgz, cwd: tmpDir })
-            const content = fs.readFileSync(path.join(tmpDir, 'back.js'), 'utf-8')
+            const content = readTarballFile(tmpDir, 'back.js')
+            if (!content) throw new Error(`no back.js inside the package downloaded from ${meta.installedFrom}`)
             fs.writeFileSync(cacheFile, content)
             logInfo(ELogComponent.CORE, `Sender '${meta.id}' back.js fetched from source and cached`)
             return content

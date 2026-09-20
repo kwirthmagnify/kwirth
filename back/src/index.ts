@@ -15,6 +15,7 @@ import { SettingsApi } from './api/SettingsApi'
 import { MarketplaceApi } from './api/MarketplaceApi'
 import { MarketplaceManager } from './tools/MarketplaceManager'
 import { configurePackageRegistries } from './tools/PackageRegistries'
+import { readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { LoginApi } from './api/LoginApi'
 
 // HTTP server & websockets
@@ -2040,6 +2041,16 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         else
             logInfo(ELogComponent.CORE, `No deployment detected. Kwirth is not running inside a cluster`)
 
+        /*
+            Si el contenedor anterior murio, su log es lo unico que explica por que, y solo esta vivo
+            AHORA: el kubelet lo rota y un rollout se lo lleva. Se lee aqui, una vez, y se queda en
+            memoria para que el About pueda ensenarlo. Que falle no importa —es diagnostico, no arranque—
+            y por eso readPreviousContainerLog() nunca lanza.
+        */
+        if (localKwirthData.inCluster && process.env.HOSTNAME) {
+            await readPreviousContainerLog(runningInstance.clusterInfo.coreApi, localKwirthData.namespace, process.env.HOSTNAME)
+        }
+
         if (envForward) {
             logInfo(ELogComponent.CORE, 'Will try to configure FORWARDing...')
             if (runningInstance.kwirthData.inCluster) {
@@ -2505,10 +2516,25 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
         process.exit(0)
     }
 
+    /*
+        Un Error NO tiene propiedades enumerables, asi que JSON.stringify(err) devuelve '{}'. El core
+        moria escribiendo "Reason: {}" y no habia forma de saber que habia pasado ni desde donde, que es
+        justo lo unico que se necesita: estos rechazos suelen venir de una extension, no del core.
+        Lo canto un unhandled rejection del provider 'trivy'.
+    */
+    const describeFailure = (value: any): string => {
+        if (value instanceof Error) return value.stack ?? `${value.name}: ${value.message}`
+        if (value && typeof value === 'object') {
+            try { return JSON.stringify(value) }
+            catch { return String(value) }   // referencias circulares
+        }
+        return String(value)
+    }
+
     const exitAndLog = async (signal:any, reason:any, promise:any, err: any, origin: any, exitCode:number, waitSeconds: number) => {
         if (reason) {
             logError(ELogComponent.CORE, 'Reason:')
-            logError(ELogComponent.CORE, JSON.stringify(reason))
+            logError(ELogComponent.CORE, describeFailure(reason))
         }
         if (promise) {
             logError(ELogComponent.CORE, 'Promise:')
@@ -2524,11 +2550,13 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
         }
 
         if (envExitLog && runningEnv.isK8s && kwirthData.inCluster) {
+            // Mismo motivo que arriba: en el log seguro es DONDE se mira el post-mortem, y guardar el
+            // Error en crudo dejaba un '{}' dentro del ConfigMap.
             let entry = {
                 timestamp: new Date().toISOString(),
-                reason,
+                reason: reason ? describeFailure(reason) : undefined,
                 promise,
-                err,
+                err: err ? describeFailure(err) : undefined,
                 origin,
             }
             try {

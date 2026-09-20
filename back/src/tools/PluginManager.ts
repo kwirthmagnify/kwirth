@@ -9,7 +9,7 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
-import { downloadFile, packageHeaders } from './PackageRegistries'
+import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 
 export interface IPluginMeta {
     id: string
@@ -183,7 +183,8 @@ export class PluginManager {
         try {
             await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
             await tar.x({ file: tmpTgz, cwd: tmpDir })
-            const content = fs.readFileSync(path.join(tmpDir, filename), 'utf-8')
+            const content = readTarballFile(tmpDir, filename)
+            if (!content) throw new Error(`no ${filename} inside the package downloaded from ${meta.installedFrom}`)
             fs.writeFileSync(cacheFile, content)
             logInfo(ELogComponent.CORE, `Plugin '${meta.id}' ${filename} fetched from source and cached`)
             return content

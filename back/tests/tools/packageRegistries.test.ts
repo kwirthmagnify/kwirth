@@ -1,6 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { matchRegistry, basicHeader, bearerHeader, authHeader, packageHeaders, configurePackageRegistries } from '../../src/tools/PackageRegistries'
+import { matchRegistry, basicHeader, bearerHeader, authHeader, packageHeaders, configurePackageRegistries, readTarballFile } from '../../src/tools/PackageRegistries'
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IPackageRegistry, EPackageRegistryAuthType } from '@kwirthmagnify/kwirth-common'
@@ -127,4 +130,59 @@ test('configurado, packageHeaders inyecta la credencial del registro que sirve e
     assert.deepEqual(await packageHeaders(TGZ), basicHeader('iriaoperae', 'fake-stored-password'))
     // una URL que no sirve ese registro sigue bajando anonima aunque ya este todo configurado
     assert.deepEqual(await packageHeaders('https://registry.npmjs.org/x/-/x-1.0.0.tgz'), {})
+})
+
+// ── readTarballFile ─────────────────────────────────────────────────────────────
+//
+// Un tarball extraido puede tener las entradas en la raiz (los tgz que armamos a mano: docs, logins) o
+// dentro de 'package/' (todo lo que sale de `npm publish`). El install() de cada manager ya probaba las
+// dos rutas, pero la RECUPERACION mirando solo la raiz dejaba fuera justo a los paquetes del registro:
+// un back.js que no cabe en el ConfigMap se baja del origen EN CADA ARRANQUE, asi que la extension se
+// instalaba bien y desaparecia al primer reinicio. Lo canto el provider 'trivy' (15,8 MB de bundle).
+
+const extractDir = (layout: Record<string, string>): string => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'kwirth-tarball-test-'))
+    for (const [rel, content] of Object.entries(layout)) {
+        const full = path.join(dir, rel)
+        mkdirSync(path.dirname(full), { recursive: true })
+        writeFileSync(full, content)
+    }
+    return dir
+}
+
+test('lo lee de la raiz del extract (tgz armado a mano)', () => {
+    const dir = extractDir({ 'back.js': 'raiz' })
+    assert.equal(readTarballFile(dir, 'back.js'), 'raiz')
+    rmSync(dir, { recursive: true, force: true })
+})
+
+test('lo lee de package/ (formato npm: el caso del provider trivy)', () => {
+    const dir = extractDir({ 'package/back.js': 'dentro-de-package', 'package/package.json': '{}' })
+    assert.equal(readTarballFile(dir, 'back.js'), 'dentro-de-package')
+    rmSync(dir, { recursive: true, force: true })
+})
+
+test('si esta en los dos sitios gana la raiz, como en el install()', () => {
+    const dir = extractDir({ 'back.js': 'raiz', 'package/back.js': 'dentro-de-package' })
+    assert.equal(readTarballFile(dir, 'back.js'), 'raiz')
+    rmSync(dir, { recursive: true, force: true })
+})
+
+test('devuelve undefined —sin lanzar— cuando el fichero no esta en ninguno de los dos sitios', () => {
+    const dir = extractDir({ 'package/package.json': '{}' })
+    assert.equal(readTarballFile(dir, 'back.js'), undefined)
+    rmSync(dir, { recursive: true, force: true })
+})
+
+test('cada fichero se busca por su nombre: front.js y back.js no se confunden', () => {
+    const dir = extractDir({ 'package/back.js': 'el-back', 'package/front.js': 'el-front' })
+    assert.equal(readTarballFile(dir, 'back.js'), 'el-back')
+    assert.equal(readTarballFile(dir, 'front.js'), 'el-front')
+    rmSync(dir, { recursive: true, force: true })
+})
+
+test('solo mira esos dos sitios: un back.js mas profundo NO se da por bueno', () => {
+    const dir = extractDir({ 'package/dist/back.js': 'demasiado-profundo' })
+    assert.equal(readTarballFile(dir, 'back.js'), undefined)
+    rmSync(dir, { recursive: true, force: true })
 })

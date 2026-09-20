@@ -1,7 +1,7 @@
 import { IAiToolset, registerToolset, unregisterToolset, isBuiltInToolsetId, getToolset, setToolsetGrants, getToolsetGrants } from '@kwirthmagnify/kwirth-common-ai/back'
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
-import { downloadFile, packageHeaders } from './PackageRegistries'
+import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 import { listBundledOfType } from './BundledExtensions'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import tar from 'tar'
@@ -186,9 +186,7 @@ export class AiToolsetManager {
             await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
             fs.mkdirSync(tmpDir, { recursive: true })
             await tar.x({ file: tmpTgz, cwd: tmpDir })
-            const candidates = [path.join(tmpDir, 'back.js'), path.join(tmpDir, 'package', 'back.js')]
-            const found = candidates.find(p => fs.existsSync(p))
-            return found ? fs.readFileSync(found, 'utf-8') : undefined
+            return readTarballFile(tmpDir, 'back.js')
         }
         catch (err) {
             logError(ELogComponent.CORE, `Could not fetch AI toolset '${meta.id}' from source: ${err}`)

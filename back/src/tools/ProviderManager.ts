@@ -7,7 +7,7 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
-import { downloadFile, packageHeaders } from './PackageRegistries'
+import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 
 /**
  * @deprecated usa IProviderFieldDef de kwirth-common-back, que es el contrato comun a todas las
@@ -143,7 +143,8 @@ export class ProviderManager {
         try {
             await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
             await tar.x({ file: tmpTgz, cwd: tmpDir })
-            const content = fs.readFileSync(path.join(tmpDir, 'back.js'), 'utf-8')
+            const content = readTarballFile(tmpDir, 'back.js')
+            if (!content) throw new Error(`no back.js inside the package downloaded from ${meta.installedFrom}`)
             logInfo(ELogComponent.CORE, `Provider '${meta.id}' back.js fetched from source`)
             return content
         } catch (err) {

@@ -116,4 +116,50 @@ Download the installer for **Windows, macOS or Linux** from the [Releases page](
 - Kwirth listens on port **3883** inside the container; for Docker/External you pick the published port and path yourself (e.g. `-p 8080:3883 --rootpath /fantastic/tony` → `http://localhost:8080/fantastic/tony`).
 - The other environment variable worth setting is **`KWIRTH_CLUSTER_NAME`**, which names the cluster in the title bar and the Homepage. kwirth detects the name on AKS, EKS, GKE and k3d, but on **k3s and bare clusters there is nothing to detect** — see [The cluster's own name](06-cluster-management#the-clusters-own-name).
 
+## After an unexpected restart
+
+When kwirth dies inside a cluster, the kubelet starts a **new container in the same pod** and the log that
+explains the death stays in the old one. By the time anyone goes looking, the kubelet has usually rotated it
+away — which is why those restarts used to be investigated blind.
+
+So kwirth reads it for you. On every startup, when it runs **in Kubernetes and inside the cluster**, it looks
+at its own pod status and, if the container had restarted, it fetches the **last 1000 lines** of the previous
+container and keeps them **in memory**. Nothing is written to the cluster: each startup reads it again, so
+anything stored would always be older than what is already there.
+
+You get to it from **About kwirth…** → **Previous container log**. Two things are worth knowing about that
+button:
+
+- It is **only for administrators**. That log carries kwirth's own internals — resource names, paths, error
+  traces from extensions — so the button does nothing without the `admin` scope, and the endpoint behind it
+  answers `403` to anybody else.
+- It stays **visible even when it cannot be used**, and the tooltip says why. That matters because there are
+  two different reasons for having nothing to show, and only one of them is worth worrying about:
+
+  | What the tooltip says | What actually happened |
+  |---|---|
+  | *This container has not restarted…* | Normal. There is no previous container, so there is no log. |
+  | *The previous container ended cleanly* | It restarted, but it was shut down properly (exit code 0). |
+  | *The previous container ended abnormally* | A crash. The log is there, and this is the one to read. |
+
+When that last case is detected, kwirth also raises a **notification** on the way in, telling you the exit
+code and pointing at About. You get it **once per restart**, not once per page load: reloading the page does
+not bring it back, and a new one only appears after a new abnormal exit.
+
+![Previous container log](_media/guide/admin-about-previous-log.png)
+
+⚠️ **This only works when the container restarted inside the same pod** — a crash, an OOM kill, a
+CrashLoopBackOff. After a rollout the pod is a brand new one and the kubelet keeps nothing from the old one,
+so there is genuinely nothing to read. The viewer tells you so instead of showing an empty box: if the
+restart happened but the log is already gone, it says that too.
+
+To read more (or less) than 1000 lines, set the **`PREVIOUSLOGLINES`** environment variable on the
+deployment:
+
+```yaml
+env:
+  - name: PREVIOUSLOGLINES
+    value: '3000'
+```
+
 Next: [Initial configuration →](02-initial-config)

@@ -5,7 +5,7 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
-import { downloadFile, packageHeaders } from './PackageRegistries'
+import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 
 export interface IHomepageMeta {
     id: string
@@ -225,9 +225,8 @@ export class HomepageManager {
         try {
             await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
             await tar.x({ file: tmpTgz, cwd: tmpDir })
-            let frontPath = path.join(tmpDir, 'front.js')
-            if (!fs.existsSync(frontPath)) frontPath = path.join(tmpDir, 'package', 'front.js')
-            const content = fs.readFileSync(frontPath, 'utf-8')
+            const content = readTarballFile(tmpDir, 'front.js')
+            if (!content) throw new Error(`no front.js inside the package downloaded from ${meta.installedFrom}`)
             fs.writeFileSync(cacheFile, content)
             return content
         } catch (err) {
