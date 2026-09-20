@@ -23,6 +23,21 @@ const kwirthGlobalsPlugin = {
     },
 }
 
+// express se mapea a la instancia compartida del host (back-global). El core carga el back de la
+// extension desde /tmp, donde no hay node_modules: un require('express') ahi no se resuelve y el
+// back no arranca. ⛔ Por eso express NO puede ir en 'external': en esbuild external gana a los
+// plugins y dejaria el require sin mapear.
+const kwirthBackGlobalsPlugin = {
+    name: 'kwirth-back-globals',
+    setup(build) {
+        const backGlobals = { express: 'global.__kwirth_back__.express' }
+        build.onResolve({ filter: /^express$/ }, (args) => backGlobals[args.path] ? { path: args.path, namespace: 'kwirth-back-globals' } : undefined)
+        build.onLoad({ filter: /.*/, namespace: 'kwirth-back-globals' }, (args) => ({
+            contents: `module.exports = ${backGlobals[args.path]}`, loader: 'js',
+        }))
+    },
+}
+
 // esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
 // El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
 const TSC = 'node_modules/typescript/lib/tsc.js'
@@ -49,7 +64,7 @@ await esbuild.build({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
-    external: ['express'],
+    plugins: [kwirthBackGlobalsPlugin],
     loader: { '.ts': 'ts' },
     minify: false,
 })
