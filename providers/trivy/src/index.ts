@@ -25,7 +25,15 @@ export class TrivyProvider implements IProvider {
     }
 
     addSubscriber = async (c: IProviderSubscriber, data: ITrivySubscriptionData) => {
-        const subData = data ?? { reportTypes: ALL_PLURALS }
+        /*
+            Se normaliza MIRANDO reportTypes, y no con `data ?? ...`: un suscriptor que no pide tipos
+            concretos manda un objeto VACIO, que no es nullish, asi que el valor por defecto no entraba y
+            reportTypes se quedaba en undefined. Lo de despues era un `for...of undefined` en una promesa
+            que nadie esperaba: unhandled rejection y el core entero abajo. Lo canto provider-debug, que
+            se suscribe sin payload.
+        */
+        const reportTypes = Array.isArray(data?.reportTypes) && data.reportTypes.length > 0 ? data.reportTypes : ALL_PLURALS
+        const subData: ITrivySubscriptionData = { ...data, reportTypes }
         this.subscribers.set(c, subData)
         console.log(`[trivy-provider] subscriber added, total: ${this.subscribers.size}`)
         // RC-1: sync de estado inicial. El provider es compartido y sus informers
@@ -33,12 +41,17 @@ export class TrivyProvider implements IProvider {
         // llega tarde se quedaría sin estado. Por eso, en cada alta listamos los
         // CRD actuales y los despachamos SOLO a este suscriptor. Proceso paralelo
         // (no se hace await) para no bloquear el alta.
-        this.sendInitialState(c, subData.reportTypes)
+        //
+        // ⛔ Un fire-and-forget SIEMPRE lleva su catch: aqui no hay nadie esperando la promesa, asi que
+        // un fallo no se queda en este provider — se convierte en unhandled rejection y el core sale.
+        this.sendInitialState(c, reportTypes)
+            .catch(err => console.error('[trivy-provider] initial-state sync failed:', err))
         // Además, entregamos la versión de Trivy del cluster a este suscriptor. Se
         // lee en cada alta (las suscripciones son infrecuentes) en vez de vigilar el
         // configmap: la versión cambia 1-2 veces al año y el drift se detecta al
         // comparar lo recibido con lo guardado en el consumidor.
         this.sendTrivyMeta(c)
+            .catch(err => console.error('[trivy-provider] trivy meta delivery failed:', err))
     }
 
     removeSubscriber = async (c: IProviderSubscriber) => {

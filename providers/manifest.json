@@ -96,6 +96,15 @@
   {
     "extensionType": "provider",
     "id": "trivy",
+    "version": "0.1.9",
+    "name": "Trivy Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.9.tgz",
+    "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "provider",
+    "id": "trivy",
     "version": "0.1.8",
     "name": "Trivy Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.8.tgz",
@@ -658,6 +667,15 @@
     "name": "Trivy Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.7.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "provider",
+    "id": "http-pull-push",
+    "version": "0.1.2",
+    "name": "HTTP Pull-Push Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-http-pull-push/-/kwirth-provider-http-pull-push-0.1.2.tgz",
+    "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
     "website": "https://kwirthmagnify.dev"
   }
 ]

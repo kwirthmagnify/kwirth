@@ -1,0 +1,7 @@
+node_modules/
+dist/
+build/
+*.js.map
+
+# Test artifacts
+tests/.out/
