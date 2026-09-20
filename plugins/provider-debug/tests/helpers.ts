@@ -68,6 +68,21 @@ export class FakeProvider implements IProvider {
         return this
     }
 
+    /*
+        Hace que el provider reviente al dar de alta o de baja al subscriber (encadenable). No es un
+        caso raro: addSubscriber() es async y este canal no espera su promesa, asi que un provider que
+        falle ahi se llevaba el core por delante con un unhandled rejection. Paso con 'trivy'.
+    */
+    withBrokenSubscribe(err = 'boom subscribing'): FakeProvider {
+        this.addSubscriber = async () => { throw new Error(err) }
+        return this
+    }
+
+    withBrokenUnsubscribe(err = 'boom unsubscribing'): FakeProvider {
+        this.removeSubscriber = async () => { throw new Error(err) }
+        return this
+    }
+
     addSubscriber = async (c: IProviderSubscriber, data: unknown) => { this.subscribers.set(c, data ?? {}) }
     removeSubscriber = async (c: IProviderSubscriber) => { this.subscribers.delete(c) }
     startProvider = async () => {}

@@ -246,14 +246,26 @@ class ProviderDebugChannel implements IChannel {
         }
         instance.subscriber = subscriber
         instance.provider = provider
-        provider.addSubscriber(subscriber, subscriptionData)
+        /*
+            addSubscriber() es async y aqui no se espera: sin catch, un provider que falle al dar de alta
+            al suscriptor no deja un error en este canal — deja un unhandled rejection, y el core sale.
+            Este canal existe para hurgar en providers ajenos, asi que es el ULTIMO sitio donde vale
+            asumir que el provider esta bien escrito. Paso justo con 'trivy' al suscribirse sin payload.
+        */
+        Promise.resolve(provider.addSubscriber(subscriber, subscriptionData)).catch(err => {
+            this.backChannelObject.logWarning?.(`Provider '${instance.providerId}' failed while adding the subscriber: ${String(err)}`)
+            this.sendSignalMessage(socket.ws, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, `Provider '${instance.providerId}' failed while adding the subscriber: ${String(err)}`)
+        })
         this.backChannelObject.logInfo?.(`Provider debug instance ${instance.instanceId} subscribed to provider '${instance.providerId}'`)
         this.sendSignalMessage(socket.ws, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, `Subscribed to provider '${instance.providerId}'`)
     }
 
     private unsubscribe = (instance: IInstance): void => {
         if (instance.provider && instance.subscriber) {
-            instance.provider.removeSubscriber(instance.subscriber)
+            // Mismo motivo que en el alta: la baja tambien es async y tampoco se espera.
+            Promise.resolve(instance.provider.removeSubscriber(instance.subscriber)).catch(err => {
+                this.backChannelObject.logWarning?.(`Provider '${instance.providerId}' failed while removing the subscriber: ${String(err)}`)
+            })
             this.backChannelObject.logInfo?.(`Provider debug instance ${instance.instanceId} unsubscribed from provider '${instance.providerId}'`)
         }
         instance.provider = undefined

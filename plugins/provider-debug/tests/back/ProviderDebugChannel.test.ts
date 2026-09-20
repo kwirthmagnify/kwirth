@@ -135,6 +135,35 @@ describe('subscription', () => {
         assert.deepEqual(events.dataOf(subscriber), {})
     })
 
+    /*
+        Este canal existe para hurgar en providers ajenos, asi que es el ULTIMO sitio donde vale asumir
+        que el provider del otro lado esta bien escrito. addSubscriber()/removeSubscriber() son async y
+        aqui no se esperan: sin catch, lo que falle alli no acaba en una señal de este canal — acaba en
+        un unhandled rejection y el core sale por su propio handler. `node --test` falla el fichero si
+        queda algun rechazo sin atender, asi que estos dos tests cazan la regresion por si solos.
+    */
+    test('un provider que falla al dar de alta se reporta como error, sin dejar un rechazo sin atender', async () => {
+        const roto = new FakeProvider('trivy').withBrokenSubscribe()
+        const channel = makeChannel([roto])
+        const ws = new MockWs()
+        await start(channel, ws, 'i1', 'trivy')
+        await new Promise(resolve => setImmediate(resolve))
+
+        assert.ok(ws.signals().some(s => s.includes('failed while adding the subscriber')), `señales: ${JSON.stringify(ws.signals())}`)
+    })
+
+    test('un provider que falla al dar de baja tampoco deja un rechazo sin atender', async () => {
+        const roto = new FakeProvider('trivy').withBrokenUnsubscribe()
+        const channel = makeChannel([roto])
+        const ws = new MockWs()
+        const config = await start(channel, ws, 'i1', 'trivy')
+        channel.stopInstance(ws as unknown as WebSocket, config)
+        await new Promise(resolve => setImmediate(resolve))
+
+        // la instancia se va igual: la baja en el provider es cosa suya, no puede bloquear el cierre
+        assert.equal(channel.containsInstance('i1'), false)
+    })
+
     test('a provider that is not running is reported and nothing is subscribed', async () => {
         const events = new FakeProvider('events')
         const channel = makeChannel([events])
