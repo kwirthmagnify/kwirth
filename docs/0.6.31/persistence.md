@@ -49,8 +49,17 @@ A few consequences worth knowing:
   clear.
 - **A filesystem store needs a real volume.** In Docker or in Kubernetes with `KWIRTH_STORE`, if the path
   is not on a mounted volume, everything kwirth remembers dies with the container — including the users.
-- **The ~1 MiB ConfigMap cap is real.** It is why extension data does not live here, and it is also why a
-  login extension's background image has a size limit: it travels inside a ConfigMap.
+- **The ~1 MiB ConfigMap cap is real, and it is not the same everywhere.** It is why extension data does
+  not live here, and why a login extension's background image has a size limit: the image travels inside
+  the record, in base64, which makes it about a third larger.
+
+  The cap belongs to the **store**, not to the feature, so each implementation declares it: `storeLimit()`
+  returns **800 KB** for Kubernetes ConfigMaps and Secrets (leaving room inside the ~1 MiB for the rest of
+  the object) and **`undefined`** — meaning *no practical ceiling* — for every filesystem-backed mode.
+
+  Whoever stores something big asks first, instead of applying the narrowest limit to everybody. That is
+  how a login extension can ship two backgrounds and get the high-quality one wherever it fits: see
+  [Login extensions](guide/extensions/logins/index?id=two-backgrounds-and-why).
 
 ## Data persistence
 

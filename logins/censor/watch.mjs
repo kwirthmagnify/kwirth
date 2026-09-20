@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 
-const FILES = ['package.json', 'login.json', 'background.png']
+const FILES = ['package.json', 'login.json', 'background.png', 'background-hi.png']
 
 let building = false
 let pending = false

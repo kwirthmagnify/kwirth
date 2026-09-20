@@ -3,6 +3,12 @@ import { ISecrets } from './ISecrets'
 import { ELogComponent, logError, logWarning } from './Logging'
 
 export class KubernetesSecrets implements ISecrets {
+    /*
+        Mismo techo que un ConfigMap: un Secret de Kubernetes tampoco pasa de ~1 MiB por objeto, con
+        margen para el resto del documento.
+    */
+    public storeLimit = (): number | undefined => 800 * 1024
+
     coreApi:CoreV1Api
     namespace:string
 

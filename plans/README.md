@@ -35,7 +35,7 @@ Terminados y en producción. Se consultan para saber **por qué** algo es como e
 | plan | entregado |
 |---|---|
 | [sso-idp](sso-idp/SSO-IDP-PLAN.md) | el tipo `idp` y seis conectores SSO instalables |
-| [login-extensions](login-extensions/PLAN.md) | el tipo `login`: páginas de acceso con marca y canales limitados |
+| [login-extensions](login-extensions/PLAN.md) | el tipo `login`: páginas de acceso con marca y canales limitados, con fondo de alta calidad donde el almacenamiento lo admite |
 | [webhook-extension](webhook-extension/PLAN.md) | el tipo `webhook`: la entrada de eventos, contraparte de los senders |
 | [private-marketplace](private-marketplace/PLAN.md) | marketplaces privados, con el manifest autenticado aparte de los paquetes |
 | [plugin-scopes](plugin-scopes/PLAN.md) | cada plugin publica sus scopes RBAC en runtime |

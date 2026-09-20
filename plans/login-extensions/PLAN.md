@@ -326,3 +326,77 @@ hacia atrás (campos nuevos opcionales en `ILoginConfig`; si no se declaran, nad
 ⚠️ Antes de tocar `ILoginConfig` hay que revisar los 5 logins públicos y los 5 privados: los
 porcentajes de posición están calculados contra su propio PNG y un cambio en el box model del panel
 (padding, ancho) los desalinea a todos a la vez.
+
+---
+
+## Anexo — Fondo de alta calidad (2026-09-19)
+
+> **ENTREGADO.** El plan sigue **CERRADO**: esto no reabre nada, amplía el bundle con un segundo fondo
+> opcional. La estructura de paquete descrita arriba (`background.png` a secas) queda **superada por este
+> anexo**.
+
+### El problema
+
+El fondo viajaba dentro del registro del login, en base64, y ese registro se guarda en un **ConfigMap de
+Kubernetes**: tope duro de ~1 MiB por objeto, del que el core reservaba 800 KB para la imagen. Como
+base64 crece un tercio, el techo real eran ~600 KB de PNG — poco para una pantalla de marca a resolución
+alta, y la razón por la que los logins existentes hornean sus degradados a paleta de 8 bits.
+
+Lo que no se había mirado hasta ahora es que **ese techo no es del producto, es de uno de sus cuatro
+almacenamientos**. Desktop/Tauri, Docker y Kubernetes con `KWIRTH_STORE` escriben en disco y no tienen
+ese problema; se les estaba aplicando un límite que no les corresponde.
+
+### La decisión: el techo lo declara el almacenamiento
+
+En vez de una constante global, `IConfigMaps` e `ISecrets` ganan `storeLimit(): number | undefined`.
+`undefined` significa **"cabe todo"**, no "no se sabe" — la distinción importa, porque un `undefined`
+ambiguo obligaría a asumir el peor caso y dejaría las cosas como estaban.
+
+| implementación | escenario | `storeLimit()` |
+|---|---|---|
+| `KubernetesConfigMaps` / `KubernetesSecrets` | K8s por defecto | `800 * 1024` |
+| `NodeConfigMaps` / `NodeSecrets` | desktop y `KWIRTH_STORE` | `undefined` |
+| `DockerConfigMaps` / `DockerSecrets` | Docker | `undefined` |
+
+Se hizo también en los secrets aunque hoy ningún secreto se acerque al tope: dos interfaces hermanas que
+divergen en su contrato es una trampa para el siguiente que escriba una implementación.
+
+### El bundle: dos imágenes, una se guarda
+
+| fichero | tope | papel |
+|---|---|---|
+| `background.png` | ~600 KB, **forzado por el `build.mjs`** | el que tiene que caber en cualquier sitio |
+| `background-hi.png` | ninguno | la buena; se usa donde el almacenamiento la admita |
+
+La elección es `pickBackground(hi, std, limit)`, una función pura: la buena si cabe → la normal si cabe →
+ninguna y `problem: 'background-too-large'`, que es lo que ya se hacía antes de esto y sigue pintando el
+aviso en la página. Solo se **persiste la elegida**; la otra se descarta.
+
+Dos consecuencias que hay que recordar al leer un bug:
+
+- **Se decide al instalar, no al servir.** Mover una instalación a almacenamiento de fichero no sube la
+  calidad del fondo de un login ya instalado: hay que reinstalarlo. Documentado con ⚠️ en la guía.
+- **En dev no se decide nada.** Un login de `kwirth-dev.json` lee el fondo del tgz sin pasar por el
+  almacenamiento, así que ahí **siempre gana el `-hi`**. Cómodo para diseñar, y a la vez la razón de que
+  una imagen pasada de tamaño se vea perfecta en dev y falle solo al instalarla de verdad.
+
+### Por qué el build falla en vez de avisar
+
+Pasarse con `background.png` **no rompe la instalación**, y eso es precisamente lo malo: el login se
+instala a medias, sin fondo, y solo se nota al abrir la página. Ya pasó con un login del marketplace.
+El `build.mjs` corta con exit 1 y el mensaje sugiere la salida correcta — dejar el normal dentro del tope
+y añadir el `-hi` —, no recortar la imagen.
+
+### Cobertura
+
+12 tests: 7 de `pickBackground` (las fronteras, incluida la de medir sobre el base64 y no sobre el PNG) y
+5 de integración que construyen un tgz con las dos imágenes y lo instalan contra un `IConfigMaps` falso,
+una vez con tope y otra sin él. Lo que verifican los de integración y no los puros es que el `install`
+lea de verdad los dos ficheros, que es justo donde un despiste al cablearlo pasaría desapercibido.
+
+### Scaffolder
+
+Crear un login era copiar `logins/_template/` a mano, con el id en un sitio y el nombre del tgz en otro.
+Ahora es `tools/create-kwirth-login.mjs`, en el mismo sitio y con la misma forma que los otros cuatro
+generadores: genera `package.json`, `login.json`, `build.mjs`, `watch.mjs` y un `README.md` que explica
+los dos fondos. Interactivo, o con `--id` para CI.

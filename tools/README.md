@@ -3,6 +3,41 @@
 Utility scripts shared across the whole monorepo (core + all plugins/providers). Kept here so agents and
 contributors find them in one place instead of copies scattered per plugin.
 
+## `create-kwirth-*.mjs` — scaffolds
+
+One per extension type. They ask for an id and a few names —or take them as flags, which is what CI and a
+repeated scaffold want— and write a folder that already builds:
+
+```bash
+node tools/create-kwirth-plugin.mjs                     # interactive
+node tools/create-kwirth-login.mjs --id my-login --name "My Login"
+```
+
+| Script | Creates | Notes |
+|---|---|---|
+| `create-kwirth-plugin.mjs` | `plugins/<id>/` | front + back, the big one |
+| `create-kwirth-provider.mjs` | `providers/<id>/` | a data source |
+| `create-kwirth-homepage.mjs` | `homepages/<id>/` | a landing dashboard |
+| `create-kwirth-theme.mjs` | `themes/<id>/` | a palette |
+| `create-kwirth-login.mjs` | `logins/<id>/` | a branded login page — **no TypeScript**, just `login.json` and its images |
+| `create-kwirth-aitoolset.mjs` | `aitoolsets/<id>/` | a package of tools a model can call — back only, no UI at all |
+
+The login one carries the background rule already solved: `background.png` is the one that must fit
+anywhere and the build **fails** if it goes over ~600 KB, while `background-hi.png` is optional and has no
+limit — Kwirth uses it wherever the storage allows. Until now a login was created by copying
+`logins/_template/` by hand, which is exactly where the id gets changed in one place and forgotten in
+another.
+
+The AI toolset one asks for its **capabilities** (`k8s`, `metrics`, `events`, `repos`), which is the
+decision that shapes the package: the host lends **only what is declared**, so the example tool is written
+against exactly that, and so is the fake host in its harness. With `k8s` it also offers a `verify.mjs`,
+to run the read tools against a real cluster — the part that a harness with fake clients can never cover.
+
+It ends by printing the two steps that are easy to skip and look like a broken tool rather than a missing
+step: **restart the back** (AI toolsets have *no hot reload* — the core reads their `dist` once, at
+startup) and **grant it** in Extensions → AI toolsets, because installing a toolset does not give it to
+anyone.
+
 ## `gen-coverage-chart.mjs` — QA charts (CL9 point 2c)
 
 Regenerates the **two QA PNGs** that every CL9 close requires (point 2, task **c** of the closure checklist).

@@ -9,6 +9,9 @@ const IV_LEN = 12
 const TAG_LEN = 16
 
 export class NodeSecrets implements ISecrets {
+    // Escribe en disco: no hay techo de objeto como el de un ConfigMap/Secret de Kubernetes.
+    public storeLimit = (): number | undefined => undefined
+
     private dir: string
     private key: Buffer
 

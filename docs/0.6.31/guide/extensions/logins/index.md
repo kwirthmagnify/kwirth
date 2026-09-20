@@ -57,32 +57,59 @@ Additional login extensions may be shipped alongside their corresponding plugin 
 
 ## Creating a login extension
 
-A login extension is a `.tgz` archive containing three files:
+A login extension is a `.tgz` archive containing up to four files:
 
 | File | Required | Purpose |
 |---|---|---|
 | `package.json` | ✅ | Extension metadata — `id`, `displayName`, `version`, `extensionType: "login"` |
 | `login.json` | ✅ | Visual configuration — see [Configuration reference](#configuration-reference) |
-| `background.png` | optional | Full-screen background image — see the size limit below |
+| `background.png` | optional | Full-screen background. **Must fit anywhere** — see below |
+| `background-hi.png` | optional | The same background at full quality, with **no size limit**. Used where the storage allows it |
 
 Build it with the `build.mjs` script from the `logins/_template` folder.
 
-> ### ⚠️ `background.png` must stay under ~600 KB
->
-> The image is stored inside a Kubernetes ConfigMap, encoded in base64 — which makes it about a third
-> larger. A ConfigMap cannot exceed roughly 1 MiB, so kwirth refuses any background whose encoded form
-> passes **800 KB**; in practice that means a PNG of about **600 KB or less**.
->
-> Over that, **the extension still installs, but without its background**, and the login page shows a
-> small red line naming it and asking the user to contact their kwirth administrator. The reason is only
-> in the backend log — the login page is served before anyone authenticates, so it says nothing more.
->
-> Two things that help: drop the alpha channel (a full-page background does not need one) and scale the
-> image down. A photographic background at 1200×896 will not fit; the same one at 600×448 does.
->
-> ⚠️ **In dev it looks like it works.** A login declared in `kwirth-dev.json` reads its background
-> straight from the tgz on disk, so an oversized image renders fine — and only fails once somebody
-> installs the extension for real.
+### Two backgrounds, and why
+
+The background is stored **inside the extension's own record**, which means its size depends on *where
+that record lives* — and that is not the same in every installation:
+
+| Where kwirth stores its data | Limit per object |
+|---|---|
+| Kubernetes **ConfigMaps** (the default in a cluster) | **~1 MiB**, imposed by etcd |
+| Filesystem — desktop, Docker, or a cluster with `KWIRTH_STORE` | none in practice |
+
+A login cannot know which one it will land on. So it may ship **two** images and let kwirth choose:
+
+- **`background.png`** — the one that has to fit **anywhere**. It is stored in base64, which makes it about
+  a third larger, and kwirth reserves **800 KB** for the encoded form: in practice a PNG of about
+  **600 KB or less**. `build.mjs` **fails the build** if you go over, because this is the image that
+  guarantees the page looks right on any installation.
+- **`background-hi.png`** — the same background at full quality, **with no limit**. Optional.
+
+**What kwirth does when the extension is installed**, in this order:
+
+1. If `background-hi.png` fits in the storage, it stores and serves **that one**.
+2. Otherwise it falls back to `background.png` — this is not an error, it is what the file is for.
+3. If **neither** fits, nothing is stored: the extension still installs, the page comes up without its
+   background, and it shows a small red line asking the user to contact their kwirth administrator. The
+   reason stays in the backend log, because the login page is served before anyone authenticates.
+
+The backend log says which one it kept, and why, so you never have to guess whether you are looking at the
+good image or the fallback.
+
+> ⚠️ **The choice is made at install time, not at render time.** If you later move the installation from
+> ConfigMaps to filesystem storage (`KWIRTH_STORE`), the logins already installed keep the image they were
+> given — **reinstall them** to pick up the high-quality one.
+
+If you only ship **one** image, nothing changes from before: it is used if it fits, and reported if it
+does not. Two things help a large background fit: drop the alpha channel (a full-page background does not
+need one) and scale it down. A photographic background at 1200×896 will not fit in a ConfigMap; the same
+one at 600×448 does.
+
+> ⚠️ **In dev it looks like it works.** A login declared in `kwirth-dev.json` reads its background straight
+> from the tgz on disk — it never goes through storage — so it always shows `background-hi.png` when there
+> is one, and an oversized image renders fine. The limit only bites once somebody installs the extension
+> for real.
 
 ### `package.json` minimal example
 
@@ -150,7 +177,7 @@ All fields in `login.json` are optional. Omit a field to use the default value s
 
 ## What a login extension can and cannot change
 
-The page is rendered by a **fixed** component. A login extension supplies **one** `login.json` and **one** `background.png`; it cannot add markup. So:
+The page is rendered by a **fixed** component. A login extension supplies **one** `login.json` and its background image (plus an optional high-quality variant); it cannot add markup. So:
 
 | You can change | You cannot add |
 |---|---|

@@ -52,14 +52,45 @@ export interface ILoginConfig {
 }
 
 // El tope no es nuestro: un ConfigMap de Kubernetes no pasa de ~1 MiB por objeto, y el fondo viaja dentro
-// en base64. Subirlo no es opcion; la imagen tiene que caber.
+// en base64. Se conserva como respaldo para cuando el almacenamiento no declara el suyo.
 export const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
-// Que le pasa al fondo de un login, o undefined si nada. Sin fondo tampoco hay problema: un login puede
-// no traerlo. El problema es traerlo y que no quepa, porque entonces la pagina sale distinta de como su
-// autor la diseño y hasta ahora eso era solo una linea de log.
-export const backgroundProblem = (backgroundB64: string|undefined): string|undefined =>
-    backgroundB64 !== undefined && backgroundB64.length > CONFIGMAP_SIZE_LIMIT ? 'background-too-large' : undefined
+/** Cual de los dos fondos se guardo. Nunca comparar contra literales sueltos. */
+export enum EBackgroundQuality {
+    HI = 'hi',
+    STANDARD = 'standard'
+}
+
+/** El fondo elegido para guardar, o el problema que impide guardar ninguno. */
+export interface IBackgroundPick {
+    backgroundB64?: string
+    quality?: EBackgroundQuality
+    problem?: string
+}
+
+/*
+    Cual de los dos fondos se guarda, sabiendo lo que admite el almacenamiento.
+
+    Un login puede traer DOS imagenes: `background-hi.png` (la buena) y `background.png` (la que cabe en
+    cualquier sitio). Cual se usa no lo decide el login: lo decide donde va a guardarse. Con ConfigMaps de
+    Kubernetes hay ~1 MiB por objeto; con almacenamiento en fichero —desktop, docker, KWIRTH_STORE— no hay
+    ese techo, y ahi la buena entra sin problema. Por eso `limit` puede ser `undefined`: significa que cabe
+    todo, no que no se sepa.
+
+    Sin fondo no hay problema: un login puede no traer ninguno. El problema es traerlo y que no quepa,
+    porque entonces la pagina sale distinta de como su autor la diseño.
+*/
+export const pickBackground = (hiB64: string|undefined, stdB64: string|undefined, limit: number|undefined): IBackgroundPick => {
+    const cabe = (b64: string) => limit === undefined || b64.length <= limit
+    if (hiB64 && cabe(hiB64)) return { backgroundB64: hiB64, quality: EBackgroundQuality.HI }
+    if (stdB64 && cabe(stdB64)) return { backgroundB64: stdB64, quality: EBackgroundQuality.STANDARD }
+    if (hiB64 || stdB64) return { problem: 'background-too-large' }
+    return {}
+}
+
+// Que le pasa al fondo de un login, o undefined si nada. Se mantiene para quien solo tiene UNA imagen.
+export const backgroundProblem = (backgroundB64: string|undefined, limit: number|undefined = CONFIGMAP_SIZE_LIMIT): string|undefined =>
+    pickBackground(undefined, backgroundB64, limit).problem
 
 // Lo que se guarda de un login instalado. `problem` marca que se instalo A MEDIAS: la extension funciona
 // pero le falta algo, y la pagina de login lo dice para que quien la vea pueda avisar al administrador.
@@ -67,6 +98,7 @@ interface ILoginPayload {
     meta: ILoginMeta
     config: ILoginConfig
     background?: string
+    backgroundQuality?: EBackgroundQuality
     problem?: string
 }
 
@@ -150,19 +182,31 @@ export class LoginManager {
             const loginJsonPath = path.join(base, 'login.json')
             const loginConfig: ILoginConfig = fs.existsSync(loginJsonPath) ? JSON.parse(fs.readFileSync(loginJsonPath, 'utf-8')) : {}
 
-            const backgroundPath = path.join(base, 'background.png')
-            const backgroundB64 = fs.existsSync(backgroundPath) ? fs.readFileSync(backgroundPath).toString('base64') : undefined
+            // Dos imagenes posibles: la buena y la que cabe en cualquier sitio. Cual se guarda lo decide
+            // el ALMACENAMIENTO (ver pickBackground), no el login.
+            const leer = (nombre: string) => {
+                const p = path.join(base, nombre)
+                return fs.existsSync(p) ? fs.readFileSync(p).toString('base64') : undefined
+            }
+            const limit = this.configMaps.storeLimit()
+            const elegido = pickBackground(leer('background-hi.png'), leer('background.png'), limit)
 
             const payload: ILoginPayload = { meta, config: loginConfig }
-            const problem = backgroundProblem(backgroundB64)
-            if (problem) {
+            if (elegido.problem) {
                 // Antes esto era SOLO una linea de log: el login salia sin fondo y nadie se enteraba. Paso
                 // de verdad con un login instalado desde el marketplace. Ahora queda anotado en el propio
                 // login, para que su pagina pueda avisar a quien la vea.
-                logInfo(ELogComponent.CORE, `Login '${meta.id}': background.png exceeds ${CONFIGMAP_SIZE_LIMIT} bytes and will not be stored in ConfigMap`)
-                payload.problem = problem
+                logInfo(ELogComponent.CORE, `Login '${meta.id}': no background fits in ${limit} bytes; none will be stored`)
+                payload.problem = elegido.problem
             }
-            else if (backgroundB64) payload.background = backgroundB64
+            else if (elegido.backgroundB64) {
+                payload.background = elegido.backgroundB64
+                payload.backgroundQuality = elegido.quality
+                // Se dice cual se guardo: con dos imagenes en juego, saber que se sirve la normal —y por
+                // que— evita buscar el fallo en la imagen o en el navegador.
+                logInfo(ELogComponent.CORE, `Login '${meta.id}': stored '${elegido.quality}' background` +
+                    (elegido.quality === EBackgroundQuality.STANDARD && limit !== undefined ? ` (the hi-res one does not fit in ${limit} bytes)` : ''))
+            }
 
             await this.configMaps.write(`kwirth-login-${meta.id}`, payload)
 
@@ -308,7 +352,10 @@ export class LoginManager {
     private async tgzHasBackground(tgzPath: string): Promise<boolean> {
         let found = false
         try {
-            await tar.t({ file: tgzPath, onentry: (entry: any) => { if (String(entry.path).endsWith('background.png')) found = true } })
+            await tar.t({ file: tgzPath, onentry: (entry: any) => {
+                const p = String(entry.path)
+                if (p.endsWith('background.png') || p.endsWith('background-hi.png')) found = true
+            } })
         }
         catch {}
         return found
@@ -328,8 +375,11 @@ export class LoginManager {
             const tmpDir = path.join(os.tmpdir(), `kwirth-login-bg-${id}`)
             try {
                 fs.mkdirSync(tmpDir, { recursive: true })
-                await tar.x({ file: dev.tgzPath, cwd: tmpDir, filter: (p: string) => p.endsWith('background.png') })
-                const candidates = [path.join(tmpDir, 'background.png'), path.join(tmpDir, 'package', 'background.png')]
+                await tar.x({ file: dev.tgzPath, cwd: tmpDir, filter: (p: string) => p.endsWith('background.png') || p.endsWith('background-hi.png') })
+                // En dev el fondo NO pasa por el almacenamiento: se sirve del tgz, asi que no hay techo
+                // que respetar y gana siempre la buena. Es tambien lo que se quiere al desarrollar un
+                // login: verlo como se vera donde quepa.
+                const candidates = ['background-hi.png', 'background.png'].flatMap(n => [path.join(tmpDir, n), path.join(tmpDir, 'package', n)])
                 const found = candidates.find(p => fs.existsSync(p))
                 return found ? fs.readFileSync(found) : undefined
             }

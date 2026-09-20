@@ -6,6 +6,15 @@ export class KubernetesConfigMaps implements IConfigMaps {
     coreApi:CoreV1Api
     namespace:string
 
+    /*
+        El tope lo pone Kubernetes, no nosotros: un ConfigMap no pasa de ~1 MiB por objeto (es lo que etcd
+        admite por clave). Se deja margen sobre ese MiB porque el limite es del OBJETO ENTERO —metadatos,
+        configuracion y el propio JSON incluidos—, no del valor grande que se le mete dentro.
+
+        Los almacenamientos de fichero devuelven `undefined`: escriben en disco y no tienen este techo.
+    */
+    public storeLimit = (): number | undefined => 800 * 1024
+
     constructor(coreApi: CoreV1Api, namespace:string) {
         this.coreApi=coreApi
         this.namespace=namespace

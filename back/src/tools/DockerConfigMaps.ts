@@ -3,6 +3,9 @@ import { IConfigMaps } from './IConfigMap'
 import fs from 'fs'
 
 export class DockerConfigMaps implements IConfigMaps {
+    // Escribe en disco: no hay techo de objeto como el de un ConfigMap/Secret de Kubernetes.
+    public storeLimit = (): number | undefined => undefined
+
     path:string
 
     constructor (_coreApi: CoreV1Api, namespace:string) {

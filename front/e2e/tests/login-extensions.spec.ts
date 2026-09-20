@@ -37,6 +37,34 @@ test('login extensions: ?loginExt=magnify renders custom login page', async ({ p
     await page.goto('about:blank')
 })
 
+/*
+    El fondo se SIRVE y la pagina lo pinta.
+
+    Un login puede traer dos imagenes —`background.png` y `background-hi.png`— y cual se guarda lo decide
+    el almacenamiento al instalar. Esto no comprueba cual de las dos es: comprueba lo que nunca debe
+    romperse al tocar esa eleccion, que es que el endpoint devuelva una imagen y que la pagina la use como
+    fondo. Sin esto, un fallo ahi se ve como una pagina de color plano, que es facil confundir con diseño.
+*/
+test('login extensions: el fondo se sirve como imagen y la pagina lo usa', async ({ page }) => {
+    // Se escucha la peticion que hace el NAVEGADOR: el back vive en otro puerto, y pedirlo por API contra
+    // el baseURL del e2e devuelve el index.html de la SPA, que pasaria por «responde 200».
+    const respuesta = page.waitForResponse(r => /\/logins\/[^/]+\/background/.test(r.url()), { timeout: 20000 })
+
+    await page.goto('/?loginExt=magnify')
+    await expect(page.getByLabel(/user/i)).toBeVisible({ timeout: LOGIN_EXT_TIMEOUT })
+
+    const res = await respuesta
+    expect(res.status(), 'el endpoint del fondo no responde').toBe(200)
+    expect(res.headers()['content-type'] ?? '', 'lo que devuelve no es una imagen').toContain('image')
+    expect((await res.body()).length, 'el fondo llega vacio').toBeGreaterThan(1000)
+
+    // la pagina lo pone como background-image, no como <img>
+    const conFondo = page.locator('[style*="background-image"]').first()
+    await expect(conFondo, 'la pagina no pinta ningun fondo').toBeVisible()
+
+    await page.goto('about:blank')
+})
+
 // ── 3. LoginExtensionPage tiene los botones correctos ─────────────────────────
 test('login extensions: extension page has Login and Change password buttons', async ({ page }) => {
     await page.goto('/?loginExt=magnify')

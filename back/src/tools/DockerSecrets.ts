@@ -3,6 +3,9 @@ import { ISecrets } from './ISecrets'
 import fs from 'fs'
 
 export class DockerSecrets implements ISecrets {
+    // Escribe en disco: no hay techo de objeto como el de un ConfigMap/Secret de Kubernetes.
+    public storeLimit = (): number | undefined => undefined
+
     path:string
 
     constructor (_coreApi: CoreV1Api, namespace:string) {

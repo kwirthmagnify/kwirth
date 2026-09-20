@@ -33,19 +33,38 @@ copyFileSync(join(__dir, 'login.json'), join(distDir, 'login.json'))
  */
 const CONFIGMAP_BACKGROUND_LIMIT = 600 * 1024
 
+/*
+ * DOS fondos posibles, y solo uno tiene tope:
+ *
+ *   · background.png    — el que tiene que caber EN CUALQUIER SITIO, incluido un ConfigMap de Kubernetes.
+ *                         Si se pasa, el build falla: es el unico que garantiza que el login se ve bien
+ *                         en cualquier instalacion.
+ *   · background-hi.png — OPCIONAL y sin tope. Se usa cuando el almacenamiento lo admite (desktop, docker
+ *                         o KWIRTH_STORE); donde no quepa, Kwirth se queda con el normal sin decir nada.
+ *                         Que no quepa no es un fallo: es justo para lo que existe el otro.
+ */
 const bgSrc = join(__dir, 'background.png')
 if (existsSync(bgSrc)) {
     const bytes = statSync(bgSrc).size
     if (bytes > CONFIGMAP_BACKGROUND_LIMIT) {
         console.error(`background.png son ${(bytes / 1024).toFixed(0)} KB y el tope es ${CONFIGMAP_BACKGROUND_LIMIT / 1024} KB ` +
-            `(${(bytes * 4 / 3 / 1024).toFixed(0)} KB en base64, sobre un limite de 800 KB en el ConfigMap).`)
+            `(${(bytes * 4 / 3 / 1024).toFixed(0)} KB en base64, sobre un limite de 800 KB en el ConfigMap). ` +
+            `Si lo que quieres es MAS CALIDAD, deja este dentro del tope y añade background-hi.png, que no lo tiene.`)
         process.exit(1)
     }
     copyFileSync(bgSrc, join(distDir, 'background.png'))
 }
 
+const bgHiSrc = join(__dir, 'background-hi.png')
+if (existsSync(bgHiSrc)) {
+    const hiBytes = statSync(bgHiSrc).size
+    console.log(`background-hi.png: ${(hiBytes / 1024).toFixed(0)} KB — se usara donde el almacenamiento lo admita`)
+    copyFileSync(bgHiSrc, join(distDir, 'background-hi.png'))
+}
+
 // pack into tgz
 const tgzName = `${id}.tgz`
-execSync(`tar -czf ${tgzName} package.json login.json${existsSync(bgSrc) ? ' background.png' : ''}`, { cwd: distDir })
+execSync(`tar -czf ${tgzName} package.json login.json${existsSync(bgSrc) ? ' background.png' : ''}` +
+    `${existsSync(bgHiSrc) ? ' background-hi.png' : ''}`, { cwd: distDir })
 
 console.log(`Built dist/${tgzName}`)
