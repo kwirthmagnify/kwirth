@@ -1,0 +1,18 @@
+{
+  "plugins": {
+    "agora": "../plugins/agora/dist",
+    "provider-debug": "../plugins/provider-debug/dist"
+  },
+  "providers": {
+    "longhorn": "../providers/longhorn/dist"
+  },
+  "senders": {},
+  "webhooks": {},
+  "logins": {},
+  "homepages": {},
+  "themes": {},
+  "senderConfigs": {},
+  "idps": {},
+  "aitoolsets": {},
+  "docs": {}
+}

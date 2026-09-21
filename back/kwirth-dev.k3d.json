@@ -1,0 +1,59 @@
+{
+  "plugins": {
+    "montag": "../plugins/montag/dist",
+    "excubitor": "../plugins/excubitor/dist",
+    "iter": "../plugins/iter/dist",
+    "situs": "../plugins/situs/dist",
+    "agora": "../plugins/agora/dist",
+    "pinocchio": "../plugins/pinocchio/dist",
+    "provider-debug": "../plugins/provider-debug/dist"
+  },
+  "providers": {
+    "otel": "../providers/otel/dist",
+    "syslog": "../providers/syslog/dist",
+    "trivy": "../providers/trivy/dist",
+    "longhorn": "../providers/longhorn/dist"
+  },
+  "senders": {},
+  "webhooks": {},
+  "logins": {
+    "excubitor": "../plugins/excubitor/login/dist/excubitor.tgz",
+    "montag": "../plugins/montag/login/dist/montag.tgz",
+    "iter": "../plugins/iter/login/dist/iter.tgz",
+    "santander": "../logins/santander/dist/santander.tgz",
+    "agora": "../plugins/agora/login/dist/agora.tgz"
+  },
+  "homepages": {},
+  "themes": {
+    "santander": "../themes/santander/dist"
+  },
+  "senderConfigs": {
+    "email-resend": [
+      {
+        "name": "default",
+        "apiKey": "${RESEND_API_KEY}",
+        "from": "kwirth@resend.dev",
+        "to": "${RESEND_TO}",
+        "subject": "Kwirth notification"
+      }
+    ]
+  },
+  "idps": {},
+  "aitoolsets": {
+    "k8s-inventory": "../aitoolsets/k8s-inventory/dist",
+    "k8s-describe": "../aitoolsets/k8s-describe/dist",
+    "k8s-observability": "../aitoolsets/k8s-observability/dist",
+    "k8s-metrics": "../aitoolsets/k8s-metrics/dist",
+    "k8s-secrets": "../aitoolsets/k8s-secrets/dist",
+    "k8s-ops": "../aitoolsets/k8s-ops/dist",
+    "source-repos": "../aitoolsets/source-repos/dist"
+  },
+  "docs": {
+    "kwirth": "bundle/docs/kwirth.tgz",
+    "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
+    "montag": "../plugins/montag/docs/montag.tgz",
+    "iter": "../plugins/iter/docs/iter.tgz",
+    "situs": "../plugins/situs/docs/situs.tgz",
+    "agora": "../plugins/agora/docs/agora.tgz"
+  }
+}
