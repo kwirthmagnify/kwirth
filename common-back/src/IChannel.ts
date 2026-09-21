@@ -1,7 +1,8 @@
 import { BackChannelData, IInstanceConfig, IInstanceMessage, AccessKey, EInstanceMessageAction, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { Request, Response } from 'express'
+import { IExtension } from './IExtension'
 
-export interface IChannel {
+export interface IChannel extends IExtension {
     readonly channelId: string
     readonly requirements: IBackChannelRequirements
     getChannelData(): BackChannelData

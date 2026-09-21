@@ -10,6 +10,7 @@
 */
 
 import { TConfigFieldType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+import { IExtension } from './IExtension'
 
 export enum EIdpConnectorKind {
     OIDC = 'oidc',
@@ -46,7 +47,7 @@ export interface IIdpCallbackContext {
     params?: Record<string, string>   // query params crudos del callback (code, state, iss, ...) para RFC 9207
 }
 
-export interface IIdpConnector {
+export interface IIdpConnector extends IExtension {
     id: string
     label: string
     kind: EIdpConnectorKind

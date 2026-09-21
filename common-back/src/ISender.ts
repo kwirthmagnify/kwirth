@@ -1,4 +1,5 @@
 import { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig, ISenderResult, TConfigFieldType, IConfigFieldDef, IExtensionNodeMeta } from '@kwirthmagnify/kwirth-common'
+import { IExtension } from './IExtension'
 
 export { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig, ISenderResult }
 
@@ -11,7 +12,7 @@ export type ISenderFieldDef = IConfigFieldDef
 /** @deprecated usa IExtensionNodeMeta, comun a todas las extensiones. */
 export type ISenderNodeMeta = IExtensionNodeMeta
 
-export interface ISender {
+export interface ISender extends IExtension {
     readonly id: string
     readonly senderType?: 'filter' | 'output'
     addConfig(config: ISenderConfig): void

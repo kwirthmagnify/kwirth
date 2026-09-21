@@ -103,6 +103,10 @@ import { DocsManager } from './tools/DocsManager'
 import { DocsApi } from './api/DocsApi'
 import { PackManager } from './tools/PackManager'
 import { PackApi } from './api/PackApi'
+import { STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS } from '@kwirthmagnify/kwirth-common-ai'
+import { ConfigBundleApi } from './api/ConfigBundleApi'
+import { ConfigBundleManager } from './tools/ConfigBundleManager'
+import { buildExtensionRefs } from './tools/ExtensionRefs'
 const fs = require('fs')
 
 // const originalFetch = require('node-fetch');
@@ -1503,6 +1507,52 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager && webhookManager && aiToolsetManager) {
             let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, apiKeyApi, registeredChannels, registeredProviders })
             riRouter.use(`/core/packs`, packApi.router)
+        }
+        if (pluginManager && providerManager && senderManager && webhookManager && aiToolsetManager && idpManager) {
+            /*
+                Portabilidad de configuracion. El core reune lo suyo y pregunta a quien pueda responder;
+                lo que cada extension considere configuracion suya es cosa suya, y viaja opaco.
+                Ver `plans/config-portability/PRD.md`.
+            */
+            const configBundleManager = new ConfigBundleManager(
+                async () => buildExtensionRefs({
+                    pluginManager: pluginManager!,
+                    providerManager: providerManager!,
+                    senderManager: senderManager!,
+                    webhookManager: webhookManager!,
+                    aiToolsetManager: aiToolsetManager!,
+                    idpManager: idpManager!,
+                    channels: ri.channels,
+                    providers: ri.clusterInfo.providers
+                }),
+                {
+                    readSettings: () => SettingsApi.read(ri.configMaps),
+                    writeSettings: async (data: unknown) => { await ri.configMaps.write('kwirth.settings', data) },
+                    // El almacen comun de IA: los modelos en configmap y los proveedores en secret, tal
+                    // y como los guarda AiConfigApi. Los proveedores llevan claves, asi que solo salen
+                    // si se han pedido credenciales.
+                    readSharedAi: async (includeCredentials: boolean) => {
+                        const llmsRaw = await ri.configMaps.read('kwirth-store-common-' + STORAGE_KEY_LLMS)
+                        const llms = llmsRaw ? JSON.parse(llmsRaw as string) : []
+                        if (!includeCredentials) return { llms }
+                        const provRaw = await ri.secrets.read('kwirth-store-common-' + STORAGE_KEY_PROVIDERS)
+                        const providers = provRaw && provRaw['data']
+                            ? JSON.parse(Buffer.from(provRaw['data'], 'base64').toString('utf8'))
+                            : []
+                        return { llms, providers }
+                    },
+                    writeSharedAi: async (data: unknown) => {
+                        const { llms, providers } = (data ?? {}) as { llms?: unknown, providers?: unknown }
+                        if (llms !== undefined) await ri.configMaps.write('kwirth-store-common-' + STORAGE_KEY_LLMS, JSON.stringify(llms))
+                        if (providers !== undefined) {
+                            const base64Data = Buffer.from(JSON.stringify(providers), 'utf8').toString('base64')
+                            await ri.secrets.write('kwirth-store-common-' + STORAGE_KEY_PROVIDERS, { data: base64Data })
+                        }
+                    }
+                },
+                VERSION
+            )
+            riRouter.use(`/core/config-bundle`, new ConfigBundleApi(configBundleManager, apiKeyApi).router)
         }
         if (docsManager) {
             const docsifyPath = process.env.KWIRTH_DOCSIFY_PATH || path.join(process.cwd(), 'docsify')

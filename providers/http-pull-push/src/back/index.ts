@@ -220,6 +220,69 @@ export class HttpPullPushProvider implements IProvider {
         this.reconcile()
     }
 
+    /*
+        ── Portabilidad de configuracion (IExtension) ──────────────────────────────────────────────
+
+        Las conexiones SON la configuracion de este provider: nombres, urls, intervalos, cabeceras y
+        credenciales. No guarda nada mas —lo que sondea no se persiste, se emite—, asi que aqui no hay
+        que separar configuracion de datos: viaja todo.
+
+        Lo que si hay que separar son las CREDENCIALES, y el store ya las tiene partidas en dos
+        almacenes; aqui solo hay que vaciarlas cuando no se piden. Se vacian, no se omiten: quien
+        importe tiene que poder ver que esa conexion necesita una contraseña.
+    */
+    exportConfig = async (options: { includeCredentials: boolean }): Promise<unknown> => {
+        const configs = this.getConfigs()
+        if (options.includeCredentials) return { configs }
+        return {
+            configs: configs.map(c => ({
+                ...c,
+                ...(c.auth ? { auth: {
+                    ...c.auth,
+                    ...(c.auth.password !== undefined ? { password: '' } : {}),
+                    ...(c.auth.token !== undefined ? { token: '' } : {}),
+                    ...(c.auth.headerValue !== undefined ? { headerValue: '' } : {})
+                } } : {})
+            }))
+        }
+    }
+
+    importConfig = async (data: unknown): Promise<{ applied: number, skipped: number, warnings: string[] }> => {
+        const warnings: string[] = []
+        const entrantes = (data as { configs?: unknown })?.configs
+        if (!Array.isArray(entrantes)) return { applied: 0, skipped: 0, warnings: ['no configs array in the imported data'] }
+
+        const errores = validateConfigs(entrantes as IHttpPullConfig[])
+        if (errores.length > 0) return { applied: 0, skipped: entrantes.length, warnings: errores }
+
+        /*
+            Un fichero exportado SIN credenciales trae los secretos vacios, y aplicarlos tal cual
+            borraria los que ya hay. Si la conexion existe y lo que llega no trae secreto, se conserva
+            el actual; si es nueva, se avisa de que hay que rellenarlo.
+        */
+        const conservarSecretos = (entrante: IHttpPullConfig): IHttpPullConfig => {
+            const actual = this.configs.get(entrante.name)
+            if (!entrante.auth) return entrante
+            const heredar = (campo: 'password' | 'token' | 'headerValue') => {
+                const valor = entrante.auth?.[campo]
+                if (valor) return { [campo]: valor }
+                const previo = actual?.auth?.[campo]
+                if (previo) return { [campo]: previo }
+                if (valor === '') warnings.push(`connection '${entrante.name}' needs its ${campo} to be set`)
+                return {}
+            }
+            return { ...entrante, auth: { ...entrante.auth, ...heredar('password'), ...heredar('token'), ...heredar('headerValue') } }
+        }
+
+        const resultado = new Map(this.configs)
+        for (const entrante of entrantes as IHttpPullConfig[]) resultado.set(entrante.name, conservarSecretos(entrante))
+
+        // applyConfigs guarda Y aplica en caliente: las conexiones importadas empiezan a sondearse sin
+        // reiniciar nada.
+        await this.applyConfigs([...resultado.values()])
+        return { applied: entrantes.length, skipped: 0, warnings }
+    }
+
     getConfigs = (): IHttpPullConfig[] => [...this.configs.values()]
 
     // Solo los nombres: alimenta el contador de la tarjeta en el gestor de extensiones.

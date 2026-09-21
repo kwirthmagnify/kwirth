@@ -1,4 +1,5 @@
 import { KwirthData, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+import { IExtension } from './IExtension'
 
 /**
  * Minimal interface representing the channel side that providers interact with.
@@ -59,7 +60,7 @@ export type IProviderFieldDef = IConfigFieldDef
  * Interface that all provider plugins must implement.
  * Use 'any' for clusterInfo to avoid pulling in kubernetes/docker dependencies.
  */
-export interface IProvider {
+export interface IProvider extends IExtension {
     readonly id: string
     readonly providesRouter: boolean
     readonly requiresApiKeyApi: boolean

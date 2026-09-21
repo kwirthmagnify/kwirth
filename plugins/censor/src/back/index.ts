@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, EInstanceConfigView, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IExtensionImportResult, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, EInstanceConfigView, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
 import { loadModels, buildModel, zodFromExample, generateText, Output } from '@kwirthmagnify/kwirth-common-ai/back'
@@ -19,6 +19,9 @@ const ASSETS_BROADCAST_DELAY = 100
 // Autostart del análisis: un único flag para todo el canal, aparte de las configs (no viaja con
 // ellas en el export/import porque es una preferencia de esta instalación)
 const STORAGE_KEY_AUTOSTART = 'censor-autostart'
+// Las configuraciones con nombre+version, en el almacen del canal. Es LO QUE VIAJA en el
+// export/import de configuracion (ver exportConfig/importConfig).
+const STORAGE_KEY_CONFIGS = 'censor-configs'
 
 const cleanANSI = (text: string): string => text.replace(/\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g, '')
 
@@ -254,6 +257,63 @@ export class CensorChannel {
         }
     }
 
+    /*
+        ── Portabilidad de configuracion (IExtension) ──────────────────────────────────────────────
+
+        El core no sabe —ni puede saber— que de lo que guarda censor es configuracion y que no. Aqui se
+        decide, y la frontera tiene tres lados:
+
+          · SI viaja   las configuraciones con nombre y version, con su marca de activa. Es lo que
+                       alguien ha compuesto a mano y lo que duele rehacer en otro Kwirth.
+          · NO viaja   el autostart: es una preferencia DE ESTA INSTALACION, no del conjunto de reglas.
+          · NO viaja   los LLMs y los proveedores de IA: viven en el almacen COMUN, que comparten varias
+                       extensiones. No son de censor, asi que no le toca a censor exportarlos — lo hace
+                       el core, como entrada propia del bundle.
+
+        Censor no guarda credenciales propias (`llmId` es una referencia, no una clave), asi que
+        `includeCredentials` no cambia lo que sale de aqui.
+    */
+    exportConfig = async (): Promise<unknown> => {
+        const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)) ?? []
+        return { configs }
+    }
+
+    importConfig = async (data: unknown): Promise<IExtensionImportResult> => {
+        const warnings: string[] = []
+
+        // Lo que llega puede venir de otro Kwirth y puede haberse editado a mano: no se da por bueno.
+        const entrantes = (data as { configs?: unknown })?.configs
+        if (!Array.isArray(entrantes)) return { applied: 0, skipped: 0, warnings: ['no configs array in the imported data'] }
+
+        const actuales: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)) ?? []
+        // Los LLMs son del almacen comun y pueden no existir aqui: eso no invalida una config —el LLM
+        // se puede crear despues—, pero hay que decirlo o la config queda muda sin explicacion.
+        const llms: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
+
+        let applied = 0
+        let skipped = 0
+        for (const cruda of entrantes) {
+            const cfg = cruda as ICensorInstanceConfig
+            if (!cfg || typeof cfg.name !== 'string' || typeof cfg.version !== 'string') {
+                skipped++
+                warnings.push('a config without name or version was discarded')
+                continue
+            }
+            if (cfg.llmId && !llms.some(l => l.id === cfg.llmId)) {
+                warnings.push(`config '${cfg.name}' references LLM '${cfg.llmId}', which is not configured here`)
+            }
+            // Upsert por nombre+version, el mismo criterio que usa CONFIGSAVE. De aqui sale la
+            // idempotencia que exige el contrato: reimportar lo mismo deja lo mismo.
+            const idx = actuales.findIndex(c => c.name === cfg.name && c.version === cfg.version)
+            if (idx >= 0) actuales[idx] = cfg
+            else actuales.push(cfg)
+            applied++
+        }
+
+        await this.backChannelObject.writeStorage!(STORAGE_KEY_CONFIGS, false, actuales)
+        return { applied, skipped, warnings }
+    }
+
     async processCommand(webSocket: WebSocket, instanceMessage: IInstanceMessage): Promise<boolean> {
         const msg = instanceMessage as ICensorCommandMessage
         if (msg.action !== EInstanceMessageAction.COMMAND) return false
@@ -274,12 +334,12 @@ export class CensorChannel {
                 instance.llm = llmList.find((l: ILlm) => l.id === instance.cfg.llmId)
                 // If the frontend sent the full config list, save it atomically here (no separate CONFIGSAVE race)
                 if (_allConfigs) {
-                    await this.backChannelObject.writeStorage!('censor-configs', false, _allConfigs)
+                    await this.backChannelObject.writeStorage!(STORAGE_KEY_CONFIGS, false, _allConfigs)
                 }
                 if (_autoStart !== undefined) await this.backChannelObject.writeStorage!(STORAGE_KEY_AUTOSTART, false, _autoStart)
                 instance.scope = instance.instanceConfig.view === EInstanceConfigView.CLUSTER ? 'cluster' : 'resource'
                 // Determine active configs (from the full list if provided, else from storage)
-                const savedForActive: ICensorInstanceConfig[] = _allConfigs ?? ((await this.backChannelObject.readStorage!('censor-configs', false)) ?? [])
+                const savedForActive: ICensorInstanceConfig[] = _allConfigs ?? ((await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)) ?? [])
                 const activeConfigs = savedForActive.filter(c => c.active)
                 const allActive: ICensorInstanceConfig[] = activeConfigs.length > 0 ? activeConfigs : [instance.cfg]
                 if (!instance.ephemeralDescription) {
@@ -313,19 +373,19 @@ export class CensorChannel {
                 return true
             case ECensorCommand.CONFIGSAVE: {
                 const cfgToSave = msg.data as ICensorInstanceConfig
-                let configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
+                let configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)) ?? []
                 const idx = configs.findIndex(c => c.name === cfgToSave.name && c.version === cfgToSave.version)
                 if (idx >= 0) configs[idx] = cfgToSave
                 else configs.push(cfgToSave)
-                await this.backChannelObject.writeStorage!('censor-configs', false, configs)
+                await this.backChannelObject.writeStorage!(STORAGE_KEY_CONFIGS, false, configs)
                 await this.executeConfigGet(webSocket, instance)
                 return true
             }
             case ECensorCommand.CONFIGDELETE: {
                 const { name, version } = msg.data as { name: string, version: string }
-                const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
+                const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)) ?? []
                 const filtered = configs.filter(c => !(c.name === name && c.version === version))
-                await this.backChannelObject.writeStorage!('censor-configs', false, filtered)
+                await this.backChannelObject.writeStorage!(STORAGE_KEY_CONFIGS, false, filtered)
                 await this.executeConfigGet(webSocket, instance)
                 return true
             }
@@ -333,7 +393,7 @@ export class CensorChannel {
                 instance.analyzing = true
                 instance.scope = instance.instanceConfig.view === EInstanceConfigView.CLUSTER ? 'cluster' : 'resource'
                 const llms: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
-                const savedConfigs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
+                const savedConfigs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)) ?? []
                 const activeConfigs = savedConfigs.filter(c => c.active)
                 const allActive = activeConfigs.length > 0 ? activeConfigs : [instance.cfg]
                 this.syncRunners(instance, allActive, llms)
@@ -1056,7 +1116,7 @@ export class CensorChannel {
         if (activeConfigsOverride !== undefined) {
             allActive = activeConfigsOverride
         } else {
-            const savedConfigs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
+            const savedConfigs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)) ?? []
             const activeConfigs = savedConfigs.filter(c => c.active)
             allActive = activeConfigs.length > 0 ? activeConfigs : (savedConfigs.length === 0 ? [instance.cfg] : [])
         }
@@ -1121,7 +1181,7 @@ export class CensorChannel {
             instance._configReady = (async () => {
                 let savedCfg: ICensorInstanceConfig | null = null
                 {
-                    const rawConfigs = await this.backChannelObject.readStorage!('censor-configs', false)
+                    const rawConfigs = await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)
                     const configs: ICensorInstanceConfig[] = (typeof rawConfigs === 'string' ? JSON.parse(rawConfigs) : rawConfigs) ?? []
                     savedCfg = configs.find(c => c.active) ?? savedCfg
                 }
@@ -1165,7 +1225,7 @@ export class CensorChannel {
 
     private executeConfigGet = async (webSocket: WebSocket, instance: IInstance, llmsOverride?: ILlm[]): Promise<void> => {
         const llms: ILlm[] = llmsOverride ?? (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
-        const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!('censor-configs', false)) ?? []
+        const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)) ?? []
         const autoStart: boolean = ((await this.backChannelObject.readStorage!(STORAGE_KEY_AUTOSTART, false)) ?? false) === true
         const storedProviders: ILlmProvider[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)) ?? []
         if (storedProviders.length > 0) {

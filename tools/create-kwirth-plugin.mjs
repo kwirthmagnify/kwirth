@@ -439,6 +439,47 @@ export class ${className}Channel {
         if (socket) socket.instances = socket.instances.filter(i => i.instanceId !== instanceId)
     }
 
+    /*
+        ── Portabilidad de configuracion (IExtension) ──────────────────────────────────────────────
+
+        Kwirth sabe exportar e importar la configuracion de una instalacion entera (Settings -> Kwirth
+        -> Export). De este plugin ya viaja lo que guarda el CORE —su configuracion de instalacion—,
+        sin que tengas que hacer nada.
+
+        Lo que el core NO puede exportar es lo que guardes TU: si este canal empieza a persistir
+        configuracion propia (\`backChannelObject.writeStorage\`, una base de datos, un servicio
+        externo), descomenta estos dos metodos y rellenalos. Son opcionales: mientras no los
+        implementes, el plugin aparece declarado como que aun no exporta lo suyo, que es la verdad.
+
+        TRES REGLAS, y las tres se olvidan:
+
+          1. QUE VIAJA. Solo configuracion: lo que alguien compuso a mano y le dolera rehacer. NO los
+             datos que acumules, ni las preferencias de ESTA instalacion. Si dudas: ¿querrias esto
+             igual en otro cluster? Si la respuesta es "depende del cluster", no viaja.
+          2. SECRETOS. Con \`includeCredentials\` en false, los campos secreto se devuelven VACIOS, no
+             se omiten: el destino tiene que poder decir cuales rellenar. Y al importar, un secreto
+             vacio NO debe borrar el que ya hubiera aqui.
+          3. IDEMPOTENCIA. Importar lo que tu mismo exportaste no puede cambiar nada. Y lo que llega
+             puede venir de otro cluster o estar editado a mano: validalo.
+
+        import { IExtensionExportOptions, IExtensionImportResult } from '@kwirthmagnify/kwirth-common'
+
+        exportConfig = async (options: IExtensionExportOptions): Promise<unknown> => {
+            const config = await this.backChannelObject.readStorage!('${id}-config', false) ?? {}
+            void options
+            return { config }
+        }
+
+        importConfig = async (data: unknown): Promise<IExtensionImportResult> => {
+            const incoming = (data as { config?: unknown })?.config
+            if (!incoming || typeof incoming !== 'object') {
+                return { applied: 0, skipped: 0, warnings: ['no configuration found in the imported data'] }
+            }
+            await this.backChannelObject.writeStorage!('${id}-config', false, incoming)
+            return { applied: 1, skipped: 0, warnings: [] }
+        }
+    \*/
+
     containsAsset = (_ws: WebSocket, _ns: string, _pod: string, _ctr: string): boolean => false
 
     containsInstance = (instanceId: string): boolean =>

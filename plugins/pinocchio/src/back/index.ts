@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IExtensionImportResult, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
@@ -528,6 +528,69 @@ export class PinocchioChannel {
 
     containsInstance = (instanceId: string): boolean => {
         return this.connections.some(socket => socket.instances.find(i => i.instanceId === instanceId))
+    }
+
+    /*
+        ── Portabilidad de configuracion (IExtension) ──────────────────────────────────────────────
+
+        Lo que pinocchio guarda son TRES cosas distintas, y solo una es configuracion portable:
+
+          · SI viaja   los triggers: lo que alguien ha compuesto —sus versiones, prompts, acciones y
+                       tools—, y lo que duele rehacer a mano en otro Kwirth.
+          · NO viaja   los LLMs: aunque `IPinocchioConfig` los lleve dentro, su origen real es el
+                       almacen COMUN (`STORAGE_KEY_LLMS`), que comparten varias extensiones y que
+                       `startChannel` vuelve a leer al arrancar. No son de pinocchio: los exporta el
+                       core como entrada propia del bundle.
+          · NO viaja   el playground: es un banco de pruebas, el borrador de quien esta trasteando
+                       aqui. Replicarlo en otro cluster no tiene ningun sentido.
+
+        Los triggers no llevan credenciales propias —`llm` es una referencia—, asi que
+        `includeCredentials` no cambia lo que sale.
+    */
+    exportConfig = async (): Promise<unknown> => {
+        const raw = await this.backChannelObject.readStorage!('pinocchio-config', false)
+        const config = (typeof raw === 'string' ? JSON.parse(raw) : raw) as IPinocchioConfig | null
+        return { triggers: config?.triggers ?? [] }
+    }
+
+    importConfig = async (data: unknown): Promise<IExtensionImportResult> => {
+        const warnings: string[] = []
+
+        // Puede venir de otro Kwirth y puede haberse editado a mano: nada se da por bueno.
+        const entrantes = (data as { triggers?: unknown })?.triggers
+        if (!Array.isArray(entrantes)) return { applied: 0, skipped: 0, warnings: ['no triggers array in the imported data'] }
+
+        const raw = await this.backChannelObject.readStorage!('pinocchio-config', false)
+        const config = ((typeof raw === 'string' ? JSON.parse(raw) : raw) ?? { triggers: [], llms: [] }) as IPinocchioConfig
+        const actuales = config.triggers ?? []
+        // Los LLMs que hay AQUI, para avisar de los triggers que apuntan a uno que no existe.
+        const llmsDisponibles = new Set((config.llms ?? []).map(l => l.id))
+
+        let applied = 0
+        let skipped = 0
+        for (const cruda of entrantes) {
+            const trigger = cruda as IConfigTrigger
+            if (!trigger || typeof trigger.id !== 'string' || !Array.isArray(trigger.versions)) {
+                skipped++
+                warnings.push('a trigger without id or versions was discarded')
+                continue
+            }
+            for (const v of trigger.versions) {
+                if (v.llm && !llmsDisponibles.has(v.llm)) {
+                    warnings.push(`trigger '${trigger.id}' version '${v.id}' references LLM '${v.llm}', which is not configured here`)
+                }
+            }
+            // Upsert por id: de aqui sale la idempotencia que exige el contrato.
+            const idx = actuales.findIndex(t => t.id === trigger.id)
+            if (idx >= 0) actuales[idx] = trigger
+            else actuales.push(trigger)
+            applied++
+        }
+
+        // Se reescribe SOLO la parte de triggers: los llms y el playground que hubiera se quedan como estaban.
+        await this.backChannelObject.writeStorage!('pinocchio-config', false, { ...config, triggers: actuales })
+        this.pinocchioConfig = { ...this.pinocchioConfig, triggers: actuales }
+        return { applied, skipped, warnings }
     }
 
     processCommand = async (webSocket:WebSocket, instanceMessage:IInstanceMessage) : Promise<boolean> => {

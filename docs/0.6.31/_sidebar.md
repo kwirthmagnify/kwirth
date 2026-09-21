@@ -159,6 +159,7 @@
   * [News](/0.6.31/channels/news)
 * [Security](/0.6.31/security)
 * [Persistence](/0.6.31/persistence)
+* [Configuration portability](/0.6.31/configportability)
 * [Common tasks](/0.6.31/commontasks)
 * [User management](/0.6.31/usermanagement)
 * [IdP integration](/0.6.31/idp/index)

@@ -1,4 +1,5 @@
 import { IWebhookEvent, IWebhookConfig, IWebhookAccess, IWebhookConsumer, IWebhookStoredConfig, TConfigFieldType, IConfigFieldDef, IExtensionNodeMeta } from '@kwirthmagnify/kwirth-common'
+import { IExtension } from './IExtension'
 
 export { IWebhookEvent, IWebhookConfig, IWebhookAccess, IWebhookConsumer, IWebhookStoredConfig }
 
@@ -11,7 +12,7 @@ export type IWebhookFieldDef = IConfigFieldDef
 /** @deprecated usa IExtensionNodeMeta, comun a todas las extensiones. */
 export type IWebhookNodeMeta = IExtensionNodeMeta
 
-export interface IWebhook {
+export interface IWebhook extends IExtension {
     readonly id: string
     // Verifica autenticidad a partir del cuerpo CRUDO + headers + la config resuelta (con secretos).
     // LA AUTH LA IMPLEMENTA CADA WEBHOOK: el core es agnóstico. Jira compara headers.authorization con

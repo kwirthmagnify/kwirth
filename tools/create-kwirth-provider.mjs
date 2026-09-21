@@ -350,9 +350,12 @@ ${configDefaults}
 
 // ─── src/back/index.ts ─────────────────────────────────────────────────────
 
+const hasConfig = hasSchema || hasFront
+
 const backImports = [
     ...(usesExpress ? ["import express, { Request, Response } from 'express'"] : []),
     `import { IProvider, ${hasSchema ? 'IProviderFieldDef, ' : ''}IProviderStorage, IProviderSubscriber, IProviderSubscriptionHelp, KwirthData } from '@kwirthmagnify/kwirth-common-back'`,
+    ...(hasConfig ? [`import { IExtensionExportOptions, IExtensionImportResult } from '@kwirthmagnify/kwirth-common'`] : []),
     `import { E${className}StorageKey, I${className}Config, I${className}Event, I${className}Subscription, ${constPrefix}_DEFAULT_CONFIG } from '../common/${className}Types'`
 ].join('\n')
 
@@ -439,6 +442,59 @@ const constructorBody = [
     ...(wantsRouter ? ['        this.buildRouter()'] : []),
     ...(hasFront ? ['        this.buildConfigRouter()'] : [])
 ].join('\n')
+
+/*
+    Portabilidad de configuracion: los dos metodos de `IExtension`.
+
+    Se generan solo si el provider tiene configuracion. Son OPCIONALES en el contrato —una extension sin
+    ellos sigue funcionando—, pero implementarlos es lo que hace que la configuracion de este provider
+    viaje en el fichero de configuracion de Kwirth. El comentario que los acompaña es la mitad del valor
+    de generarlos: recuerda las tres reglas que se olvidan.
+*/
+const portabilityBlock = hasConfig ? `
+    /*
+        ── Portabilidad de configuracion (IExtension) ──────────────────────────────────────────────
+
+        Kwirth llama a estos dos metodos cuando alguien exporta o importa la configuracion de la
+        instalacion entera. El core NO sabe que guardas ni donde: eso lo decides aqui.
+
+        TRES REGLAS, y las tres se olvidan:
+
+          1. QUE VIAJA. Solo configuracion: lo que alguien compuso a mano y le dolera rehacer. NO los
+             datos que acumules —historicos, cachés, estado de ejecucion—, ni las preferencias de ESTA
+             instalacion. Si dudas: ¿querrias esto igual en otro cluster? Si la respuesta es "depende
+             del cluster", no viaja.
+          2. SECRETOS. Con \`includeCredentials\` en false, los campos secreto se devuelven VACIOS, no se
+             omiten: el destino tiene que poder decir cuales hay que rellenar. Y al importar, un secreto
+             vacio NO debe borrar el que ya hubiera aqui.
+          3. IDEMPOTENCIA. Importar lo que tu mismo exportaste no puede cambiar nada. Y lo que llega
+             puede venir de otro cluster o estar editado a mano: validalo, no te fies de su forma ni de
+             que los recursos que menciona existan aqui.
+
+        Los \`warnings\` son lo UNICO que Kwirth puede contar de tu contenido: di que descartaste y por
+        que, y avisa de lo que se aplico pero apunta a algo que falta.
+    \*/
+    exportConfig = async (options: IExtensionExportOptions): Promise<unknown> => {
+        // TODO: si tu configuracion lleva credenciales, vacialas cuando 'options.includeCredentials'
+        // sea false — vaciarlas, no quitarlas, para que el destino sepa cuales rellenar.
+        void options
+        return { config: this.config }
+    }
+
+    importConfig = async (data: unknown): Promise<IExtensionImportResult> => {
+        const incoming = (data as { config?: I${className}Config })?.config
+        if (!incoming || typeof incoming !== 'object') {
+            return { applied: 0, skipped: 0, warnings: ['no configuration found in the imported data'] }
+        }
+
+        // Los defaults por delante: un fichero de una version anterior puede no traer campos nuevos.
+        this.config = { ...${constPrefix}_DEFAULT_CONFIG, ...incoming }
+        await this.saveConfig()
+        // Aplicar en caliente: quien importa no deberia tener que reiniciar Kwirth.
+        this.restartTimer()
+        return { applied: 1, skipped: 0, warnings: [] }
+    }
+` : ''
 
 write('src/back/index.ts', `${backImports}
 
@@ -540,7 +596,7 @@ ${configureMethod}${routerBlock}${configRouterBlock}
         // 'secret' decide el destino: true -> Secret de Kubernetes, false -> ConfigMap.
         await this.storage.writeStorage(E${className}StorageKey.CONFIG, ${wantsRouter ? 'true' : 'false'}, this.config)
     }
-}
+${portabilityBlock}}
 
 export default ${className}Provider
 `)
@@ -711,6 +767,25 @@ Authorization: Bearer <ingestToken>        # only when an ingest token is config
 Response: \`{ "ok": true }\`
 ` : ''
 
+const readmePortabilitySection = hasConfig ? `
+## Configuration portability
+
+This provider implements \`IExtension\` (\`exportConfig\` / \`importConfig\`), so its configuration
+travels in kwirth's configuration file — see **Settings → Kwirth → Export**.
+
+Both methods are optional in the contract; they are generated here because this provider has
+configuration worth carrying. Before shipping, review three things in \`src/back/index.ts\`:
+
+- **What travels.** Only configuration — what somebody composed by hand. Not the data you accumulate,
+  and not preferences that only make sense on this installation.
+- **Secrets.** If your configuration holds credentials, blank them out when \`includeCredentials\` is
+  false — blank, not missing, so the destination can tell which ones need filling in. And when
+  importing, an empty secret must not wipe the one already set here.
+- **Idempotence.** Importing what you exported must change nothing, and what arrives may come from
+  another cluster or have been edited by hand: validate it.
+
+` : ''
+
 write('README.md', `# ${name}
 
 ${description}
@@ -744,7 +819,7 @@ Events delivered to \`processProviderEvent(providerId, event)\` look like:
 ## Configuration
 
 ${readmeConfigSection}
-${readmeRouterSection}
+${readmePortabilitySection}${readmeRouterSection}
 ## Development
 
 \`\`\`

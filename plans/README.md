@@ -27,6 +27,7 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 | [geppetto](geppetto/PRD.md) | analizador LLM de propósito general (PRD) | la decisión 6; sin código todavía |
 | [pluvider](pluvider/PLAN.md) · [PRD](pluvider/PRD.md) | un plugin que además expone su información in-process | MVP en producción (agora y montag publican, provider-debug consume); queda la fase 2: `ask()`, `publications[]` y el descubrimiento en runtime |
 | [gate](gate/PRD.md) | la pantalla de acceso como extensión programable | borrador |
+| [config-portability](config-portability/PLAN.md) · [PRD](config-portability/PRD.md) | llevarse la configuración de un Kwirth a otro | core, front y las open source con configuración, hechos; quedan Excubitor y Agora, que son la prueba de fuego |
 | [previous-container-log](previous-container-log/PLAN.md) | ver en el About el log del contenedor anterior cuando el core reinicia | en producción; solo queda el S2 (el ajuste en los settings, que arrastra publicar `kwirth-common`) |
 
 ## Cerrados
