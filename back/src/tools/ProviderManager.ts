@@ -7,7 +7,7 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
-import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
+import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 
 /**
  * @deprecated usa IProviderFieldDef de kwirth-common-back, que es el contrato comun a todas las
@@ -133,6 +133,10 @@ export class ProviderManager {
     }
 
     private async fetchJsFromSource(meta: IProviderMeta): Promise<string | undefined> {
+        // Se cachea en /tmp, como plugin, sender y webhook: sin esto se baja el tarball entero en CADA
+        // arranque, y el provider se queda fuera si el registro no responde justo en ese momento.
+        const cacheFile = cachedExtensionFile('provider', meta.id, 'back.js')
+        if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
         if (!meta.installedFrom || meta.installedFrom === 'local') {
             logError(ELogComponent.CORE, `Provider '${meta.id}' back.js not stored and has no remote source — cannot recover`)
             return undefined
@@ -145,7 +149,8 @@ export class ProviderManager {
             await tar.x({ file: tmpTgz, cwd: tmpDir })
             const content = readTarballFile(tmpDir, 'back.js')
             if (!content) throw new Error(`no back.js inside the package downloaded from ${meta.installedFrom}`)
-            logInfo(ELogComponent.CORE, `Provider '${meta.id}' back.js fetched from source`)
+            fs.writeFileSync(cacheFile, content)
+            logInfo(ELogComponent.CORE, `Provider '${meta.id}' back.js fetched from source and cached`)
             return content
         } catch (err) {
             logError(ELogComponent.CORE, `Provider '${meta.id}' failed to fetch back.js from source: ${err}`)
@@ -206,6 +211,8 @@ export class ProviderManager {
                 throw new Error(`Provider '${meta.id}' is already installed`)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
+            // Una version nueva no puede heredar el js cacheado de la anterior
+            dropCachedExtensionFiles('provider', meta.id)
 
             meta.marketplaceId = marketplaceId
 
@@ -284,6 +291,9 @@ export class ProviderManager {
     }
 
     private async _doUninstall(id: string, registeredProviders: Map<string, TProviderConstructor>, index: IProviderMeta[]): Promise<void> {
+        // La cache de /tmp no lleva version en el nombre: si no se borra aqui, reinstalar servirira
+        // el js de la instalacion anterior mientras el pod siga vivo.
+        dropCachedExtensionFiles('provider', id)
         const dev = this.devProviders.get(id)
         if (dev) fs.unwatchFile(path.join(dev.distPath, 'back.js'))
         registeredProviders.delete(id)

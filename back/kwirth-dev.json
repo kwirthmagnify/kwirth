@@ -2,10 +2,12 @@
   "plugins": {
     "agora": "../plugins/agora/dist",
         "censor": "../plugins/censor/dist",
+    "montag": "../plugins/montag/dist",
     "provider-debug": "../plugins/provider-debug/dist"
   },
   "providers": {
-    "longhorn": "../providers/longhorn/dist"
+    "longhorn": "../providers/longhorn/dist",
+    "azure": "../providers/azure/dist"
   },
   "senders": {
         "console": "../senders/console/dist"

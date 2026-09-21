@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { matchRegistry, basicHeader, bearerHeader, authHeader, packageHeaders, configurePackageRegistries, readTarballFile } from '../../src/tools/PackageRegistries'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { matchRegistry, basicHeader, bearerHeader, authHeader, packageHeaders, configurePackageRegistries, readTarballFile, cachedExtensionFile, dropCachedExtensionFiles } from '../../src/tools/PackageRegistries'
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
@@ -185,4 +185,36 @@ test('solo mira esos dos sitios: un back.js mas profundo NO se da por bueno', ()
     const dir = extractDir({ 'package/dist/back.js': 'demasiado-profundo' })
     assert.equal(readTarballFile(dir, 'back.js'), undefined)
     rmSync(dir, { recursive: true, force: true })
+})
+
+// ── cache en /tmp del js que se baja del origen ──────────────────────────────────
+//
+// Un back que no cabe en el ConfigMap se vuelve a bajar del origen. Sin cache eso es un tarball entero
+// por arranque (914 KB en el provider 'trivy') y, si el registro no responde en ese momento, la extension
+// no carga. Y la cache HAY que invalidarla: no lleva la version en el nombre —quien la lee al arrancar
+// solo conoce el id— asi que sin borrarla una actualizacion seguiria cargando el js VIEJO.
+
+test('el nombre de la cache sale del tipo, el id y el fichero', () => {
+    const back = cachedExtensionFile('provider', 'trivy', 'back.js')
+    assert.equal(path.basename(back), 'kwirth-provider-trivy-back.js')
+    assert.equal(path.dirname(back), os.tmpdir())
+    assert.equal(path.basename(cachedExtensionFile('plugin', 'montag', 'front.js')), 'kwirth-plugin-montag-front.js')
+})
+
+test('invalidar borra el back y el front de esa extension, y nada mas', () => {
+    const otro = cachedExtensionFile('provider', 'otro', 'back.js')
+    const back = cachedExtensionFile('provider', 'trivy', 'back.js')
+    const front = cachedExtensionFile('provider', 'trivy', 'front.js')
+    for (const f of [otro, back, front]) writeFileSync(f, 'x')
+
+    dropCachedExtensionFiles('provider', 'trivy')
+
+    assert.equal(existsSync(back), false, 'el back cacheado se va')
+    assert.equal(existsSync(front), false, 'y el front tambien')
+    assert.equal(existsSync(otro), true, 'pero no se toca la cache de otra extension')
+    rmSync(otro, { force: true })
+})
+
+test('invalidar lo que no existe no es un error: no puede romper una instalacion', () => {
+    assert.doesNotThrow(() => dropCachedExtensionFiles('sender', 'nunca-instalado'))
 })

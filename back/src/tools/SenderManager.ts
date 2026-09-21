@@ -6,7 +6,7 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
-import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
+import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 
 export interface ISenderMeta {
     id: string
@@ -102,7 +102,7 @@ export class SenderManager implements ISenderAccess {
     }
 
     private async fetchFrontJsFromSource(meta: ISenderMeta): Promise<string | undefined> {
-        const cacheFile = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-front.js`)
+        const cacheFile = cachedExtensionFile('sender', meta.id, 'front.js')
         if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
         if (!meta.installedFrom || meta.installedFrom === 'local') return undefined
         const tmpTgz = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-frontsrc-${Date.now()}.tgz`)
@@ -321,6 +321,8 @@ export class SenderManager implements ISenderAccess {
                 throw new Error(`Sender '${meta.id}' is already installed`)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
+            // Una version nueva no puede heredar el js cacheado de la anterior
+            dropCachedExtensionFiles('sender', meta.id)
 
             meta.marketplaceId = marketplaceId
 
@@ -387,6 +389,9 @@ export class SenderManager implements ISenderAccess {
     }
 
     private async _doUninstall(id: string): Promise<void> {
+        // La cache de /tmp no lleva version en el nombre: si no se borra aqui, reinstalar servirira
+        // el js de la instalacion anterior mientras el pod siga vivo.
+        dropCachedExtensionFiles('sender', id)
         this.instances.delete(id)
         this.registeredSenders.delete(id)
         this.installedIds = this.installedIds.filter(i => i !== id)
@@ -427,7 +432,7 @@ export class SenderManager implements ISenderAccess {
     }
 
     private async fetchJsFromSource(meta: ISenderMeta): Promise<string | undefined> {
-        const cacheFile = path.join(os.tmpdir(), `kwirth-sender-${meta.id}-back.js`)
+        const cacheFile = cachedExtensionFile('sender', meta.id, 'back.js')
         if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
         if (!meta.installedFrom || meta.installedFrom === 'local') {
             logError(ELogComponent.CORE, `Sender '${meta.id}' back.js not stored and has no remote source`)

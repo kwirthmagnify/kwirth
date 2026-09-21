@@ -7,7 +7,7 @@ import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
 import crypto from 'crypto'
-import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
+import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 
 export interface IWebhookMeta {
     id: string
@@ -107,7 +107,7 @@ export class WebhookManager implements IWebhookAccess {
     }
 
     private async fetchFrontJsFromSource(meta: IWebhookMeta): Promise<string | undefined> {
-        const cacheFile = path.join(os.tmpdir(), `kwirth-webhook-${meta.id}-front.js`)
+        const cacheFile = cachedExtensionFile('webhook', meta.id, 'front.js')
         if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
         if (!meta.installedFrom || meta.installedFrom === 'local') return undefined
         const tmpTgz = path.join(os.tmpdir(), `kwirth-webhook-${meta.id}-frontsrc-${Date.now()}.tgz`)
@@ -315,6 +315,8 @@ export class WebhookManager implements IWebhookAccess {
                 throw new Error(`Webhook '${meta.id}' is already installed`)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
+            // Una version nueva no puede heredar el js cacheado de la anterior
+            dropCachedExtensionFiles('webhook', meta.id)
 
             meta.marketplaceId = marketplaceId
 
@@ -380,6 +382,9 @@ export class WebhookManager implements IWebhookAccess {
     }
 
     private async _doUninstall(id: string): Promise<void> {
+        // La cache de /tmp no lleva version en el nombre: si no se borra aqui, reinstalar servirira
+        // el js de la instalacion anterior mientras el pod siga vivo.
+        dropCachedExtensionFiles('webhook', id)
         this.instances.delete(id)
         this.registeredWebhooks.delete(id)
         this.installedIds = this.installedIds.filter(i => i !== id)
@@ -422,7 +427,7 @@ export class WebhookManager implements IWebhookAccess {
     }
 
     private async fetchJsFromSource(meta: IWebhookMeta): Promise<string | undefined> {
-        const cacheFile = path.join(os.tmpdir(), `kwirth-webhook-${meta.id}-back.js`)
+        const cacheFile = cachedExtensionFile('webhook', meta.id, 'back.js')
         if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
         if (!meta.installedFrom || meta.installedFrom === 'local') {
             logError(ELogComponent.CORE, `Webhook '${meta.id}' back.js not stored and has no remote source`)

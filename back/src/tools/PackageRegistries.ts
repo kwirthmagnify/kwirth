@@ -3,6 +3,7 @@ import { SettingsApi } from '../api/SettingsApi'
 import { IConfigMaps } from './IConfigMap'
 import { ISecrets } from './ISecrets'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import https from 'https'
 import http from 'http'
@@ -128,6 +129,29 @@ export const downloadFile = (url: string, destPath: string, headers: THeaders = 
 // un back.js que no cabe en el ConfigMap no se guarda, asi que se vuelve a bajar del origen EN CADA
 // ARRANQUE. Mirando solo la raiz, la extension se instala bien y desaparece al primer reinicio. Lo canto
 // el provider 'trivy' (15,8 MB de bundle) con un ENOENT sobre /tmp/kwirth-provider-trivy-src-*/back.js.
+/*
+    Cache en /tmp del js que se baja del origen.
+
+    Un back que no cabe en el ConfigMap no se guarda, asi que hay que volver a bajarlo. Sin cache eso es
+    un tarball entero POR ARRANQUE (914 KB en el provider 'trivy') y, si el registro no responde justo en
+    ese momento, la extension no carga.
+
+    ⚠️ Y hay que INVALIDARLA al instalar y al desinstalar. La cache no lleva la version en el nombre —a
+    proposito, porque quien la lee al arrancar solo sabe el id— asi que sin borrarla una actualizacion
+    seguiria cargando el back VIEJO mientras el pod siga vivo, y /tmp sobrevive a reiniciar el proceso.
+*/
+const CACHEABLE_FILES = ['back.js', 'front.js']
+
+export const cachedExtensionFile = (kind: string, id: string, filename: string): string =>
+    path.join(os.tmpdir(), `kwirth-${kind}-${id}-${filename}`)
+
+export const dropCachedExtensionFiles = (kind: string, id: string): void => {
+    for (const filename of CACHEABLE_FILES) {
+        try { fs.rmSync(cachedExtensionFile(kind, id, filename), { force: true }) }
+        catch { /* que no se pueda borrar no puede romper una instalacion */ }
+    }
+}
+
 export const readTarballFile = (extractDir: string, filename: string): string|undefined => {
     const found = [path.join(extractDir, filename), path.join(extractDir, 'package', filename)]
         .find(candidate => fs.existsSync(candidate))

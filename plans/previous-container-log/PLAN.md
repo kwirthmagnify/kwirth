@@ -103,10 +103,17 @@ Lo que se decidió mientras se escribía, y que el plan no preveía:
 
 ## Backlog
 
-- ¿Debería el core **sobrevivir** a un unhandled rejection de una extensión, en vez de salir? Hoy
-  `exitAndLog()` se lleva el pod por delante porque una extensión de terceros dejó una promesa sin catch.
-  Es un frente de diseño aparte —aislar el fallo de una extensión del proceso del core— y no se decide
-  dentro de este plan.
-- `ProviderManager.fetchJsFromSource()` no cachea en `/tmp` lo que baja, al contrario que plugin, sender
-  y webhook. Cada arranque vuelve a bajar el tarball entero (914 KB en el caso de `trivy`), y si el
-  registro no responde en ese momento el provider no carga.
+- ✅ **Hecho el 2026-09-21: el core ya no muere por una promesa sin `catch` de una extensión.** Era el
+  frente que este plan dejaba abierto: `exitAndLog()` se llevaba el pod por delante porque una extensión
+  de terceros no atendió un rechazo. Ahora el fallo se **atribuye por el stack** —el core carga cada back
+  desde `/tmp/kwirth-<tipo>-<id>-back.js`, así que ahí está su rastro— y si es de una extensión se aísla,
+  se deja traza con su nombre y el core sigue sirviendo. La heurística es a propósito conservadora: lo que
+  **no** se puede atribuir se sigue tratando como fallo del core y el proceso sale, porque ahí sí puede
+  haber quedado un estado del que no conviene fiarse. En `tools/FailureOrigin.ts`, con 7 tests.
+- ✅ **Hecho el 2026-09-21: `ProviderManager` ya cachea en `/tmp`** lo que baja, como plugin, sender y
+  webhook. Y de paso se arregló el defecto del patrón que se iba a copiar: **ninguno de los cuatro
+  invalidaba esa caché**. El nombre no lleva la versión —quien la lee al arrancar solo conoce el id—, así
+  que una actualización seguía cargando el js viejo mientras el pod siguiera vivo, y `/tmp` sobrevive a
+  reiniciar el proceso. Ahora se borra al instalar y al desinstalar, con el nombre en un solo sitio
+  (`cachedExtensionFile` / `dropCachedExtensionFiles`) para que el borrado y la lectura no puedan
+  divergir.

@@ -153,6 +153,23 @@ CrashLoopBackOff. After a rollout the pod is a brand new one and the kubelet kee
 so there is genuinely nothing to read. The viewer tells you so instead of showing an empty box: if the
 restart happened but the log is already gone, it says that too.
 
+### When the fault is an extension's
+
+Not every crash is kwirth's, and since **0.6.31** it does not pay for one either. A plugin, provider or
+sender that leaves a rejected promise unattended used to take the whole core down with it — every channel,
+for every user. Now kwirth looks at where the failure came from: extensions are loaded from their own
+files, so a fault born inside one is **isolated and logged with the culprit's name**, and the core keeps
+serving:
+
+```
+[core] [ERROR] ❌ UNHANDLED REJECTION in provider 'trivy' — isolated, kwirth keeps running
+```
+
+If you see that line, the extension is the one to fix (or uninstall) — and kwirth did not restart, so
+there is no previous container log to read for it. A failure that **cannot** be attributed to an extension
+is still treated as kwirth's own and does end the process, on purpose: the core may have been left in a
+state not worth trusting.
+
 To read more (or less) than 1000 lines, set the **`PREVIOUSLOGLINES`** environment variable on the
 deployment:
 

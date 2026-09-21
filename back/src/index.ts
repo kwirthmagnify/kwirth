@@ -16,6 +16,7 @@ import { MarketplaceApi } from './api/MarketplaceApi'
 import { MarketplaceManager } from './tools/MarketplaceManager'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { readPreviousContainerLog } from './tools/PreviousContainerLog'
+import { failureOrigin } from './tools/FailureOrigin'
 import { LoginApi } from './api/LoginApi'
 
 // HTTP server & websockets
@@ -2697,6 +2698,22 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
     process.on('SIGINT', () => handleNodeProcessSignal('SIGINT'))
 
     process.on('unhandledRejection', async (reason:any, promise:any) => {
+        /*
+            Un fallo de una EXTENSION no puede llevarse el core por delante. Antes si: cualquier promesa
+            sin catch acababa aqui y el proceso salia, con todos sus canales y todos sus usuarios dentro.
+            Lo provoco el provider 'trivy' —un fire-and-forget sin catch— y bastaba con suscribirse a el
+            sin payload desde provider-debug.
+
+            Se aisla, se deja traza con su nombre, y el core sigue. Si el rechazo NO se puede atribuir a
+            una extension se mantiene el comportamiento de siempre: puede ser un fallo del core, que si
+            deja el proceso en un estado del que no conviene fiarse.
+        */
+        const origin = failureOrigin(reason)
+        if (origin) {
+            logError(ELogComponent.CORE, `❌ UNHANDLED REJECTION in ${origin.kind} '${origin.id}' — isolated, kwirth keeps running`)
+            logError(ELogComponent.CORE, describeFailure(reason))
+            return
+        }
         logError(ELogComponent.CORE, '❌ UNHANDLED REJECTION')
         exitAndLog(undefined, reason, promise, undefined, undefined, 1, 10)
     })
