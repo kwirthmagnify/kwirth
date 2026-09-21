@@ -5,7 +5,7 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
-import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
+import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 
 export interface IThemeMeta {
     id: string
@@ -151,6 +151,9 @@ export class ThemeManager {
             if (this.installedIds.includes(meta.id))
                 throw new Error(`Theme '${meta.id}' is already installed`)
 
+            // Una version nueva no puede heredar el front cacheado de la anterior
+            dropCachedExtensionFiles('theme', meta.id)
+
             const frontJs = fs.readFileSync(frontPath, 'utf-8')
             const frontCompressed = zlib.gzipSync(Buffer.from(frontJs, 'utf-8')).toString('base64')
             meta.frontStored = frontCompressed.length <= CONFIGMAP_SIZE_LIMIT
@@ -201,8 +204,7 @@ export class ThemeManager {
         // Se sigue borrando la clave del preview aunque la funcionalidad ya no exista: puede haber
         // quedado escrita por una instalacion anterior, y desinstalar tiene que dejarlo todo limpio.
         await this.configMaps.write(`kwirth-theme-${id}-preview`, null)
-        const cacheFile = path.join(os.tmpdir(), `kwirth-theme-${id}-front.js`)
-        if (fs.existsSync(cacheFile)) fs.rmSync(cacheFile)
+        dropCachedExtensionFiles('theme', id)
         logInfo(ELogComponent.CORE, `Theme '${id}' uninstalled`)
     }
 
@@ -216,7 +218,7 @@ export class ThemeManager {
     }
 
     private async fetchJsFromSource(meta: IThemeMeta): Promise<string | undefined> {
-        const cacheFile = path.join(os.tmpdir(), `kwirth-theme-${meta.id}-front.js`)
+        const cacheFile = cachedExtensionFile('theme', meta.id, 'front.js')
         if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
         if (!meta.installedFrom || meta.installedFrom === 'local') return undefined
         const tmpTgz = path.join(os.tmpdir(), `kwirth-theme-${meta.id}-src-${Date.now()}.tgz`)

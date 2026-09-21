@@ -10,7 +10,7 @@
 // external: si un test las toca, node las usa reales; si no, nunca se cargan.
 
 import esbuild from 'esbuild'
-import { readdirSync, mkdirSync, rmSync, existsSync } from 'fs'
+import { readdirSync, mkdirSync, rmSync, existsSync, writeFileSync } from 'fs'
 import { execFileSync } from 'child_process'
 import path from 'path'
 
@@ -36,8 +36,26 @@ if (entries.length === 0) {
 rmSync(OUT_DIR, { recursive: true, force: true })
 mkdirSync(OUT_DIR, { recursive: true })
 
+/*
+    COVERAGE=1 → UN SOLO entry que importa todos los tests.
+
+    Con un bundle por fichero, cada uno arrastra su PROPIA copia del src y el informe los trata como
+    ficheros distintos: hace la MEDIA de esas copias en vez de la union, y cuenta como no cubierto todo
+    el src que ese test concreto no toca. El numero salia MUY por debajo del real (y encima el informe
+    listaba `tests/.out/*.test.mjs`, no `src/`). Mismo arreglo que ya llevan montag, agora y
+    provider-debug. Solo con COVERAGE=1: la ejecucion normal sigue siendo un proceso por fichero, que es
+    lo que aisla los tests entre si.
+*/
+const ALL_ENTRY = path.join(TEST_DIR, '.coverage-all.generated.ts')
+let buildEntries = entries
+if (process.env.COVERAGE) {
+    const imports = entries.map(e => `import './${path.relative(TEST_DIR, e).split(path.sep).join('/')}'`).join('\n')
+    writeFileSync(ALL_ENTRY, `// Generado por run.mjs para medir cobertura. NO editar ni versionar.\n${imports}\n`)
+    buildEntries = [ALL_ENTRY]
+}
+
 await esbuild.build({
-    entryPoints: entries,
+    entryPoints: buildEntries,
     bundle: true,
     format: 'esm',
     platform: 'node',
@@ -67,5 +85,9 @@ try {
     execFileSync('node', ['--test', ...covArgs, ...bundled], { stdio: 'inherit' })
 }
 catch {
+    if (process.env.COVERAGE) rmSync(ALL_ENTRY, { force: true })
     process.exit(1)   // node --test devuelve ≠0 si algún test falla
+}
+finally {
+    if (process.env.COVERAGE) rmSync(ALL_ENTRY, { force: true })
 }
