@@ -183,3 +183,24 @@ test('el numero de lineas es 1000 por defecto y se puede subir por entorno', () 
 
     delete process.env.PREVIOUSLOGLINES
 })
+
+test('las lineas se piden con lo que decida la configuracion de Kwirth, no con el default', async () => {
+    const { api, logCalls } = fakeApi({
+        statuses: [status('kwirth', 1, { exitCode: 1, reason: 'Error' })],
+        log: 'una linea\n',
+    })
+
+    // quien llama resuelve el valor (settings → entorno → default) y lo pasa ya resuelto
+    await readPreviousContainerLog(api, NS, POD, 250)
+
+    assert.equal(logCalls[0].tailLines, 250)
+})
+
+test('un valor invalido cae al del entorno/default en vez de pedir cero lineas', async () => {
+    delete process.env.PREVIOUSLOGLINES
+    const { api, logCalls } = fakeApi({ statuses: [status('kwirth', 1, { exitCode: 1 })], log: 'x\n' })
+
+    await readPreviousContainerLog(api, NS, POD, 0)
+
+    assert.equal(logCalls[0].tailLines, 1000, 'tailLines 0 dejaria el diagnostico vacio')
+})

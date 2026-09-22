@@ -2099,7 +2099,9 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             y por eso readPreviousContainerLog() nunca lanza.
         */
         if (localKwirthData.inCluster && process.env.HOSTNAME) {
-            await readPreviousContainerLog(runningInstance.clusterInfo.coreApi, localKwirthData.namespace, process.env.HOSTNAME)
+            // Cuantas lineas, de los settings de Kwirth (o de PREVIOUSLOGLINES, o 1000)
+            const lineas = SettingsApi.resolvePreviousLogLines(await SettingsApi.read(runningInstance.configMaps))
+            await readPreviousContainerLog(runningInstance.clusterInfo.coreApi, localKwirthData.namespace, process.env.HOSTNAME, lineas)
         }
 
         if (envForward) {

@@ -5,7 +5,7 @@ import { Info, Pause, PlayArrow, Settings, Stop } from '@kwirthmagnify/kwirth-co
 
 import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelObject, IContentProps } from '../../IChannel'
-import { createChannelInstance } from '../../../tools/ChannelTools'
+import { createChannelInstance, getChannelIconOf } from '../../../tools/ChannelTools'
 import { ENotifyLevel } from '../../../tools/Global'
 import { MagnifyUserPreferences } from './MagnifyUserPreferences'
 import { IContentWindow } from '../MagnifyTabContent'
@@ -703,7 +703,7 @@ const containerRef = useRef<HTMLDivElement>(null)
                     </IconButton>
                     
                     <Typography sx={{flexGrow:1}}></Typography>
-                    <Typography>{contentExternalData.content?.externalChannel?.getChannelIcon()}&nbsp;{props.title}</Typography>
+                    <Typography>{getChannelIconOf(contentExternalData.content?.externalChannel)}&nbsp;{props.title}</Typography>
                     <Typography sx={{flexGrow:1}}></Typography>
 
                     <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />

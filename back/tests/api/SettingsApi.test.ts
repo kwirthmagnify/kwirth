@@ -519,3 +519,36 @@ test('marketplaces y metricsInterval no se pisan entre si', async () => {
     }
     finally { await srv.stop() }
 })
+
+/*
+    previousLogLines: cuantas lineas del log del contenedor ANTERIOR se leen al arrancar.
+
+    Misma precedencia que el intervalo de metricas —lo guardado gana, luego la variable de entorno, luego
+    el default— porque es el mismo tipo de ajuste. Se prueba aparte porque el orden ES el contrato: quien
+    lo configura en la pantalla espera que su valor mande sobre el deployment.
+*/
+test('previousLogLines: lo guardado gana sobre el entorno', () => {
+    process.env.PREVIOUSLOGLINES = '250'
+    assert.equal(SettingsApi.resolvePreviousLogLines({ previousLogLines: 4000 }), 4000)
+    delete process.env.PREVIOUSLOGLINES
+})
+
+test('previousLogLines: sin nada guardado manda el entorno', () => {
+    process.env.PREVIOUSLOGLINES = '250'
+    assert.equal(SettingsApi.resolvePreviousLogLines({}), 250)
+    delete process.env.PREVIOUSLOGLINES
+})
+
+test('previousLogLines: sin guardar ni entorno, 1000', () => {
+    delete process.env.PREVIOUSLOGLINES
+    assert.equal(SettingsApi.resolvePreviousLogLines({}), 1000)
+})
+
+test('previousLogLines: un valor absurdo no deja al core sin log', () => {
+    delete process.env.PREVIOUSLOGLINES
+    // cero y negativos se ignoran, como en el intervalo de metricas
+    assert.equal(SettingsApi.resolvePreviousLogLines({ previousLogLines: 0 }), 1000)
+    assert.equal(SettingsApi.resolvePreviousLogLines({ previousLogLines: -5 }), 1000)
+    // y un decimal se trunca: tailLines es un entero para la API de Kubernetes
+    assert.equal(SettingsApi.resolvePreviousLogLines({ previousLogLines: 120.7 }), 120)
+})

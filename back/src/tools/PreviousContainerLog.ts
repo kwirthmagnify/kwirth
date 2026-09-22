@@ -69,7 +69,12 @@ const asIso = (value: unknown): string|undefined => {
     return undefined
 }
 
-export const readPreviousContainerLog = async (coreApi: CoreV1Api, namespace: string, podName: string): Promise<IPreviousContainerLog> => {
+/*
+    `tailLines` viene RESUELTO de fuera (settings → env → default, via SettingsApi) porque quien manda es
+    la configuracion de Kwirth, y este modulo no tiene por que saber de donde sale. Sin argumento cae a
+    env+default, que es lo que hace falta para poder probarlo aislado.
+*/
+export const readPreviousContainerLog = async (coreApi: CoreV1Api, namespace: string, podName: string, lines?: number): Promise<IPreviousContainerLog> => {
     try {
         const pod = await coreApi.readNamespacedPod({ name: podName, namespace })
         const statuses = pod.status?.containerStatuses ?? []
@@ -102,7 +107,7 @@ export const readPreviousContainerLog = async (coreApi: CoreV1Api, namespace: st
             lines: [],
         }
 
-        const tailLines = resolvePreviousLogLines()
+        const tailLines = lines && lines > 0 ? Math.floor(lines) : resolvePreviousLogLines()
         try {
             // Mismo camino que usa MagnifyChannel para leer log de un pod, mas 'previous'
             const log = await coreApi.readNamespacedPodLog({ name: podName, namespace, container: status.name, previous: true, tailLines })

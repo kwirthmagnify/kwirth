@@ -26,7 +26,7 @@ import './custom-fm-magnify.css'
 import { ArtifactSearch, IArtifactSearchData } from './components/ArtifactSearch'
 import { LogSearchPanel, ILogSearchData } from './components/LogSearchPanel'
 import { rfmSetup, setLeftItem, setPropertyFunction } from './components/RFMSetup'
-import { createChannelInstance } from '../../tools/ChannelTools'
+import { createChannelInstance, getChannelIconOf, getChannelIconSafe } from '../../tools/ChannelTools'
 import { MenuKubeWorks } from './components/MenuKubeWorks'
 import { useTheme } from '@mui/material'
 import { MenuKwirthWorks } from './components/MenuKwirthWorks'
@@ -790,7 +790,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 const ch = createChannelInstance(ChannelClass)
                 spcClusterOverview.leftItems!.push({
                     name: pluginId,
-                    icon: ch?.getChannelIcon(),
+                    icon: getChannelIconOf(ch ?? undefined, pluginId),
                     text: pluginId.charAt(0).toUpperCase() + pluginId.slice(1),
                     permission: true
                 })
@@ -1397,8 +1397,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             return <></>
         }
         else {
-            let ch = new channelConstructor()
-            return ch.getChannelIcon()
+            return getChannelIconSafe(channelConstructor, w.data.channelId)
         }
     }
 
@@ -1476,7 +1475,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     menuKwirthWorksAnchorParent && <MenuKwirthWorks onWorkSelected={onMenuKwirthWorksSelected} onClose={() => setMenuKwirthWorksAnchorParent(undefined)} anchorParent={menuKwirthWorksAnchorParent} customActions={magnifyData.userPreferences.customActions}/>
                 }
                 {
-                    notificationMenuAnchorParent && <MenuNotification anchorParent={notificationMenuAnchorParent} notifications={props.channelObject.notifications!} onRefresh={() => setTick((t) => t+1)} onClose={() => setNotificationMenuAnchorParent(undefined)} renderIcon={(channelId) => channelId ? (new (props.channelObject.frontChannels!.get(channelId)!)()).getChannelIcon() : getIconFromKind('IconK8s', 20)}/>
+                    notificationMenuAnchorParent && <MenuNotification anchorParent={notificationMenuAnchorParent} notifications={props.channelObject.notifications!} onRefresh={() => setTick((t) => t+1)} onClose={() => setNotificationMenuAnchorParent(undefined)} renderIcon={(channelId) => channelId ? getChannelIconSafe(props.channelObject.frontChannels!.get(channelId), channelId) : getIconFromKind('IconK8s', 20)}/>
                 }
                 <Stack direction={'row'} sx={{mt:1}}>
                     {

@@ -1,10 +1,15 @@
 import { IChannel, IChannelObject, IContentProps } from '../../channels/IChannel'
+import { ChannelErrorBoundary } from './ChannelErrorBoundary'
 
 interface ITabContentProps {
     channel?:IChannel
     channelObject?: IChannelObject
 }
 
+/*
+    El contenido de una pestaña lo pinta la EXTENSION, asi que va envuelto en su boundary: lo que se
+    cae es la pestaña, no Kwirth entero (ver ChannelErrorBoundary).
+*/
 const TabContent: React.FC<ITabContentProps> = (props:ITabContentProps) => {
     const showContent = () => {
         if (!props.channel) return
@@ -14,6 +19,6 @@ const TabContent: React.FC<ITabContentProps> = (props:ITabContentProps) => {
         }
         return <ChannelTabContent {...channelProps}/>
     }
-    return <>{ showContent() } </>
+    return <ChannelErrorBoundary channelId={props.channel?.channelId}>{ showContent() }</ChannelErrorBoundary>
 }
 export { TabContent }

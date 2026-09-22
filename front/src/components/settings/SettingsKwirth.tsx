@@ -105,6 +105,7 @@ interface ISettingsKwirthProps {
 const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthProps) => {
     const [tab, setTab] = useState<ESettingsKwirthTab>(ESettingsKwirthTab.GENERAL)
     const [metricsInterval, setMetricsInterval] = useState<number>(0)
+    const [previousLogLines, setPreviousLogLines] = useState<number>(0)
     const [marketplaces, setMarketplaces] = useState<IMarketplaceRow[]>([])
     const [registries, setRegistries] = useState<IPackageRegistryRow[]>([])
     const [loading, setLoading] = useState(true)
@@ -143,6 +144,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 }
                 const settings = await response.json() as IKwirthSettings
                 setMetricsInterval(settings.metricsInterval ?? 0)
+                setPreviousLogLines(settings.previousLogLines ?? 0)
                 setMarketplaces((settings.marketplaces ?? []).map(m => ({ ...m })))
                 setRegistries((settings.packageRegistries ?? []).map(r => ({ ...r })))
 
@@ -260,7 +262,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         const chosenMarketplaces = marketplaces.filter(m => exportSelected.has(marketplaceKey(m.id)))
         const chosenRegistries = registries.filter(r => exportSelected.has(registryKey(r.id)))
         const settings: IKwirthSettings = {
-            ...(exportSelected.has(GENERAL_KEY) ? { metricsInterval } : {}),
+            ...(exportSelected.has(GENERAL_KEY) ? { metricsInterval, previousLogLines } : {}),
             marketplaces: chosenMarketplaces.map(m => ({
                 id: m.id,
                 url: m.url.trim(),
@@ -471,7 +473,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         : { password: r.auth.password ?? '' })
                 } } : {})
             }))
-            const payload = JSON.stringify({ metricsInterval, marketplaces: cleaned, packageRegistries: cleanedRegistries })
+            const payload = JSON.stringify({ metricsInterval, previousLogLines, marketplaces: cleaned, packageRegistries: cleanedRegistries })
             const response = await fetch(`${props.clusterUrl}/core/settings`, addPutAuthorization(props.accessString, payload))
             if (!response.ok) {
                 const detail = await response.json().catch(() => ({}))
@@ -736,6 +738,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                     <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
                         <Typography variant='body2'>Configuration of Kwirth itself on cluster <b>{props.clusterName}</b>. These settings are stored by Kwirth and survive a restart.</Typography>
                         <TextField value={metricsInterval} onChange={(e) => setMetricsInterval(+e.target.value)} variant='standard' label='Cluster metrics read interval (seconds)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} />
+                        {/* El log del contenedor anterior se lee UNA vez, al arrancar: cambiar esto no
+                            tiene efecto hasta el siguiente arranque del core. */}
+                        <TextField value={previousLogLines} onChange={(e) => setPreviousLogLines(+e.target.value)} variant='standard' label='Previous container log lines to keep (on startup)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} helperText='Read once when kwirth starts, so a change applies from the next restart' />
                     </Stack>
                 </Box>
 

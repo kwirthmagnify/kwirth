@@ -42,7 +42,7 @@ import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 import { getMetricsNames, ENotifyLevel, readClusterInfo } from './tools/Global'
 import { Homepage } from './components/home/Homepage'
 import { DEFAULTLASTTABS, IColors, TABSELECTEDCOLORS, TABUNSELECTEDCOLORS } from './tools/Constants'
-import { createChannelInstance } from './tools/ChannelTools'
+import { createChannelInstance, getChannelIconOf, getChannelIconSafe } from './tools/ChannelTools'
 import { clusterColor } from './tools/clusterColor'
 import { MenuNotification, INotification } from '@kwirthmagnify/kwirth-common-front'
 import { getIconFromKind } from './tools/Constants-React'
@@ -87,6 +87,17 @@ interface IRawKubeEvent {
     eventTime?: string
     firstTimestamp?: string
     involvedObject?: IRawInvolvedObject
+}
+
+/*
+    Lo que se mira de /managekwirth/previouslog para decidir si hay que avisar. La respuesta del core
+    trae mas cosas (el detalle completo lo pinta el About); aqui solo esta lo que decide el aviso.
+*/
+interface IPreviousLogNotice {
+    restarted?: boolean
+    abnormal?: boolean
+    lines?: string[]
+    termination?: { exitCode?: number, reason?: string, finishedAt?: string }
 }
 
 const App: React.FC<IAppProps> = (props:IAppProps) => {
@@ -721,8 +732,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         checkExtensionUpdates()
 
         /*
-            Si el contenedor anterior del core murio de mala manera, avisar: el log que lo explica esta en
-            el About, y solo mientras el kubelet lo guarde.
+            Si el contenedor anterior del core se fue, avisar: el log que lo explica esta en el About, y
+            solo mientras el kubelet lo guarde.
+
+            Es un ERROR, no un aviso: que el core se reinicie solo no es una incidencia menor, y lo que
+            lo explica CADUCA —el kubelet rota ese log y un rollout se lo lleva—, asi que quien lo ve
+            tiene que ir a mirarlo ahora. Por eso el texto dice el camino exacto hasta las lineas en vez
+            de mencionar el About de pasada: el que recibe el aviso no tiene por que saber que ese boton
+            existe.
 
             El aviso se da UNA VEZ por reinicio, no en cada recarga de la SPA: se recuerda la marca de
             tiempo de aquella muerte, que no cambia hasta que haya otra. Sin eso, quien abre Kwirth diez
@@ -733,14 +750,29 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             try {
                 const response = await fetch(`${backendUrl}/managekwirth/previouslog`, addGetAuthorization(accessString))
                 if (!response.ok) return
-                const previous = await response.json() as { abnormal?: boolean, termination?: { exitCode?: number, reason?: string, finishedAt?: string } }
-                if (!previous.abnormal) return
+                const previous = await response.json() as IPreviousLogNotice
+                // sin reinicio no hay nada que contar; con reinicio SI, aunque la salida fuera limpia:
+                // el core no se reinicia solo por gusto, y el log de antes es lo unico que lo explica
+                if (!previous.restarted) return
                 const seenKey = 'kwirth.previouslog.notified'
                 const stamp = previous.termination?.finishedAt ?? ''
                 if (localStorage.getItem(seenKey) === stamp) return
                 localStorage.setItem(seenKey, stamp)
                 const reason = previous.termination?.reason ? ` (${previous.termination.reason})` : ''
-                notify(undefined, ENotifyLevel.WARNING, `Kwirth restarted after an abnormal exit: code ${previous.termination?.exitCode}${reason}. Its log is in About`)
+                const lineas = previous.lines?.length ?? 0
+                const donde = lineas > 0
+                    ? `Its last ${lineas} log lines are available in the side menu, About, "Previous container log".`
+                    : 'Its log is no longer available (the kubelet has already rotated it).'
+                /*
+                    Un SIGTERM atendido sale con 0, que es justo lo que pasa cuando a este contenedor lo
+                    para el kubelet: decir "abnormal exit: code 0" seria mentir, y quien lo lea dejaria de
+                    fiarse del aviso. Pero se avisa IGUAL, porque lo que importa es que el core se
+                    reinicio, no como de limpia fue la salida.
+                */
+                const salida = previous.abnormal
+                    ? `after an abnormal exit: code ${previous.termination?.exitCode}${reason}`
+                    : `after a clean exit: code ${previous.termination?.exitCode}${reason}`
+                notify(undefined, ENotifyLevel.ERROR, `Kwirth restarted ${salida}. ${donde}`)
             } catch {}
         }
         checkPreviousContainer()
@@ -2169,7 +2201,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const formatTabName = (tab : ITabObject) => {
         if (!tab.name) return <>noname</>
         let icon = <Box sx={{minWidth:'24px'}}/>
-        if (tab.channel) icon = tab.channel.getChannelIcon()
+        if (tab.channel) icon = getChannelIconOf(tab.channel)
         let name = tab.name
         if (name.length>20) name = tab.name.slice(0, 8) + '...' + tab.name.slice(-8)
         return <>{icon}&nbsp;{name}</>
@@ -2653,7 +2685,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 <Snackbar open={notifySnackbarOpen} autoHideDuration={3000} anchorOrigin={{vertical: 'bottom', horizontal:'center'}} onClose={onNotifySnackbarClose}>
                     <Alert severity={notifySnackbarLevel} variant="filled" onClose={onNotifySnackbarClose} sx={{ width: '100%' }}>{notifySnackbarMessage}</Alert>
                 </Snackbar>
-                { notificationMenuAnchorParent && <MenuNotification anchorParent={notificationMenuAnchorParent} notifications={notifications.current} onRefresh={() => setRefresh(Math.random())} onClose={() => setNotificationMenuAnchorParent(null)} renderIcon={(channelId) => channelId ? (new (frontChannels.get(channelId)!)()).getChannelIcon() : getIconFromKind('IconK8s', 20)} />}
+                { notificationMenuAnchorParent && <MenuNotification anchorParent={notificationMenuAnchorParent} notifications={notifications.current} onRefresh={() => setRefresh(Math.random())} onClose={() => setNotificationMenuAnchorParent(null)} renderIcon={(channelId) => channelId ? getChannelIconSafe(frontChannels.get(channelId), channelId) : getIconFromKind('IconK8s', 20)} />}
                 { msgBox }
                 { showAiProviders && <AiConfigProvider
                     providersAvailable={PROVIDERS_AVAILABLE}
