@@ -51,6 +51,13 @@ interface IKwirthSettings {
     // De donde se DESCARGAN los paquetes, y con que credenciales. Lista aparte porque no hay relacion
     // uno-a-uno: un manifest puede listar tarballs alojados en varios registros distintos.
     packageRegistries?: IPackageRegistry[]
+    /*
+        Cuantas lineas del log del contenedor ANTERIOR se leen al arrancar (kubernetes, in-cluster).
+        1000 por defecto. Es un ajuste porque 1000 es un numero razonable, no una verdad: un core que
+        escupe mucho en el arranque necesita mas para que la causa del cierre no se quede fuera de la
+        ventana. Lo guardado gana, luego la variable PREVIOUSLOGLINES, luego el default.
+    */
+    previousLogLines?: number
 }
 
 export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings }

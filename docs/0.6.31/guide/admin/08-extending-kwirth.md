@@ -55,6 +55,21 @@ Every family uses the same manager UI, so once you learn one you know them all:
 
 1. **Install** — from **Available** click an item, or paste its URL / **BROWSE…** a file under **Install**.
 2. **Configure** — click **⚙ Settings** on the card. What opens depends on what the extension declares: a **typed form** (one set of fields), a **list of named configurations** (several destinations, several accounts — with a shared *base configuration* when the extension has settings common to all of them, and export/import to carry them to another kwirth), a **JSON editor**, or a **UI the extension provides itself**. If the gear is **greyed out**, that extension has nothing to configure — it is not a failure. Configuration (including secrets, shown masked behind an eye toggle) is stored in Kubernetes secrets/configmaps.
+
+   Two things you will meet in that typed form:
+
+   - **TEST** — some extensions know how to **check their own configuration**, and then the form offers a
+     test button. It sends **what you have typed**, without saving it: you find out whether the credentials
+     work *before* committing them, and you can correct and retry without leaving the dialog. The answer is
+     the extension's own words — *"Authenticated. 3 subscription(s) in scope"*, or exactly what the provider
+     complained about. If an extension only knows how to check what is **already saved**, the button says so
+     and asks you to save first. No test button means that extension does not offer the check; it says
+     nothing about whether your configuration is right.
+   - **Fields that take several values** are a dropdown with **checkboxes**: tick as many as you need and the
+     field shows them separated by commas. When the extension can find out the valid values it fills the list
+     for you — the Azure provider, for instance, offers the regions of your own subscription — and when it
+     cannot (no credentials saved yet), the same field falls back to free text, so what you type by hand
+     still counts.
 3. **Enable / disable** — many extensions have an enabled toggle in their settings; disabled ones stay installed but inactive.
 4. **Remove** — click the delete icon on the card.
 

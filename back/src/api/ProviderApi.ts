@@ -20,6 +20,13 @@ export interface IProviderApiCallbacks {
 export interface IProviderRuntimeInfo {
     /** true si el provider esta instanciado y arrancado en esta running instance */
     running?: boolean
+    /**
+     * true si el provider sabe comprobar su propia configuracion: expone '/test' en su configRouter.
+     * Con esto el gestor le pinta un boton de prueba junto al formulario, para que el usuario sepa si
+     * las credenciales que acaba de guardar valen — que es lo que ya hacia Excubitor con sus conectores
+     * cloud, pero a mano y solo para ellos.
+     */
+    hasTest?: boolean
     /** true para los providers que el core registra en codigo, no instalados como extension */
     core?: boolean
     /** lo que el provider publica sobre como suscribirse a el; ausente si no lo implementa */
@@ -128,6 +135,20 @@ export class ProviderApi {
      * que ISender e IWebhook. Es OPCIONAL, y un provider que reviente al pedirsela no puede tumbar el
      * listado de todos los demas.
      */
+    /**
+     * ¿Sabe este provider comprobar su configuracion? Se mira si su configRouter tiene la ruta '/test',
+     * en vez de pedirle que lo declare: el endpoint es la unica fuente que no puede mentir, y asi un
+     * provider que lo añada manaña no tiene que tocar tambien su package.json ni su build.
+     *
+     * Se lee `stack`, que es interno de express pero estable, y a la defensiva: un provider sin
+     * configRouter, o una version de express que lo cambie, deja el boton oculto y nada mas.
+     */
+    private configTestOf(provider: IProvider): boolean {
+        const stack = (provider.configRouter as unknown as { stack?: Array<{ route?: { path?: string } }> } | undefined)?.stack
+        if (!Array.isArray(stack)) return false
+        return stack.some(layer => layer.route?.path === '/test')
+    }
+
     private configSchemaOf(provider: IProvider): IProviderFieldDef[] | undefined {
         if (typeof provider.getConfigSchema !== 'function') return undefined
         try {
@@ -162,6 +183,7 @@ export class ProviderApi {
                     // Un provider que declara su schema por metodo tambien tiene configuracion que
                     // ofrecer, aunque no exportara la constante 'schema' que se lee al instalarlo.
                     if (this.configSchemaOf(provider)) entry.hasSchema = true
+                    if (this.configTestOf(provider)) entry.hasTest = true
                     entries.set(provider.id, entry)
                 }
 

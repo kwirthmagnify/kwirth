@@ -51,6 +51,12 @@ interface IInstalledProvider {
     hasFront?: boolean
     /** Declara un schema, y entonces el formulario lo pinta el core. */
     hasSchema?: boolean
+    /*
+        Sabe comprobar su propia configuracion: expone '/test' en su configRouter, y el core lo detecta
+        mirando sus rutas. Con esto el formulario saca un boton TEST — el usuario sabe si sus credenciales
+        valen en el momento de escribirlas, en vez de descubrirlo cuando el provider no trae nada.
+    */
+    hasTest?: boolean
     /** Provider del core (events, metrics): viene dentro de Kwirth, no es una extension. */
     core?: boolean
     /**
@@ -155,6 +161,8 @@ const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProvi
             helpSection: HELP,
             schemaEndpoint: `/core/providers/${p.id}/schema`,
             endpoint: `/core/providers/${p.id}/config`,
+            // El test lo sirve el PROPIO provider en su configRouter, que el core monta en otro prefijo
+            ...(p.hasTest ? { testEndpoint: `/core/providerconfig/${p.id}/test` } : {}),
             emptyText: 'This provider has no configurable options.',
             onClose
         })

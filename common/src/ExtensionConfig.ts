@@ -38,8 +38,13 @@
                   pintan; los de idp y provider no.
       'json'      area de texto libre para JSON. NINGUN gestor lo pinta todavia: hoy cae a campo de
                   texto. Declararlo es valido, pero no esperes editor estructurado.
+      'multiselect' desplegable de VARIOS valores, alimentado por 'options'. El valor se guarda como
+                  una sola cadena separada por comas, no como array: el contrato de configuracion no
+                  tiene tipo lista, y cambiarlo obligaria a migrar lo ya guardado de 25 campos. Lo
+                  pinta el formulario generico del core (ConfigFormDialog); donde no este soportado
+                  cae a campo de texto, y lo que el usuario escriba a mano sigue valiendo.
 */
-export type TConfigFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json'
+export type TConfigFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json' | 'multiselect'
 
 /*
     Un campo del formulario de configuracion de una extension.
