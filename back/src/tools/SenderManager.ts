@@ -424,7 +424,16 @@ export class SenderManager implements ISenderAccess {
                 return dev.meta
             }
         })
-        return [...stored, ...devMetas].map(meta => ({
+        /*
+            Un sender registrado en dev SUSTITUYE al instalado con su mismo id, no se suma a el. Sin
+            este filtro el mismo sender sale DOS veces —lo normal en un entorno de desarrollo, donde
+            esta instalado y ademas montado desde su dist— y el duplicado viaja tal cual por
+            GET /core/senders a todos sus consumidores: el gestor de senders y cualquier extension
+            que liste senders. Es el mismo patron que ya usan plugin, theme, login, homepage y
+            aitoolset; aqui faltaba. Manda el de dev, que es el que getSender() acaba resolviendo.
+        */
+        const devIds = new Set(devMetas.map(m => m.id))
+        return [...stored.filter(m => !devIds.has(m.id)), ...devMetas].map(meta => ({
             ...meta,
             configNames: Array.from(this.configStore.get(meta.id)?.values() ?? []).map(c => c.name),
             hasFront: this.hasFront(meta.id),

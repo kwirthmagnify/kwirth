@@ -66,6 +66,26 @@ test.describe('gestor generico de extensiones: senders', () => {
         }
     })
 
+    /*
+        Un sender montado desde dev SUSTITUYE al instalado con su mismo id, no se suma a el.
+
+        Faltaba el filtro en `SenderManager.listInstalled()` —que concatena el indice de instalados
+        con los metadatos de dev— y en un entorno de desarrollo, donde lo normal es tener una
+        extension instalada Y ademas montada desde su dist, el mismo sender salia DOS veces: aqui en
+        el gestor, y en cualquier consumidor de '/core/senders'. Lo cazo el e2e del plugin
+        sender-debug, cuyo desplegable pintaba 'console' repetido.
+
+        Se mira la RESPUESTA del endpoint y no las tarjetas: el gestor pinta los instalados y ademas
+        los disponibles en el marketplace, asi que un sender instalado que tambien esta publicado sale
+        dos veces con toda la razon. Contar tarjetas por su nombre daria un rojo que no dice nada del
+        bug — se comprobo, y era exactamente lo que pasaba con 'email-resend'.
+    */
+    test('ningun sender sale repetido, aunque este instalado y ademas montado desde dev', async () => {
+        const ids = senders.map(s => s.id)
+        const repetidos = ids.filter((id, i) => ids.indexOf(id) !== i)
+        expect(repetidos, `'/core/senders' devuelve ids repetidos: ${repetidos.join(', ')}`).toEqual([])
+    })
+
     test('el chip cuenta los destinos que tiene puestos cada sender', async () => {
         // Un sender sin configuraciones no manda nada a ningun sitio, y eso se lee de un vistazo.
         const conConfigs = senders.filter(s => s.configNames.length > 0)

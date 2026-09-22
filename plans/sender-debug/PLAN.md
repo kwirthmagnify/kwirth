@@ -130,10 +130,26 @@ Queda:
 
 ## Backlog
 
-- 🐛 **Arreglar el duplicado en el CORE.** `SenderManager.listInstalled()` concatena el índice de
-  instalados con los de dev sin deduplicar por id. El plugin ya se defiende, pero el defecto sigue
-  ahí y lo sirve `GET /core/senders` a todos sus consumidores. Es del core, no de este plugin: se
-  reportó y se dejó sin tocar a propósito.
+*(vacío por ahora)*
+
+## El duplicado del core · ARREGLADO (2026-09-22)
+
+El hallazgo que salió de este plugin no se quedó en el plugin.
+
+`listInstalled()` concatenaba el índice de instalados con los metadatos de dev **sin filtrar los que
+se pisan**, y una extensión registrada en `kwirth-dev.json` **sustituye** a la instalada con su mismo
+id: no se suma a ella. En un entorno de desarrollo —donde lo normal es tenerla instalada *y* además
+montada desde su `dist`— la misma salía dos veces, y el duplicado viajaba tal cual por
+`/core/senders`, `/core/providers` y `/core/webhooks` a todos sus consumidores.
+
+Al ir a arreglarlo apareció que **no era solo de senders**: `plugin`, `theme`, `login`, `homepage` y
+`aitoolset` ya llevaban el filtro, pero **sender, provider y webhook se habían quedado atrás**. Los
+tres usan ahora el mismo patrón, con 8 tests nuevos (que montan un workspace de dev de verdad y
+recorren el camino del arranque, en vez de falsear los mapas a mano) y un caso e2e en el gestor de
+senders.
+
+La deduplicación **del plugin se queda**: no sobra. Sigue defendiéndolo de un core anterior al
+arreglo, que es exactamente el caso que un depurador se va a encontrar por ahí.
 
 - `fetchStatus(configName, externalId)`: reconciliar el estado de un ticket creado por un sender de
   ticketing. Pide su propia pantalla (pedir un id externo no es componer un mensaje).

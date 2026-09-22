@@ -173,7 +173,10 @@ export class ProviderManager {
                 return dev.meta
             }
         })
-        return [...stored, ...devMetas]
+        // Un provider de dev SUSTITUYE al instalado con su mismo id, no se suma a el: sin el filtro
+        // sale duplicado en '/core/providers' y en el gestor. Mismo patron que plugin, theme y login.
+        const devIds = new Set(devMetas.map(m => m.id))
+        return [...stored.filter(m => !devIds.has(m.id)), ...devMetas]
     }
 
     async install(tarGzUrl: string, registeredProviders: Map<string, TProviderConstructor>, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<IProviderMeta> {
