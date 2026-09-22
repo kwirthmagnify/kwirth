@@ -1,47 +1,20 @@
 {
-  "plugins": {
-    "agora": "../plugins/agora/dist",
-        "censor": "../plugins/censor/dist",
-    "montag": "../plugins/montag/dist",
-    "provider-debug": "../plugins/provider-debug/dist"
-  },
-  "providers": {
-    "longhorn": "../providers/longhorn/dist",
-    "azure": "../providers/azure/dist"
-  },
-  "senders": {
-        "console": "../senders/console/dist"
+    "plugins": {
+        "agora": "../plugins/agora/dist",
+        "montag": "../plugins/montag/dist",
+        "provider-debug": "../plugins/provider-debug/dist"
     },
-  "webhooks": {},
-  "logins": {},
-  "homepages": {},
-  "themes": {},
-  "senderConfigs": {
-        "console": [
-            {
-                "name": "dev-console",
-                "prefix": "[dev]",
-                "timestamps": true,
-                "levels": true
-            }
-        ]
+    "providers": {
+        "longhorn": "../providers/longhorn/dist",
+        "azure": "../providers/azure/dist"
     },
-  "idps": {
-        "github-cloud": "../idps/github-cloud/dist"
-    },
-  "idpConfigs": {
-        "github-dev": {
-            "connectorId": "github-cloud",
-            "label": "GitHub (dev, disabled)",
-            "enabled": false,
-            "config": {
-                "clientId": "dev-client-id",
-                "clientSecret": "dev-client-secret"
-            }
-        }
-    },
-    "aitoolsets": {
-        "k8s-inventory": "../aitoolsets/k8s-inventory/dist"
-    },
-  "docs": {}
+    "senders": {},
+    "webhooks": {},
+    "logins": {},
+    "homepages": {},
+    "themes": {},
+    "senderConfigs": {},
+    "idps": {},
+    "aitoolsets": {},
+    "docs": {}
 }
