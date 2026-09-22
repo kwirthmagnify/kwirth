@@ -3,8 +3,8 @@
     pintarle un boton de prueba junto al formulario.
 
     Que un usuario meta unas credenciales y no sepa si valen hasta que el provider no trae nada horas
-    despues es justo lo que Excubitor resolvio a mano con su 'Test connection' para los conectores cloud.
-    Aqui se hace una vez, en el core, para cualquier provider.
+    despues es lo que cada extension que lo queria resolvia por su cuenta. Aqui se hace una vez, en el
+    core, para cualquier provider.
 
     La deteccion mira las RUTAS del configRouter en vez de pedirle al provider que lo declare: el
     endpoint es la unica fuente que no puede mentir —si responde, existe— y asi añadirlo mañana no
@@ -73,17 +73,17 @@ const listar = async (providers: IProvider[]): Promise<TProviderApiEntry[]> => {
 }
 
 test('un provider con /test en su configRouter se anuncia con hasTest', async () => {
-    // como azure: state + health + quotas + test
-    const list = await listar([fakeProvider('azure', { configRoutes: ['/state', '/health', '/quotas', '/test'] })])
+    // un provider cloud tipico: state + health + quotas + test
+    const list = await listar([fakeProvider('cloud-x', { configRoutes: ['/state', '/health', '/quotas', '/test'] })])
 
-    assert.equal(list.find(e => e.id === 'azure')?.hasTest, true)
+    assert.equal(list.find(e => e.id === 'cloud-x')?.hasTest, true)
 })
 
 test('un provider con configRouter pero SIN /test no lo anuncia: no habria boton que pintar', async () => {
-    // como longhorn: expone su estado para poder validarlo aislado, pero no prueba credenciales
-    const list = await listar([fakeProvider('longhorn', { configRoutes: ['/state'] })])
+    // otro que expone su estado para poder validarlo aislado, pero no prueba credenciales
+    const list = await listar([fakeProvider('read-only-x', { configRoutes: ['/state'] })])
 
-    assert.equal(list.find(e => e.id === 'longhorn')?.hasTest, undefined)
+    assert.equal(list.find(e => e.id === 'read-only-x')?.hasTest, undefined)
 })
 
 test('un provider sin configRouter ninguno tampoco', async () => {
@@ -94,14 +94,14 @@ test('un provider sin configRouter ninguno tampoco', async () => {
 
 test('cada provider responde por si mismo: el /test de uno no se lo atribuye a los demas', async () => {
     const list = await listar([
-        fakeProvider('azure', { configRoutes: ['/test'] }),
-        fakeProvider('longhorn', { configRoutes: ['/state'] }),
+        fakeProvider('cloud-x', { configRoutes: ['/test'] }),
+        fakeProvider('read-only-x', { configRoutes: ['/state'] }),
         fakeProvider('events')
     ])
 
     assert.deepEqual(
-        list.filter(e => ['azure', 'longhorn', 'events'].includes(e.id)).map(e => `${e.id}:${e.hasTest === true}`).sort(),
-        ['azure:true', 'events:false', 'longhorn:false']
+        list.filter(e => ['cloud-x', 'read-only-x', 'events'].includes(e.id)).map(e => `${e.id}:${e.hasTest === true}`).sort(),
+        ['cloud-x:true', 'events:false', 'read-only-x:false']
     )
 })
 

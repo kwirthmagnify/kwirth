@@ -12,7 +12,7 @@
     y seguir sirviendo a todo el mundo.
 
     Se atribuye por el stack, que es lo unico que hay. El core carga el back de cada extension desde un
-    fichero en el tmpdir del sistema (`/tmp/kwirth-plugin-montag-back.js` y compañia), asi que cuando el
+    fichero en el tmpdir del sistema (`/tmp/kwirth-plugin-<id>-back.js`), asi que cuando el
     rechazo nace en su codigo, ahi esta su rastro.
 
     ⚠️ La heuristica es DELIBERADAMENTE conservadora: si no se puede atribuir a una extension, se trata

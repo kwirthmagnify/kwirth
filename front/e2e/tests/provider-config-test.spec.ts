@@ -5,12 +5,12 @@ import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
     El formulario de configuracion de un provider, con las dos cosas que el core le puso:
 
       · el boton TEST, que sale cuando el provider expone '/test' en su configRouter. Antes no habia
-        forma de saber si unas credenciales valian hasta que el provider fallaba en silencio; Excubitor
-        lo resolvio a mano para sus conectores cloud y esto lo hace una vez para todos.
+        forma de saber si unas credenciales valian hasta que el provider fallaba en silencio. Cada
+        extension que lo queria se lo montaba por su cuenta; esto lo hace una vez para todas.
       · el campo 'multiselect', que se pinta como desplegable de VARIOS valores CON CHECKBOX. Sin el
         check, un desplegable de seleccion multiple parece de seleccion unica.
 
-    ⚠️ No se PULSA el boton: probar de verdad sale a la red del proveedor (Azure, en el caso de hoy).
+    ⚠️ No se PULSA el boton: probar de verdad sale a la red del proveedor cloud que haya detras.
     Lo que se comprueba aqui es el contrato de la UI; que la prueba funcione es del QA manual.
 
     Si el entorno no tiene ningun provider con '/test', el caso se salta en vez de fallar: la suite no

@@ -67,7 +67,7 @@ Every family uses the same manager UI, so once you learn one you know them all:
      nothing about whether your configuration is right.
    - **Fields that take several values** are a dropdown with **checkboxes**: tick as many as you need and the
      field shows them separated by commas. When the extension can find out the valid values it fills the list
-     for you — the Azure provider, for instance, offers the regions of your own subscription — and when it
+     for you — a cloud provider, for instance, can offer the regions your own account has — and when it
      cannot (no credentials saved yet), the same field falls back to free text, so what you type by hand
      still counts.
 3. **Enable / disable** — many extensions have an enabled toggle in their settings; disabled ones stay installed but inactive.

@@ -23,8 +23,8 @@ export interface IProviderRuntimeInfo {
     /**
      * true si el provider sabe comprobar su propia configuracion: expone '/test' en su configRouter.
      * Con esto el gestor le pinta un boton de prueba junto al formulario, para que el usuario sepa si
-     * las credenciales que acaba de guardar valen — que es lo que ya hacia Excubitor con sus conectores
-     * cloud, pero a mano y solo para ellos.
+     * las credenciales que acaba de escribir valen, en vez de descubrirlo cuando la extension falla en
+     * silencio. Antes, cada extension que lo queria se lo montaba por su cuenta.
      */
     hasTest?: boolean
     /** true para los providers que el core registra en codigo, no instalados como extension */
@@ -131,14 +131,9 @@ export class ProviderApi {
     }
 
     /**
-     * getConfigSchema() es la forma ESTANDAR de que un provider declare su configuracion, la misma
-     * que ISender e IWebhook. Es OPCIONAL, y un provider que reviente al pedirsela no puede tumbar el
-     * listado de todos los demas.
-     */
-    /**
      * ¿Sabe este provider comprobar su configuracion? Se mira si su configRouter tiene la ruta '/test',
      * en vez de pedirle que lo declare: el endpoint es la unica fuente que no puede mentir, y asi un
-     * provider que lo añada manaña no tiene que tocar tambien su package.json ni su build.
+     * provider que lo añada mañana no tiene que tocar tambien su package.json ni su build.
      *
      * Se lee `stack`, que es interno de express pero estable, y a la defensiva: un provider sin
      * configRouter, o una version de express que lo cambie, deja el boton oculto y nada mas.
@@ -149,6 +144,11 @@ export class ProviderApi {
         return stack.some(layer => layer.route?.path === '/test')
     }
 
+    /**
+     * getConfigSchema() es la forma ESTANDAR de que un provider declare su configuracion, la misma
+     * que ISender e IWebhook. Es OPCIONAL, y un provider que reviente al pedirsela no puede tumbar el
+     * listado de todos los demas.
+     */
     private configSchemaOf(provider: IProvider): IProviderFieldDef[] | undefined {
         if (typeof provider.getConfigSchema !== 'function') return undefined
         try {

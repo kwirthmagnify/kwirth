@@ -33,8 +33,8 @@ test('un fallo nacido en el back de un provider se atribuye a ese provider', () 
 
 test('lo mismo para un plugin, que es el otro caso que se ha dado', () => {
     const err = new Error('boom')
-    err.stack = 'Error: boom\n    at MontagChannel.processChunk (/tmp/kwirth-plugin-montag-back.js:1200:9)'
-    assert.deepEqual(failureOrigin(err), { kind: 'plugin', id: 'montag' })
+    err.stack = 'Error: boom\n    at SomeChannel.processChunk (/tmp/kwirth-plugin-some-channel-back.js:1200:9)'
+    assert.deepEqual(failureOrigin(err), { kind: 'plugin', id: 'some-channel' })
 })
 
 test('los ids con guiones y puntos se leen enteros', () => {

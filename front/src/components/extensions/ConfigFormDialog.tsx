@@ -129,7 +129,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
         Probar la configuracion. La prueba la hace el BACK, que es quien tiene las credenciales y la red.
 
         Se manda el BORRADOR por POST: se prueba lo que el usuario tiene delante SIN guardarlo, que es lo
-        que hace Excubitor con sus conectores cloud. Obligar a guardar para poder probar es pedirle que
+        que hacen las extensiones que traen su propia UI. Obligar a guardar para poder probar es pedirle que
         escriba unas credenciales que a lo mejor estan mal para averiguar si estan mal.
 
         ⛔ Y este boton NO guarda por su cuenta: si el formulario se hubiera cargado a medias —un campo que
@@ -193,8 +193,8 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
             Varios valores, guardados como UNA cadena separada por comas: el contrato de configuracion no
             tiene tipo lista, y darselo obligaria a migrar lo ya guardado de todos los artefactos.
 
-            Las opciones las trae el schema, que las extensiones pueden generar EN CALIENTE —azure descubre
-            las regiones de Azure con las credenciales guardadas—. Si el descubrimiento no da fruto, la
+            Las opciones las trae el schema, que las extensiones pueden generar EN CALIENTE —un provider
+            cloud puede descubrir sus regiones con las credenciales guardadas—. Si el descubrimiento no da fruto, la
             lista llega vacia; entonces esto cae a campo de texto y lo escrito a mano sigue valiendo, que
             es justo lo que hace falta la primera vez, cuando todavia no hay credenciales que preguntar.
         */
