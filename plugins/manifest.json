@@ -1,6 +1,15 @@
 [
   {
     "extensionType": "plugin",
+    "id": "sender-debug",
+    "version": "0.1.0",
+    "name": "Sender Debug",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-sender-debug/-/kwirth-plugin-sender-debug-0.1.0.tgz",
+    "description": "Sender debugging channel for Kwirth - picks a sender configuration, sends a hand-written message and shows what the sender actually answered",
+    "icon": "Send"
+  },
+  {
+    "extensionType": "plugin",
     "id": "provider-debug",
     "version": "0.1.4",
     "name": "Provider Debug",
