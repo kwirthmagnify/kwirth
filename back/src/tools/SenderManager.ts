@@ -586,6 +586,42 @@ export class SenderManager implements ISenderAccess {
         }
     }
 
+    /*
+        Entrega un LOTE por una sola llamada al sender.
+
+        Un `send` por linea convierte el reenvio de log en una fila de idas y venidas a la red, y las APIs
+        de los destinos (Datadog, Elastic, Loki) aceptan arrays y cobran por peticion. Con el lote, el
+        `await` sigue significando "estas N lineas entregadas", que es lo que permite al llamante contar lo
+        enviado.
+
+        ⚠️ Si el sender NO implementa sendBatch se entrega mensaje a mensaje, en orden. Es mas lento pero
+        correcto, y es lo que permite que el contrato sea opcional: ningun sender existente se rompe.
+    */
+    async sendBatch(senderId: string, configName: string, messages: ISenderMessage[]): Promise<ISenderResult | void> {
+        if (messages.length === 0) return
+        const sender = this.getSender(senderId)
+        if (!sender) {
+            logError(ELogComponent.CORE, `Sender '${senderId}' not found — ${messages.length} message(s) dropped`)
+            return
+        }
+        if (!sender.hasConfig(configName)) {
+            logError(ELogComponent.CORE, `Sender '${senderId}' has no config '${configName}' — ${messages.length} message(s) dropped`)
+            return
+        }
+        try {
+            if (typeof sender.sendBatch === 'function') return await sender.sendBatch(configName, messages)
+            // Sin soporte de lote: uno a uno, y el primer fallo NO cancela el resto — cada linea se
+            // entrega por su cuenta, igual que si el llamante hubiera hecho N sends.
+            for (const message of messages) {
+                try { await sender.send(configName, message) }
+                catch (err) { logError(ELogComponent.CORE, `Sender '${senderId}' send error (within batch): ${err}`) }
+            }
+        }
+        catch (err) {
+            logError(ELogComponent.CORE, `Sender '${senderId}' sendBatch error: ${err}`)
+        }
+    }
+
     // H3b-recon: consulta el estado actual de una entidad externa (p.ej. un ticket) vía el sender. Undefined si
     // el sender no lo soporta, no existe, no tiene la config, o falla. Contraparte de pull del webhook (push).
     async fetchStatus(senderId: string, configName: string, externalId: string): Promise<string | undefined> {

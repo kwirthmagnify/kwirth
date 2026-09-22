@@ -25,6 +25,26 @@ These deliver a message to a real destination:
 | **[email-resend](email-resend)** | **Email** via the **Resend** API. | API key, from, to. |
 | **[teams](teams)** | A **Microsoft Teams** channel. | Incoming webhook URL. |
 
+## Delivering in batches
+
+A sender normally receives **one message per call**: kwirth awaits each delivery, and that is what makes
+the promise meaningful — *this alert reached its destination*. For an alert that is exactly right.
+
+For a **stream of log lines** it is not: one round trip per line turns forwarding into a queue, and the
+destinations that take log volume (Datadog, Elastic, Loki) accept arrays and charge per request. So a
+sender may also declare that it knows how to take a **batch**, and then kwirth hands it the whole lot in
+a single call and awaits **once per batch** — the promise still means "these N lines delivered".
+
+It is **optional on purpose**. A sender that does not declare it keeps receiving messages one at a time,
+in order, and needs no changes: kwirth delivers them itself, and a line that fails does not cancel the
+ones behind it.
+
+Messages also carry **where they came from** — cluster, namespace, pod, container, and which provider or
+channel they entered through. That travels **with the message**, because a destination can only tag what
+arrives tagged: a log line that reaches Datadog without its namespace cannot be filtered by anything, and
+is effectively useless. It is a field of its own rather than free-form metadata, so every sender finds it
+in the same place.
+
 ## Pipeline senders
 
 These don't deliver on their own — they **compose or shape** the flow, then pass it to other senders:
