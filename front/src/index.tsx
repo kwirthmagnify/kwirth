@@ -33,6 +33,36 @@ declare global {
         __kwirth_homepages__: Record<string, any>
     }
 }
+/*
+    "ResizeObserver loop completed with undelivered notifications".
+
+    Lo lanza el NAVEGADOR cuando el callback de un ResizeObserver provoca mas cambios de tamaño en el
+    mismo fotograma: React re-renderiza, el elemento cambia, y quedan notificaciones sin entregar. Es
+    benigno —nada se rompe— pero en desarrollo el overlay de CRA lo trata como fatal y TAPA LA PANTALLA,
+    que es justo lo que impide ver un error de verdad.
+
+    Se parchea aqui, UNA vez y para toda la aplicacion, en vez de en cada sitio que observa tamaños: asi
+    cubre tambien los ResizeObserver de las librerias de terceros —React Flow re-mide sus nodos, MUI sus
+    contenedores—, que no podemos tocar. Diferir la medida un fotograma es seguro: lo unico que cambia es
+    que se mide despues de que el navegador haya terminado, que es cuando el dato es bueno.
+
+    El patron salio del mapa de iter (React Flow), donde ya se habia resuelto; aqui vale para todos.
+*/
+if (typeof window !== 'undefined' && window.ResizeObserver && !(window as unknown as { __kwirthROPatched?: boolean }).__kwirthROPatched) {
+    ;(window as unknown as { __kwirthROPatched?: boolean }).__kwirthROPatched = true
+    const NativeRO = window.ResizeObserver
+    window.ResizeObserver = class extends NativeRO {
+        constructor(cb: ResizeObserverCallback) {
+            let raf = 0
+            super((entries, observer) => {
+                // se descarta la medida anterior si llega otra antes del siguiente fotograma
+                cancelAnimationFrame(raf)
+                raf = requestAnimationFrame(() => cb(entries, observer))
+            })
+        }
+    }
+}
+
 // elkjs (~1.4MB) is lazy-loaded on first layout computation; webpack code-splits it into its own chunk.
 // @ts-ignore - elk.bundled.js is a JS bundle without type declarations
 const loadElk = () => import('elkjs/lib/elk.bundled.js').then((m: any) => m.default ?? m)
