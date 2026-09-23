@@ -43,7 +43,12 @@ test('los manager dialogs siguen listando catalogo tras pasar por el back', asyn
         // ⚠️ Se mira el BOTON de instalar, no un chip 'v0.0.0': ese chip es de lo INSTALADO — en el
         // catalogo la version va en un Select. Buscarlo daba por bueno un catalogo vacio siempre que
         // hubiera algo instalado, y se cayo con packs, que en un entorno puede no tener nada puesto.
-        const hasEntries = await dialog.locator('span[aria-label$="nstall"] button').first().isVisible({ timeout: 60000 }).catch(() => false)
+        // ⚠️ isVisible() NO espera, por mucho timeout que se le pase: devuelve el estado de ESE instante
+        // y el timeout es decorativo. Con once diálogos en fila, los ultimos se preguntaban con la
+        // maquina cargada y respondian que no habia catalogo cuando lo que faltaba era un pintado.
+        // waitFor si espera, que es lo que el 60000 de aqui decia querer decir.
+        const hasEntries = await dialog.locator('span[aria-label$="nstall"] button').first()
+            .waitFor({ state: 'visible', timeout: 60000 }).then(() => true).catch(() => false)
         if (!hasEntries) failures.push(`${c.menu}: no catalog entries`)
 
         const failedText = await dialog.getByText(/Failed to fetch/i).count()

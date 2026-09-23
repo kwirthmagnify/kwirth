@@ -4,6 +4,7 @@ import { ILoginFieldDef } from '@kwirthmagnify/kwirth-common-back'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
 import { downloadFile, packageHeaders } from './PackageRegistries'
+import { assertInstallable } from './ExtensionInstallGuard'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -134,7 +135,7 @@ export class LoginManager {
         return this.devLogins.has(id)
     }
 
-    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<ILoginMeta> {
+    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string, upgrade?: boolean): Promise<ILoginMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-login-${Date.now()}.tgz`)
         const tmpDir = path.join(os.tmpdir(), `kwirth-login-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
@@ -175,9 +176,14 @@ export class LoginManager {
                 configSchema: Array.isArray(pkg.configSchema) ? pkg.configSchema : undefined
             }
 
-            const existing = this.cachedIndex.find(m => m.id === meta.id)
-            if (existing && installedFrom !== 'bundled' && installedFrom !== 'dev')
-                throw new Error(`Login extension '${meta.id}' is already installed`)
+            /*
+                El payload se escribe ENTERO mas abajo, asi que actualizar no deja nada de la version
+                anterior: si la nueva no trae fondo, el documento nuevo no lo lleva y el viejo desaparece
+                con el. Es lo que se quiere —lo instalado es lo que trae el paquete—, y conviene no
+                cambiar esa escritura por una parcial.
+            */
+            if (installedFrom !== 'bundled' && installedFrom !== 'dev')
+                assertInstallable('Login extension', meta.id, this.cachedIndex.find(m => m.id === meta.id), meta.version, upgrade)
 
             const loginJsonPath = path.join(base, 'login.json')
             const loginConfig: ILoginConfig = fs.existsSync(loginJsonPath) ? JSON.parse(fs.readFileSync(loginJsonPath, 'utf-8')) : {}

@@ -6,6 +6,7 @@ import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
+import { assertInstallable } from './ExtensionInstallGuard'
 
 export interface IHomepageMeta {
     id: string
@@ -105,7 +106,7 @@ export class HomepageManager {
         return [...stored.filter(t => !devIds.has(t.id)), ...devMetas]
     }
 
-    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<IHomepageMeta> {
+    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string, upgrade?: boolean): Promise<IHomepageMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-homepage-${Date.now()}.tgz`)
         let tmpDir = path.join(os.tmpdir(), `kwirth-homepage-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
@@ -148,8 +149,9 @@ export class HomepageManager {
                 marketplaceLabel,
             }
 
-            if (this.installedIds.includes(meta.id))
-                throw new Error(`Homepage '${meta.id}' is already installed`)
+            const index = (await this.configMaps.read('kwirth-homepages-index', []) as IHomepageMeta[]) || []
+            // Instalado es lo que diga installedIds, no el indice: uno de dev esta cargado sin figurar ahi.
+            assertInstallable('Homepage', meta.id, this.installedIds.includes(meta.id) ? (index.find(t => t.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
             // Una version nueva no puede heredar el front cacheado de la anterior
             dropCachedExtensionFiles('homepage', meta.id)
@@ -160,7 +162,6 @@ export class HomepageManager {
 
             await this.configMaps.write(`kwirth-homepage-${meta.id}`, { meta, code: meta.frontStored ? frontCompressed : undefined, compressed: true })
 
-            const index = (await this.configMaps.read('kwirth-homepages-index', []) as IHomepageMeta[]) || []
             const existingIdx = index.findIndex(t => t.id === meta.id)
             if (existingIdx >= 0) index[existingIdx] = meta
             else index.push(meta)

@@ -7,6 +7,7 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import { downloadFile, packageHeaders } from './PackageRegistries'
+import { assertInstallable } from './ExtensionInstallGuard'
 
 export interface IDocsMeta {
     id: string
@@ -64,7 +65,7 @@ export class DocsManager {
         return (await this.configMaps.read('kwirth-docs-index', [])) as IDocsMeta[] || []
     }
 
-    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<IDocsMeta> {
+    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string, upgrade?: boolean): Promise<IDocsMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-docs-${Date.now()}.tgz`)
         const isLocalPath = tarGzUrl.startsWith('file://') || (!tarGzUrl.startsWith('http://') && !tarGzUrl.startsWith('https://'))
 
@@ -92,8 +93,11 @@ export class DocsManager {
                 if (!meta.targetType) throw new Error(`Invalid docs bundle: missing targetType in package.json`)
 
                 const index = (await this.configMaps.read('kwirth-docs-index', []) as IDocsMeta[]) || []
-                const existing = index.find(d => d.targetType === meta.targetType && d.id === meta.id)
-                if (existing && installedFrom !== 'bundled' && installedFrom !== 'dev') throw new Error(`Docs '${meta.targetType}/${meta.id}' is already installed`)
+                // La identidad de unos docs es el par (targetType, id), no el id solo.
+                // Su carpeta de destino se borra entera antes de extraer, asi que aqui no hay huerfanos
+                // que limpiar: lo que queda en disco es exactamente lo que trae el paquete.
+                if (installedFrom !== 'bundled' && installedFrom !== 'dev')
+                    assertInstallable('Docs', `${meta.targetType}/${meta.id}`, index.find(d => d.targetType === meta.targetType && d.id === meta.id), meta.version, upgrade)
 
                 const destDir = path.join(this.docsPath, meta.targetType, meta.id)
                 if (fs.existsSync(destDir)) fs.rmSync(destDir, { recursive: true, force: true })

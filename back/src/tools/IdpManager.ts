@@ -10,6 +10,7 @@ import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, IIdpInstanceConfi
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
 import { downloadFile, packageHeaders } from './PackageRegistries'
+import { assertInstallable } from './ExtensionInstallGuard'
 
 const IDPS_SECRET = 'kwirth-idps'
 const CONNECTORS_INDEX = 'kwirth-idp-connectors-index'
@@ -149,7 +150,7 @@ export class IdpManager {
 
     // instala un conector desde un tgz (URL http(s), file:// o ruta local). El back.js se guarda
     // comprimido en configmap y se registra en registeredIdps.
-    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<IIdpConnectorMeta> {
+    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string, upgrade?: boolean): Promise<IIdpConnectorMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-idp-${Date.now()}.tgz`)
         let tmpDir = path.join(os.tmpdir(), `kwirth-idp-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
@@ -188,18 +189,27 @@ export class IdpManager {
                 requiresRestart: pkg.requiresRestart ?? false,
                 requiresExtension: pkg.requiresExtension ?? []
             }
-            if (this.installedConnectorIds.has(meta.id) && !this.registeredIdps.has(meta.id)) {
-                // reinstalación permitida (sobrescribe)
-            }
+            const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
+            /*
+                Este era el unico de los once que dejaba pisar una instalacion sin pedir permiso —el hueco
+                donde los demas tienen su guardian estaba literalmente vacio, con un comentario—. Ahora
+                sigue la misma regla que el resto: reemplazar se pide, y solo hacia adelante.
+
+                Lo bundled y lo de dev quedan fuera, como en logins y docs: se reinstalan en cada arranque
+                y no pasan por aqui a actualizar nada.
+            */
+            if (installedFrom !== 'bundled' && installedFrom !== 'dev')
+                assertInstallable('IdP connector', meta.id, this.installedConnectorIds.has(meta.id) ? (index.find(m => m.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
             const backJs = fs.readFileSync(backPath, 'utf-8')
             const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')
             meta.backStored = backCompressed.length <= CONFIGMAP_SIZE_LIMIT
             if (!meta.backStored) logError(ELogComponent.AUTH, `IdP connector '${meta.id}' back.js (${Math.round(backCompressed.length / 1024)}KB) exceeds configmap limit`)
 
             await this.configMaps.write(`kwirth-idp-connector-${meta.id}-meta`, meta)
-            if (meta.backStored) await this.configMaps.write(`kwirth-idp-connector-${meta.id}-back`, { code: backCompressed, compressed: true })
+            // null y no saltarse la escritura: actualizando, si el back de antes cabia y el de ahora no,
+            // saltarla dejaria ahi el codigo VIEJO. Lo instalado tiene que ser lo que trae el paquete.
+            await this.configMaps.write(`kwirth-idp-connector-${meta.id}-back`, meta.backStored ? { code: backCompressed, compressed: true } : null)
 
-            const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
             const existing = index.findIndex(m => m.id === meta.id)
             if (existing >= 0) index[existing] = meta
             else index.push(meta)

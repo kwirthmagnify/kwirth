@@ -123,6 +123,13 @@ const makePackDescriptor = (deps: IPackDescriptorDeps): IExtensionManagerDescrip
     },
     // Quitar un pack se lleva por delante todo lo que trajo, y eso se avisa ANTES de pulsar.
     uninstallTooltip: 'Uninstall pack (removes all member extensions)',
+    /*
+        El unico tipo que NO se actualiza instalando encima. Instalar un pack rechaza tambien si alguno de
+        sus miembros ya esta puesto, asi que reemplazarlo no es reemplazar una extension: es actualizar
+        todas las que trae, con sus reinicios y su configuracion. Mientras el back no lo haga, el boton lo
+        dice en vez de ofrecer algo que va a fallar.
+    */
+    updateBlockedReason: () => 'Packs cannot be updated in place — uninstall this pack and install the new version',
     keyOf: e => e.id,
     toModel,
     canUninstall,

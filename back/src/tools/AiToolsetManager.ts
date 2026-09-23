@@ -1,6 +1,7 @@
 import { IAiToolset, registerToolset, unregisterToolset, isBuiltInToolsetId, getToolset, setToolsetGrants, getToolsetGrants } from '@kwirthmagnify/kwirth-common-ai/back'
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
+import { assertInstallable } from './ExtensionInstallGuard'
 import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 import { listBundledOfType } from './BundledExtensions'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
@@ -223,7 +224,7 @@ export class AiToolsetManager {
 
     // ── Instalacion ─────────────────────────────────────────────────────────────
 
-    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<IAiToolsetMeta> {
+    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string, upgrade?: boolean): Promise<IAiToolsetMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-aitoolset-${Date.now()}.tgz`)
         let tmpDir = path.join(os.tmpdir(), `kwirth-aitoolset-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
@@ -261,8 +262,10 @@ export class AiToolsetManager {
             // despues de haber escrito el indice dejaria una entrada que no se puede registrar nunca.
             if (isBuiltInToolsetId(meta.id))
                 throw new Error(`AI toolset id '${meta.id}' is reserved by a built-in toolset`)
-            if (installedFrom !== 'dev' && installedFrom !== 'bundled' && getToolset(meta.id))
-                throw new Error(`AI toolset '${meta.id}' is already installed`)
+            const index = (await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || []
+            // Instalado es lo que diga el registro en vivo, no el indice: uno de dev esta cargado sin figurar ahi.
+            if (installedFrom !== 'dev' && installedFrom !== 'bundled')
+                assertInstallable('AI toolset', meta.id, getToolset(meta.id) ? (index.find(t => t.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
             meta.marketplaceId = marketplaceId
@@ -277,9 +280,14 @@ export class AiToolsetManager {
                 logInfo(ELogComponent.CORE, `AI toolset '${meta.id}' back.js exceeds configmap limit — will fetch from source on startup`)
 
             await this.configMaps.write(`kwirth-aitoolset-${meta.id}-meta`, meta)
-            if (meta.backStored) await this.configMaps.write(`kwirth-aitoolset-${meta.id}-back`, { code: backCompressed, compressed: true })
+            /*
+                null y no saltarse la escritura. Actualizando, una clave que no se toca se queda con el
+                contenido de la version ANTERIOR: el back de antes si el de ahora no cabe en el
+                almacenamiento. Lo instalado tiene que ser exactamente lo que trae el paquete, no la suma
+                de lo que fueron trayendo sus versiones.
+            */
+            await this.configMaps.write(`kwirth-aitoolset-${meta.id}-back`, meta.backStored ? { code: backCompressed, compressed: true } : null)
 
-            const index = (await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || []
             const existingIdx = index.findIndex(t => t.id === meta.id)
             if (existingIdx >= 0) index[existingIdx] = meta
             else index.push(meta)

@@ -41,7 +41,8 @@ Every family uses the same manager UI, so once you learn one you know them all:
 | **State chips** (right) | What the extension has *now* rather than where it came from — for example **`N configs`** when it holds several named configurations, or **`via pack`** when a pack owns it. |
 | **Filter** | Narrow the list by name. |
 | **Card / List view** | Toggle between card grid and compact list. The list view is the one to use when you have many of a family: same information, one row each. |
-| **Per-item icons** | **Open website**, **Settings ⚙** and **delete/uninstall** (🗑). |
+| **Per-item icons** | **Open website**, **Settings ⚙**, **Update ⬆** and **delete/uninstall** (🗑), always in that order. |
+| **Update ⬆** | Installs a newer version **over** the one you have, keeping its configuration. It is always on the card, greyed out when there is nothing to do, and its tooltip says which case you are in — **`Update to v0.2.0`** when there is one waiting, **`Up to date (v0.1.4)`** when there is not. See [Updating an extension](#updating-an-extension). |
 | **Settings ⚙** | Opens whatever *that* extension declares: a typed form, a list of named configurations, a free JSON editor, or a UI the extension brings itself. **The gear is greyed out when the extension has nothing to configure** — and its tooltip says so, instead of opening an empty dialog. |
 | **Install *(family)*** | Add a new one: paste a package **URL** and download it, or **BROWSE…** for a local package file. |
 | **Available *(family)*** | A browsable catalog of extensions you can install with one click. Already-installed ones are marked as such. |
@@ -71,7 +72,8 @@ Every family uses the same manager UI, so once you learn one you know them all:
      cannot (no credentials saved yet), the same field falls back to free text, so what you type by hand
      still counts.
 3. **Enable / disable** — many extensions have an enabled toggle in their settings; disabled ones stay installed but inactive.
-4. **Remove** — click the delete icon on the card.
+4. **Update** — click the **⬆** icon on the card when it offers a newer version. See below: it is not a reinstall, and it keeps your configuration.
+5. **Remove** — click the delete icon on the card.
 
 > **Channels are plugins.** Installing a plugin is exactly how you add or remove the channels users see in the [resource selector](../user/04-selecting-resources). Install the Log plugin and the **Log** channel appears; remove it and it's gone.
 
@@ -79,9 +81,59 @@ Every family uses the same manager UI, so once you learn one you know them all:
 
 > **Pack-owned extensions.** Extensions installed via a pack show a **`via pack`** badge and have their uninstall button disabled. To remove them, uninstall the parent pack from **☰ → Manage extensions → Packs**.
 
+## Updating an extension
+
+Click **⬆** on an installed extension and kwirth installs the newer version **on top of** the one you have.
+It is not an uninstall followed by an install, and that distinction is the whole point: **removing an
+extension takes its configuration with it**, so upgrading the old way meant writing down your destinations,
+your credentials and your named configurations, and typing them back in afterwards. Installing over keeps
+all of it — the configuration lives in kubernetes secrets and configmaps of its own, and the update never
+touches them.
+
+**Where the new version comes from.** Both places offer it, and they differ in *which* version you get:
+
+- The **⬆ on the installed card** always goes to the **newest** version any of your catalogs offers. This is
+  the one to use when you just want to be up to date.
+- The **Available** section, through the **version dropdown** on the catalog card, goes to the **version you
+  pick**. Use it when you need a specific one rather than the latest.
+
+**Only forwards.** You cannot go back to an earlier version, and the dropdown will not let you: pick one older
+than what you have and the button stays greyed out, saying **`Already installed (v0.2.0) — pick a newer
+version to update`**. Going backwards would leave the extension's configuration — which nobody rewrites —
+built for a version that is no longer there, and that is a worse place to be than the version you wanted to
+leave.
+
+**Three things that are not updated this way**, each of which says so in its tooltip instead of failing when
+you click:
+
+| Case | Why | What to do instead |
+|---|---|---|
+| **`dev`** | It is not coming from a catalog at all, but from a local build | Change it in `kwirth-dev.json` |
+| **`bundled`** | It travels inside kwirth itself | It updates when kwirth does |
+| **packs** | Installing a pack also refuses if any of its members is already installed, so replacing one means updating everything it brought | Uninstall the pack and install the new one |
+
+> **What you end up with is exactly what the new package contains.** An update is a replacement, not a merge:
+> whatever the previous version brought and the new one does not is **removed**. If a login extension used to
+> ship a background image and the new version drops it, the background goes; if an extension stops declaring a
+> configuration schema, its form goes with it. This is deliberate — the alternative is an installation that
+> slowly becomes the sum of every version it ever had, showing you things no package on disk can explain.
+
 ## When a restart is needed
 
 Most extensions are live the moment you install them. Some are not, and **kwirth tells you**: the extension declares `requiresRestart`, and the manager prompts you after installing, updating or removing it. **Take the prompt seriously** — the extension is installed but not yet running.
+
+The prompt says something different in each of the three cases, because what is actually going on is
+different — and after an **update** it is the opposite of what you might assume:
+
+| After | What the prompt tells you |
+|---|---|
+| installing | the extension **will not work** until you restart |
+| uninstalling | the extension **stays active** until you restart — its routes are still mounted, even though it has disappeared from the list |
+| updating | the **previous version stays active** until you restart. The extension keeps working; what you are running is still the old one |
+
+That last case is worth reading twice: nothing looks broken after an update, which is exactly why the prompt
+is easy to dismiss. kwirth also raises it when the version you are **leaving** declared `requiresRestart` and
+the new one does not — the old routes are mounted and cannot be unmounted while the server runs.
 
 **Why.** Installing writes the extension's files and registers it. What it cannot do is reach into a server that is already running and add things to it. Two kinds of extension are affected:
 

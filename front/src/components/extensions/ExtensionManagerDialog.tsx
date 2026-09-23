@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { CheckCircle, Delete, Download, FolderOpen, Refresh, Settings, ViewList } from '@kwirthmagnify/kwirth-common-front/icons'
-import { ViewModule } from '../../icons'
+import { Upgrade, ViewModule } from '../../icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
@@ -125,6 +125,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const [loadingManifest, setLoadingManifest] = useState(false)
     const [installingKey, setInstallingKey] = useState<string | undefined>()
     const [uninstallingKey, setUninstallingKey] = useState<string | undefined>()
+    const [updatingKey, setUpdatingKey] = useState<string | undefined>()
     const [installingCustom, setInstallingCustom] = useState(false)
     const [installingFile, setInstallingFile] = useState(false)
     const [customUrl, setCustomUrl] = useState('')
@@ -288,6 +289,54 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const isInstalled = (key: string) => installedByKey.has(key)
     const isDevInstalled = (key: string) => installedByKey.get(key)?.['installedFrom' as keyof TInstalled] === 'dev'
 
+    /*
+        Por que algo instalado NO se actualiza desde el catalogo, ya redactado para el tooltip.
+
+        Son las dos procedencias que no las sirve un marketplace: lo de dev se cambia en kwirth-dev.json y
+        lo bundled viaja dentro de Kwirth. El back las rechaza igual —no sabe su version—, asi que esto no
+        es la defensa, es poder decir el motivo en vez de dejar un boton muerto.
+    */
+    const notUpdatableReason = (installedFrom?: string): string | undefined => {
+        switch (installedFrom) {
+            case 'dev': return 'A dev version is loaded — change it in kwirth-dev.json'
+            case 'bundled': return 'Bundled with Kwirth — it is updated with Kwirth itself'
+            default: return undefined
+        }
+    }
+
+    /*
+        La actualizacion disponible para algo instalado, si la hay.
+
+        El dato ya estaba aqui: el catalogo viene agrupado por clave y con las versiones ordenadas de mas
+        nueva a mas vieja, asi que basta comparar la primera con la instalada. No hace falta preguntarle
+        nada al back ni reaprovechar el aviso del arranque.
+    */
+    const updateFor = (entry: TInstalled): TEntry | undefined => {
+        if (updateBlocked(entry)) return undefined
+        const group = grouped[d.keyOf(entry)]
+        if (!group?.length || !entry.version) return undefined
+        const newest = group[0]
+        return newest.version && versionGreaterThan(newest.version, entry.version) ? newest : undefined
+    }
+
+    /** Por que no se puede actualizar algo instalado: su procedencia, o lo que diga su tipo. */
+    const updateBlocked = (entry: TInstalled): string | undefined =>
+        notUpdatableReason(d.toModel(entry).installedFrom) ?? d.updateBlockedReason?.(entry)
+
+    /*
+        El tooltip del boton de update, que es lo unico que se ve cuando esta deshabilitado —que es casi
+        siempre—. Un 'Up to date' cuando lo que pasa es que el catalogo aun no ha cargado, o que la
+        extension no esta en ninguno, seria mentira: son tres situaciones distintas y cada una lo dice.
+    */
+    const updateTooltip = (entry: TInstalled, newer?: TEntry): string => {
+        const blocked = updateBlocked(entry)
+        if (blocked) return blocked
+        if (newer) return `Update to v${newer.version}`
+        if (loadingManifest) return 'Checking the catalog for a newer version…'
+        if (!grouped[d.keyOf(entry)]?.length) return 'Not in any catalog — there is nothing to update from'
+        return entry.version ? `Up to date (v${entry.version})` : 'No version information — cannot tell if there is an update'
+    }
+
     const matches = (entry: TInstalled | TEntry, filter: string) => {
         if (!filter) return true
         const f = filter.toLowerCase()
@@ -295,10 +344,19 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     }
 
     // ── instalar / desinstalar ──────────────────────────────────────────────────
-    const afterInstall = async (meta: TInstalled) => {
+    /*
+        `replaced` es lo que habia instalado antes, cuando esto es una ACTUALIZACION y no una instalacion.
+
+        Se necesita por el aviso de reinicio: hay que mirar `requiresRestart` en las DOS. Si la version
+        que se va traia su router de express, ese router sigue montado aunque la nueva ya no declare
+        ninguno —engancharlos y desengancharlos solo pasa al arrancar—, y preguntarselo solo a la nueva
+        daria por buena una actualizacion que deja media extension vieja viva.
+    */
+    const afterInstall = async (meta: TInstalled, replaced?: TInstalled) => {
         await loadInstalled()
         d.onInstalled?.(meta)
-        if (meta.requiresRestart) props.onRestartRequired?.(d.keyOf(meta), ERestartAction.INSTALL)
+        if (meta.requiresRestart || replaced?.requiresRestart)
+            props.onRestartRequired?.(d.keyOf(meta), replaced ? ERestartAction.UPDATE : ERestartAction.INSTALL)
     }
 
     const postInstall = async (body: Record<string, unknown>): Promise<TInstalled> => {
@@ -310,15 +368,26 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         return await res.json()
     }
 
-    const installFromCatalog = async (entry: TEntry) => {
+    /*
+        Instalar y actualizar son la MISMA operacion, y por eso no hay dos caminos: el back reemplaza
+        indice, codigo y modulo cargado, y lo unico que cambia es que hay que pedirle permiso con
+        `upgrade` para pisar lo que ya esta. Hacerlo con desinstalar + instalar, que es lo que tocaba
+        antes, se lleva por delante la configuracion de la extension.
+    */
+    const installFromCatalog = async (entry: TEntry, replaced?: TInstalled) => {
         const key = d.keyOf(entry)
         setError(undefined)
-        setInstallingKey(key)
+        if (replaced) setUpdatingKey(key)
+        else setInstallingKey(key)
         try {
-            await afterInstall(await postInstall({ url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL }))
+            const body = { url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL, upgrade: Boolean(replaced) }
+            await afterInstall(await postInstall(body), replaced)
         }
-        catch (err) { setError(`Failed to install ${d.toModel(entry).name}: ${err}`) }
-        finally { setInstallingKey(undefined) }
+        catch (err) { setError(`Failed to ${replaced ? 'update' : 'install'} ${d.toModel(entry).name}: ${err}`) }
+        finally {
+            setUpdatingKey(undefined)
+            setInstallingKey(undefined)
+        }
     }
 
     const installFromUrl = async () => {
@@ -452,8 +521,22 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                 onClick: () => setConfiguring(entry)
             })
         }
-        const verdict = d.canUninstall(entry)
         const key = d.keyOf(entry)
+        const newer = updateFor(entry)
+        /*
+            Visible siempre y deshabilitado con el motivo, como el de configurar: apareciendo solo cuando
+            hay version nueva, los botones bailarian de sitio entre filas y la papelera acabaria justo
+            donde estaba el update de la fila de arriba.
+        */
+        actions.push({
+            icon: updatingKey === key ? <CircularProgress size={16} /> : <Upgrade fontSize='small' />,
+            tooltip: updateTooltip(entry, newer),
+            disabled: !newer || updatingKey === key,
+            color: 'primary',
+            onClick: () => { if (newer) installFromCatalog(newer, entry) }
+        })
+
+        const verdict = d.canUninstall(entry)
         actions.push({
             icon: uninstallingKey === key ? <CircularProgress size={16} /> : <Delete fontSize='small' />,
             tooltip: verdict.allowed ? (d.uninstallTooltip ?? 'Uninstall') : (verdict.reason ?? 'Cannot be uninstalled'),
@@ -466,20 +549,31 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
 
     const availableActions = (key: string, entry: TEntry): IExtensionAction[] => {
         const blocked = requirementsBlocking(entry) ?? d.installBlockedReason?.(entry)
-        const already = isInstalled(key)
+        const current = installedByKey.get(key)
+        /*
+            Desde aqui tambien se actualiza, y ademas a una version CONCRETA —la del desplegable—, mientras
+            que el boton de la seccion de instaladas va siempre a la mas nueva. Hacia atras no: volver a
+            una version anterior deja el indice diciendo una cosa y la configuracion pensada para otra.
+        */
+        const isUpgrade = Boolean(current && !updateBlocked(current)
+            && current.version && entry.version && versionGreaterThan(entry.version, current.version))
+        const already = Boolean(current) && !isUpgrade
+        const busy = installingKey === key || updatingKey === key
         return [
             ...(d.actions?.(entry, EManagerSection.AVAILABLE) ?? []),
             {
-                icon: installingKey === key ? <CircularProgress size={16} /> : <Download fontSize='small' />,
+                icon: busy ? <CircularProgress size={16} /> : isUpgrade ? <Upgrade fontSize='small' /> : <Download fontSize='small' />,
                 // ⚠️ A una extension de DEV no se le puede decir "desinstala primero": no se desinstala,
                 // se quita de kwirth-dev.json. El consejo generico mandaba al usuario a pulsar una papelera
                 // que esta deshabilitada. Lo traia ThemeManagerDialog y lo hereda el generico al migrarlo.
                 tooltip: isDevInstalled(key) ? 'A dev version is already loaded'
-                    : already ? 'Already installed — uninstall first'
-                        : blocked ?? 'Install',
-                disabled: already || !!blocked || installingKey === key,
+                    : isUpgrade ? `Update to v${entry.version}`
+                        : already ? (updateBlocked(current!)
+                            ?? `Already installed (v${current?.version ?? '?'}) — pick a newer version to update`)
+                            : blocked ?? 'Install',
+                disabled: already || !!blocked || busy,
                 color: 'primary',
-                onClick: () => installFromCatalog(entry)
+                onClick: () => installFromCatalog(entry, isUpgrade ? current : undefined)
             }
         ]
     }

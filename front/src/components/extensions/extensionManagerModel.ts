@@ -225,6 +225,15 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     /** Si devuelve un motivo, instalar queda deshabilitado y el motivo va al tooltip (dependencias sin cumplir). */
     installBlockedReason?: (entry: TEntry) => string | undefined
 
+    /**
+     * Lo mismo para ACTUALIZAR: si devuelve un motivo, el boton de update queda deshabilitado con el.
+     *
+     * Casi ningun tipo lo necesita —actualizar es instalar encima—, pero un pack no es una extension mas:
+     * su instalacion tambien rechaza si cualquiera de sus miembros esta puesto, asi que reemplazarlo
+     * significa actualizarlos todos y eso el back no lo hace.
+     */
+    updateBlockedReason?: (entry: TInstalled) => string | undefined
+
     /** Efectos del alta/baja: un pack carga el front de cada extension que trae. */
     onInstalled?: (meta: TInstalled) => void
     onUninstalled?: (entry: TInstalled) => void

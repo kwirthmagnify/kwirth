@@ -231,9 +231,11 @@ export class ProviderApi {
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                const { url, marketplaceId, marketplaceLabel } = req.body
+                // 'upgrade' es el permiso EXPLICITO para pisar una instalacion existente. Sin el, el
+                // manager rechaza una id ya instalada, que es el comportamiento de siempre.
+                const { url, marketplaceId, marketplaceLabel, upgrade } = req.body
                 if (!url) return void res.status(400).json({ error: 'url required' })
-                const meta = await this.providerManager.install(url, this.registeredProviders, undefined, marketplaceId, marketplaceLabel)
+                const meta = await this.providerManager.install(url, this.registeredProviders, undefined, marketplaceId, marketplaceLabel, upgrade === true)
                 this.callbacks.onProviderInstalled?.(meta.id)
                 logInfo(ELogComponent.CORE, `Provider installed via API: ${meta.id} v${meta.version}`)
                 // La otra direccion del aviso: el provider recien instalado puede llamarse igual que un

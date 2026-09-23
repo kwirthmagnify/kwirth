@@ -8,6 +8,7 @@ import fs from 'fs'
 import zlib from 'zlib'
 import crypto from 'crypto'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
+import { assertInstallable } from './ExtensionInstallGuard'
 
 export interface IWebhookMeta {
     id: string
@@ -282,7 +283,7 @@ export class WebhookManager implements IWebhookAccess {
         }
     }
 
-    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<IWebhookMeta> {
+    async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string, upgrade?: boolean): Promise<IWebhookMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-webhook-${Date.now()}.tgz`)
         let tmpDir = path.join(os.tmpdir(), `kwirth-webhook-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
@@ -311,8 +312,9 @@ export class WebhookManager implements IWebhookAccess {
 
             const meta: IWebhookMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
 
-            if (this.installedIds.includes(meta.id))
-                throw new Error(`Webhook '${meta.id}' is already installed`)
+            const index = (await this.configMaps.read('kwirth-webhooks-index', []) as IWebhookMeta[]) || []
+            // Instalado es lo que diga installedIds, no el indice: uno de dev esta cargado sin figurar ahi.
+            assertInstallable('Webhook', meta.id, this.installedIds.includes(meta.id) ? (index.find(w => w.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
             // Una version nueva no puede heredar el js cacheado de la anterior
@@ -331,19 +333,27 @@ export class WebhookManager implements IWebhookAccess {
                 logInfo(ELogComponent.CORE, `Webhook '${meta.id}' back.js exceeds configmap limit — will fetch from source on startup`)
 
             const frontPath = path.join(tmpDir, 'front.js')
+            let frontEntry: { code: string, compressed: boolean } | null = null
             if (fs.existsSync(frontPath)) {
                 const frontJs = fs.readFileSync(frontPath, 'utf-8')
                 const frontCompressed = zlib.gzipSync(Buffer.from(frontJs, 'utf-8')).toString('base64')
                 meta.frontStored = frontCompressed.length <= CONFIGMAP_SIZE_LIMIT
                 if (!meta.frontStored)
                     logInfo(ELogComponent.CORE, `Webhook '${meta.id}' front.js exceeds configmap limit — will fetch from source on request`)
-                if (meta.frontStored) await this.configMaps.write(`kwirth-webhook-${meta.id}-front`, { code: frontCompressed, compressed: true })
+                if (meta.frontStored) frontEntry = { code: frontCompressed, compressed: true }
             }
 
-            await this.configMaps.write(`kwirth-webhook-${meta.id}-meta`, meta)
-            if (meta.backStored) await this.configMaps.write(`kwirth-webhook-${meta.id}-back`, { code: backCompressed, compressed: true })
+            /*
+                null y no saltarse la escritura. Actualizando, una clave que no se toca se queda con el
+                contenido de la version ANTERIOR: el front de antes si el de ahora no cabe —o si la nueva
+                version ya no trae front—, y lo mismo con el back. Lo instalado tiene que ser exactamente
+                lo que trae el paquete, no la suma de lo que fueron trayendo sus versiones.
+            */
+            await this.configMaps.write(`kwirth-webhook-${meta.id}-front`, frontEntry)
 
-            const index = (await this.configMaps.read('kwirth-webhooks-index', []) as IWebhookMeta[]) || []
+            await this.configMaps.write(`kwirth-webhook-${meta.id}-meta`, meta)
+            await this.configMaps.write(`kwirth-webhook-${meta.id}-back`, meta.backStored ? { code: backCompressed, compressed: true } : null)
+
             const existingIdx = index.findIndex(w => w.id === meta.id)
             if (existingIdx >= 0) index[existingIdx] = meta
             else index.push(meta)

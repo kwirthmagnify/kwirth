@@ -8,6 +8,7 @@ import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
+import { assertInstallable } from './ExtensionInstallGuard'
 
 /**
  * @deprecated usa IProviderFieldDef de kwirth-common-back, que es el contrato comun a todas las
@@ -179,7 +180,7 @@ export class ProviderManager {
         return [...stored.filter(m => !devIds.has(m.id)), ...devMetas]
     }
 
-    async install(tarGzUrl: string, registeredProviders: Map<string, TProviderConstructor>, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<IProviderMeta> {
+    async install(tarGzUrl: string, registeredProviders: Map<string, TProviderConstructor>, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string, upgrade?: boolean): Promise<IProviderMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-provider-${Date.now()}.tgz`)
         let tmpDir = path.join(os.tmpdir(), `kwirth-provider-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
@@ -210,8 +211,9 @@ export class ProviderManager {
 
             const meta: IProviderMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
 
-            if (this.installedIds.includes(meta.id))
-                throw new Error(`Provider '${meta.id}' is already installed`)
+            const index = (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || []
+            // Instalado es lo que diga installedIds, no el indice: uno de dev esta cargado sin figurar ahi.
+            assertInstallable('Provider', meta.id, this.installedIds.includes(meta.id) ? (index.find(p => p.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
             // Una version nueva no puede heredar el js cacheado de la anterior
@@ -230,18 +232,26 @@ export class ProviderManager {
 
             const frontPath = path.join(tmpDir, 'front.js')
             meta.hasFront = fs.existsSync(frontPath)
+            let frontEntry: { code: string, compressed: boolean } | null = null
             if (meta.hasFront) {
                 const frontJs = fs.readFileSync(frontPath, 'utf-8')
                 const frontCompressed = zlib.gzipSync(Buffer.from(frontJs, 'utf-8')).toString('base64')
                 meta.frontStored = frontCompressed.length <= CONFIGMAP_SIZE_LIMIT
-                if (meta.frontStored) await this.configMaps.write(`kwirth-provider-${meta.id}-front`, { code: frontCompressed, compressed: true })
+                if (meta.frontStored) frontEntry = { code: frontCompressed, compressed: true }
                 else logInfo(ELogComponent.CORE, `Provider '${meta.id}' front.js (${Math.round(frontCompressed.length / 1024)}KB) exceeds configmap limit`)
             }
 
-            await this.configMaps.write(`kwirth-provider-${meta.id}-meta`, meta)
-            if (meta.backStored) await this.configMaps.write(`kwirth-provider-${meta.id}-back`, { code: backCompressed, compressed: true })
+            /*
+                null y no saltarse la escritura. Actualizando, una clave que no se toca se queda con el
+                contenido de la version ANTERIOR: el front de antes si el de ahora no cabe —o si la nueva
+                version ya no trae front—, y lo mismo con el back. Lo instalado tiene que ser exactamente
+                lo que trae el paquete, no la suma de lo que fueron trayendo sus versiones.
+            */
+            await this.configMaps.write(`kwirth-provider-${meta.id}-front`, frontEntry)
 
-            const index = (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || []
+            await this.configMaps.write(`kwirth-provider-${meta.id}-meta`, meta)
+            await this.configMaps.write(`kwirth-provider-${meta.id}-back`, meta.backStored ? { code: backCompressed, compressed: true } : null)
+
             const existingIdx = index.findIndex(p => p.id === meta.id)
             if (existingIdx >= 0) index[existingIdx] = meta
             else index.push(meta)
@@ -250,6 +260,7 @@ export class ProviderManager {
 
             await this.loadBackProvider(meta.id, backJs, registeredProviders)
 
+            let schema: unknown[] | null = null
             try {
                 const { createRequire } = await import('module')
                 const localRequire = createRequire(path.join(process.cwd(), 'package.json'))
@@ -257,10 +268,13 @@ export class ProviderManager {
                 const wrapFn = new Function('module', 'exports', 'require', '__filename', '__dirname', backJs)
                 wrapFn(schemaMod, schemaMod.exports, localRequire, `kwirth-provider-${meta.id}-back.js`, process.cwd())
                 if (Array.isArray(schemaMod.exports['schema']) && (schemaMod.exports['schema'] as unknown[]).length > 0) {
-                    await this.configMaps.write(`kwirth-provider-${meta.id}-schema`, schemaMod.exports['schema'])
+                    schema = schemaMod.exports['schema'] as unknown[]
                     meta.hasSchema = true
                 }
             } catch {}
+            // Fuera del try y con null: si la version nueva ya no declara esquema, el de la anterior
+            // seguiria ahi y la UI pintaria un formulario que el provider ya no entiende.
+            await this.configMaps.write(`kwirth-provider-${meta.id}-schema`, schema)
 
             logInfo(ELogComponent.CORE, `Provider '${meta.id}' v${meta.version} installed`)
             return meta

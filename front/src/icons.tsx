@@ -22,6 +22,10 @@ export const Star = (props: SvgIconProps) => (
     <SvgIcon {...props}><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" /></SvgIcon>
 )
 
+export const Upgrade = (props: SvgIconProps) => (
+    <SvgIcon {...props}><path d="M16 18v2H8v-2zM11 7.99V16h2V7.99h3L12 4 8 7.99z" /></SvgIcon>
+)
+
 export const ViewModule = (props: SvgIconProps) => (
     <SvgIcon {...props}><path d="M14.67 5v6.5H9.33V5zm1 6.5H21V5h-5.33zm-1 7.5v-6.5H9.33V19zm1-6.5V19H21v-6.5zm-7.34 0H3V19h5.33zm0-1V5H3v6.5z" /></SvgIcon>
 )

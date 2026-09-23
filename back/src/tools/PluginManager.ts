@@ -10,6 +10,7 @@ import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
+import { assertInstallable } from './ExtensionInstallGuard'
 
 export interface IPluginMeta {
     id: string
@@ -211,7 +212,7 @@ export class PluginManager {
         return [...stored.filter(p => !devIds.has(p.id)), ...devMetas]
     }
 
-    async install(tarGzUrl: string, registeredChannels: Map<string, TChannelConstructor>, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string): Promise<IPluginMeta> {
+    async install(tarGzUrl: string, registeredChannels: Map<string, TChannelConstructor>, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string, upgrade?: boolean): Promise<IPluginMeta> {
         let tmpTgz = path.join(os.tmpdir(), `kwirth-plugin-${Date.now()}.tgz`)
         let tmpDir = path.join(os.tmpdir(), `kwirth-plugin-extract-${Date.now()}`)
         fs.mkdirSync(tmpDir, { recursive: true })
@@ -248,8 +249,10 @@ export class PluginManager {
 
             const meta: IPluginMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
 
-            if (this.installedIds.includes(meta.id))
-                throw new Error(`Plugin '${meta.id}' is already installed`)
+            const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
+            // Instalado es lo que diga installedIds, no el indice: uno de dev esta cargado sin figurar ahi.
+            // Se le pasa igual al guardian, sin version, y este rechaza actualizar lo que no sabe de donde viene.
+            assertInstallable('Plugin', meta.id, this.installedIds.includes(meta.id) ? (index.find(p => p.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
             // Una version nueva no puede heredar el js cacheado de la anterior
@@ -274,9 +277,10 @@ export class PluginManager {
             const backEntry: Record<string, unknown> = { meta }
             if (meta.backStored) { backEntry.code = backCompressed; backEntry.compressed = true }
             await this.configMaps.write(`kwirth-plugin-${meta.id}-back`, backEntry)
-            if (meta.frontStored) await this.configMaps.write(`kwirth-plugin-${meta.id}-front`, { code: frontCompressed, compressed: true })
+            // null y no saltarse la escritura: actualizando, si el front de antes cabia y el de ahora no,
+            // saltarla dejaria ahi el codigo VIEJO. Lo instalado tiene que ser lo que trae el paquete.
+            await this.configMaps.write(`kwirth-plugin-${meta.id}-front`, meta.frontStored ? { code: frontCompressed, compressed: true } : null)
 
-            const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
             const existingIdx = index.findIndex(p => p.id === meta.id)
             if (existingIdx >= 0) index[existingIdx] = meta
             else index.push(meta)

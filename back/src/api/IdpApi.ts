@@ -40,9 +40,11 @@ export class IdpApi {
         this.router.post('/connectors/install', async (req: Request, res: Response) => {
             try {
                 const url = String(req.body?.url || '').trim()
-                const { marketplaceId, marketplaceLabel } = req.body ?? {}
+                // 'upgrade' es el permiso EXPLICITO para pisar una instalacion existente. Sin el, el
+                // manager rechaza una id ya instalada, que es el comportamiento de siempre.
+                const { marketplaceId, marketplaceLabel, upgrade } = req.body ?? {}
                 if (!url) { res.status(400).json({ error: 'url is required' }); return }
-                const meta = await this.idpManager.install(url, undefined, marketplaceId, marketplaceLabel)
+                const meta = await this.idpManager.install(url, undefined, marketplaceId, marketplaceLabel, upgrade === true)
                 res.status(200).json(meta)
             }
             catch (err) {

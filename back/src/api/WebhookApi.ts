@@ -29,9 +29,11 @@ export class WebhookApi {
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                const { url, marketplaceId, marketplaceLabel } = req.body
+                // 'upgrade' es el permiso EXPLICITO para pisar una instalacion existente. Sin el, el
+                // manager rechaza una id ya instalada, que es el comportamiento de siempre.
+                const { url, marketplaceId, marketplaceLabel, upgrade } = req.body
                 if (!url) return void res.status(400).json({ error: 'url required' })
-                const meta = await this.webhookManager.install(url, undefined, marketplaceId, marketplaceLabel)
+                const meta = await this.webhookManager.install(url, undefined, marketplaceId, marketplaceLabel, upgrade === true)
                 logInfo(ELogComponent.CORE, `Webhook installed via API: ${meta.id} v${meta.version}`)
                 res.json(meta)
             } catch (err) {

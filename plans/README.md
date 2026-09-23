@@ -48,6 +48,7 @@ Terminados y en producción. Se consultan para saber **por qué** algo es como e
 | [business-provider](business-provider/PLAN.md) | `business` fuera del core, instalable, y `/provider/{alias}` |
 | [http-pull-push](http-pull-push/PLAN.md) | el provider que sondea HTTP y empuja a sus suscriptores |
 | [extension-managers-ui](extension-managers-ui/PLAN.md) | los once gestores de extensiones en un único diálogo |
+| [extension-upgrade](extension-upgrade/PLAN.md) | actualizar una extensión instalando encima, sin desinstalar y sin perder su configuración |
 | [user-admin-guide](user-admin-guide/USER-ADMIN-GUIDE-PLAN.md) | la guía de usuario y administrador |
 
 ## Sin empezar
@@ -57,7 +58,6 @@ Documentados a propósito, para no volver a pensarlos desde cero el día que toq
 | plan | por qué está parado |
 |---|---|
 | [provider-contract](provider-contract/PLAN.md) | decisión del usuario (2026-09-12): se deja escrito y no se toca |
-| [extension-upgrade](extension-upgrade/PLAN.md) | la detección de versión nueva existe; actualizar desde la UI, no |
 | shell [1](shell/prd-1-shell-extension.md) · [2](shell/prd-2-channel-variants.md) · [3](shell/prd-3-dashboard-shell.md) | tres PRD encadenados: el tipo `shell`, las variantes de presentación de un canal y el dashboard |
 
 ## Lo que no es un plan
