@@ -621,10 +621,26 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         getClusters()
         const settingsLoaded = readLoggedUserSettings()
 
-        // load front.js for already-installed plugins
+        /*
+            load front.js for already-installed plugins, EL DEL CANAL DE ARRANQUE PRIMERO.
+
+            El tab inicial no se crea hasta que su canal esta registrado (ver el efecto de
+            'user.startChannel'), asi que lo que el usuario espera mirando una pantalla vacia es un solo
+            bundle: el suyo. Cargandolos todos a la vez ese bundle competia con los demas por las seis
+            conexiones que el navegador abre por host, y con una docena de plugins instalados podia caer
+            en la ultima tanda.
+
+            Medido con trece plugins: el tab aparecia a los 9,3 s, justo cuando terminaba de descargarse
+            el ultimo. Adelantandolo, el resto sigue cargando detras sin que nadie lo espere mirando.
+        */
         fetch(`${backendUrl}/core/plugins`, addGetAuthorization(accessString))
             .then(r => r.json())
-            .then((plugins: { id: string }[]) => Promise.all(plugins.map(p => loadPluginFront(p.id))))
+            .then(async (plugins: { id: string }[]) => {
+                const arranque = plugins.find(p => p.id === user?.startChannel)
+                // Sin canal de arranque no hay nada que priorizar: se cargan todos a la vez, como siempre.
+                if (arranque) await loadPluginFront(arranque.id)
+                await Promise.all(plugins.filter(p => p.id !== arranque?.id).map(p => loadPluginFront(p.id)))
+            })
             .catch(err => console.log(`[plugins] failed to load installed plugins: ${err}`))
             .finally(() => setPluginsLoaded(true))
 
@@ -729,7 +745,22 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 if (updates.length > 0) notify(undefined, ENotifyLevel.WARNING, `Updates available: ${updates.join(', ')}`)
             } catch {}
         }
-        checkExtensionUpdates()
+
+        /*
+            El chequeo NO bloquea el render —no hay await—, pero lanzaba sus 20 peticiones (catalogo e
+            instalados, una de cada por tipo de extension) justo cuando el front esta descargando los
+            bundles de los plugins, que es lo que necesita para pintar.
+
+            Medido en un arranque real: 146 peticiones, 34 en vuelo A LA VEZ contra un limite de 6
+            conexiones por host, y los bundles de plugin tardando 700-900 ms compitiendo con estas. Lo
+            que se ve desde fuera es que la home tarda en responder "hasta que sale el aviso", cuando en
+            realidad el aviso solo es el final de la tormenta.
+
+            Saber que hay una version nueva no corre ninguna prisa, asi que se espera a que el navegador
+            este ocioso. El timeout es el tope: si nunca hay calma, se hace igualmente a los 10 s.
+        */
+        if (window.requestIdleCallback) window.requestIdleCallback(() => { checkExtensionUpdates() }, { timeout: 10000 })
+        else setTimeout(() => { checkExtensionUpdates() }, 5000)
 
         /*
             Si el contenedor anterior del core se fue, avisar: el log que lo explica esta en el About, y

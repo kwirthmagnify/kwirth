@@ -47,6 +47,13 @@ export class MarketplaceManager {
     private configMaps: IConfigMaps
     private secrets: ISecrets
     private cache: Map<string, ICacheItem> = new Map()
+    /*
+        Descargas EN CURSO, por url. La cache sola no basta: se consulta al entrar y se escribe al
+        salir, asi que diez peticiones lanzadas a la vez —que es justo lo que hace el arranque del
+        front, una por tipo de extension— se encuentran las diez la cache vacia y descargan las diez
+        el MISMO manifest. Aqui la primera deja su promesa y las demas se enganchan a ella.
+    */
+    private enCurso: Map<string, Promise<IMarketplaceEntry[]>> = new Map()
 
     constructor(configMaps: IConfigMaps, secrets: ISecrets) {
         this.configMaps = configMaps
@@ -109,11 +116,23 @@ export class MarketplaceManager {
         return entry.targetType ? `${entry.targetType}/${entry.id}` : entry.id
     }
 
-    // Descarga un manifest. Nunca lanza: una fuente inalcanzable no puede tumbar las demas, pero SI se
-    // registra, a diferencia del silencio absoluto que habia cuando descargaba el navegador.
+    // Un manifest, de donde sea que este ya: cache, descarga en curso, o una nueva.
     private async fetchManifest(url: string, headers: Record<string, string>): Promise<IMarketplaceEntry[]> {
         const cached = this.cache.get(url)
         if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.entries
+
+        // Si alguien ya la esta pidiendo, se espera a SU descarga en vez de lanzar otra igual.
+        const yaPedida = this.enCurso.get(url)
+        if (yaPedida) return yaPedida
+
+        const descarga = this.downloadManifest(url, headers).finally(() => this.enCurso.delete(url))
+        this.enCurso.set(url, descarga)
+        return descarga
+    }
+
+    // La descarga de verdad. Nunca lanza: una fuente inalcanzable no puede tumbar las demas, pero SI se
+    // registra, a diferencia del silencio absoluto que habia cuando descargaba el navegador.
+    private async downloadManifest(url: string, headers: Record<string, string>): Promise<IMarketplaceEntry[]> {
         try {
             const response = await fetch(url, { headers })
             if (!response.ok) {
@@ -146,6 +165,8 @@ export class MarketplaceManager {
 
     public invalidateCache(): void {
         this.cache.clear()
+        // Tambien las que esten a medias: empezaron antes del refresh, asi que traen lo de antes.
+        this.enCurso.clear()
     }
 
     // Prueba de alcance para la UI: dice si el manifest se lee y cuantas entradas trae, distinguiendo el
