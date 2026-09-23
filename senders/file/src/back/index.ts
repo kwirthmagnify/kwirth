@@ -86,8 +86,17 @@ export class FileSender implements ISender {
         let origin = ''
         if ((config.origin ?? false) && message.origin) {
             const o = message.origin
-            const partes = [o.namespace, o.pod, o.container].filter(Boolean).join('/')
-            const etiqueta = partes || o.service || ''
+            /*
+             * A line from a cluster is identified by namespace/pod/container. A line from a MACHINE has
+             * no namespace: what identifies it is the host plus the service that produced it — and the
+             * service is the half that matters, because one machine runs many. Producers put the host
+             * in the pod field on purpose (it is what a destination expects as its host), so taking
+             * the Kubernetes trio whenever a pod is present dropped the service and left every line of
+             * a machine looking the same, whichever service wrote it.
+             */
+            const etiqueta = o.namespace
+                ? [o.namespace, o.pod, o.container].filter(Boolean).join('/')
+                : [o.pod, o.service].filter(Boolean).join('/')
             if (etiqueta) origin = `[${etiqueta}] `
         }
 

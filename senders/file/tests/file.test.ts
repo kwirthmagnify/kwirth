@@ -80,6 +80,31 @@ test('sin pod, el origen se identifica por su servicio', async () => {
     assert.deepEqual(lee(ruta), ['[facturacion] linea'])
 })
 
+test('una linea de una MAQUINA lleva su host Y el servicio que la produjo', async () => {
+    const ruta = tmp()
+    const sender = await crea({ name: 'c', filePath: ruta, timestamps: false, levels: false, origin: true })
+
+    /*
+        Log de fuera de un cluster: no hay namespace, y quien lo produce pone el HOST en el campo del
+        pod, porque es lo que un destino espera como su host. Si se toma el trio de Kubernetes en
+        cuanto hay pod, el servicio se pierde — y una maquina corre muchos, asi que todas sus lineas
+        acaban pareciendo la misma.
+    */
+    await sender.sendBatch!('c', [{ body: 'latido', origin: { pod: 'windows-dev', service: 'demo-app' } }])
+
+    assert.deepEqual(lee(ruta), ['[windows-dev/demo-app] latido'])
+})
+
+test('y una de un cluster sigue siendo namespace/pod/container', async () => {
+    const ruta = tmp()
+    const sender = await crea({ name: 'c', filePath: ruta, timestamps: false, levels: false, origin: true })
+
+    // el servicio NO se cuela aqui: dentro de un cluster el container ya dice que es
+    await sender.sendBatch!('c', [{ body: 'linea', origin: { namespace: 'produccion', pod: 'api-7', container: 'api', service: 'pagos' } }])
+
+    assert.deepEqual(lee(ruta), ['[produccion/api-7/api] linea'])
+})
+
 test('un mensaje sin origen no deja corchetes vacios', async () => {
     const ruta = tmp()
     const sender = await crea({ name: 'c', filePath: ruta, timestamps: false, levels: false, origin: true })
