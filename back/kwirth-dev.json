@@ -1,12 +1,14 @@
 {
     "plugins": {
         "agora": "../plugins/agora/dist",
+        "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
         "provider-debug": "../plugins/provider-debug/dist"
     },
     "providers": {
         "longhorn": "../providers/longhorn/dist",
-        "azure": "../providers/azure/dist"
+        "azure": "../providers/azure/dist",
+    "fluentbit": "../providers/fluentbit/dist"
     },
     "senders": {},
     "webhooks": {},

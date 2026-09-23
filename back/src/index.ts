@@ -172,6 +172,8 @@ const envPort = +(process?.env?.PORT || '3883')
 // Tope del cuerpo de una peticion. Configurable porque quien ingiere log sabe cuanto agrupa su
 // recolector, y 8 MB es un punto de partida razonable, no una verdad.
 const envBodyLimit = process.env.BODYLIMIT || '8mb'
+// Cuanto se mantiene abierta una conexion ociosa, en milisegundos (ver createHttpServers)
+const envKeepAliveMs = +(process.env.KEEPALIVE || '65000')
 
 /*
     Rutas de providers que quieren el cuerpo EN CRUDO (las que declaran 'rawBody').
@@ -2465,6 +2467,18 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
         // create HTTP and WS servers
         logInfo(ELogComponent.CORE, 'Creating HTTP server...')
         httpServer = http.createServer(expressApp)
+        /*
+            Node cierra las conexiones ociosas a los 5 segundos, y quien nos manda datos las REUTILIZA:
+            un recolector que envie cada 10 s escribe siempre sobre un socket que acabamos de cerrar, y
+            del otro lado se ve un error de red —no un error HTTP— que parece que kwirth no esta
+            escuchando cuando si lo esta. Paso con Fluent Bit y su output http.
+
+            Se sube a 65 s, por encima de lo que espacian sus envios los clientes habituales. El
+            headersTimeout DEBE quedar por encima del keepAliveTimeout: si no, Node corta la peticion
+            mientras aun se estan leyendo sus cabeceras.
+        */
+        httpServer.keepAliveTimeout = envKeepAliveMs
+        httpServer.headersTimeout = envKeepAliveMs + 5000
         logInfo(ELogComponent.CORE, 'Creating WS server...')
         // perMessageDeflate: comprime los mensajes grandes del WS (p.ej. snapshots de findings de Defender
         // que pueden pesar MB). El navegador negocia la extensión automáticamente (front sin cambios).

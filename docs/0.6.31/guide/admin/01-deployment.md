@@ -118,6 +118,10 @@ Download the installer for **Windows, macOS or Linux** from the [Releases page](
   *receives* data instead of returning it: a log collector batches several records per request and goes
   past the old 100 kB default without effort. The symptom is misleading — kwirth answers **413** with an
   HTML error page before the extension ever sees the request, so it looks like the extension's fault.
+- **`KEEPALIVE`** is how long an idle connection is kept open, in milliseconds (default **65000**).
+  Node's own default is 5 s, which is too short for anything that *sends* to kwirth on a schedule: the
+  sender reuses the connection, finds it closed and reports a network error that reads like "kwirth is
+  not listening" when it is.
 - The other environment variable worth setting is **`KWIRTH_CLUSTER_NAME`**, which names the cluster in the title bar and the Homepage. kwirth detects the name on AKS, EKS, GKE and k3d, but on **k3s and bare clusters there is nothing to detect** — see [The cluster's own name](06-cluster-management#the-clusters-own-name).
 
 ## After an unexpected restart
