@@ -11,8 +11,11 @@
     "fluentbit": "../providers/fluentbit/dist"
     },
     "senders": {
-    "file": "../senders/file/dist"},
-    "webhooks": {},
+    "file": "../senders/file/dist",
+    "datadog": "../senders/datadog/dist",
+    "gitlab-issues": "../senders/gitlab-issues/dist"},
+    "webhooks": {
+    "gitlab-issues": "../webhooks/gitlab-issues/dist"},
     "logins": {},
     "homepages": {},
     "themes": {},

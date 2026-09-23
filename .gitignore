@@ -64,7 +64,9 @@ kwirth-bundled.json
 /aitoolsets/k8s-ops/
 /aitoolsets/source-repos/
 /senders/jira/
+/senders/gitlab-issues/
 /webhooks/jira/
+/webhooks/gitlab-issues/
 /idps/entraid/
 /themes/santander/
 /logins/santander/
