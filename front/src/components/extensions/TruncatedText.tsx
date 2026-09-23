@@ -36,7 +36,7 @@ const TruncatedText: React.FC<{
         medir()
         const el = ref.current
         if (!el || typeof ResizeObserver === 'undefined') return
-        const observer = new ResizeObserver(medir)
+        const observer = new ResizeObserver(() => requestAnimationFrame(medir))
         observer.observe(el)
         return () => observer.disconnect()
     }, [medir, text])
