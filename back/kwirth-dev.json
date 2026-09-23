@@ -10,7 +10,8 @@
         "azure": "../providers/azure/dist",
     "fluentbit": "../providers/fluentbit/dist"
     },
-    "senders": {},
+    "senders": {
+    "file": "../senders/file/dist"},
     "webhooks": {},
     "logins": {},
     "homepages": {},

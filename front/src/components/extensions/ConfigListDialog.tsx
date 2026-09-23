@@ -146,9 +146,10 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
             const comunes: TConfigValues = {}
             for (const f of camposComunes) {
                 const v = base[f.name]
+                // un booleano se guarda siempre, tambien apagado (ver buildPayload)
+                if (f.type === 'boolean') { comunes[f.name] = Boolean(v); continue }
                 if (v === undefined || v === '') continue
                 if (f.type === 'number') comunes[f.name] = Number(v)
-                else if (f.type === 'boolean') comunes[f.name] = Boolean(v)
                 else comunes[f.name] = v
             }
             const res = await fetch(`${backendUrl}${props.basePath}/configs`, addPutAuthorization(accessString, JSON.stringify({ ...comunes, configs })))
@@ -267,9 +268,16 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         const payload: TConfigValues = { name: values.name }
         for (const f of schema.filter(f => !f.common && f.name !== 'name')) {
             const v = values[f.name]
+            /*
+                Un booleano se guarda SIEMPRE, tambien cuando esta apagado.
+
+                Saltarlo por "vacio" convertia el apagado en AUSENTE, y una extension con un campo cuyo
+                defecto es true lo volvia a encender: el interruptor se veia apagado y el comportamiento
+                era el de encendido. Lo que se ve tiene que ser lo que se guarda.
+            */
+            if (f.type === 'boolean') { payload[f.name] = Boolean(v); continue }
             if (v === undefined || v === '') continue
             if (f.type === 'number') payload[f.name] = Number(v)
-            else if (f.type === 'boolean') payload[f.name] = Boolean(v)
             else payload[f.name] = v
         }
         if (values.description !== undefined && values.description !== '') payload.description = values.description

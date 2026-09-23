@@ -74,6 +74,15 @@
   {
     "extensionType": "sender",
     "id": "file",
+    "version": "0.1.13",
+    "name": "File Sender",
+    "displayName": "File Sender",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-file/-/kwirth-sender-file-0.1.13.tgz",
+    "description": "File sender plugin for Kwirth — appends messages to a file, with configurable path, format and timestamps per named config"
+  },
+  {
+    "extensionType": "sender",
+    "id": "file",
     "version": "0.1.11",
     "name": "File Sender",
     "displayName": "File Sender",

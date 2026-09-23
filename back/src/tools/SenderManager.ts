@@ -476,6 +476,25 @@ export class SenderManager implements ISenderAccess {
         const instance = new Ctor()
         instance.startSender(this).catch(err => logError(ELogComponent.CORE, `Sender '${id}' startSender error: ${err}`))
         this.instances.set(id, instance)
+        /*
+            Una instancia RECIEN creada no sabe nada: sus configuraciones se cargaron en la instancia
+            anterior, al arrancar el core. Y aqui se llega no solo la primera vez, sino cada vez que se
+            recarga un sender montado desde dev —el rebuild tira la instancia para coger el codigo
+            nuevo—, asi que sin esto un rebuild deja al sender SIN configuraciones.
+
+            El sintoma engañaba: la lista de /core/senders las seguia mostrando —esa sale del almacen
+            del core, no de la instancia— y solo al enviar aparecia "has no config", como si se hubieran
+            borrado solas.
+        */
+        const guardadas = this.configStore.get(id)
+        if (guardadas) {
+            const base = this.commonFieldStore.get(id) ?? {}
+            for (const config of guardadas.values()) {
+                try { instance.addConfig({ ...base, ...config } as ISenderConfig) }
+                catch (err) { logError(ELogComponent.CORE, `Sender '${id}' could not restore config '${config.name}': ${err}`) }
+            }
+            if (guardadas.size > 0) logInfo(ELogComponent.CORE, `Sender '${id}' re-instantiated with ${guardadas.size} config(s)`)
+        }
         return instance
     }
 

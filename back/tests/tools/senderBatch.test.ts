@@ -155,3 +155,43 @@ test('una config que el sender no tiene descarta el lote sin lanzar', async () =
 
     assert.equal(fake.batches.length, 0)
 })
+
+/*
+    Una instancia NUEVA del sender tiene que recibir las configuraciones que el core ya conoce.
+
+    No es un caso de laboratorio: en dev, cada rebuild de un sender tira su instancia para cargar el
+    codigo nuevo, y la siguiente se creaba VACIA. El sintoma engañaba —la lista de senders seguia
+    mostrando las configuraciones, porque esa sale del almacen del core y no de la instancia— y solo al
+    enviar aparecia "has no config", como si se hubieran borrado solas.
+*/
+
+test('una instancia re-creada recupera las configuraciones del core', async () => {
+    const manager = new SenderManager(memConfigMaps())
+    await manager.init()
+
+    const recibidas: string[] = []
+    class FakeSender {
+        id = 'file'
+        private nombres = new Set<string>()
+        addConfig(c: { name: string }) { this.nombres.add(c.name); recibidas.push(c.name) }
+        removeConfig(n: string) { this.nombres.delete(n) }
+        hasConfig(n: string) { return this.nombres.has(n) }
+        getConfigNames() { return [...this.nombres] }
+        async startSender() {}
+        async stopSender() {}
+        async send() {}
+    }
+    ;(manager as unknown as { registeredSenders: Map<string, unknown> }).registeredSenders.set('file', FakeSender)
+
+    // el core registra una configuracion: se guarda en su almacen y llega a la instancia
+    manager.addConfig('file', { name: 'montag-test' } as never)
+    assert.deepEqual(recibidas, ['montag-test'])
+
+    // ...y ahora se tira la instancia, que es lo que hace el recargador de dev tras un rebuild
+    ;(manager as unknown as { instances: Map<string, unknown> }).instances.delete('file')
+
+    const nueva = manager.getSender('file')
+    assert.ok(nueva)
+    assert.equal(nueva!.hasConfig('montag-test'), true,
+        'sin esto, un rebuild deja al sender sin configuraciones y los envios se descartan')
+})
