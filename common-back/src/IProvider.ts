@@ -100,6 +100,18 @@ export interface IProvider extends IExtension {
     router: any
     routerAlias: string | undefined
     /**
+     * El provider quiere el cuerpo de las peticiones de su router publico EN CRUDO (Buffer), sin que
+     * el bodyParser global del core lo toque.
+     *
+     * Hace falta para todo lo que no sea JSON plano: ndjson, msgpack, protobuf, o verificar una firma
+     * sobre los bytes exactos que llegaron. Sin esto, una extension que INGIERE recibe el cuerpo ya
+     * parseado —y con el limite del parser global—, que es justo lo que el core resolvio para los
+     * webhooks montandolos por delante.
+     *
+     * Por defecto es false: los providers que hoy leen 'req.body' como objeto siguen igual.
+     */
+    readonly rawBody?: boolean
+    /**
      * Router de gestion del provider (su propia configuracion). El core lo monta SIEMPRE detras de
      * validacion de accessKey, igual que hace con los endpoints de un canal, en la ruta
      * '/core/providerconfig/<providerId>'. Es una via distinta de 'router', que es publica y puede

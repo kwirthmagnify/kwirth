@@ -169,6 +169,17 @@ const envAuth = process.env.AUTH || 'kwirth'  // kwirth | kubeconfig | b2c | ent
 const envMasterKey = process.env.MASTERKEY || 'Kwirth4Ever'
 const envForward = (process.env.FORWARD || 'true').toLowerCase() === 'true'
 const envPort = +(process?.env?.PORT || '3883')
+// Tope del cuerpo de una peticion. Configurable porque quien ingiere log sabe cuanto agrupa su
+// recolector, y 8 MB es un punto de partida razonable, no una verdad.
+const envBodyLimit = process.env.BODYLIMIT || '8mb'
+
+/*
+    Rutas de providers que quieren el cuerpo EN CRUDO (las que declaran 'rawBody').
+
+    Se rellena al montar sus routers, que ocurre despues de arrancar express; por eso el middleware que
+    la consulta mira esta lista EN CADA PETICION en vez de decidirse al arrancar.
+*/
+const rawBodyProviderPaths: string[] = []
 const envFront = process.env.FRONT !== undefined ? process.env.FRONT === 'true' : true
 const envAnsiLog = process.env.ANSILOG !== undefined ? process.env.ANSILOG === 'true' : true
 const envExitLog = process.env.EXITLOG !== undefined ? process.env.EXITLOG === 'true' : true
@@ -1579,7 +1590,17 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         path = `/${ri.id}/provider/${provider.id}`
                     riRouter.use(path, provider.router)
                     provider.started = true
-                    logInfo(ELogComponent.CORE, `Provider ${provider.id} will listen HTTP requests at '${path}'`)
+                    /*
+                        El cuerpo en crudo se decide aqui, no en el router: para cuando el router corre,
+                        el bodyParser global ya se lo habria comido.
+
+                        Se lee de forma estructural y no por el tipo: 'rawBody' es nuevo en
+                        kwirth-common-back, y asi el core compila igual contra la version anterior —lo
+                        que importa cuando el paquete acaba de publicarse y npm todavia no lo sirve.
+                    */
+                    const quiereCrudo = (provider as { rawBody?: boolean }).rawBody === true
+                    if (quiereCrudo && !rawBodyProviderPaths.includes(path)) rawBodyProviderPaths.push(path)
+                    logInfo(ELogComponent.CORE, `Provider ${provider.id} will listen HTTP requests at '${path}'${quiereCrudo ? ' (raw body)' : ''}`)
                 }
                 else {
                     logError(ELogComponent.CORE, `Provider ${provider.id} provides router but ruter doen't exist`)
@@ -2824,7 +2845,29 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
     })
     app.use(`${envRootPath}/webhook`, express.raw({ type: '*/*', limit: '1mb' }), webhookRouter)
 
-    app.use(bodyParser.json())
+    /*
+        Un provider de INGESTA necesita los bytes tal y como llegaron: ndjson y msgpack no son JSON, y
+        verificar una firma exige el cuerpo exacto. El bodyParser global se los comeria, asi que los que
+        lo piden ('rawBody' en IProvider) pasan por delante con su propio parser.
+
+        Es el mismo patron que ya usa el receptor de webhooks unas lineas mas arriba; lo que faltaba era
+        que los providers publicos pudieran pedirlo tambien, en vez de recibir el cuerpo ya masticado.
+    */
+    app.use((req: Request, res: Response, next) => {
+        const casa = (ruta: string): boolean =>
+            req.path === ruta || req.path.startsWith(`${ruta}/`) ||
+            req.path === `${envRootPath}${ruta}` || req.path.startsWith(`${envRootPath}${ruta}/`)
+        if (!rawBodyProviderPaths.some(casa)) return next()
+        express.raw({ type: () => true, limit: envBodyLimit })(req, res, next)
+    })
+
+    /*
+        El limite por defecto de body-parser son 100 kB, y eso se queda corto en cuanto una extension
+        RECIBE algo en vez de devolverlo: un recolector de log agrupa varios registros por peticion y
+        pasa de 100 kB sin esfuerzo. El sintoma engaña, porque el 413 lo devuelve el core con una pagina
+        HTML de error antes de que la extension llegue a verlo, y parece un fallo de la extension.
+    */
+    app.use(bodyParser.json({ limit: envBodyLimit }))
     app.use(cors())
     app.use(fileUpload())
 

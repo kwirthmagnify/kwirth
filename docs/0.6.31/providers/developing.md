@@ -21,6 +21,7 @@ export interface IProvider {
   stopProvider(): Promise<void>
   router: Router | undefined
   routerAlias: string | undefined
+  readonly rawBody?: boolean
   configRouter?: Router
   apiKeyApi: any | undefined
 }
@@ -42,6 +43,13 @@ Where:
   - `router`, the public Express router, served at
     `/<rootPath>/<runningInstance>/provider/<providerId>`, or at `/<rootPath>/provider/<routerAlias>` when
     you set a `routerAlias`.
+  - `rawBody`, opt in to receiving the **raw body** (a `Buffer`) on your public router, untouched by
+    kwirth's global JSON parser. You need it for anything that is not plain JSON — ndjson, msgpack,
+    protobuf — or to verify a signature over the exact bytes that arrived. **Without it your router gets
+    the body already parsed**, because kwirth's `bodyParser.json()` runs before your routes: a
+    `Content-Type` it does not understand (say `application/x-ndjson`) leaves you with an empty body, and
+    a batch larger than the global limit is answered with a **413** before your code ever runs. The
+    default is off, so providers that read `req.body` as an object keep working unchanged.
   - `configRouter`, **your own management endpoints** — see below.
   - `getSubscriptionHelp`, optional, to document how to subscribe to you — see below.
 

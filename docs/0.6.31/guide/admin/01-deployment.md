@@ -114,6 +114,10 @@ Download the installer for **Windows, macOS or Linux** from the [Releases page](
       value: '/quirz'
   ```
 - Kwirth listens on port **3883** inside the container; for Docker/External you pick the published port and path yourself (e.g. `-p 8080:3883 --rootpath /fantastic/tony` → `http://localhost:8080/fantastic/tony`).
+- **`BODYLIMIT`** caps the size of a request body (default **8mb**). It only matters when an extension
+  *receives* data instead of returning it: a log collector batches several records per request and goes
+  past the old 100 kB default without effort. The symptom is misleading — kwirth answers **413** with an
+  HTML error page before the extension ever sees the request, so it looks like the extension's fault.
 - The other environment variable worth setting is **`KWIRTH_CLUSTER_NAME`**, which names the cluster in the title bar and the Homepage. kwirth detects the name on AKS, EKS, GKE and k3d, but on **k3s and bare clusters there is nothing to detect** — see [The cluster's own name](06-cluster-management#the-clusters-own-name).
 
 ## After an unexpected restart
