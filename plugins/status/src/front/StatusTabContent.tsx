@@ -1,10 +1,11 @@
 import React from 'react'
 import { Box, Chip, IconButton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material'
-import { Refresh } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Refresh, ViewList, Hub } from '@kwirthmagnify/kwirth-common-front/icons'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { EComponentHealth, EComponentKind, EStatusCommand, IStatusComponent } from '../common/StatusTypes'
 import { IStatusData } from './StatusData'
+import { StatusDiagram } from './StatusDiagram'
 
 /*
     Cómo se dice cada estado, y de qué color.
@@ -44,6 +45,12 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         mismo patron que usan los demas canales: se mide donde EMPIEZA la caja y se le da el resto del
         viewport. Se remide en cada render porque la barra de herramientas de arriba cambia de alto.
     */
+    /*
+        Tabla o diagrama. Arranca en TABLA a proposito: responder "¿esta todo bien?" es lo que se hace
+        diez veces al dia, y el grafo es para cuando ya sabes que algo pasa y quieres ver a quien
+        arrastra. Ademas el diagrama descarga el motor de layout, y quien no lo abra no lo paga.
+    */
+    const [vista, setVista] = React.useState<'tabla' | 'grafo'>('tabla')
     const boxRef = React.useRef<HTMLDivElement | null>(null)
     const [boxTop, setBoxTop] = React.useState(0)
     React.useEffect(() => {
@@ -135,6 +142,12 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 <Chip size='small' variant='outlined' label={`${inventory.components.length} components`} />
                 <Box sx={{ flexGrow: 1 }} />
                 <TextField size='small' placeholder='Filter…' value={filter} onChange={e => setFilter(e.target.value)} sx={{ width: 220 }} />
+                <Tooltip title='Table view'>
+                    <IconButton size='small' color={vista === 'tabla' ? 'primary' : 'default'} aria-label='Table view' onClick={() => setVista('tabla')}><ViewList fontSize='small' /></IconButton>
+                </Tooltip>
+                <Tooltip title='Graph view'>
+                    <IconButton size='small' color={vista === 'grafo' ? 'primary' : 'default'} aria-label='Graph view' onClick={() => setVista('grafo')}><Hub fontSize='small' /></IconButton>
+                </Tooltip>
                 <Tooltip title='Take a new snapshot'>
                     <IconButton size='small' onClick={refresh}><Refresh fontSize='small' /></IconButton>
                 </Tooltip>
@@ -145,8 +158,9 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 Snapshot taken at {new Date(inventory.takenAt).toLocaleTimeString()} — it does not refresh on its own
             </Typography>
 
-            <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
-                <Table size='small' stickyHeader>
+            <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: vista === 'tabla' ? 'auto' : 'hidden', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
+                {vista === 'grafo' && <StatusDiagram inventory={inventory} />}
+                {vista === 'tabla' && <Table size='small' stickyHeader>
                     <TableHead>
                         <TableRow>
                             <TableCell>Kind</TableCell>
@@ -157,7 +171,7 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                         </TableRow>
                     </TableHead>
                     <TableBody>{componentes.map(fila)}</TableBody>
-                </Table>
+                </Table>}
             </Box>
 
             {data.signals.length > 0 && (

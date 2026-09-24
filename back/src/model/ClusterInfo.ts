@@ -22,6 +22,23 @@ export interface IPendingWebsocket {
     instanceConfig: IInstanceConfig
 }
 
+/**
+ * Una suscripcion VIVA, tal y como el core la intermedio: quien produce y quien consume.
+ *
+ * El core es el unico sitio donde esta informacion existe completa. Un provider guarda sus
+ * suscriptores, pero 'IProviderSubscriber' es una interfaz de un solo metodo y no lleva identidad, asi
+ * que el provider sabe CUANTOS tiene y no QUIENES son. Aqui, en cambio, la suscripcion pasa con el
+ * canal delante — y con eso se puede dibujar el grafo sin pedirle nada a nadie.
+ */
+export interface ISubscription {
+    /** Quien produce: un provider ('events') o un pluvider ('plugin:agora'). */
+    providerId: string
+    /** Quien consume: el id del canal. */
+    channelId: string
+    /** Desde cuando, para poder decir cuanto lleva algo sin consumidores. */
+    since: number
+}
+
 export class ClusterInfo {
     public name: string = ''
     public id: string = ''
@@ -59,6 +76,20 @@ export class ClusterInfo {
     public pluviders: Map<string, TPluviderChannel> = new Map()
     public senders?: ISenderAccess
     public webhooks?: IWebhookAccess
+    /*
+        Quien consume a quien, registrado aqui porque aqui es donde se sabe.
+
+        Se escribe al suscribirse y al darse de baja —cuando alguien abre o cierra un canal—, nunca por
+        evento: no esta en el camino caliente y no cuesta nada mantenerlo.
+
+        ⚠️ NO es la verdad absoluta: quien llame a 'provider.addSubscriber()' directamente, sin pasar
+        por aqui, no aparece. Lo hace provider-debug con su propio proxy, a proposito. Por eso esto
+        convive con 'IProvider.getStats()', que da el TOTAL que el provider reconoce: si el total es
+        mayor que lo registrado aqui, hay consumidores que este mapa no conoce, y quien lo pinte debe
+        decirlo en vez de dar a entender que estan todos.
+    */
+    private subscriptions: ISubscription[] = []
+
     public vcpus: number = 0
     public memory: number = 0
     public type: EClusterType = EClusterType.KUBERNETES
@@ -78,6 +109,7 @@ export class ClusterInfo {
             let pluv = this.pluviders.get(providerId)
             if (pluv) {
                 pluv.addSubscriber(c, data)
+                this.trackSubscription(providerId, c)
                 logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' added to pluvider '${providerId}'`)
             }
             else
@@ -87,6 +119,7 @@ export class ClusterInfo {
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {
             prov.addSubscriber(c,data)
+            this.trackSubscription(providerId, c)
             logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' added to provider '${providerId}'`)
         }
         else
@@ -102,6 +135,7 @@ export class ClusterInfo {
             let pluv = this.pluviders.get(providerId)
             if (pluv) {
                 pluv.removeSubscriber(c)
+                this.untrackSubscription(providerId, c)
                 logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' removed from pluvider '${providerId}'`)
             }
             else
@@ -111,11 +145,37 @@ export class ClusterInfo {
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {
             prov.removeSubscriber(c)
+            this.untrackSubscription(providerId, c)
             logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' removed from provider '${providerId}'`)
         }
         else
             logError(ELogComponent.PROVIDER,`Cannot remove subscription of channel '${c.getChannelData().id}' from provider ${providerId} (provider do not exist)`)
     }
+
+    /*
+        Se anota DESPUES de que el provider haya aceptado el alta, no antes: si 'addSubscriber' revienta,
+        el core no debe quedarse creyendo que existe una suscripcion que nunca se hizo.
+
+        Se ignora el duplicado: un canal que se suscribe dos veces al mismo provider —recargas, reintentos—
+        es una arista, no dos.
+    */
+    private trackSubscription = (providerId: string, c: IChannel): void => {
+        const channelId = c.getChannelData().id
+        if (this.subscriptions.some(s => s.providerId === providerId && s.channelId === channelId)) return
+        this.subscriptions.push({ providerId, channelId, since: Date.now() })
+    }
+
+    private untrackSubscription = (providerId: string, c: IChannel): void => {
+        const channelId = c.getChannelData().id
+        const pos = this.subscriptions.findIndex(s => s.providerId === providerId && s.channelId === channelId)
+        if (pos >= 0) this.subscriptions.splice(pos, 1)
+    }
+
+    /**
+     * Quien consume a quien, ahora mismo. Copia, no la lista viva: quien la lea no puede modificar el
+     * registro del core sin querer.
+     */
+    getSubscriptions = (): ISubscription[] => this.subscriptions.map(s => ({ ...s }))
 
     // Kubernetes no tiene nombre de cluster: los gestionados dejan pistas en labels/providerID del
     // nodo, y k3s no deja ninguna (k3d solo la deja en el nombre de sus contenedores). Precedencia:

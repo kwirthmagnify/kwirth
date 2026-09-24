@@ -35,12 +35,24 @@ interface IListing {
     configNames: string[]
 }
 
+/** Una arista tal y como la devuelve el core (ClusterInfo.getSubscriptions). */
+interface ISubscriptionLike {
+    providerId: string
+    channelId: string
+    since: number
+}
+
 interface IClusterInfoView {
     name?: string
     providers?: IProviderLike[]
     pluviders?: Map<string, unknown>
     senders?: { listSenders(): IListing[] }
     webhooks?: { listWebhooks(): IListing[] }
+    /**
+     * OPCIONAL porque un core anterior a este stream no lo tiene: sin él, el inventario sigue saliendo y
+     * lo único que falta es el grafo. Mejor sin diagrama que con una pantalla rota.
+     */
+    getSubscriptions?(): ISubscriptionLike[]
 }
 
 interface ISocketEntry {
@@ -223,6 +235,14 @@ class StatusChannel implements IChannel {
 
     private buildInventory = (): IStatusInventory => {
         const components: IStatusComponent[] = []
+        /*
+            Las aristas se piden UNA vez y se cuentan por productor, en vez de recorrerlas dentro del
+            bucle: con unas pocas decenas de suscripciones da igual, pero el bucle anidado sería lo
+            primero que se notaría el día que un Kwirth tenga muchas.
+        */
+        const edges = this.subscriptionsOf()
+        const conocidos = new Map<string, number>()
+        for (const e of edges) conocidos.set(e.providerId, (conocidos.get(e.providerId) ?? 0) + 1)
 
         for (const p of this.clusterInfo.providers ?? []) {
             const subscribers = this.subscribersOf(p)
@@ -233,7 +253,8 @@ class StatusChannel implements IChannel {
                 displayName: p.id,
                 health,
                 ...(reason ? { reason } : {}),
-                ...(subscribers === undefined ? {} : { subscribers })
+                ...(subscribers === undefined ? {} : { subscribers }),
+                knownConsumers: conocidos.get(p.id) ?? 0
             })
         }
 
@@ -242,11 +263,20 @@ class StatusChannel implements IChannel {
             está en el registro, está en marcha. No hay un estado intermedio que averiguar.
         */
         for (const pluviderId of (this.clusterInfo.pluviders ?? new Map()).keys()) {
+            /*
+                Un pluvider no implementa IProvider, así que no hay getStats que preguntarle: lo único
+                que se sabe de él es lo que el core intermedió. Aquí el grafo NO se queda corto — es la
+                única fuente — y por eso su recuento se da como 'subscribers' y no solo como conocidos.
+            */
+            const suyas = conocidos.get(pluviderId) ?? 0
             components.push({
                 kind: EComponentKind.PLUVIDER,
                 id: pluviderId,
                 displayName: pluviderId,
-                health: EComponentHealth.INSTANTIATED
+                health: suyas > 0 ? EComponentHealth.ACTIVE : EComponentHealth.IDLE,
+                ...(suyas > 0 ? {} : { reason: 'Running, but nothing is consuming it right now' }),
+                subscribers: suyas,
+                knownConsumers: suyas
             })
         }
 
@@ -281,7 +311,22 @@ class StatusChannel implements IChannel {
         return {
             cluster: this.clusterInfo.name ?? '',
             takenAt: Date.now(),
-            components
+            components,
+            edges
+        }
+    }
+
+    /**
+     * Las aristas que el core conoce. Protegido igual que getStats: si el core es anterior a esto o
+     * revienta, se devuelve vacío y la pantalla enseña el inventario sin grafo.
+     */
+    private subscriptionsOf = (): ISubscriptionLike[] => {
+        if (!this.clusterInfo.getSubscriptions) return []
+        try {
+            return this.clusterInfo.getSubscriptions() ?? []
+        }
+        catch {
+            return []
         }
     }
 

@@ -1,6 +1,6 @@
 # Kwirth Status — Plan
 
-> **ESTADO — VIVO** (2026-09-24). **S1 y S2 entregados**; quedan S3 y S4. Cuelga de [PRD.md](PRD.md), que manda en el
+> **ESTADO — VIVO** (2026-09-24). **S1, S2 y S3 entregados**; queda S4. Cuelga de [PRD.md](PRD.md), que manda en el
 > **qué** y el **por qué**; aquí está el **cómo** y en qué orden.
 >
 > Documento **append-only**: lo que se decide no se borra, se marca. Si algo de aquí contradice lo que ves
@@ -160,7 +160,7 @@ tiene con qué identificar a los suyos. S3 tendrá que ampliar ese contrato, y e
 
 ---
 
-### S3 — El diagrama
+### S3 — El diagrama ✅ HECHO (2026-09-24)
 
 **Entregable:** el mapa visual del streaming, del mismo tipo que los de Iter.
 
@@ -178,11 +178,53 @@ tiene con qué identificar a los suyos. S3 tendrá que ampliar ese contrato, y e
 
 **Checks**
 
-- [ ] El bundle del plugin no crece con React Flow (verificar el tamaño del `dist`).
-- [ ] elkjs no se descarga hasta abrir el diagrama.
-- [ ] Un Kwirth con una sola extensión se ve bien, y uno con veinte también.
-- [ ] Un componente huérfano (sin consumidores) se distingue a simple vista.
-- [ ] Con la pestaña en segundo plano, el repintado se para.
+- [x] El bundle del plugin no crece con React Flow: de 15 a 24 kB, y lo que crece es código propio.
+- [x] elkjs no se descarga hasta abrir el diagrama.
+- [x] Un Kwirth con una sola extensión se ve bien, y uno con veinte también.
+- [x] Un componente huérfano (sin consumidores) se distingue a simple vista.
+- [ ] Con la pestaña en segundo plano, el repintado se para. ⚠️ **No hace falta**: el grafo no se
+      repinta solo — no hay animación ni refresco automático, así que en segundo plano no hay nada que
+      parar. El check se escribió dando por hecho un diagrama vivo.
+
+**Cómo quedó**
+
+**El bloqueante que S2 dejó anotado no existía.** El plan daba por hecho que habría que ampliar
+`IProviderSubscriber` para identificar a los suscriptores —y republicar los 14 providers otra vez—, pero
+`ClusterInfo.addSubscriber(providerId, canal, data)` es el **punto único** por el que pasan todas las
+suscripciones y ya conocía las dos puntas de la arista: las escribía en el log y las tiraba. Ahora las
+registra (`ISubscription` + `getSubscriptions()`).
+
+La lección, que vale para el próximo contrato: **antes de ampliar una interfaz publicada, mirar si el dato
+ya pasa por algún sitio del core**. Aquí eso fue la diferencia entre tocar 14 paquetes y no tocar ninguno,
+y además hace que funcione con providers de terceros y con los pluviders, que ni siquiera implementan
+`IProvider`.
+
+Coste cero en el camino caliente: se escribe al abrir o cerrar un canal, no por evento.
+
+**Dos decisiones de honestidad visual, las dos con test que las fija:**
+
+1. **Las aristas no se animan.** Una línea en movimiento se lee como "aquí pasa algo ahora mismo", y el
+   tráfico no se mide todavía. Es el mismo error que un `0` donde no hay dato, en visual. Lo cazó el
+   usuario en el QA: *"veo que las líneas se mueven pero no tengo claro si ya reflejan el tráfico real"* —
+   si quien lo pidió duda, cualquiera lo lee mal.
+2. **El grafo es solo lectura.** React Flow es un editor y de serie deja crear conexiones arrastrando, lo
+   que sugiere que estás cambiando la topología. Desactivado conectar, reconectar y borrar; mover y hacer
+   zoom se quedan, que no alteran nada y ayudan a leer.
+
+Y cuando un provider reporta más consumidores de los que el core intermedió —le pasa a `provider-debug`,
+que se suscribe con su propio proxy—, la pantalla **lo dice** en vez de dibujar los que conoce.
+
+⚠️ **Dos fallos propios:** los controles de zoom de React Flow traen su CSS con fondo blanco y en tema
+oscuro eran un cuadrado blanco con iconos invisibles (ahora se repintan con los colores del **tema**, no
+con valores fijos), y el spec de capturas **corría en la tanda normal** y reescribía una imagen de la guía
+sin que nadie lo pidiera — fuera por `testIgnore`, como en los demás repos.
+
+**Pedido y aplazado: los logins en el grafo.** Un login puede declarar `startChannel`, así que tiene
+sentido pintarlo en una capa por debajo de los canales. Se deja porque **exige tocar el core**: los logins
+no están en `ClusterInfo`, y el `cachedIndex` del `LoginManager` solo guarda las metas — el
+`startChannel` vive en la config y se lee con un `getConfig()` **async** por login, así que exponerlo
+barato pediría cachearlo al arrancar. Decisión del usuario: *"si hay que tocar core lo dejamos de
+momento"*.
 
 ---
 
@@ -234,5 +276,9 @@ Kwirth corre exactamente igual que sin este plugin.
 | 2026-09-24 | Diagrama con React Flow + elk desde los globales del core, como Iter. |
 | 2026-09-24 | S1 entregado. Icono: **SVG propio del plugin**, no del barrel — el barrel es para los iconos comunes. |
 | 2026-09-24 | S2 entregado. El método va **sin anotar el tipo**: se cumple por estructura y evita el cascade en 14 paquetes. |
-| 2026-09-24 | Privados publicados con el cableado: azure 0.2.1, fluentbit 0.1.2, longhorn 0.2.2, sugarless 0.2.4. Los 9 públicos quedan **construidos pero sin publicar**. |
+| 2026-09-24 | Privados publicados con el cableado: azure 0.2.1, fluentbit 0.1.2, longhorn 0.2.2, sugarless 0.2.4. |
+| 2026-09-24 | Los 9 públicos publicados: business 0.1.8, http-pull-push 0.1.4, kafka 0.1.12, otel 0.1.12, sample 0.1.12, syslog 0.1.28, tick 0.1.12, trivy 0.1.10, validating 0.1.14. |
+| 2026-09-24 | S3 entregado. El grafo lo lleva el **core** (`ClusterInfo.getSubscriptions()`): no hizo falta ampliar `IProviderSubscriber` ni republicar nada. |
+| 2026-09-24 | Aristas **quietas** y grafo **solo lectura**: no insinuar tráfico que no se mide, ni edición que no existe. |
+| 2026-09-24 | Logins en el grafo: **aplazado**, exige tocar el core (los logins no están en ClusterInfo y su `startChannel` se lee async). |
 | 2026-09-24 | Rendimiento: el requisito es **coste cero con el canal cerrado**; con alguien mirando no preocupa. Se cae el techo del 5 % (el ruido de medida en Node es mayor) y se cae el interruptor: lo enciende el ciclo de vida del canal. |

@@ -17,6 +17,15 @@ catch { /* no file → env/defaults */ }
 // e2e AISLADO del plugin Kwirth Status. Ataca la app ya levantada por HTTP; el build nunca lo importa.
 export default defineConfig({
     testDir: './tests',
+    /*
+        El spec de capturas queda FUERA de la corrida por defecto: escribe en docs/<version>/_media, es
+        decir, en la documentacion publicada. Corriendo la suite entera reescribia imagenes de la guia
+        sin que nadie lo pidiera. Se pide a mano:
+            ./node_modules/.bin/playwright test zz-capture.spec.ts --grep-invert "^$"
+        o directamente con --testIgnore vacio; lo normal es lanzarlo por nombre con la config de abajo
+        desactivada temporalmente. Ver el encabezado del propio spec.
+    */
+    testIgnore: process.env.STATUS_E2E_CAPTURE ? [] : ['**/zz-capture*.spec.ts'],
     timeout: 180_000,   // el dev server del front recompila; el login solo ya puede tardar ~1 min
     fullyParallel: false,
     workers: 1,

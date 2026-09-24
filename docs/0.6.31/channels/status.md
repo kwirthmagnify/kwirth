@@ -17,6 +17,7 @@ With Status channel you can:
 Key features of Status channel:
 
   - **Real state, not just installed/not installed** — each component is classified and the reason is spelled out in plain words.
+  - **A map of who feeds whom** — the same kind of graph the Iter channel draws, applied to Kwirth's own insides.
   - **Sorted by what needs attention** — problems first, healthy components last. You never scroll to find the bad news.
   - **Filter by name or kind** — type `sender` and only senders remain.
   - **Zero cost when closed** — no timer, no polling, no background collection. See [Cost](#cost).
@@ -75,6 +76,53 @@ An **Idle** provider is running correctly; it just has nobody listening. That is
 not orange: it is not something to fix, it is something to decide about. It may be a provider you installed
 and never wired to a channel, or one whose consumer you removed and forgot to clean up.
 
+## The graph
+
+The second button in the toolbar switches from the table to a **map of who feeds whom**.
+
+![statusgraph](../_media/ch-images/status-graph.png ':class=imageclass80')
+
+It reads top to bottom: **producers on top** — providers and pluviders — and **the channels that consume
+them underneath**. A line from one to the other means that channel is subscribed to that provider.
+
+**Click a node** and everything it touches stays lit while the rest dims: its own lines thicken and glow,
+and so do the components on the other end. Click the background to clear it. On a Kwirth with a handful of
+extensions the whole map fits at a glance; on a busy one, that is the only way to answer *"and this one,
+who talks to it?"*.
+
+### A line is not traffic
+
+The lines do not move, and that is deliberate. **A line means the subscription exists** — nothing here
+measures how much data is going through it yet. An animated line reads as *"something is flowing right
+now"*, which would be the same lie as printing a `0` where the answer is unknown: it would look like
+information and it would be decoration.
+
+When per-component counters arrive, movement will be able to mean something, and then it will be used.
+
+### The graph only shows
+
+You cannot drag new connections, reconnect lines or delete anything. The topology is decided by the real
+subscriptions, not by this drawing, so anything you did here would be a lie the moment you released the
+mouse. Moving nodes around and zooming do work — they change nothing and they help you read.
+
+### When somebody is missing
+
+You may see a notice saying that some consumers are **not shown**. It is not a bug and it is worth
+understanding:
+
+The graph is built from what **the core intermediated** — every subscription made through Kwirth passes
+through one place, and that is where both ends are known. But a provider can also be subscribed to
+*directly*, skipping the core; the **Provider Debug** channel does exactly that, on purpose.
+
+So when a provider reports more consumers than the core knows about, the difference is shown as a number
+instead of being quietly dropped. Drawing three lines while the provider says there are four would be
+lying by omission.
+
+### What the graph does not include
+
+Only providers, pluviders and the channels consuming them. **Senders and webhooks are not in it**: they are
+destinations and entry points, not part of these subscriptions. They are all in the table.
+
 ### The snapshot does not refresh on its own
 
 Under the header you will see the time the snapshot was taken, and it will not change while you watch. That is deliberate: press the refresh button to take a new one.
@@ -96,5 +144,4 @@ The inventory is a privileged view: it lists every extension mounted in the serv
 
 ## Coming next
 
-  - **The dependency diagram** — the same kind of graph the Iter channel draws, applied to Kwirth's own insides.
   - **Per-component counters** — events and bytes moved by each provider, channel and sender, counted only while you are watching.

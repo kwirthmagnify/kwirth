@@ -129,10 +129,15 @@ test('y si el router SÍ está montado, no molesta con un aviso de reinicio', as
 })
 
 test('los pluviders se listan, y existir ya significa estar en marcha', async () => {
+    /*
+        Su estado concreto (activo u ocioso) se comprueba mas abajo, con el grafo: desde S3 un pluvider
+        sin consumidores sale IDLE, porque el registro del core es lo unico que se sabe de el. Aqui solo
+        se fija que aparece, y que aparece como pluvider.
+    */
     const inv = await inventarioDe({ pluviders: new Map([['plugin:agora', {}]]) })
     assert.equal(inv.components[0].kind, EComponentKind.PLUVIDER)
     assert.equal(inv.components[0].id, 'plugin:agora')
-    assert.equal(inv.components[0].health, EComponentHealth.INSTANTIATED)
+    assert.notEqual(inv.components[0].health, EComponentHealth.NOT_INSTANTIATED)
 })
 
 test('un sender sin configuraciones se lista, y se avisa de que no puede entregar nada', async () => {
@@ -159,6 +164,68 @@ test('🔴 de los webhooks no sale la URL por ninguna parte', async () => {
     })
     assert.equal(pidioUrl, false, 'se ha pedido la URL de un webhook, que lleva el token dentro')
     assert.ok(!JSON.stringify(inv).includes('SECRETO'), 'un token ha acabado en el inventario')
+})
+
+// ── el grafo (S3) ──────────────────────────────────────────────────────────────
+
+test('el inventario trae las aristas que el core conoce', async () => {
+    const inv = await inventarioDe({
+        providers: [{ id: 'events', started: true, getStats: () => ({ subscribers: 2 }) }],
+        getSubscriptions: () => [
+            { providerId: 'events', channelId: 'agora', since: 1 },
+            { providerId: 'events', channelId: 'montag', since: 2 }
+        ]
+    })
+    assert.equal(inv.edges.length, 2)
+    assert.deepEqual(inv.edges.map(e => e.channelId).sort(), ['agora', 'montag'])
+    // y el provider dice cuántos de sus consumidores están identificados
+    assert.equal(inv.components[0].subscribers, 2)
+    assert.equal(inv.components[0].knownConsumers, 2)
+})
+
+test('🔴 si el provider dice más consumidores de los que el core conoce, se nota', async () => {
+    /*
+        Pasa de verdad: provider-debug se suscribe DIRECTAMENTE al provider, sin pasar por el core, así
+        que su suscripción no está en el registro. El grafo dibuja las que conoce y la pantalla avisa de
+        las que faltan — dibujar tres y callar que hay cuatro sería mentir por omisión.
+    */
+    const inv = await inventarioDe({
+        providers: [{ id: 'events', started: true, getStats: () => ({ subscribers: 4 }) }],
+        getSubscriptions: () => [{ providerId: 'events', channelId: 'agora', since: 1 }]
+    })
+    const c = inv.components[0]
+    assert.equal(c.subscribers, 4)
+    assert.equal(c.knownConsumers, 1, 'el core solo intermedió una de las cuatro')
+})
+
+test('un pluvider con consumidores sale ACTIVO, y sin ellos OCIOSO', async () => {
+    // Un pluvider no implementa IProvider, así que no hay getStats: el grafo es su ÚNICA fuente.
+    const conConsumidor = await inventarioDe({
+        pluviders: new Map([['plugin:agora', {}]]),
+        getSubscriptions: () => [{ providerId: 'plugin:agora', channelId: 'montag', since: 1 }]
+    })
+    assert.equal(conConsumidor.components[0].health, EComponentHealth.ACTIVE)
+    assert.equal(conConsumidor.components[0].subscribers, 1)
+
+    const sinNadie = await inventarioDe({ pluviders: new Map([['plugin:agora', {}]]) })
+    assert.equal(sinNadie.components[0].health, EComponentHealth.IDLE)
+    assert.match(sinNadie.components[0].reason ?? '', /nothing is consuming it/i)
+})
+
+test('un core que no sabe de aristas no rompe la pantalla', async () => {
+    // getSubscriptions es opcional: un core anterior a S3 no lo tiene y el inventario sigue saliendo.
+    const inv = await inventarioDe({ providers: [{ id: 'events', started: true }] })
+    assert.deepEqual(inv.edges, [])
+    assert.equal(inv.components.length, 1)
+})
+
+test('y si el core revienta al pedirle las aristas, tampoco', async () => {
+    const inv = await inventarioDe({
+        providers: [{ id: 'events', started: true }],
+        getSubscriptions: () => { throw new Error('boom') }
+    })
+    assert.deepEqual(inv.edges, [])
+    assert.equal(inv.components.length, 1)
 })
 
 test('un Kwirth pelado no rompe: sin registros, inventario vacío', async () => {

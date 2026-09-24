@@ -64,6 +64,14 @@ export interface IStatusComponent {
      * lea puede ir a desinstalar algo. Por eso es opcional y no un número con valor por defecto.
      */
     subscribers?: number
+    /**
+     * Cuántos de esos consumidores están IDENTIFICADOS en el grafo (S3).
+     *
+     * Si es menor que `subscribers`, hay consumidores que el core no intermedió y de los que solo se
+     * sabe que existen. La pantalla lo dice en vez de dibujar los que conoce y dar a entender que son
+     * todos.
+     */
+    knownConsumers?: number
 }
 
 /**
@@ -76,6 +84,27 @@ export interface IStatusInventory {
     cluster: string
     takenAt: number
     components: IStatusComponent[]
+    /**
+     * Quién consume a quién. Puede quedarse corto respecto a `IStatusComponent.subscribers`, y eso es
+     * un dato, no un fallo: quien se suscriba a un provider **sin pasar por el core** no aparece aquí.
+     * Lo hace `provider-debug` a propósito, con su propio proxy.
+     */
+    edges: IStatusEdge[]
+}
+
+/**
+ * Una arista del grafo: quién produce y quién consume.
+ *
+ * Sale del registro del CORE (`ClusterInfo.getSubscriptions()`), no de los providers: la suscripción
+ * pasa por el core con el canal delante, así que ahí es donde se conocen las dos puntas. Un provider
+ * solo sabe cuántos suscriptores tiene, no quiénes son.
+ */
+export interface IStatusEdge {
+    /** Quién produce: un provider ('events') o un pluvider ('plugin:agora'). */
+    providerId: string
+    /** Quién consume: el id del canal. */
+    channelId: string
+    since: number
 }
 
 /** Qué trae un mensaje de datos de este canal. Hoy solo hay uno; el diagrama y los contadores vendrán. */

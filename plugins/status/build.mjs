@@ -8,7 +8,7 @@ import path from 'path'
     'window.__kwirth__'. Un plugin que bundlee React o MUI mete una segunda copia en la página y rompe
     @emotion, aparte de pesar de más.
 
-    Aquí solo van los que este plugin usa de verdad. React Flow entrará con el diagrama (S3), no antes.
+    Aquí solo van los que este plugin usa de verdad.
 */
 const kwirthGlobalsPlugin = {
     name: 'kwirth-globals',
@@ -20,6 +20,9 @@ const kwirthGlobalsPlugin = {
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
             '@kwirthmagnify/kwirth-common-front/icons': 'window.__kwirth__.MUI.icons',
+            // El diagrama: React Flow lo publica el core, y su CSS ya lo carga el front del core en
+            // index.tsx, asi que aqui no hay que importar ningun estilo.
+            '@xyflow/react': 'window.__kwirth__.reactFlow',
         }
         // Sin namespace en el filtro, para que intercepte tambien lo que llegue desde node_modules.
         for (const pkg of Object.keys(globals)) {
