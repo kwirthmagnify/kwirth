@@ -3,7 +3,8 @@
         "agora": "../plugins/agora/dist",
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
-        "provider-debug": "../plugins/provider-debug/dist"
+        "provider-debug": "../plugins/provider-debug/dist",
+        "status": "../plugins/status/dist"
     },
     "providers": {
         "longhorn": "../providers/longhorn/dist",
