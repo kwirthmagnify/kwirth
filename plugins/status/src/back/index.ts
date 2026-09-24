@@ -221,6 +221,24 @@ class StatusChannel implements IChannel {
 
     private healthOfProvider = (p: IProviderLike, subscribers: number | undefined): { health: EComponentHealth, reason?: string } => {
         if (p.started !== true) {
+            /*
+                Parado PERO con suscriptores: la averia silenciosa que esta pantalla existe para cazar.
+
+                El core solo arranca un provider si algun canal lo declara en 'requirements.providers'.
+                Pero cualquiera puede suscribirse en RUNTIME con clusterInfo.addSubscriber(), y eso
+                funciona aunque el provider no haya arrancado nunca: la suscripcion se registra, el
+                provider no emite, y el canal se queda esperando datos que no van a llegar. Sin error,
+                sin log, sin nada.
+
+                Decir aqui "no lo declara ningun canal" seria tecnicamente cierto —en requirements— y
+                completamente engañoso, porque SI hay alguien consumiendo.
+            */
+            if (subscribers !== undefined && subscribers > 0) {
+                return {
+                    health: EComponentHealth.NOT_INSTANTIATED,
+                    reason: `${subscribers} subscriber${subscribers > 1 ? 's' : ''} waiting for data that will never arrive: no channel declares it in its requirements`
+                }
+            }
             return {
                 health: EComponentHealth.NOT_INSTANTIATED,
                 // El core solo instancia los providers que algún canal declara en sus requirements.

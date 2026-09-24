@@ -116,6 +116,32 @@ test('un provider que el core nunca arrancó dice POR QUÉ', async () => {
     assert.match(c.reason ?? '', /declares this provider/i)
 })
 
+test('🔴 parado PERO con suscriptores: la avería silenciosa', async () => {
+    /*
+        Pasa de verdad y lo cazó esta pantalla: agora se suscribe a longhorn en runtime, pero no lo
+        declara en 'requirements.providers', así que el core nunca lo arranca. La suscripción se
+        registra, el provider no emite y agora espera datos que no van a llegar — sin error ni log.
+
+        El mensaje tiene que decir ESO, no "no lo declara ningún canal": sería cierto respecto a los
+        requirements y engañoso, porque sí hay alguien consumiendo.
+    */
+    const inv = await inventarioDe({
+        providers: [{ id: 'longhorn', started: false, getStats: () => ({ subscribers: 1 }) }]
+    })
+    const c = inv.components[0]
+    assert.equal(c.health, EComponentHealth.NOT_INSTANTIATED)
+    assert.match(c.reason ?? '', /never arrive/i, 'no avisa de que alguien espera datos que no llegan')
+    assert.match(c.reason ?? '', /requirements/i, 'no dice la causa: que nadie lo declara en requirements')
+})
+
+test('y sin suscriptores, el motivo sigue siendo el simple', async () => {
+    const inv = await inventarioDe({
+        providers: [{ id: 'azure', started: false, getStats: () => ({ subscribers: 0 }) }]
+    })
+    assert.match(inv.components[0].reason ?? '', /No installed channel declares/i)
+    assert.doesNotMatch(inv.components[0].reason ?? '', /never arrive/i)
+})
+
 test('con el router de configuración sin montar, pide reinicio en vez de parecer roto', async () => {
     const inv = await inventarioDe({ providers: [{ id: 'azure', started: true, configRouter: {}, configRouterStarted: false }] })
     const c = inv.components[0]
