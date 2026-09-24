@@ -1,4 +1,6 @@
 import fs from 'fs'
+import os from 'os'
+import path from 'path'
 import { KubeConfig } from '@kubernetes/client-node'
 import { EClusterType, EExecutionEnvironment } from '@kwirthmagnify/kwirth-common'
 
@@ -80,7 +82,34 @@ const detectExecutionEnvironment = (): EExecutionEnvironment|undefined => {
 }
 
 /*
-    Comprobacion PASIVA: hay un kubeconfig con un cluster seleccionado. No se le pregunta al servidor.
+    De donde puede salir una configuracion de Kubernetes. Se pregunta ANTES de cargar nada, y esa es toda
+    la gracia.
+
+    loadFromDefault() NO se queda sin cluster cuando no encuentra ningun kubeconfig: se inventa uno que
+    apunta a http://localhost:8080 —el viejo defecto de kubectl— con un contexto llamado 'loaded-context'.
+    Asi que preguntarle despues si hay cluster seleccionado responde que SI dentro de un contenedor
+    pelado, y el arranque se va detras de un servidor que no existe. Ese era exactamente el sintoma que
+    dejaba a Kwirth sin instancia en docker: 'request to http://localhost:8080/api/v1/namespaces/
+    kube-system failed'.
+
+    'existe' se inyecta para poder probar esto sin depender de la maquina donde corran los tests.
+*/
+const hasKubeconfigSource = (existe: (ruta:string) => boolean = fs.existsSync): boolean => {
+    // KUBECONFIG admite varias rutas; basta con que una exista.
+    const kubeconfig = process.env.KUBECONFIG
+    if (kubeconfig) return kubeconfig.split(path.delimiter).some(ruta => ruta.length > 0 && existe(ruta))
+
+    if (existe(path.join(os.homedir(), '.kube', 'config'))) return true
+
+    // Dentro de un pod la credencial la monta el propio kubelet, y no hay fichero de kubeconfig.
+    if (existe('/var/run/secrets/kubernetes.io/serviceaccount/token')) return true
+
+    return false
+}
+
+/*
+    Comprobacion PASIVA: hay una fuente de kubeconfig y de ella sale un cluster. No se le pregunta al
+    servidor.
 
     Es deliberado. Preguntar seria mas honesto, pero mete un timeout de red en el arranque y, sobre todo,
     convierte un cluster que tarda en responder en un Kwirth degradado a 'sin Kubernetes' —que es un
@@ -89,6 +118,8 @@ const detectExecutionEnvironment = (): EExecutionEnvironment|undefined => {
 */
 const hasUsableKubeconfig = (context:string|undefined): boolean => {
     try {
+        if (!hasKubeconfigSource()) return false
+
         const kubeConfig = new KubeConfig()
         kubeConfig.loadFromDefault()
         if (context) kubeConfig.setCurrentContext(context)
@@ -180,4 +211,4 @@ const resolveClusterType = (capabilities:IEnvironmentCapabilities): EClusterType
     return EClusterType.NONE
 }
 
-export { EStoreKind, IEnvironmentCapabilities, IEnvironmentProbes, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType, hasUsableKubeconfig }
+export { EStoreKind, IEnvironmentCapabilities, IEnvironmentProbes, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType, hasKubeconfigSource, hasUsableKubeconfig }

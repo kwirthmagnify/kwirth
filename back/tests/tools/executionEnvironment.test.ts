@@ -1,7 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { EClusterType, EExecutionEnvironment } from '@kwirthmagnify/kwirth-common'
-import { EStoreKind, IEnvironmentProbes, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType } from '../../src/tools/ExecutionEnvironment'
+import { EStoreKind, IEnvironmentProbes, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType, hasKubeconfigSource } from '../../src/tools/ExecutionEnvironment'
+import os from 'os'
+import path from 'path'
 
 /*
     Las variables que deciden el entorno. Se limpian antes de cada caso porque el proceso de test las
@@ -73,6 +75,46 @@ test('el metadata del agente de ECS identifica el entorno, en los dos launch typ
 test('sin ninguna senal, el entorno no se detecta', async () => {
     await conEntorno({}, () => {
         assert.equal(detectExecutionEnvironment(), undefined)
+    })
+})
+
+// ── de donde puede salir un kubeconfig ─────────────────────────────────────────────────────────────
+//
+// Esto existe por un fallo real, visto en un contenedor: loadFromDefault() se inventa un cluster
+// apuntando a http://localhost:8080 cuando no encuentra ningun kubeconfig, asi que preguntarle despues
+// si hay cluster responde que si, y el arranque se va detras de un servidor inexistente.
+
+const KUBECONFIG_EN_CASA = path.join(os.homedir(), '.kube', 'config')
+const TOKEN_IN_CLUSTER = '/var/run/secrets/kubernetes.io/serviceaccount/token'
+
+test('sin ninguna fuente, no hay kubeconfig que valga', async () => {
+    await conEntorno({}, () => {
+        assert.equal(hasKubeconfigSource(() => false), false)
+    })
+})
+
+test('el kubeconfig de la cuenta del usuario cuenta como fuente', async () => {
+    await conEntorno({}, () => {
+        assert.equal(hasKubeconfigSource(ruta => ruta === KUBECONFIG_EN_CASA), true)
+    })
+})
+
+test('dentro de un pod la fuente es el token que monta el kubelet, no un fichero de kubeconfig', async () => {
+    await conEntorno({}, () => {
+        assert.equal(hasKubeconfigSource(ruta => ruta === TOKEN_IN_CLUSTER), true)
+    })
+})
+
+test('KUBECONFIG manda, y vale con que exista una de sus rutas', async () => {
+    await conEntorno({ KUBECONFIG: `/a/no/existe${path.delimiter}/b/si/existe` }, () => {
+        assert.equal(hasKubeconfigSource(ruta => ruta === '/b/si/existe'), true)
+    })
+})
+
+test('KUBECONFIG apuntando a algo que no existe no es una fuente, aunque haya uno en la cuenta', async () => {
+    // Si se ha dicho explicitamente donde esta, no se busca en otro sitio a sus espaldas.
+    await conEntorno({ KUBECONFIG: '/no/existe' }, () => {
+        assert.equal(hasKubeconfigSource(ruta => ruta === KUBECONFIG_EN_CASA), false)
     })
 })
 

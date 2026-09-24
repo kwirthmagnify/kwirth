@@ -2770,6 +2770,24 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
     logInfo(ELogComponent.CORE, 'Execution environment capabilities:')
     for (let reason of capabilities.reasons) logInfo(ELogComponent.CORE, `  ${reason}`)
 
+    /*
+        Los dos providers del CORE leen del cluster y de ningun otro sitio, asi que sin API de Kubernetes
+        no se registran siquiera. Dejarlos instanciarse cuesta caro y se vio en un contenedor: 'events'
+        reintenta una docena de recursos cada 80 segundos con 'No currently active cluster', y el tick de
+        'metrics' lanza en cada intervalo contra un listNode() que no existe. El despliegue funciona igual,
+        pero un arranque perfectamente normal queda sepultado en errores — y entonces un error de verdad
+        ya no se distingue.
+
+        Esto decide sobre codigo del core, no sobre extensiones ajenas: un plugin sigue arrancando y
+        conectandose a lo que pueda, y si pide uno de estos dos recibe un 'not registered' claro, dicho
+        una vez, que es la verdad.
+    */
+    if (!capabilities.kubernetes) {
+        registeredProviders.delete('events')
+        registeredProviders.delete('metrics')
+        logInfo(ELogComponent.CORE, `Providers 'events' and 'metrics' are not registered: they read from the Kubernetes API, and there is none here`)
+    }
+
     let kwirthData:KwirthData
     switch (exenv) {
         case EExecutionEnvironment.DESKTOP:
