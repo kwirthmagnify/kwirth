@@ -70,7 +70,35 @@ export type IProviderFieldDef = IConfigFieldDef
 export interface IProviderStats {
     /** Cuantos suscriptores tiene AHORA. Cero significa que esta emitiendo para nadie. */
     subscribers: number
+    /**
+     * ENTREGAS hechas desde que el provider arranco: una por cada vez que se llama a
+     * processProviderEvent, no una por evento producido. OPCIONAL: quien no lo lleve se muestra como
+     * "no informa", igual que el resto.
+     *
+     * Se cuentan entregas y no eventos a proposito. Un provider que produce mil eventos y los filtra
+     * todos no esta moviendo nada, y el numero util para quien opera es el trabajo que SE HACE. Ademas
+     * el sitio donde incrementar es inequivoco —justo donde ya se llama al suscriptor—, y eso hace que
+     * cablearlo en dieciseis providers no dependa de interpretar el codigo de cada uno.
+     *
+     * Es un ACUMULADO, no una tasa: quien lo lea resta dos lecturas y divide por el tiempo. El provider
+     * no debe saber nada de ventanas ni de medias — eso obligaria a guardar historia en el camino
+     * caliente, que es justo lo que no puede pasar.
+     *
+     * ⚠️ El incremento va JUNTO a la llamada al suscriptor, y es un entero. Nada
+     * de timestamps por evento, nada de arrays que crezcan, nada de objetos nuevos: lo que duele en
+     * Node no es el contador, es la basura que genera.
+     */
+    events?: number
+    /** Errores al entregar, con el mismo criterio: acumulado y barato. */
+    errors?: number
 }
+
+/*
+    ⚠️ NO hay 'bytes'. Contarlos obligaria a medir cada evento —serializarlo o recorrerlo— y eso ya no es
+    un entero: es trabajo proporcional al tamaño del dato, en el camino caliente y para todos, mire
+    alguien la pantalla o no. Un provider que reciba el tamaño ya hecho (porque le llego por HTTP, por
+    ejemplo) puede exponerlo por su cuenta; lo que no se hace es pedirselo a todos.
+*/
 
 /**
  * Interface that all provider plugins must implement.

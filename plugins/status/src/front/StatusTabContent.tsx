@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Chip, IconButton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Chip, IconButton, MenuItem, Select, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material'
 import { Refresh, ViewList, Hub } from '@kwirthmagnify/kwirth-common-front/icons'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
@@ -34,9 +34,46 @@ const KIND_LABEL: Record<EComponentKind, string> = {
     [EComponentKind.CHANNEL]: 'Channel'
 }
 
+interface IEmptyStateProps {
+    title: string
+    detail: string
+}
+
+/*
+    Mismo patron que situs, iter y asteroids: decir solo "not started" deja al usuario sin saber que lo
+    que falta es darle a Start. El detalle lleva SIEMPRE la accion.
+
+    ⚠️ La altura se MIDE, no se hereda. El contenedor que el core da al contenido de una pestaña no
+    tiene altura definida, asi que 'height: 100%' no resuelve a nada y el mensaje se quedaba pegado
+    arriba en vez de centrado. Se mide donde empieza la caja y se le da el resto del viewport — lo
+    mismo que hace la tabla, y que hacen los demas canales en su estado vacio.
+*/
+const EmptyState: React.FC<IEmptyStateProps> = ({ title, detail }) => {
+    const ref = React.useRef<HTMLDivElement | null>(null)
+    const [top, setTop] = React.useState(0)
+    React.useEffect(() => {
+        if (ref.current) setTop(ref.current.getBoundingClientRect().top)
+    })
+    return (
+        <Stack ref={ref} alignItems='center' justifyContent='center' spacing={1}
+            sx={{ flex: 1, width: '100%', minHeight: `calc(100vh - ${top}px - 8px)`, px: 4, textAlign: 'center' }}>
+            <Typography variant='h6' color='text.secondary'>{title}</Typography>
+            <Typography variant='body2' color='text.secondary'>{detail}</Typography>
+        </Stack>
+    )
+}
+
 const StatusTabContent: React.FC<IContentProps> = (props) => {
     const data: IStatusData = props.channelObject.data
-    const [filter, setFilter] = React.useState('')
+    /*
+        El estado que debe sobrevivir a cambiar de pestaña se guarda en 'data', que es del canal. Como
+        mutarlo no dispara un render por si solo, se fuerza uno a mano — es el mismo patron que usan
+        los demas canales del proyecto.
+    */
+    const [, forzarRender] = React.useState(0)
+    const repintar = () => forzarRender(n => n + 1)
+    const filter = data.filter
+    const setFilter = (v: string) => { data.filter = v; repintar() }
     /*
         La altura del area que scrollea se calcula, no se hereda.
 
@@ -50,7 +87,8 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         diez veces al dia, y el grafo es para cuando ya sabes que algo pasa y quieres ver a quien
         arrastra. Ademas el diagrama descarga el motor de layout, y quien no lo abra no lo paga.
     */
-    const [vista, setVista] = React.useState<'tabla' | 'grafo'>('tabla')
+    const vista = data.view
+    const setVista = (v: 'table' | 'graph') => { data.view = v; repintar() }
     const boxRef = React.useRef<HTMLDivElement | null>(null)
     const [boxTop, setBoxTop] = React.useState(0)
     React.useEffect(() => {
@@ -77,12 +115,58 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         }))
     }
 
+    /*
+        Auto-refresco. El temporizador se monta con el componente y se limpia al desmontarlo, asi que
+        cambiar de pestaña o cerrar el canal lo apaga SIN que nadie tenga que acordarse — con el canal
+        cerrado no queda nada corriendo, que es el requisito que manda en este plugin.
+
+        Se pide una foto al back, no se recalcula en el front: lo que interesa es el estado de AHORA.
+    */
+    React.useEffect(() => {
+        if (!data.autoRefresh) return
+        const id = setInterval(() => refresh(), data.autoRefresh * 1000)
+        return () => clearInterval(id)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data.autoRefresh, props.channelObject.instanceId])
+
     const inventory = data.inventory
+
+    /*
+        Entregas por segundo entre la foto anterior y esta. Solo se puede dar si hay dos fotos, si el
+        componente informaba en las dos, y si el contador no ha ido hacia atrás — que pasa cuando el
+        provider se reinicia y empieza de cero: ahí no hay tasa que calcular, hay que decir que no se sabe.
+    */
+    const tasaDe = (id: string, ahora?: number): number | undefined => {
+        if (ahora === undefined || !data.previous || !inventory) return undefined
+        const antes = data.previous.components.find(c => c.id === id)?.events
+        if (antes === undefined || ahora < antes) return undefined
+        const segundos = (inventory.takenAt - data.previous.takenAt) / 1000
+        if (segundos <= 0) return undefined
+        return (ahora - antes) / segundos
+    }
     const componentes = (inventory?.components ?? []).filter(c => {
         if (!filter) return true
         const f = filter.toLowerCase()
         return c.id.toLowerCase().includes(f) || KIND_LABEL[c.kind].toLowerCase().includes(f)
     })
+
+    /*
+        Que componentes han ENTREGADO ALGO entre el refresco anterior y este.
+
+        Es una comparacion de valores, no una tasa: si el contador es distinto al de la foto anterior,
+        ese componente ha movido algo y sus lineas se animan. Si es el mismo, no. Nada de dividir por
+        el tiempo — la tasa sirve para el numerito de la tabla, pero para decidir si algo se mueve lo
+        unico que hace falta es saber si el valor cambio.
+
+        Un componente que no informa, o que aun no tiene foto anterior con la que compararse, no entra:
+        no se sabe, y no se anima.
+    */
+    const activos = new Set<string>()
+    for (const c of inventory?.components ?? []) {
+        if (c.events === undefined || !data.previous) continue
+        const antes = data.previous.components.find(p => p.id === c.id)?.events
+        if (antes !== undefined && c.events !== antes) activos.add(c.id)
+    }
 
     /*
         Lo que necesita atención primero, y dentro de cada estado por tipo e id.
@@ -118,12 +202,23 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 <TableCell><Chip size='small' label={estado.label} color={estado.color} variant={c.health === EComponentHealth.ACTIVE ? 'outlined' : 'filled'} /></TableCell>
                 {/*
                     Un guion cuando no se sabe, nunca un 0: el cero diria "nadie lo consume" y quien lo
-                    lea puede ir a desinstalar algo que en realidad si se usa.
+                    lea puede ir a desinstalar algo que en realidad si se usa. Lo mismo vale para las
+                    entregas de la columna siguiente.
                 */}
                 <TableCell align='right'>
                     <Typography variant='body2' sx={{ fontVariantNumeric: 'tabular-nums' }} color={c.subscribers === undefined ? 'text.disabled' : 'text.primary'}>
                         {c.subscribers === undefined ? '—' : c.subscribers}
                     </Typography>
+                </TableCell>
+                <TableCell align='right'>
+                    <Typography variant='body2' sx={{ fontVariantNumeric: 'tabular-nums' }} color={c.events === undefined ? 'text.disabled' : 'text.primary'}>
+                        {c.events === undefined ? '—' : c.events.toLocaleString()}
+                    </Typography>
+                    {(() => {
+                        const t = tasaDe(c.id, c.events)
+                        if (t === undefined) return null
+                        return <Typography variant='caption' color='text.secondary' display='block'>{t < 1 && t > 0 ? t.toFixed(2) : Math.round(t)}/s</Typography>
+                    })()}
                 </TableCell>
                 {/* El porqué es la columna que justifica la pantalla: sin ella esto es otra lista más. */}
                 <TableCell><Typography variant='body2' color='text.secondary'>{c.reason ?? ''}</Typography></TableCell>
@@ -131,8 +226,18 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         )
     }
 
+    /*
+        Los dos estados vacios son distintos y hay que distinguirlos: sin arrancar, lo que falta es una
+        accion del usuario; arrancado y sin foto, lo que falta es que llegue — y no hay nada que hacer
+        salvo esperar un segundo.
+    */
+    if (!data.started) {
+        return <EmptyState title='Kwirth Status not started'
+            detail='Start the channel (tab settings ⚙ → Start) to see what this Kwirth has inside.' />
+    }
     if (!inventory) {
-        return <Box sx={{ p: 2 }}><Typography variant='body2' color='text.secondary'>Waiting for the inventory…</Typography></Box>
+        return <EmptyState title='Waiting for the first snapshot'
+            detail='The channel is running; the inventory should appear in a moment.' />
     }
 
     return (
@@ -143,11 +248,25 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 <Box sx={{ flexGrow: 1 }} />
                 <TextField size='small' placeholder='Filter…' value={filter} onChange={e => setFilter(e.target.value)} sx={{ width: 220 }} />
                 <Tooltip title='Table view'>
-                    <IconButton size='small' color={vista === 'tabla' ? 'primary' : 'default'} aria-label='Table view' onClick={() => setVista('tabla')}><ViewList fontSize='small' /></IconButton>
+                    <IconButton size='small' color={vista === 'table' ? 'primary' : 'default'} aria-label='Table view' onClick={() => setVista('table')}><ViewList fontSize='small' /></IconButton>
                 </Tooltip>
                 <Tooltip title='Graph view'>
-                    <IconButton size='small' color={vista === 'grafo' ? 'primary' : 'default'} aria-label='Graph view' onClick={() => setVista('grafo')}><Hub fontSize='small' /></IconButton>
+                    <IconButton size='small' color={vista === 'graph' ? 'primary' : 'default'} aria-label='Graph view' onClick={() => setVista('graph')}><Hub fontSize='small' /></IconButton>
                 </Tooltip>
+                {/*
+                    Sin Tooltip a proposito: el Select ya ENSEÑA su valor ('Manual', 'Every 5s'), asi
+                    que la ayuda sobraba — y al desplegarse, el tooltip se quedaba flotando ENCIMA del
+                    menu y tapaba las opciones. El aria-label cubre al lector de pantalla.
+                */}
+                <Select size='small' value={data.autoRefresh} aria-label='Auto refresh'
+                        onChange={e => { data.autoRefresh = Number(e.target.value); repintar() }}
+                        sx={{ minWidth: 104, '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' } }}>
+                        <MenuItem value={0}>Manual</MenuItem>
+                        <MenuItem value={5}>Every 5s</MenuItem>
+                        <MenuItem value={15}>Every 15s</MenuItem>
+                        <MenuItem value={30}>Every 30s</MenuItem>
+                        <MenuItem value={60}>Every minute</MenuItem>
+                    </Select>
                 <Tooltip title='Take a new snapshot'>
                     <IconButton size='small' onClick={refresh}><Refresh fontSize='small' /></IconButton>
                 </Tooltip>
@@ -155,18 +274,21 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
 
             {/* Que la foto es de un instante concreto se dice, no se insinúa: esto no se actualiza solo. */}
             <Typography variant='caption' color='text.secondary' sx={{ mb: 1 }}>
-                Snapshot taken at {new Date(inventory.takenAt).toLocaleTimeString()} — it does not refresh on its own
+                Snapshot taken at {new Date(inventory.takenAt).toLocaleTimeString()}
+                {data.autoRefresh ? ` — refreshing every ${data.autoRefresh}s while this tab is open` : ' — it does not refresh on its own'}.
+                {' '}Delivered counts since each component started; the rate is measured against your previous snapshot.
             </Typography>
 
-            <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: vista === 'tabla' ? 'auto' : 'hidden', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
-                {vista === 'grafo' && <StatusDiagram inventory={inventory} />}
-                {vista === 'tabla' && <Table size='small' stickyHeader>
+            <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: vista === 'table' ? 'auto' : 'hidden', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
+                {vista === 'graph' && <StatusDiagram inventory={inventory} active={activos} />}
+                {vista === 'table' && <Table size='small' stickyHeader>
                     <TableHead>
                         <TableRow>
                             <TableCell>Kind</TableCell>
                             <TableCell>Name</TableCell>
                             <TableCell>State</TableCell>
                             <TableCell align='right'>Consumers</TableCell>
+                            <TableCell align='right'>Delivered</TableCell>
                             <TableCell>Why</TableCell>
                         </TableRow>
                     </TableHead>

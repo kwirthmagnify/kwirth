@@ -33,6 +33,12 @@ export class EventsProvider implements IProvider {
     private resourceWatchers: Map<string, { watch: Watch, stopped: boolean }>
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IEventsSubscriber>
+    /*
+        Entregas hechas desde que arranco: una por cada llamada a un suscriptor, no una por evento
+        producido. Aqui la diferencia importa — este provider FILTRA por 'kinds', asi que un evento
+        puede no entregarse a nadie, y contar producciones daria un caudal que no existe.
+    */
+    private deliveries = 0
     private eventsWatchStartTime = 0   // epoch ms when the /api/v1/events watch started (backlog gate)
 
     constructor(clusterInfo: ClusterInfo, kwirthData: KwirthData) {
@@ -130,7 +136,7 @@ export class EventsProvider implements IProvider {
         sea BARATO —se devuelve lo que ya se tiene, no se calcula—, y de aqui sale que events este
         siendo consumido o emitiendo para nadie.
     */
-    getStats = () => ({ subscribers: this.subscribers.size })
+    getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 
     private startResourceWatcher = async (resourcePath: string, eventHandler: (type: string, obj: any, subscribersList: Map<IChannel, IEventsSubscriber>) => void) => {
         if (this.resourceWatchers.has(resourcePath)) return
@@ -206,6 +212,7 @@ export class EventsProvider implements IProvider {
     private dispatch = (type: string, obj: any, subscribersList: Map<IChannel, IEventsSubscriber>) => {
         for (let [channel, subscriber] of subscribersList.entries()) {
             if ((subscriber.kinds && subscriber.kinds.includes(obj.kind)) || (subscriber.crdInstances && subscriber.crdInstances.includes(obj.kind)) || subscriber.syncCrdInstances) {
+                this.deliveries++
                 channel.processProviderEvent(this.id, { type, obj })
             }
         }

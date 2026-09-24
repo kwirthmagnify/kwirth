@@ -65,6 +65,13 @@ export interface IStatusComponent {
      */
     subscribers?: number
     /**
+     * Entregas acumuladas desde que el componente arrancó (S4), cuando sabe decirlo.
+     *
+     * Acumulado, no tasa: la tasa la calcula quien lee restando dos fotos. Y `undefined` sigue siendo
+     * "no lo dice", nunca 0 — misma regla que con los consumidores.
+     */
+    events?: number
+    /**
      * Cuántos de esos consumidores están IDENTIFICADOS en el grafo (S3).
      *
      * Si es menor que `subscribers`, hay consumidores que el core no intermedió y de los que solo se

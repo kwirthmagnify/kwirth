@@ -1,6 +1,7 @@
 # Kwirth Status — Plan
 
-> **ESTADO — VIVO** (2026-09-24). **S1, S2 y S3 entregados**; queda S4. Cuelga de [PRD.md](PRD.md), que manda en el
+> **ESTADO — CERRADO** (2026-09-24). Los cuatro streams entregados. Lo que quede por hacer está en
+> "Lo que se queda fuera", al final: son decisiones tomadas, no trabajo pendiente de planificar. Cuelga de [PRD.md](PRD.md), que manda en el
 > **qué** y el **por qué**; aquí está el **cómo** y en qué orden.
 >
 > Documento **append-only**: lo que se decide no se borra, se marca. Si algo de aquí contradice lo que ves
@@ -228,7 +229,7 @@ momento"*.
 
 ---
 
-### S4 — Contadores por componente
+### S4 — Contadores por componente ✅ HECHO (2026-09-24)
 
 **Entregable:** cuánto caudal mueve cada cosa mientras la miras, y la prueba de que con la pantalla cerrada
 Kwirth corre exactamente igual que sin este plugin.
@@ -257,7 +258,66 @@ Kwirth corre exactamente igual que sin este plugin.
   **una vez al encender**, no por evento, y luego se reestabiliza: es un coste puntual a cambio de cero coste
   permanente. Conviene comprobar que efectivamente se reestabiliza y no queda megamórfico.
 
+**Cómo quedó, y en qué se apartó de lo planeado**
+
+**No hay encendido ni apagado.** El plan preveía instrumentación conmutable atada al ciclo de vida del
+canal; al ir a hacerlo, la pregunta "¿dónde se cuenta?" se resolvió antes: el contador vive **dentro del
+provider**, en el bucle de entrega que ya ejecuta, y es un entero. Encenderlo y apagarlo habría exigido
+sustituir implementaciones en caliente o interponer una sonda, y ninguna de las dos compensaba para
+ahorrar un `++`. Se perdió la literalidad del "coste cero con el canal cerrado" —el contador cuenta
+siempre— y se ganó no tocar el mecanismo del que depende que la gente reciba su log.
+
+**Se cuentan entregas, no eventos producidos.** Un provider que genera mil y los filtra todos no mueve
+nada. Y el sitio donde incrementar es inequívoco, lo que hizo que cablear dieciséis no dependiera de
+interpretar el código de cada uno. Efecto visible: con un tick y cuatro suscriptores el contador sube 4.
+
+**Añadido sobre la marcha, a petición del usuario:** el **auto-refresco** (Manual · 5s · 15s · 30s · 1min).
+Su temporizador vive con el componente, así que cerrar la pestaña lo apaga sin que nadie tenga que
+acordarse — el requisito de "nada corriendo con el canal cerrado" se mantiene.
+
+**La actividad se ve en las líneas, no en el nodo.** El borde del nodo llegó a engordar con el acumulado y
+decía poco: quien movió un millón el lunes seguía siendo el más gordo hoy. Ahora se animan las salientes
+del productor **cuyo contador cambió respecto al refresco anterior**.
+
+🔴 **El fallo del stream fue de método: cablear con un script global.** Un regex colocó contadores fuera de
+las condiciones en azure y longhorn —contando entregas que no ocurrían, con un número plausible y falso— y
+rompió dos bucles `for` sin llaves porque no contemplaba paréntesis anidados (`.keys()`). El usuario lo
+paró: *"no quiero que lo hagas con un script global, modifica cada uno por separado"*. Se revirtió todo y
+se rehízo **uno a uno con el texto exacto de cada fichero**, con una auditoría que comprueba que cada una
+de las 25 entregas tiene su contador donde toca.
+
+**La lección, para el próximo cableado masivo:** un cambio que hay que aplicar en dieciséis sitios NO es un
+cambio mecánico solo porque se parezca. Lo que varía —una llave, un paréntesis anidado, un `if` en la misma
+línea— es justo lo que un regex no ve y un compilador tampoco: el código sigue compilando y el número sale
+plausible.
+
+⚠️ **Y un segundo fallo que costó tres intentos:** las flechas se quedaban animadas para siempre porque el
+`useMemo` del grafo **no tenía en las dependencias** el conjunto de componentes activos. Se simplificó
+además el criterio a lo que se pedía literalmente —*"solo se anima lo que tenga un valor diferente al
+refresh anterior"*—, quitando la tasa por segundo de esa decisión.
+
+**Tres defectos de UI que salieron del QA:** la vista y el filtro se perdían al cambiar de pestaña (vivían
+en `useState`, y el contenido se desmonta), el mensaje de canal parado no salía —nadie bajaba `started`— ni
+estaba centrado, y el tooltip del selector tapaba su propio menú desplegado.
+
 ---
+
+## Lo que se queda fuera
+
+Decisiones tomadas, no trabajo pendiente:
+
+- **Tráfico por arista.** Hoy el contador es del provider entero: se sabe que entrega, no cuánto va a cada
+  consumidor. Hacerlo exige o un `WeakMap` por suscriptor en los 16 providers (cuarta pasada, y los de
+  terceros nunca lo tendrán) o una **sonda** del core envolviendo al suscriptor. La sonda se descartó al
+  escribirla: el provider guardaría la sonda en vez del canal, y las bajas se hacen **por identidad del
+  objeto** — un `removeSubscriber(canal)` dejaría de encontrarlo y el suscriptor fantasma no se limpiaría
+  nunca. No se toca el mecanismo del que depende que la gente reciba su log para pintar líneas.
+- **Los logins en el grafo.** Un login declara `startChannel`, pero exponerlo barato exige tocar el core:
+  no están en `ClusterInfo` y su config se lee async.
+- **Caducar la animación en modo Manual.** Si refrescas con tráfico y te vas, las líneas siguen moviéndose
+  por algo que pasó hace una hora. Propuesto (pararlas si la foto tiene más de 60 s), sin decidir.
+- **Eventos producidos además de entregados.** Las dos cifras juntas dirían "produce 1/s y entrega 4/s",
+  que es información útil; hoy solo está la segunda.
 
 ## Lo que este plan NO hace
 
@@ -281,4 +341,8 @@ Kwirth corre exactamente igual que sin este plugin.
 | 2026-09-24 | S3 entregado. El grafo lo lleva el **core** (`ClusterInfo.getSubscriptions()`): no hizo falta ampliar `IProviderSubscriber` ni republicar nada. |
 | 2026-09-24 | Aristas **quietas** y grafo **solo lectura**: no insinuar tráfico que no se mide, ni edición que no existe. |
 | 2026-09-24 | Logins en el grafo: **aplazado**, exige tocar el core (los logins no están en ClusterInfo y su `startChannel` se lee async). |
+| 2026-09-24 | S4 entregado. Contadores **dentro del provider**, sin encendido/apagado: interponerse para poder apagarlos costaba más de lo que ahorraba. |
+| 2026-09-24 | Se cuentan **entregas**, no eventos producidos. |
+| 2026-09-24 | 🔴 Prohibido cablear cambios repetidos con un script global: se hace **uno a uno**. |
+| 2026-09-24 | Tráfico por arista **descartado por ahora**: la sonda rompería las bajas por identidad. |
 | 2026-09-24 | Rendimiento: el requisito es **coste cero con el canal cerrado**; con alguien mirando no preocupa. Se cae el techo del 5 % (el ruido de medida en Node es mayor) y se cae el interruptor: lo enciende el ciclo de vida del canal. |

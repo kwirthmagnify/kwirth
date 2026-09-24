@@ -22,7 +22,13 @@ export class SyslogProvider implements IProvider {
         lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
         consumido o emitiendo para nadie.
     */
-    getStats = () => ({ subscribers: this.subscribers.size })
+    /*
+        Entregas desde que arranco: una por suscriptor y mensaje. Distinto de 'messageCount', que cuenta
+        mensajes recibidos aunque no los consuma nadie.
+    */
+    private deliveries = 0
+
+    getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 
     private config: ISyslogConfig = { port: 513, protocol: 'both', tcpFraming: 'non-transparent', relayTargets: [], maxMessages: 10000, maxParallel: 20 }
     private configured = false
@@ -66,7 +72,7 @@ export class SyslogProvider implements IProvider {
         this.activeWorkers++
         Promise.resolve().then(() => {
             this.relay(item.raw)
-            for (const sub of this.subscribers.keys()) sub.processProviderEvent(this.id, item.msg)
+            for (const sub of this.subscribers.keys()) { this.deliveries++; sub.processProviderEvent(this.id, item.msg) }
             this.messageCount++
         }).finally(() => {
             this.activeWorkers--

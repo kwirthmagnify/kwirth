@@ -16,7 +16,12 @@ export class TickProvider implements IProvider {
         lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
         consumido o emitiendo para nadie.
     */
-    getStats = () => ({ subscribers: this.subscribers.size })
+    /*
+        Entregas desde que arranco: una por llamada a un suscriptor. Sin filtro: cada tick va a todos.
+    */
+    private deliveries = 0
+
+    getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 
     private interval: NodeJS.Timeout | undefined
 
@@ -33,6 +38,7 @@ export class TickProvider implements IProvider {
     startProvider = async () => {
         this.interval = setInterval(() => {
             for (const subscriber of this.subscribers.keys()) {
+                this.deliveries++
                 subscriber.processProviderEvent(this.id, true)
             }
         }, 5000)

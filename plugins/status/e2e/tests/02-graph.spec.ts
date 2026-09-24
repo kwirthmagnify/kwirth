@@ -75,19 +75,21 @@ test('los productores quedan ARRIBA y los consumidores DEBAJO', async () => {
     expect(masAltoDeAbajo, 'los consumidores no estan por debajo de los productores').toBeGreaterThan(masBajoDeArriba)
 })
 
-test('🔴 las aristas NO se mueven: una linea no significa trafico', async () => {
+test('🔴 con una sola foto no se anima nada: no hay con que comparar', async () => {
     /*
-        El invariante de honestidad visual del stream. Una linea animada se lee como "por aqui esta
-        pasando algo ahora mismo", y eso NO se mide todavia — es el mismo error que poner un 0 donde no
-        hay dato. React Flow marca las animadas con la clase 'animated'.
-
-        Cuando S4 mida caudal de verdad esto tendra que cambiar A PROPOSITO, y este test obliga a ello.
+        Sustituye al invariante de S3 ("nada se anima nunca"), que dejo de valer cuando S4 trajo los
+        contadores. El que queda es igual de importante: una linea se anima solo si el contador de su
+        productor CAMBIO respecto al refresco anterior, asi que recien abierto —cuando solo hay una
+        foto— no puede haber ninguna animada. Si la hay, se esta animando sin dato que lo sostenga.
     */
-    expect(await page.locator('.react-flow__edge.animated').count()).toBe(0)
+    expect(await page.locator('.react-flow__edge.animated').count(),
+        'hay aristas animadas con una sola foto: se esta afirmando actividad sin comparar nada').toBe(0)
 })
 
-test('y la pantalla dice con todas las letras que una linea no es trafico', async () => {
-    await expect(page.getByText(/A line means .*active subscription.* not traffic/i)).toBeVisible()
+test('y la pantalla dice que significa una linea, y que significa que se mueva', async () => {
+    await expect(page.getByText(/A line means .*active subscription/i)).toBeVisible()
+    // lo importante: que se mueva NO dice cuanto va a cada consumidor
+    await expect(page.getByText(/not how much goes to each consumer/i)).toBeVisible()
 })
 
 test('🔴 el grafo es SOLO VISUALIZACION: no se pueden crear conexiones', async () => {

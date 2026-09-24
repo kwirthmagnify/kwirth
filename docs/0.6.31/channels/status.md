@@ -34,6 +34,7 @@ The table has five columns:
 | **Name** | the component id, as the rest of Kwirth names it |
 | **State** | see the table below |
 | **Consumers** | how many things are consuming it — or **—** when the component does not say |
+| **Delivered** | how much it has handed to its consumers since it started, and the rate since your previous snapshot |
 | **Why** | the reason, when there is one worth giving |
 
 ### States
@@ -123,9 +124,45 @@ lying by omission.
 Only providers, pluviders and the channels consuming them. **Senders and webhooks are not in it**: they are
 destinations and entry points, not part of these subscriptions. They are all in the table.
 
+## How much is moving
+
+**Delivered** counts *deliveries*, not events produced: one event handed to four consumers counts four.
+That is on purpose — it measures the work the component actually does. A provider that generates a
+thousand events and filters them all out has moved nothing.
+
+The number is a total since that component started. Underneath it, once you have taken a second snapshot,
+you get a **rate** — deliveries per second between your previous snapshot and this one. That is the number
+that tells you whether something is busy *now*: a total of seven million does not distinguish a provider
+at full tilt from one that was at full tilt last Tuesday.
+
+If a component restarts its counter goes back to zero; no rate is shown for that interval rather than a
+made-up negative one.
+
+### Refreshing
+
+Next to the refresh button there is a selector: **Manual** (the default), or every **5s**, **15s**, **30s**
+or **minute**.
+
+The timer only exists while the tab is open — closing it or switching away stops it, with nothing left
+running. That is why it starts in Manual: this is a screen to *look at*, and watching continuously is
+something you turn on deliberately.
+
+The line under the header always tells you which mode you are in, so the screen never claims to be fresher
+than it is.
+
+### Live lines in the graph
+
+In the graph view, **a line moves when its producer's counter changed since the previous refresh**. Put the
+selector on 5s and you will see components light up as they deliver and go quiet when they do not.
+
+What a moving line does **not** tell you is how much went to each consumer. The count belongs to the
+component, not to each line: if a provider delivers to three channels, all three lines move, and the split
+between them is not measured. When that changes, the lines will be able to speak for themselves.
+
 ### The snapshot does not refresh on its own
 
-Under the header you will see the time the snapshot was taken, and it will not change while you watch. That is deliberate: press the refresh button to take a new one.
+In Manual mode the time under the header will not change while you watch. That is deliberate: press the
+refresh button to take a new one, or pick an interval.
 
 ## Cost
 

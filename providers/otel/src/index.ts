@@ -124,7 +124,12 @@ export class OtelProvider implements IProvider {
         lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
         consumido o emitiendo para nadie.
     */
-    getStats = () => ({ subscribers: this.subscribers.size })
+    /*
+        Entregas desde que arranco: una por llamada a un suscriptor. Una entrega por señal aceptada y suscriptor.
+    */
+    private deliveries = 0
+
+    getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 
     private data = new Map<string, Map<string, unknown[]>>()   // space -> signal -> events[]
 
@@ -193,6 +198,7 @@ export class OtelProvider implements IProvider {
                 if (!typeArr) { typeArr = []; spaceData.set(signal, typeArr) }
                 typeArr.push(event)
 
+                this.deliveries++
                 subscriber.processProviderEvent(this.id, {
                     last: {
                         type: 'event',

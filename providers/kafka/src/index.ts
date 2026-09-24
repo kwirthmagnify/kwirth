@@ -93,12 +93,19 @@ export class KafkaProvider implements IProvider {
 
         Sigue siendo barato: recorre conexiones, no mensajes, y de esas hay un puñado.
     */
+    /*
+        Entregas desde que arranco: una por mensaje aceptado y suscriptor. A diferencia del recuento de
+        suscriptores, aqui NO hay que deduplicar — si el mismo suscriptor recibe por dos conexiones, son
+        dos entregas y dos veces el trabajo.
+    */
+    private deliveries = 0
+
     getStats = () => {
         const unicos = new Set<IProviderSubscriber>()
         for (const entry of this.connections.values()) {
             for (const s of entry.subscribers.keys()) unicos.add(s)
         }
-        return { subscribers: unicos.size }
+        return { subscribers: unicos.size, events: this.deliveries }
     }
 
     constructor(_clusterInfo: any, _kwirthData: KwirthData) {}
@@ -253,6 +260,7 @@ export class KafkaProvider implements IProvider {
             // Apply optional type filter: if types is set, value must carry a matching 'type' field
             if (mapping.types && mapping.types.length > 0 && !mapping.types.includes(value?.type)) continue
 
+            this.deliveries++
             subscriber.processProviderEvent(this.id, {
                 last: {
                     type: 'event',

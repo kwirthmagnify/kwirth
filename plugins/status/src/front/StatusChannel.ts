@@ -48,7 +48,9 @@ export class StatusChannel implements IChannel {
         switch (msg.type) {
             case EInstanceMessageType.DATA:
                 if (msg.payloadType === EStatusPayload.INVENTORY && msg.inventory) {
-                    // Se REEMPLAZA, no se acumula: lo que se enseña es la última foto (ver StatusData).
+                    // La que había pasa a ser la anterior: con dos fotos se puede calcular una tasa.
+                    // Solo se guarda UNA; esto no es una serie temporal.
+                    data.previous = data.inventory
                     data.inventory = msg.inventory
                 }
                 return { action: EChannelRefreshAction.REFRESH }
@@ -73,10 +75,37 @@ export class StatusChannel implements IChannel {
         return true
     }
     startChannel(_channelObject: IChannelObject): boolean { return true }
-    stopChannel(_channelObject: IChannelObject): boolean { return true }
+
+    /*
+        Al parar hay que DECIRLO, y ademas tirar la foto.
+
+        'started' lo ponia a true la respuesta del arranque y no lo bajaba nadie, asi que al parar el
+        canal la pestaña se quedaba enseñando el inventario como si nada. Y esa foto ya no vale: es de
+        un momento anterior y nada la va a refrescar mientras el canal este parado — dejarla puesta es
+        justo el tipo de dato viejo con pinta de actual que este plugin existe para evitar.
+    */
+    stopChannel(channelObject: IChannelObject): boolean {
+        const data: IStatusData = channelObject.data
+        if (data) {
+            data.started = false
+            data.inventory = undefined
+            data.previous = undefined
+        }
+        return true
+    }
+
     pauseChannel(_channelObject: IChannelObject): boolean { return true }
     continueChannel(_channelObject: IChannelObject): boolean { return true }
-    socketDisconnected(_channelObject: IChannelObject): boolean { return true }
+
+    /*
+        Si se cae el socket, el canal deja de recibir y la foto se queda congelada sin avisar. Se trata
+        igual que una parada: mejor decir que hay que arrancar que enseñar algo que ya no se actualiza.
+    */
+    socketDisconnected(channelObject: IChannelObject): boolean {
+        const data: IStatusData = channelObject.data
+        if (data) data.started = false
+        return true
+    }
     /*
         false = el core rehace la instancia al reconectar, en vez de dar por buena la anterior. Es lo que
         queremos: tras una reconexion la foto que hubiera en pantalla puede ser vieja, y se pide otra.

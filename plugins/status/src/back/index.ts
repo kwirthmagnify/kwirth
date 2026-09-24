@@ -27,7 +27,7 @@ interface IProviderLike {
      * OPCIONAL en el contrato (kwirth-common-back >= 0.5.50) y opcional de verdad: la mayoría de los
      * providers publicados no lo tienen. Quien no lo implemente sale como "no informa".
      */
-    getStats?(): { subscribers: number }
+    getStats?(): { subscribers: number, events?: number }
 }
 
 interface IListing {
@@ -53,6 +53,27 @@ interface IClusterInfoView {
      * lo único que falta es el grafo. Mejor sin diagrama que con una pantalla rota.
      */
     getSubscriptions?(): ISubscriptionLike[]
+}
+
+/**
+ * Lo que un provider dice de si mismo, o undefined si no lo dice o si revienta al preguntarle.
+ *
+ * Es codigo de terceros: si lanza, esta pantalla tiene que seguir dando el resto del inventario. Y si
+ * devuelve algo que no cuadra con el contrato, se descarta en vez de creerselo — TypeScript no vigila a
+ * un provider ya compilado.
+ */
+const statsOf = (p: { getStats?(): { subscribers: number, events?: number } }): { subscribers?: number, events?: number } | undefined => {
+    if (!p.getStats) return undefined
+    try {
+        const s = p.getStats()
+        return {
+            subscribers: typeof s?.subscribers === 'number' ? s.subscribers : undefined,
+            events: typeof s?.events === 'number' ? s.events : undefined
+        }
+    }
+    catch {
+        return undefined
+    }
 }
 
 interface ISocketEntry {
@@ -194,16 +215,9 @@ class StatusChannel implements IChannel {
      * Se protege con try/catch porque esto es código de una extensión de terceros: un provider que
      * reviente al preguntarle no puede llevarse por delante la pantalla entera. Si falla, no informa.
      */
-    private subscribersOf = (p: IProviderLike): number | undefined => {
-        if (!p.getStats) return undefined
-        try {
-            const stats = p.getStats()
-            return typeof stats?.subscribers === 'number' ? stats.subscribers : undefined
-        }
-        catch {
-            return undefined
-        }
-    }
+    private subscribersOf = (p: IProviderLike): number | undefined => statsOf(p)?.subscribers
+
+    private eventsOf = (p: IProviderLike): number | undefined => statsOf(p)?.events
 
     private healthOfProvider = (p: IProviderLike, subscribers: number | undefined): { health: EComponentHealth, reason?: string } => {
         if (p.started !== true) {
@@ -246,6 +260,7 @@ class StatusChannel implements IChannel {
 
         for (const p of this.clusterInfo.providers ?? []) {
             const subscribers = this.subscribersOf(p)
+            const eventos = this.eventsOf(p)
             const { health, reason } = this.healthOfProvider(p, subscribers)
             components.push({
                 kind: EComponentKind.PROVIDER,
@@ -254,6 +269,7 @@ class StatusChannel implements IChannel {
                 health,
                 ...(reason ? { reason } : {}),
                 ...(subscribers === undefined ? {} : { subscribers }),
+                ...(eventos === undefined ? {} : { events: eventos }),
                 knownConsumers: conocidos.get(p.id) ?? 0
             })
         }

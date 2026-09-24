@@ -24,7 +24,13 @@ export class TrivyProvider implements IProvider {
         lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
         consumido o emitiendo para nadie.
     */
-    getStats = () => ({ subscribers: this.subscribers.size })
+    /*
+        Entregas desde que arranco: informers, sincronizacion inicial y envio de meta. Una por llamada
+        a un suscriptor, no una por objeto producido — este provider filtra por reportTypes.
+    */
+    private deliveries = 0
+
+    getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 
     private informers: Map<string, any> = new Map()
     private clusterInfo: any
@@ -147,6 +153,7 @@ export class TrivyProvider implements IProvider {
         const providerEvent = this.buildProviderEvent(plural, event, obj)
         for (const [subscriber, subData] of this.subscribers) {
             if (!subData.reportTypes.includes(plural)) continue
+            this.deliveries++
             subscriber.processProviderEvent(this.id, providerEvent)
         }
     }
@@ -162,6 +169,7 @@ export class TrivyProvider implements IProvider {
             try {
                 const res: { items?: any[] } = await this.clusterInfo.crdApi.listCustomObjectForAllNamespaces({ group: TRIVY_API_GROUP, version: TRIVY_API_VERSION, plural })
                 for (const obj of (res.items ?? [])) {
+                    this.deliveries++
                     subscriber.processProviderEvent(this.id, this.buildProviderEvent(plural, 'add', obj))
                 }
             }
@@ -180,6 +188,7 @@ export class TrivyProvider implements IProvider {
     private sendTrivyMeta = async (subscriber: IProviderSubscriber) => {
         const meta = await this.readTrivyMeta()
         const event: ITrivyMetaEvent = { eventKind: ETrivyEventKind.META, meta }
+        this.deliveries++
         subscriber.processProviderEvent(this.id, event)
     }
 

@@ -105,9 +105,52 @@ test('🔴 no se filtra ninguna URL de webhook: llevan el token dentro', async (
     expect(texto).not.toMatch(/https?:\/\//i)
 })
 
-test('la pantalla dice de cuando es la foto, y que no se actualiza sola', async () => {
-    // Que no se refresca solo no es un defecto que se esconde: es el producto, y se dice.
+test('la pantalla dice de cuando es la foto y si se refresca sola', async () => {
+    // En manual —lo de por defecto— dice que no se actualiza solo. No es un defecto que se esconde.
     await expect(page.getByText(/Snapshot taken at .* it does not refresh on its own/)).toBeVisible()
+})
+
+test('el selector de auto-refresco esta a la izquierda del boton de refrescar', async () => {
+    /*
+        El orden importa: se pidio ahi expresamente. Se comprueba por posicion en pantalla, no por el
+        orden del DOM, que es lo que de verdad ve quien lo usa.
+    */
+    const selector = page.locator('[aria-label="Auto refresh"]')
+    await expect(selector).toBeVisible()
+    const izq = await selector.boundingBox()
+    const der = await page.locator('button[aria-label="Take a new snapshot"]').boundingBox()
+    expect(izq!.x + izq!.width, 'el selector no esta a la izquierda del boton').toBeLessThanOrEqual(der!.x + 2)
+})
+
+test('🔴 al elegir un intervalo, la pantalla deja de decir que no se refresca sola', async () => {
+    // La frase era una afirmacion fija; con auto-refresco seria falsa, y una pantalla que miente sobre
+    // si se actualiza es peor que una que no se actualiza.
+    await page.locator('[aria-label="Auto refresh"]').click()
+    // El menu de MUI entra con animacion: sin esperar, el clic llega a un elemento que aun se mueve.
+    await page.waitForTimeout(500)
+    await page.getByRole('option', { name: 'Every 5s' }).click()
+    await expect(page.getByText(/refreshing every 5s while this tab is open/)).toBeVisible()
+    await expect(page.getByText(/it does not refresh on its own/)).toHaveCount(0)
+
+    // y se deja como estaba, que los demas casos cuentan con el modo manual
+    await page.locator('[aria-label="Auto refresh"]').click()
+    // El menu de MUI entra con animacion: sin esperar, el clic llega a un elemento que aun se mueve.
+    await page.waitForTimeout(500)
+    await page.getByRole('option', { name: 'Manual' }).click()
+    await expect(page.getByText(/it does not refresh on its own/)).toBeVisible()
+})
+
+test('la columna de entregas distingue un numero de "no lo dice"', async () => {
+    const filas = page.locator('table tbody tr')
+    const n = await filas.count()
+    let conNumero = 0
+    for (let i = 0; i < n; i++) {
+        const txt = (await filas.nth(i).locator('td').nth(4).innerText()).trim().split('\n')[0]
+        if (txt === '—') continue
+        expect(txt.replace(/[.,]/g, ''), `entregas raras: '${txt}'`).toMatch(/^[0-9]+$/)
+        conNumero++
+    }
+    expect(conNumero, 'ningun componente informa de sus entregas').toBeGreaterThan(0)
 })
 
 test('refrescar trae una foto nueva', async () => {

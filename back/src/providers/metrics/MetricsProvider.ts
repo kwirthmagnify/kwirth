@@ -28,6 +28,11 @@ export class MetricsProvider implements IProvider {
     private clusterInfo: ClusterInfo
     private kwirthData: KwirthData
     private subscribers: Map<IChannel, IMetricsSubscriberConfig> = new Map()
+    /*
+        Entregas desde que arranco: una por suscriptor y lectura. Este provider no filtra —cada tick va
+        a todos—, asi que el numero crece con los suscriptores, que es justo el trabajo que hace.
+    */
+    private deliveries = 0
 
     private metricsList: Map<string,MetricDefinition> = new Map()
     public metricsInterval: number = 15
@@ -253,7 +258,7 @@ export class MetricsProvider implements IProvider {
         sea BARATO —se devuelve lo que ya se tiene, no se calcula—, y de aqui sale que metrics este
         siendo consumido o emitiendo para nadie.
     */
-    getStats = () => ({ subscribers: this.subscribers.size })
+    getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 
     addRecordType (map:Map<string,MetricDefinition>, metricName:string, recordType:string, value:string): void {
         if (!map.has(metricName)) map.set(metricName,{help: '', type: '', eval: ''})
@@ -636,6 +641,7 @@ export class MetricsProvider implements IProvider {
         this.lastRead = await this.readClusterMetrics(clusterInfo)
         if (this.lastRead) {
             for (let [channel, _config] of this.subscribers) {
+                this.deliveries++
                 channel.processProviderEvent(this.id, this.lastRead)
             }
             this.getClusterUsage()

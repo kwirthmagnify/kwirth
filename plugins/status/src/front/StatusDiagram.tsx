@@ -80,9 +80,14 @@ const colocar = async (nodos: Node[], aristas: Edge[]): Promise<Record<string, I
 
 interface IDiagramProps {
     inventory: IStatusInventory
+    /**
+     * Componentes cuyo contador de entregas CAMBIO respecto al refresco anterior. Quien no esta aqui
+     * es que no ha movido nada, o que no se puede saber.
+     */
+    active: Set<string>
 }
 
-const StatusDiagram: React.FC<IDiagramProps> = ({ inventory }) => {
+const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active }) => {
     const theme = useTheme()
     const [posiciones, setPosiciones] = React.useState<Record<string, IPosicion> | undefined>(undefined)
     /*
@@ -118,6 +123,13 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory }) => {
         /*
             La vecindad del nodo seleccionado: el propio nodo y todo lo que toca, en los dos sentidos.
             Lo de fuera no se esconde, se ATENUA: sigue estando y se ve que hay más grafo alrededor.
+        */
+        /*
+            La actividad se ve en las LINEAS, no en el nodo.
+
+            El borde del nodo llego a engordar con el acumulado de entregas, y eso decia poco: un
+            provider que movio un millon el lunes y lleva dos dias parado seguia siendo el mas gordo
+            del grafo. Lo que interesa es que se mueve AHORA, y eso son las lineas por las que sale.
         */
         const vecinos = new Set<string>()
         if (seleccionado) {
@@ -186,17 +198,37 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory }) => {
                 Cuando los contadores de S4 midan caudal de verdad, el movimiento (o el grosor) podrá
                 significar algo, y entonces se pone.
             */
-            animated: false,
             ...(() => {
                 const tocaAlSeleccionado = Boolean(seleccionado) && (e.providerId === seleccionado || `channel:${e.channelId}` === seleccionado)
-                const color = tocaAlSeleccionado ? '#7fd8b0' : '#4a8'
+                /*
+                    Viva = el contador de su productor CAMBIO entre el refresco anterior y este. Se
+                    animan todas sus salientes.
+
+                    ⚠️ Lo que NO dice: por cual de ellas fue. Eso exigiria contar por arista, y hoy el
+                    contador es del provider entero. Una linea viva significa "este componente ha
+                    entregado algo y tu eres uno de sus consumidores", no "por aqui han pasado N".
+                */
+                const viva = active.has(e.providerId)
+                const color = tocaAlSeleccionado ? '#7fd8b0' : viva ? '#5fc79a' : '#4a8'
+                const ancho = tocaAlSeleccionado ? 3 : viva ? 2 : 1
+                /*
+                    El tamaño del marcador se compensa con el grosor de la linea.
+
+                    React Flow dibuja la punta con markerUnits="strokeWidth", asi que su tamaño se
+                    MULTIPLICA por el ancho del trazo: con la linea fina la flecha salia diminuta y al
+                    resaltarla se triplicaba de golpe. Dividiendo entre el grosor, la punta mide lo
+                    mismo en pantalla —unos 16 px— y lo que cambia al seleccionar es la LINEA, que es
+                    justo lo que se quiere resaltar.
+                */
+                const punta = 16 / ancho
                 return {
-                    // Mismo realce que el mapa de Iter: +2 de grosor, sombra y por delante de las demás.
+                    // Mismo realce que el mapa de Iter: mas grosor, sombra y por delante de las demás.
                     style: tocaAlSeleccionado
-                        ? { stroke: color, strokeWidth: 3, filter: `drop-shadow(0 0 3px ${color})`, opacity: 1 }
-                        : { stroke: color, strokeWidth: 1, opacity: seleccionado ? 0.2 : 1 },
-                    zIndex: tocaAlSeleccionado ? 1000 : 0,
-                    markerEnd: { type: MarkerType.ArrowClosed, color }
+                        ? { stroke: color, strokeWidth: ancho, filter: `drop-shadow(0 0 3px ${color})`, opacity: 1 }
+                        : { stroke: color, strokeWidth: ancho, opacity: seleccionado ? 0.2 : 1 },
+                    animated: viva,
+                    zIndex: tocaAlSeleccionado ? 1000 : viva ? 500 : 0,
+                    markerEnd: { type: MarkerType.ArrowClosed, color, width: punta, height: punta }
                 }
             })()
         })).filter(e => idsProductores.has(e.source))
@@ -205,7 +237,9 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory }) => {
         const canalesSueltos = inventory.edges.length - aristas.length
 
         return { nodos, aristas, canalesSueltos }
-    }, [inventory, seleccionado, colores.fondoNodo, colores.fondoCanal, colores.texto, colores.bordeCanal])
+        // 'active' entra en las dependencias: si no, el grafo se quedaria con el ultimo reparto de
+        // animaciones y las lineas no se apagarian nunca.
+    }, [inventory, active, seleccionado, colores.fondoNodo, colores.fondoCanal, colores.texto, colores.bordeCanal])
 
     /*
         El layout depende del INVENTARIO, no de la selección: recalcularlo al hacer clic movería los
@@ -251,7 +285,9 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory }) => {
                     línea, y lo natural es suponer que significa tráfico.
                 */}
                 <Typography variant='caption' color='text.secondary'>
-                    A line means <b>an active subscription</b> — not traffic. Nothing here measures volume yet.
+                    A line means <b>an active subscription</b>. A <b>moving line</b> means its producer is
+                    delivering right now — but not how much goes to each consumer: that is measured per
+                    component, not per line.
                     {' '}Click a node to highlight what it is connected to; click the background to clear.
                 </Typography>
             </Stack>

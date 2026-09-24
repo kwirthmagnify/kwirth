@@ -166,6 +166,48 @@ test('🔴 de los webhooks no sale la URL por ninguna parte', async () => {
     assert.ok(!JSON.stringify(inv).includes('SECRETO'), 'un token ha acabado en el inventario')
 })
 
+// ── el caudal (S4) ─────────────────────────────────────────────────────────────
+
+test('un provider que cuenta entregas las publica en el inventario', async () => {
+    const inv = await inventarioDe({
+        providers: [{ id: 'events', started: true, getStats: () => ({ subscribers: 2, events: 1500 }) }]
+    })
+    assert.equal(inv.components[0].events, 1500)
+    assert.equal(inv.components[0].subscribers, 2)
+})
+
+test('🔴 quien no cuenta entregas no sale con un 0', async () => {
+    /*
+        La misma regla que con los consumidores, y por el mismo motivo: 'events' es OPCIONAL dentro de
+        un getStats que ya de por sí es opcional. Un 0 diría "esto no ha movido nada", y quien lo lea
+        puede desinstalar un provider que lleva semanas trabajando.
+    */
+    const inv = await inventarioDe({
+        providers: [{ id: 'viejo', started: true, getStats: () => ({ subscribers: 1 }) }]
+    })
+    assert.equal(inv.components[0].subscribers, 1, 'los consumidores sí los dice')
+    assert.equal(inv.components[0].events, undefined, 'las entregas no, y no se inventan')
+})
+
+test('y si devuelve algo que no es un número, se descarta', async () => {
+    const inv = await inventarioDe({
+        providers: [{ id: 'raro', started: true, getStats: () => ({ subscribers: 1, events: 'un montón' }) }]
+    })
+    assert.equal(inv.components[0].events, undefined)
+    assert.equal(inv.components[0].subscribers, 1, 'lo que sí es válido se conserva')
+})
+
+test('un provider que revienta no deja a los demás sin caudal', async () => {
+    const inv = await inventarioDe({
+        providers: [
+            { id: 'malo', started: true, getStats: () => { throw new Error('boom') } },
+            { id: 'bueno', started: true, getStats: () => ({ subscribers: 1, events: 42 }) }
+        ]
+    })
+    assert.equal(inv.components.find(c => c.id === 'malo')!.events, undefined)
+    assert.equal(inv.components.find(c => c.id === 'bueno')!.events, 42)
+})
+
 // ── el grafo (S3) ──────────────────────────────────────────────────────────────
 
 test('el inventario trae las aristas que el core conoce', async () => {

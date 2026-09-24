@@ -44,7 +44,12 @@ export class HttpPullPushProvider implements IProvider {
         lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
         consumido o emitiendo para nadie.
     */
-    getStats = () => ({ subscribers: this.subscribers.size })
+    /*
+        Entregas desde que arranco: una por llamada a un suscriptor. Filtra por configuracion antes de entregar.
+    */
+    private deliveries = 0
+
+    getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 
     private pollers = new Map<string, Poller>()
     private started = false
@@ -351,6 +356,7 @@ export class HttpPullPushProvider implements IProvider {
         for (const [subscriber, entry] of this.subscribers) {
             if (entry.configs !== undefined && !entry.configs.has(event.config)) continue
             try {
+                this.deliveries++
                 subscriber.processProviderEvent(this.id, event)
             }
             catch (err) {

@@ -22,7 +22,12 @@ export class SampleProvider implements IProvider {
         lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
         consumido o emitiendo para nadie.
     */
-    getStats = () => ({ subscribers: this.subscribers.size })
+    /*
+        Entregas desde que arranco: una por llamada a un suscriptor. Sin filtro: cada latido va a todos.
+    */
+    private deliveries = 0
+
+    getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 
     private interval: ReturnType<typeof setInterval> | undefined
 
@@ -40,6 +45,7 @@ export class SampleProvider implements IProvider {
         this.interval = setInterval(() => {
             const event: ISampleEvent = { timestamp: Date.now(), message: 'sample heartbeat' }
             for (const channel of this.subscribers.keys()) {
+                this.deliveries++
                 channel.processProviderEvent(this.id, event)
             }
         }, 10000)

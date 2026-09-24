@@ -68,7 +68,12 @@ export class BusinessProvider implements IProvider {
         lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
         consumido o emitiendo para nadie.
     */
-    getStats = () => ({ subscribers: this.subscribers.size })
+    /*
+        Entregas desde que arranco: una por llamada a un suscriptor. Filtra por espacio y tipo, asi que un mensaje puede no entregarse a nadie.
+    */
+    private deliveries = 0
+
+    getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 
 
     constructor(_clusterInfo: any, _kwirthData: KwirthData) {
@@ -113,6 +118,7 @@ export class BusinessProvider implements IProvider {
         for (const [subscriber, config] of this.subscribers) {
             const subSpace = config.spaces.find(s => s.name === body.space)
             if (subSpace && subSpace.types.includes(body.type)) {
+                this.deliveries++
                 subscriber.processProviderEvent(this.id, {
                     last: {
                         type: 'event',
