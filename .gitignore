@@ -72,6 +72,14 @@ kwirth-bundled.json
 /logins/santander/
 /marketplace/
 
+# El store de un Kwirth en docker: docker-launch.cmd monta la propia carpeta como CONFIGMAPPATH y
+# SECRETPATH, asi que estos dos ficheros son ESTADO en ejecucion —usuarios y claves de acceso— y no
+# fuente. En modo docker ademas se escriben EN CLARO. Estuvieron versionados hasta el 2026-09-24, con
+# un admin de contrasena conocida y 12 claves dentro. No hace falta dejar plantilla: si no existen, el
+# core crea el usuario admin por defecto al arrancar.
+/docker/kwirth-users
+/docker/kwirth.keys
+
 # claude
 /.claude/settings.json
 /.claude/settings.local.json
