@@ -1,0 +1,5 @@
+node_modules/
+dist/
+
+# Generados por la corrida de tests (COVERAGE=1 escribe aqui su entry unico)
+tests/.out/
