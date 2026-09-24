@@ -1,0 +1,281 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Kwirth on ECS Fargate. Creates what Kubernetes would have given Kwirth for free: somewhere to store
+  its data, an identity, and a way to be reached. It does NOT create a VPC, a cluster or a load
+  balancer - those you already have, and they are inputs here.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where the task and the EFS mount targets live
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnets for the task and the EFS mount targets (one per AZ you use)
+  ClusterName:
+    Type: String
+    Description: Name of an existing ECS cluster
+  LoadBalancerSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group of the load balancer that will reach the task
+  ImageTag:
+    Type: String
+    Default: '0.5.228'
+    # Pin a released version. 'latest' in a task definition throws away the one thing a task definition
+    # is for: two tasks from the same revision can end up on different builds, and rolling back the
+    # revision does not roll back the image.
+    Description: Tag of kwirthmagnify/kwirth to run. Pin a version; avoid 'latest' outside demos
+  DesiredCount:
+    Type: Number
+    Default: 1
+    # Kwirth keeps per-instance state and its store is a single EFS access point. Raising this is not a
+    # supported way to scale it.
+    MaxValue: 1
+    MinValue: 0
+
+Resources:
+
+  # ── Storage ──────────────────────────────────────────────────────────────────────────────────────
+  # Without this, everything Kwirth writes - users, API keys, installed extensions - dies with the task.
+
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: true
+      PerformanceMode: generalPurpose
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-kwirth-store'
+
+  AccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref FileSystem
+      # The image runs as root; if you change that, change these to match or the task cannot write.
+      PosixUser:
+        Uid: '0'
+        Gid: '0'
+      RootDirectory:
+        Path: /kwirth
+        CreationInfo:
+          OwnerUid: '0'
+          OwnerGid: '0'
+          Permissions: '0755'
+
+  MountTargetSubnet1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Select [0, !Ref SubnetIds]
+      SecurityGroups:
+        - !Ref FileSystemSecurityGroup
+
+  FileSystemSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: NFS from the Kwirth task only
+      VpcId: !Ref VpcId
+
+  FileSystemIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref FileSystemSecurityGroup
+      IpProtocol: tcp
+      FromPort: 2049
+      ToPort: 2049
+      SourceSecurityGroupId: !Ref TaskSecurityGroup
+
+  # ── Network ──────────────────────────────────────────────────────────────────────────────────────
+
+  TaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Kwirth task
+      VpcId: !Ref VpcId
+
+  TaskIngressFromLoadBalancer:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref TaskSecurityGroup
+      IpProtocol: tcp
+      FromPort: 3883
+      ToPort: 3883
+      SourceSecurityGroupId: !Ref LoadBalancerSecurityGroupId
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VpcId
+      Port: 3883
+      Protocol: HTTP
+      TargetType: ip
+      # Kwirth answers /healthz always, in every environment. Point the check anywhere else and the
+      # task will be recycled forever without saying why.
+      HealthCheckPath: /healthz
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetGroupAttributes:
+        # Kwirth serves websockets; without stickiness a reconnect can land on another target.
+        - Key: stickiness.enabled
+          Value: 'true'
+        - Key: stickiness.type
+          Value: lb_cookie
+        # Must stay BELOW the load balancer idle timeout, or the balancer drops connections Kwirth
+        # still considers alive.
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+
+  # ── Identity ─────────────────────────────────────────────────────────────────────────────────────
+
+  MasterKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: >-
+        Derives the encryption key for Kwirth secrets at rest. Changing it makes everything already
+        written unreadable - there is no migration.
+      GenerateSecretString:
+        PasswordLength: 48
+        ExcludePunctuation: true
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: read-masterkey
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Only the one secret: the execution role reads it to inject it at start.
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref MasterKeySecret
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: efs-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - elasticfilesystem:ClientMount
+                  - elasticfilesystem:ClientWrite
+                Resource: !GetAtt FileSystem.Arn
+                Condition:
+                  StringEquals:
+                    elasticfilesystem:AccessPointArn: !GetAtt AccessPoint.Arn
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/${AWS::StackName}-kwirth'
+      RetentionInDays: 30
+
+  # ── The task ─────────────────────────────────────────────────────────────────────────────────────
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub '${AWS::StackName}-kwirth'
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      Cpu: '1024'
+      Memory: '2048'
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      Volumes:
+        - Name: kwirth-store
+          EFSVolumeConfiguration:
+            FilesystemId: !Ref FileSystem
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              AccessPointId: !Ref AccessPoint
+              IAM: ENABLED
+      ContainerDefinitions:
+        - Name: kwirth
+          Image: !Sub 'kwirthmagnify/kwirth:${ImageTag}'
+          Essential: true
+          PortMappings:
+            - ContainerPort: 3883
+              Protocol: tcp
+          MountPoints:
+            - SourceVolume: kwirth-store
+              ContainerPath: /data/kwirth
+              ReadOnly: false
+          Environment:
+            - Name: KWIRTH_STORE
+              Value: /data/kwirth
+            - Name: KWIRTH_CLUSTER_NAME
+              Value: !Ref AWS::StackName
+          Secrets:
+            # Through Secrets Manager, not Environment: anything in Environment shows up in the console
+            # and in describe-task-definition.
+            - Name: MASTERKEY
+              ValueFrom: !Ref MasterKeySecret
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - wget -q -O - http://localhost:3883/healthz || exit 1
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: kwirth
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ClusterName
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        # One at a time, and never two at once: two tasks would write to the same store.
+        MinimumHealthyPercent: 0
+        MaximumPercent: 100
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref TaskSecurityGroup
+          AssignPublicIp: DISABLED
+      LoadBalancers:
+        - ContainerName: kwirth
+          ContainerPort: 3883
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  TargetGroupArn:
+    Description: Attach this to a listener rule on your load balancer
+    Value: !Ref TargetGroup
+  FileSystemId:
+    Description: EFS holding the Kwirth store
+    Value: !Ref FileSystem
+  MasterKeySecretArn:
+    Description: Generated MASTERKEY. Do not change it once Kwirth has written secrets.
+    Value: !Ref MasterKeySecret

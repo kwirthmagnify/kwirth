@@ -1,0 +1,48 @@
+{
+  "family": "kwirth-minimal",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "networkMode": "awsvpc",
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "kwirth",
+      "image": "kwirthmagnify/kwirth:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3883,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "KWIRTH_CLUSTER_NAME",
+          "value": "kwirth-on-ecs"
+        }
+      ],
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "wget -q -O - http://localhost:3883/healthz || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/kwirth",
+          "awslogs-region": "<REGION>",
+          "awslogs-stream-prefix": "kwirth",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}

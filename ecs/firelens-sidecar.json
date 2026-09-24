@@ -1,0 +1,51 @@
+{
+  "family": "my-app-with-firelens",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "networkMode": "awsvpc",
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "my-app",
+      "image": "<YOUR_APP_IMAGE>",
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awsfirelens",
+        "options": {
+          "Name": "http",
+          "Host": "<KWIRTH_HOST>",
+          "Port": "443",
+          "URI": "/provider/fluentbit",
+          "Format": "json",
+          "tls": "on",
+          "Header": "Authorization Bearer <INGEST_TOKEN>",
+          "Retry_Limit": "2"
+        }
+      }
+    },
+    {
+      "name": "log-router",
+      "image": "public.ecr.aws/aws-observability/aws-for-fluent-bit:stable",
+      "essential": true,
+      "firelensConfiguration": {
+        "type": "fluentbit",
+        "options": {
+          "enable-ecs-log-metadata": "true"
+        }
+      },
+      "memoryReservation": 128,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/firelens",
+          "awslogs-region": "<REGION>",
+          "awslogs-stream-prefix": "log-router",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}

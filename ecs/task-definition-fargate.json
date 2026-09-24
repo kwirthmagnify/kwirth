@@ -1,0 +1,80 @@
+{
+  "family": "kwirth",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "networkMode": "awsvpc",
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/kwirthTaskRole",
+  "volumes": [
+    {
+      "name": "kwirth-store",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "<EFS_FILE_SYSTEM_ID>",
+        "rootDirectory": "/",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "<EFS_ACCESS_POINT_ID>",
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ],
+  "containerDefinitions": [
+    {
+      "name": "kwirth",
+      "image": "kwirthmagnify/kwirth:0.5.228",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3883,
+          "protocol": "tcp"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "kwirth-store",
+          "containerPath": "/data/kwirth",
+          "readOnly": false
+        }
+      ],
+      "environment": [
+        {
+          "name": "KWIRTH_STORE",
+          "value": "/data/kwirth"
+        },
+        {
+          "name": "KWIRTH_CLUSTER_NAME",
+          "value": "kwirth-on-ecs"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "MASTERKEY",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:kwirth/masterkey"
+        }
+      ],
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "wget -q -O - http://localhost:3883/healthz || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/kwirth",
+          "awslogs-region": "<REGION>",
+          "awslogs-stream-prefix": "kwirth",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}
