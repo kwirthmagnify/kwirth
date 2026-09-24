@@ -46,7 +46,7 @@ class NewsChannel {
         modifiable: false,
         reconnectable: true,
         metrics: false,
-        sources: [EClusterType.KUBERNETES, EClusterType.DOCKER],
+        sources: [EClusterType.KUBERNETES],
         endpoints: [],
         websocket: false,
         cluster: true,

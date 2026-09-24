@@ -84,7 +84,7 @@ class ProviderDebugChannel implements IChannel {
         modifiable: false,      // F1: para cambiar de provider se para y se rearranca la instancia
         reconnectable: true,
         metrics: false,
-        sources: [EClusterType.KUBERNETES, EClusterType.DOCKER],
+        sources: [EClusterType.KUBERNETES],
         endpoints: [],
         websocket: false,
         cluster: true,          // los providers son cluster-wide, no cuelgan de un pod

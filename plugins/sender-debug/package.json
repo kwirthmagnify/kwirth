@@ -2,7 +2,7 @@
   "id": "sender-debug",
   "displayName": "Sender Debug",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Sender debugging channel for Kwirth - picks a sender configuration, sends a hand-written message and shows what the sender actually answered",
   "icon": "Send",
   "type": "module",
@@ -12,7 +12,7 @@
     "test": "node tests/run.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common": "^0.5.41",
+    "@kwirthmagnify/kwirth-common": "^0.5.56",
     "@kwirthmagnify/kwirth-common-back": "^0.5.40",
     "@kwirthmagnify/kwirth-common-front": "^0.5.54"
   },

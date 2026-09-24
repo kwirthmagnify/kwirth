@@ -47,7 +47,7 @@ class MircChannel implements IChannel {
         modifiable: false,
         reconnectable: true,    // core keeps the instance on drop + reconnects the tab socket (presence survives)
         metrics: false,
-        sources: [EClusterType.KUBERNETES, EClusterType.DOCKER],
+        sources: [EClusterType.KUBERNETES],
         endpoints: [],          // front-hub model: no back-to-back endpoints needed
         websocket: false,
         cluster: true,          // cluster-scoped channel (not tied to pods)

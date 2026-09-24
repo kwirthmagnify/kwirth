@@ -39,7 +39,7 @@ describe('channel contract', () => {
         assert.equal(data.modifiable, false)
         assert.equal(data.routable, false)
         assert.deepEqual(data.endpoints, [])
-        assert.deepEqual(data.sources, [EClusterType.KUBERNETES, EClusterType.DOCKER])
+        assert.deepEqual(data.sources, [EClusterType.KUBERNETES])
         // vacío es la decisión: un depurador no arranca nada por estar instalado
         assert.deepEqual(channel.requirements.providers, [])
         assert.equal(channel.requirements.storage, false)

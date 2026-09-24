@@ -57,7 +57,7 @@ class AlertChannel {
     getChannelData(): BackChannelData {
         return {
             id: 'alert', routable: false, pauseable: true, modifiable: false, reconnectable: true,
-            metrics: false, sources: [EClusterType.DOCKER, EClusterType.KUBERNETES],
+            metrics: false, sources: [EClusterType.KUBERNETES],
             endpoints: [], websocket: false, cluster: false, resourced: true
         }
     }
@@ -134,28 +134,6 @@ class AlertChannel {
         return this.webSockets.some(s => s.instances.find(i => i.instanceId === instanceId))
     }
 
-    async startDockerStream(webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string, regExps: Map<EAlertSeverity, RegExp[]>, metricRules: IAlertMetricRule[], senderId?: string, senderConfigName?: string): Promise<void> {
-        try {
-            const id = await this.clusterInfo.dockerTools.getContainerId(podName, containerName)
-            if (!id) { this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Cannot obtain Id for container ${podName}/${containerName}`, instanceConfig); return }
-            let socket = this.webSockets.find(s => s.ws === webSocket)
-            if (!socket) { const len = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] }); socket = this.webSockets[len - 1] }
-            let instance = socket.instances.find(i => i.instanceId === instanceConfig.instance)
-            if (!instance) {
-                const len = socket.instances.push({ instanceId: instanceConfig.instance, regExps, metricRules, alertStates: new Map(), paused: false, assets: [], senderId, senderConfigName })
-                instance = socket.instances[len - 1]
-            }
-            const asset: IAsset = { podNamespace, podName, containerName: '', buffer: '' }
-            instance.assets.push(asset)
-            const container = this.clusterInfo.dockerApi.getContainer(id)
-            asset.readableStream = await container.logs({ follow: true, stdout: true, stderr: true })
-            asset.readableStream!.on('data', (chunk: any) => { this.sendBlock(webSocket, instanceConfig.instance, asset, chunk.toString('utf8')) })
-        } catch (err) {
-            console.error('[alert] Error starting docker stream:', err)
-            this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, err as string, instanceConfig)
-        }
-    }
-
     async startKubernetesStream(webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string, regExps: Map<EAlertSeverity, RegExp[]>, metricRules: IAlertMetricRule[], senderId?: string, senderConfigName?: string): Promise<void> {
         try {
             let socket = this.webSockets.find(s => s.ws === webSocket)
@@ -183,11 +161,10 @@ class AlertChannel {
         regexes.set(EAlertSeverity.WARNING, (data.regexWarning ?? []).map(r => new RegExp(r)))
         regexes.set(EAlertSeverity.ERROR, (data.regexError ?? []).map(r => new RegExp(r)))
         const metricRules = data.metricRules ?? []
-        if (this.clusterInfo.type === EClusterType.DOCKER) {
-            this.startDockerStream(webSocket, instanceConfig, podNamespace, podName, containerName, regexes, metricRules, data.senderId, data.senderConfigName)
-        } else if (this.clusterInfo.type === EClusterType.KUBERNETES) {
+        if (this.clusterInfo.type === EClusterType.KUBERNETES) {
             this.startKubernetesStream(webSocket, instanceConfig, podNamespace, podName, containerName, regexes, metricRules, data.senderId, data.senderConfigName)
-        } else {
+        }
+        else {
             console.log('[alert] Unsupported source')
             return false
         }
@@ -267,14 +244,7 @@ class AlertChannel {
             if (entry.instances.find(i => i.instanceId === instanceId)) {
                 entry.ws = newWebSocket
                 for (const instance of entry.instances) {
-                    if (this.clusterInfo.type === EClusterType.DOCKER) {
-                        for (const asset of instance.assets) {
-                            if (asset.readableStream) {
-                                asset.readableStream.removeAllListeners('data')
-                                asset.readableStream.on('data', (chunk: any) => { try { this.sendBlock(newWebSocket, instance.instanceId, asset, chunk.toString('utf8')) } catch (err) { console.log(err) } })
-                            }
-                        }
-                    } else if (this.clusterInfo.type === EClusterType.KUBERNETES) {
+                    if (this.clusterInfo.type === EClusterType.KUBERNETES) {
                         for (const asset of instance.assets) {
                             if (asset.passThroughStream) {
                                 asset.passThroughStream.removeAllListeners('data')

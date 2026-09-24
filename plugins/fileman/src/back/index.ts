@@ -72,7 +72,7 @@ class FilemanChannel {
         modifiable: false,
         reconnectable: true,
         metrics: false,
-        sources: [EClusterType.KUBERNETES, EClusterType.DOCKER],
+        sources: [EClusterType.KUBERNETES],
         endpoints: [
             { name: 'download', methods: ['GET'], requiresAccessKey: true },
             { name: 'upload', methods: ['POST'], requiresAccessKey: true },

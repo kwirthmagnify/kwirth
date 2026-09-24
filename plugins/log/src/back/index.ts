@@ -39,7 +39,7 @@ class LogChannel {
     getChannelData(): BackChannelData {
         return {
             id: 'log', routable: false, pauseable: true, modifiable: false, reconnectable: true,
-            metrics: false, sources: [EClusterType.DOCKER, EClusterType.KUBERNETES],
+            metrics: false, sources: [EClusterType.KUBERNETES],
             endpoints: [], websocket: false, cluster: false, resourced: true
         }
     }
@@ -96,54 +96,6 @@ class LogChannel {
             }
         } catch (err) {
             console.log('[log] sendBatch error for', asset.podNamespace, asset.podName, asset.containerName, err)
-        }
-    }
-
-    async startDockerStream(webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<void> {
-        try {
-            let id = await this.clusterInfo.dockerTools.getContainerId(podName, containerName)
-            if (!id) {
-                this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Cannot obtain Id for container ${podName}/${containerName}`, instanceConfig)
-                return
-            }
-
-            let socket = this.webSockets.find(s => s.ws === webSocket)
-            if (!socket) {
-                const len = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] })
-                socket = this.webSockets[len - 1]
-            }
-
-            let instance = socket.instances.find(i => i.instanceId === instanceConfig.instance)
-            if (!instance) {
-                const len = socket.instances.push({
-                    instanceId: instanceConfig.instance,
-                    timestamps: (instanceConfig.data as ILogInstanceConfig).timestamp,
-                    previous: false, paused: false, assets: [], isSending: false
-                })
-                instance = socket.instances[len - 1]
-            }
-
-            const asset: IAsset = {
-                podNamespace, podName, containerName,
-                msg: {
-                    action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED,
-                    namespace: podNamespace, instance: instance.instanceId, type: EInstanceMessageType.DATA,
-                    pod: podName, container: containerName, channel: EInstanceMessageChannel.LOG,
-                    text: '', msgtype: 'logmessage'
-                }
-            }
-            const container = this.clusterInfo.dockerApi.getContainer(id)
-            asset.readableStream = await container.logs({
-                follow: true, stdout: true, stderr: true,
-                timestamps: (instanceConfig.data as ILogInstanceConfig).timestamp as boolean,
-                ...((instanceConfig.data as ILogInstanceConfig).fromStart ? {} : { since: Date.now() - 1800 })
-            })
-            asset.readableStream!.setEncoding('utf8')
-            asset.readableStream!.on('data', async (chunk: any) => this.sendBatch(webSocket, instance!, asset, chunk))
-            instance.assets.push(asset)
-        } catch (err: unknown) {
-            console.log('[log] Generic error starting docker log', err)
-            this.sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, err as string, instanceConfig)
         }
     }
 
@@ -217,10 +169,7 @@ class LogChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        if (this.clusterInfo.type === EClusterType.DOCKER)
-            this.startDockerStream(webSocket, instanceConfig, podNamespace, podName, containerName)
-        else
-            this.startKubernetesStream(webSocket, instanceConfig, podNamespace, podName, containerName)
+        this.startKubernetesStream(webSocket, instanceConfig, podNamespace, podName, containerName)
         return true
     }
 
@@ -309,19 +258,10 @@ class LogChannel {
             if (entry.instances.find(i => i.instanceId === instanceId)) {
                 entry.ws = newWebSocket
                 for (const instance of entry.instances) {
-                    if (this.clusterInfo.type === EClusterType.DOCKER) {
-                        for (const asset of instance.assets) {
-                            if (asset.readableStream) {
-                                asset.readableStream.removeAllListeners('data')
-                                asset.readableStream.on('data', (chunk: any) => this.sendBatch(newWebSocket, instance, asset, chunk))
-                            }
-                        }
-                    } else {
-                        for (const asset of instance.assets) {
-                            if (asset.passThroughStream) {
-                                asset.passThroughStream.removeAllListeners('data')
-                                asset.passThroughStream.on('data', (chunk: any) => this.sendBatch(newWebSocket, instance, asset, chunk))
-                            }
+                    for (const asset of instance.assets) {
+                        if (asset.passThroughStream) {
+                            asset.passThroughStream.removeAllListeners('data')
+                            asset.passThroughStream.on('data', (chunk: any) => this.sendBatch(newWebSocket, instance, asset, chunk))
                         }
                     }
                 }
