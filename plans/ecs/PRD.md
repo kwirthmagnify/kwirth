@@ -73,16 +73,16 @@ resuelto por el propio cluster:
 
 ### 4.3 Qué puede observar desde ECS
 
-- **Nada** — y es una configuración completa, no un arranque a medias. Los canales autónomos funcionan,
-  el front se sirve, los usuarios entran y los providers de ingesta reciben. Es el caso que hoy es
-  imposible, porque el arranque exige un cluster.
-- **Kubernetes** — con kubeconfig montado (EFS o Secrets Manager). Es el modo que ya funciona.
-- **Cloud** — vía los providers correspondientes, con las credenciales que cada uno pida.
-- **Otros servicios ECS** — dos caminos, y no dan lo mismo:
-  - **EC2 launch type**: bind-mount de `/var/run/docker.sock` → los contenedores de *esa* instancia, como
-    el modo Docker local. Sólo esa instancia, no el cluster ECS entero.
-  - **Fargate**: no hay socket ni acceso al host. El camino es la **ingesta**: FireLens (Fluent Bit como
-    sidecar) mandando el log de las otras tareas al provider `fluentbit`, o OTLP al provider `otel`.
+- **Kubernetes** — con kubeconfig montado (EFS o Secrets Manager). Los canales funcionan **exactamente
+  igual** que en un Kwirth in-cluster: la conexión es por la API de Kubernetes con las credenciales del
+  kubeconfig, y eso es transparente para ellos. El core no hace nada especial.
+- **Nada** — y es una configuración completa, no un arranque a medias: el front se sirve, los usuarios
+  entran, los canales autónomos funcionan, los providers de ingesta reciben, y desde ahí se **federa**
+  contra otro Kwirth. Es el caso que hoy es imposible, porque el arranque exige un cluster.
+- **Cloud** — vía los providers correspondientes, con las credenciales que cada uno pida. Un plugin
+  arranca y se conecta a lo que pueda; eso no es asunto del core.
+
+> **Lo que NO hace**: gestionar las tareas o los contenedores de ECS como recursos propios. Ver **D2**.
 
 ### 4.4 Documentación y ejemplos
 
@@ -130,48 +130,60 @@ están repartidas entre `runningEnv.isDesktop`, `runningEnv.isDocker`, `kwirthDa
 `clusterType` a lo largo de todo el arranque, y esa dispersión es lo que hace que añadir un entorno nuevo
 sea un trabajo de riesgo.
 
-| entorno | socket CRI | API de Kubernetes | store |
-|---|---|---|---|
-| `kubernetes` (in-cluster) | no | sí | ConfigMap/Secret |
-| `docker` | **sí** (compose incluido) | si hay kubeconfig | fichero |
-| `desktop` | no | kubeconfig local | fichero |
-| `ecs` / EC2 | **sí** (bind-mount del socket) | si hay kubeconfig | fichero (EFS) |
-| `ecs` / Fargate | no | si hay kubeconfig | fichero (EFS) |
+| entorno | API de Kubernetes | store |
+|---|---|---|
+| `kubernetes` (in-cluster) | sí, no es opcional | ConfigMap/Secret |
+| `docker` | si hay kubeconfig | fichero (formato histórico) |
+| `desktop` | kubeconfig local | fichero cifrado |
+| `ecs` (los dos launch types) | si hay kubeconfig | fichero cifrado (EFS) |
 
-> **ECS sobre EC2 no necesita código de observación nuevo: es el camino de Docker corriendo en otro
-> sitio.** Desbloquear Docker y desbloquear ECS son el mismo trabajo, no dos.
+> El socket del CRI no aparece en esta tabla: ver **D2**. Los cuatro entornos observan un cluster o no
+> observan nada, y en los dos launch types de ECS la respuesta es la misma — lo que cambia entre Fargate
+> y EC2 no afecta a lo que Kwirth puede hacer.
 
 > **D1-bis. `EClusterType` gana `NONE`.** Hace falta de verdad: en Fargate sin socket y sin kubeconfig no
 > hay ni contenedores ni pods, y declararse `KUBERNETES` haría que el front saliera a listar pods contra
 > nada. Afecta a [ResourceSelector.tsx:365](../../front/src/components/home/ResourceSelector.tsx#L365),
 > que decide el icono por la **primera letra** del valor (`'d'` → Docker, `'k'` → Kubernetes).
 
-**D2. `EClusterType.DOCKER` se revive. ✅ Validado.** Se le da detección real en vez de retirarlo, porque
-es el camino por el que Kwirth ve contenedores —los de un `docker compose` local, o los de una instancia
-EC2 de ECS— a través de `/var/run/docker.sock`. Sin eso, EC2 se queda con lo mismo que Fargate y el launch
-type deja de aportar nada.
+**D2. Docker deja de ser una fuente de recursos, y se retira. ✅ Decidido el 2026-09-24.**
 
-Y no es trabajo de implementación, es de **cableado**. Lo que hay ya:
+> Esta decisión **sustituye** a la anterior, que era revivir `EClusterType.DOCKER` dándole detección real.
+> Se mantiene escrita abajo porque explica lo que se encontró, y porque el estado del código era lo que
+> llevó a proponerlo.
 
-- `DockerTools` ([DockerTools.ts](../../back/src/tools/DockerTools.ts)) entiende **compose**: lee las
-  labels `com.docker.compose.project` y `.service`, mapea proyecto → "pod" y servicio → "container", y
-  cuelga los contenedores sueltos del pseudo-pod `$docker`.
-- Las ramas que lo consumen están escritas en los cuatro puntos que el canal de log necesita:
-  `watchPods` ([index.ts:697](../../back/src/index.ts#L697)), la resolución de pods
-  ([:721](../../back/src/index.ts#L721)), la validación de nombres
-  ([:1172](../../back/src/index.ts#L1172)) y `ConfigApi` ([:200](../../back/src/api/ConfigApi.ts#L200)).
+Kwirth **no va a gestionar contenedores ni proyectos de `docker compose` como si fuesen un cluster**.
+Docker sigue siendo un sitio **donde correr** —eso lo dice `EExecutionEnvironment`—, y desde ahí se
+federa contra otro Kwirth o se apunta a un cluster montando un kubeconfig, que es el caso paralelo a ECS.
 
-Lo que falta son **dos cables**:
+Se comprobó **empíricamente** que esa vía no estaba viva, con un `docker run` sobre la imagen publicada:
 
-1. **Nadie produce `EClusterType.DOCKER`.** Sólo salía de los `case 'windowsdocker'/'linuxdocker'`
-   ([index.ts:2812](../../back/src/index.ts#L2812)), que la detección no devuelve. El `exenv === 'docker'`
-   que sí se detecta acaba en `clusterType: KUBERNETES` ([:2822](../../back/src/index.ts#L2822)): el
-   camino de contenedores queda cortocircuitado hacia el de kubeconfig.
-2. **Nadie asigna `clusterInfo.dockerApi` ni `clusterInfo.dockerTools`.** Están declarados con `!` en
-   [ClusterInfo.ts:30](../../back/src/model/ClusterInfo.ts#L30) —"confía, alguien los rellenará"— y no hay
-   un solo `new DockerTools(...)` en el back. El único `new Docker()` es el que `ConfigApi` se hace para
-   sí mismo ([:19](../../back/src/api/ConfigApi.ts#L19)). Encender sólo el cable 1 reventaría en el primer
-   `dockerTools.getAllPods()`.
+```
+"clusterName": "inDocker",
+"clusterType": "kubernetes",        ← no 'docker'
+FetchError: request to http://localhost:8080/api/v1/namespaces/kube-system failed
+Cannot get a running instance
+```
+
+El contenedor se queda vivo escuchando en el 3883 pero **sin instancia**: cualquier petición responde
+`503`. Es el peor modo de fallo, porque parece arrancado.
+
+Por qué no podía funcionar, y son dos motivos independientes:
+
+1. **Nadie producía `EClusterType.DOCKER`.** Sólo salía de los `case 'windowsdocker'/'linuxdocker'`, que
+   la detección no devolvía nunca; el `'docker'` que sí se detectaba asignaba `KUBERNETES`.
+2. **Nadie asignaba `clusterInfo.dockerApi` ni `dockerTools`.** Estaban declarados con `!` y no había un
+   solo `new DockerTools(...)` en el back.
+
+Lo que sí estaba escrito —y era bueno— es que **`dockerTools` no era código muerto del core: era API que
+el core ofrecía a los plugins**. Los canales `log` y `alert` tenían su `startDockerStream()` completo,
+eligiendo por `clusterInfo.type`. Esa es la parte que se retira.
+
+Alcance de la retirada: `EClusterType.DOCKER` fuera del enum (`common` 0.5.56), `DockerTools.ts` borrado,
+`dockerode` fuera de las dependencias del back, `watchDockerPods()` y las ramas de `index.ts` y
+`ConfigApi.ts` eliminadas, `dockerApi`/`dockerTools` fuera de `ClusterInfo`, las ramas `isDocker` del
+`ResourceSelector` del front, y los **nueve plugins** que declaraban `DOCKER` en sus `sources` —`log` y
+`alert` además con su `startDockerStream()`.
 
 **D3. Detección de ECS: señal canónica + escape.** `ECS_CONTAINER_METADATA_URI_V4`, que el agente inyecta
 en **los dos** launch types, más `FORCE=ecs` para poder forzarlo. La comprobación va **antes** que la de

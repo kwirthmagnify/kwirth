@@ -8,7 +8,7 @@
 
 The **Fileman** channel turns any running container into a **remote file manager**, right inside kwirth. It lets you **browse the container's filesystem**, **view and edit** text/config files in place, and **upload, download, copy, move, rename, create and delete** files and folders — all without `kubectl cp`, `kubectl exec` or shelling in.
 
-It works entirely over the cluster's **exec API** (the same channel a `kubectl exec` uses), so there's nothing to install inside the container. It is available for both **Kubernetes** and **Docker** sources.
+It works entirely over the cluster's **exec API** (the same channel a `kubectl exec` uses), so there's nothing to install inside the container.
 
 > Because Fileman drives standard shell commands (`ls`, `cat`, `mv`, `cp`, `rm`, `mkdir`, `tar`) inside the target, the container must have a **shell and coreutils**. Minimal/**distroless** images (no `sh`, no `ls`) won't expose a filesystem here.
 
@@ -97,7 +97,7 @@ Fileman moves data in every direction — in, out, and between containers.
 ## Admin guide
 
 - **Install / remove:** **☰ → Manage extensions → Plugins** → install **Fileman**.
-- **Sources:** works on **Kubernetes** and **Docker** targets.
+- **Sources:** works on **Kubernetes** targets.
 - **Permissions (scopes):** grant on the target objects —
   - **`fileman$read`** — browse, view, download.
   - **`fileman$write`** — everything read can do, **plus** edit/save, upload, create, rename, move/copy and delete.

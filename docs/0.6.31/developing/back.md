@@ -43,7 +43,7 @@ interface IChannel {
 
 And this is a short explanation on each function:
 
-  - `getChannelData`. The back channel must implement this function to inform kwirth core which capabilities does it support. This refers to things like 'pausing', 'reconnecting', source support (Kubernetes, MesOS, Docker...), routing, metrics, etc.
+  - `getChannelData`. The back channel must implement this function to inform kwirth core which capabilities does it support. This refers to things like 'pausing', 'reconnecting', source support (Kubernetes, or none for an autonomous channel), routing, metrics, etc.
   - `getChannelScopeLevel`. Your channel may need to offer different scope levels to your users. For example, in the metrics channel the clients can just do SNAPSHOT (obtaining a set of metrics and its values) or do STREAM (that is, obtaining metrics through a stream of data implemented as an instance inside a WebSocket). This function returns an id that kwirth core uses for deciding if a specific user has an Access Key with a scope for performing the function he requested.
   - `endpointRequest`. If your channel will receive HTTP requests from your clients once the channel is started you need to provide this function implementation. When a connected client performs an HTTP POST to your channel, the kwirth request processor will send you the request by means of this function. See a working example in Trivy channel or Fileman channel.
   - `websocketRequest`. If your channel will receive WebSocket connection requests from your clients once the channel is started, you need to provide this function implementation. See a working example in Magnify channel.

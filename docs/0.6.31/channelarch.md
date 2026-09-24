@@ -76,7 +76,7 @@ Starting in kwirth 0.3 and ending in kwirth 0.4, kwirth features are implemented
 
 When you create a kwirth channel you must understand that the channel is split into two different artifacts:
 
-  - **Back channel**, that is, a kwirth core extension that receives requests from clients and interacts with your source (Kubernetes, Docker or whatever it be).
+  - **Back channel**, that is, a kwirth core extension that receives requests from clients and interacts with your source (a Kubernetes cluster, or none at all — an autonomous channel takes its data from somewhere else entirely).
   - **Front channel**, is an extension artifact to be loaded into front application, it handles user interaction and communicates with backend. Please keep in mid kwirth core is not strongly coupled to kwirth front end, you can implement your own kwirth clients. When we talk about front channels, we are referring to plugins to be added to **kwirth front React application**.
 
 Front channels communicate with back channels through an open websocket that kwirth front app and kwirth core use for data streaming.

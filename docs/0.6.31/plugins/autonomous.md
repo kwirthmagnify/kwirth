@@ -52,7 +52,7 @@ class MyAppChannel implements IChannel {
         id: 'my-app',
         routable: false, pauseable: false, modifiable: false,
         reconnectable: true, metrics: false,
-        sources: [EClusterType.KUBERNETES, EClusterType.DOCKER],
+        sources: [EClusterType.KUBERNETES],
         endpoints: [], websocket: false,
         cluster: false,      // ← autonomous
         resourced: false     // ← autonomous

@@ -52,7 +52,7 @@ The header tracks **Lines / Max**, the **Interval**, and the **Status**.
 
 - **Install / remove:** **☰ → Manage extensions → Plugins** → install **Echo**.
 - **Permissions (scopes):** **`none`** and **`cluster`**. See [Security & permissions](../../admin/04-security-and-permissions).
-- **Sources:** Kubernetes and Docker.
+- **Sources:** Kubernetes.
 - **Senders:** if you set a **Sender config**, Echo's lines are forwarded there — the perfect way to validate a sender without a real log source.
 
 ## Notes

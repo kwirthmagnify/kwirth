@@ -28,9 +28,10 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 | [geppetto](geppetto/PRD.md) | analizador LLM de propósito general (PRD) | la decisión 6; sin código todavía |
 | [pluvider](pluvider/PLAN.md) · [PRD](pluvider/PRD.md) | un plugin que además expone su información in-process | MVP en producción (agora y montag publican, provider-debug consume); queda la fase 2: `ask()`, `publications[]` y el descubrimiento en runtime |
 | [gate](gate/PRD.md) | la pantalla de acceso como extensión programable | borrador |
-| [ecs](ecs/PLAN.md) · [PRD](ecs/PRD.md) | desplegar Kwirth en AWS ECS (Fargate y EC2) con la misma imagen | todo. Bloqueado por las decisiones del PRD §6: hoy el core **no arranca sin un Kubernetes alcanzable**, así que antes de los ejemplos hay que desbloquear el arranque |
+| [ecs](ecs/PLAN.md) · [PRD](ecs/PRD.md) | desplegar Kwirth en AWS ECS (Fargate y EC2) con la misma imagen | **S1 hecho**: el core ya arranca sin Kubernetes, y de paso se retiró Docker como fuente de recursos (12 artefactos republicados). Quedan S2 (qué se observa), S3 (el proyecto `ecs/` con los ejemplos) y S4 (documentación). Pendientes del cierre: publicar el back y una corrida e2e completa |
 | [config-portability](config-portability/PLAN.md) · [PRD](config-portability/PRD.md) | llevarse la configuración de un Kwirth a otro | core, front y las open source con configuración, hechos; quedan Excubitor y Agora, que son la prueba de fuego |
 | [previous-container-log](previous-container-log/PLAN.md) | ver en el About el log del contenedor anterior cuando el core reinicia | en producción; solo queda el S2 (el ajuste en los settings, que arrastra publicar `kwirth-common`) |
+| [provider-handle](provider-handle/PLAN.md) | lo que el core entrega a un consumidor deja de ser el `IProvider` real: un handle por (canal, instancia) | todo, sin empezar. Espera a que termine el refactor en curso del core. Lleva además dos averías abiertas en su backlog: `started` significa "router montado" y no "arrancado", y el registro de aristas borra la arista con la primera baja |
 
 ## Cerrados
 

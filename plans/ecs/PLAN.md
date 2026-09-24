@@ -16,7 +16,7 @@ Cada stream cierra con su propia CL9 completa. **No hay fase de cierre acumulada
 
 ---
 
-## S1 — Arranque sin Kubernetes
+## S1 — Arranque sin Kubernetes ✅ (código completo el 2026-09-24, pendiente de QA manual)
 
 **MVP**: una tarea de ECS (Fargate) con la imagen actual arranca, sirve el front, permite login y
 persiste en EFS. Sin Kubernetes en ninguna parte, y **sin observar nada**: los canales autónomos
@@ -27,13 +27,13 @@ funcionan y eso ya es un despliegue completo.
 | S1.1 | **Capacidades en un solo sitio.** Una función que, del entorno detectado más las comprobaciones reales (¿socket del CRI?, ¿kubeconfig utilizable?), devuelva qué hay a mano y dónde se persiste. Es la pieza central del modelo (D1): todo lo demás pregunta aquí en vez de repetir condiciones sobre `runningEnv`. |
 | S1.2 | `getExecutionEnvironment()` aprende `ecs`: `ECS_CONTAINER_METADATA_URI_V4`, que el agente inyecta en **los dos** launch types. Va **antes** que la rama de Docker — en EC2 existe `/.dockerenv` y ganaría la partida. Escape por `FORCE`. |
 | S1.3 | `common`: publicar el entorno de ejecución en `KwirthData` en vez de tirarlo tras el `switch`, y **`EClusterType.NONE`** (D1-bis). Publicar `common` y subir la dependencia en back y front — no hay alias de TS, el back consume el paquete publicado. |
-| S1.4 | `clusterType` pasa a rellenarse **desde las capacidades**, no desde el entorno: hay socket → `DOCKER`, hay API de kube → `KUBERNETES`, ninguna → `NONE`. Con esto se enciende el **cable 1** de D2 y el camino de contenedores deja de estar cortocircuitado. |
-| S1.5 | **Cable 2** de D2: instanciar `clusterInfo.dockerApi` y `clusterInfo.dockerTools` cuando hay socket. Hoy no los asigna nadie y el primer `dockerTools.getAllPods()` reventaría. |
+| S1.4 | `clusterType` pasa a rellenarse **desde las capacidades**, no desde el entorno: hay API de kube → `KUBERNETES`, no la hay → `NONE`. |
+| S1.5 | Retirada de Docker como fuente de recursos (D2): el enum, `DockerTools`, `dockerode`, las ramas de `index.ts`, `ConfigApi` y el front, y los nueve plugins que lo declaraban. |
 | S1.6 | `createRunningInstance()` deja de exigir Kubernetes: sin kubeconfig utilizable no se construyen los clientes, no se llama a `readNamespace('kube-system')`, ni a `setKubernetesClusterName()`, ni a `getNodes()`. **No es un `try/catch` más ancho**: es una rama explícita, porque un `catch` que se traga el fallo convierte "no hay cluster" y "el cluster no responde" en el mismo silencio. |
 | S1.7 | Almacenamiento según capacidades: fichero (`NodeSecrets` + `NodeConfigMaps`, cifrado con `MASTERKEY`) o ConfigMap/Secret. Hoy la rama de fichero existe pero vive detrás del `else` de Kubernetes ([index.ts:400](../../back/src/index.ts#L400)). |
 | S1.8 | Identidad: `clusterName` de `KWIRTH_CLUSTER_NAME` o del metadata de ECS (cluster ARN / familia de tarea). |
 | S1.9 | Healthcheck (**D4**): que el ALB tenga algo a lo que preguntar, siempre, no sólo `inCluster`. |
-| S1.10 | Canales y providers de Kubernetes (**D5**): `metrics` y `events` no se arrancan si no hay API de kube, y el log de arranque lo dice con todas las letras. |
+| ~~S1.10~~ | **Descartado.** Se llegó a filtrar canales por sus `sources` y a no registrar `events`/`metrics` sin API de kube. Se retiró: **el core no decide por los plugins**. Un plugin arranca encima y se conecta a lo que pueda, y `sources` no decidía nada en ninguna parte —el front sólo lo imprimía como texto— hasta que este filtro le dio un significado que no tenía. |
 | S1.11 | Front: que `NONE` se entienda. [ResourceSelector.tsx:365](../../front/src/components/home/ResourceSelector.tsx#L365) decide el icono por la primera letra del valor, y [ManageClusters.tsx:80](../../front/src/components/home/ManageClusters.tsx#L80) lo enseña tal cual. Un Kwirth que no observa nada tiene que verse como lo que es, no como un desconocido. |
 | S1.12 | Log de arranque: entorno detectado, capacidades resultantes y **por qué** cada una. Es la primera herramienta de diagnóstico de quien despliega esto. |
 
@@ -47,7 +47,42 @@ funcionan y eso ya es un despliegue completo.
 - [ ] `docker compose` local: el canal de **log** funciona contra los contenedores, con los proyectos compose agrupados como "pods". Es el camino que estaba escrito y sin cablear, y en EC2 de ECS es exactamente el mismo.
 - [ ] **Regresión**: los tres entornos de hoy (in-cluster, desktop, contenedor con kubeconfig) se comportan **exactamente** igual que antes. Es el riesgo real de S1, porque se toca el único camino de arranque que existe.
 
-**CL9** al terminar. Los e2e de S1 necesitan decidirse: el arranque en ECS no es reproducible en el dev local, así que el harness cubre la **detección** y la **selección de almacenamiento** por unitarios, y el e2e cubre la regresión de los entornos existentes.
+### Lo que se encontró al implementarlo
+
+Tres cosas que el análisis previo no había visto y que habrían roto el arranque en Fargate:
+
+1. **`loadFromDefault()` también había que meterlo dentro de la rama.** El plan sólo contemplaba no
+   construir los clientes; pero cargar el kubeconfig, donde no hay ninguno, puede quejarse de que no hay
+   contexto actual — y esa excepción cae en el mismo `catch` que dejaba a Kwirth sin instancia. El síntoma
+   habría sido idéntico al que se quería arreglar.
+2. **Había una segunda detección de entorno**, en `runningEnv`, con reglas parecidas pero no idénticas a
+   las de `getExecutionEnvironment()`. Dos detecciones del mismo hecho acaban discrepando, así que ahora
+   `runningEnv` se deriva de la única. De paso desapareció `isDocker`, que ya no consultaba nadie.
+3. **Un segundo `switch` sobre el entorno**, el que elige qué arranque lanzar, con los mismos `case`
+   muertos. `launchDocker` pasó a `launchStandalone` y lo comparten `docker` y `ecs`: siguen exactamente
+   el mismo camino, y lo que cambia entre ellos son las capacidades, que ya vienen resueltas.
+
+Y un defecto latente en el front: `getIcon()` decidía por la **primera letra** del tipo de cluster, así
+que con `none` (`'n'`) no entraba en ninguna rama y **devolvía `undefined`**.
+
+### Cómo se verificó
+
+Sin ECS, levantando el back con el entorno forzado y almacenamiento en un directorio temporal:
+
+| escenario | resultado |
+|---|---|
+| **UC1** dev normal (Kubernetes) | `executionEnvironment: kubernetes`, `clusterType: kubernetes`, los 11 canales arrancan. Sin regresión |
+| **UC5** `docker run` con la imagen **anterior** | `clusterType: kubernetes`, busca `kube-system` en `localhost:8080` y acaba en `Cannot get a running instance`. El contenedor queda vivo pero devolviendo `503` — la prueba de que esa vía no estaba viva |
+| ECS sin kubeconfig (Fargate) | `executionEnvironment: ecs`, `clusterType: none`, `/healthz` 200, y el usuario admin creado y **cifrado** en el volumen |
+
+**UC2** (magnify desktop), **UC3** (Kwirth en docker con kubeconfig) y **UC4** (ECS con kubeconfig) no se
+verificaron aquí a propósito: los tres exigen conectarse a un cluster real con los plugins cargados, y eso
+puede disparar senders o webhooks de verdad. Van al QA manual.
+
+**CL9**: el harness cubre la detección, las capacidades y el store (14 casos nuevos, con las dos
+comprobaciones de máquina inyectadas para que no dependan de dónde se corra). El e2e cubre la parte
+observable —el entorno publicado, `/healthz` fuera del cluster y la coherencia de los canales
+anunciados— porque montar ECS en un e2e exigiría ECS.
 
 ---
 
@@ -115,6 +150,34 @@ type, los contenedores de su instancia.
 **CL9** al terminar.
 
 ---
+
+## Pendiente al cerrar el proyecto
+
+- **Publicar el back.** Lleva el bump de `kwirth-common` a `0.5.56` en su `package.json` desde el
+  2026-09-24, pero su publish en npm se hace **al terminar ECS**, no stream a stream. Decisión del
+  2026-09-24.
+- **Corrida e2e completa.** Aplazada el 2026-09-24 para agruparla con otros cambios: tarda ~33 min y dos
+  tandas se invalidaron por reinicios del back en mitad. Los 4 casos del spec nuevo sí pasan.
+- **`agora` no compila**, por `EInfraSource.CLOUD` —que el enum no declara— en `azureSignals.ts` y su
+  test. Es trabajo previo, ajeno a esto, y quedó **aparcado por decisión del usuario**. Mientras no
+  compile no se puede reconstruir su `dist`, así que seguirá mostrando el hueco en sus `sources`.
+- **Actualizar los plugins instalados.** Publicar no actualiza lo que un Kwirth tiene puesto: en el dev,
+  `log` seguía en 0.2.23 y por eso mostraba `[,kubernetes]`. Hay que actualizarlos desde el gestor.
+
+## Hallazgos laterales, al backlog
+
+- Las entradas de **docs** en el manifest privado se llaman `Kwirth <X> — Guide`, pero el criterio de los
+  artefactos de pago es `IRIA <Producto> — Guide`. Visto al clonar las entradas de spectrum, sugarless y
+  asteroids; **no se tocó** para no cambiar naming publicado de paso.
+
+## Publicaciones hechas
+
+| fecha | artefacto | versión | por qué |
+|---|---|---|---|
+| 2026-09-24 | `kwirth-common` | 0.5.55 | `EExecutionEnvironment`, `EClusterType.NONE` y el campo `executionEnvironment` |
+| 2026-09-24 | `kwirth-common` | 0.5.56 | `EClusterType.DOCKER` retirado del enum (D2) |
+| 2026-09-24 | `log` 0.2.24 · `alert` 0.2.25 · `status` 0.2.2 · `news` 0.2.24 · `sender-debug` 0.1.1 · `echo` 0.2.24 · `mirc` 0.1.14 · `fileman` 0.2.24 · `provider-debug` 0.1.5 | — | los nueve declaraban `DOCKER` en sus `sources`; `log` y `alert` además tenían `startDockerStream()`. npm + manifest público |
+| 2026-09-24 | `spectrum` 0.4.3 · `sugarless` 0.2.3 · `asteroids` 0.1.7 | — | lo mismo, en los privados. Nexus + manifest privado, **plugin y docs en lockstep** |
 
 ## Riesgos
 

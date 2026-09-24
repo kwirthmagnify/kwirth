@@ -44,7 +44,7 @@ The header shows the **item count / max** and the **Status**. Each entry has a *
 - **Install / remove:** **☰ → Manage extensions → Plugins** → install **News**.
 - **Permissions:** none special — any user who can open the channel can use it.
 - **Network:** the channel fetches **public RSS feeds over the internet**, so the kwirth backend needs outbound access to those sources.
-- **Sources:** Kubernetes and Docker.
+- **Sources:** Kubernetes.
 
 ## Notes
 
