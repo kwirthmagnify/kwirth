@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import { ApisApi, CoreV1Api, AppsV1Api, KubeConfig, KubernetesObjectApi, Log, Watch, Exec, V1Pod, CustomObjectsApi, RbacAuthorizationV1Api, ApiextensionsV1Api, VersionApi, NetworkingV1Api, StorageV1Api, BatchV1Api, AutoscalingV2Api, NodeV1Api, SchedulingV1Api, CoordinationV1Api, AdmissionregistrationV1Api, PolicyV1Api, V1ConfigMap } from '@kubernetes/client-node'
-//import Docker from 'dockerode'
 import { ConfigApi } from './api/ConfigApi'
 import { KubernetesSecrets } from './tools/KubernetesSecrets'
 import { KubernetesConfigMaps } from './tools/KubernetesConfigMaps'
@@ -45,7 +44,8 @@ import { DockerConfigMaps } from './tools/DockerConfigMaps'
 import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
-import { IUserInfo, IKwirthSettings } from '@kwirthmagnify/kwirth-common'
+import { IUserInfo, IKwirthSettings, EExecutionEnvironment } from '@kwirthmagnify/kwirth-common'
+import { EStoreKind, IEnvironmentCapabilities, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType } from './tools/ExecutionEnvironment'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import * as _kwirthCommon from '@kwirthmagnify/kwirth-common'
 import { IdentityService } from './tools/auth/IdentityService'
@@ -141,6 +141,16 @@ const runningEnv = {
   isK8s: process.env.FORCE==='k8s' || !!process.env.KUBERNETES_SERVICE_HOST,
   isTTY: !!process.stdout.isTTY
 }
+
+/*
+    Que tiene a mano este Kwirth: API de Kubernetes, socket del CRI y donde persiste. Se resuelve UNA vez,
+    al arrancar, en cuanto se sabe donde corremos, y de ahi en adelante manda esto.
+
+    'runningEnv' sigue ahi porque hay sitios que preguntan por el runtime en si (isTTY para el log, isDesktop
+    para el FORWARD), pero ya no es quien decide que se puede hacer: eso lo dice este objeto.
+*/
+let capabilities:IEnvironmentCapabilities
+
 const app : Application = express()
 
 interface IRunningInstance {
@@ -234,19 +244,20 @@ if (envCommand!==undefined) {
     }
 }
 
-const getExecutionEnvironment = async (context:string|undefined):Promise<string> => {
+/*
+    Donde corremos, y —lo que de verdad importa— que tenemos a mano. La deteccion y la derivacion viven en
+    ExecutionEnvironment.ts para que sean una sola: hasta ahora el resultado de esta funcion se perdia en
+    cuanto terminaba el switch de arranque, y cada sitio que necesitaba saber algo del entorno se lo volvia
+    a preguntar por su cuenta a runningEnv.
+*/
+const getExecutionEnvironment = async ():Promise<EExecutionEnvironment|undefined> => {
     logInfo(ELogComponent.CORE, 'Detecting execution environment...')
-
-    logInfo(ELogComponent.CORE, 'Trying Desktop (Electron/Tauri)...')
-    if (runningEnv.isDesktop) return 'desktop'
-
-    logInfo(ELogComponent.CORE, 'Trying Kubernetes...')
-    if (runningEnv.isK8s) return 'kubernetes'
-
-    logInfo(ELogComponent.CORE, 'Trying Docker...')
-    if (runningEnv.isDocker) return 'docker'
-
-    return 'undetected'
+    let executionEnvironment = detectExecutionEnvironment()
+    if (executionEnvironment)
+        logInfo(ELogComponent.CORE, `Execution environment: '${executionEnvironment}'`)
+    else
+        logError(ELogComponent.CORE, 'Execution environment could not be detected')
+    return executionEnvironment
 }
 
 
@@ -264,7 +275,7 @@ const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthD
             const pod = pods.items.find(p => p.metadata?.name === podName)  
             if (pod && pod.metadata?.namespace) {
                 let depName = (await AuthorizationManagement.getPodControllerName(appsApi, pod, true)) || ''
-                return { clusterName: 'inCluster', namespace: pod.metadata.namespace, deployment:depName, inCluster:true, isDesktop:false, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, metricsInterval:15, channels: [] }
+                return { clusterName: 'inCluster', namespace: pod.metadata.namespace, deployment:depName, inCluster:true, isDesktop:false, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, executionEnvironment: EExecutionEnvironment.KUBERNETES, metricsInterval:15, channels: [] }
             }
             else {
                 // kwirth is supposed to be running outside of cluster, so we look for kwirth users config in order to detect namespace
@@ -273,7 +284,7 @@ const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthD
                 if (!usersSecret) usersSecret = allSecrets.find(s => s.metadata?.name === 'kwirth.users')
                 if (usersSecret) {
                     // this namespace will be used to access secrets and configmaps
-                    return { clusterName: 'inCluster', namespace:usersSecret.metadata?.namespace!, deployment:'', inCluster:false, isDesktop:runningEnv.isDesktop, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, metricsInterval:15, channels: [] }
+                    return { clusterName: 'inCluster', namespace:usersSecret.metadata?.namespace!, deployment:'', inCluster:false, isDesktop:runningEnv.isDesktop, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, executionEnvironment: EExecutionEnvironment.KUBERNETES, metricsInterval:15, channels: [] }
                 }
                 else {
                     // kwirth is running outside, but wants to use kubernetes secrets for storing creds, and they don't exsit
@@ -297,119 +308,146 @@ const activateRunningInstance = (ri:IRunningInstance) => {
     logInfo(ELogComponent.CORE, `Activated RI: ${ri.id} ${ri.clusterInfo.name}` )
 }
 
+/*
+    Un almacenamiento en fichero empieza vacio, asi que el primer arranque tiene que dejar dentro alguien
+    con quien poder entrar. En Kubernetes no hace falta, porque el secreto de usuarios lo pone el propio
+    despliegue.
+*/
+const createAdminUserIfMissing = async (secrets:ISecrets) => {
+    let users:{ [username:string]:string } = await secrets.read('kwirth-users')
+    if (users) return
+    logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users secret')
+    users = { admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0=' }
+    await secrets.write('kwirth-users', users)
+}
+
 const createRunningInstance = async (context:string|undefined, kwirthData:KwirthData):Promise<IRunningInstance|undefined> => {
     try {
+        /*
+            Cargar el kubeconfig tambien va dentro del 'si hay Kubernetes'. No es adorno: donde no hay
+            ninguno —una tarea de Fargate, sin ~/.kube/config y sin las variables del pod— loadFromDefault()
+            puede quejarse de que no hay contexto actual, y esa excepcion acabaria en el catch de esta
+            funcion, que es exactamente el camino que dejaba a Kwirth sin arrancar.
+
+            El objeto vacio si se asigna: hay codigo que consulta clusterInfo.kubeConfig sin preguntar
+            antes, y prefiere encontrarse un kubeconfig sin clusters a un undefined.
+        */
         let kubeConfig = new KubeConfig()
-        kubeConfig.loadFromDefault()
-        if (context) kubeConfig.setCurrentContext(context)
 
-        const currentContextName = kubeConfig.getCurrentContext()
-        logInfo(ELogComponent.CORE, `Will use '${currentContextName}' context`)
-        const currentContext = kubeConfig.contexts.find(c => c.name === currentContextName)
+        if (capabilities.kubernetes) {
+            kubeConfig.loadFromDefault()
+            if (context) kubeConfig.setCurrentContext(context)
 
-        if (currentContext) {
-            kubeConfig.clusters = kubeConfig.clusters.map(cluster => {
-                if (cluster.name === currentContext.cluster) {
-                    return {
-                        ...cluster,
-                        skipTLSVerify: true
+            const currentContextName = kubeConfig.getCurrentContext()
+            logInfo(ELogComponent.CORE, `Will use '${currentContextName}' context`)
+            const currentContext = kubeConfig.contexts.find(c => c.name === currentContextName)
+
+            if (currentContext) {
+                kubeConfig.clusters = kubeConfig.clusters.map(cluster => {
+                    if (cluster.name === currentContext.cluster) {
+                        return {
+                            ...cluster,
+                            skipTLSVerify: true
+                        }
                     }
-                }
-                return cluster
-            })
+                    return cluster
+                })
+            }
         }
-        
+
 
         let clusterInfo = new ClusterInfo()
         clusterInfo.kubeConfig = kubeConfig
-        clusterInfo.coreApi = kubeConfig.makeApiClient(CoreV1Api)
-        clusterInfo.versionApi = kubeConfig.makeApiClient(VersionApi)    
-        clusterInfo.appsApi= kubeConfig.makeApiClient(AppsV1Api)
-        clusterInfo.networkApi= kubeConfig.makeApiClient(NetworkingV1Api)
-        clusterInfo.crdApi= kubeConfig.makeApiClient(CustomObjectsApi)
-        clusterInfo.rbacApi= kubeConfig.makeApiClient(RbacAuthorizationV1Api)
-        clusterInfo.extensionApi= kubeConfig.makeApiClient(ApiextensionsV1Api)
-        clusterInfo.storageApi= kubeConfig.makeApiClient(StorageV1Api)
-        clusterInfo.batchApi= kubeConfig.makeApiClient(BatchV1Api)
-        clusterInfo.autoscalingApi= kubeConfig.makeApiClient(AutoscalingV2Api)
-        clusterInfo.schedulingApi= kubeConfig.makeApiClient(SchedulingV1Api)
-        clusterInfo.coordinationApi= kubeConfig.makeApiClient(CoordinationV1Api)
-        clusterInfo.admissionApi= kubeConfig.makeApiClient(AdmissionregistrationV1Api)
-        clusterInfo.policyApi= kubeConfig.makeApiClient(PolicyV1Api)
-        clusterInfo.nodeApi = kubeConfig.makeApiClient(NodeV1Api)
-        clusterInfo.objectsApi = KubernetesObjectApi.makeApiClient(kubeConfig)
-        clusterInfo.execApi = new Exec(clusterInfo.kubeConfig)
-        clusterInfo.logApi = new Log(clusterInfo.kubeConfig)
-        clusterInfo.apisApi = kubeConfig.makeApiClient(ApisApi)
-        
-        clusterInfo.id = await (await clusterInfo.coreApi.readNamespace({ name:'kube-system'})).metadata?.uid || ''
 
-        if (runningEnv.isDesktop || runningEnv.isDocker) {
-            // do nothing, since we will use kubeconfig credentials
-            logInfo(ELogComponent.CORE, 'SA Token will not be created under isDesktop or isDocker contexts')
+        /*
+            Los clientes de Kubernetes se construyen SOLO si hay una API detras. Antes se construian
+            siempre y, acto seguido, se le pedia el uid al namespace kube-system: sin cluster alcanzable eso
+            lanzaba, el catch de esta funcion se lo tragaba y el arranque terminaba sin instancia ninguna.
+            Ese era el motivo real de que Kwirth no pudiera correr en un sitio sin Kubernetes.
+
+            Es una rama explicita y no un catch mas ancho a proposito: un catch convierte 'aqui no hay
+            cluster, y esta bien' y 'el cluster no responde, y eso es un problema' en el mismo silencio.
+        */
+        if (!capabilities.kubernetes) {
+            logInfo(ELogComponent.CORE, 'No Kubernetes API available: cluster clients will not be created')
         }
         else {
-            let saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
-            let token = await saToken.createToken('kwirth-sa', kwirthData.namespace)
-            if (token) {
-                logInfo(ELogComponent.CORE, 'Got token...')
-                clusterInfo.saToken = saToken
-                clusterInfo.token = token
+        clusterInfo.coreApi = kubeConfig.makeApiClient(CoreV1Api)
+            clusterInfo.versionApi = kubeConfig.makeApiClient(VersionApi)
+            clusterInfo.appsApi= kubeConfig.makeApiClient(AppsV1Api)
+            clusterInfo.networkApi= kubeConfig.makeApiClient(NetworkingV1Api)
+            clusterInfo.crdApi= kubeConfig.makeApiClient(CustomObjectsApi)
+            clusterInfo.rbacApi= kubeConfig.makeApiClient(RbacAuthorizationV1Api)
+            clusterInfo.extensionApi= kubeConfig.makeApiClient(ApiextensionsV1Api)
+            clusterInfo.storageApi= kubeConfig.makeApiClient(StorageV1Api)
+            clusterInfo.batchApi= kubeConfig.makeApiClient(BatchV1Api)
+            clusterInfo.autoscalingApi= kubeConfig.makeApiClient(AutoscalingV2Api)
+            clusterInfo.schedulingApi= kubeConfig.makeApiClient(SchedulingV1Api)
+            clusterInfo.coordinationApi= kubeConfig.makeApiClient(CoordinationV1Api)
+            clusterInfo.admissionApi= kubeConfig.makeApiClient(AdmissionregistrationV1Api)
+            clusterInfo.policyApi= kubeConfig.makeApiClient(PolicyV1Api)
+            clusterInfo.nodeApi = kubeConfig.makeApiClient(NodeV1Api)
+            clusterInfo.objectsApi = KubernetesObjectApi.makeApiClient(kubeConfig)
+            clusterInfo.execApi = new Exec(clusterInfo.kubeConfig)
+            clusterInfo.logApi = new Log(clusterInfo.kubeConfig)
+            clusterInfo.apisApi = kubeConfig.makeApiClient(ApisApi)
+
+            clusterInfo.id = await (await clusterInfo.coreApi.readNamespace({ name:'kube-system'})).metadata?.uid || ''
+
+            /*
+                El SA Token solo tiene sentido cuando Kwirth ES una carga del cluster. Fuera de el —desktop,
+                un contenedor con kubeconfig, una tarea de ECS— las credenciales son las del kubeconfig y
+                pedir un token de service account no lleva a ninguna parte.
+            */
+            if (kwirthData.executionEnvironment !== EExecutionEnvironment.KUBERNETES) {
+                logInfo(ELogComponent.CORE, `SA Token will not be created outside Kubernetes (running on '${kwirthData.executionEnvironment}', using kubeconfig credentials)`)
             }
             else {
-                logWarning(ELogComponent.CORE, 'There is no SA Token, no metrics will be available.')
+                let saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
+                let token = await saToken.createToken('kwirth-sa', kwirthData.namespace)
+                if (token) {
+                    logInfo(ELogComponent.CORE, 'Got token...')
+                    clusterInfo.saToken = saToken
+                    clusterInfo.token = token
+                }
+                else {
+                    logWarning(ELogComponent.CORE, 'There is no SA Token, no metrics will be available.')
+                }
             }
+
+            await clusterInfo.setKubernetesClusterName()
+            clusterInfo.nodes = await clusterInfo.getNodes()
         }
 
-        await clusterInfo.setKubernetesClusterName()
-        clusterInfo.nodes = await clusterInfo.getNodes()
 
+        /*
+            Donde se persiste lo dicen las capacidades, no el entorno. Es la misma decision de siempre
+            —ficheros fuera de Kubernetes, Secrets y ConfigMaps dentro—, solo que escrita en un sitio en
+            vez de repartida entre tres ramas que preguntaban cada una por su cuenta.
+        */
         let configMaps
         let secrets
 
-        if (runningEnv.isDesktop) {
-            logInfo(ELogComponent.CORE, 'Using local filesystem storage (desktop/Tauri mode)')
-            configMaps = new NodeConfigMaps()
-            secrets = new NodeSecrets(undefined, envMasterKey)
-            let users:{ [username:string]:string } = await secrets.read('kwirth-users')
-            if (!users) {
-                logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users secret')
-                users = {
-                    admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0='
-                }
-                await secrets.write('kwirth-users', users)
-            }
-        }
-        else if (runningEnv.isDocker) {
-            logInfo(ELogComponent.CORE, `Configuration paths:  ${envConfigMapPath} ${envSecretPath}`)
-            configMaps = new DockerConfigMaps(clusterInfo.coreApi, envConfigMapPath)
-            secrets = new DockerSecrets(clusterInfo.coreApi, envSecretPath)
-            let users:{ [username:string]:string } = await secrets.read('kwirth-users')
-            if (!users) {
-                logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users config map')
-                users = {
-                    admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0='
-                }
-                await secrets.write('kwirth-users', users)
-            }
-        }
-        else {
-            const kwirthStore = process.env.KWIRTH_STORE
-            if (kwirthStore && kwirthStore !== 'etcd') {
-                logInfo(ELogComponent.CORE, `Using filesystem storage at ${kwirthStore}`)
-                secrets = new NodeSecrets(kwirthStore, envMasterKey)
-                configMaps = new NodeConfigMaps(kwirthStore)
-                let users:{ [username:string]:string } = await secrets.read('kwirth-users')
-                if (!users) {
-                    logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users secret')
-                    users = { admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0=' }
-                    await secrets.write('kwirth-users', users)
-                }
-            }
-            else {
+        switch (capabilities.store) {
+            case EStoreKind.FILE:
+                logInfo(ELogComponent.CORE, `Using filesystem storage at ${capabilities.storePath || 'the default path'}`)
+                secrets = new NodeSecrets(capabilities.storePath, envMasterKey)
+                configMaps = new NodeConfigMaps(capabilities.storePath)
+                await createAdminUserIfMissing(secrets)
+                break
+
+            case EStoreKind.FILE_PLAIN:
+                logInfo(ELogComponent.CORE, `Configuration paths:  ${envConfigMapPath} ${envSecretPath}`)
+                configMaps = new DockerConfigMaps(clusterInfo.coreApi, envConfigMapPath)
+                secrets = new DockerSecrets(clusterInfo.coreApi, envSecretPath)
+                await createAdminUserIfMissing(secrets)
+                break
+
+            case EStoreKind.KUBERNETES:
+                logInfo(ELogComponent.CORE, `Using cluster storage on namespace '${kwirthData.namespace}'`)
                 secrets = new KubernetesSecrets(clusterInfo.coreApi, kwirthData.namespace)
                 configMaps = new KubernetesConfigMaps(clusterInfo.coreApi, kwirthData.namespace)
-            }
+                break
         }
 
         // Las credenciales de descarga se registran AQUI, en cuanto hay almacenamiento, y no al montar las
@@ -618,47 +656,6 @@ const processEvent = async (eventType:string, obj: any, webSocket:WebSocket, ins
     }
 }
 
-const watchDockerPods = async (ri:IRunningInstance, _apiPath:string, queryParams:any, webSocket:WebSocket, instanceConfig:IInstanceConfig) => {
-    //launch included containers
-
-    try {
-        if (instanceConfig.view==='pod') {
-            let kvps:string[] = queryParams.labelSelector.split(',')
-            const jsonObject: { [key: string]: string } = {}
-            kvps.forEach(kvp => {
-                const [key, value] = kvp.split('=')
-                jsonObject[key] = value
-            })
-
-            let containers = await ri.clusterInfo.dockerTools.getContainers(jsonObject['kwirthDockerPodName'])
-            for (let container of containers) {
-                processEvent('ADDED', null, webSocket, instanceConfig, '$docker', jsonObject['kwirthDockerPodName'], [ container ], ri )
-            }
-        }
-        else if (instanceConfig.view==='container') {
-            let kvps:string[] = queryParams.labelSelector.split(',')
-            const jsonObject: { [key: string]: string } = {}
-            kvps.forEach(kvp => {
-                const [key, value] = kvp.split('=')
-                jsonObject[key] = value
-            })
-            let podName=jsonObject['kwirthDockerPodName']
-            let containerName = jsonObject['kwirthDockerContainerName']
-            let id = await ri.clusterInfo.dockerTools.getContainerId(podName, containerName )
-            if (id) {
-                processEvent('ADDED', null, webSocket, instanceConfig, '$docker', podName, [ containerName ], ri)
-            }
-            else {
-                sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Container ${podName}/${containerName} does not exist.`, instanceConfig, ri.channels)
-            }
-        }
-    }
-    catch (err) {
-        logError(ELogComponent.CORE, 'Error watching docker pods')
-        logError(ELogComponent.CORE, err)
-    }
-}
-
 const watchKubernetesPods = async (ri:IRunningInstance, apiPath:string, queryParams:any, webSocket:WebSocket, instanceConfig:IInstanceConfig) => {
     while (true) {
         const wsState = (webSocket as any).readyState
@@ -694,18 +691,7 @@ const watchKubernetesPods = async (ri:IRunningInstance, apiPath:string, queryPar
 
 const watchPods = async (ri:IRunningInstance, apiPath:string, queryParams:any, webSocket:WebSocket, instanceConfig:IInstanceConfig) => {
     try {
-        if (ri.kwirthData.clusterType === EClusterType.DOCKER) {
-            await watchDockerPods(ri, apiPath, queryParams, webSocket, instanceConfig)
-        }
-        else {
-            try {
-                await watchKubernetesPods(ri, apiPath, queryParams, webSocket, instanceConfig)
-            }
-            catch (err) {
-                logError(ELogComponent.CORE, 'Error starting to watch docker pods')
-                logError(ELogComponent.CORE, err)
-            }
-        }
+        await watchKubernetesPods(ri, apiPath, queryParams, webSocket, instanceConfig)
     }
     catch (err) {
         logError(ELogComponent.CORE, 'Error in generic watch pods')
@@ -718,12 +704,8 @@ const getRequestedValidatedScopedPods = async (ri:IRunningInstance, instanceConf
     let allPods:V1Pod[] = []
     try {
 
-        if (ri.kwirthData.clusterType === EClusterType.DOCKER)
-            allPods = await ri.clusterInfo.dockerTools.getAllPods()
-        else {
-            for (let ns of validNamespaces) {
-                allPods.push(...(await ri.clusterInfo.coreApi.listNamespacedPod({namespace: ns})).items)
-            }
+        for (let ns of validNamespaces) {
+            allPods.push(...(await ri.clusterInfo.coreApi.listNamespacedPod({namespace: ns})).items)
         }
 
         for (let pod of allPods) {
@@ -876,10 +858,6 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
                         if (validPod) {
                             let metadataLabels = validPod.metadata?.labels
                             if (metadataLabels) {
-                                if (ri.kwirthData.clusterType === EClusterType.DOCKER) {
-                                    metadataLabels['kwirthDockerPodName'] = podName
-                                }
-
                                 let labelSelector = Object.entries(metadataLabels).map(([key, value]) => `${key}=${value}`).join(',')
                                 let specificInstanceConfig: IInstanceConfig = JSON.parse(JSON.stringify(instanceConfig))
                                 specificInstanceConfig.pod = podName
@@ -910,11 +888,6 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
                             let metadataLabels = validPod.metadata?.labels
 
                             if (metadataLabels) {
-                                if (ri.kwirthData.clusterType === EClusterType.DOCKER) {
-                                    metadataLabels['kwirthDockerContainerName'] = containerName
-                                    metadataLabels['kwirthDockerPodName'] = podName
-                                }
-            
                                 let labelSelector = Object.entries(metadataLabels).map(([key, value]) => `${key}=${value}`).join(',')
                                 let specificInstanceConfig: IInstanceConfig = JSON.parse(JSON.stringify(instanceConfig))
                                 specificInstanceConfig.container = container
@@ -1168,12 +1141,7 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
         logInfo(ELogComponent.AUTH, 'validControllers:' + validControllers)
 
         let validPodNames:string[] = []
-        if (ri.kwirthData.clusterType === EClusterType.DOCKER) {
-            validPodNames = await ri.clusterInfo.dockerTools.getAllPodNames()
-        }
-        else {
-            if (instanceConfig.pod) validPodNames = await AuthorizationManagement.getValidPods(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, validNamespaces, accessKey, instanceConfig.pod.split(','))
-        }
+        if (instanceConfig.pod) validPodNames = await AuthorizationManagement.getValidPods(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, validNamespaces, accessKey, instanceConfig.pod.split(','))
         logInfo(ELogComponent.AUTH, 'validPods:' + validPodNames)
 
         let validContainers:string[] = []
@@ -2189,9 +2157,9 @@ const launchKubernetes = async (context:string|undefined, localKwirthData:Kwirth
     }
 }
 
-const launchDocker = async (context:string|undefined, localKwirthData:KwirthData, expressApp:Application) : Promise<void> => {    
+const launchDocker = async (context:string|undefined, localKwirthData:KwirthData, expressApp:Application) : Promise<void> => {
     try {
-        logInfo(ELogComponent.CORE, 'Start Docker Kwirth')
+        logInfo(ELogComponent.CORE, `Start Kwirth (running on '${localKwirthData.executionEnvironment}')`)
         if (localKwirthData) {
             logInfo(ELogComponent.CORE, `Initial kwirthData`)
             logInfo(ELogComponent.CORE, localKwirthData)
@@ -2782,15 +2750,29 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 showLogo()
 startNodeTasks()
 
-getExecutionEnvironment(envContext).then( async (exenv:string) => {
+getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) => {
     if (envContext)
         logInfo(ELogComponent.CORE, `Kubernetes context: '${envContext}' (default kubeconfig context)`)
     else
         logInfo(ELogComponent.CORE, `No CONTEXT specified via env var`)
 
+    if (!exenv) {
+        logError(ELogComponent.CORE, 'Unsupported execution environment. Exiting...')
+        process.exit(1)
+    }
+
+    /*
+        A partir de aqui nadie vuelve a preguntarle al entorno: se pregunta a las capacidades. Y se imprime
+        el porque de cada una, porque quien despliega esto en un sitio al que no puede asomarse solo tiene
+        el log para entender que cree Kwirth que tiene a mano.
+    */
+    capabilities = await resolveEnvironmentCapabilities(exenv, envContext)
+    logInfo(ELogComponent.CORE, 'Execution environment capabilities:')
+    for (let reason of capabilities.reasons) logInfo(ELogComponent.CORE, `  ${reason}`)
+
     let kwirthData:KwirthData
     switch (exenv) {
-        case 'desktop':
+        case EExecutionEnvironment.DESKTOP:
             kwirthData = {
                 namespace: 'default',
                 deployment: '',
@@ -2799,27 +2781,13 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
                 version: VERSION,
                 lastVersion: VERSION,
                 clusterName: 'inDesktop',
-                clusterType: EClusterType.KUBERNETES,
+                clusterType: resolveClusterType(capabilities),
+                executionEnvironment: exenv,
                 metricsInterval: 15,
                 channels: []
             }
             break
-        case 'windowsdocker':
-        case 'linuxdocker':
-            kwirthData = {
-                namespace: '',
-                deployment: '',
-                isDesktop: runningEnv.isDesktop,
-                inCluster: false,
-                version: VERSION,
-                lastVersion: VERSION,
-                clusterName: 'inDocker',
-                clusterType: EClusterType.DOCKER,
-                metricsInterval:15,
-                channels: []
-            }
-            break
-        case 'docker':
+        case EExecutionEnvironment.DOCKER:
             kwirthData = {
                 namespace: '',
                 deployment: '',
@@ -2828,12 +2796,28 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
                 version: VERSION,
                 lastVersion: VERSION,
                 clusterName: 'inDocker',
-                clusterType: EClusterType.KUBERNETES,
+                clusterType: resolveClusterType(capabilities),
+                executionEnvironment: exenv,
                 metricsInterval:15,
                 channels: []
             }
             break
-        case 'kubernetes':
+        case EExecutionEnvironment.ECS:
+            kwirthData = {
+                namespace: '',
+                deployment: '',
+                isDesktop: false,
+                inCluster: false,
+                version: VERSION,
+                lastVersion: VERSION,
+                clusterName: process.env.KWIRTH_CLUSTER_NAME || 'inEcs',
+                clusterType: resolveClusterType(capabilities),
+                executionEnvironment: exenv,
+                metricsInterval:15,
+                channels: []
+            }
+            break
+        case EExecutionEnvironment.KUBERNETES:
             let kd = await getKubernetesKwirthData(envContext)
             if (kd) {
                 kwirthData = kd
@@ -2843,9 +2827,6 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
                 process.exit(1)
             }
             break
-        default:
-            logError(ELogComponent.CORE, `Unsupported execution environment '${exenv}'. Exiting...`)
-            process.exit()
     }
 
     // Receptor de webhooks (tipo de extensión 'webhook'): cuerpo CRUDO (para verificación de firma del
@@ -2921,10 +2902,13 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
         app.use(`${envRootPath}/front/`, express.static('./front'))
     }
 
-    if (kwirthData.inCluster) {
-        logInfo(ELogComponent.CORE, 'Configuring healthz endpoint for Kubernetes')
-        app.get(`/healthz`, (_req:Request,res:Response) => { res.status(200).send() })
-    }
+    /*
+        '/healthz' deja de ser cosa solo de Kubernetes. Cualquier orquestador quiere preguntar si esto
+        esta vivo, y un balanceador de AWS que no obtiene respuesta no marca la tarea como sana y la
+        recicla en bucle sin decir por que. No cuesta nada y no ensena nada.
+    */
+    logInfo(ELogComponent.CORE, 'Configuring healthz endpoint')
+    app.get(`/healthz`, (_req:Request,res:Response) => { res.status(200).send() })
 
     app.get(`${envRootPath}/core/license`, (_req:Request, res:Response) => { res.json(licenseManager.getPublicInfo() ?? {}) })
 
@@ -2941,22 +2925,18 @@ getExecutionEnvironment(envContext).then( async (exenv:string) => {
     createHttpServers(kwirthData, app, runningInstances, processClientMessage)
 
     switch (exenv) {
-        case 'desktop':
+        case EExecutionEnvironment.DESKTOP:
             await launchDesktop(kwirthData, app)
             break
-        case 'windowsdocker':
-        case 'linuxdocker':
-            //await launchKwirthDocker(kwirthData)
-            break
-        case 'docker':
+        case EExecutionEnvironment.DOCKER:
+        case EExecutionEnvironment.ECS:
+            // ECS sigue el mismo camino que un contenedor suelto: lo que cambia entre ambos son las
+            // capacidades, y esas ya vienen resueltas antes de llegar aqui.
             await launchDocker(envContext, kwirthData, app)
             break
-        case 'kubernetes':
+        case EExecutionEnvironment.KUBERNETES:
             await launchKubernetes(envContext, kwirthData, app)
             break
-        default:
-            logError(ELogComponent.CORE, `'Unsupported execution environment '${exenv}'. Exiting...`)
-            process.exit()
     }
     logInfo(ELogComponent.CORE, `KWI1500I Control is being given to Kwirth`)
  })

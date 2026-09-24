@@ -1,12 +1,41 @@
 //transient
 enum ClusterTypeEnum {
-    KUBERNETES = 'kubernetes',
-    DOCKER = 'docker'
+    KUBERNETES = 'kubernetes'
 }
 
+/*
+    De donde salen los recursos que este Kwirth observa. Solo hay dos respuestas: de un cluster de
+    Kubernetes, o de ningun sitio.
+
+    NONE no es un arranque a medias: es la respuesta honesta cuando no hay API de Kubernetes a mano. Un
+    Kwirth asi sigue sirviendo el front, sigue llevando canales AUTONOMOS —los que declaran 'cluster' y
+    'resourced' a false y arrancan con la vista 'none'—, y desde el se puede federar contra otro Kwirth o
+    apuntar a un cluster montando un kubeconfig. Sin este valor habria que declararse KUBERNETES sin
+    Kubernetes, y el front saldria a listar pods contra nada.
+
+    DOCKER estuvo aqui: Kwirth iba a gestionar contenedores y proyectos de compose como si fuesen un
+    cluster. Esa via se abandono. Docker sigue siendo un sitio DONDE correr —eso lo dice
+    EExecutionEnvironment—, pero no una fuente de recursos.
+
+    OJO: esto NO decide capacidades, se DERIVA de ellas. Quien manda es el entorno de ejecucion mas lo que
+    se compruebe al arrancar.
+*/
 enum EClusterType {
     KUBERNETES = 'kubernetes',
-    DOCKER = 'docker'
+    NONE = 'none'
+}
+
+/*
+    Donde corre este Kwirth. Es el resultado de getExecutionEnvironment() en el back, que hasta ahora se
+    perdia en cuanto terminaba el switch de arranque: lo unico que sobrevivia eran campos derivados y peor
+    informados. Se publica porque es el dato del que cuelga todo lo demas —que hay a mano y donde se
+    persiste— y porque es lo primero que se quiere saber al diagnosticar un despliegue ajeno.
+*/
+enum EExecutionEnvironment {
+    KUBERNETES = 'kubernetes',  // dentro de un cluster, o contra uno via kubeconfig
+    DOCKER = 'docker',          // contenedor suelto en un CRI
+    DESKTOP = 'desktop',        // Electron/Tauri en la maquina del usuario
+    ECS = 'ecs'                 // tarea de AWS ECS (Fargate o EC2)
 }
 
 // How many back instances of a channel make sense per cluster.
@@ -53,7 +82,8 @@ interface KwirthData {
     version: string
     lastVersion: string
     clusterName: string
-    clusterType: EClusterType
+    clusterType: EClusterType                       // de donde salen los recursos (NONE = de ningun sitio)
+    executionEnvironment: EExecutionEnvironment     // donde corre este Kwirth
     inCluster: boolean
     isDesktop: boolean
     namespace: string
@@ -81,4 +111,4 @@ interface IBackChannelRequirements {
 */
 const PLUVIDER_ID_PREFIX = 'plugin:'
 
-export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, EChannelInstances, EChannelMode, IBackChannelRequirements, PLUVIDER_ID_PREFIX }
+export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, EExecutionEnvironment, EChannelInstances, EChannelMode, IBackChannelRequirements, PLUVIDER_ID_PREFIX }

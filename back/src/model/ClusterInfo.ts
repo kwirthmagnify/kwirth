@@ -1,7 +1,5 @@
 import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
 import { EClusterType, IInstanceConfig, ISenderAccess, IWebhookAccess } from '@kwirthmagnify/kwirth-common'
-import Docker from 'dockerode'
-import { DockerTools } from '../tools/DockerTools'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
 import { isPluviderId, TPluviderChannel } from '../providers/Pluvider'
@@ -44,8 +42,6 @@ export class ClusterInfo {
     public id: string = ''
     public nodes: Map<string, INodeInfo> = new Map()
     public pendingWebsocket:IPendingWebsocket[] = []
-    public dockerTools!: DockerTools
-    public dockerApi!: Docker
     public kubeConfig!: KubeConfig
     public coreApi!: CoreV1Api
     public versionApi!: VersionApi

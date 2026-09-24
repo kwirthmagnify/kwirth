@@ -2,12 +2,10 @@ import express, { Request, Response} from 'express'
 import { ApiKeyApi } from './ApiKeyApi'
 import { ClusterInfo } from '../model/ClusterInfo'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
-import { EClusterType, KwirthData } from '@kwirthmagnify/kwirth-common'
-import Docker from 'dockerode'
+import { KwirthData } from '@kwirthmagnify/kwirth-common'
 
 export class ConfigApi {
     public router = express.Router()
-    dockerApi : Docker
     kwirthData: KwirthData
     clusterInfo: ClusterInfo
     apiKeyApi: ApiKeyApi
@@ -16,7 +14,6 @@ export class ConfigApi {
         this.kwirthData = kwirthData
         this.clusterInfo = clusterInfo
         this.apiKeyApi = aka
-        this.dockerApi = new Docker()
 
         // return kwirth version information
         this.router.route('/info')
@@ -71,25 +68,20 @@ export class ConfigApi {
             })
             .get( async (req:Request, res:Response) => {
                 try {
-                    if (this.kwirthData.clusterType === EClusterType.DOCKER) {
-                        res.status(200).json(['$docker'])
+                    try {
+                        let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
+                        if (accessKey) {
+                            let list = await AuthorizationManagement.getAllowedNamespaces(this.clusterInfo.coreApi, accessKey)
+                            res.status(200).json(list)
+                        }
+                        else {
+                            res.status(403).json([])
+                            return
+                        }
                     }
-                    else {
-                        try {
-                            let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
-                            if (accessKey) {
-                                let list = await AuthorizationManagement.getAllowedNamespaces(this.clusterInfo.coreApi, accessKey)
-                                res.status(200).json(list)
-                            }
-                            else {
-                                res.status(403).json([])
-                                return
-                            }
-                        }
-                        catch (err) {
-                            res.status(500).json([])
-                            console.log(err)
-                        }
+                    catch (err) {
+                        res.status(500).json([])
+                        console.log(err)
                     }
                 }
                 catch (err) {
@@ -106,25 +98,20 @@ export class ConfigApi {
             })
             .get( async (req:Request, res:Response) => {
                 try {
-                    if (this.kwirthData.clusterType === EClusterType.DOCKER) {
-                        res.status(200).json(['$docker'])
+                    try {
+                        let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
+                        if (accessKey) {
+                            let list = await AuthorizationManagement.getAllowedClusterPods(this.clusterInfo.coreApi, this.clusterInfo.appsApi, accessKey)
+                            res.status(200).json(list)
+                        }
+                        else {
+                            res.status(403).json([])
+                            return
+                        }
                     }
-                    else {
-                        try {
-                            let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
-                            if (accessKey) {
-                                let list = await AuthorizationManagement.getAllowedClusterPods(this.clusterInfo.coreApi, this.clusterInfo.appsApi, accessKey)
-                                res.status(200).json(list)
-                            }
-                            else {
-                                res.status(403).json([])
-                                return
-                            }
-                        }
-                        catch (err) {
-                            res.status(500).json([])
-                            console.log(err)
-                        }
+                    catch (err) {
+                        res.status(500).json([])
+                        console.log(err)
                     }
                 }
                 catch (err) {
@@ -166,10 +153,6 @@ export class ConfigApi {
             })
             .get( async (req:Request, res:Response) => {
                 try {
-                    if (this.kwirthData.clusterType === EClusterType.DOCKER) {
-                        res.status(200).json({})
-                        return
-                    }
                     let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
                     if (accessKey) {
                         let result = await AuthorizationManagement.getPodsByController(this.clusterInfo.coreApi, this.clusterInfo.appsApi, req.params.namespace, accessKey)
@@ -196,18 +179,13 @@ export class ConfigApi {
                 try {
                     let result:string[]=[]
 
-                    if (this.kwirthData.clusterType === EClusterType.DOCKER) {
-                        result = await this.clusterInfo.dockerTools.getAllPodNames()
+                    let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
+                    if (accessKey) {
+                        result = await AuthorizationManagement.getAllowedPods(this.clusterInfo.coreApi, this.clusterInfo.appsApi, req.params.namespace, req.params.controller, accessKey)
                     }
                     else {
-                        let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
-                        if (accessKey) {
-                            result = await AuthorizationManagement.getAllowedPods(this.clusterInfo.coreApi, this.clusterInfo.appsApi, req.params.namespace, req.params.controller, accessKey)
-                        }
-                        else {
-                            res.status(403).json([])
-                            return
-                        }
+                        res.status(403).json([])
+                        return
                     }
                     result = [...new Set(result)]
                     res.status(200).json(result)
@@ -226,27 +204,15 @@ export class ConfigApi {
             })
             .get( async (req:Request, res:Response) => {
                 try {
-                if (this.kwirthData.clusterType === EClusterType.DOCKER) {
-                    let names = await this.clusterInfo.dockerTools.getContainers(req.params.pod)
-                    res.status(200).json(names)
-                }
-                else {
-                    try {
-                        let accessKey = await AuthorizationManagement.getKey(req, res, this.apiKeyApi)
-                        if (accessKey) {
-                            let result = await AuthorizationManagement.getAllowedContainers(this.clusterInfo.coreApi, accessKey, req.params.namespace, req.params.pod)
-                            res.status(200).json(result)
-                        }
-                        else {
-                            res.status(403).json([])
-                            return
-                        }
+                    let accessKey = await AuthorizationManagement.getKey(req, res, this.apiKeyApi)
+                    if (accessKey) {
+                        let result = await AuthorizationManagement.getAllowedContainers(this.clusterInfo.coreApi, accessKey, req.params.namespace, req.params.pod)
+                        res.status(200).json(result)
                     }
-                    catch (err) {
-                        res.status(500).json([])
-                        console.log(err)
+                    else {
+                        res.status(403).json([])
+                        return
                     }
-                }
                 }
                 catch (err) {
                     console.log('Error obtaining pod containers')
@@ -254,9 +220,4 @@ export class ConfigApi {
                 }
             })
     }
-
-    setDockerApi = (dockerApi:Docker) => {
-        this.dockerApi = dockerApi
-    }
-    
 }

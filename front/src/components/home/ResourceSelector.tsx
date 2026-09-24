@@ -108,8 +108,6 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     const [podFilter, setPodFilter] = useState('')
     const [containerFilter, setContainerFilter] = useState('')
 
-    let isDocker = cluster.kwirthData?.clusterType === EClusterType.DOCKER
-
     // Views que no seleccionan recursos: con ellas los desplegables de namespace/controller/pod/
     // container no pintan nada que elegir.
     const noResourceView = view === EInstanceConfigView.CLUSTER || view === EInstanceConfigView.NONE
@@ -163,16 +161,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     }
 
     const loadAllPods = async (namespaces:string[], controllers:string[]) => {
-        if (isDocker) {
-            let [gtype,gname] = controllers[0].split('+')
-            let response = await fetch(`${cluster!.url}/config/${namespaces[0]}/${gname}/pods?type=${gtype}`, addGetAuthorization(cluster!.accessString))
-            let data = await response.json()
-            setAllPods((prev) => [...prev, ...data])
-        }
-        else {
-            const pods = controllers.flatMap(group => podsByController.get(group) ?? [])
-            setAllPods((prev) => [...new Set([...prev, ...pods])])
-        }
+        const pods = controllers.flatMap(group => podsByController.get(group) ?? [])
+        setAllPods((prev) => [...new Set([...prev, ...pods])])
     }
 
     const loadAllContainers = async (cluster: Cluster, namespace:string, pod:string) => {
@@ -184,32 +174,17 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     const onChangeCluster = (event: SelectChangeEvent) => {
         let value=event.target.value
         let cluster = props.clusters?.find(c => c.name===value)!
-        if (cluster.kwirthData?.clusterType === EClusterType.DOCKER) {
-            setCluster(cluster)
-            setView('')
-            setAllNamespaces([])
-            setNamespaces([])
-            setAllControllers([])
-            setPodsByController(new Map())
-            setPodNamespaces(new Map())
-            setControllers([])
-            setPods([])
-            setAllContainers([])
-            setContainers([])
-        }
-        else {
-            setCluster(cluster)
-            setView('')
-            setAllNamespaces([])
-            setNamespaces([])
-            setAllControllers([])
-            setPodsByController(new Map())
-            setPodNamespaces(new Map())
-            setControllers([])
-            setPods([])
-            setAllContainers([])
-            setContainers([])
-        }
+        setCluster(cluster)
+        setView('')
+        setAllNamespaces([])
+        setNamespaces([])
+        setAllControllers([])
+        setPodsByController(new Map())
+        setPodNamespaces(new Map())
+        setControllers([])
+        setPods([])
+        setAllContainers([])
+        setContainers([])
         if (props.onChangeCluster !== undefined) props.onChangeCluster(value)
     }
 
@@ -237,47 +212,29 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             return
         }
 
-        if (isDocker) {
-            setNamespaces(['$docker'])
-            setControllers(['$docker'])
-            setAllPods([])
-            setPods([])
-            setContainers([])
-            loadAllPods(['$docker'], ['$docker'])
-        }
-        else {
-            setNamespaces([])
-            setAllControllers([])
-            setPodsByController(new Map())
-            setPodNamespaces(new Map())
-            setControllers([])
-            setPods([])
-            setAllContainers([])
-            setContainers([])
-            loadAllNamespaces(props.clusters?.find(c => c.name===cluster.name)!)
-            setChannel('')
-        }
+        setNamespaces([])
+        setAllControllers([])
+        setPodsByController(new Map())
+        setPodNamespaces(new Map())
+        setControllers([])
+        setPods([])
+        setAllContainers([])
+        setContainers([])
+        loadAllNamespaces(props.clusters?.find(c => c.name===cluster.name)!)
+        setChannel('')
     }
 
     const onChangeNamespaces = (event: SelectChangeEvent<typeof namespaces>) => {
         let nss  = event.target.value as string[]
-        if (isDocker){
-            setNamespaces(['$docker'])
-            setAllPods([])
-            setPods([])
-            if (view!==EInstanceConfigView.NAMESPACE) loadAllPods(['$docker'], ['$docker'])
-        }
-        else {
-            setNamespaces(nss)
-            setAllControllers([...( view===EInstanceConfigView.POD || view===EInstanceConfigView.CONTAINER? ['Pod+No controller']:[])])
-            setPodsByController(new Map())
-            setPodNamespaces(new Map())
-            setControllers([])
-            setPods([])
-            setAllContainers([])
-            setContainers([])
-            if (view!==EInstanceConfigView.NAMESPACE) nss.map (ns => loadAllControllers(cluster, ns))
-        }
+        setNamespaces(nss)
+        setAllControllers([...( view===EInstanceConfigView.POD || view===EInstanceConfigView.CONTAINER? ['Pod+No controller']:[])])
+        setPodsByController(new Map())
+        setPodNamespaces(new Map())
+        setControllers([])
+        setPods([])
+        setAllContainers([])
+        setContainers([])
+        if (view!==EInstanceConfigView.NAMESPACE) nss.map (ns => loadAllControllers(cluster, ns))
     }
 
     const onChangeController = (event: SelectChangeEvent<typeof controllers>) => {
@@ -363,16 +320,16 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
     const getIcon = (cluster:Cluster, size:number)  => {
         if (!cluster.kwirthData || !cluster.kwirthData.clusterType) return getIconFromKind('IconK8sUnknown', size)
-        if (cluster.kwirthData.clusterType[0] === 'd') return getIconFromKind('IconDocker', size)
-        if (cluster.kwirthData.clusterType[0] === 'k') {
-            if (cluster.kwirthData.inCluster) 
-                return getIconFromKind('IconK8s', size)
-            else {
-                if (cluster.name === 'inElectron')
-                    return getIconFromKind('IconK8sElectron', size)
-                else
-                    return getIconFromKind('', size)
-            }
+
+        switch (cluster.kwirthData.clusterType) {
+            case EClusterType.KUBERNETES:
+                if (cluster.kwirthData.inCluster) return getIconFromKind('IconK8s', size)
+                if (cluster.name === 'inElectron') return getIconFromKind('IconK8sElectron', size)
+                return getIconFromKind('', size)
+            case EClusterType.NONE:
+                // Un Kwirth que no observa infraestructura: ni pods ni contenedores. El icono neutro es
+                // deliberado, porque los otros dos dirian que hay algo detras que no hay.
+                return getIconFromKind('', size)
         }
     }
 
@@ -467,14 +424,14 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 <Select value={view} onChange={onChangeView} >
                     <MenuItem key={EInstanceConfigView.NONE} value={EInstanceConfigView.NONE}>none</MenuItem>
                     <MenuItem key={EInstanceConfigView.CLUSTER} value={EInstanceConfigView.CLUSTER}>cluster</MenuItem>
-                    <MenuItem key={EInstanceConfigView.NAMESPACE} value={EInstanceConfigView.NAMESPACE} disabled={isDocker}>namespace</MenuItem>
-                    <MenuItem key={EInstanceConfigView.GROUP} value={EInstanceConfigView.GROUP} disabled={isDocker}>controller</MenuItem>
+                    <MenuItem key={EInstanceConfigView.NAMESPACE} value={EInstanceConfigView.NAMESPACE}>namespace</MenuItem>
+                    <MenuItem key={EInstanceConfigView.GROUP} value={EInstanceConfigView.GROUP}>controller</MenuItem>
                     <MenuItem key={EInstanceConfigView.POD} value={EInstanceConfigView.POD}>pod</MenuItem>
                     <MenuItem key={EInstanceConfigView.CONTAINER} value={EInstanceConfigView.CONTAINER}>container</MenuItem>
                 </Select>
             </FormControl>
 
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={view==='' || isDocker || noResourceView}>
+            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={view==='' || noResourceView}>
                 <InputLabel>Namespace</InputLabel>
                 { /* autoFocus:false en el menu NO es cosmetico: MenuList clona el item ACTIVO con
                      autoFocus y lo recalcula en cada render, asi que al teclear cambiaba la lista
@@ -496,7 +453,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 </Select>
             </FormControl>
 
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={namespaces.length===0 || view===EInstanceConfigView.NAMESPACE || isDocker || noResourceView}>
+            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={namespaces.length===0 || view===EInstanceConfigView.NAMESPACE || noResourceView}>
                 <InputLabel>Controller</InputLabel>
                 <Select onChange={onChangeController} value={controllers} multiple renderValue={(selected) => selected.map(v => v.split('+')[1]).join(', ')} onClose={() => setCtrlFilter('')} MenuProps={{ autoFocus: false }}>
                     <ListSubheader sx={{ p: 0 }}>
@@ -516,7 +473,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 </Select>
             </FormControl>
 
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={(!isDocker && (controllers.length === 0 || view===EInstanceConfigView.NAMESPACE || view===EInstanceConfigView.GROUP)) || (isDocker && (view ==='namespace' || namespaces.length === 0))}>
+            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={controllers.length === 0 || view===EInstanceConfigView.NAMESPACE || view===EInstanceConfigView.GROUP}>
                 <InputLabel >Pod</InputLabel>
                 <Select value={pods} onChange={onChangePod} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setPodFilter('')} MenuProps={{ autoFocus: false }}>
                     <ListSubheader sx={{ p: 0 }}>
