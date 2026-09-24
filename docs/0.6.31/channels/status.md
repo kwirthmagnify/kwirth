@@ -119,6 +119,11 @@ So when a provider reports more consumers than the core knows about, the differe
 instead of being quietly dropped. Drawing three lines while the provider says there are four would be
 lying by omission.
 
+The same applies when the core knows about **none** of them: there is nothing to draw, and the screen says
+exactly that — there is consumption, but those subscriptions were made straight to the provider, so nobody
+knows who is on the other end. It does *not* report that nothing is subscribed, which would be the opposite
+of what is happening. The table still shows how much each producer is delivering.
+
 ### What the graph does not include
 
 Only providers, pluviders and the channels consuming them. **Senders and webhooks are not in it**: they are

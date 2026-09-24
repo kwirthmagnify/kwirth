@@ -2,6 +2,7 @@ import React from 'react'
 import { Box, Chip, Stack, Typography, useTheme } from '@mui/material'
 import { ReactFlow, Background, Controls, Node, Edge, MarkerType, Position } from '@xyflow/react'
 import { EComponentHealth, EComponentKind, IStatusInventory } from '../common/StatusTypes'
+import { countUnbrokeredConsumers } from './StatusData'
 
 /*
     El mapa de quién produce y quién consume.
@@ -254,11 +255,25 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [firmaGrafo])
 
+    // Consumidores que el core no intermedió: se dicen, no se dibujan — no se sabe quiénes son.
+    const anonimos = countUnbrokeredConsumers(inventory.components)
+
+    /*
+        Sin aristas hay dos situaciones MUY distintas y decir la misma frase en las dos es mentir en
+        una de ellas: que de verdad no consuma nadie, o que quien consume se haya suscrito hablando
+        directamente con el provider, sin pasar por el core. En el segundo caso el dato existe —los
+        providers reconocen a sus suscriptores— y lo unico que falta es saber QUIENES son, que es
+        justo lo que el core no vio.
+    */
     if (inventory.edges.length === 0) {
         return (
             <Box sx={{ p: 3 }}>
                 <Typography variant='body2' color='text.secondary'>
-                    Nothing is subscribed to anything right now, so there is no graph to draw.
+                    {anonimos > 0
+                        ? `There is consumption right now — ${anonimos} subscriber${anonimos > 1 ? 's' : ''} — but no graph to draw: `
+                          + 'they subscribed straight to the provider instead of going through the core, so nobody knows who they are. '
+                          + 'The table still shows how much each producer is delivering.'
+                        : 'Nothing is subscribed to anything right now, so there is no graph to draw.'}
                 </Typography>
             </Box>
         )
@@ -269,13 +284,6 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active }) => {
     }
 
     const colocados = nodos.map(n => ({ ...n, position: posiciones[n.id] ?? { x: 0, y: 0 } }))
-
-    // Cuántos consumidores hay que el core no intermedió: el total que dice el provider menos los que
-    // aparecen en el grafo. Se dice, no se dibuja: no se sabe quiénes son.
-    const anonimos = inventory.components.reduce((n, c) => {
-        if (c.subscribers === undefined || c.knownConsumers === undefined) return n
-        return n + Math.max(0, c.subscribers - c.knownConsumers)
-    }, 0)
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>

@@ -1,4 +1,4 @@
-import { IStatusInventory } from '../common/StatusTypes'
+import { IStatusComponent, IStatusInventory } from '../common/StatusTypes'
 
 /*
     El estado del tab: la última foto y la anterior, y nada más.
@@ -39,6 +39,25 @@ export interface IStatusData {
     configAccepted: boolean
     started: boolean
 }
+
+/*
+    Cuantos consumidores hay que el core NO intermedio: lo que el productor reconoce menos lo que el
+    core registro.
+
+    Existe porque el grafo se dibuja con lo que el core vio pasar, y suscribirse sin pasar por el core
+    es posible —se llama a 'addSubscriber' del provider y ya— y hay quien lo hace. Cuando ese numero
+    no es cero, el grafo esta INCOMPLETO y hay que decirlo: callarlo convierte un dibujo parcial en
+    una afirmacion falsa ("no consume nadie") justo cuando alguien esta consumiendo.
+
+    Se ignora el componente que no informa de una de las dos cifras: 'undefined' no es cero, y restar
+    con un hueco produce un numero inventado. Y se recorta en cero, porque el desfase contrario —el
+    core conoce mas que el provider— es una baja que el provider aun no ha aplicado, no un anonimo.
+*/
+export const countUnbrokeredConsumers = (components: IStatusComponent[]): number =>
+    components.reduce((n, c) => {
+        if (c.subscribers === undefined || c.knownConsumers === undefined) return n
+        return n + Math.max(0, c.subscribers - c.knownConsumers)
+    }, 0)
 
 export class StatusData implements IStatusData {
     view: 'table' | 'graph' = 'table'

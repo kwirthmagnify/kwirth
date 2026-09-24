@@ -37,6 +37,25 @@ export interface ISubscription {
     since: number
 }
 
+/*
+    La arista con lo que hace falta para saber CUANDO deja de existir, que no es lo mismo que saber
+    que existe.
+
+    Un canal se suscribe al mismo provider mas de una vez con total normalidad —una suscripcion por
+    pestaña, o porque se reinstancia—, y eso sigue siendo UNA arista: el grafo dice quien alimenta a
+    quien, no cuantas veces. Pero la baja llega igual de repetida, y si la primera borrase la arista,
+    el registro se quedaria vacio mientras el provider sigue emitiendo para los demas. Es exactamente
+    lo que pasaba: el grafo se vaciaba solo con un par de recargas.
+
+    Se guardan los suscriptores POR IDENTIDAD, que es el mismo criterio con el que el provider los
+    guarda en su Map. Asi el registro no puede acabar diciendo algo distinto de lo que el provider
+    cree: dos altas del mismo objeto son una, igual que alli, y la arista se va cuando se va el
+    ultimo. Retener esas referencias no añade fuga: el provider ya las tiene.
+*/
+interface ISubscriptionEntry extends ISubscription {
+    subscribers: Set<IChannel>
+}
+
 export class ClusterInfo {
     public name: string = ''
     public id: string = ''
@@ -84,7 +103,7 @@ export class ClusterInfo {
         mayor que lo registrado aqui, hay consumidores que este mapa no conoce, y quien lo pinte debe
         decirlo en vez de dar a entender que estan todos.
     */
-    private subscriptions: ISubscription[] = []
+    private subscriptions: ISubscriptionEntry[] = []
 
     public vcpus: number = 0
     public memory: number = 0
@@ -152,26 +171,41 @@ export class ClusterInfo {
         Se anota DESPUES de que el provider haya aceptado el alta, no antes: si 'addSubscriber' revienta,
         el core no debe quedarse creyendo que existe una suscripcion que nunca se hizo.
 
-        Se ignora el duplicado: un canal que se suscribe dos veces al mismo provider —recargas, reintentos—
-        es una arista, no dos.
+        El duplicado no se ignora, se CUENTA: sigue habiendo una sola arista, pero hay que saber
+        cuantos suscriptores la sostienen para no borrarla con la primera baja. El 'since' se conserva
+        —es de la arista, no del ultimo en llegar—, que es lo que permite decir cuanto lleva algo
+        alimentando a alguien.
     */
     private trackSubscription = (providerId: string, c: IChannel): void => {
         const channelId = c.getChannelData().id
-        if (this.subscriptions.some(s => s.providerId === providerId && s.channelId === channelId)) return
-        this.subscriptions.push({ providerId, channelId, since: Date.now() })
+        const arista = this.subscriptions.find(s => s.providerId === providerId && s.channelId === channelId)
+        if (arista) {
+            arista.subscribers.add(c)
+            return
+        }
+        this.subscriptions.push({ providerId, channelId, since: Date.now(), subscribers: new Set([c]) })
     }
 
+    /*
+        La arista desaparece cuando se va el ULTIMO suscriptor, no el primero. Una baja de alguien que
+        no estaba —doble cleanup, un canal que nunca llego a suscribirse— no se lleva nada por delante.
+    */
     private untrackSubscription = (providerId: string, c: IChannel): void => {
         const channelId = c.getChannelData().id
         const pos = this.subscriptions.findIndex(s => s.providerId === providerId && s.channelId === channelId)
-        if (pos >= 0) this.subscriptions.splice(pos, 1)
+        if (pos < 0) return
+        const arista = this.subscriptions[pos]
+        arista.subscribers.delete(c)
+        if (arista.subscribers.size === 0) this.subscriptions.splice(pos, 1)
     }
 
     /**
      * Quien consume a quien, ahora mismo. Copia, no la lista viva: quien la lea no puede modificar el
-     * registro del core sin querer.
+     * registro del core sin querer, y el Set de suscriptores no sale de aqui — fuera solo se necesita
+     * la arista.
      */
-    getSubscriptions = (): ISubscription[] => this.subscriptions.map(s => ({ ...s }))
+    getSubscriptions = (): ISubscription[] =>
+        this.subscriptions.map(({ providerId, channelId, since }) => ({ providerId, channelId, since }))
 
     // Kubernetes no tiene nombre de cluster: los gestionados dejan pistas en labels/providerID del
     // nodo, y k3s no deja ninguna (k3d solo la deja en el nombre de sus contenedores). Precedencia:

@@ -143,3 +143,36 @@ test('se vuelve a la tabla sin perder nada', async () => {
     await expect(page.getByRole('columnheader', { name: 'Why', exact: true })).toBeVisible()
     expect(await page.locator('table tbody tr').count()).toBeGreaterThan(0)
 })
+
+test('🔴 si hay consumo, o se dibuja o se dice por que no se puede dibujar', async () => {
+    /*
+        El invariante que faltaba, y el que se rompio de verdad: la tabla y el grafo no pueden decir
+        cosas distintas. Si algun productor reconoce consumidores, el grafo NO puede limitarse a
+        "nothing is subscribed to anything" — o ensena las aristas, o explica que esas suscripciones
+        se hicieron sin pasar por el core y por eso no sabe quienes son.
+
+        Se cruza lo que ve el usuario en las dos vistas, no el estado interno: asi el test sigue
+        valiendo aunque cambie de donde sale cada numero.
+    */
+    await page.locator('button[aria-label="Table view"]').click()
+    await expect(page.getByRole('columnheader', { name: 'Why', exact: true })).toBeVisible()
+
+    const filas = page.locator('table tbody tr')
+    let consumo = 0
+    for (let i = 0; i < await filas.count(); i++) {
+        const celda = (await filas.nth(i).locator('td').nth(3).innerText()).trim()
+        if (/^[0-9]+$/.test(celda)) consumo += Number(celda)
+    }
+
+    await page.locator('button[aria-label="Graph view"]').click()
+    if (consumo === 0) return   // sin consumo, "no hay nada que dibujar" es la verdad
+
+    await page.waitForTimeout(1500)   // el layout es asincrono
+    const aristas = await page.locator('.react-flow__edge').count()
+    if (aristas > 0) return
+
+    await expect(
+        page.getByText(/subscribed straight to the provider/),
+        `${consumo} consumidores en la tabla y el grafo no dibuja ni explica nada`
+    ).toBeVisible()
+})
