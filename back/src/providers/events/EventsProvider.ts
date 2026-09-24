@@ -125,6 +125,13 @@ export class EventsProvider implements IProvider {
         if (this.subscribers.has(c)) this.subscribers.delete(c)
     }
 
+    /*
+        Lo que este provider sabe de si mismo. Es 'subscribers.size' y nada mas: el contrato pide que
+        sea BARATO —se devuelve lo que ya se tiene, no se calcula—, y de aqui sale que events este
+        siendo consumido o emitiendo para nadie.
+    */
+    getStats = () => ({ subscribers: this.subscribers.size })
+
     private startResourceWatcher = async (resourcePath: string, eventHandler: (type: string, obj: any, subscribersList: Map<IChannel, IEventsSubscriber>) => void) => {
         if (this.resourceWatchers.has(resourcePath)) return
 

@@ -21,12 +21,17 @@ export enum EComponentKind {
     extensión instalada que nunca arrancó, una que arrancó y se cayó, y una que funciona pero tiene el
     router sin montar. Los tres se ven igual desde fuera —"no va"— y se arreglan de forma distinta.
 
-    ⚠️ ACTIVE y IDLE (instanciado con y sin consumidores) NO están todavía: distinguirlos exige preguntarle
-    al provider a quién tiene dentro, y ese contrato llega en S2. Hasta entonces existe INSTANTIATED, que
-    los engloba. Un estado que no se puede saber no se adivina.
+    ACTIVE e IDLE aparecieron en S2, cuando 'IProvider.getStats()' hizo posible preguntar cuántos
+    suscriptores tiene un provider. INSTANTIATED sigue existiendo y NO es un resto: es lo que se muestra
+    cuando el componente no implementa ese método opcional — está corriendo, y si alguien lo consume o no,
+    no se sabe. Un estado que no se puede saber no se adivina.
 */
 export enum EComponentHealth {
-    /** Instanciado y corriendo. Si tiene consumidores o no, todavía no se sabe (S2). */
+    /** Instanciado y con al menos un consumidor. */
+    ACTIVE = 'active',
+    /** Instanciado y sin nadie escuchando: está emitiendo para nadie. */
+    IDLE = 'idle',
+    /** Instanciado, pero no dice cuántos consumidores tiene (no implementa getStats). */
     INSTANTIATED = 'instantiated',
     /** Instalado, pero el core nunca lo puso en marcha. `reason` dice por qué. */
     NOT_INSTANTIATED = 'not-instantiated',
@@ -52,6 +57,13 @@ export interface IStatusComponent {
     version?: string
     /** De dónde vino: un marketplace, 'dev', 'bundled'… lo mismo que muestran los gestores. */
     installedFrom?: string
+    /**
+     * Cuántos consumidores tiene, cuando el componente sabe decirlo (S2).
+     *
+     * `undefined` significa **no lo dice**, que es distinto de 0 — cero es una afirmación, y quien la
+     * lea puede ir a desinstalar algo. Por eso es opcional y no un número con valor por defecto.
+     */
+    subscribers?: number
 }
 
 /**

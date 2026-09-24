@@ -15,6 +15,15 @@ export class SyslogProvider implements IProvider {
     public apiKeyApi = undefined
 
     private subscribers = new Map<IProviderSubscriber, unknown>()
+
+    /*
+        Lo que este provider sabe de si mismo: cuantos consumidores tiene AHORA. El contrato
+        (IProvider.getStats, opcional desde kwirth-common-back 0.5.50) pide que sea BARATO — se devuelve
+        lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
+        consumido o emitiendo para nadie.
+    */
+    getStats = () => ({ subscribers: this.subscribers.size })
+
     private config: ISyslogConfig = { port: 513, protocol: 'both', tcpFraming: 'non-transparent', relayTargets: [], maxMessages: 10000, maxParallel: 20 }
     private configured = false
     private udpServer: UdpServer | undefined

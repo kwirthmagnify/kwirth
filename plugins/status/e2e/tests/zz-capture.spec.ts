@@ -15,7 +15,9 @@ const MEDIA = path.resolve(__dirname, '../../../../docs/0.6.31/_media/ch-images'
 
 test('captura del inventario', async ({ browser }) => {
     test.setTimeout(240000)
-    const page: Page = await browser.newPage({ viewport: { width: 1400, height: 900 } })
+    // Alto generoso a proposito: las filas ACTIVE van al final —lo que va bien se mira al ultimo— y con
+    // 900px se quedaban fuera de la imagen, justo lo que la guia esta explicando.
+    const page: Page = await browser.newPage({ viewport: { width: 1400, height: 1180 } })
     // La guía va en oscuro, como el resto de sus imágenes.
     await page.addInitScript(() => { try { localStorage.setItem('kwirth.mode', 'dark') } catch { /* */ } })
     await login(page)

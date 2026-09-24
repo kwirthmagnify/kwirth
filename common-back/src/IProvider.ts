@@ -57,6 +57,22 @@ export interface IProviderSubscriptionHelp {
 export type IProviderFieldDef = IConfigFieldDef
 
 /**
+ * Lo que un provider sabe contar de si mismo.
+ *
+ * Existe para que kwirth pueda decir si algo esta siendo consumido o esta emitiendo para nadie, que
+ * es de las pocas preguntas que NADIE puede responder desde fuera: cada provider guarda sus
+ * suscriptores en su propia estructura y hasta ahora no habia forma de preguntarselo.
+ *
+ * ⚠️ Solo el NUMERO, no quienes son: 'IProviderSubscriber' es una interfaz de un solo metodo y no
+ * lleva identidad, asi que un provider no tiene con que identificarlos. Dibujar el grafo de quien
+ * consume a quien pedira ampliar ese contrato, y es una decision aparte.
+ */
+export interface IProviderStats {
+    /** Cuantos suscriptores tiene AHORA. Cero significa que esta emitiendo para nadie. */
+    subscribers: number
+}
+
+/**
  * Interface that all provider plugins must implement.
  * Use 'any' for clusterInfo to avoid pulling in kubernetes/docker dependencies.
  */
@@ -95,6 +111,16 @@ export interface IProvider extends IExtension {
      * mismo array desde el back.js, que el core lee al instalar sin instanciar nada.
      */
     getConfigSchema?(): IProviderFieldDef[]
+    /**
+     * Que sabe el provider de si mismo ahora mismo. OPCIONAL, como el resto de este bloque: quien no
+     * lo implemente se muestra como "no informa", que es distinto de cero — un cero seria una
+     * afirmacion que nadie puede sostener.
+     *
+     * ⚠️ Tiene que ser BARATO: devuelve lo que ya tienes, no lo calcules. Se llama cuando alguien
+     * abre una pantalla de estado, pero un provider no sabe con que frecuencia, y recorrer
+     * estructuras aqui convierte una consulta en trabajo para todos.
+     */
+    getStats?(): IProviderStats
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
     router: any

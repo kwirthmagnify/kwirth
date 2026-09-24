@@ -9,6 +9,15 @@ export class TickProvider implements IProvider {
     public apiKeyApi = undefined
 
     private subscribers: Map<IProviderSubscriber, any> = new Map()
+
+    /*
+        Lo que este provider sabe de si mismo: cuantos consumidores tiene AHORA. El contrato
+        (IProvider.getStats, opcional desde kwirth-common-back 0.5.50) pide que sea BARATO — se devuelve
+        lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
+        consumido o emitiendo para nadie.
+    */
+    getStats = () => ({ subscribers: this.subscribers.size })
+
     private interval: NodeJS.Timeout | undefined
 
     constructor(_clusterInfo: unknown, _kwirthData: unknown) {}

@@ -69,14 +69,34 @@ test('se listan providers y senders del Kwirth de verdad', async () => {
     expect(texto).toMatch(/Provider|Sender|Webhook|Pluvider/)
 })
 
-test('🔴 nada aparece como "activo" ni como "ocioso"', async () => {
+test('la columna de consumidores distingue "ninguno" de "no lo dice"', async () => {
     /*
-        El invariante de S1: saber si algo tiene consumidores exige el contrato de S2. Mientras no
-        exista, la pantalla no puede insinuar que lo sabe — quien lea "ocioso" irá a desinstalar algo.
+        El invariante, que sobrevive a S2 aunque cambie de forma: un componente que no implementa
+        getStats NO puede salir con un 0 — quien lea "cero consumidores" va a ir a desinstalar algo que
+        quizá se usa. Sale con un guion.
+
+        Tras cablear los providers del repo conviven los dos casos en la misma tabla, que es justo lo
+        que hay que poder distinguir de un vistazo.
     */
+    const filas = page.locator('table tbody tr')
+    const n = await filas.count()
+    let conNumero = 0
+    let sinDato = 0
+    for (let i = 0; i < n; i++) {
+        const consumidores = (await filas.nth(i).locator('td').nth(3).innerText()).trim()
+        if (consumidores === '—') sinDato++
+        else if (/^[0-9]+$/.test(consumidores)) conNumero++
+        else throw new Error(`la columna de consumidores dice '${consumidores}', que no es ni un numero ni un guion`)
+    }
+    expect(conNumero + sinDato).toBe(n)
+    // Los senders y webhooks no informan (el contrato es de providers), asi que siempre hay guiones.
+    expect(sinDato, 'nadie sale como "no informa", y eso significa que se esta inventando el dato').toBeGreaterThan(0)
+})
+
+test('🔴 un provider cableado dice si esta ACTIVO o si emite para nadie', async () => {
+    // Con los providers del repo cableados, la tabla tiene que poder decirlo de alguno.
     const texto = await page.locator('table tbody').innerText()
-    expect(texto).not.toMatch(/\bActive\b/i)
-    expect(texto).not.toMatch(/\bIdle\b/i)
+    expect(texto, 'ningun provider informa: el cableado de getStats no ha llegado').toMatch(/Active|Idle/)
 })
 
 test('🔴 no se filtra ninguna URL de webhook: llevan el token dentro', async () => {

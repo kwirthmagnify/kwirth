@@ -25,20 +25,23 @@ Key features of Status channel:
 ## Use
 Select the cluster in the resource selector, add a **status** tab and start it. There is nothing to configure.
 
-The table has four columns:
+The table has five columns:
 
 | Column | What it tells you |
 |---|---|
 | **Kind** | Provider, Pluvider, Sender or Webhook |
 | **Name** | the component id, as the rest of Kwirth names it |
 | **State** | see the table below |
+| **Consumers** | how many things are consuming it — or **—** when the component does not say |
 | **Why** | the reason, when there is one worth giving |
 
 ### States
 
 | State | What it means | What to do |
 |---|---|---|
-| **Running** | instantiated and working | nothing |
+| **Active** | running, and something is consuming it | nothing |
+| **Idle** | running, but **nothing is consuming it** | decide whether you still need it installed |
+| **Running** | running, and it does not report how many consumers it has | nothing — see below |
 | **Not started** | installed, but the core never started it | the **Why** column says what is missing — usually that no installed channel declares that provider, so nothing ever asked for it |
 | **Needs restart** | running, but something of it is not wired in | restart the Kwirth server; its routes are only mounted at startup |
 | **Failed** | it tried to start and failed | the **Why** column carries the error |
@@ -47,6 +50,30 @@ The table has four columns:
 > **Why "Not reported" is not an error.** Extensions publish what they know about themselves, and not all of
 > them do. An extension that stays quiet is shown as *not reported* rather than as a zero, because a zero
 > would be a statement — and one nobody can back up.
+
+### A dash is not a zero
+
+In the **Consumers** column you will see numbers on some rows and a dash on others. They mean different
+things, and the difference matters:
+
+| | |
+|---|---|
+| **4** | four things are consuming it right now |
+| **0** | nothing is consuming it — that row also shows as **Idle** |
+| **—** | the component **does not say**. Nothing is wrong with it |
+
+Reporting consumers is optional, so a component that does not implement it shows a dash. Senders and
+webhooks always show a dash: the mechanism belongs to providers. A provider written before this existed, or
+one that comes from elsewhere, shows one too — and it keeps working exactly the same.
+
+**This is on purpose.** Showing a `0` where the answer is unknown would read as *"nothing uses this"*, and
+whoever read it might uninstall something that is very much in use. A dash cannot be misread.
+
+### Idle is information, not a fault
+
+An **Idle** provider is running correctly; it just has nobody listening. That is why its chip is grey and
+not orange: it is not something to fix, it is something to decide about. It may be a provider you installed
+and never wired to a channel, or one whose consumer you removed and forgot to clean up.
 
 ### The snapshot does not refresh on its own
 
@@ -69,6 +96,5 @@ The inventory is a privileged view: it lists every extension mounted in the serv
 
 ## Coming next
 
-  - **Who consumes what** — how many subscribers each provider has, which will also split *Running* into *active* and *idle*.
   - **The dependency diagram** — the same kind of graph the Iter channel draws, applied to Kwirth's own insides.
   - **Per-component counters** — events and bytes moved by each provider, channel and sender, counted only while you are watching.

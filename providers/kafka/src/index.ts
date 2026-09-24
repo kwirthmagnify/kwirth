@@ -85,6 +85,22 @@ export class KafkaProvider implements IProvider {
     // accumulated data store, same shape as BusinessProvider: space -> type -> messages[]
     private data = new Map<string, Map<string, any[]>>()
 
+    /*
+        Cuantos consumidores tiene AHORA (IProvider.getStats, opcional desde kwirth-common-back 0.5.50).
+
+        Aqui no vale sumar los de cada conexion: un mismo suscriptor puede estar en varias a la vez —es
+        justo lo que permite este provider— y la suma lo contaria dos veces. Se cuentan UNICOS.
+
+        Sigue siendo barato: recorre conexiones, no mensajes, y de esas hay un puñado.
+    */
+    getStats = () => {
+        const unicos = new Set<IProviderSubscriber>()
+        for (const entry of this.connections.values()) {
+            for (const s of entry.subscribers.keys()) unicos.add(s)
+        }
+        return { subscribers: unicos.size }
+    }
+
     constructor(_clusterInfo: any, _kwirthData: KwirthData) {}
 
     // ── IProvider ──────────────────────────────────────────────────────────────

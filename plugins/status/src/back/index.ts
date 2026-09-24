@@ -23,6 +23,11 @@ interface IProviderLike {
     configRouterStarted?: boolean
     providesRouter?: boolean
     configRouter?: unknown
+    /**
+     * OPCIONAL en el contrato (kwirth-common-back >= 0.5.50) y opcional de verdad: la mayoría de los
+     * providers publicados no lo tienen. Quien no lo implemente sale como "no informa".
+     */
+    getStats?(): { subscribers: number }
 }
 
 interface IListing {
@@ -171,7 +176,24 @@ class StatusChannel implements IChannel {
         cuántos suscriptores tiene, y ese contrato todavía no existe (llega en S2). Inventar el dato sería
         peor que no darlo — un administrador que lea "ocioso" va a ir a desinstalar algo.
     */
-    private healthOfProvider = (p: IProviderLike): { health: EComponentHealth, reason?: string } => {
+    /**
+     * Cuántos consumidores tiene, o undefined si no lo dice.
+     *
+     * Se protege con try/catch porque esto es código de una extensión de terceros: un provider que
+     * reviente al preguntarle no puede llevarse por delante la pantalla entera. Si falla, no informa.
+     */
+    private subscribersOf = (p: IProviderLike): number | undefined => {
+        if (!p.getStats) return undefined
+        try {
+            const stats = p.getStats()
+            return typeof stats?.subscribers === 'number' ? stats.subscribers : undefined
+        }
+        catch {
+            return undefined
+        }
+    }
+
+    private healthOfProvider = (p: IProviderLike, subscribers: number | undefined): { health: EComponentHealth, reason?: string } => {
         if (p.started !== true) {
             return {
                 health: EComponentHealth.NOT_INSTANTIATED,
@@ -187,15 +209,32 @@ class StatusChannel implements IChannel {
                 reason: 'Its configuration endpoint is not mounted — the server has not been restarted since it was installed'
             }
         }
-        return { health: EComponentHealth.INSTANTIATED }
+        /*
+            Con el dato de S2 ya se puede separar lo que funciona de lo que funciona PARA NADIE. Sin el
+            dato se queda en INSTANTIATED: no informa, y eso es una respuesta, no un hueco.
+        */
+        if (subscribers === undefined) return { health: EComponentHealth.INSTANTIATED }
+        if (subscribers > 0) return { health: EComponentHealth.ACTIVE }
+        return {
+            health: EComponentHealth.IDLE,
+            reason: 'Running, but nothing is consuming it right now'
+        }
     }
 
     private buildInventory = (): IStatusInventory => {
         const components: IStatusComponent[] = []
 
         for (const p of this.clusterInfo.providers ?? []) {
-            const { health, reason } = this.healthOfProvider(p)
-            components.push({ kind: EComponentKind.PROVIDER, id: p.id, displayName: p.id, health, ...(reason ? { reason } : {}) })
+            const subscribers = this.subscribersOf(p)
+            const { health, reason } = this.healthOfProvider(p, subscribers)
+            components.push({
+                kind: EComponentKind.PROVIDER,
+                id: p.id,
+                displayName: p.id,
+                health,
+                ...(reason ? { reason } : {}),
+                ...(subscribers === undefined ? {} : { subscribers })
+            })
         }
 
         /*

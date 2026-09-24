@@ -50,16 +50,62 @@ test('un provider arrancado sale como INSTANTIATED, y sin motivo que explicar', 
     assert.equal(c.reason, undefined)
 })
 
-test('🔴 un provider arrancado NO se marca como activo ni como ocioso', async () => {
+test('🔴 un provider que NO informa no se marca como activo ni como ocioso', async () => {
     /*
-        El caso que más fácil sería estropear. Saber si algo tiene consumidores exige preguntárselo al
-        provider, y ese contrato no existe todavía (S2). Un administrador que lea "ocioso" va a ir a
-        desinstalar algo, así que mientras no se sepa, no se dice.
+        El caso que más fácil sería estropear, y sigue vigente después de S2: 'getStats' es OPCIONAL y la
+        mayoría de los providers publicados no lo tienen. Sin el dato no se dice nada — quien lea
+        "ocioso" va a ir a desinstalar algo.
     */
     const inv = await inventarioDe({ providers: [{ id: 'events', started: true }] })
-    const estados = inv.components.map(c => String(c.health))
-    assert.ok(!estados.includes('active'), 'se está afirmando que algo está activo sin poder saberlo')
-    assert.ok(!estados.includes('idle'), 'se está afirmando que algo está ocioso sin poder saberlo')
+    const c = inv.components[0]
+    assert.equal(c.health, EComponentHealth.INSTANTIATED)
+    assert.equal(c.subscribers, undefined, 'sin getStats no puede haber numero de consumidores')
+})
+
+test('con consumidores, el provider sale como ACTIVO y dice cuántos', async () => {
+    const inv = await inventarioDe({ providers: [{ id: 'events', started: true, getStats: () => ({ subscribers: 3 }) }] })
+    const c = inv.components[0]
+    assert.equal(c.health, EComponentHealth.ACTIVE)
+    assert.equal(c.subscribers, 3)
+})
+
+test('sin consumidores sale como OCIOSO, y se explica que emite para nadie', async () => {
+    const inv = await inventarioDe({ providers: [{ id: 'trivy', started: true, getStats: () => ({ subscribers: 0 }) }] })
+    const c = inv.components[0]
+    assert.equal(c.health, EComponentHealth.IDLE)
+    assert.equal(c.subscribers, 0)
+    assert.match(c.reason ?? '', /nothing is consuming it/i)
+})
+
+test('🔴 un provider que revienta al preguntarle no tumba la pantalla', async () => {
+    /*
+        getStats lo implementa código de terceros. Si lanza, este canal tiene que seguir dando el resto
+        del inventario: se degrada a "no informa", que es exactamente lo mismo que no implementarlo.
+    */
+    const inv = await inventarioDe({
+        providers: [
+            { id: 'malo', started: true, getStats: () => { throw new Error('boom') } },
+            { id: 'bueno', started: true, getStats: () => ({ subscribers: 1 }) }
+        ]
+    })
+    assert.equal(inv.components.length, 2, 'un provider roto se llevó por delante al resto')
+    const malo = inv.components.find(c => c.id === 'malo')!
+    assert.equal(malo.health, EComponentHealth.INSTANTIATED)
+    assert.equal(malo.subscribers, undefined)
+    assert.equal(inv.components.find(c => c.id === 'bueno')!.health, EComponentHealth.ACTIVE)
+})
+
+test('y si devuelve una basura en vez de un número, tampoco se la cree', async () => {
+    // El contrato dice 'subscribers: number'; TypeScript no vigila a un provider ya compilado.
+    const inv = await inventarioDe({ providers: [{ id: 'raro', started: true, getStats: () => ({ subscribers: 'muchos' }) }] })
+    assert.equal(inv.components[0].subscribers, undefined)
+    assert.equal(inv.components[0].health, EComponentHealth.INSTANTIATED)
+})
+
+test('un provider PARADO no se marca ocioso aunque diga que tiene cero', async () => {
+    // El orden importa: 'no arrancado' manda sobre 'sin consumidores', porque es la causa, no el efecto.
+    const inv = await inventarioDe({ providers: [{ id: 'azure', started: false, getStats: () => ({ subscribers: 0 }) }] })
+    assert.equal(inv.components[0].health, EComponentHealth.NOT_INSTANTIATED)
 })
 
 test('un provider que el core nunca arrancó dice POR QUÉ', async () => {

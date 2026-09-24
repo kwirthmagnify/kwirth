@@ -14,6 +14,10 @@ import { IStatusData } from './StatusData'
     ni reiniciar el servidor.
 */
 const HEALTH_LABEL: Record<EComponentHealth, { label: string, color: 'success' | 'warning' | 'error' | 'default' }> = {
+    [EComponentHealth.ACTIVE]: { label: 'Active', color: 'success' },
+    // Ocioso NO es un error, es información: funciona, pero no le sirve a nadie. De ahí 'default' y no
+    // 'warning' — quien mire tiene que poder distinguir "hay que arreglar esto" de "esto sobra".
+    [EComponentHealth.IDLE]: { label: 'Idle', color: 'default' },
     [EComponentHealth.INSTANTIATED]: { label: 'Running', color: 'success' },
     [EComponentHealth.NOT_INSTANTIATED]: { label: 'Not started', color: 'warning' },
     [EComponentHealth.PENDING_RESTART]: { label: 'Needs restart', color: 'warning' },
@@ -73,16 +77,27 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         return c.id.toLowerCase().includes(f) || KIND_LABEL[c.kind].toLowerCase().includes(f)
     })
 
-    // Lo que necesita atención primero: se ordena por estado y, dentro de cada estado, por tipo e id.
-    const ORDEN: EComponentHealth[] = [
-        EComponentHealth.FAILED,
-        EComponentHealth.PENDING_RESTART,
-        EComponentHealth.NOT_INSTANTIATED,
-        EComponentHealth.UNKNOWN,
-        EComponentHealth.INSTANTIATED
-    ]
+    /*
+        Lo que necesita atención primero, y dentro de cada estado por tipo e id.
+
+        Primero lo ROTO, después lo que SOBRA (ocioso: funciona, pero no le sirve a nadie), luego lo que
+        no informa, y al final lo que va bien.
+
+        ⚠️ Es un Record y no un array a propósito: con un array, un estado que alguien añada y olvide
+        meter aquí devuelve -1 en indexOf y se cuela ENCIMA de los fallos — justo al revés de lo que se
+        quiere. Con Record, TypeScript obliga a decidir su sitio.
+    */
+    const ORDEN: Record<EComponentHealth, number> = {
+        [EComponentHealth.FAILED]: 0,
+        [EComponentHealth.PENDING_RESTART]: 1,
+        [EComponentHealth.NOT_INSTANTIATED]: 2,
+        [EComponentHealth.IDLE]: 3,
+        [EComponentHealth.UNKNOWN]: 4,
+        [EComponentHealth.INSTANTIATED]: 5,
+        [EComponentHealth.ACTIVE]: 6
+    }
     componentes.sort((a, b) => {
-        const d = ORDEN.indexOf(a.health) - ORDEN.indexOf(b.health)
+        const d = ORDEN[a.health] - ORDEN[b.health]
         if (d !== 0) return d
         return a.kind === b.kind ? a.id.localeCompare(b.id) : a.kind.localeCompare(b.kind)
     })
@@ -93,7 +108,16 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
             <TableRow key={`${c.kind}-${c.id}`}>
                 <TableCell sx={{ whiteSpace: 'nowrap' }}>{KIND_LABEL[c.kind]}</TableCell>
                 <TableCell><Typography variant='body2' sx={{ fontWeight: 500 }}>{c.displayName}</Typography></TableCell>
-                <TableCell><Chip size='small' label={estado.label} color={estado.color} variant={c.health === EComponentHealth.INSTANTIATED ? 'outlined' : 'filled'} /></TableCell>
+                <TableCell><Chip size='small' label={estado.label} color={estado.color} variant={c.health === EComponentHealth.ACTIVE ? 'outlined' : 'filled'} /></TableCell>
+                {/*
+                    Un guion cuando no se sabe, nunca un 0: el cero diria "nadie lo consume" y quien lo
+                    lea puede ir a desinstalar algo que en realidad si se usa.
+                */}
+                <TableCell align='right'>
+                    <Typography variant='body2' sx={{ fontVariantNumeric: 'tabular-nums' }} color={c.subscribers === undefined ? 'text.disabled' : 'text.primary'}>
+                        {c.subscribers === undefined ? '—' : c.subscribers}
+                    </Typography>
+                </TableCell>
                 {/* El porqué es la columna que justifica la pantalla: sin ella esto es otra lista más. */}
                 <TableCell><Typography variant='body2' color='text.secondary'>{c.reason ?? ''}</Typography></TableCell>
             </TableRow>
@@ -128,6 +152,7 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                             <TableCell>Kind</TableCell>
                             <TableCell>Name</TableCell>
                             <TableCell>State</TableCell>
+                            <TableCell align='right'>Consumers</TableCell>
                             <TableCell>Why</TableCell>
                         </TableRow>
                     </TableHead>

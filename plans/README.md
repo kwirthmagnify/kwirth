@@ -20,7 +20,7 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 
 | plan | de qué va | qué queda |
 |---|---|---|
-| [kwirth-status](kwirth-status/PLAN.md) · [PRD](kwirth-status/PRD.md) | una pantalla para echar un ojo a Kwirth por dentro: qué hay montado, cómo está y quién consume a quién | S1 (el inventario) entregado; quedan S2 (el contrato *quién consume qué*), S3 (el diagrama) y S4 (contadores) |
+| [kwirth-status](kwirth-status/PLAN.md) · [PRD](kwirth-status/PRD.md) | una pantalla para echar un ojo a Kwirth por dentro: qué hay montado, cómo está y quién consume a quién | S1 y S2 entregados (inventario y quién consume qué); quedan S3 (el diagrama) y S4 (contadores) |
 | [ai-tools](ai-tools/PLAN.md) | las tools de IA como extensión instalable (`aitoolset`) | S4–S7 y retirar las 43 tools viejas de `common-ai` |
 | [icons](icons/PLAN.md) | aligerar el barrel de iconos | los dos que un sender pide por nombre, y el alias `/icons` en 26 `build.mjs` |
 | [provider-debug](provider-debug/PLAN.md) | canal para ver en crudo lo que emite un provider | la fase de front |
