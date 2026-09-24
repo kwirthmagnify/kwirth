@@ -12,6 +12,7 @@ As of kwirth version 0.6.31, these are the existing channels:
   - **[Pinocchio](channels/pinocchio)**. Extend kwirth capabilities with AI, by adding LLM features.
   - **[Censor](channels/censor)**. LLM-based log noise filtering: learn regex patterns automatically and filter out boilerplate so only meaningful lines reach your screen.
   - **[Topology](channels/topology)**. Interactive 3D visualization of cluster resources and relationships.
+  - **[Status](channels/status)**. What this Kwirth has inside: every provider, sender and webhook it has mounted, what state each one is in, and why.
   - **[News](channels/news)**. RSS news feed reader — test/demo plugin.
   - **[Provider Debug](channels/provider-debug)**. For debugging purposes, it shows provider subscriptions data in real time.
 

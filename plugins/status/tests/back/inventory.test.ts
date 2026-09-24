@@ -1,0 +1,149 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { StatusChannel } from '../../src/back/index'
+import { EComponentHealth, EComponentKind, EStatusPayload, IStatusMessageResponse } from '../../src/common/StatusTypes'
+
+/*
+    El inventario, por el camino real.
+
+    No se prueban los métodos privados: se arranca una instancia como hace el core y se mira lo que sale
+    por el socket, que es lo único que el front va a ver. Así el test sigue valiendo si mañana se
+    reorganiza el interior.
+
+    Lo que se fija aquí es sobre todo lo que NO se puede decir: que un estado que no se sabe no se
+    inventa, y que un registro ausente no rompe nada.
+*/
+
+interface IEnviado {
+    mensajes: IStatusMessageResponse[]
+}
+
+/** Un socket de mentira que solo apunta lo que se le manda. */
+const socketFalso = (enviado: IEnviado) => ({
+    send: (raw: string) => { enviado.mensajes.push(JSON.parse(raw)) }
+}) as unknown as WebSocket
+
+const configFalsa = (instance: string) => ({ instance }) as never
+
+/** Arranca una instancia contra el clusterInfo que se le dé y devuelve el último inventario enviado. */
+const inventarioDe = async (clusterInfo: unknown) => {
+    const enviado: IEnviado = { mensajes: [] }
+    const canal = new StatusChannel(clusterInfo as never, {} as never)
+    await canal.addObject(socketFalso(enviado), configFalsa('i1'), '', '', '')
+    const ultimo = enviado.mensajes[enviado.mensajes.length - 1]
+    assert.equal(ultimo.payloadType, EStatusPayload.INVENTORY)
+    return ultimo.inventory!
+}
+
+test('al abrir la pestaña se manda una foto, sin que nadie la pida', async () => {
+    const inv = await inventarioDe({ name: 'c1', providers: [{ id: 'metrics', started: true }] })
+    assert.equal(inv.cluster, 'c1')
+    assert.ok(inv.takenAt > 0, 'la foto tiene que decir de cuándo es')
+    assert.equal(inv.components.length, 1)
+})
+
+test('un provider arrancado sale como INSTANTIATED, y sin motivo que explicar', async () => {
+    const inv = await inventarioDe({ providers: [{ id: 'events', started: true }] })
+    const c = inv.components[0]
+    assert.equal(c.kind, EComponentKind.PROVIDER)
+    assert.equal(c.health, EComponentHealth.INSTANTIATED)
+    assert.equal(c.reason, undefined)
+})
+
+test('🔴 un provider arrancado NO se marca como activo ni como ocioso', async () => {
+    /*
+        El caso que más fácil sería estropear. Saber si algo tiene consumidores exige preguntárselo al
+        provider, y ese contrato no existe todavía (S2). Un administrador que lea "ocioso" va a ir a
+        desinstalar algo, así que mientras no se sepa, no se dice.
+    */
+    const inv = await inventarioDe({ providers: [{ id: 'events', started: true }] })
+    const estados = inv.components.map(c => String(c.health))
+    assert.ok(!estados.includes('active'), 'se está afirmando que algo está activo sin poder saberlo')
+    assert.ok(!estados.includes('idle'), 'se está afirmando que algo está ocioso sin poder saberlo')
+})
+
+test('un provider que el core nunca arrancó dice POR QUÉ', async () => {
+    const inv = await inventarioDe({ providers: [{ id: 'trivy', started: false }] })
+    const c = inv.components[0]
+    assert.equal(c.health, EComponentHealth.NOT_INSTANTIATED)
+    // El motivo es la columna que justifica la pantalla: un 'not running' a secas ya existe hoy.
+    assert.match(c.reason ?? '', /declares this provider/i)
+})
+
+test('con el router de configuración sin montar, pide reinicio en vez de parecer roto', async () => {
+    const inv = await inventarioDe({ providers: [{ id: 'azure', started: true, configRouter: {}, configRouterStarted: false }] })
+    const c = inv.components[0]
+    assert.equal(c.health, EComponentHealth.PENDING_RESTART)
+    assert.match(c.reason ?? '', /restart/i)
+})
+
+test('y si el router SÍ está montado, no molesta con un aviso de reinicio', async () => {
+    const inv = await inventarioDe({ providers: [{ id: 'azure', started: true, configRouter: {}, configRouterStarted: true }] })
+    assert.equal(inv.components[0].health, EComponentHealth.INSTANTIATED)
+})
+
+test('los pluviders se listan, y existir ya significa estar en marcha', async () => {
+    const inv = await inventarioDe({ pluviders: new Map([['plugin:agora', {}]]) })
+    assert.equal(inv.components[0].kind, EComponentKind.PLUVIDER)
+    assert.equal(inv.components[0].id, 'plugin:agora')
+    assert.equal(inv.components[0].health, EComponentHealth.INSTANTIATED)
+})
+
+test('un sender sin configuraciones se lista, y se avisa de que no puede entregar nada', async () => {
+    const inv = await inventarioDe({
+        senders: { listSenders: () => [{ id: 'email', configNames: [] }, { id: 'file', configNames: ['logs'] }] }
+    })
+    const email = inv.components.find(c => c.id === 'email')!
+    const file = inv.components.find(c => c.id === 'file')!
+    assert.match(email.reason ?? '', /no configuration/i)
+    assert.equal(file.reason, undefined, 'uno con configuración no tiene nada que explicar')
+})
+
+test('🔴 de los webhooks no sale la URL por ninguna parte', async () => {
+    /*
+        getUrl() devuelve la URL con el TOKEN dentro, y esta pantalla la puede estar mirando alguien que
+        no debe conocerlo. El test lo fija para que nadie la añada "porque es cómoda".
+    */
+    let pidioUrl = false
+    const inv = await inventarioDe({
+        webhooks: {
+            listWebhooks: () => [{ id: 'jira', configNames: ['prod'] }],
+            getUrl: () => { pidioUrl = true; return 'https://kwirth/webhook/jira/prod?token=SECRETO' }
+        }
+    })
+    assert.equal(pidioUrl, false, 'se ha pedido la URL de un webhook, que lleva el token dentro')
+    assert.ok(!JSON.stringify(inv).includes('SECRETO'), 'un token ha acabado en el inventario')
+})
+
+test('un Kwirth pelado no rompe: sin registros, inventario vacío', async () => {
+    const inv = await inventarioDe({})
+    assert.deepEqual(inv.components, [])
+})
+
+test('refrescar manda una foto NUEVA, y solo si la instancia existe', async () => {
+    const enviado: IEnviado = { mensajes: [] }
+    const canal = new StatusChannel({ providers: [{ id: 'events', started: true }] } as never, {} as never)
+    const ws = socketFalso(enviado)
+    await canal.addObject(ws, configFalsa('i1'), '', '', '')
+    assert.equal(enviado.mensajes.length, 1)
+
+    await canal.processCommand(ws, { instance: 'i1', action: 'command', flow: 'request' } as never)
+    assert.equal(enviado.mensajes.length, 2, 'el refresco no mandó una foto nueva')
+    assert.ok(enviado.mensajes[1].inventory!.takenAt >= enviado.mensajes[0].inventory!.takenAt)
+
+    // Una instancia que no es de este socket se rechaza con una señal, no con otra foto.
+    await canal.processCommand(ws, { instance: 'no-existe', action: 'command', flow: 'request' } as never)
+    assert.equal(enviado.mensajes.length, 3)
+    assert.equal(enviado.mensajes[2].payloadType, undefined, 'una instancia inexistente no puede recibir inventario')
+})
+
+test('cerrar la conexión no deja nada colgando', async () => {
+    const enviado: IEnviado = { mensajes: [] }
+    const canal = new StatusChannel({} as never, {} as never)
+    const ws = socketFalso(enviado)
+    await canal.addObject(ws, configFalsa('i1'), '', '', '')
+    assert.equal(canal.containsConnection(ws), true)
+    canal.removeConnection(ws)
+    assert.equal(canal.containsConnection(ws), false)
+    assert.equal(canal.containsInstance('i1'), false)
+})

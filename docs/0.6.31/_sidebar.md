@@ -156,6 +156,7 @@
   * [Pinocchio](/0.6.31/channels/pinocchio)
   * [Topology](/0.6.31/channels/topology)
   * [Censor](/0.6.31/channels/censor)
+  * [Status](/0.6.31/channels/status)
   * [News](/0.6.31/channels/news)
 * [Security](/0.6.31/security)
 * [Persistence](/0.6.31/persistence)
