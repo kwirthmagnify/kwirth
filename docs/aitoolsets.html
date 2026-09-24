@@ -259,7 +259,7 @@
     ]
 }</pre></div>
 
-  <p>The Kubernetes clients your tool receives are <strong>the ones Kwirth itself uses</strong> — the same authenticated instances, not new connections. What a toolset does <em>not</em> get is equally deliberate: the service-account token, senders, webhooks and the Docker client stay out. The set can be widened later, but on purpose rather than handed over wholesale.</p>
+  <p>The Kubernetes clients your tool receives are <strong>the ones Kwirth itself uses</strong> — the same authenticated instances, not new connections. What a toolset does <em>not</em> get is equally deliberate: the service-account token, senders and webhooks stay out. The set can be widened later, but on purpose rather than handed over wholesale.</p>
 
   <p>Point Kwirth at your build while you develop it, the same way as any other extension:</p>
 

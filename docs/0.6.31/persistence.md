@@ -33,6 +33,7 @@ at startup based on how it is running. The code above them never changes; only t
 | **Kubernetes** with `KWIRTH_STORE=<path>` | JSON files under `<path>/configmaps/` | **Encrypted** files under `<path>/secrets/` |
 | **Docker** | JSON files under `CONFIGMAPPATH` | Plain JSON files under `SECRETPATH` |
 | **Desktop** (Electron / Tauri) | JSON files under `~/.kwirth/configmaps/` | **Encrypted** files under `~/.kwirth/secrets/` |
+| **ECS** | JSON files under `KWIRTH_STORE/configmaps/` | **Encrypted** files under `KWIRTH_STORE/secrets/` |
 
 A few consequences worth knowing:
 
@@ -49,6 +50,10 @@ A few consequences worth knowing:
   clear.
 - **A filesystem store needs a real volume.** In Docker or in Kubernetes with `KWIRTH_STORE`, if the path
   is not on a mounted volume, everything kwirth remembers dies with the container — including the users.
+  **On ECS this is the default outcome**, because a task's disk does not survive the task: point
+  `KWIRTH_STORE` at an EFS mount or accept that every recycle starts from scratch. kwirth warns about it
+  in its startup log rather than failing, because a Kwirth without persistence is still useful — it just
+  is not the one you meant to deploy.
 - **The ~1 MiB ConfigMap cap is real, and it is not the same everywhere.** It is why extension data does
   not live here, and why a login extension's background image has a size limit: the image travels inside
   the record, in base64, which makes it about a third larger.

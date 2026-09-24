@@ -86,70 +86,102 @@ anunciados— porque montar ECS en un e2e exigiría ECS.
 
 ---
 
-## S2 — Qué se observa desde ECS
+## S2 — Qué se observa desde ECS · **absorbido por S3 y S4** (2026-09-24)
 
-**MVP**: la misma tarea de ECS, configurada, observa un cluster de Kubernetes externo; y en EC2 launch
-type, los contenedores de su instancia.
+Este stream se queda sin contenido propio, y conviene dejar escrito por qué en vez de borrarlo:
 
-| paso | qué |
-|---|---|
-| S2.1 | **Kubeconfig montado** (EFS o Secrets Manager): Kwirth en ECS observa un EKS externo. El código ya lo soporta; lo que falta es que la detección de ECS no lo impida y que la combinación quede nombrada. |
-| S2.2 | **EC2 + `/var/run/docker.sock`**: qué se ve realmente y qué no. Depende de **D2**, porque el camino pasa por las ramas de `EClusterType.DOCKER` que hoy están muertas. |
-| S2.3 | **Ingesta** como camino de Fargate: verificar de punta a punta FireLens → provider `fluentbit`, y OTLP → provider `otel`, desde otra tarea del mismo cluster ECS. |
-| S2.4 | Credenciales AWS: rol de tarea (`taskRoleArn`) frente a variables de entorno, y qué necesita cada provider. |
+- **S2.1 — kubeconfig montado**: ya verificado en S1. Un Kwirth con `FORCE=ecs` y un kubeconfig
+  utilizable resuelve `clusterType: kubernetes` y los canales funcionan igual que in-cluster, porque la
+  conexión es la misma API con las credenciales del kubeconfig. No hacía falta código nuevo.
+- **S2.2 — socket del CRI en EC2**: **descartado** con D2. Docker deja de ser una fuente de recursos.
+- **S2.3 — ingesta** y **S2.4 — credenciales AWS**: no son trabajo de core, son **configuración**. Su
+  sitio natural son los ejemplos (S3) y la documentación (S4), que es donde alguien los va a buscar.
 
-**Checks**
-
-- [ ] Desde ECS, un cluster EKS se lista y su log se sigue.
-- [ ] EC2: los contenedores de la instancia aparecen; queda escrito que **es sólo esa instancia**, no el cluster ECS.
-- [ ] Fargate: una segunda tarea con sidecar FireLens manda su log y se ve en el canal.
-- [ ] ⛔ Ningún camino de prueba dispara senders ni webhooks reales.
-
-**CL9** al terminar.
+Lo que quedaba de verdad —FireLens apuntando al provider `fluentbit`, OTLP al provider `otel`, y el rol
+de tarea frente a variables de entorno— pasa a S3 como ejemplos ejecutables.
 
 ---
 
-## S3 — El proyecto `ecs/`
+## S3 — El proyecto `ecs/` ✅ (2026-09-24)
 
 **MVP**: `ecs/` contiene lo que hace falta para desplegar, y se despliega tal cual.
 
-- Task definition **Fargate** (mínima, y una completa con EFS + Secrets Manager + ALB).
-- Task definition **EC2** (con el bind-mount del socket, y la advertencia de su alcance).
-- Plantilla **CloudFormation** con los recursos de alrededor: EFS, security groups, target group, roles
-  de ejecución y de tarea con los permisos mínimos.
-- Ejemplo de **FireLens** para el camino de ingesta de Fargate.
-- `README.md` del proyecto: qué hay, qué elegir y en qué orden.
+- `README.md` — qué hay, qué elegir, y la configuración que ECS obliga a resolver.
+- `task-definition-minimal.json` — lo mínimo que arranca. No persiste nada, y lo dice.
+- `task-definition-fargate.json` — EFS, `MASTERKEY` por Secrets Manager, health check.
+- `task-definition-ec2.json` — lo mismo en EC2, y **con un kubeconfig montado**, que es el caso de
+  observar un cluster desde ECS.
+- `cloudformation.yaml` — EFS con access point, security groups, target group, roles y log group. No
+  crea VPC, cluster ni balanceador: eso ya existe y entra como parámetro.
+- `firelens-sidecar.json` — cómo **otra** tarea manda su log a este Kwirth.
 
 **Checks**
 
-- [ ] Cada JSON/YAML valida con `node -e JSON.parse` (o el parser que toque) — no basta con que *parezca* bien.
-- [ ] Los ejemplos no llevan credenciales, cuentas ni ARNs reales.
-- [ ] Los permisos IAM son los mínimos, y cada uno tiene escrito para qué es.
-
-**CL9** al terminar.
+- [x] Cada JSON valida con `node -e JSON.parse`; el YAML, revisado (sin tabs, 279 líneas).
+- [x] Sin credenciales, cuentas ni ARNs reales: sólo placeholders `<ACCOUNT_ID>`, `<REGION>`…
+- [x] Permisos IAM mínimos y comentados: el rol de ejecución lee **una** secret, el de tarea monta EFS
+      **a través del access point** y nada más.
+- [x] El health check usa `wget`, **comprobado dentro de la imagen** (`/usr/bin/wget`; no hay `curl`).
+- [x] La URI de ingesta de FireLens (`/provider/fluentbit`) comprobada contra el código —
+      `routerAlias`, que el core monta como `/provider/<alias>`— y no escrita de memoria.
+- [x] El tag de la imagen: documentado cómo se elige, con `latest` sólo en el ejemplo de prueba y
+      versión fijada en los demás, explicando por qué `latest` en una task definition anula lo que una
+      task definition sirve.
 
 ---
 
-## S4 — Documentación
+## S4 — Documentación ✅ (2026-09-24)
 
 **MVP**: quien no conoce Kwirth despliega en ECS siguiendo la página, sin abrir el código.
 
-- Página de ECS en `docs/0.6.31/`, colgada del sidebar, **en inglés** como el resto de la documentación.
-- Tabla completa de variables de entorno relevantes en ECS, con qué hace cada una y qué pasa si falta.
-- Las dos rutas (Fargate y EC2) con lo que cambia entre ellas, incluido lo que **no se puede** hacer en cada una.
-- Actualizar [installation.md](../../docs/0.6.31/installation.md) y [persistence.md](../../docs/0.6.31/persistence.md), que hoy sólo contemplan Kubernetes, Docker y External.
-- ⚠️ La documentación del core se sirve desde el tgz: editar el markdown **no basta**, hay que regenerar
-  `kwirth.tgz` y reiniciar el back.
+Se hizo **sección dentro de `installation.md`**, no página aparte: ECS es una forma más de instalar, y
+quien busca cómo desplegar va a esa página. Así no hay que tocar el sidebar ni partir en dos la
+información de instalación.
+
+- `installation.md` — sección *ECS: kwirth as an AWS task*, entre Docker y External. Qué deja de dar la
+  plataforma (store e identidad), qué observa según lo que se monte, y el log de arranque como primera
+  herramienta de diagnóstico. Y *Docker & External* pasa a *Docker, ECS & External*.
+- `persistence.md` — ECS en la tabla de modos, y la consecuencia que en ECS es **el caso por defecto**:
+  sin `KWIRTH_STORE` en un volumen, el store muere con la tarea.
+- **Website** (`docs/*.html`, que es otra cosa que la documentación versionada): pestaña **AWS ECS** en
+  la sección de instalación de `index.html`, y `aitoolsets.html` corregido — decía que a un toolset no
+  se le entrega "the Docker client", que ya no existe.
+- `kwirth.tgz` regenerado, porque la guía se sirve desde ahí y editar el markdown no basta.
 
 **Checks**
 
-- [ ] Toda variable documentada existe de verdad en el código.
-- [ ] Las capturas necesarias, hechas y verificadas (punto 4 de la CL9, no un extra).
-- [ ] Revisado si esto invalida algo ya escrito en `installation.md` y `persistence.md`.
-
-**CL9** al terminar.
+- [x] Las 9 variables documentadas existen en el código, comprobado una a una con `process.env.<X>`.
+- [x] La pestaña del website **verificada en un navegador**, no supuesta: aparece, se activa, muestra su
+      panel y oculta el de Helm. Y de paso se corrigió el subtítulo, que prometía *"just one Helm
+      command"* con una pestaña de ECS al lado.
+- [x] **Ninguna captura afectada**, y no por omisión: `isDocker` era siempre falso en todo entorno real
+      —`clusterType` sólo podía valer `kubernetes`—, así que los `disabled={… || isDocker}` no
+      deshabilitaban nada y quitarlos no cambia un píxel. El icono de `none` sólo sale en un Kwirth sin
+      cluster, que antes no podía existir.
+- [x] Revisado qué quedaba **falso** en la documentación, no sólo qué faltaba: el ejemplo de canal
+      autónomo, y las páginas de `fileman`, `echo` y `news`, que prometían funcionar sobre Docker.
 
 ---
+
+## S5 — Documentación de Docker ✅ (2026-09-24)
+
+No estaba en el plan. Sale de que S1 cambió el modo Docker sin querer: un contenedor **sin kubeconfig**
+pasó de no arrancar a ser una forma válida de correr Kwirth, y la carpeta `docker/` llevaba tiempo sin
+que nadie la mirase.
+
+Lo que la revisión encontró:
+
+| hallazgo | qué se hizo |
+|---|---|
+| `kwirth-users` y `kwirth.keys` **versionados en el repo público**, con un admin de contraseña `asd`, scope `cluster::::` y 12 access keys. Están ahí porque `docker-launch.cmd` monta la propia carpeta como `CONFIGMAPPATH` y `SECRETPATH` | fuera de git y a `.gitignore`, contenido reemplazado. Las 12 claves ya caducaron en abril y `cleanApiKeys()` las tiraba al arrancar, así que no aportaban nada operativo |
+| La sección *Get started [Docker]* del readme de Docker Hub dice literalmente **`+++pending`** | **no tocado**, fuera del alcance acordado. Queda anotado: es lo primero que ve quien encuentra la imagen |
+| `CONFIGMAPPATH` y `SECRETPATH` valen `.` por defecto, que en la imagen es `/usr/kwirth/dist` — la capa escribible del contenedor | documentado como la trampa principal: funciona perfectamente hasta el `docker rm` |
+| En modo Docker los secretos se escriben **en claro**, al contrario que en Kubernetes con `KWIRTH_STORE`, desktop y ECS | documentado, con la consecuencia: `MASTERKEY` firma API keys pero **no cifra nada aquí** |
+| Los cuatro scripts son `.cmd` de Windows; no hay equivalente para Linux ni macOS | **no se añadieron**, fuera del alcance acordado. El README da el `docker run` de las dos plataformas |
+| Dos readmes de Docker Hub divergidos (`jfvilas` y `kwirthmagnify`) | anotado, sin tocar |
+
+Entregado: [`docker/README.md`](../../docker/README.md), y la sección *Docker* de `installation.md`
+reescrita — documentaba un `docker run` **sin store**, que es exactamente el fallo que se describe.
 
 ## Pendiente al cerrar el proyecto
 
@@ -165,6 +197,15 @@ type, los contenedores de su instancia.
   `log` seguía en 0.2.23 y por eso mostraba `[,kubernetes]`. Hay que actualizarlos desde el gestor.
 
 ## Hallazgos laterales, al backlog
+
+- **Actualizar un plugin no refresca lo que el core ANUNCIA de él.** En `onPluginInstalled`
+  ([index.ts:1400](../../back/src/index.ts#L1400)) la entrada de `kwirthData.channels` sólo se añade
+  `if (!...some(c => c.id === id))`. Eso vale para una instalación nueva; en una **actualización** el id
+  ya está y la entrada vieja se queda, con los `sources` y los flags de la versión anterior. El módulo
+  del back sí se recarga —lo que no se recompone es el anuncio—, así que hace falta reiniciar el core y
+  **nada lo avisa**, porque el aviso depende de que el plugin declare `requiresRestart` y esto le pasa a
+  cualquiera. Lo destapó el usuario actualizando `log` a 0.2.24: seguía anunciando `[,kubernetes]` hasta
+  reiniciar. Arreglo probable: reemplazar la entrada en vez de saltarla.
 
 - Las entradas de **docs** en el manifest privado se llaman `Kwirth <X> — Guide`, pero el criterio de los
   artefactos de pago es `IRIA <Producto> — Guide`. Visto al clonar las entradas de spectrum, sugarless y

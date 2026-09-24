@@ -494,11 +494,12 @@
   <div class="install-section">
     <div class="section-tag">Installation</div>
     <h2 class="section-title">Up and running in 2 minutes</h2>
-    <p class="section-sub" style="margin-bottom:32px;">No external databases, no message queues, no complex configuration. Just one Helm command.</p>
+    <p class="section-sub" style="margin-bottom:32px;">No external databases, no message queues, no complex configuration. One Helm command on Kubernetes, one task definition on ECS.</p>
     <div class="install-tabs">
       <button class="install-tab active" data-tab="i-helm">Helm</button>
       <button class="install-tab" data-tab="i-kubectl">kubectl</button>
       <button class="install-tab" data-tab="i-docker">Docker Desktop</button>
+      <button class="install-tab" data-tab="i-ecs">AWS ECS</button>
     </div>
     <div id="i-helm" class="install-panel active">
       <div class="code-block"><pre><span class="comment"># Add the Kwirth Helm repo</span>
@@ -534,6 +535,24 @@
 
 <span class="comment"># Access at http://localhost:PORT (check service for assigned port)</span>
 <span class="cmd">kubectl get svc</span> <span class="flag">-n</span> kwirth kwirth</pre></div>
+    </div>
+    <div id="i-ecs" class="install-panel">
+      <div class="code-block"><pre><span class="comment"># Same image, no ECS-specific build. Pin a version, not :latest</span>
+<span class="cmd">aws ecs register-task-definition</span> \
+  <span class="flag">--cli-input-json</span> <span class="val">file://task-definition-fargate.json</span>
+
+<span class="cmd">aws ecs create-service</span> \
+  <span class="flag">--cluster</span> <span class="val">my-cluster</span> \
+  <span class="flag">--service-name</span> <span class="val">kwirth</span> \
+  <span class="flag">--task-definition</span> <span class="val">kwirth</span> \
+  <span class="flag">--launch-type</span> <span class="val">FARGATE</span> \
+  <span class="flag">--desired-count</span> <span class="val">1</span>
+
+<span class="comment"># Point KWIRTH_STORE at an EFS mount, or nothing survives a task recycle</span></pre></div>
+      <p style="margin-top:12px;font-size:0.875rem;color:var(--muted);">
+        Task definitions, a CloudFormation template for EFS, IAM and the target group, and a FireLens example:
+        <a href="https://github.com/kwirthmagnify/kwirth/tree/master/ecs" style="color:var(--blue);">ecs/ folder</a>.
+      </p>
     </div>
     <p style="margin-top:20px;font-size:0.875rem;color:var(--muted);">
       Need more options? See the full <a href="getting-started.html" style="color:var(--blue);">Getting Started guide</a> for Ingress, TLS, and multi-cluster setup.

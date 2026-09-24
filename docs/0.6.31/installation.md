@@ -143,13 +143,74 @@ With this setup, all kwirth configuration is persisted in the PVC and survives p
 > **Helm**: pass `--set store=/mnt/kwirth-data` together with the appropriate `volumes`/`volumeMounts` values, or configure them in your `values.yaml`.
 
 ## Docker: kwirth in your local docker environment
-To run kwirth as a Docker container, you can use the following command, ensuring you mount your kubeconfig file so kwirth can interact with your cluster:
+To run kwirth as a Docker container, mount your kubeconfig so kwirth can reach your cluster, **and mount
+a directory for its store** — without it, everything kwirth remembers dies with the container:
 
 ```bash
 docker run -d -p 3883:3883 \
-  -v ~/.kube/config:/root/.kube/config \
+  -v ~/.kube/config:/root/.kube/config:ro \
+  -v ~/.kwirth:/data \
+  -e CONFIGMAPPATH=/data \
+  -e SECRETPATH=/data \
   --name kwirth kwirthmagnify/kwirth:latest
 ```
+
+`CONFIGMAPPATH` and `SECRETPATH` both default to `.`, which inside the image is the container's own
+writable layer. It works perfectly until you `docker rm` the container, and then your users, API keys and
+installed extensions are gone. Note also that **in Docker mode secrets are written as plain JSON**, so
+whatever directory you mount for `SECRETPATH` holds passwords and tokens in the clear — see
+[Persistence](persistence).
+
+The kubeconfig is optional. Without it kwirth still starts and serves the front, reporting its cluster
+type as `none`: autonomous channels run, ingestion providers receive, and you can federate against
+another kwirth. A kubeconfig pointing at `127.0.0.1` will not work as is, because inside the container
+that address is the container itself.
+
+More detail, including the Windows form of the command and what each script in the repository does, is in
+the [`docker/` folder](https://github.com/kwirthmagnify/kwirth/tree/master/docker).
+
+## ECS: kwirth as an AWS task
+
+kwirth runs as an ECS task on **Fargate** or **EC2**, with the same image — there is no ECS-specific
+build. It recognises ECS by the metadata variable the ECS agent injects in both launch types, so nothing
+has to be declared for the environment to be detected.
+
+What changes is not the image, it is what the platform stops giving you. Kubernetes hands kwirth a
+namespace to keep its state in and an identity; ECS hands neither, so both are configuration:
+
+- **`KWIRTH_STORE` pointing at an EFS mount.** Without it kwirth starts and warns, but its store lives on
+  a disk that dies with the task — users, API keys and installed extensions included.
+- **`MASTERKEY` through `secrets[]`**, not `environment[]`. It derives the encryption key for secrets at
+  rest, and **changing it later makes everything already written unreadable**; there is no migration.
+- **A health check on `/healthz`.** kwirth answers it in every environment. A target group checking
+  something else recycles the task forever without saying why.
+
+What kwirth **observes** there is a separate question, and it depends only on what you mount:
+
+- **With a kubeconfig** (`KUBECONFIG`), it observes that cluster, and the channels behave exactly as they
+  do in-cluster — the connection is the same API with the kubeconfig credentials. Note that an EKS
+  kubeconfig usually shells out to `aws eks get-token`, and the AWS CLI is not in the image.
+- **With nothing**, it observes no infrastructure, and that is a complete configuration: the front is
+  served, users log in, autonomous channels run, ingestion providers receive, and you can federate
+  against another kwirth. It reports itself as cluster type `none`, which is the honest answer rather
+  than claiming a Kubernetes that is not there.
+
+kwirth prints what it found at startup, and that log is the first thing to read when a deployment does
+not behave:
+
+```
+Execution environment: 'ecs'
+Execution environment capabilities:
+  Kubernetes API: no (no usable kubeconfig), so cluster events, metrics and resources are not available
+  Store: encrypted files at '/data/kwirth' (KWIRTH_STORE)
+```
+
+Ready-to-use task definitions, a CloudFormation template for the surrounding resources (EFS, security
+groups, target group, IAM roles) and a FireLens example live in the
+[`ecs/` folder](https://github.com/kwirthmagnify/kwirth/tree/master/ecs) of the repository.
+
+> kwirth does **not** manage ECS tasks or containers as if they were a cluster. To get the log of your
+> other tasks, ship it in through an ingestion provider.
 
 ## External: launch kwirth locally (without docker)
 First install kwirth:
@@ -308,8 +369,8 @@ So, finally, you should be able to access kwirth at: http://your.dns.name/quirz.
 http://localhost/quirz
 ```
 
-## Docker & External
-Accessing Docker and External installations is very similar to accessing a Kubernetes deployed kwirth, with the slight difference of not to access via a ingress controller. Instead, you just access kwirth at the port and path you have configured when you started the kwirth server:
+## Docker, ECS & External
+Accessing Docker, ECS and External installations is very similar to accessing a Kubernetes deployed kwirth, with the slight difference of not to access via a ingress controller. Instead, you just access kwirth at the port and path you have configured when you started the kwirth server — on ECS that means through whatever load balancer fronts the task, with `ROOTPATH` set if it routes by path.
 
 ### Docker
 If your start command was something similar to:
