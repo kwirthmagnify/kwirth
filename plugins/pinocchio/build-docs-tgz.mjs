@@ -43,9 +43,9 @@ try {
         targetType: 'plugin',
         id: 'pinocchio',
         name: '@kwirthmagnify/kwirth-docs-pinocchio',
-        displayName: 'kwirth Pinocchio — Guide',
+        displayName: 'Kwirth Pinocchio — Guide',
         version: pkg.version,
-        description: 'User and administrator guide for the kwirth Pinocchio plugin'
+        description: 'User and administrator guide for the Kwirth Pinocchio plugin'
     }, null, 2))
 
     // El prefijo 'package/' NO es decorativo: npmjs rechaza el tarball sin el, con

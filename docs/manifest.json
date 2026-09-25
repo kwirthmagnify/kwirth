@@ -3,6 +3,18 @@
     "extensionType": "docs",
     "targetType": "plugin",
     "id": "pinocchio",
+    "name": "Kwirth Pinocchio — Guide",
+    "displayName": "Kwirth Pinocchio — Guide",
+    "version": "0.2.35",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-docs-pinocchio/-/kwirth-docs-pinocchio-0.2.35.tgz",
+    "description": "User and administrator guide for the Kwirth Pinocchio plugin",
+    "icon": "Description",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "docs",
+    "targetType": "plugin",
+    "id": "pinocchio",
     "name": "kwirth Pinocchio — Guide",
     "displayName": "kwirth Pinocchio — Guide",
     "version": "0.2.31",
