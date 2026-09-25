@@ -11,7 +11,8 @@
     "providers": {
         "longhorn": "../providers/longhorn/dist",
         "azure": "../providers/azure/dist",
-    "fluentbit": "../providers/fluentbit/dist"
+    "fluentbit": "../providers/fluentbit/dist",
+        "sugarless": "../providers/sugarless/dist"
     },
     "senders": {
     "file": "../senders/file/dist",
