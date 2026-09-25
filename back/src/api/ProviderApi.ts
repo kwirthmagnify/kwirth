@@ -3,7 +3,7 @@ import { ProviderManager } from '../tools/ProviderManager'
 import { IProvider, IProviderFieldDef, IProviderSubscriptionHelp, TProviderConstructor } from '../providers/IProvider'
 import { TPluviderChannel, warnNameCollisions } from '../providers/Pluvider'
 import { IProviderMeta } from '../tools/ProviderManager'
-import { ELogComponent, logError, logInfo } from '../tools/Logging'
+import { ELogComponent, logError, logInfo, providerLogger } from '../tools/Logging'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 
@@ -96,7 +96,7 @@ export class ProviderApi {
             if (!help || typeof help.usage !== 'string' || typeof help.example !== 'object') return undefined
             return help
         } catch (err) {
-            logError(ELogComponent.PROVIDER, `'${id}' failed to report its subscription help: ${err}`)
+            providerLogger(id).error(`Failed to report its subscription help: ${err}`)
             return undefined
         }
     }
@@ -110,7 +110,7 @@ export class ProviderApi {
         try {
             return pluvider.getPluviderData()?.description ?? ''
         } catch (err) {
-            logError(ELogComponent.PROVIDER, `Pluvider '${id}' failed to report its data: ${err}`)
+            providerLogger(id).error(`Failed to report its pluvider data: ${err}`)
             return ''
         }
     }
@@ -125,7 +125,7 @@ export class ProviderApi {
             const names = provider.getConfigNames()
             return Array.isArray(names) ? names.filter(n => typeof n === 'string') : undefined
         } catch (err) {
-            logError(ELogComponent.PROVIDER, `Provider '${provider.id}' failed to report its config names: ${err}`)
+            providerLogger(provider.id).error(`Failed to report its config names: ${err}`)
             return undefined
         }
     }
@@ -155,7 +155,7 @@ export class ProviderApi {
             const schema = provider.getConfigSchema()
             return Array.isArray(schema) && schema.length > 0 ? schema : undefined
         } catch (err) {
-            logError(ELogComponent.PROVIDER, `Provider '${provider.id}' failed to report its config schema: ${err}`)
+            providerLogger(provider.id).error(`Failed to report its config schema: ${err}`)
             return undefined
         }
     }

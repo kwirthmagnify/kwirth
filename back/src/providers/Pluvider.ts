@@ -1,6 +1,6 @@
 import { IChannel, IPluvider } from '@kwirthmagnify/kwirth-common-back'
 import { PLUVIDER_ID_PREFIX } from '@kwirthmagnify/kwirth-common'
-import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
+import { ELogComponent, logInfo, logWarning, providerLogger } from '../tools/Logging'
 
 /*
     Un PLUVIDER es un canal que ADEMAS produce: expone in-process la informacion que ya genera, para
@@ -102,15 +102,15 @@ export const rebindPluvider = async (pluviders: Map<string, TPluviderChannel>, p
     const old = pluviders.get(pluvId)
     if (old) {
         try { await old.stopProvider() }
-        catch (err) { logError(ELogComponent.CORE, `Pluvider '${pluvId}' failed to stop while being replaced: ${err}`) }
+        catch (err) { providerLogger(pluvId).error(`Failed to stop while being replaced: ${err}`) }
         pluviders.delete(pluvId)
     }
     if (!isPluvider(newInstance)) return
     pluviders.set(pluvId, newInstance)
     try { await newInstance.startProvider() }
-    catch (err) { logError(ELogComponent.CORE, `Pluvider '${pluvId}' failed to start after being replaced: ${err}`) }
-    if (old) logWarning(ELogComponent.CORE, `Pluvider '${pluvId}' was replaced — its subscribers were left on the previous instance and must subscribe again`)
-    else logInfo(ELogComponent.CORE, `Pluvider '${pluvId}' registered`)
+    catch (err) { providerLogger(pluvId).error(`Failed to start after being replaced: ${err}`) }
+    if (old) providerLogger(pluvId).warning('Replaced — its subscribers were left on the previous instance and must subscribe again')
+    else providerLogger(pluvId).info('Registered')
 }
 
 /*
@@ -129,10 +129,10 @@ export const startPluviders = async (pluviders: Map<string, TPluviderChannel>): 
     for (const [pluvId, pluv] of pluviders) {
         try {
             await pluv.startProvider()
-            logInfo(ELogComponent.CORE, `  '${pluvId}' started`)
+            providerLogger(pluvId).info('Started')
         }
         catch (err) {
-            logError(ELogComponent.CORE, `Pluvider '${pluvId}' failed to start: ${err}`)
+            providerLogger(pluvId).error(`Failed to start: ${err}`)
         }
     }
 }

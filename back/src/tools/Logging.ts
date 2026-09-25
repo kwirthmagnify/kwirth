@@ -54,8 +54,12 @@ const logGeneric = (
     }
 }
 
-export const logTrace = (message: unknown): void => {
-    logGeneric('trace', colors.trace, ELogComponent.CORE, message)
+/*
+    Takes a component like the rest of them. It used to hardcode CORE, and since its ONLY caller is the
+    one the core lends to channels, everything a plugin traced showed up as if the core had said it.
+*/
+export const logTrace = (component: ELogComponent, message: unknown): void => {
+    logGeneric('trace', colors.trace, component, message)
 }
 
 export const logInfo = (component: ELogComponent, message: unknown): void => {
@@ -69,6 +73,47 @@ export const logWarning = (component: ELogComponent, message: unknown): void => 
 export const logError = (component: ELogComponent, message: any): void => {
     logGeneric('error', colors.error, component, message)
 }
+
+/**
+ * What a component logs with: the usual levels, but always saying who is speaking.
+ */
+export interface IComponentLogger {
+    info(message: unknown): void
+    trace(message: unknown): void
+    warning(message: unknown): void
+    error(message: unknown): void
+}
+
+/*
+    A bare '[provider]' identifies nobody: in a Kwirth running fifteen providers they all write under
+    the same label, so there is no way to tell which one is talking, nor to filter the log down to the
+    one you care about. The component says what KIND of line this is, not whose it is.
+
+    So the id goes in front of the message, the way channels already do it ('[excubitor] registry
+    scan...'). The core puts it there instead of asking every provider to remember its own prefix:
+    whatever has to be remembered ends up missing from half the lines.
+
+    Objects are serialised ON ONE LINE rather than indented as the general format does: a provider log
+    is usually a small value next to its explanation, and splitting it over five lines breaks exactly
+    what this is here to fix — reading a provider's log at a glance. An Error keeps its stack, which is
+    the one case where the extra lines earn their place.
+*/
+export const componentLogger = (component: ELogComponent, id: string): IComponentLogger => {
+    const prefixed = (message: unknown): string => {
+        if (message instanceof Error) return `[${id}] ${message.stack ?? message.message}`
+        if (typeof message === 'object' && message !== null) return `[${id}] ${JSON.stringify(message)}`
+        return `[${id}] ${String(message)}`
+    }
+    return {
+        info: (message: unknown) => logGeneric('info', colors.info, component, prefixed(message)),
+        trace: (message: unknown) => logGeneric('trace', colors.trace, component, prefixed(message)),
+        warning: (message: unknown) => logGeneric('warn', colors.warning, component, prefixed(message)),
+        error: (message: unknown) => logGeneric('error', colors.error, component, prefixed(message))
+    }
+}
+
+/** Shorthand for the common case: a provider logging under its own id. */
+export const providerLogger = (providerId: string): IComponentLogger => componentLogger(ELogComponent.PROVIDER, providerId)
 
 export const setLogConfig = (ansi:boolean) => {
     ansiLog = ansi

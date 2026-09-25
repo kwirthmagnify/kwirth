@@ -144,36 +144,37 @@ test('se vuelve a la tabla sin perder nada', async () => {
     expect(await page.locator('table tbody tr').count()).toBeGreaterThan(0)
 })
 
-test('🔴 si hay consumo, o se dibuja o se dice por que no se puede dibujar', async () => {
+test('🔴 if there is consumption, it either draws it or says why it cannot', async () => {
     /*
-        El invariante que faltaba, y el que se rompio de verdad: la tabla y el grafo no pueden decir
-        cosas distintas. Si algun productor reconoce consumidores, el grafo NO puede limitarse a
-        "nothing is subscribed to anything" — o ensena las aristas, o explica que esas suscripciones
-        se hicieron sin pasar por el core y por eso no sabe quienes son.
+        The invariant that was missing, and the one that actually broke: the table and the graph
+        cannot say different things. If any producer acknowledges consumers, the graph must NOT
+        settle for "nothing is subscribed to anything" — it either shows the edges, or explains that
+        those subscriptions were made without going through the core and that is why it does not
+        know who they are.
 
-        Se cruza lo que ve el usuario en las dos vistas, no el estado interno: asi el test sigue
-        valiendo aunque cambie de donde sale cada numero.
+        It crosses what the USER sees in both views, not the internal state, so the test keeps its
+        value even if where each number comes from changes.
     */
     await page.locator('button[aria-label="Table view"]').click()
     await expect(page.getByRole('columnheader', { name: 'Why', exact: true })).toBeVisible()
 
-    const filas = page.locator('table tbody tr')
-    let consumo = 0
-    for (let i = 0; i < await filas.count(); i++) {
-        const celda = (await filas.nth(i).locator('td').nth(3).innerText()).trim()
-        if (/^[0-9]+$/.test(celda)) consumo += Number(celda)
+    const rows = page.locator('table tbody tr')
+    let consumption = 0
+    for (let i = 0; i < await rows.count(); i++) {
+        const cell = (await rows.nth(i).locator('td').nth(3).innerText()).trim()
+        if (/^[0-9]+$/.test(cell)) consumption += Number(cell)
     }
 
     await page.locator('button[aria-label="Graph view"]').click()
-    if (consumo === 0) return   // sin consumo, "no hay nada que dibujar" es la verdad
+    if (consumption === 0) return   // with no consumption, "nothing to draw" is the truth
 
-    await page.waitForTimeout(1500)   // el layout es asincrono
-    const aristas = await page.locator('.react-flow__edge').count()
-    if (aristas > 0) return
+    await page.waitForTimeout(1500)   // the layout is asynchronous
+    const edges = await page.locator('.react-flow__edge').count()
+    if (edges > 0) return
 
     await expect(
         page.getByText(/subscribed straight to the provider/),
-        `${consumo} consumidores en la tabla y el grafo no dibuja ni explica nada`
+        `${consumption} consumers in the table and the graph neither draws nor explains anything`
     ).toBeVisible()
 })
 

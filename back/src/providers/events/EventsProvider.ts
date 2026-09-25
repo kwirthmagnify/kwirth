@@ -4,7 +4,7 @@ import { KwirthData } from '@kwirthmagnify/kwirth-common'
 import { IProvider, IProviderSubscriptionHelp } from '../IProvider'
 import { ClusterInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
-import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
+import { IComponentLogger, providerLogger } from '../../tools/Logging'
 import { AuthorizationManagement } from '../../tools/AuthorizationManagement'
 import { ApiKeyApi } from '../../api/ApiKeyApi'
 
@@ -24,6 +24,8 @@ export interface IEventsQuery {
 
 export class EventsProvider implements IProvider {
     public readonly id = 'events'
+    // Everything this provider writes comes out identified: '[provider] [WARN] [events] ...'
+    private log: IComponentLogger = providerLogger(this.id)
     public readonly providesRouter = true
     public router = express.Router()
     public routerAlias = 'events'
@@ -64,7 +66,7 @@ export class EventsProvider implements IProvider {
                     res.status(200).json(items)
                 }
                 catch (err) {
-                    logError(ELogComponent.PROVIDER, `GET /provider/events error: ${err}`)
+                    this.log.error(`GET /provider/events error: ${err}`)
                     res.status(500).json([])
                 }
             })
@@ -123,7 +125,7 @@ export class EventsProvider implements IProvider {
             this.subscribers.set(c, subscriber)
         }
         catch(err) {
-            logError(ELogComponent.PROVIDER, `Errors occurred while adding subscriber ${c.getChannelData().id} to provider 'events'`)
+            this.log.error(`Errors occurred while adding subscriber ${c.getChannelData().id} to provider 'events'`)
         }
     }
 
@@ -166,16 +168,16 @@ export class EventsProvider implements IProvider {
                     (err) => {
                         if (entry.stopped) return
                         const errorMsg = err?.message || err?.Error || "Unknown error"
-                        logError(ELogComponent.PROVIDER, `[${resourcePath}] Watcher ended: ${errorMsg}`)
+                        this.log.error(`[${resourcePath}] Watcher ended: ${errorMsg}`)
 
                         if (retryCount < MAX_RETRIES) {
                             retryCount++
-                            logInfo(ELogComponent.PROVIDER, `[${resourcePath}] Retry ${retryCount}/${MAX_RETRIES}. Waiting ${currentWaitTime / 1000}s...`)
+                            this.log.info(`[${resourcePath}] Retry ${retryCount}/${MAX_RETRIES}. Waiting ${currentWaitTime / 1000}s...`)
                             setTimeout(watchLoop, currentWaitTime)
                             currentWaitTime *= 2
                         }
                         else {
-                            logError(ELogComponent.PROVIDER, `[${resourcePath}] MAX RETRIES REACHED (${MAX_RETRIES}). Stopping watcher.`)
+                            this.log.error(`[${resourcePath}] MAX RETRIES REACHED (${MAX_RETRIES}). Stopping watcher.`)
                             this.resourceWatchers.delete(resourcePath)
                         }
                     }
@@ -185,7 +187,7 @@ export class EventsProvider implements IProvider {
                 if (entry.stopped) return
                 if (retryCount < MAX_RETRIES) {
                     retryCount++
-                    logError(ELogComponent.PROVIDER, `[${resourcePath}] Error: ${error.message}. Retry ${retryCount} in ${currentWaitTime / 1000}s`)
+                    this.log.error(`[${resourcePath}] Error: ${error.message}. Retry ${retryCount} in ${currentWaitTime / 1000}s`)
                     setTimeout(watchLoop, currentWaitTime)
                     currentWaitTime *= 2
                 }
@@ -233,12 +235,12 @@ export class EventsProvider implements IProvider {
         const resourcePath = `/apis/${crd.spec.group}/${crd.spec.versions[0].name}/${crd.spec.names.plural}`
 
         if (this.resourceWatchers.has(resourcePath)) {
-            logWarning(ELogComponent.PROVIDER, `Already watching CRD instances for: ${kindName}`)
+            this.log.warning(`Already watching CRD instances for: ${kindName}`)
             return
         }
 
         if (crd.spec.versions && crd.spec.versions.length > 1) {
-            logWarning(ELogComponent.PROVIDER, `Only version '${crd.spec.versions[0].name}' of '${kindName}' will be watched. All versions are: ${crd.spec.versions.map((v:any) => v.name).join(', ')}`);
+            this.log.warning(`Only version '${crd.spec.versions[0].name}' of '${kindName}' will be watched. All versions are: ${crd.spec.versions.map((v:any) => v.name).join(', ')}`);
         }
 
         for (let [channel, subscriber] of subscribersList.entries()) {
@@ -258,22 +260,22 @@ export class EventsProvider implements IProvider {
         }
 
         if (entry) {
-            logWarning(ELogComponent.PROVIDER, `Stopping watcher for CRD: ${kindName} at ${resourcePath}`)
+            this.log.warning(`Stopping watcher for CRD: ${kindName} at ${resourcePath}`)
             entry.stopped = true
             try {
                 // @ts-ignore
                 if (typeof entry.watch.abort === 'function') entry.watch.abort()
             }
             catch (e) {
-                logError(ELogComponent.PROVIDER, 'Error aborting watcher:')
-                logError(ELogComponent.PROVIDER, e)
+                this.log.error('Error aborting watcher:')
+                this.log.error(e)
             }
             this.resourceWatchers.delete(resourcePath)
         }
     }
 
     startProvider = async () => {
-        logInfo(ELogComponent.PROVIDER, 'Events reception started...')
+        this.log.info('Events reception started...')
         const coreResources = [
             '/api/v1/nodes',
             '/api/v1/namespaces',
@@ -322,7 +324,7 @@ export class EventsProvider implements IProvider {
                 if (typeof entry.watch.abort === 'function') entry.watch.abort()
             }
             catch (e) {
-                logError(ELogComponent.PROVIDER, `Error aborting watcher for ${path}: ${e}`)
+                this.log.error(`Error aborting watcher for ${path}: ${e}`)
             }
         }
         this.resourceWatchers.clear()

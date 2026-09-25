@@ -3,7 +3,7 @@ import { IMetricsCluster, IMetricsClusterUsage, IMetricsNode, IMetricsNodeSummar
 import { IProvider, IProviderSubscriptionHelp } from '../IProvider'
 import { ClusterInfo, INodeInfo } from '../../model/ClusterInfo'
 import { IChannel } from '../../channels/IChannel'
-import { ELogComponent, logError, logInfo, logWarning } from '../../tools/Logging'
+import { IComponentLogger, providerLogger } from '../../tools/Logging'
 import express, { Request, Response} from 'express'
 import { AuthorizationManagement } from '../../tools/AuthorizationManagement'
 import { ApiKeyApi } from '../../api/ApiKeyApi'
@@ -19,6 +19,8 @@ export interface MetricDefinition {
 
 export class MetricsProvider implements IProvider {
     public readonly id = 'metrics'
+    // Everything this provider writes comes out identified by its id: '[provider] [INFO] [metrics] ...'
+    private log: IComponentLogger = providerLogger(this.id)
     public readonly providesRouter = true
     public router = express.Router()
     public routerAlias = 'metrics'
@@ -102,8 +104,8 @@ export class MetricsProvider implements IProvider {
                     }
                     catch (err) {
                         res.status(400).send()
-                        logError(ELogComponent.CORE, 'Error sending metrics settings')
-                        logError(ELogComponent.CORE, err)
+                        this.log.error('Error sending metrics settings')
+                        this.log.error(err)
                     }
                 })
                 .post( async (req:Request, res:Response) => {
@@ -113,7 +115,7 @@ export class MetricsProvider implements IProvider {
                             this.metricsInterval = data.metricsInterval
                             this.stopMetricsInterval()
                             this.startMetricsInterval(+data.metricsInterval) 
-                            logWarning(ELogComponent.CORE, `New metrics cluster interval set to ${data.metricsInterval}`)
+                            this.log.warning(`New metrics cluster interval set to ${data.metricsInterval}`)
                         }
                         res.status(200).json()
                     }
@@ -205,8 +207,8 @@ export class MetricsProvider implements IProvider {
                 }
             }
             catch (err) {
-                logError(ELogComponent.CHANNEL, 'Error calculating node resources')
-                logError(ELogComponent.CHANNEL, err)
+                this.log.error('Error calculating node resources')
+                this.log.error(err)
             }
         }
         return {
@@ -245,7 +247,7 @@ export class MetricsProvider implements IProvider {
             this.subscribers.set(channel, subscriber)
         }
         catch(err) {
-            logError(ELogComponent.PROVIDER, `Errors occurred while adding subscriber ${channel.getChannelData().id} to provider ${this.id}`)
+            this.log.error(`Errors occurred while adding subscriber ${channel.getChannelData().id} to provider ${this.id}`)
         }
     }
 
@@ -311,7 +313,7 @@ export class MetricsProvider implements IProvider {
         if (response.ok)
             text = await response.text()
         else
-            logError(ELogComponent.PROVIDER, `Error reading metrics from '${url}' ${response.status}: ${response.statusText}`)
+            this.log.error(`Error reading metrics from '${url}' ${response.status}: ${response.statusText}`)
 
         // add kwirth container metrics
         text += '# HELP kwirth_container_memory_percentage Percentage of memory used by object from the whole cluster\n'
@@ -494,29 +496,33 @@ export class MetricsProvider implements IProvider {
                                 newContainerMetricValues.set(sampledMetricName, { value: newValue + newContainerMetricValues.get(sampledMetricName)!.value, timestamp:timestamp } )                                    
                             }
                             else {
-                                logInfo(ELogComponent.PROVIDER, 'Repeated container metrics (will add values):')
-                                logInfo(ELogComponent.PROVIDER, 'Line:')
-                                logInfo(ELogComponent.PROVIDER, line)
-                                logInfo(ELogComponent.PROVIDER, 'Original metric:')
-                                logInfo(ELogComponent.PROVIDER, sampledMetricName)
-                                logInfo(ELogComponent.PROVIDER, newContainerMetricValues.get(sampledMetricName))
-                                logInfo(ELogComponent.PROVIDER, 'Duplicated  metric:')
-                                logInfo(ELogComponent.PROVIDER, sampledMetricName)
-                                logInfo(ELogComponent.PROVIDER, newValue)
-                                newContainerMetricValues.set(sampledMetricName, { value: newContainerMetricValues.get(sampledMetricName)!.value, timestamp: timestamp} )
+                                /*
+                                    cAdvisor returned TWO series for the same namespace/pod/container in
+                                    a single read, and the key does not carry the cgroup, so they
+                                    collide. It happens, for instance, with a recreated container whose
+                                    old cgroup the kubelet has not stopped publishing yet.
+
+                                    One line per collision instead of nine: with a duplicated container
+                                    this fired ~25 times per read, every fifteen seconds, and buried the
+                                    rest of the log. It also states the value that SURVIVES, which is
+                                    the only thing that helps when a chart looks odd later on.
+                                */
+                                const previous = newContainerMetricValues.get(sampledMetricName)!
+                                this.log.warning(`Duplicated container metric '${sampledMetricName}': keeping ${previous.value} (ts ${timestamp}), discarding ${newValue}`)
+                                newContainerMetricValues.set(sampledMetricName, { value: previous.value, timestamp: timestamp} )
                             }
                         }
                         else
                             newContainerMetricValues.set(sampledMetricName, { value: newValue, timestamp:timestamp} )
                     }
                     else {
-                        logWarning(ELogComponent.PROVIDER, 'No value nor ts for container metric: ')
-                        logWarning(ELogComponent.PROVIDER, line)
+                        this.log.warning('No value nor ts for container metric: ')
+                        this.log.warning(line)
                     }
                 }
                 else {
-                    logWarning(ELogComponent.PROVIDER, 'Invalid container metric format:')
-                    logWarning(ELogComponent.PROVIDER, line)
+                    this.log.warning('Invalid container metric format:')
+                    this.log.warning(line)
                 }
             }
             else {
@@ -559,13 +565,13 @@ export class MetricsProvider implements IProvider {
                                 newPodMetricValues.set(sampledMetricName, { value: newValue, timestamp:timestamp })
                         }
                         else {
-                            logWarning(ELogComponent.PROVIDER, 'No value nor ts for pode metric: ')
-                            logWarning(ELogComponent.PROVIDER, line)
+                            this.log.warning('No value nor ts for pode metric: ')
+                            this.log.warning(line)
                         }
                     }
                     else {
-                        logWarning(ELogComponent.PROVIDER, 'Invalid pod metric format: ')
-                        logWarning(ELogComponent.PROVIDER, line)
+                        this.log.warning('Invalid pod metric format: ')
+                        this.log.warning(line)
                     }    
                 }
                 else {
@@ -598,13 +604,13 @@ export class MetricsProvider implements IProvider {
 
     readClusterMetrics = async (clusterInfo: ClusterInfo): Promise<IMetricsCluster|undefined> => {
         if (this.loadingClusterMetrics) {
-            logInfo(ELogComponent.PROVIDER, `Still loading cluster metrics ${new Date().toTimeString()}`)
+            this.log.info(`Still loading cluster metrics ${new Date().toTimeString()}`)
             return undefined
         }
 
         this.loadingClusterMetrics = true
         try {
-            logInfo(ELogComponent.PROVIDER, `About to read cluster metrics for provider ${new Date().toTimeString()}`)
+            this.log.info(`About to read cluster metrics for provider ${new Date().toTimeString()}`)
 
             // we rebuild the list of nodes
             let newNodeSet = await clusterInfo.getNodes()
@@ -629,8 +635,8 @@ export class MetricsProvider implements IProvider {
             return { metricsInterval: this.metricsInterval, cluster:usage, nodes, clusterMetricValues }
         }
         catch (err) {
-            logError(ELogComponent.PROVIDER, 'Error reading cluster metrics')
-            logError(ELogComponent.PROVIDER, err)
+            this.log.error('Error reading cluster metrics')
+            this.log.error(err)
         }
         this.loadingClusterMetrics = false
         return undefined
@@ -649,7 +655,7 @@ export class MetricsProvider implements IProvider {
     }
 
     startProvider = async () => {
-        logInfo(ELogComponent.PROVIDER, 'Metrics provider started...')
+        this.log.info('Metrics provider started...')
 
         let nodes = Array.from(this.clusterInfo.nodes.values())
         this.metricsList = new Map()
@@ -661,7 +667,7 @@ export class MetricsProvider implements IProvider {
                     if (!this.metricsList.has(m)) this.metricsList.set(m,nodeMetricsMap.get(m)!)
                 }
             }
-            logInfo(ELogComponent.CORE, `Metric list read: ${this.metricsList.size}`)
+            this.log.info(`Metric list read: ${this.metricsList.size}`)
             let vcpus = 0
             let memory = 0
             for (let node of nodes.values()) {
@@ -676,11 +682,11 @@ export class MetricsProvider implements IProvider {
             // this.memory = memory
 
             this.startMetricsInterval(this.metricsInterval)
-            logInfo(ELogComponent.PROVIDER, 'Metrics gathering started...')
+            this.log.info('Metrics gathering started...')
         }
         catch (err) {
-            logError(ELogComponent.CORE, 'Error starting metrics provider')
-            logError(ELogComponent.CORE, JSON.stringify(err))
+            this.log.error('Error starting metrics provider')
+            this.log.error(JSON.stringify(err))
         }
     }
 

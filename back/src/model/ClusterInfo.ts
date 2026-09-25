@@ -4,7 +4,7 @@ import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
 import { isPluviderId, TPluviderChannel } from '../providers/Pluvider'
 import { IChannel } from '../channels/IChannel'
-import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
+import { ELogComponent, logError, logInfo, logWarning, providerLogger } from '../tools/Logging'
 
 export interface INodeInfo {
     name: string
@@ -38,19 +38,19 @@ export interface ISubscription {
 }
 
 /*
-    La arista con lo que hace falta para saber CUANDO deja de existir, que no es lo mismo que saber
-    que existe.
+    The edge, plus what it takes to know WHEN it stops existing — which is not the same as knowing
+    that it exists.
 
-    Un canal se suscribe al mismo provider mas de una vez con total normalidad —una suscripcion por
-    pestaña, o porque se reinstancia—, y eso sigue siendo UNA arista: el grafo dice quien alimenta a
-    quien, no cuantas veces. Pero la baja llega igual de repetida, y si la primera borrase la arista,
-    el registro se quedaria vacio mientras el provider sigue emitiendo para los demas. Es exactamente
-    lo que pasaba: el grafo se vaciaba solo con un par de recargas.
+    A channel subscribes to the same provider more than once perfectly normally: one subscription per
+    tab, or because it gets re-instantiated. That is still ONE edge — the graph says who feeds whom,
+    not how many times. But the unsubscribe arrives just as repeatedly, and if the first one removed
+    the edge, the registry would empty out while the provider keeps delivering to the others. That is
+    exactly what used to happen: the graph emptied itself after a couple of reloads.
 
-    Se guardan los suscriptores POR IDENTIDAD, que es el mismo criterio con el que el provider los
-    guarda en su Map. Asi el registro no puede acabar diciendo algo distinto de lo que el provider
-    cree: dos altas del mismo objeto son una, igual que alli, y la arista se va cuando se va el
-    ultimo. Retener esas referencias no añade fuga: el provider ya las tiene.
+    Subscribers are kept BY IDENTITY, the same criterion the provider uses in its own Map. That way
+    the registry cannot end up claiming something different from what the provider believes: two adds
+    of the same object count as one, just like there, and the edge goes when the last one goes.
+    Holding those references adds no leak — the provider already holds them.
 */
 interface ISubscriptionEntry extends ISubscription {
     subscribers: Set<IChannel>
@@ -120,25 +120,26 @@ export class ClusterInfo {
         el (warning).
     */
     addSubscriber = (providerId: string, c:IChannel, data:any) => {
+        const log = providerLogger(providerId)
         if (isPluviderId(providerId)) {
             let pluv = this.pluviders.get(providerId)
             if (pluv) {
                 pluv.addSubscriber(c, data)
                 this.trackSubscription(providerId, c)
-                logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' added to pluvider '${providerId}'`)
+                log.info(`Subscriber '${c.getChannelData().id}' added`)
             }
             else
-                logWarning(ELogComponent.PROVIDER, `Cannot subscribe channel '${c.getChannelData().id}' to pluvider '${providerId}' (its plugin is not installed or not running here)`)
+                log.warning(`Cannot subscribe channel '${c.getChannelData().id}': this pluvider is not installed or is not running here`)
             return
         }
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {
             prov.addSubscriber(c,data)
             this.trackSubscription(providerId, c)
-            logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' added to provider '${providerId}'`)
+            log.info(`Subscriber '${c.getChannelData().id}' added`)
         }
         else
-            logError(ELogComponent.PROVIDER, `Cannot subscribe channel '${c.getChannelData().id}' to provider '${providerId}' (provider do not exist)`)
+            log.error(`Cannot subscribe channel '${c.getChannelData().id}': this provider does not exist`)
     }
 
     updateSubscriber = (providerId: string, c:IChannel, data:any) => {
@@ -146,63 +147,64 @@ export class ClusterInfo {
     }
 
     removeSubscriber = (providerId: string, c:IChannel) => {
+        const log = providerLogger(providerId)
         if (isPluviderId(providerId)) {
             let pluv = this.pluviders.get(providerId)
             if (pluv) {
                 pluv.removeSubscriber(c)
                 this.untrackSubscription(providerId, c)
-                logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' removed from pluvider '${providerId}'`)
+                log.info(`Subscriber '${c.getChannelData().id}' removed`)
             }
             else
-                logWarning(ELogComponent.PROVIDER, `Cannot remove subscription of channel '${c.getChannelData().id}' from pluvider '${providerId}' (its plugin is not installed or not running here)`)
+                log.warning(`Cannot remove the subscription of channel '${c.getChannelData().id}': this pluvider is not installed or is not running here`)
             return
         }
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {
             prov.removeSubscriber(c)
             this.untrackSubscription(providerId, c)
-            logInfo(ELogComponent.PROVIDER, `Subscriber '${c.getChannelData().id}' removed from provider '${providerId}'`)
+            log.info(`Subscriber '${c.getChannelData().id}' removed`)
         }
         else
-            logError(ELogComponent.PROVIDER,`Cannot remove subscription of channel '${c.getChannelData().id}' from provider ${providerId} (provider do not exist)`)
+            log.error(`Cannot remove the subscription of channel '${c.getChannelData().id}': this provider does not exist`)
     }
 
     /*
-        Se anota DESPUES de que el provider haya aceptado el alta, no antes: si 'addSubscriber' revienta,
-        el core no debe quedarse creyendo que existe una suscripcion que nunca se hizo.
+        Recorded AFTER the provider has accepted the subscription, not before: if 'addSubscriber'
+        blows up, the core must not be left believing in a subscription that never happened.
 
-        El duplicado no se ignora, se CUENTA: sigue habiendo una sola arista, pero hay que saber
-        cuantos suscriptores la sostienen para no borrarla con la primera baja. El 'since' se conserva
-        —es de la arista, no del ultimo en llegar—, que es lo que permite decir cuanto lleva algo
-        alimentando a alguien.
+        A duplicate is not ignored, it is COUNTED: there is still a single edge, but we need to know
+        how many subscribers hold it up so the first unsubscribe does not remove it. The 'since' is
+        kept — it belongs to the edge, not to the latest arrival — and that is what lets us say how
+        long something has been feeding someone.
     */
     private trackSubscription = (providerId: string, c: IChannel): void => {
         const channelId = c.getChannelData().id
-        const arista = this.subscriptions.find(s => s.providerId === providerId && s.channelId === channelId)
-        if (arista) {
-            arista.subscribers.add(c)
+        const edge = this.subscriptions.find(s => s.providerId === providerId && s.channelId === channelId)
+        if (edge) {
+            edge.subscribers.add(c)
             return
         }
         this.subscriptions.push({ providerId, channelId, since: Date.now(), subscribers: new Set([c]) })
     }
 
     /*
-        La arista desaparece cuando se va el ULTIMO suscriptor, no el primero. Una baja de alguien que
-        no estaba —doble cleanup, un canal que nunca llego a suscribirse— no se lleva nada por delante.
+        The edge goes away with the LAST subscriber, not the first. An unsubscribe from someone who was
+        never there — a double cleanup, a channel that never subscribed — takes nothing down with it.
     */
     private untrackSubscription = (providerId: string, c: IChannel): void => {
         const channelId = c.getChannelData().id
         const pos = this.subscriptions.findIndex(s => s.providerId === providerId && s.channelId === channelId)
         if (pos < 0) return
-        const arista = this.subscriptions[pos]
-        arista.subscribers.delete(c)
-        if (arista.subscribers.size === 0) this.subscriptions.splice(pos, 1)
+        const edge = this.subscriptions[pos]
+        edge.subscribers.delete(c)
+        if (edge.subscribers.size === 0) this.subscriptions.splice(pos, 1)
     }
 
     /**
-     * Quien consume a quien, ahora mismo. Copia, no la lista viva: quien la lea no puede modificar el
-     * registro del core sin querer, y el Set de suscriptores no sale de aqui — fuera solo se necesita
-     * la arista.
+     * Who consumes what, right now. A copy, not the live list: whoever reads it cannot modify the
+     * core's registry by accident, and the subscriber Set never leaves this class — outside, only the
+     * edge itself is needed.
      */
     getSubscriptions = (): ISubscription[] =>
         this.subscriptions.map(({ providerId, channelId, since }) => ({ providerId, channelId, since }))

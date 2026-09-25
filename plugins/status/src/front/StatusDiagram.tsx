@@ -291,15 +291,15 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [firmaGrafo])
 
-    // Consumidores que el core no intermedió: se dicen, no se dibujan — no se sabe quiénes son.
+    // Consumers the core did not broker: they get stated, not drawn — nobody knows who they are.
     const anonimos = countUnbrokeredConsumers(inventory.components)
 
     /*
-        Sin aristas hay dos situaciones MUY distintas y decir la misma frase en las dos es mentir en
-        una de ellas: que de verdad no consuma nadie, o que quien consume se haya suscrito hablando
-        directamente con el provider, sin pasar por el core. En el segundo caso el dato existe —los
-        providers reconocen a sus suscriptores— y lo unico que falta es saber QUIENES son, que es
-        justo lo que el core no vio.
+        With no edges there are two VERY different situations, and saying the same sentence in both
+        means lying in one of them: either nobody is really consuming, or whoever consumes subscribed
+        by talking straight to the provider, skipping the core. In the second case the figure does
+        exist — providers do acknowledge their subscribers — and the only thing missing is WHO they
+        are, which is precisely what the core never saw.
     */
     if (inventory.edges.length === 0) {
         return (

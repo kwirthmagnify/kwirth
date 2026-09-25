@@ -1,7 +1,7 @@
-// Registro de quien consume a quien (ClusterInfo.getSubscriptions), que es de donde sale el grafo de
-// Kwirth Status. Lo que se fija aqui es que una arista viva SOBREVIVA a la baja de uno de sus
-// suscriptores: el fallo original borraba la arista con la primera baja y el grafo se vaciaba solo
-// mientras el provider seguia emitiendo para los demas.
+// The registry of who consumes what (ClusterInfo.getSubscriptions), which is where the Kwirth Status
+// graph comes from. What is pinned down here is that a live edge SURVIVES one of its subscribers
+// leaving: the original defect removed the edge on the first unsubscribe, so the graph emptied itself
+// while the provider kept delivering to everyone else.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -9,143 +9,143 @@ import { ClusterInfo } from '../../src/model/ClusterInfo'
 import { IChannel } from '../../src/channels/IChannel'
 import { IProvider } from '../../src/providers/IProvider'
 
-// Un canal solo aporta su id al registro. Dos objetos con el MISMO id son dos suscriptores del mismo
-// canal: es justo el caso de dos pestañas, o de un canal que se reinstancia.
-const canal = (id: string): IChannel => ({ getChannelData: () => ({ id }) }) as never
+// A channel only contributes its id to the registry. Two objects with the SAME id are two subscribers
+// of the same channel: exactly the case of two tabs, or of a channel that gets re-instantiated.
+const channel = (id: string): IChannel => ({ getChannelData: () => ({ id }) }) as never
 
 interface IFakeProvider {
     provider: IProvider
-    altas: number
-    bajas: number
+    adds: number
+    removes: number
 }
 
 const provider = (id: string): IFakeProvider => {
-    const fake: IFakeProvider = { altas: 0, bajas: 0, provider: undefined as never }
+    const fake: IFakeProvider = { adds: 0, removes: 0, provider: undefined as never }
     fake.provider = {
         id,
-        addSubscriber: async () => { fake.altas++ },
-        removeSubscriber: async () => { fake.bajas++ }
+        addSubscriber: async () => { fake.adds++ },
+        removeSubscriber: async () => { fake.removes++ }
     } as never
     return fake
 }
 
-const clusterInfoCon = (...ids: string[]) => {
+const clusterInfoWith = (...ids: string[]) => {
     const ci = new ClusterInfo()
     const fakes = ids.map(provider)
     ci.providers = fakes.map(f => f.provider)
     return { ci, fakes }
 }
 
-test('un alta registra la arista, con quien produce y quien consume', () => {
-    const { ci } = clusterInfoCon('events')
-    ci.addSubscriber('events', canal('agora'), {})
+test('a subscription registers the edge, with who produces and who consumes', () => {
+    const { ci } = clusterInfoWith('events')
+    ci.addSubscriber('events', channel('agora'), {})
 
-    const aristas = ci.getSubscriptions()
-    assert.equal(aristas.length, 1)
-    assert.equal(aristas[0].providerId, 'events')
-    assert.equal(aristas[0].channelId, 'agora')
+    const edges = ci.getSubscriptions()
+    assert.equal(edges.length, 1)
+    assert.equal(edges[0].providerId, 'events')
+    assert.equal(edges[0].channelId, 'agora')
 })
 
-test('dos suscriptores del mismo canal son UNA arista, y la primera baja no se la lleva', () => {
-    const { ci, fakes } = clusterInfoCon('events')
-    const pestaña1 = canal('agora')
-    const pestaña2 = canal('agora')
+test('two subscribers of the same channel are ONE edge, and the first unsubscribe does not take it', () => {
+    const { ci, fakes } = clusterInfoWith('events')
+    const tab1 = channel('agora')
+    const tab2 = channel('agora')
 
-    ci.addSubscriber('events', pestaña1, {})
-    ci.addSubscriber('events', pestaña2, {})
-    assert.equal(ci.getSubscriptions().length, 1, 'el grafo dice quien alimenta a quien, no cuantas veces')
-    assert.equal(fakes[0].altas, 2, 'al provider si le llegan las dos altas')
+    ci.addSubscriber('events', tab1, {})
+    ci.addSubscriber('events', tab2, {})
+    assert.equal(ci.getSubscriptions().length, 1, 'the graph says who feeds whom, not how many times')
+    assert.equal(fakes[0].adds, 2, 'the provider does get both subscriptions')
 
-    ci.removeSubscriber('events', pestaña1)
-    assert.equal(ci.getSubscriptions().length, 1, 'queda un suscriptor vivo: la arista sigue existiendo')
+    ci.removeSubscriber('events', tab1)
+    assert.equal(ci.getSubscriptions().length, 1, 'a live subscriber remains: the edge still exists')
 
-    ci.removeSubscriber('events', pestaña2)
-    assert.equal(ci.getSubscriptions().length, 0, 'se fue el ultimo: ahora si desaparece')
+    ci.removeSubscriber('events', tab2)
+    assert.equal(ci.getSubscriptions().length, 0, 'the last one left: now it does disappear')
 })
 
-test('el mismo objeto suscrito dos veces cuenta una, igual que en el Map del provider', () => {
-    const { ci } = clusterInfoCon('metrics')
-    const c = canal('magnify')
+test('the same object subscribed twice counts once, as it does in the provider Map', () => {
+    const { ci } = clusterInfoWith('metrics')
+    const c = channel('magnify')
 
     ci.addSubscriber('metrics', c, {})
     ci.addSubscriber('metrics', c, {})
     assert.equal(ci.getSubscriptions().length, 1)
 
-    // Una sola baja basta, porque para el provider tambien hay un solo suscriptor.
+    // One unsubscribe is enough, because for the provider there is a single subscriber too.
     ci.removeSubscriber('metrics', c)
     assert.equal(ci.getSubscriptions().length, 0)
 })
 
-test('el since es de la arista: no lo pisa el suscriptor que llega despues', async () => {
-    const { ci } = clusterInfoCon('events')
-    ci.addSubscriber('events', canal('iter'), {})
-    const primero = ci.getSubscriptions()[0].since
+test('since belongs to the edge: a later subscriber does not overwrite it', async () => {
+    const { ci } = clusterInfoWith('events')
+    ci.addSubscriber('events', channel('iter'), {})
+    const first = ci.getSubscriptions()[0].since
 
     await new Promise(r => setTimeout(r, 5))
-    ci.addSubscriber('events', canal('iter'), {})
+    ci.addSubscriber('events', channel('iter'), {})
 
-    assert.equal(ci.getSubscriptions()[0].since, primero)
+    assert.equal(ci.getSubscriptions()[0].since, first)
 })
 
-test('una baja de quien nunca se suscribio no borra la arista de los demas', () => {
-    const { ci } = clusterInfoCon('trivy')
-    const vivo = canal('excubitor')
-    ci.addSubscriber('trivy', vivo, {})
+test('an unsubscribe from someone who never subscribed does not remove anyone else edge', () => {
+    const { ci } = clusterInfoWith('trivy')
+    const live = channel('excubitor')
+    ci.addSubscriber('trivy', live, {})
 
-    ci.removeSubscriber('trivy', canal('excubitor'))   // mismo id, otro objeto: nunca se dio de alta
+    ci.removeSubscriber('trivy', channel('excubitor'))   // same id, different object: never subscribed
     assert.equal(ci.getSubscriptions().length, 1)
 
-    ci.removeSubscriber('trivy', vivo)
+    ci.removeSubscriber('trivy', live)
     assert.equal(ci.getSubscriptions().length, 0)
 })
 
-test('un canal puede alimentarse de varios providers, y cada arista va por su cuenta', () => {
-    const { ci } = clusterInfoCon('events', 'metrics')
-    const c = canal('agora')
+test('a channel can feed from several providers, and each edge lives on its own', () => {
+    const { ci } = clusterInfoWith('events', 'metrics')
+    const c = channel('agora')
     ci.addSubscriber('events', c, {})
     ci.addSubscriber('metrics', c, {})
 
     ci.removeSubscriber('events', c)
-    const aristas = ci.getSubscriptions()
-    assert.equal(aristas.length, 1)
-    assert.equal(aristas[0].providerId, 'metrics')
+    const edges = ci.getSubscriptions()
+    assert.equal(edges.length, 1)
+    assert.equal(edges[0].providerId, 'metrics')
 })
 
-test('lo que se devuelve es una copia: tocarla no altera el registro del core', () => {
-    const { ci } = clusterInfoCon('events')
-    ci.addSubscriber('events', canal('agora'), {})
+test('what comes back is a copy: touching it does not alter the core registry', () => {
+    const { ci } = clusterInfoWith('events')
+    ci.addSubscriber('events', channel('agora'), {})
 
-    const aristas = ci.getSubscriptions()
-    aristas[0].channelId = 'otro'
-    aristas.length = 0
+    const edges = ci.getSubscriptions()
+    edges[0].channelId = 'other'
+    edges.length = 0
 
-    const despues = ci.getSubscriptions()
-    assert.equal(despues.length, 1)
-    assert.equal(despues[0].channelId, 'agora')
+    const after = ci.getSubscriptions()
+    assert.equal(after.length, 1)
+    assert.equal(after[0].channelId, 'agora')
 })
 
-test('la arista no expone los suscriptores: fuera solo se necesita quien con quien', () => {
-    const { ci } = clusterInfoCon('events')
-    ci.addSubscriber('events', canal('agora'), {})
+test('the edge does not expose its subscribers: outside, only who with whom is needed', () => {
+    const { ci } = clusterInfoWith('events')
+    ci.addSubscriber('events', channel('agora'), {})
 
     assert.deepEqual(Object.keys(ci.getSubscriptions()[0]).sort(), ['channelId', 'providerId', 'since'])
 })
 
-test('suscribirse a un provider que no existe no inventa una arista', () => {
-    const { ci } = clusterInfoCon('events')
-    ci.addSubscriber('nolohay', canal('agora'), {})
+test('subscribing to a provider that does not exist invents no edge', () => {
+    const { ci } = clusterInfoWith('events')
+    ci.addSubscriber('nosuchthing', channel('agora'), {})
     assert.equal(ci.getSubscriptions().length, 0)
 })
 
-test('los pluviders se registran igual, por su id compuesto', () => {
+test('pluviders register the same way, under their composite id', () => {
     const ci = new ClusterInfo()
     ci.providers = []
-    let altas = 0
-    ci.pluviders.set('plugin:agora', { addSubscriber: () => { altas++ }, removeSubscriber: () => {} } as never)
+    let adds = 0
+    ci.pluviders.set('plugin:agora', { addSubscriber: () => { adds++ }, removeSubscriber: () => {} } as never)
 
-    const c = canal('montag')
+    const c = channel('montag')
     ci.addSubscriber('plugin:agora', c, {})
-    assert.equal(altas, 1)
+    assert.equal(adds, 1)
     assert.equal(ci.getSubscriptions()[0].providerId, 'plugin:agora')
 
     ci.removeSubscriber('plugin:agora', c)

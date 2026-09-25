@@ -41,17 +41,18 @@ export interface IStatusData {
 }
 
 /*
-    Cuantos consumidores hay que el core NO intermedio: lo que el productor reconoce menos lo que el
-    core registro.
+    How many consumers the core did NOT broker: what the producer acknowledges minus what the core
+    registered.
 
-    Existe porque el grafo se dibuja con lo que el core vio pasar, y suscribirse sin pasar por el core
-    es posible —se llama a 'addSubscriber' del provider y ya— y hay quien lo hace. Cuando ese numero
-    no es cero, el grafo esta INCOMPLETO y hay que decirlo: callarlo convierte un dibujo parcial en
-    una afirmacion falsa ("no consume nadie") justo cuando alguien esta consumiendo.
+    It exists because the graph is drawn from what the core saw go by, and subscribing without going
+    through the core is possible — you call the provider's 'addSubscriber' and that is it — and some
+    do. When that number is not zero the graph is INCOMPLETE and it has to be said: keeping quiet
+    turns a partial drawing into a false claim ("nobody is consuming") precisely when someone is.
 
-    Se ignora el componente que no informa de una de las dos cifras: 'undefined' no es cero, y restar
-    con un hueco produce un numero inventado. Y se recorta en cero, porque el desfase contrario —el
-    core conoce mas que el provider— es una baja que el provider aun no ha aplicado, no un anonimo.
+    A component that does not report one of the two figures is skipped: 'undefined' is not zero, and
+    subtracting with a hole in it produces an invented number. The result is clamped at zero, because
+    the opposite mismatch — the core knowing more than the provider — is an unsubscribe the provider
+    has not applied yet, not an anonymous consumer.
 */
 export const countUnbrokeredConsumers = (components: IStatusComponent[]): number =>
     components.reduce((n, c) => {

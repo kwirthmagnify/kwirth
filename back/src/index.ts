@@ -1331,7 +1331,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                 const ChannelClass = registeredChannels.get(id)
                 if (!ChannelClass) return
                 try {
-                    const channelInstance = createChannelInstance(ChannelClass, activeRI.clusterInfo, activeRI.backChannelObject)
+                    const channelInstance = createChannelInstance(ChannelClass, activeRI.clusterInfo, activeRI.backChannelObject, id)
                     if (channelInstance) {
                         // 'instances' gate (same as startup in prepareRunningInstance): a 'single' channel is
                         // hosted only by the k8s-mode Kwirth home. On desktop/docker it is announced as REMOTE
@@ -1733,7 +1733,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     if (!ri.channels.has(id)) continue
                     const oldInstance = ri.channels.get(id)
                     if (typeof (oldInstance as any).cleanup === 'function') (oldInstance as any).cleanup()
-                    const newInstance = createChannelInstance(ChannelClass, ri.clusterInfo, ri.backChannelObject)
+                    const newInstance = createChannelInstance(ChannelClass, ri.clusterInfo, ri.backChannelObject, id)
                     if (newInstance) {
                         ri.channels.set(id, newInstance)
                         // La instancia se acaba de sustituir, asi que el registro de pluviders apunta a la
@@ -1774,7 +1774,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         for(let channelId of requiredChannels) {
             let channelConstructor = registeredChannels.get(channelId)
             if (channelConstructor) {
-                let channelInstance = createChannelInstance(registeredChannels.get(channelId), localClusterInfo, backChannelObject)
+                let channelInstance = createChannelInstance(registeredChannels.get(channelId), localClusterInfo, backChannelObject, channelId)
                 if (channelInstance) {
                     // 'instances' gate: a 'single' channel is hosted only by the k8s-mode Kwirth home
                     // (runningEnv.isK8s = FORCE==='k8s' or running inside a pod). On desktop/docker it is
@@ -1969,7 +1969,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
 
     let backChannelObject: IBackChannelObject = {
             logInfo: (message: unknown) => logInfo(ELogComponent.CHANNEL, message),
-            logTrace: (message: unknown) => logTrace(message),
+            logTrace: (message: unknown) => logTrace(ELogComponent.CHANNEL, message),
             logWarning: (message: unknown) => logWarning(ELogComponent.CHANNEL, message),
             logError: (message: unknown) => logError(ELogComponent.CHANNEL, message),
             writeStorage: async (id: string, secret: boolean, data: any) => {
