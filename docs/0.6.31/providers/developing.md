@@ -162,6 +162,39 @@ getConfigNames = (): string[] => [...this.configs.keys()]
 Names only, never values — it travels in the public provider listing. Like `getSubscriptionHelp()`, it is
 optional and read defensively: not implementing it just means no counter.
 
+## Writing to the log
+
+Implement `setLogger()` and the core hands you a logger as soon as it builds your provider. It already
+knows your id, so you write the message and nothing else:
+
+```typescript
+setLogger = (logger: IProviderLogger): void => { this.log = logger }
+```
+
+```
+[12:21:07] [provider] [ERROR] [longhorn] informer error (engines): HTTP-Code: 404
+```
+
+It is optional and read defensively, like everything else here: keep a fallback that writes to the
+console and your provider still works on an older core, with no minimum version to demand.
+
+```typescript
+private log: IProviderLogger = {
+    info: (message: unknown) => console.log(`[${PROVIDER_ID}] ${message}`),
+    warning: (message: unknown) => console.warn(`[${PROVIDER_ID}] ${message}`),
+    error: (message: unknown) => console.error(`[${PROVIDER_ID}] ${message}`)
+}
+```
+
+**Use `console.log` for nothing else.** It comes out with no timestamp, no level and no component, so
+it cannot be filtered and, worse, a failure ends up looking exactly like a routine trace — which is
+precisely how an unreachable API or a dead informer goes unnoticed for weeks. Choose the level on
+purpose: `error` when something did not happen, `warning` when it happened but degraded (a quota with
+no usage, a CRD that is not there), `info` for the rest.
+
+If some of your traces come from plain functions rather than from the class, keep a module-level
+logger and have `setLogger()` replace that one too, instead of importing the provider from them.
+
 ## Deprecated: core-managed configuration
 
 Older providers received their configuration through `configure(config)`, fed by the core from a ConfigMap

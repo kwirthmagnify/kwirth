@@ -1,7 +1,9 @@
 # Provider handle — lo que el core entrega a un consumidor deja de ser el provider — Plan
 
-> **ESTADO — SIN EMPEZAR** (acordado con el usuario el 2026-09-24; el arranque espera a que termine el
-> refactor en curso del core, `DockerTools` → `ExecutionEnvironment`).
+> **ESTADO — EN PRODUCCIÓN lo esencial** (2026-09-25). El handle existe en el core y está publicado
+> (`common-back` 0.5.52); el logger de providers está cableado y publicado en los 13 que escribían por
+> `console.log`. Queda **H2**, y queda a propósito: ver abajo por qué se decidió NO migrar a los diez
+> consumidores que ya pasan por el core.
 > Plan **append-only**: se marca, no se borra. Si contradice al producto, gana el producto.
 
 ## De dónde sale esto
@@ -54,11 +56,31 @@ de ser vía de suscripción.
 
 - **H1 — el handle en el core.** `getProvider(id)` en `ClusterInfo`, el wrapper, y el registro de
   aristas con **refcount** por handle. Contrato en `kwirth-common-back`.
-- **H2 — migrar los consumidores, uno a uno.** Lo pidió el usuario explícitamente: *"luego revisamos
-  todos los providers y suscriptores para asegurarnos que usan el nuevo interfaz"*. Son sugarless,
-  situs, provider-debug (los tres de la vía directa) y excubitor, agora, iter, montag (los que ya
-  pasan por el core y cambian de API). ⚠️ Uno a uno y mirando el código de cada uno: nada de un
-  script global.
+  - ✅ **HECHO el 2026-09-25.** `clusterInfo.getProvider(providerId, consumer)` devuelve un handle atado
+    a las dos puntas; el registro cuenta por **suscriptor** y no por canal, así que un canal con tres
+    pestañas es una arista sostenida por tres suscripciones que se va con la última. Contrato publicado
+    en `common-back` **0.5.52** (`IProviderHandle`), y mientras npm no lo servía el core declaró su
+    propia vista para no bloquearse — cuando se suba la dependencia, esas declaraciones sobran.
+  - ⚠️ **La garantía de rendimiento está fijada con un test**: el handle NO envuelve al suscriptor, le
+    pasa al provider el mismo objeto que recibe. Envolverlo para contar entregas sería un closure por
+    evento, para todos, mire alguien o no. Por eso el **caudal por arista sigue fuera**.
+  - `subscribe()` devuelve lo que devuelva el provider: si se lo tragara, un provider que falla al dar
+    de alta dejaría un unhandled rejection y se lleva el core por delante. Lo destapó provider-debug,
+    que es justo quien se encuentra providers ajenos mal escritos.
+- **H2 — migrar los consumidores.** ⏸ **REPLANTEADO el 2026-09-25, y solo se hizo la mitad que valía
+  la pena.** El recuento con el que se escribió este plan caducó en unas horas: el usuario migró
+  **sugarless y situs a mano** esa misma mañana (`fix(sugarless): una suscripcion del canal, A TRAVES
+  DEL CORE`), así que de los tres que se saltaban el core quedaba uno.
+  - ✅ Migrados los dos que seguían por fuera: **`echo`** y **`provider-debug`**. El segundo conserva su
+    suscriptor por pestaña —para eso existe— y ahora además aparece en el grafo, así que el bypass deja
+    de tener motivo.
+  - ⛔ **NO se migran los diez que ya pasan por el core** (agora, alert, excubitor, iter, pinocchio,
+    situs, status, sugarless, topology, trivy): hoy funcionan y el registro ya los ve, así que cambiarlos
+    costaría diez bbpm a cambio de nada inmediato. Cada uno pasa al handle **cuando se toque por otra
+    razón**. Lo que el handle aporta ahí es futuro —cerrar la puerta, la baja por suscriptor, la
+    suscripción por instancia—, no una avería viva.
+  - ⚠️ Mientras tanto, la puerta sigue abierta: `clusterInfo.providers` continúa entregando el objeto
+    real, así que saltarse el core sigue siendo posible para quien no use el handle.
 - **H3 — Kwirth Status.** Recalibrar la salud con el dato ya correcto y, mientras queden consumidores
   sin migrar, decir en pantalla cuándo `subscribers > knownConsumers` en vez de dar el grafo por
   completo.
@@ -70,6 +92,16 @@ de ser vía de suscripción.
   - ⏳ Queda lo primero: la salud del provider, que depende de arreglar `started` (abajo).
 
 ## Backlog — averías abiertas que salen de aquí
+
+- ✅ **HECHO el 2026-09-25 — el logger de providers (H4, no estaba en este plan y se añadió aquí).** Un
+  provider no tenía con qué escribir en el log: a los canales se les presta un `backChannelObject`, a
+  un provider no se le daba nada, así que sólo le quedaba `console.log` — sin hora, sin nivel y sin
+  componente, con **los fallos indistinguibles de una traza**. `setLogger?()` opcional en el contrato,
+  inyectado por el core en `createProviderInstance`, y **117 líneas reclasificadas a mano** en 13
+  providers: error cuando algo no ocurrió, warning cuando ocurrió degradado (una cuota sin uso, un CRD
+  ausente), info el resto. `longhorn` y `trivy` escribían `[longhorn-provider]` y `[trivy-provider]`,
+  que no son sus ids. Publicados los 13 + `common-back` 0.5.52 + `echo` y `provider-debug`.
+
 
 - 🔴 **`provider.started` no significa "arrancado", significa "tiene el router montado".** Solo se
   asigna en los dos sitios que montan el router (`back/src/index.ts` ~1369 y ~1562); los tres que de

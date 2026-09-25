@@ -1,9 +1,13 @@
+/*
+    Four letters each, so the tag column lines up and the eye can skip it: what you are looking for is
+    the id and the message, not which bucket the line belongs to.
+*/
 export enum ELogComponent {
     AUTH = 'auth',
     CORE = 'core',
-    PROVIDER = 'provider',
-    CHANNEL = 'channel',
-    STORAGE = 'storage'
+    PROVIDER = 'prov',
+    CHANNEL = 'chan',
+    STORAGE = 'stor'
 }
 
 let ansiLog = true

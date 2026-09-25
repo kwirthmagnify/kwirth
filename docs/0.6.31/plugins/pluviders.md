@@ -106,6 +106,33 @@ processProviderEvent = (providerId: string, obj: any): void => {
 }
 ```
 
+### Subscribing once per instance: the handle
+
+`addSubscriber` subscribes **the channel**, and a channel is one object no matter how many tabs it is
+serving. When you need a subscription **per instance** — one that can be paused, filtered or dropped on
+its own — ask the core for a handle instead:
+
+```ts
+const producer = this.clusterInfo.getProvider('events', this)   // undefined if it is not here
+producer?.subscribe(subscriber, { kinds: ['Pod'], syncInstances: false })
+...
+producer?.unsubscribe(subscriber)
+```
+
+The handle arrives already bound to both ends — the producer and your channel — so the core knows who
+consumes what without you telling it, and your channel shows up in the Kwirth Status graph. Before this
+existed, a channel that needed one subscription per tab had to reach for the provider object and call it
+directly, which works but leaves the core blind.
+
+It is **not** in the path of the data: the producer is handed the very same subscriber you pass, so events
+travel straight to you, with nothing extra per event. And `subscribe` returns whatever the producer
+returned — usually a promise — so a provider that fails while taking your subscriber on board can be
+caught instead of becoming an unhandled rejection:
+
+```ts
+Promise.resolve(producer.subscribe(subscriber, data)).catch(err => { /* tell the user */ })
+```
+
 ### The dependency is soft
 
 If the producing plugin is not installed, or is not hosted by this kwirth, **the consumer still starts and still works**. The core logs a warning and moves on — it never fails the channel:
