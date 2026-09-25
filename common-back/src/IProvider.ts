@@ -10,8 +10,13 @@ export interface IProviderSubscriber {
 }
 
 /**
- * How a channel subscribes to a producer. The core hands one of these out already bound to the two
- * ends — the producer and the channel asking for it — with 'clusterInfo.getProvider(id, this)'.
+ * How a consumer subscribes to a producer. The core hands one of these out already bound to the two
+ * ends — the producer and whoever asked for it — with 'clusterInfo.getProvider(id, this)'.
+ *
+ * The consumer is usually a channel, but it does NOT have to be: a PROVIDER may consume another
+ * provider, which is how a provider that owns shared configuration — cloud credentials, say — reaches
+ * the providers that need it. A provider subscribes from onProvidersReady(), never from
+ * startProvider(); see that method for why.
  *
  * It exists because a channel used to receive the provider OBJECT and call 'addSubscriber' on it,
  * which meant the core could be bypassed without doing anything wrong, and therefore that its
@@ -192,10 +197,26 @@ export interface IProvider extends IExtension {
      * Why it exists: channels get a 'backChannelObject' to log with, providers got nothing, so the
      * only thing left to them was 'console.log'. That comes out with no timestamp, no level and no
      * component — an error from a provider looks exactly like an informational line, and nothing can
-     * be filtered. With this, a provider's line reads '[provider] [ERROR] [longhorn] ...' and the
+     * be filtered. With this, a provider's line reads '[prov] [ERRO] [longhorn] ...' and the
      * provider does not even have to write its own id: the core puts it there.
      */
     setLogger?(logger: IExtensionLogger): void
+    /**
+     * Called once, after EVERY provider and pluvider is registered and started. This is where a
+     * provider that CONSUMES another one subscribes to it.
+     *
+     * ⚠️ Do not subscribe from startProvider(). Whether the producer is registered by then depends on
+     * which startup loop instantiated it and on the order within that loop, so it would work or not
+     * for reasons you cannot see from your own code.
+     *
+     * 🔴 Whatever you subscribe to here, unsubscribe in stopProvider(). Skipping it does not leak one
+     * object: the producer keeps feeding an instance nobody uses any more, and every hot reload
+     * leaves another ghost behind holding whatever that instance held.
+     *
+     * OPTIONAL, like the rest of this block: a provider that does not implement it is never called,
+     * and an older core that does not know about it simply never calls anyone.
+     */
+    onProvidersReady?(): void | Promise<void>
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
     router: any

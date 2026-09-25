@@ -4,6 +4,7 @@ import { IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
 import { isPluviderId, TPluviderChannel } from '../providers/Pluvider'
+import { consumerIdOf, TSubscriptionConsumer } from '../providers/Consumer'
 import { IChannel } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning, providerLogger } from '../tools/Logging'
 
@@ -32,8 +33,12 @@ export interface IPendingWebsocket {
 export interface ISubscription {
     /** Quien produce: un provider ('events') o un pluvider ('plugin:agora'). */
     providerId: string
-    /** Quien consume: el id del canal. */
-    channelId: string
+    /**
+     * Quien consume: el id del canal ('agora'), o el de un provider con su prefijo
+     * ('provider:aws') cuando quien consume es otro provider. Se llama 'consumerId' y no
+     * 'channelId' desde que dejo de poder ser solo un canal — ver providers/Consumer.ts.
+     */
+    consumerId: string
     /** Desde cuando, para poder decir cuanto lleva algo sin consumidores. */
     since: number
 }
@@ -209,21 +214,21 @@ export class ClusterInfo {
         kept — it belongs to the edge, not to the latest arrival — and that is what lets us say how
         long something has been feeding someone.
     */
-    private trackSubscription = (providerId: string, channelId: string, subscriber: object): void => {
-        const edge = this.subscriptions.find(s => s.providerId === providerId && s.channelId === channelId)
+    private trackSubscription = (providerId: string, consumerId: string, subscriber: object): void => {
+        const edge = this.subscriptions.find(s => s.providerId === providerId && s.consumerId === consumerId)
         if (edge) {
             edge.subscribers.add(subscriber)
             return
         }
-        this.subscriptions.push({ providerId, channelId, since: Date.now(), subscribers: new Set([subscriber]) })
+        this.subscriptions.push({ providerId, consumerId, since: Date.now(), subscribers: new Set([subscriber]) })
     }
 
     /*
         The edge goes away with the LAST subscriber, not the first. An unsubscribe from someone who was
         never there — a double cleanup, a channel that never subscribed — takes nothing down with it.
     */
-    private untrackSubscription = (providerId: string, channelId: string, subscriber: object): void => {
-        const pos = this.subscriptions.findIndex(s => s.providerId === providerId && s.channelId === channelId)
+    private untrackSubscription = (providerId: string, consumerId: string, subscriber: object): void => {
+        const pos = this.subscriptions.findIndex(s => s.providerId === providerId && s.consumerId === consumerId)
         if (pos < 0) return
         const edge = this.subscriptions[pos]
         edge.subscribers.delete(subscriber)
@@ -240,11 +245,34 @@ export class ClusterInfo {
         as they do today. The core only runs on subscribe and unsubscribe, which happen once per tab.
 
         Returns undefined when there is no such producer here, and says nothing about it: this is a
-        question, and a channel is allowed to ask whether something is available. Whoever cannot work
+        question, and a consumer is allowed to ask whether something is available. Whoever cannot work
         without it is the one that knows how to complain, and now knows how to identify itself too.
+
+        ⚠️ The consumer is no longer necessarily a CHANNEL. A provider may consume another provider —
+        the case that forced it is a provider owning the cloud credentials that aws/azure/gcp need —
+        so the two shapes are resolved to an id in one place (providers/Consumer.ts) instead of
+        letting each call site invent its own.
+
+        🔴 A provider that subscribes here subscribes for the LIFETIME of the instance, so it MUST
+        unsubscribe in stopProvider(). Skipping it is not a leak of one object: the producer keeps
+        handing events to an instance nobody uses any more, and on a hot reload each round leaves
+        another ghost behind. It already happened once, and it disguised itself as a database error.
+
+        ⚠️ Do NOT call this from startProvider(): whether the producer is already registered depends
+        on which startup loop instantiated it. Use onProvidersReady(), which runs once everything is
+        registered precisely so this is deterministic.
     */
-    getProvider = (providerId: string, consumer: IChannel): IProviderHandle | undefined => {
-        const channelId = consumer.getChannelData().id
+    getProvider = (providerId: string, consumer: TSubscriptionConsumer): IProviderHandle | undefined => {
+        const consumerId = consumerIdOf(consumer)
+        if (consumerId === undefined) {
+            /*
+                Warned but not refused: an unnamed edge in the registry is a smaller harm than a
+                subscription that does not happen. The subscriber Set still counts it, so nothing
+                breaks — the graph just cannot say who it is.
+            */
+            providerLogger(providerId).warning('A consumer subscribed without being able to identify itself: the subscription works, but it will not be attributed to anyone in the registry')
+        }
+        const edgeId = consumerId ?? 'unknown'
         /*
             Both are subscribed to the same way. The cast is here because the core narrows a provider's
             subscriber to IChannel — older than the published contract, which has always said
@@ -259,13 +287,13 @@ export class ClusterInfo {
             id: providerId,
             subscribe: (subscriber: IProviderSubscriber, data?: any) => {
                 const accepted = target.addSubscriber(subscriber, data)
-                this.trackSubscription(providerId, channelId, subscriber)
+                this.trackSubscription(providerId, edgeId, subscriber)
                 return accepted
             },
             updateSubscription: (subscriber: IProviderSubscriber, data?: any) => target.updateSubscription?.(subscriber, data),
             unsubscribe: (subscriber: IProviderSubscriber) => {
                 const removed = target.removeSubscriber(subscriber)
-                this.untrackSubscription(providerId, channelId, subscriber)
+                this.untrackSubscription(providerId, edgeId, subscriber)
                 return removed
             }
         }
@@ -277,7 +305,7 @@ export class ClusterInfo {
      * edge itself is needed.
      */
     getSubscriptions = (): ISubscription[] =>
-        this.subscriptions.map(({ providerId, channelId, since }) => ({ providerId, channelId, since }))
+        this.subscriptions.map(({ providerId, consumerId, since }) => ({ providerId, consumerId, since }))
 
     // Kubernetes no tiene nombre de cluster: los gestionados dejan pistas en labels/providerID del
     // nodo, y k3s no deja ninguna (k3d solo la deja en el nombre de sus contenedores). Precedencia:

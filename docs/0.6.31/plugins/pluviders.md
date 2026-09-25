@@ -229,6 +229,7 @@ In the **Provider Debug** plugin, pluviders appear in the same drop-down as prov
 
 ## Related
 
+- [Consuming another provider](/0.6.31/providers/developing?id=consuming-another-provider) — the symmetric direction: a pluvider is a channel that also **produces**, and a provider can also **consume**
 - [Autonomous plugins](/0.6.31/plugins/autonomous) — the plugin with its own always-running back end, which is the typical producer
 - [Developing plugins](/0.6.31/plugins/developing)
 - [Providers](/0.6.31/providers/index) and [Developing providers](/0.6.31/providers/developing)

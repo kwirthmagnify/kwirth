@@ -74,11 +74,12 @@ import * as crypto from 'crypto'
 
 import { createProviderInstance, IProvider, IProviderStorage, TProviderConstructor } from './providers/IProvider'
 import { findMissingSubscriptionTargets, isPluvider, pluviderId, rebindPluvider, startPluviders, warnNameCollisions } from './providers/Pluvider'
+import { wireProviderConsumers } from './providers/Consumer'
 import { buildProviderStorage } from './tools/ProviderStorage'
 import { EventsProvider } from './providers/events/EventsProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
 
-import { ELogComponent, logError, logInfo, logTrace, logWarning, setLogConfig } from './tools/Logging'
+import { ELogComponent, logError, logInfo, logTrace, logWarning, providerLogger, setLogConfig } from './tools/Logging'
 import { PluginManager } from './tools/PluginManager'
 import { LicenseManager } from './tools/LicenseManager'
 import { PluginApi } from './api/PluginApi'
@@ -1895,6 +1896,19 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         // Fase de PLUVIDERS: entre la de providers (arriba) y la de canales, que ocurre despues en
         // startRunningInstance(). El detalle y el porque del orden, en providers/Pluvider.ts.
         await startPluviders(localClusterInfo.pluviders)
+
+        /*
+            Con TODO lo suscribible ya registrado —providers y pluviders—, se avisa a los providers que
+            consumen a otros para que se suscriban. Va aqui y no dentro de startProvider() porque alli
+            que el productor exista depende de cual de los dos bucles lo instancio y del orden dentro
+            del bucle: el autor no puede verlo y le funciona o no por motivos invisibles.
+
+            El fallo de uno se registra y no tumba al resto: consumir a otro productor es una
+            dependencia BLANDA, igual que para un canal que se suscribe a un pluvider ausente.
+        */
+        const wired = await wireProviderConsumers(localClusterInfo.providers,
+            (provId, err) => providerLogger(provId).error(`Failed while wiring up to the providers it consumes: ${err}`))
+        if (wired > 0) logInfo(ELogComponent.CORE, `Wired ${wired} provider(s) that consume other providers`)
 
         // Tercer momento del aviso de coincidencia de nombres: cada arranque. Los otros dos son al
         // instalar el plugin y al instalar el provider, porque cualquiera de los dos puede llegar el

@@ -45,7 +45,7 @@ test('a subscription registers the edge, with who produces and who consumes', ()
     const edges = ci.getSubscriptions()
     assert.equal(edges.length, 1)
     assert.equal(edges[0].providerId, 'events')
-    assert.equal(edges[0].channelId, 'agora')
+    assert.equal(edges[0].consumerId, 'agora')
 })
 
 test('two subscribers of the same channel are ONE edge, and the first unsubscribe does not take it', () => {
@@ -118,19 +118,19 @@ test('what comes back is a copy: touching it does not alter the core registry', 
     ci.addSubscriber('events', channel('agora'), {})
 
     const edges = ci.getSubscriptions()
-    edges[0].channelId = 'other'
+    edges[0].consumerId = 'other'
     edges.length = 0
 
     const after = ci.getSubscriptions()
     assert.equal(after.length, 1)
-    assert.equal(after[0].channelId, 'agora')
+    assert.equal(after[0].consumerId, 'agora')
 })
 
 test('the edge does not expose its subscribers: outside, only who with whom is needed', () => {
     const { ci } = clusterInfoWith('events')
     ci.addSubscriber('events', channel('agora'), {})
 
-    assert.deepEqual(Object.keys(ci.getSubscriptions()[0]).sort(), ['channelId', 'providerId', 'since'])
+    assert.deepEqual(Object.keys(ci.getSubscriptions()[0]).sort(), ['consumerId', 'providerId', 'since'])
 })
 
 test('subscribing to a provider that does not exist invents no edge', () => {
@@ -169,7 +169,7 @@ test('the handle registers the edge, with both ends, without the channel saying 
     const edges = ci.getSubscriptions()
     assert.equal(edges.length, 1)
     assert.equal(edges[0].providerId, 'events')
-    assert.equal(edges[0].channelId, 'agora')
+    assert.equal(edges[0].consumerId, 'agora')
 })
 
 test('🔴 the handle does NOT wrap the subscriber: the provider gets the very same object', () => {
@@ -238,5 +238,5 @@ test('the old addSubscriber and the handle land in the same registry', () => {
     ci.addSubscriber('events', channel('agora'), {})
     ci.getProvider('events', channel('iter'))!.subscribe({ processProviderEvent: () => {} })
 
-    assert.deepEqual(ci.getSubscriptions().map(s => s.channelId).sort(), ['agora', 'iter'])
+    assert.deepEqual(ci.getSubscriptions().map(s => s.consumerId).sort(), ['agora', 'iter'])
 })

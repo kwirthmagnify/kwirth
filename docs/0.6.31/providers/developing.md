@@ -172,7 +172,7 @@ setLogger = (logger: IProviderLogger): void => { this.log = logger }
 ```
 
 ```
-[12:21:07] [provider] [ERROR] [longhorn] informer error (engines): HTTP-Code: 404
+[12:21:07] [prov] [ERRO] [longhorn] informer error (engines): HTTP-Code: 404
 ```
 
 It is optional and read defensively, like everything else here: keep a fallback that writes to the
@@ -194,6 +194,52 @@ no usage, a CRD that is not there), `info` for the rest.
 
 If some of your traces come from plain functions rather than from the class, keep a module-level
 logger and have `setLogger()` replace that one too, instead of importing the provider from them.
+
+## Consuming another provider
+
+A provider does not only produce. It can also **subscribe to another provider** — typically when
+something it needs is owned by someone else, such as configuration shared by several providers.
+
+Ask the core for a handle and subscribe with it. Never reach into `clusterInfo.providers` yourself: the
+handle is what keeps the core's registry of who-consumes-what true, and going around it makes your
+subscription invisible to everything built on that registry.
+
+```typescript
+onProvidersReady = async (): Promise<void> => {
+    const handle = this.clusterInfo?.getProvider('some-provider', this)
+    if (!handle) {
+        this.log.warning('some-provider is not available here: continuing without it')
+        return
+    }
+    await Promise.resolve(handle.subscribe(this, { /* subscription payload */ })).catch(
+        err => this.log.error(`could not subscribe to some-provider: ${err}`))
+    this.producer = handle
+}
+
+stopProvider = async (): Promise<void> => {
+    this.producer?.unsubscribe(this)      // 🔴 not optional, see below
+    this.producer = undefined
+}
+```
+
+⚠️ **Subscribe from `onProvidersReady()`, never from `startProvider()`.** The core calls it once, when
+every provider and pluvider is already registered. From `startProvider()` you may or may not find your
+producer depending on the order things were instantiated in, which is not something you can see from
+your own code — so it would work on one Kwirth and not on the next.
+
+🔴 **Whatever you subscribe to, unsubscribe in `stopProvider()`.** Skipping it does not leak one object:
+the producer keeps handing events to an instance nobody uses any more, and every hot reload leaves
+another ghost behind holding whatever that instance held. That failure does not announce itself — it
+shows up later as whatever resource the ghosts are holding running out.
+
+`getProvider()` answering `undefined` is a legitimate answer, not an error: the other provider may
+simply not be installed here. Say so and carry on — a **soft** dependency, the same way a channel deals
+with a pluvider that is not there. If you genuinely cannot work without it, you are the one who knows
+how to complain about it.
+
+> Your subscriber is whatever you pass as the first argument to `subscribe()`, and it needs
+> `processProviderEvent(providerId, payload)`. Passing `this` is the simple case; pass a separate object
+> per subscription if you need to hold several.
 
 ## Deprecated: core-managed configuration
 

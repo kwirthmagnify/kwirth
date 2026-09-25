@@ -1,10 +1,16 @@
 # Pluvider — PLAN
 
-## Estado (2026-09-19) — **MVP ENTREGADO Y EN PRODUCCIÓN; el plan sigue VIVO**
+## Estado (2026-09-25) — **MVP ENTREGADO Y EN PRODUCCIÓN; el plan sigue VIVO**
 
 F1 a F4 escritas, validadas y cerradas con su CL9: el core sabe qué es un pluvider, **Agora** publica
 sus alertas proactivas y **Montag** sus issues, y se consumen desde `provider-debug` y se ven en el
 gestor de providers. Validado en vivo: una alerta real de Agora llegó a otro plugin in-process.
+
+**F6 cerrada (2026-09-25)**: la dirección **simétrica**. Un pluvider es un canal que además produce; un
+provider puede ahora además **consumir**, suscribiéndose a otro productor por el handle del core en vez
+de rebuscar en `clusterInfo.providers` por su espalda. Con su fase de cableado (`onProvidersReady`),
+porque los dos bucles de arranque registraban en orden opuesto y suscribirse desde `startProvider()`
+funcionaba o no por motivos invisibles.
 
 **No se cierra** porque queda la **fase 2**, fuera del MVP por decisión: `ask()` (la cara de consulta),
 `publications[]` (separar la publicación en un array) y el descubrimiento en runtime. Más la
@@ -598,8 +604,62 @@ guías, sus métricas y el `BACKLOG.md` de otra sesión van por su repo privado 
 **Sin bump de versión no hay tag**: ninguna de las tres extensiones ha cambiado de versión en este
 cierre.
 
+## F6 — La dirección simétrica: un provider que CONSUME — *código escrito, checks técnicos verdes; QA pendiente*
+
+Un **pluvider** es un canal que además **produce**. F6 abre la otra mitad: un **provider** que además
+**consume**, es decir, que se suscribe a otro productor para hacer su trabajo.
+
+El caso que lo fuerza: un provider dueño de una configuración que **varios** providers necesitan (unas
+credenciales compartidas, por ejemplo). Hasta ahora solo un canal podía suscribirse, porque el handle
+pedía un `IChannel` y nombraba al consumidor por `getChannelData()`. Un provider no tiene ninguna de las
+dos cosas, así que le quedaba rebuscar en `clusterInfo.providers` **por la espalda del core** — justo lo
+que el handle existe para impedir, y lo que volvería a dejar falso el registro de quién consume a quién.
+
+- [x] **`providers/Consumer.ts`**, simétrico a `Pluvider.ts`: identidad del consumidor y fase de cableado.
+- [x] **`getProvider(providerId, consumer)` acepta consumidores que no son canales.** Las dos formas se
+      resuelven a un id **en un solo sitio**. ⚠️ La comprobación es por **presencia de `getChannelData()`
+      primero**, no por `id`: un pluvider es un canal que además produce, así que lleva `id` también, y
+      preguntar por `id` antes archivaría **todos** los pluviders como providers.
+- [x] **`ISubscription.channelId` → `consumerId`**, y los ids de provider van con prefijo `provider:`.
+      Sin el prefijo, un canal `aws` y un provider `aws` consumiendo al mismo productor colapsan en **una
+      sola arista** y el grafo enseña un consumidor donde hay dos. No rompe nada —el Set de suscriptores
+      sigue contando los dos, así que la arista no muere antes de tiempo— pero es una mentira en el único
+      sitio construido para decir la verdad sobre esto. Barato: el campo solo se usaba dentro de
+      `ClusterInfo` y `getSubscriptions()` **no tiene todavía ni un consumidor**.
+- [x] 🔴 **`onProvidersReady()`**, fase de cableado que corre cuando ya está **todo** registrado,
+      providers y pluviders. No es un adorno: los **dos bucles de arranque registran en orden opuesto**
+      —el de providers requeridos hace `push` *después* de `startProvider()` y el de auto-instanciación
+      *antes*—, así que suscribirse desde `startProvider()` funciona o no por motivos que el autor no
+      puede ver. **No se ha montado un grafo de dependencias**, la misma decisión que ya se tomó aquí para
+      los pluviders (S1.3): esto hace determinista lo único que lo necesitaba, y nada más.
+- [x] Extraído a `wireProviderConsumers()` para poder probarlo, igual que `startPluviders()`. Un fallo
+      **no tumba al resto**: consumir a otro productor es una dependencia **blanda**, como en S1.4.
+- [x] Contrato publicado (`common-back`) documentado: el handle ya no es solo para canales, y se declara
+      `onProvidersReady?`. Corregido de paso el literal del formato de log, que seguía diciendo
+      `'[provider] [ERROR] [longhorn]'` cuando desde el cambio a etiquetas de cuatro letras es
+      `'[prov] [ERRO] [longhorn]'` — ese comentario obsoleto ya indujo un paso de QA con un literal
+      inexistente.
+- [x] **15 tests** (`tests/providers/providerConsumer.test.ts`), core en **491/491**.
+- [x] **Documentado** en la guía: *Consuming another provider* en `providers/developing`, con referencia
+      cruzada desde la página de pluviders — son conceptos gemelos y quien lee uno pregunta por el otro.
+      Corregido de paso el literal del formato de log, que también aquí decía `[provider] [ERROR]`.
+- [x] 🔴 **QA de regresión validado (2026-09-25).** ⚠️ F6 **no tiene comportamiento observable**: no hay
+      UI ni función nueva hasta que exista el primer provider consumidor, así que lo que se comprobó es
+      que **no se rompió lo anterior**. Validado: el arranque **no** emite la línea de cableado (correcto,
+      hoy nadie implementa el enganche), un canal sigue recibiendo de un provider, **un pluvider sigue
+      contando como canal** —el paso que de verdad importaba, porque lleva las dos formas a la vez— y la
+      baja y el alta de nuevo funcionan.
+
 ## Backlog que deja este trabajo
 
+- ⚠️ **El core se traga en silencio los fallos de arranque de un provider.** El bucle de
+  auto-instanciación de `back/src/index.ts` cierra con `catch { }` sin traza: si `startProvider()`
+  lanza, el provider **desaparece sin una sola línea en el log**. Costó una ronda de diagnóstico creer
+  que un provider no arrancaba cuando el problema era otro. Mínimo: un `logWarning` con el id y el error.
+- ⚠️ **Los dos bucles de arranque de providers registran en orden opuesto**: el de providers requeridos
+  hace `push` a `clusterInfo.providers` **después** de `startProvider()`, y el de auto-instanciación
+  **antes**. F6 lo esquiva con `onProvidersReady()`, así que ya no muerde, pero la incoherencia sigue
+  ahí y es una trampa para lo siguiente que dependa de ese registro durante el arranque.
 - **Aislamiento de BD en los tests de Agora**: `AGORA_DB_CONSUMER` es una variable de entorno global;
   debería resolverse por fichero en runtime para que la suite se pueda ejecutar en un solo proceso.
 - **`updateSubscriber` de `ClusterInfo` sigue vacío** (`//+++ review how to implement`), también para

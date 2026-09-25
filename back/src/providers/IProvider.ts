@@ -79,4 +79,20 @@ export interface IProvider extends Omit<IPublicProvider, 'addSubscriber'|'remove
         core compila y los providers que ya lo implementen reciben su logger.
     */
     setLogger?: (logger: IComponentLogger) => void
+    /*
+        Called once, after EVERY provider is registered and started, so that a provider which consumes
+        another one can subscribe knowing its producer exists.
+
+        It is not a nicety: whether a producer is already in 'clusterInfo.providers' during someone
+        else's startProvider() depends on which of the two startup loops instantiated it — one pushes
+        before starting and the other after — and on the order within the loop. Subscribing from
+        startProvider() therefore works or not for reasons the author cannot see.
+
+        A dependency graph was deliberately NOT built, the same call already made for pluviders: the
+        order within a phase is not guaranteed and that is assumed. This hook makes the ONE thing that
+        needed determinism deterministic, and nothing else.
+
+        Optional, like setLogger: a provider built before this exists is simply never called.
+    */
+    onProvidersReady?: () => void | Promise<void>
 }
