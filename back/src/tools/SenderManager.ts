@@ -1,6 +1,6 @@
 import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage, ISenderResult, ISenderStoredConfig, TSenderConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { IConfigMaps } from './IConfigMap'
-import { ELogComponent, logError, logInfo, logWarning } from './Logging'
+import { componentLogger, ELogComponent, IComponentLogger, logError, logInfo, logWarning } from './Logging'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -38,6 +38,14 @@ const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 interface IDevSender {
     distPath: string
     meta: ISenderMeta
+}
+
+/*
+    'setLogger' ya esta en el contrato publicado (ISender), pero el paquete que npm sirve todavia no lo
+    trae. Se declara aqui para no bloquear el core; en cuanto la version nueva este instalada, sobra.
+*/
+interface ISenderWithLogger {
+    setLogger?: (logger: IComponentLogger) => void
 }
 
 export class SenderManager implements ISenderAccess {
@@ -484,6 +492,14 @@ export class SenderManager implements ISenderAccess {
         const Ctor = this.registeredSenders.get(id)
         if (!Ctor) return undefined
         const instance = new Ctor()
+        /*
+            Same as providers: the sender is handed a logger that already knows its id, so whatever it
+            says about itself comes out identified and with a level — '[send] [ERRO] [teams] ...' —
+            instead of a console line that reads like any other. Optional, so a sender built before
+            this simply does not get called.
+        */
+        const withLogger = instance as ISenderWithLogger
+        withLogger.setLogger?.(componentLogger(ELogComponent.SENDER, id))
         instance.startSender(this).catch(err => logError(ELogComponent.CORE, `Sender '${id}' startSender error: ${err}`))
         this.instances.set(id, instance)
         /*

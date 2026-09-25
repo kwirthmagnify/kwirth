@@ -18,6 +18,25 @@ import { IExtensionExportOptions, IExtensionImportResult } from '@kwirthmagnify/
 
     Ver `plans/config-portability/PRD.md`.
 */
+/**
+ * What an extension writes its log with. The core builds it knowing who the extension is, so the
+ * line comes out identified — '[prov] [ERRO] [longhorn] ...' — and the extension only writes the
+ * message.
+ *
+ * It lives here, and not next to one family's contract, because the need is the same for all of
+ * them: before this, anything that was not a channel had only `console.log`, which comes out with no
+ * timestamp, no level and no component, and turns a failure into something that reads like a routine
+ * trace.
+ *
+ * Three levels and no more. An `info` nobody can filter out is what buries a log, and a failure that
+ * goes out as `info` is a failure nobody sees.
+ */
+export interface IExtensionLogger {
+    info(message: unknown): void
+    warning(message: unknown): void
+    error(message: unknown): void
+}
+
 export interface IExtension {
     /*
         Devuelve la configuracion de esta extension, lista para viajar a otro Kwirth.

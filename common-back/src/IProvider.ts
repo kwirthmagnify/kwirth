@@ -1,5 +1,5 @@
 import { KwirthData, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
-import { IExtension } from './IExtension'
+import { IExtension, IExtensionLogger } from './IExtension'
 
 /**
  * Minimal interface representing the channel side that providers interact with.
@@ -134,17 +134,11 @@ export interface IProviderStats {
 */
 
 /**
- * What a provider writes its log with. The core builds it and hands it over with 'setLogger', so the
- * id is already in place and the provider only writes the message.
- *
- * Three levels and no more: an 'info' that nobody can filter out is what buries a log, and a failure
- * that goes out as 'info' is a failure nobody sees.
+ * What a provider writes its log with. It is the common extension logger — the need turned out to be
+ * the same for senders, so it lives in IExtension. Kept as a name of its own because it is already
+ * published and providers compile against it.
  */
-export interface IProviderLogger {
-    info(message: unknown): void
-    warning(message: unknown): void
-    error(message: unknown): void
-}
+export type IProviderLogger = IExtensionLogger
 
 /**
  * Interface that all provider plugins must implement.

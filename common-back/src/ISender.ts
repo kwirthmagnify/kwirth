@@ -1,5 +1,5 @@
 import { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig, ISenderResult, TConfigFieldType, IConfigFieldDef, IExtensionNodeMeta } from '@kwirthmagnify/kwirth-common'
-import { IExtension } from './IExtension'
+import { IExtension, IExtensionLogger } from './IExtension'
 
 export { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig, ISenderResult }
 
@@ -22,6 +22,18 @@ export interface ISender extends IExtension {
     getConfigSchema?(): ISenderFieldDef[]
     getNodeMeta?(): ISenderNodeMeta
     send(configName: string, message: ISenderMessage): Promise<ISenderResult | void>
+    /**
+     * The core hands the sender a logger that already knows who it is, as soon as it builds it.
+     *
+     * OPTIONAL and read defensively, like the rest: a sender that does not implement it keeps writing
+     * wherever it was writing, and an older core that never calls it leaves the sender on its own
+     * fallback.
+     *
+     * ⚠️ This is for what the sender says ABOUT ITSELF — a delivery that failed, a configuration it
+     * could not read. It is not the place for what it delivers: a sender's job is to put a message
+     * somewhere, and that somewhere is decided by its configuration, not by this.
+     */
+    setLogger?(logger: IExtensionLogger): void
     /*
         OPCIONAL: entrega un LOTE de una vez. Para un destino de log (Datadog, Elastic, Loki) mandar linea
         a linea es inviable: sus APIs aceptan arrays y cobran por peticion. Quien lo implemente recibe el

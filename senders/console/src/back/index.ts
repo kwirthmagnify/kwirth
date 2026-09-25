@@ -19,9 +19,29 @@ const RESET = '\x1b[0m'
 
 // ─── Sender ────────────────────────────────────────────────────────────────────
 
+/*
+    What the core lends the sender to write with. Declared here structurally rather than imported
+    from kwirth-common-back, so this sender does not depend on a particular version of it.
+*/
+interface IExtensionLogger {
+    info(message: unknown): void
+    warning(message: unknown): void
+    error(message: unknown): void
+}
+
 export class ConsoleSender implements ISender {
     readonly id = 'console'
     readonly senderType = 'output' as const
+    /*
+        This sender is a special case: its DESTINATION is the log, so what it delivers goes through
+        the logger the core hands it and comes out like every other line of the back —
+        '[15:46:08] [send] [WARN] [console] ...' — instead of with a format of its own.
+
+        Until the core hands one over, it writes to the console exactly as before: that fallback is
+        also what keeps it working on an older core.
+    */
+    private log: IExtensionLogger | undefined
+    setLogger = (logger: IExtensionLogger): void => { this.log = logger }
     private configs = new Map<string, IConsoleSenderConfig>()
     getNodeMeta() { return { label: 'Console', icon: 'Terminal' } }
 
@@ -45,19 +65,31 @@ export class ConsoleSender implements ISender {
         const config = this.configs.get(configName)
         if (!config) throw new Error(`ConsoleSender: config '${configName}' not found`)
 
-        const useTimestamps = config.timestamps ?? true
-        const useLevels     = config.levels ?? true
-        const prefix        = config.prefix ? `${config.prefix} ` : ''
-
-        const ts    = useTimestamps ? `[${new Date().toISOString()}] ` : ''
-        const level = message.level ?? 'info'
-        const lvTag = useLevels ? `[${level.toUpperCase()}] ` : ''
-        const color = LEVEL_COLORS[level] ?? ''
-
+        const prefix  = config.prefix ? `${config.prefix} ` : ''
+        const level   = message.level ?? 'info'
         const subject = message.subject ? `${message.subject}: ` : ''
         const to      = message.to ? ` → ${Array.isArray(message.to) ? message.to.join(', ') : message.to}` : ''
+        const body    = `${prefix}${subject}${message.body}${to}`
 
-        const line = `${color}${ts}${prefix}${lvTag}${subject}${message.body}${to}${RESET}`
+        /*
+            With a logger, the timestamp and the level are the core's, and they come out in the same
+            shape as the rest of the back. That is why 'timestamps' and 'levels' no longer apply
+            here: they existed to compensate for not having any of this.
+        */
+        if (this.log) {
+            if (level === 'error') this.log.error(body)
+            else if (level === 'warning') this.log.warning(body)
+            else this.log.info(body)
+            return
+        }
+
+        // Sin logger (core antiguo): el formato de siempre, con su configuracion de siempre.
+        const useTimestamps = config.timestamps ?? true
+        const useLevels     = config.levels ?? true
+        const ts    = useTimestamps ? `[${new Date().toISOString()}] ` : ''
+        const lvTag = useLevels ? `[${level.toUpperCase()}] ` : ''
+        const color = LEVEL_COLORS[level] ?? ''
+        const line  = `${color}${ts}${prefix}${lvTag}${subject}${message.body}${to}${RESET}`
 
         if (level === 'error') {
             console.error(line)

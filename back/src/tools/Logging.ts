@@ -7,12 +7,13 @@ export enum ELogComponent {
     CORE = 'core',
     PROVIDER = 'prov',
     CHANNEL = 'chan',
+    SENDER = 'send',
     STORAGE = 'stor'
 }
 
 let ansiLog = true
 
-const ENABLED_COMPONENTS: (ELogComponent | '*')[] = [ ELogComponent.CHANNEL, ELogComponent.CORE, ELogComponent.PROVIDER ]
+const ENABLED_COMPONENTS: (ELogComponent | '*')[] = [ ELogComponent.CHANNEL, ELogComponent.CORE, ELogComponent.PROVIDER, ELogComponent.SENDER ]
 
 const colors = {
   reset: '\x1b[0m',
