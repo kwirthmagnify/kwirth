@@ -24,7 +24,28 @@ interface ISubscriberEntry {
     configs: Set<string> | undefined
 }
 
+/*
+    What the core lends the provider to write its log with. Declared here structurally instead of
+    imported from kwirth-common-back, so this provider does not depend on a particular version of
+    that package. Once the contract is published this interface can go.
+*/
+interface IProviderLogger {
+    info(message: unknown): void
+    warning(message: unknown): void
+    error(message: unknown): void
+}
+
 export class HttpPullPushProvider implements IProvider {
+    /*
+        Starts writing to the console — what it did before — and the core replaces it as soon as the
+        provider is built. With an older core nobody calls setLogger and everything stays as it was.
+    */
+    private log: IProviderLogger = {
+        info: (message: unknown) => console.log(`[http-pull-push] ${message}`),
+        warning: (message: unknown) => console.warn(`[http-pull-push] ${message}`),
+        error: (message: unknown) => console.error(`[http-pull-push] ${message}`)
+    }
+    setLogger = (logger: IProviderLogger): void => { this.log = logger }
     public readonly id = 'http-pull-push'
     public readonly providesRouter = false
     public router = undefined
@@ -66,10 +87,10 @@ export class HttpPullPushProvider implements IProvider {
         try {
             const configs = await this.store.load()
             this.configs = new Map(configs.map(c => [c.name, c]))
-            console.log(`[http-pull-push] ${this.configs.size} connection(s) loaded`)
+            this.log.info(`${this.configs.size} connection(s) loaded`)
         }
         catch (err) {
-            console.error(`[http-pull-push] Could not load connections: ${err}`)
+            this.log.error(`Could not load connections: ${err}`)
         }
         this.started = true
         // no se arranca ningun poller aqui: son lazy, esperan al primer suscriptor
@@ -159,7 +180,7 @@ export class HttpPullPushProvider implements IProvider {
                     res.status(200).json({ ok: true })
                 }
                 catch (err) {
-                    console.error(`[http-pull-push] Error saving connections: ${err}`)
+                    this.log.error(`Error saving connections: ${err}`)
                     res.status(500).json({ errors: [String(err)] })
                 }
             })
@@ -176,7 +197,7 @@ export class HttpPullPushProvider implements IProvider {
                     res.status(200).json(result)
                 }
                 catch (err) {
-                    console.error(`[http-pull-push] Error testing connection: ${err}`)
+                    this.log.error(`Error testing connection: ${err}`)
                     res.status(500).json({ ok: false, durationMs: 0, error: String(err) })
                 }
             })
@@ -360,7 +381,7 @@ export class HttpPullPushProvider implements IProvider {
                 subscriber.processProviderEvent(this.id, event)
             }
             catch (err) {
-                console.error(`[http-pull-push] Subscriber failed processing '${event.config}': ${err}`)
+                this.log.error(`Subscriber failed processing '${event.config}': ${err}`)
             }
         }
     }
@@ -374,7 +395,7 @@ export class HttpPullPushProvider implements IProvider {
     private warnUnknown = (data: IHttpPullPushSubscription | undefined): void => {
         if (!data?.configs) return
         for (const name of data.configs) {
-            if (!this.configs.has(name)) console.log(`[http-pull-push] Subscription to unknown connection '${name}' — ignored`)
+            if (!this.configs.has(name)) this.log.warning(`Subscription to unknown connection '${name}' — ignored`)
         }
     }
 }

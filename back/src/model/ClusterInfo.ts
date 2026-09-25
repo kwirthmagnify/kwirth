@@ -61,9 +61,14 @@ export interface ISubscription {
 */
 export interface IProviderHandle {
     readonly id: string
-    subscribe(subscriber: IProviderSubscriber, data?: any): void
-    updateSubscription(subscriber: IProviderSubscriber, data?: any): void
-    unsubscribe(subscriber: IProviderSubscriber): void
+    /*
+        Devuelve lo que devuelva el productor —normalmente una promesa—, en vez de tragarselo: un
+        provider que falla al dar de alta a un suscriptor deja un unhandled rejection, y eso tumba el
+        core. Quien consume providers ajenos lo envuelve en Promise.resolve().catch().
+    */
+    subscribe(subscriber: IProviderSubscriber, data?: any): unknown
+    updateSubscription(subscriber: IProviderSubscriber, data?: any): unknown
+    unsubscribe(subscriber: IProviderSubscriber): unknown
 }
 
 /* A provider or a pluvider, seen only as the thing you subscribe to: both offer exactly this. */
@@ -253,15 +258,15 @@ export class ClusterInfo {
         return {
             id: providerId,
             subscribe: (subscriber: IProviderSubscriber, data?: any) => {
-                target.addSubscriber(subscriber, data)
+                const accepted = target.addSubscriber(subscriber, data)
                 this.trackSubscription(providerId, channelId, subscriber)
+                return accepted
             },
-            updateSubscription: (subscriber: IProviderSubscriber, data?: any) => {
-                target.updateSubscription?.(subscriber, data)
-            },
+            updateSubscription: (subscriber: IProviderSubscriber, data?: any) => target.updateSubscription?.(subscriber, data),
             unsubscribe: (subscriber: IProviderSubscriber) => {
-                target.removeSubscriber(subscriber)
+                const removed = target.removeSubscriber(subscriber)
                 this.untrackSubscription(providerId, channelId, subscriber)
+                return removed
             }
         }
     }

@@ -133,10 +133,31 @@ export class FakePluvider {
     }
 }
 
-export const makeClusterInfo = (providers: FakeProvider[], pluviders: FakePluvider[] = []) => ({
-    providers,
-    pluviders: new Map(pluviders.map(p => [p.id, p]))
-})
+/*
+    El clusterInfo que ve el canal, con el HANDLE que hoy entrega el core: el canal ya no coge el
+    objeto provider del registro, pide 'getProvider(id, this)' y se suscribe por ahi.
+
+    Aqui el handle es el minimo que el canal usa. Lo que importa reproducir del de verdad es que
+    'subscribe' DEVUELVE lo que devuelva el provider: de eso depende que un provider que falla al dar
+    de alta acabe como un error en pantalla y no como un rechazo sin atender que tumba el proceso.
+*/
+export const makeClusterInfo = (providers: FakeProvider[], pluviders: FakePluvider[] = []) => {
+    const pluviderMap = new Map(pluviders.map(p => [p.id, p]))
+    return {
+        providers,
+        pluviders: pluviderMap,
+        getProvider: (id: string) => {
+            const target = id.startsWith('plugin:') ? pluviderMap.get(id) : providers.find(p => p.id === id)
+            if (!target) return undefined
+            return {
+                id,
+                subscribe: (c: IProviderSubscriber, data: unknown) => target.addSubscriber(c, data),
+                updateSubscription: (c: IProviderSubscriber, data: unknown) => target.addSubscriber(c, data),
+                unsubscribe: (c: IProviderSubscriber) => target.removeSubscriber(c)
+            }
+        }
+    }
+}
 
 export const makeBackObj = () => {
     const logs: string[] = []

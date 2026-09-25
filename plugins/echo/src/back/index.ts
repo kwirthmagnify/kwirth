@@ -44,10 +44,17 @@ class EchoChannel implements IChannel {
 
     getChannelScopeLevel = (scope: string): number => ['', 'none', 'cluster'].indexOf(scope)
 
+    /*
+        Subscribing through the core, not by grabbing the provider object and calling it directly.
+        Both reach otel, but only this way does the core get to know that echo consumes otel — which
+        is what the "who feeds whom" registry, and the graph drawn from it, are made of. Going around
+        it is not doing anything wrong, it just leaves the core blind, and that is the whole reason
+        the handle exists.
+    */
     startChannel = async () => {
-        const otelProvider = this.clusterInfo.providers?.find((p: any) => p.id === 'otel')
-        if (otelProvider) {
-            await otelProvider.addSubscriber(this, {
+        const otel = this.clusterInfo.getProvider?.('otel', this)
+        if (otel) {
+            otel.subscribe(this, {
                 spaces: [{ name: 'echo', signals: ['traces', 'metrics', 'logs'] }]
             })
         }

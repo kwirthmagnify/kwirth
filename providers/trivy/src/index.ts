@@ -8,8 +8,30 @@ const TRIVY_NS = 'trivy-system'
 const TRIVY_CONFIGMAP = 'trivy-operator-trivy-config'
 const TRIVY_OPERATOR_DEPLOY = 'trivy-operator'
 
+/*
+    What the core lends the provider to write its log with. Declared here structurally instead of
+    imported from kwirth-common-back, so this provider does not depend on a particular version of
+    that package. Once the contract is published this interface can go.
+*/
+interface IProviderLogger {
+    info(message: unknown): void
+    warning(message: unknown): void
+    error(message: unknown): void
+}
+
 export class TrivyProvider implements IProvider {
     public readonly id = 'trivy'
+    /*
+        Starts writing to the console — what it did before — and the core replaces it as soon as the
+        provider is built. Note the console prefix said '[trivy-provider]', which is NOT the provider
+        id: the core writes '[trivy]', the real one.
+    */
+    private log: IProviderLogger = {
+        info: (message: unknown) => console.log(`[trivy] ${message}`),
+        warning: (message: unknown) => console.warn(`[trivy] ${message}`),
+        error: (message: unknown) => console.error(`[trivy] ${message}`)
+    }
+    setLogger = (logger: IProviderLogger): void => { this.log = logger }
     public readonly providesRouter = false
     public router = undefined
     public routerAlias = undefined
@@ -50,7 +72,7 @@ export class TrivyProvider implements IProvider {
         const reportTypes = Array.isArray(data?.reportTypes) && data.reportTypes.length > 0 ? data.reportTypes : ALL_PLURALS
         const subData: ITrivySubscriptionData = { ...data, reportTypes }
         this.subscribers.set(c, subData)
-        console.log(`[trivy-provider] subscriber added, total: ${this.subscribers.size}`)
+        this.log.info(`subscriber added, total: ${this.subscribers.size}`)
         // RC-1: sync de estado inicial. El provider es compartido y sus informers
         // pueden haber entregado ya su LIST inicial a otros suscriptores; uno que
         // llega tarde se quedaría sin estado. Por eso, en cada alta listamos los
@@ -60,29 +82,29 @@ export class TrivyProvider implements IProvider {
         // ⛔ Un fire-and-forget SIEMPRE lleva su catch: aqui no hay nadie esperando la promesa, asi que
         // un fallo no se queda en este provider — se convierte en unhandled rejection y el core sale.
         this.sendInitialState(c, reportTypes)
-            .catch(err => console.error('[trivy-provider] initial-state sync failed:', err))
+            .catch(err => this.log.error(`initial-state sync failed: ${err}`))
         // Además, entregamos la versión de Trivy del cluster a este suscriptor. Se
         // lee en cada alta (las suscripciones son infrecuentes) en vez de vigilar el
         // configmap: la versión cambia 1-2 veces al año y el drift se detecta al
         // comparar lo recibido con lo guardado en el consumidor.
         this.sendTrivyMeta(c)
-            .catch(err => console.error('[trivy-provider] trivy meta delivery failed:', err))
+            .catch(err => this.log.error(`trivy meta delivery failed: ${err}`))
     }
 
     removeSubscriber = async (c: IProviderSubscriber) => {
         this.subscribers.delete(c)
-        console.log(`[trivy-provider] subscriber removed, total: ${this.subscribers.size}`)
+        this.log.info(`subscriber removed, total: ${this.subscribers.size}`)
     }
 
     updateSubscription = async (c: IProviderSubscriber, data: ITrivySubscriptionData) => {
         if (this.subscribers.has(c)) {
             this.subscribers.set(c, data)
-            console.log(`[trivy-provider] subscription updated, reportTypes: ${data.reportTypes.join(',')}`)
+            this.log.info(`subscription updated, reportTypes: ${data.reportTypes.join(',')}`)
         }
     }
 
     startProvider = async () => {
-        console.log('[trivy-provider] starting — creating informers for all CRD types')
+        this.log.info('starting — creating informers for all CRD types')
         for (const plural of ALL_PLURALS) {
             const informer = this.createInformer(plural)
             this.informers.set(plural, informer)
@@ -91,7 +113,7 @@ export class TrivyProvider implements IProvider {
     }
 
     stopProvider = async () => {
-        console.log('[trivy-provider] stopping informers')
+        this.log.info('stopping informers')
         for (const informer of this.informers.values()) {
             try { informer.stop() } catch {}
         }
@@ -120,14 +142,14 @@ export class TrivyProvider implements IProvider {
             onDelete: (obj: any) => this.processInformerEvent(plural, 'delete', obj),
             onError:  (err: any) => {
                 try {
-                    console.error(`[trivy-provider] informer error (${plural}):`, err)
+                    this.log.error(`informer error (${plural}): ${err}`)
                     if (err['HTTP-Code'] === '404' || err.statusCode === 404 || err.code === 404)
-                        console.log(`[trivy-provider] CRD ${plural} not found, informer will not restart`)
+                        this.log.warning(`CRD ${plural} not found, informer will not restart`)
                     else {
                         const informer = this.informers.get(plural)
-                        if (informer) setTimeout(() => { informer.start(); console.log(`[trivy-provider] informer ${plural} restarted`) }, 5000)
+                        if (informer) setTimeout(() => { informer.start(); this.log.info(`informer ${plural} restarted`) }, 5000)
                     }
-                } catch (e) { console.error(`[trivy-provider] error managing informer error (${plural}):`, e) }
+                } catch (e) { this.log.error(`error managing informer error (${plural}): ${e}`) }
             }
         }
         return createCrdInformer(this.clusterInfo, TRIVY_API_GROUP, TRIVY_API_VERSION, plural, handlers)
@@ -174,7 +196,7 @@ export class TrivyProvider implements IProvider {
                 }
             }
             catch (err) {
-                console.error(`[trivy-provider] initial-state sync error (${plural}):`, err)
+                this.log.error(`initial-state sync error (${plural}): ${err}`)
             }
         }
     }
@@ -199,14 +221,14 @@ export class TrivyProvider implements IProvider {
             meta.trivyVersion = cm.data?.['trivy.tag']
         }
         catch (err) {
-            console.warn(`[trivy-provider] no se pudo leer ${TRIVY_CONFIGMAP} (¿Trivy Operator instalado?):`, err instanceof Error ? err.message : err)
+            this.log.warning(`Could not read ${TRIVY_CONFIGMAP} (is Trivy Operator installed?): ${err instanceof Error ? err.message : err}`)
         }
         try {
             const dep = await this.clusterInfo.appsApi.readNamespacedDeployment({ name: TRIVY_OPERATOR_DEPLOY, namespace: TRIVY_NS })
             meta.operatorVersion = this.parseImageTag(dep.spec?.template?.spec?.containers?.[0]?.image)
         }
         catch (err) {
-            console.warn('[trivy-provider] no se pudo leer el deployment trivy-operator:', err instanceof Error ? err.message : err)
+            this.log.warning(`Could not read the trivy-operator deployment: ${err instanceof Error ? err.message : err}`)
         }
         return meta
     }
@@ -226,7 +248,7 @@ export class TrivyProvider implements IProvider {
             if (ctrl) return `${ctrl.kind.toLowerCase()}-${ctrl.name}${containerName ? '-' + containerName : ''}`
             return `pod-${podName}${containerName ? '-' + containerName : ''}`
         } catch (err) {
-            console.error('[trivy-provider] cannot get CRD name:', err)
+            this.log.error(`cannot get CRD name: ${err}`)
             return undefined
         }
     }
@@ -238,7 +260,7 @@ export class TrivyProvider implements IProvider {
             const crdObject = await this.clusterInfo.crdApi.getNamespacedCustomObject({ group: TRIVY_API_GROUP, version: TRIVY_API_VERSION, namespace: asset.namespace, plural, name: crdName })
             return crdObject.report
         } catch (err) {
-            console.error(`[trivy-provider] getReport error (${plural}):`, err)
+            this.log.error(`getReport error (${plural}): ${err}`)
             return undefined
         }
     }

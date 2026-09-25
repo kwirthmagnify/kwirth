@@ -50,7 +50,28 @@ export interface IBusinessProviderEvent {
 
 // ─── Provider ────────────────────────────────────────────────────────────────────
 
+/*
+    What the core lends the provider to write its log with. Declared here structurally instead of
+    imported from kwirth-common-back, so this provider does not depend on a particular version of
+    that package. Once the contract is published this interface can go.
+*/
+interface IProviderLogger {
+    info(message: unknown): void
+    warning(message: unknown): void
+    error(message: unknown): void
+}
+
 export class BusinessProvider implements IProvider {
+    /*
+        Starts writing to the console — what it did before — and the core replaces it as soon as the
+        provider is built. With an older core nobody calls setLogger and everything stays as it was.
+    */
+    private log: IProviderLogger = {
+        info: (message: unknown) => console.log(`[business] ${message}`),
+        warning: (message: unknown) => console.warn(`[business] ${message}`),
+        error: (message: unknown) => console.error(`[business] ${message}`)
+    }
+    setLogger = (logger: IProviderLogger): void => { this.log = logger }
     public readonly id = 'business'
     public readonly providesRouter = true
     public router = express.Router()
@@ -77,7 +98,7 @@ export class BusinessProvider implements IProvider {
 
 
     constructor(_clusterInfo: any, _kwirthData: KwirthData) {
-        console.log(`[business] Instantiating provider ${this.id}`)
+        this.log.info(`Instantiating provider ${this.id}`)
 
         this.router.route('/')
             .post(async (req: Request, res: Response) => {
@@ -86,7 +107,7 @@ export class BusinessProvider implements IProvider {
                 }
                 catch (err) {
                     res.status(500).send()
-                    console.error('[business] Error managing business event:', err)
+                    this.log.error(`Error managing business event: ${err}`)
                 }
             })
     }

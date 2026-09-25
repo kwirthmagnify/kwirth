@@ -22,9 +22,17 @@ const PLUVIDER_PREFIX = 'plugin:'
  * Los dos publican la misma pareja de métodos; lo demás (routers, config, ciclo de vida) no pinta
  * nada aquí.
  */
+/*
+    El handle que entrega el core, visto por este canal. Se declara aqui en vez de importarlo de
+    kwirth-common-back para no atarse a una version concreta del paquete.
+
+    'subscribe' devuelve lo que devuelva el provider —normalmente una promesa— y aqui eso importa
+    especialmente: este canal existe para hurgar en providers ajenos, asi que es el ultimo sitio
+    donde se puede dar por hecho que ninguno va a fallar al dar de alta a un suscriptor.
+*/
 interface ISubscribable {
-    addSubscriber(c: IProviderSubscriber, data: unknown): Promise<void> | void
-    removeSubscriber(c: IProviderSubscriber): Promise<void> | void
+    subscribe(c: IProviderSubscriber, data: unknown): unknown
+    unsubscribe(c: IProviderSubscriber): unknown
 }
 
 /** Un pluvider, tal y como lo ve este canal: lo suscribible más lo que sabe contar de sí mismo. */
@@ -216,9 +224,14 @@ class ProviderDebugChannel implements IChannel {
         // Un id con prefijo es un pluvider y vive en su propio registro; sin prefijo, un provider de
         // toda la vida. Los dos se suscriben igual, que es justo la gracia del asunto.
         const isPluvider = instance.providerId.startsWith(PLUVIDER_PREFIX)
-        const provider: ISubscribable | undefined = isPluvider
-            ? (this.clusterInfo.pluviders as Map<string, IPluviderLike> | undefined)?.get(instance.providerId)
-            : (this.clusterInfo.providers as IProvider[] | undefined)?.find(p => p.id === instance.providerId)
+        /*
+            Por el HANDLE del core, no cogiendo el objeto del registro y llamandolo por lo bajo. Este
+            canal se suscribe por INSTANCIA —un suscriptor por pestaña, para poder pausar y filtrar
+            cada una por su cuenta—, y el handle lo admite: es lo que hay detras de cada pestaña. A
+            cambio, el core se entera de que provider-debug consume, que antes no podia saberlo y por
+            eso este canal no salia en el grafo.
+        */
+        const provider: ISubscribable | undefined = this.clusterInfo.getProvider?.(instance.providerId, this)
         if (!provider) {
             // El mensaje de un provider no vale para un pluvider: un provider parado es un provider
             // que nadie arrancó, mientras que un pluvider ausente suele ser un plugin que ni está
@@ -252,7 +265,7 @@ class ProviderDebugChannel implements IChannel {
             Este canal existe para hurgar en providers ajenos, asi que es el ULTIMO sitio donde vale
             asumir que el provider esta bien escrito. Paso justo con 'trivy' al suscribirse sin payload.
         */
-        Promise.resolve(provider.addSubscriber(subscriber, subscriptionData)).catch(err => {
+        Promise.resolve(provider.subscribe(subscriber, subscriptionData)).catch(err => {
             this.backChannelObject.logWarning?.(`Provider '${instance.providerId}' failed while adding the subscriber: ${String(err)}`)
             this.sendSignalMessage(socket.ws, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, `Provider '${instance.providerId}' failed while adding the subscriber: ${String(err)}`)
         })
@@ -263,7 +276,7 @@ class ProviderDebugChannel implements IChannel {
     private unsubscribe = (instance: IInstance): void => {
         if (instance.provider && instance.subscriber) {
             // Mismo motivo que en el alta: la baja tambien es async y tampoco se espera.
-            Promise.resolve(instance.provider.removeSubscriber(instance.subscriber)).catch(err => {
+            Promise.resolve(instance.provider.unsubscribe(instance.subscriber)).catch(err => {
                 this.backChannelObject.logWarning?.(`Provider '${instance.providerId}' failed while removing the subscriber: ${String(err)}`)
             })
             this.backChannelObject.logInfo?.(`Provider debug instance ${instance.instanceId} unsubscribed from provider '${instance.providerId}'`)

@@ -5,7 +5,28 @@ interface IValidatingSubscriber {
     kinds: string[]
 }
 
+/*
+    What the core lends the provider to write its log with. Declared here structurally instead of
+    imported from kwirth-common-back, so this provider does not depend on a particular version of
+    that package. Once the contract is published this interface can go.
+*/
+interface IProviderLogger {
+    info(message: unknown): void
+    warning(message: unknown): void
+    error(message: unknown): void
+}
+
 export class ValidatingProvider implements IProvider {
+    /*
+        Starts writing to the console — what it did before — and the core replaces it as soon as the
+        provider is built. With an older core nobody calls setLogger and everything stays as it was.
+    */
+    private log: IProviderLogger = {
+        info: (message: unknown) => console.log(`[validating] ${message}`),
+        warning: (message: unknown) => console.warn(`[validating] ${message}`),
+        error: (message: unknown) => console.error(`[validating] ${message}`)
+    }
+    setLogger = (logger: IProviderLogger): void => { this.log = logger }
     public readonly id = 'validating'
     public readonly providesRouter = true
     public router = express.Router()
@@ -30,7 +51,7 @@ export class ValidatingProvider implements IProvider {
                 try {
                     res.status(200).json({})
                 } catch (err) {
-                    console.error('[validating] Error in /validate:', err)
+                    this.log.error(`Error in /validate: ${err}`)
                     res.status(400).send()
                 }
             })

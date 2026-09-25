@@ -30,10 +30,16 @@ export interface IProviderSubscriber {
 export interface IProviderHandle {
     /** Who produces: a provider ('events') or a pluvider ('plugin:agora'). */
     readonly id: string
-    subscribe(subscriber: IProviderSubscriber, data?: any): void
+    /**
+     * Returns whatever the producer returned — normally a promise. It is handed back instead of
+     * swallowed because a provider that fails while taking a subscriber on board leaves an unhandled
+     * rejection, and that takes the whole core down. A consumer that wants to survive third-party
+     * providers wraps this in Promise.resolve().catch(); one that does not care ignores it.
+     */
+    subscribe(subscriber: IProviderSubscriber, data?: any): unknown
     /** Changes what this subscriber wants. Providers may not implement it; then nothing happens. */
-    updateSubscription(subscriber: IProviderSubscriber, data?: any): void
-    unsubscribe(subscriber: IProviderSubscriber): void
+    updateSubscription(subscriber: IProviderSubscriber, data?: any): unknown
+    unsubscribe(subscriber: IProviderSubscriber): unknown
 }
 
 /**

@@ -6,7 +6,28 @@ import { ISyslogConfig, ISyslogMessage } from '../types/ISyslogMessage'
 import { UdpServer, TMessageCallback } from './UdpServer'
 import { TcpServer } from './TcpServer'
 
+/*
+    What the core lends the provider to write its log with. Declared here structurally instead of
+    imported from kwirth-common-back, so this provider does not depend on a particular version of
+    that package. Once the contract is published this interface can go.
+*/
+interface IProviderLogger {
+    info(message: unknown): void
+    warning(message: unknown): void
+    error(message: unknown): void
+}
+
 export class SyslogProvider implements IProvider {
+    /*
+        Starts writing to the console — what it did before — and the core replaces it as soon as the
+        provider is built. With an older core nobody calls setLogger and everything stays as it was.
+    */
+    private log: IProviderLogger = {
+        info: (message: unknown) => console.log(`[syslog] ${message}`),
+        warning: (message: unknown) => console.warn(`[syslog] ${message}`),
+        error: (message: unknown) => console.error(`[syslog] ${message}`)
+    }
+    setLogger = (logger: IProviderLogger): void => { this.log = logger }
     public readonly id = 'syslog'
     public readonly providesRouter = false
     public readonly requiresApiKeyApi = false
@@ -59,7 +80,7 @@ export class SyslogProvider implements IProvider {
     private enqueue = (msg: ISyslogMessage, raw: Buffer): void => {
         if (this.queue.length >= this.config.maxMessages) {
             this.discardedCount++
-            if (this.discardedCount % 1000 === 0) console.log(`[syslog] ${this.discardedCount} messages discarded (queue full, maxMessages=${this.config.maxMessages})`)
+            if (this.discardedCount % 1000 === 0) this.log.warning(`${this.discardedCount} messages discarded (queue full, maxMessages=${this.config.maxMessages})`)
             return
         }
         this.queue.push({ msg, raw })
@@ -91,7 +112,7 @@ export class SyslogProvider implements IProvider {
             try {
                 await this.udpServer.start()
             } catch (err) {
-                console.error(`[syslog] UDP server failed to start on port ${port}: ${err}`)
+                this.log.error(`UDP server failed to start on port ${port}: ${err}`)
                 this.udpServer = undefined
             }
         }
@@ -100,7 +121,7 @@ export class SyslogProvider implements IProvider {
             try {
                 await this.tcpServer.start()
             } catch (err) {
-                console.error(`[syslog] TCP server failed to start on port ${port}: ${err}`)
+                this.log.error(`TCP server failed to start on port ${port}: ${err}`)
                 this.tcpServer = undefined
             }
         }
