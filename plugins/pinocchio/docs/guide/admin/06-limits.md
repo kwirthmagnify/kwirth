@@ -13,7 +13,7 @@ el canal ya abierto, ese canal no lo verá hasta que se cierre y se reabra.
 canal.
 
 **La config de IA no viaja entre clústeres.** Los menús *AI Providers* / *AI Models* del core escriben en el
-backend **local**, pero un canal abierto contra otro kwirth lee el almacén de **ese** clúster. En una
+backend **local**, pero un canal abierto contra otro Kwirth lee el almacén de **ese** clúster. En una
 federación hay que configurar providers y LLMs en cada clúster.
 
 **Las opciones de salida estructurada se eligen por el `Name` del provider, no por su `Type`.** El modelo se

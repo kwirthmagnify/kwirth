@@ -82,7 +82,7 @@ análisis entero es sospechoso.
 ## El informe
 
 El botón **Report** abre el campo `report`: un informe **en markdown** redactado por el modelo, pensado para
-leerse como documento y no como lista. Se renderiza con el visor de markdown de kwirth.
+leerse como documento y no como lista. Se renderiza con el visor de markdown de Kwirth.
 
 Es la salida que puedes pegar en un ticket o en un correo. Los findings son para triar; el informe es para
 explicar.

@@ -3,9 +3,9 @@
 Esta es la configuración que hay que resolver **antes** de que Pinocchio sirva para algo. Y lo primero que
 hay que entender es que **no es configuración de Pinocchio**.
 
-## La configuración de IA es de kwirth, no del plugin
+## La configuración de IA es de Kwirth, no del plugin
 
-Pinocchio no guarda sus propios providers ni sus propios modelos. Los lee del **almacén común de kwirth**,
+Pinocchio no guarda sus propios providers ni sus propios modelos. Los lee del **almacén común de Kwirth**,
 compartido con todos los demás plugins que usan IA:
 
 | Qué | Clave | Dónde |
@@ -20,7 +20,7 @@ Las consecuencias prácticas son tres:
    (*AI providers* / *AI models*) son literalmente los mismos componentes comunes
    (`AiConfigProvider` / `AiConfigLlm`) que usa el core en sus menús *AI Providers* / *AI Models*.
 3. Las claves viven en un **Secret**, no en un ConfigMap. Quien tenga permiso de lectura sobre los Secrets del
-   namespace de kwirth puede leerlas.
+   namespace de Kwirth puede leerlas.
 
 ## Provider
 
@@ -39,7 +39,7 @@ Al elegir un `Type`, si el nombre está vacío se rellena solo con el tipo. **D�
 razón** — ver la advertencia del final de la página.
 
 **Load models** consulta al proveedor el catálogo de modelos disponibles y lo cachea en el provider. La
-llamada la hace el **core** de kwirth (`POST /core/aiconfig/loadmodels`), no el plugin, porque es el core
+llamada la hace el **core** de Kwirth (`POST /core/aiconfig/loadmodels`), no el plugin, porque es el core
 quien tiene los adaptadores de cada SDK. Si el botón no aparece o falla, revisa que la clave sea válida.
 
 Sin modelos cargados, el provider aparece **deshabilitado** en el desplegable del diálogo de LLM.
@@ -120,6 +120,6 @@ plugin manda un `PROVIDERSSET`/`CONFIGSET` que reescribe el almacén y recarga l
 ## Multi-clúster
 
 La configuración de IA **no viaja entre clústeres**. Los menús del core escriben en el backend **local**,
-pero un canal abierto contra otro kwirth lee el almacén de **ese** clúster. Si operas una federación, tienes
+pero un canal abierto contra otro Kwirth lee el almacén de **ese** clúster. Si operas una federación, tienes
 que configurar providers y LLMs en cada clúster, y con los **mismos ids de LLM** si quieres poder mover
 triggers entre ellos. Ver [Límites conocidos](06-limits.md).

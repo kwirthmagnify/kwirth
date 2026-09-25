@@ -1,24 +1,24 @@
 # Instalación
 
-Pinocchio es un plugin de tipo **canal**. Se instala como cualquier otro plugin de kwirth, pero tiene una
+Pinocchio es un plugin de tipo **canal**. Se instala como cualquier otro plugin de Kwirth, pero tiene una
 dependencia dura y una condición previa que conviene resolver antes de que los usuarios abran el canal.
 
 ## Requisitos
 
 | Requisito | Detalle |
 |-----------|---------|
-| Provider `business` | **Obligatorio.** El manifiesto declara `requiresExtension: ["provider:business:0.1.6"]`. kwirth no deja instalar el plugin sin él. |
+| Provider `business` | **Obligatorio.** El manifiesto declara `requiresExtension: ["provider:business:0.1.6"]`. Kwirth no deja instalar el plugin sin él. |
 | Providers `events` y `metrics` | Los aporta el core. No hay nada que instalar. |
-| Almacenamiento del canal | El canal declara `storage: true`: kwirth le da un almacén donde guarda la clave `pinocchio-config`. |
+| Almacenamiento del canal | El canal declara `storage: true`: Kwirth le da un almacén donde guarda la clave `pinocchio-config`. |
 | Un provider de IA y un LLM | **No es un requisito de instalación, pero sí de uso.** Sin ellos el canal arranca y no sirve para nada. Ver [Providers y modelos de IA](02-ai-config.md). |
 | Tipo de clúster | El canal declara `sources: [KUBERNETES]`. No funciona sobre orígenes que no sean Kubernetes. |
 
 **Reinicio:** el manifiesto declara `requiresRestart: false`. Instalarlo o actualizarlo no obliga a reiniciar
-el backend de kwirth.
+el backend de Kwirth.
 
 ## Instalar en producción
 
-Desde la UI de administración de kwirth, en el gestor de plugins: búscalo en el marketplace, o instálalo
+Desde la UI de administración de Kwirth, en el gestor de plugins: búscalo en el marketplace, o instálalo
 desde la URL del tarball publicado:
 
 ```
@@ -46,7 +46,7 @@ En un entorno de desarrollo, el backend carga los plugins desde disco leyendo `b
 }
 ```
 
-La entrada de `docs` es la que hace que **esta guía** quede accesible desde la propia UI de kwirth.
+La entrada de `docs` es la que hace que **esta guía** quede accesible desde la propia UI de Kwirth.
 
 ## Construir desde fuente
 

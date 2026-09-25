@@ -35,7 +35,7 @@ al canal.
 el mundo, sin confirmación adicional más allá del propio diálogo.
 
 **3. Editar la configuración de IA compartida.** Los diálogos *Provider* y *LLM* escriben en el almacén
-**común** de kwirth. Un usuario de Pinocchio puede añadir, modificar o **borrar** los providers y modelos que
+**común** de Kwirth. Un usuario de Pinocchio puede añadir, modificar o **borrar** los providers y modelos que
 usan los demás plugins de IA del clúster.
 
 **4. Ver y cambiar las API keys.** El diálogo de provider tiene un botón de ojo que revela la clave, y un
@@ -55,7 +55,7 @@ El catálogo de tools incluye acciones que **modifican el clúster**: `add_repli
 filtra las tools de escritura**: si una versión de trigger las tiene marcadas —o tiene el interruptor
 **`Auto`** activado, que entrega el catálogo entero— el modelo puede invocarlas.
 
-Y cuando las invoca, se ejecutan con el **service account del backend de kwirth**, no con los permisos del
+Y cuando las invoca, se ejecutan con el **service account del backend de Kwirth**, no con los permisos del
 usuario que configuró el trigger. Un usuario con el scope mínimo puede, a través de un trigger, provocar
 acciones que su propio nivel de acceso no le permitiría hacer directamente.
 
@@ -66,7 +66,7 @@ Tres medidas concretas:
    ese fichero se puede versionar y revisar en un pull request.
 3. **Ajusta el RBAC del service account del backend** a lo que de verdad necesites. Si en tu instalación
    Pinocchio sólo tiene que auditar, el backend no debería poder escalar deployments ni borrar pods. Ésa es
-   la barrera que de verdad detiene el problema, y está fuera del plugin: es el RBAC de kwirth en el clúster.
+   la barrera que de verdad detiene el problema, y está fuera del plugin: es el RBAC de Kwirth en el clúster.
 
 ## Auditoría
 

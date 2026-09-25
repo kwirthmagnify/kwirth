@@ -1,6 +1,6 @@
 # Recorrido por la UI
 
-Pinocchio es un canal, así que se abre como cualquier otro canal de kwirth: eliges el canal **Pinocchio** en
+Pinocchio es un canal, así que se abre como cualquier otro canal de Kwirth: eliges el canal **Pinocchio** en
 el selector y lo arrancas. No tiene diálogo de *Setup* — no hay nada que configurar antes de arrancar.
 
 ## La pestaña
@@ -45,7 +45,7 @@ casual: cada una depende de la anterior.
 | **Trigger**       | hay al menos un LLM                    | Los triggers y sus versiones                      |
 | **Import / Export** | siempre                              | Volcado y carga de triggers en JSON                |
 
-**AI** es un grupo plegable —el patrón habitual de kwirth, el mismo que usan Excubitor y Agora— y **arranca
+**AI** es un grupo plegable —el patrón habitual de Kwirth, el mismo que usan Excubitor y Agora— y **arranca
 plegado**: hay que clicarlo para ver *AI providers* y *AI models*. Es lo que menos se toca una vez montado,
 por eso está recogido.
 
@@ -54,7 +54,7 @@ configurado. Empieza por **AI ▸ AI providers**. El detalle está en
 [Providers y modelos de IA](../admin/02-ai-config.md).
 
 > Los diálogos de **AI providers** y **AI models** no son de Pinocchio: son los diálogos comunes de IA de
-> kwirth (`AiConfigProvider` / `AiConfigLlm`), los mismos que usan los demás plugins con IA. Lo que configures
+> Kwirth (`AiConfigProvider` / `AiConfigLlm`), los mismos que usan los demás plugins con IA. Lo que configures
 > aquí lo verán también ellos.
 
 ## Los diálogos de detalle

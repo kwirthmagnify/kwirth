@@ -1,6 +1,6 @@
 # Cómo funciona
 
-Pinocchio es un **canal** de kwirth. Cuando lo abres, el backend arranca una instancia del canal que se
+Pinocchio es un **canal** de Kwirth. Cuando lo abres, el backend arranca una instancia del canal que se
 **suscribe a tres providers** y se queda escuchando. Cada evento que llega se compara con tus **triggers**;
 si encaja, se construye una llamada al LLM y el resultado vuelve a tu pantalla.
 
@@ -77,11 +77,11 @@ backend. Sólo se analiza lo que nace **después** de que el canal esté escucha
 | Qué                          | Dónde                                                                |
 |------------------------------|----------------------------------------------------------------------|
 | Triggers y estado del Playground | Almacén del canal, clave `pinocchio-config`                       |
-| Providers de IA (con las API keys) | Almacén **común** de kwirth, `kwirth-ai-providers` (Secret)     |
-| LLMs                         | Almacén **común** de kwirth, `kwirth-ai-llms` (ConfigMap)             |
+| Providers de IA (con las API keys) | Almacén **común** de Kwirth, `kwirth-ai-providers` (Secret)     |
+| LLMs                         | Almacén **común** de Kwirth, `kwirth-ai-llms` (ConfigMap)             |
 | Análisis producidos          | Sólo en **memoria** del canal, los últimos 50                        |
 
-Los dos almacenes comunes los comparte Pinocchio con el resto de plugins de kwirth que usan IA: no son
+Los dos almacenes comunes los comparte Pinocchio con el resto de plugins de Kwirth que usan IA: no son
 suyos. Ver [Providers y modelos de IA](../admin/02-ai-config.md).
 
 Los análisis **no se persisten**. Al reconectar, el back te reenvía de golpe los que tenga en memoria; si el

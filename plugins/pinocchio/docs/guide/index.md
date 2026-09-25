@@ -1,6 +1,6 @@
 # Pinocchio — análisis agéntico de tu clúster
 
-**Pinocchio** es un plugin de kwirth que pone un **LLM a mirar lo que pasa en tu clúster**. No es un chat:
+**Pinocchio** es un plugin de Kwirth que pone un **LLM a mirar lo que pasa en tu clúster**. No es un chat:
 es un canal que **escucha eventos** —altas y cambios de recursos de Kubernetes, o eventos de negocio que le
 manda un sistema externo— y, cuando uno encaja con un **trigger** que tú has definido, invoca al modelo con
 tu prompt y tus *tools*, y devuelve **findings** estructurados y un **informe**.

@@ -24,7 +24,7 @@ Todas las llamadas y respuestas de tools se registran como trazas en el log del 
 
 ## El catálogo
 
-El catálogo lo aporta `kwirth-common-ai` y es el mismo para todos los plugins de IA de kwirth. El canal se lo
+El catálogo lo aporta `kwirth-common-ai` y es el mismo para todos los plugins de IA de Kwirth. El canal se lo
 envía al front al arrancar, así que el selector siempre muestra lo que el backend soporta de verdad.
 
 ![El selector de tools, con la descripción de cada una](../images/tool-selector.png)
