@@ -24,6 +24,17 @@ const colors = {
   gray: '\x1b[90m'
 } as const
 
+/*
+    Four letters each, like the component tags, so both columns line up and the message always starts
+    at the same place. 'TRACE' and 'ERROR' are the only ones that did not already fit.
+*/
+const LEVEL_LABEL = {
+    trace: 'TRCE',
+    info: 'INFO',
+    warn: 'WARN',
+    error: 'ERRO'
+} as const
+
 const logGeneric = (
         level: 'trace' | 'info' | 'warn' | 'error',
         color: string,
@@ -36,7 +47,7 @@ const logGeneric = (
     if (!isEnabled && level !== 'error') return
 
     const timestamp = new Date().toLocaleTimeString(undefined, { hour12: false})
-    const label = level.toUpperCase()
+    const label = LEVEL_LABEL[level]
     
     /*
         An object goes out ON ONE LINE. Indenting it looked nicer on screen but turned a single event
