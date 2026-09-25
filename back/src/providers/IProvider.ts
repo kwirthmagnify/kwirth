@@ -10,6 +10,7 @@ import {
     IProviderSubscriptionHelp
 } from "@kwirthmagnify/kwirth-common-back"
 import { ApiKeyApi } from "../api/ApiKeyApi"
+import { IComponentLogger, providerLogger } from "../tools/Logging"
 
 /*
     Este fichero era un ESPEJO MANUAL del contrato publicado en common-back y habia empezado a
@@ -30,9 +31,24 @@ export type IProviderStorage = IPublicProviderStorage
 
 export type TProviderConstructor = (new (clusterInfo:ClusterInfo, kwirthData:KwirthData, storage?:IProviderStorage) => IProvider)|undefined
 
+/*
+    Every provider in this Kwirth is born here, which is why the logger is handed over here and
+    nowhere else.
+
+    A provider used to get nothing to log with — channels get a backChannelObject, providers got
+    nothing — so the only thing left was console.log: no timestamp, no level, no component, and an
+    error looking exactly like an informational line. Now it receives one that already knows its id,
+    so the line comes out as '[provider] [ERROR] [longhorn] ...' and the provider writes the message
+    and nothing else.
+
+    Optional on purpose: a provider built before this exists simply does not get called, and keeps
+    writing wherever it was writing. Nothing to coordinate, no minimum version to demand.
+*/
 export const createProviderInstance = (providerConstructor:TProviderConstructor, clusterInfo: ClusterInfo, kwirthData:KwirthData, storage?:IProviderStorage): IProvider | null => {
     if (!providerConstructor) throw  new Error('Error: providerConstructor is empty')
-    return new providerConstructor(clusterInfo, kwirthData, storage)
+    const instance = new providerConstructor(clusterInfo, kwirthData, storage)
+    instance.setLogger?.(providerLogger(instance.id))
+    return instance
 }
 
 /*
@@ -57,4 +73,10 @@ export interface IProvider extends Omit<IPublicProvider, 'addSubscriber'|'remove
     started?: boolean
     configRouterStarted?: boolean
     apiKeyApi: ApiKeyApi|undefined
+    /*
+        Declarado aqui y no tomado del contrato publicado porque 'common-back' todavia no se ha
+        republicado con el: en cuanto npm sirva la version nueva, esta linea sobra. Mientras tanto el
+        core compila y los providers que ya lo implementen reciben su logger.
+    */
+    setLogger?: (logger: IComponentLogger) => void
 }

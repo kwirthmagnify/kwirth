@@ -10,6 +10,33 @@ export interface IProviderSubscriber {
 }
 
 /**
+ * How a channel subscribes to a producer. The core hands one of these out already bound to the two
+ * ends — the producer and the channel asking for it — with 'clusterInfo.getProvider(id, this)'.
+ *
+ * It exists because a channel used to receive the provider OBJECT and call 'addSubscriber' on it,
+ * which meant the core could be bypassed without doing anything wrong, and therefore that its
+ * registry of who consumes what — the one the status graph is drawn from — was incomplete by
+ * construction. Going through the handle is what makes that registry true.
+ *
+ * ⚠️ The handle is NOT in the path of the data. It hands the provider the very same subscriber it
+ * was given, so events still travel straight from the producer to the consumer: no wrapper, no extra
+ * call, nothing per event. What runs is two functions per SUBSCRIPTION, which happens once when a tab
+ * opens. That is the whole reason it is shaped like this.
+ *
+ * One subscription per handle call, so a channel serving several instances subscribes once per
+ * instance with its own subscriber, and each one is unsubscribed on its own. The edge in the graph
+ * survives until the last of them is gone.
+ */
+export interface IProviderHandle {
+    /** Who produces: a provider ('events') or a pluvider ('plugin:agora'). */
+    readonly id: string
+    subscribe(subscriber: IProviderSubscriber, data?: any): void
+    /** Changes what this subscriber wants. Providers may not implement it; then nothing happens. */
+    updateSubscription(subscriber: IProviderSubscriber, data?: any): void
+    unsubscribe(subscriber: IProviderSubscriber): void
+}
+
+/**
  * Persistencia que el core inyecta al provider (mismo mecanismo que reciben los canales).
  * El booleano 'secret' decide el destino: true -> Secret de Kubernetes, false -> ConfigMap.
  * Las variantes 'Common' escriben en el almacen compartido entre extensiones.
@@ -101,6 +128,19 @@ export interface IProviderStats {
 */
 
 /**
+ * What a provider writes its log with. The core builds it and hands it over with 'setLogger', so the
+ * id is already in place and the provider only writes the message.
+ *
+ * Three levels and no more: an 'info' that nobody can filter out is what buries a log, and a failure
+ * that goes out as 'info' is a failure nobody sees.
+ */
+export interface IProviderLogger {
+    info(message: unknown): void
+    warning(message: unknown): void
+    error(message: unknown): void
+}
+
+/**
  * Interface that all provider plugins must implement.
  * Use 'any' for clusterInfo to avoid pulling in kubernetes/docker dependencies.
  */
@@ -149,6 +189,20 @@ export interface IProvider extends IExtension {
      * estructuras aqui convierte una consulta en trabajo para todos.
      */
     getStats?(): IProviderStats
+    /**
+     * The core hands the provider a logger that already knows who it is, right after building it.
+     *
+     * OPTIONAL, like everything in this block: a provider that does not implement it keeps writing
+     * wherever it was writing, and an older core that never calls it leaves the provider on its own
+     * fallback. Neither side needs the other to be up to date.
+     *
+     * Why it exists: channels get a 'backChannelObject' to log with, providers got nothing, so the
+     * only thing left to them was 'console.log'. That comes out with no timestamp, no level and no
+     * component — an error from a provider looks exactly like an informational line, and nothing can
+     * be filtered. With this, a provider's line reads '[provider] [ERROR] [longhorn] ...' and the
+     * provider does not even have to write its own id: the core puts it there.
+     */
+    setLogger?(logger: IProviderLogger): void
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
     router: any

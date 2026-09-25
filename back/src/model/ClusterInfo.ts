@@ -1,5 +1,6 @@
 import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
 import { EClusterType, IInstanceConfig, ISenderAccess, IWebhookAccess } from '@kwirthmagnify/kwirth-common'
+import { IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
 import { isPluviderId, TPluviderChannel } from '../providers/Pluvider'
@@ -52,8 +53,33 @@ export interface ISubscription {
     of the same object count as one, just like there, and the edge goes when the last one goes.
     Holding those references adds no leak — the provider already holds them.
 */
+/*
+    The core's view of the handle it hands out. The published contract lives in 'common-back'
+    (IProviderHandle) and is what plugins compile against; this is declared here so the core does not
+    have to wait for that package to be republished and served by npm — the same reason its view of
+    IProvider is written down in providers/IProvider.ts.
+*/
+export interface IProviderHandle {
+    readonly id: string
+    subscribe(subscriber: IProviderSubscriber, data?: any): void
+    updateSubscription(subscriber: IProviderSubscriber, data?: any): void
+    unsubscribe(subscriber: IProviderSubscriber): void
+}
+
+/* A provider or a pluvider, seen only as the thing you subscribe to: both offer exactly this. */
+interface ISubscriptionTarget {
+    addSubscriber(subscriber: IProviderSubscriber, data: any): unknown
+    removeSubscriber(subscriber: IProviderSubscriber): unknown
+    updateSubscription?(subscriber: IProviderSubscriber, data: any): unknown
+}
+
 interface ISubscriptionEntry extends ISubscription {
-    subscribers: Set<IChannel>
+    /*
+        Whatever the provider was handed: the channel itself through the old 'addSubscriber', or a
+        per-instance subscriber through a handle. It is kept as the key because it is the same thing
+        the provider holds in its own Map, so both sides count the same subscriptions.
+    */
+    subscribers: Set<object>
 }
 
 export class ClusterInfo {
@@ -125,7 +151,7 @@ export class ClusterInfo {
             let pluv = this.pluviders.get(providerId)
             if (pluv) {
                 pluv.addSubscriber(c, data)
-                this.trackSubscription(providerId, c)
+                this.trackSubscription(providerId, c.getChannelData().id, c)
                 log.info(`Subscriber '${c.getChannelData().id}' added`)
             }
             else
@@ -135,7 +161,7 @@ export class ClusterInfo {
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {
             prov.addSubscriber(c,data)
-            this.trackSubscription(providerId, c)
+            this.trackSubscription(providerId, c.getChannelData().id, c)
             log.info(`Subscriber '${c.getChannelData().id}' added`)
         }
         else
@@ -152,7 +178,7 @@ export class ClusterInfo {
             let pluv = this.pluviders.get(providerId)
             if (pluv) {
                 pluv.removeSubscriber(c)
-                this.untrackSubscription(providerId, c)
+                this.untrackSubscription(providerId, c.getChannelData().id, c)
                 log.info(`Subscriber '${c.getChannelData().id}' removed`)
             }
             else
@@ -162,7 +188,7 @@ export class ClusterInfo {
         let prov = this.providers.find(p => p.id===providerId)
         if (prov) {
             prov.removeSubscriber(c)
-            this.untrackSubscription(providerId, c)
+            this.untrackSubscription(providerId, c.getChannelData().id, c)
             log.info(`Subscriber '${c.getChannelData().id}' removed`)
         }
         else
@@ -178,27 +204,66 @@ export class ClusterInfo {
         kept — it belongs to the edge, not to the latest arrival — and that is what lets us say how
         long something has been feeding someone.
     */
-    private trackSubscription = (providerId: string, c: IChannel): void => {
-        const channelId = c.getChannelData().id
+    private trackSubscription = (providerId: string, channelId: string, subscriber: object): void => {
         const edge = this.subscriptions.find(s => s.providerId === providerId && s.channelId === channelId)
         if (edge) {
-            edge.subscribers.add(c)
+            edge.subscribers.add(subscriber)
             return
         }
-        this.subscriptions.push({ providerId, channelId, since: Date.now(), subscribers: new Set([c]) })
+        this.subscriptions.push({ providerId, channelId, since: Date.now(), subscribers: new Set([subscriber]) })
     }
 
     /*
         The edge goes away with the LAST subscriber, not the first. An unsubscribe from someone who was
         never there — a double cleanup, a channel that never subscribed — takes nothing down with it.
     */
-    private untrackSubscription = (providerId: string, c: IChannel): void => {
-        const channelId = c.getChannelData().id
+    private untrackSubscription = (providerId: string, channelId: string, subscriber: object): void => {
         const pos = this.subscriptions.findIndex(s => s.providerId === providerId && s.channelId === channelId)
         if (pos < 0) return
         const edge = this.subscriptions[pos]
-        edge.subscribers.delete(c)
+        edge.subscribers.delete(subscriber)
         if (edge.subscribers.size === 0) this.subscriptions.splice(pos, 1)
+    }
+
+    /*
+        The way a channel gets hold of a producer, and the only one that keeps the core's registry
+        true: it is handed the handle already bound to both ends, instead of the provider object it
+        could call behind the core's back.
+
+        ⚠️ Nothing here sits in the path of the data. 'subscribe' passes the provider the very same
+        subscriber it was given — no wrapper — so events go straight from producer to consumer exactly
+        as they do today. The core only runs on subscribe and unsubscribe, which happen once per tab.
+
+        Returns undefined when there is no such producer here, and says nothing about it: this is a
+        question, and a channel is allowed to ask whether something is available. Whoever cannot work
+        without it is the one that knows how to complain, and now knows how to identify itself too.
+    */
+    getProvider = (providerId: string, consumer: IChannel): IProviderHandle | undefined => {
+        const channelId = consumer.getChannelData().id
+        /*
+            Both are subscribed to the same way. The cast is here because the core narrows a provider's
+            subscriber to IChannel — older than the published contract, which has always said
+            IProviderSubscriber, and which is what a per-instance subscriber actually is.
+        */
+        const target = (isPluviderId(providerId)
+            ? this.pluviders.get(providerId)
+            : this.providers.find(p => p.id === providerId)) as ISubscriptionTarget | undefined
+        if (!target) return undefined
+
+        return {
+            id: providerId,
+            subscribe: (subscriber: IProviderSubscriber, data?: any) => {
+                target.addSubscriber(subscriber, data)
+                this.trackSubscription(providerId, channelId, subscriber)
+            },
+            updateSubscription: (subscriber: IProviderSubscriber, data?: any) => {
+                target.updateSubscription?.(subscriber, data)
+            },
+            unsubscribe: (subscriber: IProviderSubscriber) => {
+                target.removeSubscriber(subscriber)
+                this.untrackSubscription(providerId, channelId, subscriber)
+            }
+        }
     }
 
     /**

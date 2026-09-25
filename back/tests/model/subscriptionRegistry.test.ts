@@ -17,13 +17,15 @@ interface IFakeProvider {
     provider: IProvider
     adds: number
     removes: number
+    /** What the provider was actually handed, to check the core does not slip a wrapper in between. */
+    lastSubscriber?: unknown
 }
 
 const provider = (id: string): IFakeProvider => {
     const fake: IFakeProvider = { adds: 0, removes: 0, provider: undefined as never }
     fake.provider = {
         id,
-        addSubscriber: async () => { fake.adds++ },
+        addSubscriber: async (subscriber: unknown) => { fake.adds++; fake.lastSubscriber = subscriber },
         removeSubscriber: async () => { fake.removes++ }
     } as never
     return fake
@@ -150,4 +152,91 @@ test('pluviders register the same way, under their composite id', () => {
 
     ci.removeSubscriber('plugin:agora', c)
     assert.equal(ci.getSubscriptions().length, 0)
+})
+
+// ── The handle: subscribing without being able to bypass the core ──────────────────────────────
+//
+// The handle exists so that the registry above cannot be incomplete. What is pinned here is the part
+// that makes it worth having: it is bound to both ends, it counts per SUBSCRIBER (so one channel
+// serving several tabs is one edge held up by several subscriptions), and it never stands between
+// the producer and the consumer.
+
+test('the handle registers the edge, with both ends, without the channel saying who it is', () => {
+    const { ci } = clusterInfoWith('events')
+    const handle = ci.getProvider('events', channel('agora'))!
+    handle.subscribe({ processProviderEvent: () => {} })
+
+    const edges = ci.getSubscriptions()
+    assert.equal(edges.length, 1)
+    assert.equal(edges[0].providerId, 'events')
+    assert.equal(edges[0].channelId, 'agora')
+})
+
+test('🔴 the handle does NOT wrap the subscriber: the provider gets the very same object', () => {
+    /*
+        This is the performance guarantee, and it is a real risk: wrapping the subscriber to count
+        deliveries would be one closure per event, for everyone, whether or not anybody is looking.
+        If someone ever adds that wrapper, this test says so.
+    */
+    const { ci, fakes } = clusterInfoWith('events')
+    const subscriber = { processProviderEvent: () => {} }
+    ci.getProvider('events', channel('agora'))!.subscribe(subscriber)
+
+    assert.equal(fakes[0].lastSubscriber, subscriber, 'the provider is being handed something other than the subscriber')
+})
+
+test('one subscription per tab: the edge holds until the last one leaves', () => {
+    const { ci } = clusterInfoWith('sugarless')
+    const handle = ci.getProvider('sugarless', channel('sugarless'))!
+    const tab1 = { processProviderEvent: () => {} }
+    const tab2 = { processProviderEvent: () => {} }
+
+    handle.subscribe(tab1)
+    handle.subscribe(tab2)
+    assert.equal(ci.getSubscriptions().length, 1, 'two tabs of one channel are one edge')
+
+    handle.unsubscribe(tab1)
+    assert.equal(ci.getSubscriptions().length, 1, 'one tab is still receiving')
+    handle.unsubscribe(tab2)
+    assert.equal(ci.getSubscriptions().length, 0)
+})
+
+test('unsubscribing goes through the provider too, so nothing is left receiving', () => {
+    const { ci, fakes } = clusterInfoWith('events')
+    const subscriber = { processProviderEvent: () => {} }
+    const handle = ci.getProvider('events', channel('iter'))!
+
+    handle.subscribe(subscriber)
+    handle.unsubscribe(subscriber)
+    assert.equal(fakes[0].removes, 1)
+})
+
+test('asking for a producer that is not here answers undefined, and says nothing about it', () => {
+    const { ci } = clusterInfoWith('events')
+    assert.equal(ci.getProvider('nosuchthing', channel('agora')), undefined)
+    assert.equal(ci.getProvider('plugin:notinstalled', channel('agora')), undefined)
+})
+
+test('a pluvider is handed out as a handle just the same', () => {
+    const ci = new ClusterInfo()
+    ci.providers = []
+    let adds = 0
+    ci.pluviders.set('plugin:agora', { addSubscriber: () => { adds++ }, removeSubscriber: () => {} } as never)
+
+    const subscriber = { processProviderEvent: () => {} }
+    const handle = ci.getProvider('plugin:agora', channel('montag'))!
+    handle.subscribe(subscriber)
+
+    assert.equal(adds, 1)
+    assert.equal(ci.getSubscriptions()[0].providerId, 'plugin:agora')
+    handle.unsubscribe(subscriber)
+    assert.equal(ci.getSubscriptions().length, 0)
+})
+
+test('the old addSubscriber and the handle land in the same registry', () => {
+    const { ci } = clusterInfoWith('events')
+    ci.addSubscriber('events', channel('agora'), {})
+    ci.getProvider('events', channel('iter'))!.subscribe({ processProviderEvent: () => {} })
+
+    assert.deepEqual(ci.getSubscriptions().map(s => s.channelId).sort(), ['agora', 'iter'])
 })
