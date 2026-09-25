@@ -34,11 +34,19 @@ const logGeneric = (
     const timestamp = new Date().toLocaleTimeString(undefined, { hour12: false})
     const label = level.toUpperCase()
     
-    // Un Error serializa a `{}` con JSON.stringify (message/stack son no-enumerables) → mostrar su stack/message.
+    /*
+        An object goes out ON ONE LINE. Indenting it looked nicer on screen but turned a single event
+        into fifteen lines with no timestamp, no level and no component of their own: impossible to
+        grep, and enough to bury everything around it.
+
+        An Error is the exception and keeps its stack over several lines, because the stack IS the
+        message. Note it serialises to `{}` under JSON.stringify — message and stack are not
+        enumerable — so it has to be handled before the generic branch.
+    */
     const formattedMessage = message instanceof Error
         ? `\n${message.stack ?? message.message}`
-        : typeof message === 'object'
-            ? `\n${JSON.stringify(message, null, 2)}`
+        : typeof message === 'object' && message !== null
+            ? JSON.stringify(message)
             : message
 
     const output = `${ansiLog? colors.gray : ''}[${timestamp}]${ansiLog? colors.reset : ''} ` +

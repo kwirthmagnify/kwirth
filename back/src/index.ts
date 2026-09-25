@@ -1618,13 +1618,14 @@ const processHttpChannelRequest = async (channel: IChannel, endpointName:string,
 }
 
 const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
-    logInfo(ELogComponent.CORE, `Starting HTTP channel endpoints`)
+    // Gathered and logged as ONE line at the end: this used to print a header per channel plus a full
+    // path per endpoint, which is a dozen lines saying something that fits in one.
+    const mountedEndpoints: string[] = []
     for (let channel of ri.channels.values()) {
         let channelData = channel.getChannelData()
         if (channelData.endpoints.length>0) {
-            logInfo(ELogComponent.CORE, `  Starting endpoints for channel '${channelData.id}'`)
             for (let endpoint of channelData.endpoints) {
-                logInfo(ELogComponent.CORE, `    ${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`)
+                mountedEndpoints.push(`${channelData.id}/${endpoint.name}`)
                 const router = express.Router()
                 router.route('*')
                     .all( async (req:Request,res:Response, next) => {
@@ -1669,6 +1670,9 @@ const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
             logInfo(ELogComponent.CORE, `Channel '${channelData.id}' HTTP router mounted at '${mountPath}'`)
         }
     }
+    logInfo(ELogComponent.CORE, mountedEndpoints.length > 0
+        ? `HTTP channel endpoints under '${envRootPath}/${ri.id}/channel' (${mountedEndpoints.length}): ${mountedEndpoints.join(', ')}`
+        : 'No channel declares HTTP endpoints')
 }
 
 const startRunningInstance = async (ri:IRunningInstance, expressApp:Application) => {
@@ -1693,9 +1697,13 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
 
         startChannelEndpoints(ri, expressApp)
         
-        logInfo(ELogComponent.CORE, 'Starting channels:')
-        for (let channel of ri.channels.values()) {
-            logInfo(ELogComponent.CORE, `  '${channel.getChannelData().id}'`)
+        /*
+            One line, not one per channel. It is logged BEFORE starting them, so that if one of them
+            blows up on the way in, the log still says what was about to be started.
+        */
+        const channelsToStart = [...ri.channels.values()]
+        logInfo(ELogComponent.CORE, `Starting ${channelsToStart.length} channel(s): ${channelsToStart.map(c => c.getChannelData().id).join(', ')}`)
+        for (let channel of channelsToStart) {
             channel.startChannel()
         }
     }
@@ -1709,11 +1717,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
     try {
         logInfo(ELogComponent.CORE, 'Node info loaded')
 
-        logInfo(ELogComponent.CORE, 'Source Info')
-        logInfo(ELogComponent.CORE, '  Name: ' + localClusterInfo.name)
-        logInfo(ELogComponent.CORE, '  Type: ' + localClusterInfo.type)
-        logInfo(ELogComponent.CORE, '  Flavour: ' + localClusterInfo.flavour)
-        logInfo(ELogComponent.CORE, '  Nodes: ' + localClusterInfo.nodes.size)
+        logInfo(ELogComponent.CORE, `Source info — name: ${localClusterInfo.name} · type: ${localClusterInfo.type} · flavour: ${localClusterInfo.flavour} · nodes: ${localClusterInfo.nodes.size}`)
 
 
         // Channel management
@@ -1763,10 +1767,10 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         }
 
 
-        logInfo(ELogComponent.CORE, 'Required channels:')
-        for (let chanId of registeredChannels.keys()) {
-            logInfo(ELogComponent.CORE, `  '${chanId}' required: ${requiredChannels.includes(chanId)}`)
-        }
+        const registered = [...registeredChannels.keys()]
+        const notRequired = registered.filter(chanId => !requiredChannels.includes(chanId))
+        logInfo(ELogComponent.CORE, `Channels registered (${registered.length}) — required: ${registered.filter(c => requiredChannels.includes(c)).join(', ') || 'none'}`
+            + ` · not required: ${notRequired.join(', ') || 'none'}`)
 
 
         // we create and instantiate channels, but we don't start them, because we need to start the providers first
@@ -1806,13 +1810,15 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         
 
         // we need the channels instantiated (but not started) in order to discover what provider do they require
-        logInfo(ELogComponent.CORE, 'Required providers:')
         let requiredProviders = []
+        const notRequiredProviders = []
         for (let provId of registeredProviders.keys()) {
             let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.requirements.providers.includes(provId)}, false)
             if (required) requiredProviders.push(provId)
-            logInfo(ELogComponent.CORE, `  '${provId}' required: ${required}`)
+            else notRequiredProviders.push(provId)
         }
+        logInfo(ELogComponent.CORE, `Providers registered (${registeredProviders.size}) — required: ${requiredProviders.join(', ') || 'none'}`
+            + ` · not required: ${notRequiredProviders.join(', ') || 'none'}`)
 
         /*
             Lo de arriba recorre lo REGISTRADO; esto recorre lo que los canales PIDEN, que no es lo
@@ -2340,9 +2346,10 @@ const startNodeTasks = () => {
         logInfo(ELogComponent.CORE, `No GC will run. You'd better enable it by adding '--expose-gc' to your node start command`)
     }
 
-    // show heap status every 5 mins
+    // Heap status, once a minute. It says what it is: the bare object came out as an anonymous blob
+    // of numbers that nothing in the line identified.
     setInterval ( () => {
-        logInfo(ELogComponent.CORE, v8.getHeapStatistics())
+        logInfo(ELogComponent.CORE, `Heap statistics: ${JSON.stringify(v8.getHeapStatistics())}`)
     }, 60000)
 }
 
@@ -2767,8 +2774,7 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
         el log para entender que cree Kwirth que tiene a mano.
     */
     capabilities = await resolveEnvironmentCapabilities(exenv, envContext)
-    logInfo(ELogComponent.CORE, 'Execution environment capabilities:')
-    for (let reason of capabilities.reasons) logInfo(ELogComponent.CORE, `  ${reason}`)
+    logInfo(ELogComponent.CORE, `Execution environment capabilities — ${capabilities.reasons.join(' · ')}`)
 
     /*
         Los dos providers del CORE leen del cluster y de ningun otro sitio, asi que sin API de Kubernetes
