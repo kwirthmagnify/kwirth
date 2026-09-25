@@ -1,6 +1,6 @@
 # Kwirth Status — Plan
 
-> **ESTADO — CERRADO** (2026-09-24). Los cuatro streams entregados. Lo que quede por hacer está en
+> **ESTADO — CERRADO** (2026-09-24). Los cuatro streams entregados; una mejora posterior (2026-09-25, 0.2.5) sin trabajo pendiente. Lo que quede por hacer está en
 > "Lo que se queda fuera", al final: son decisiones tomadas, no trabajo pendiente de planificar. Cuelga de [PRD.md](PRD.md), que manda en el
 > **qué** y el **por qué**; aquí está el **cómo** y en qué orden.
 >
@@ -300,6 +300,27 @@ refresh anterior"*—, quitando la tasa por segundo de esa decisión.
 en `useState`, y el contenido se desmonta), el mensaje de canal parado no salía —nadie bajaba `started`— ni
 estaba centrado, y el tooltip del selector tapaba su propio menú desplegado.
 
+### Mejora tras el cierre — las líneas frenan, y el grafo deja de parpadear ✅ HECHO (2026-09-25)
+
+`plugin/status@0.2.4` (frenada) y `@0.2.5` (sin flash). Petición del usuario sobre el plan ya cerrado; no
+reabre ningún stream.
+
+- **Con auto-refresco, la línea viva frena hasta pararse justo al llegar la foto siguiente.** Sustituye el
+  `dashdraw 0.5s linear infinite` de React Flow por UNA pasada ease-out que dura exactamente el intervalo, con
+  `forwards`. Arranca a la velocidad de serie (recorrido = 20 px/s · T / 2, porque la ease-out cuadrática
+  empieza a 2·D/T), así que no hay tirón. En **Manual** se deja la animación continua: no hay intervalo que
+  agotar.
+- **Relanzarla en cada foto** exige cambiar el nombre de la animación —repintar no la reinicia—: se alterna
+  entre dos keyframes idénticos según la paridad del número de fotos.
+- **El flash de cada refresco era de React Flow**: solo reutiliza un nodo si recibe el MISMO objeto; con uno
+  nuevo le borra `measured` y lo esconde hasta volver a medirlo (`adoptUserNodes` en `@xyflow/system`). Cada
+  foto regeneraba todos. Ahora el objeto se conserva mientras no cambie su firma (datos, estilo, posición).
+- ⚠️ El e2e del flash destapó que `data` llevaba `subscribers`, `known` y `health` **que nadie leía**: el
+  contador variaba entre fotos y rehacía nodos idénticos. Fuera — en `data` va solo lo que se pinta.
+- La 0.2.4 salió solo con la frenada; el flash lo señaló el usuario en el QA y va en la 0.2.5.
+- +3 casos e2e (24 en total): la frenada, el manual sin cambios, y ningún nodo escondido durante un ciclo
+  de refresco muestreado cada 50 ms.
+
 ---
 
 ## Lo que se queda fuera
@@ -316,6 +337,8 @@ Decisiones tomadas, no trabajo pendiente:
   no están en `ClusterInfo` y su config se lee async.
 - **Caducar la animación en modo Manual.** Si refrescas con tráfico y te vas, las líneas siguen moviéndose
   por algo que pasó hace una hora. Propuesto (pararlas si la foto tiene más de 60 s), sin decidir.
+  *(2026-09-25: con **auto-refresco** ya no pasa — la línea frena y se para al acabar el intervalo. En
+  Manual se deja moverse a propósito, por decisión del usuario; sigue sin decidir si caduca.)*
 - **Eventos producidos además de entregados.** Las dos cifras juntas dirían "produce 1/s y entrega 4/s",
   que es información útil; hoy solo está la segunda.
 
@@ -346,3 +369,5 @@ Decisiones tomadas, no trabajo pendiente:
 | 2026-09-24 | 🔴 Prohibido cablear cambios repetidos con un script global: se hace **uno a uno**. |
 | 2026-09-24 | Tráfico por arista **descartado por ahora**: la sonda rompería las bajas por identidad. |
 | 2026-09-24 | Rendimiento: el requisito es **coste cero con el canal cerrado**; con alguien mirando no preocupa. Se cae el techo del 5 % (el ruido de medida en Node es mayor) y se cae el interruptor: lo enciende el ciclo de vida del canal. |
+| 2026-09-25 | Con auto-refresco, la línea viva **frena y se para al acabar el intervalo**; en Manual sigue la animación continua. Publicado 0.2.4. |
+| 2026-09-25 | Nodos **estables por identidad** entre fotos (firma de lo que pintan) para que React Flow no los esconda y re-mida: sin flash. En `data` solo va lo que se pinta. Publicado 0.2.5. |

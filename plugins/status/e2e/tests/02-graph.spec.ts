@@ -176,3 +176,96 @@ test('🔴 si hay consumo, o se dibuja o se dice por que no se puede dibujar', a
         `${consumo} consumidores en la tabla y el grafo no dibuja ni explica nada`
     ).toBeVisible()
 })
+
+/** Animación CSS que tiene aplicada ahora mismo la primera línea viva, o undefined si no hay ninguna. */
+interface IAnimacionLinea {
+    nombre: string
+    duracion: string
+    repeticiones: string
+    relleno: string
+}
+const animacionDeLineaViva = async (): Promise<IAnimacionLinea | undefined> => {
+    const viva = page.locator('.react-flow__edge.animated path.react-flow__edge-path').first()
+    if (await viva.count() === 0) return undefined
+    return viva.evaluate(p => {
+        const s = getComputedStyle(p)
+        return { nombre: s.animationName, duracion: s.animationDuration, repeticiones: s.animationIterationCount, relleno: s.animationFillMode }
+    })
+}
+
+const elegirRefresco = async (opcion: string): Promise<void> => {
+    await page.locator('[aria-label="Auto refresh"]').click()
+    // El menu de MUI entra con animacion: sin esperar, el clic llega a un elemento que aun se mueve.
+    await page.waitForTimeout(500)
+    await page.getByRole('option', { name: opcion }).click()
+}
+
+/** Refresca a mano hasta que haya alguna línea viva: hacen falta dos fotos y que algo haya entregado entre ellas. */
+const esperarLineaViva = async (): Promise<IAnimacionLinea> => {
+    for (let i = 0; i < 10; i++) {
+        await page.locator('button[aria-label="Take a new snapshot"]').click()
+        await page.waitForTimeout(2000)
+        const a = await animacionDeLineaViva()
+        if (a) return a
+    }
+    throw new Error('en 10 refrescos ningun productor ha entregado nada: no hay linea viva que mirar')
+}
+
+test('🔴 con auto-refresco, la linea viva FRENA y se para justo al acabar el intervalo', async () => {
+    /*
+        La linea que se mueve cuenta lo que paso en el intervalo. Si siguiera moviendose despues, diria
+        "ahora" con un dato que ya es viejo. Por eso con auto-refresco la animacion es UNA sola pasada
+        que dura exactamente el intervalo y se queda en su ultimo fotograma (forwards).
+
+        Y tiene que VOLVER A EMPEZAR en cada foto aunque la linea ya estuviera viva: el nombre de la
+        animacion alterna entre dos keyframes identicos, que es lo unico que relanza una animacion CSS.
+    */
+    await elegirRefresco('Every 5s')
+    let primera: IAnimacionLinea | undefined
+    for (let i = 0; i < 12 && !primera; i++) {
+        await page.waitForTimeout(1000)
+        primera = await animacionDeLineaViva()
+    }
+    expect(primera, 'con auto-refresco a 5s no ha aparecido ninguna linea viva').toBeTruthy()
+    expect(primera!.nombre).toMatch(/^statusFrenada[01]$/)
+    expect(primera!.duracion, 'la frenada no dura lo mismo que el intervalo').toBe('5s')
+    expect(primera!.repeticiones, 'la animacion se repite: no se para nunca').toBe('1')
+    expect(primera!.relleno, 'al acabar vuelve al principio en vez de quedarse parada').toBe('forwards')
+
+    // En la foto siguiente, si sigue viva, la animacion se ha relanzado con el otro nombre.
+    await page.waitForTimeout(5500)
+    const segunda = await animacionDeLineaViva()
+    if (segunda) expect(segunda.nombre, 'la foto nueva no ha relanzado el movimiento').not.toBe(primera!.nombre)
+
+    await elegirRefresco('Manual')
+})
+
+test('en manual no hay intervalo que agotar: la linea viva se mueve sin parar, como siempre', async () => {
+    await expect(page.getByText(/it does not refresh on its own/)).toBeVisible()
+    const a = await esperarLineaViva()
+    expect(a.nombre, 'en manual la linea viva no usa la animacion de serie de React Flow').toBe('dashdraw')
+    expect(a.repeticiones).toBe('infinite')
+})
+
+test('🔴 al refrescar el grafo no parpadea: un nodo que no ha cambiado no se vuelve a pintar', async () => {
+    /*
+        React Flow esconde (visibility: hidden) todo nodo que recibe como objeto nuevo hasta volver a
+        medirlo. Si cada foto regenera los nodos, el grafo entero da un flash en cada refresco aunque no
+        haya cambiado nada. Se vigila un ciclo completo de auto-refresco muestreando cada 50 ms.
+    */
+    await elegirRefresco('Every 5s')
+    await page.waitForTimeout(1000)
+    const escondidos = await page.evaluate(async () => {
+        const vistos = new Set<string>()
+        const fin = Date.now() + 6500
+        while (Date.now() < fin) {
+            for (const e of document.querySelectorAll('.react-flow__node')) {
+                if (getComputedStyle(e).visibility === 'hidden') vistos.add(e.getAttribute('data-id') ?? '?')
+            }
+            await new Promise(r => setTimeout(r, 50))
+        }
+        return [...vistos]
+    })
+    await elegirRefresco('Manual')
+    expect(escondidos, 'estos nodos se han escondido al refrescar: el grafo parpadea').toEqual([])
+})

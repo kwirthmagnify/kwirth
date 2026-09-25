@@ -280,7 +280,7 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
             </Typography>
 
             <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: vista === 'table' ? 'auto' : 'hidden', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
-                {vista === 'graph' && <StatusDiagram inventory={inventory} active={activos} />}
+                {vista === 'graph' && <StatusDiagram inventory={inventory} active={activos} autoRefresh={data.autoRefresh} />}
                 {vista === 'table' && <Table size='small' stickyHeader>
                     <TableHead>
                         <TableRow>

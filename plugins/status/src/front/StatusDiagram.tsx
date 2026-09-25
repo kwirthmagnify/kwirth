@@ -86,10 +86,30 @@ interface IDiagramProps {
      * es que no ha movido nada, o que no se puede saber.
      */
     active: Set<string>
+    /** Segundos entre refrescos; 0 = manual. Marca cuánto dura el movimiento de las líneas vivas. */
+    autoRefresh: number
 }
 
-const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active }) => {
+interface INodoPintado {
+    firma: string
+    nodo: Node
+}
+
+/** Velocidad de arranque de la línea viva, la misma que la animación de serie de React Flow (10 px en 0,5 s). */
+const VELOCIDAD_INICIAL = 20
+
+const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh }) => {
     const theme = useTheme()
+    /*
+        Cuántas fotos se han pintado. Solo importa su PARIDAD: una animación CSS no vuelve a empezar
+        porque se repinte el elemento, sino cuando cambia su nombre. Alternando entre dos keyframes
+        idénticos, cada refresco relanza el movimiento aunque la línea ya estuviera viva en el anterior.
+    */
+    const vueltas = React.useRef({ inventario: inventory, n: 0 })
+    if (vueltas.current.inventario !== inventory) vueltas.current = { inventario: inventory, n: vueltas.current.n + 1 }
+    const frenada = `statusFrenada${vueltas.current.n % 2}`
+    // Último objeto entregado a React Flow por cada nodo, con la firma de lo que pinta (ver 'colocados').
+    const nodosPintados = React.useRef(new Map<string, INodoPintado>())
     const [posiciones, setPosiciones] = React.useState<Record<string, IPosicion> | undefined>(undefined)
     /*
         Nodo seleccionado. Con muchos nodos, la pregunta deja de ser "¿qué hay?" y pasa a ser "¿y ESTO
@@ -148,7 +168,12 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active }) => {
             ...productores.map(p => ({
                 id: p.id,
                 position: { x: 0, y: 0 },
-                data: { label: p.displayName, esProductor: true, health: p.health, subscribers: p.subscribers, known: p.knownConsumers },
+                /*
+                    SOLO lo que se pinta (o lo que usa el layout). Aquí llegaron a ir los suscriptores y la
+                    salud sin que nadie los leyera, y como el nodo se rehace cuando cambia su data (ver
+                    'colocados'), un contador que variaba entre fotos hacía parpadear nodos idénticos.
+                */
+                data: { label: p.displayName, esProductor: true },
                 // Con el grafo en vertical, la arista tiene que salir por ABAJO y entrar por ARRIBA; si
                 // no, React Flow las saca por los lados y los cables dan un rodeo absurdo.
                 sourcePosition: Position.Bottom,
@@ -190,14 +215,9 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active }) => {
             source: e.providerId,
             target: `channel:${e.channelId}`,
             /*
-                QUIETA a propósito, aunque React Flow sepa animarlas.
-
-                Una línea en movimiento se lee como "por aquí está pasando algo ahora mismo", y eso no
-                se sabe: lo único que dice esta arista es que la suscripción existe. Animarla sería el
-                mismo error que poner un 0 donde no hay dato — parecería información y sería decoración.
-
-                Cuando los contadores de S4 midan caudal de verdad, el movimiento (o el grosor) podrá
-                significar algo, y entonces se pone.
+                Una línea en movimiento se lee como "por aquí está pasando algo ahora mismo", así que
+                solo se mueve cuando eso se ha MEDIDO (ver 'viva'). Quieta, lo único que dice es que la
+                suscripción existe. Cómo frena con auto-refresco está en el contenedor del ReactFlow.
             */
             ...(() => {
                 const tocaAlSeleccionado = Boolean(seleccionado) && (e.providerId === seleccionado || `channel:${e.channelId}` === seleccionado)
@@ -283,7 +303,23 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active }) => {
         return <Box sx={{ p: 3 }}><Typography variant='body2' color='text.secondary'>Laying out the graph…</Typography></Box>
     }
 
-    const colocados = nodos.map(n => ({ ...n, position: posiciones[n.id] ?? { x: 0, y: 0 } }))
+    /*
+        Sin esto, cada refresco era un FLASH del grafo entero aunque no hubiera cambiado nada.
+
+        React Flow reutiliza un nodo solo si recibe el MISMO objeto; si le llega uno nuevo, le borra las
+        medidas y lo esconde hasta volver a medirlo — y cada foto regenera todos los nodos. Así que el
+        objeto se conserva mientras lo que se pinta de él (datos, estilo, posición) sea igual, y solo se
+        rehace el nodo que de verdad ha cambiado.
+    */
+    const colocados = nodos.map(n => {
+        const position = posiciones[n.id] ?? { x: 0, y: 0 }
+        const firma = JSON.stringify([n.data, n.style, position])
+        const previo = nodosPintados.current.get(n.id)
+        if (previo?.firma === firma) return previo.nodo
+        const nodo = { ...n, position }
+        nodosPintados.current.set(n.id, { firma, nodo })
+        return nodo
+    })
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -326,7 +362,25 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active }) => {
                 },
                 '& .react-flow__controls-button:hover': { background: theme.palette.action.hover },
                 '& .react-flow__controls-button svg': { fill: theme.palette.text.primary },
-                '& .react-flow__attribution': { display: 'none' }
+                '& .react-flow__attribution': { display: 'none' },
+                /*
+                    Con auto-refresco, la línea viva arranca a la velocidad de serie y va FRENANDO hasta
+                    pararse justo cuando llega la siguiente foto: lo que se ha visto moverse es lo que
+                    pasó en ese intervalo, y la línea no sigue diciendo "ahora" cuando el dato ya es viejo.
+                    En manual no hay intervalo que agotar, así que se queda la animación continua de serie.
+
+                    El recorrido sale de la curva: con ease-out cuadrática la velocidad inicial es 2·D/T,
+                    así que D = VELOCIDAD_INICIAL·T/2 arranca igual que la de serie, sin tirón.
+                */
+                ...(autoRefresh > 0 ? {
+                    [`@keyframes ${frenada}`]: {
+                        from: { strokeDashoffset: VELOCIDAD_INICIAL * autoRefresh / 2 },
+                        to: { strokeDashoffset: 0 }
+                    },
+                    '& .react-flow__edge.animated path': {
+                        animation: `${frenada} ${autoRefresh}s cubic-bezier(0.5, 1, 0.89, 1) 1 forwards`
+                    }
+                } : {})
             }}>
                 {/*
                     SOLO VISUALIZACION. React Flow es un editor de grafos, asi que de serie deja tirar

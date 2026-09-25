@@ -93,12 +93,10 @@ who talks to it?"*.
 
 ### A line is not traffic
 
-The lines do not move, and that is deliberate. **A line means the subscription exists** — nothing here
-measures how much data is going through it yet. An animated line reads as *"something is flowing right
-now"*, which would be the same lie as printing a `0` where the answer is unknown: it would look like
-information and it would be decoration.
-
-When per-component counters arrive, movement will be able to mean something, and then it will be used.
+**A line means the subscription exists**, and a still line says nothing more than that. An animated line
+reads as *"something is flowing right now"*, so a line only moves when that has actually been measured —
+see [Live lines in the graph](#live-lines-in-the-graph). Moving it without a measurement would be the same
+lie as printing a `0` where the answer is unknown: it would look like information and it would be decoration.
 
 ### The graph only shows
 
@@ -159,6 +157,15 @@ than it is.
 
 In the graph view, **a line moves when its producer's counter changed since the previous refresh**. Put the
 selector on 5s and you will see components light up as they deliver and go quiet when they do not.
+
+With an interval set, a live line **slows down and comes to a stop exactly when the next snapshot arrives**.
+The movement you saw describes that interval and nothing after it: a line that kept moving would keep
+saying *"now"* about data that is already old. If the producer delivered again, the next snapshot sets the
+line moving once more; if not, it stays still. In **Manual** there is no interval to run out, so a live line
+keeps moving until you take the next snapshot.
+
+Refreshing does not redraw what has not changed: nodes stay exactly where they were, without a flicker, and
+only what differs from the previous snapshot is repainted.
 
 What a moving line does **not** tell you is how much went to each consumer. The count belongs to the
 component, not to each line: if a provider delivers to three channels, all three lines move, and the split
