@@ -29,7 +29,7 @@ interface ISubscriberEntry {
     imported from kwirth-common-back, so this provider does not depend on a particular version of
     that package. Once the contract is published this interface can go.
 */
-interface IProviderLogger {
+interface IExtensionLogger {
     info(message: unknown): void
     warning(message: unknown): void
     error(message: unknown): void
@@ -40,12 +40,12 @@ export class HttpPullPushProvider implements IProvider {
         Starts writing to the console — what it did before — and the core replaces it as soon as the
         provider is built. With an older core nobody calls setLogger and everything stays as it was.
     */
-    private log: IProviderLogger = {
+    private log: IExtensionLogger = {
         info: (message: unknown) => console.log(`[http-pull-push] ${message}`),
         warning: (message: unknown) => console.warn(`[http-pull-push] ${message}`),
         error: (message: unknown) => console.error(`[http-pull-push] ${message}`)
     }
-    setLogger = (logger: IProviderLogger): void => { this.log = logger }
+    setLogger = (logger: IExtensionLogger): void => { this.log = logger }
     public readonly id = 'http-pull-push'
     public readonly providesRouter = false
     public router = undefined

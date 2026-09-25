@@ -13,7 +13,7 @@ const TRIVY_OPERATOR_DEPLOY = 'trivy-operator'
     imported from kwirth-common-back, so this provider does not depend on a particular version of
     that package. Once the contract is published this interface can go.
 */
-interface IProviderLogger {
+interface IExtensionLogger {
     info(message: unknown): void
     warning(message: unknown): void
     error(message: unknown): void
@@ -26,12 +26,12 @@ export class TrivyProvider implements IProvider {
         provider is built. Note the console prefix said '[trivy-provider]', which is NOT the provider
         id: the core writes '[trivy]', the real one.
     */
-    private log: IProviderLogger = {
+    private log: IExtensionLogger = {
         info: (message: unknown) => console.log(`[trivy] ${message}`),
         warning: (message: unknown) => console.warn(`[trivy] ${message}`),
         error: (message: unknown) => console.error(`[trivy] ${message}`)
     }
-    setLogger = (logger: IProviderLogger): void => { this.log = logger }
+    setLogger = (logger: IExtensionLogger): void => { this.log = logger }
     public readonly providesRouter = false
     public router = undefined
     public routerAlias = undefined

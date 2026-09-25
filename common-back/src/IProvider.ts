@@ -134,13 +134,6 @@ export interface IProviderStats {
 */
 
 /**
- * What a provider writes its log with. It is the common extension logger — the need turned out to be
- * the same for senders, so it lives in IExtension. Kept as a name of its own because it is already
- * published and providers compile against it.
- */
-export type IProviderLogger = IExtensionLogger
-
-/**
  * Interface that all provider plugins must implement.
  * Use 'any' for clusterInfo to avoid pulling in kubernetes/docker dependencies.
  */
@@ -202,7 +195,7 @@ export interface IProvider extends IExtension {
      * be filtered. With this, a provider's line reads '[provider] [ERROR] [longhorn] ...' and the
      * provider does not even have to write its own id: the core puts it there.
      */
-    setLogger?(logger: IProviderLogger): void
+    setLogger?(logger: IExtensionLogger): void
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
     router: any
