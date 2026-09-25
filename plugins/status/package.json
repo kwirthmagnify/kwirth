@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "watch": "node watch.mjs",
     "test": "node tests/run.mjs"
   },
   "dependencies": {

@@ -65,9 +65,25 @@ const colocar = async (nodos: Node[], aristas: Edge[]): Promise<Record<string, I
                 */
                 'elk.direction': 'DOWN',
                 'elk.spacing.nodeNode': '40',
-                'elk.layered.spacing.nodeNodeBetweenLayers': '110'
+                'elk.layered.spacing.nodeNodeBetweenLayers': '110',
+                /*
+                    UN solo grafo, no uno por componente. De serie elk coloca cada componente conexo por
+                    su cuenta y luego los apila: un par suelto como sugarless -> sugarless salia en su
+                    propio bloque de dos filas, con su canal por ENCIMA de productores del bloque grande.
+                */
+                'elk.separateConnectedComponents': 'false'
             },
-            children: nodos.map(n => ({ id: n.id, width: 230, height: 56 })),
+            /*
+                Y la fila de cada nodo, fijada: productores en la primera capa, consumidores en la ultima.
+                Sin esto, un productor sin aristas (plugin:montag) es un nodo sin salidas y el layering
+                lo puede bajar con los consumidores.
+            */
+            children: nodos.map(n => ({
+                id: n.id,
+                width: 230,
+                height: 56,
+                layoutOptions: { 'elk.layered.layering.layerConstraint': n.data.esProductor ? 'FIRST' : 'LAST' }
+            })),
             edges: aristas.map(e => ({ id: e.id, sources: [e.source], targets: [e.target] }))
         })
         const pos: Record<string, IPosicion> = {}

@@ -4,7 +4,9 @@
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
         "provider-debug": "../plugins/provider-debug/dist",
-        "status": "../plugins/status/dist"
+        "status": "../plugins/status/dist",
+        "situs": "../plugins/situs/dist",
+        "sugarless": "../plugins/sugarless/dist"
     },
     "providers": {
         "longhorn": "../providers/longhorn/dist",
