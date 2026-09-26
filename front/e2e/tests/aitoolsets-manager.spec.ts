@@ -44,6 +44,16 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
 
     const dialog = () => page.getByRole('dialog').filter({ hasText: DIALOG })
 
+    /*
+        Whether ANY toolset in this environment is loaded from `kwirth-dev.json`.
+
+        It used to be a given —every toolset was a dev one— so two tests below asserted the dev
+        wording unconditionally. The day the toolsets were installed from the marketplace instead,
+        both went red without a single thing being broken. What this manager promises does not
+        depend on where an extension came from, so the checks that DO depend on it are guarded.
+    */
+    const anyDevLoaded = async (): Promise<boolean> => await dialog().getByText('dev active').count() > 0
+
     test('el tipo aitoolset tiene su entrada de menu y abre el gestor generico', async () => {
         await expect(dialog()).toBeVisible()
         // Las dos secciones del generico, con el nombre del tipo interpolado desde el descriptor
@@ -71,20 +81,34 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         // ⚠️ El motivo distingue quien lo carga: a una extension de DEV no se le puede decir "desinstala
         // primero" porque no se desinstala — se quita de kwirth-dev.json. Lo traia ThemeManagerDialog y lo
         // heredo el generico al migrarlo, asi que aqui se aceptan los dos motivos.
-        await expect(dialog().getByText('dev active').first()).toBeVisible({ timeout: 40000 })
         const yaInstalados = dialog().locator('span[aria-label^="Already installed"] button, span[aria-label^="A dev version"] button')
+        // The catalogue is not instant: the back resolves the remote manifests before answering.
+        await expect(yaInstalados.first()).toBeVisible({ timeout: 40000 })
         expect(await yaInstalados.count(), 'ningun toolset del catalogo consta como instalado').toBeGreaterThan(0)
         for (let i = 0; i < await yaInstalados.count(); i++) await expect(yaInstalados.nth(i)).toBeDisabled()
 
-        // Y el de dev lo dice con SU motivo, no con el generico
-        await expect(dialog().locator('span[aria-label="A dev version is already loaded"]').first()).toBeVisible()
+        // A dev extension cannot be told "uninstall first" — it is not uninstalled, it is taken out
+        // of kwirth-dev.json — so when one IS loaded the manager must say it with its own reason.
+        if (await anyDevLoaded()) {
+            await expect(dialog().locator('span[aria-label="A dev version is already loaded"]').first()).toBeVisible()
+        }
     })
 
     test('el veredicto de canUninstall se ve y bloquea el boton', async () => {
         // Un toolset de dev lo gobierna kwirth-dev.json: desinstalarlo desde aqui dejaria el indice
         // diciendo una cosa y el arranque volviendolo a poner. El descriptor lo prohibe y el generico
         // tiene que enseñar el MOTIVO, no solo desactivar el boton.
-        await expect(dialog().locator('span[aria-label="Dev toolsets cannot be uninstalled"] button').first()).toBeDisabled()
+        if (await anyDevLoaded()) {
+            await expect(dialog().locator('span[aria-label="Dev toolsets cannot be uninstalled"] button').first()).toBeDisabled()
+            return
+        }
+
+        // With no dev toolset around, the other half of the same rule is what can be checked: one
+        // installed from a marketplace CAN be uninstalled, so its button must be alive and say so.
+        // Nothing is clicked — this spec is read-only, and uninstalling would take the user's toolset.
+        const desinstalar = dialog().locator('span[aria-label="Uninstall"] button')
+        expect(await desinstalar.count(), 'ningun toolset instalado ofrece desinstalar').toBeGreaterThan(0)
+        await expect(desinstalar.first()).toBeEnabled()
     })
 
     test('un tipo sin dialogo de configuracion no enseña engranaje', async () => {
@@ -98,10 +122,15 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         const filters = dialog().getByPlaceholder('Filter…')
         await expect(filters).toHaveCount(2)
 
+        // What the catalogue holds, counted BEFORE filtering: the entries themselves, not the dev wording,
+        // which only exists when a toolset is loaded from kwirth-dev.json.
+        const enCatalogo = dialog().locator('span[aria-label^="Already installed"] button, span[aria-label^="A dev version"] button')
+        const antes = await enCatalogo.count()
+
         await filters.first().fill('no-existe-este-toolset')
         await expect(dialog().getByText('No AI toolsets installed.')).toBeVisible()
         // el catalogo sigue entero: el filtro de arriba no es global
-        await expect(dialog().getByText('dev active').first()).toBeVisible()
+        expect(await enCatalogo.count(), 'el filtro de instalados se ha llevado por delante el catalogo').toBe(antes)
 
         await filters.first().fill('')
         await expect(dialog().getByText(/^\d+ tools?$/).first()).toBeVisible()
