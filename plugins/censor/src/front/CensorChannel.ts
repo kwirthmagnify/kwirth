@@ -179,8 +179,8 @@ export class CensorChannel implements IChannel {
                 else if (msg.kind === 'analyzing' && msg.analyzing !== undefined && msg.runnerKey) {
                     const rd = ensureRunner(msg.runnerKey)
                     rd.analyzing = msg.analyzing
-                    // El contador de tiempo lo arrancaba solo el botón Start; con autoStart el análisis
-                    // empieza sin que nadie pulse nada, así que la marca se pone al enterarse
+                    // The elapsed counter used to be started only by the Start button; with autoStart the
+                    // analysis begins with nobody pressing anything, so the mark is set on finding out
                     if (msg.analyzing && data.startTime === undefined) {
                         data.startTime = Date.now()
                         data.stopTime = undefined

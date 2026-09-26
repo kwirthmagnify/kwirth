@@ -22,8 +22,8 @@ test.describe('Censor — channel baseline', () => {
 
     test('starting the channel does NOT start the analysis by itself', async ({ page }) => {
         await openCensor(page)
-        // Los dos arranques son distintos: el del channel (este) deja el analisis parado, asi que el
-        // boton propio de censor sigue ofreciendo Start (y no Stop)
+        // The two starts are different: the channel's one (this) leaves the analysis stopped, so
+        // censor's own button keeps offering Start (and not Stop)
         await expect(page.getByTestId('censor-analyze-toggle')).toHaveText('Start')
     })
 })

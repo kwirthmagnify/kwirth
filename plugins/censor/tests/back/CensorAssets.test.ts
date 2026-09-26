@@ -6,10 +6,10 @@ import CensorChannel from '../../src/back/index'
 import { ECensorAssetState, ECensorCommand, ICensorInstanceConfig } from '../../src/common/CensorTypes'
 import { MockWs, makeBackObj, makeClusterInfo, cmd, instanceConfigFor, sleep, IPodSpec } from '../helpers'
 
-// Tope de reintentos de reconexión del back (MAX_RECONNECT_ATTEMPTS en src/back/index.ts)
+// The back end's reconnection retry ceiling (MAX_RECONNECT_ATTEMPTS in src/back/index.ts)
 const MAX_RECONNECT_ATTEMPTS = 20
-// El inventario se emite agrupado (ASSETS_BROADCAST_DELAY), así que hay que esperar más que eso
-// para leer el último mensaje enviado al front
+// The inventory is broadcast in batches (ASSETS_BROADCAST_DELAY), so we have to wait longer than that
+// to read the last message sent to the front end
 const AFTER_BROADCAST = 150
 
 const logCfg = (over: Record<string, unknown> = {}): ICensorInstanceConfig => ({
@@ -19,7 +19,7 @@ const logCfg = (over: Record<string, unknown> = {}): ICensorInstanceConfig => ({
     ...over
 })
 
-// Vista de los internos del canal para asertar estado real (inventario, streams y runners)
+// A view of the channel's internals, to assert real state (inventory, streams and runners)
 interface IAssetView {
     namespace: string
     pod: string
@@ -45,7 +45,7 @@ const PODS: IPodSpec[] = [
     { namespace: 'ns-a', pod: 'pod-b', containers: ['c1'] }
 ]
 
-// Instancia resource (vista namespace): el core da de alta un objeto por container
+// A resource instance (namespace view): the core registers one object per container
 const setupResource = async (cfgs: ICensorInstanceConfig[] = [logCfg()], pods: IPodSpec[] = PODS) => {
     const { ci, calls, setFailure } = makeClusterInfo(pods)
     const { obj, own, warnings } = makeBackObj()
@@ -59,12 +59,12 @@ const setupResource = async (cfgs: ICensorInstanceConfig[] = [logCfg()], pods: I
     }
     const start = () => ch.processCommand(ws as never, cmd('i1', ECensorCommand.ANALYZESTART) as never)
     const stop = () => ch.processCommand(ws as never, cmd('i1', ECensorCommand.ANALYZESTOP) as never)
-    // Sin teardown quedarían timers de reconexión vivos y el proceso de test no terminaría
+    // Without a teardown, reconnection timers would stay alive and the test process would never finish
     const teardown = () => ch.stopInstance(ws as never, instanceConfig as never)
     return { ch, ws, instanceConfig, calls, warnings, setFailure, start, stop, teardown }
 }
 
-// Instancia cluster: censor descubre los pods por su cuenta
+// A cluster instance: censor discovers the pods on its own
 const setupCluster = async (cfgs: ICensorInstanceConfig[] = [logCfg()], pods: IPodSpec[] = PODS) => {
     const { ci, calls, setFailure } = makeClusterInfo(pods)
     const { obj, own, warnings } = makeBackObj()
@@ -132,7 +132,7 @@ test('streams are opened asking only for new lines, never for the historical tai
     await start()
     await sleep(AFTER_BROADCAST)
 
-    // tailLines traería la última línea vieja de CADA container al primer lote del LLM
+    // tailLines would bring EACH container's last old line into the LLM's first batch
     assert.ok(calls.every(c => c.opts.tailLines === undefined), 'no historical tail must be requested')
     assert.ok(calls.every(c => c.opts.sinceSeconds === 1), 'only lines from now on')
     assert.ok(calls.every(c => c.opts.follow === true))
@@ -174,7 +174,7 @@ test('a premature stream close keeps the object and reconnects it', async (t) =>
     await sleep(AFTER_BROADCAST)
     ws.clear()
 
-    // El cliente de k8s cierra el PassThrough cuando el body HTTP se corta (habitual con follow)
+    // The k8s client closes the PassThrough when the HTTP body is cut (common with follow)
     assetOf(ch, 'pod-b', 'c1').passThroughStream!.end()
     await sleep(AFTER_BROADCAST)
 
@@ -184,7 +184,7 @@ test('a premature stream close keeps the object and reconnects it', async (t) =>
     assert.equal(lastAssets(ws).find(a => a.pod === 'pod-b')!.state, ECensorAssetState.RECONNECTING)
     assert.equal(calls.length, 3, 'no reconnection before the backoff elapses')
 
-    // Primer reintento del backoff (1s)
+    // The backoff's first retry (1s)
     await sleep(1200)
     assert.equal(calls.length, 4, 'the stream must be reopened')
     assert.equal(calls[3].pod, 'pod-b')
@@ -267,7 +267,7 @@ test('a deleted pod leaves the inventory and its stream is aborted', async (t) =
 })
 
 test('an object only matched by the second active config survives the runner sync', async (t) => {
-    // El pod entra por evento de cluster (que no filtra), así que nace sin runner que lo cubra
+    // The pod arrives through a cluster event (which does not filter), so it is born with no runner covering it
     const other = logCfg({ name: 'other', version: '1', logstreamAll: false, logstreamSources: [{ namespace: 'ns-zzz' }] })
     const { ch, ws, teardown } = await setupCluster([other], [])
     t.after(teardown)
@@ -278,8 +278,8 @@ test('an object only matched by the second active config survives the runner syn
     await sleep(AFTER_BROADCAST)
     assert.equal(getInstance(ch).assets.length, 1)
 
-    // Llega una segunda config activa que sí cubre ese pod: la purga de huérfanos no debe ejecutarse
-    // hasta haber sincronizado TODOS los runners
+    // A second active config arrives that does cover that pod: the orphan purge must not run until ALL
+    // the runners have been synchronised
     const covering = logCfg({ name: 'covering', version: '1', logstreamAll: false, logstreamSources: [{ namespace: 'ns-a' }] })
     await ch.processCommand(ws as never, cmd('i1', ECensorCommand.CONFIGSET, { ...covering, _llms: [], _allConfigs: [other, covering] }) as never)
     await sleep(AFTER_BROADCAST)

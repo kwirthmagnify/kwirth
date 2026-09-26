@@ -31,11 +31,11 @@ const MEDIA = path.join(DOCS, liveDocsVersion(), '_media', 'guide').replace(/\\/
 
 test.skip(!process.env.CENSOR_CAPTURE, 'capture-only (set CENSOR_CAPTURE=1)')
 
-// El trace/video de Playwright con la SPA y su WebSocket abierto cuelga el teardown; se desactivan
+// Playwright's trace/video with the SPA and its WebSocket open hangs the teardown; they are disabled
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
 
 test('capture: config dialog (with the autostart switch)', async ({ page }) => {
-    // Tema oscuro y encuadre a pantalla completa, como el resto de capturas de la guía
+    // Dark theme and full-screen framing, like the rest of the guide's screenshots
     await page.addInitScript(() => localStorage.setItem('kwirth.mode', 'dark'))
     await page.setViewportSize({ width: 1600, height: 900 })
     await openCensor(page)

@@ -5,22 +5,22 @@ import { loadModels, buildModel, zodFromExample, generateText, Output } from '@k
 import { PassThrough } from 'stream'
 import { ECensorAssetState, ECensorCommand, ERegexOrigin, ICensorAssetInfo, ICensorInstanceConfig } from '../common/CensorTypes'
 
-// ── Motor de análisis (autónomo, dentro del channel back) ────────────────────
+// ── Analysis engine (self-contained, inside the channel's back end) ──────────
 const BATCH_SIZE = 50
 const MAX_LINE_BUFFER = 25000
-// Reconexión de streams de log: el cliente de k8s corta 'follow' prematuramente con frecuencia,
-// así que un cierre no es motivo para descartar el asset (ver startAssetStream)
+// Log stream reconnection: the k8s client cuts 'follow' short often, so a close is no reason to
+// discard the asset (see startAssetStream)
 const RECONNECT_DELAYS = [1_000, 2_000, 5_000, 10_000, 30_000]
 const MAX_RECONNECT_ATTEMPTS = 20
-// Tope de la ventana que se recupera tras un corte de stream (ver startAssetStream)
+// Ceiling on the window recovered after a stream cut (see startAssetStream)
 const MAX_GAP_RECOVERY_SECONDS = 300
-// Agrupación de la emisión del inventario de assets (varios cambios seguidos → un solo mensaje)
+// Batching of the asset inventory broadcast (several changes in a row → a single message)
 const ASSETS_BROADCAST_DELAY = 100
-// Autostart del análisis: un único flag para todo el canal, aparte de las configs (no viaja con
-// ellas en el export/import porque es una preferencia de esta instalación)
+// Analysis autostart: a single flag for the whole channel, kept apart from the configs (it does not
+// travel with them in export/import because it is a preference of this installation)
 const STORAGE_KEY_AUTOSTART = 'censor-autostart'
-// Las configuraciones con nombre+version, en el almacen del canal. Es LO QUE VIAJA en el
-// export/import de configuracion (ver exportConfig/importConfig).
+// The configurations with name+version, in the channel's store. This is WHAT TRAVELS in the
+// configuration export/import (see exportConfig/importConfig).
 const STORAGE_KEY_CONFIGS = 'censor-configs'
 
 const cleanANSI = (text: string): string => text.replace(/\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g, '')
@@ -108,8 +108,8 @@ interface ICensorMessage {
     runnerKey?: string
 }
 
-// Un asset es una entrada de INVENTARIO (container que casa con las configs activas). El stream de
-// logs es un adorno opcional que solo existe mientras algún runner que lo cubre está analizando.
+// An asset is an INVENTORY entry (a container matching the active configs). The log stream is an
+// optional extra that only exists while some runner covering it is analysing.
 interface IAsset {
     namespace: string
     pod: string
@@ -119,7 +119,7 @@ interface IAsset {
     state: ECensorAssetState
     reconnectAttempts: number
     reconnectTimer?: NodeJS.Timeout
-    // Momento del último corte involuntario, para recuperar solo la ventana perdida al reconectar
+    // Time of the last involuntary cut, so only the lost window is recovered on reconnect
     streamClosedAt?: number
     runnerIds?: Set<string>
 }
@@ -281,13 +281,13 @@ export class CensorChannel {
     importConfig = async (data: unknown): Promise<IExtensionImportResult> => {
         const warnings: string[] = []
 
-        // Lo que llega puede venir de otro Kwirth y puede haberse editado a mano: no se da por bueno.
+        // What arrives may come from another Kwirth and may have been hand-edited: it is not taken on trust.
         const entrantes = (data as { configs?: unknown })?.configs
         if (!Array.isArray(entrantes)) return { applied: 0, skipped: 0, warnings: ['no configs array in the imported data'] }
 
         const actuales: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)) ?? []
-        // Los LLMs son del almacen comun y pueden no existir aqui: eso no invalida una config —el LLM
-        // se puede crear despues—, pero hay que decirlo o la config queda muda sin explicacion.
+        // The LLMs belong to the common store and may not exist here: that does not invalidate a config
+        // — the LLM can be created later — but it has to be said, or the config goes silent unexplained.
         const llms: ILlm[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_LLMS, false)) ?? []
 
         let applied = 0
@@ -302,8 +302,8 @@ export class CensorChannel {
             if (cfg.llmId && !llms.some(l => l.id === cfg.llmId)) {
                 warnings.push(`config '${cfg.name}' references LLM '${cfg.llmId}', which is not configured here`)
             }
-            // Upsert por nombre+version, el mismo criterio que usa CONFIGSAVE. De aqui sale la
-            // idempotencia que exige el contrato: reimportar lo mismo deja lo mismo.
+            // Upsert by name+version, the same criterion CONFIGSAVE uses. This is where the idempotence
+            // the contract demands comes from: re-importing the same leaves the same.
             const idx = actuales.findIndex(c => c.name === cfg.name && c.version === cfg.version)
             if (idx >= 0) actuales[idx] = cfg
             else actuales.push(cfg)
@@ -405,7 +405,7 @@ export class CensorChannel {
                     this.sendEvent(instance, 'analyzing', { analyzing: true, runnerKey: rk })
                 }
                 if (instance.scope === 'cluster') await this.discoverClusterPods(instance)
-                // Arrancar el análisis es lo que abre los streams de log
+                // Starting the analysis is what opens the log streams
                 this.reconcileStreams(instance)
                 return true
             }
@@ -432,7 +432,7 @@ export class CensorChannel {
                     }
                     for (const name of savedNames) await this.saveRegexesForConfig(name)
                 }
-                // Parar el análisis cierra los streams que ya no cubre ningún runner analizando
+                // Stopping the analysis closes the streams no analysing runner covers any more
                 this.reconcileStreams(instance)
                 return true
             }
@@ -483,8 +483,8 @@ export class CensorChannel {
         return runner.currentBatchSize ?? max
     }
 
-    // Envío directo al WebSocket de la instancia.
-    // Localiza el socket vía connections para respetar reconexiones (updateConnection).
+    // Direct send to the instance's WebSocket.
+    // It locates the socket through connections so reconnections are honoured (updateConnection).
     private sendEvent(instance: IInstance, kind: ICensorMessage['kind'], data: Record<string, unknown>): void {
         const socket = this.connections.find(s => s.instances.includes(instance))
         if (!socket) return
@@ -557,8 +557,8 @@ export class CensorChannel {
         await this.backChannelObject.writeStorage!(`censor-regexes-${configName}`, false, regexes)
     }
 
-    // ¿Se puede analizar con estas configs? Es la misma condición que habilita el botón Start: sin
-    // ninguna fuente configurada el análisis no recibiría una sola línea
+    // Can anything be analysed with these configs? It is the same condition that enables the Start
+    // button: with no source configured the analysis would not receive a single line
     private someConfigHasSource(configs: ICensorInstanceConfig[]): boolean {
         return configs.some(c => Boolean(c.logstreamEnabled) || (c.businessSources?.length ?? 0) > 0)
     }
@@ -604,8 +604,8 @@ export class CensorChannel {
             if (this.podMatchesRunnerCfg(cfg, asset.namespace, asset.pod)) asset.runnerIds.add(rkey)
             else asset.runnerIds.delete(rkey)
         }
-        // La purga de assets sin runner y el ajuste de streams los hace el llamante una vez
-        // sincronizados TODOS los runners (purgeUnmatchedAssets + reconcileStreams)
+        // Purging runnerless assets and adjusting streams is done by the caller once ALL the runners
+        // are synchronised (purgeUnmatchedAssets + reconcileStreams)
     }
 
     private processChunk(instance: IInstance, asset: IAsset, chunk: string): void {
@@ -820,8 +820,8 @@ export class CensorChannel {
         return instance.assets.map(a => ({ namespace: a.namespace, pod: a.pod, container: a.container, state: a.state }))
     }
 
-    // El inventario se emite agrupado: el descubrimiento y el alta de objetos provocan muchos cambios
-    // seguidos, y el front sustituye la lista completa con cada mensaje
+    // The inventory is broadcast in batches: discovery and object registration cause many changes in a
+    // row, and the front end replaces the whole list with every message
     private scheduleAssetsBroadcast(instance: IInstance): void {
         if (instance.assetsTimer) return
         instance.assetsTimer = setTimeout(() => {
@@ -830,8 +830,9 @@ export class CensorChannel {
         }, ASSETS_BROADCAST_DELAY)
     }
 
-    // Alta en el INVENTARIO (no abre stream). Si ya se está analizando, el stream arranca acto seguido.
-    // Los llamantes aplican su propio filtrado de candidatos (resource addObject filtra; cluster ADDED no).
+    // Registration in the INVENTORY (it opens no stream). If analysis is already running, the stream
+    // starts right after. Callers apply their own candidate filtering (resource addObject filters;
+    // cluster ADDED does not).
     private addAsset(instance: IInstance, ns: string, pod: string, container: string): void {
         if (instance.assets.some(a => a.namespace === ns && a.pod === pod && a.container === container)) return
         const runnerIds = new Set<string>()
@@ -844,7 +845,7 @@ export class CensorChannel {
         this.scheduleAssetsBroadcast(instance)
     }
 
-    // Un asset necesita stream solo si algún runner que lo cubre está analizando
+    // An asset only needs a stream when some runner covering it is analysing
     private assetShouldStream(instance: IInstance, asset: IAsset): boolean {
         for (const rkey of (asset.runnerIds ?? [])) {
             if (instance.runners.get(rkey)?.analyzing) return true
@@ -860,7 +861,7 @@ export class CensorChannel {
         asset.state = ECensorAssetState.STREAMING
         logStream.setEncoding('utf8')
         logStream.on('data', (chunk: string) => {
-            // Si llegan datos el stream está sano: se reinicia la cuenta de reintentos
+            // If data arrives the stream is healthy: the retry count is reset
             asset.reconnectAttempts = 0
             this.processChunk(instance, asset, chunk)
         })
@@ -868,20 +869,20 @@ export class CensorChannel {
             this.backChannelObject.logWarning?.(`[censor] log stream failure for ${ns}/${pod}/${container}: ${err}`)
             this.handleStreamClosed(instance, asset, logStream)
         })
-        // El cliente de k8s hace pipe(response.body, stream) con end:true, así que un corte del body
-        // (habitual con follow) cierra este PassThrough. Eso NO significa que el container haya
-        // desaparecido: se reconecta mientras se siga analizando y el asset nunca sale del inventario.
+        // The k8s client does pipe(response.body, stream) with end:true, so a cut in the body (common
+        // with follow) closes this PassThrough. That does NOT mean the container is gone: it reconnects
+        // as long as analysis continues, and the asset never leaves the inventory.
         logStream.on('end', () => this.handleStreamClosed(instance, asset, logStream))
-        // Se pide SOLO lo nuevo: 'tailLines' traía la última línea del histórico de cada container, y
-        // con el análisis recién arrancado eso llenaba el primer lote del LLM de líneas viejas y
-        // desordenadas. Tras un corte involuntario se recupera la ventana perdida (acotada) para no
-        // dejar un agujero de logs sin analizar.
+        // ONLY what is new is requested: 'tailLines' brought the last line of each container's history,
+        // and with the analysis freshly started that filled the LLM's first batch with old, out-of-order
+        // lines. After an involuntary cut the lost window is recovered (bounded), so no gap of logs is
+        // left unanalysed.
         const gapSeconds = asset.streamClosedAt ? Math.ceil((Date.now() - asset.streamClosedAt) / 1000) : 0
         const sinceSeconds = Math.max(1, Math.min(gapSeconds, MAX_GAP_RECOVERY_SECONDS))
         const logApi = (this.clusterInfo as { logApi: { log: (ns: string, pod: string, container: string, stream: PassThrough, opts: unknown) => Promise<AbortController> } }).logApi
         logApi.log(ns, pod, container, logStream, { follow: true, pretty: false, timestamps: false, sinceSeconds })
             .then(controller => {
-                // Si el asset ya cerró o reemplazó este stream, la petición sobra
+                // If the asset has already closed or replaced this stream, the request is redundant
                 if (asset.passThroughStream === logStream) asset.abortController = controller
                 else controller.abort()
             })
@@ -891,8 +892,8 @@ export class CensorChannel {
             })
     }
 
-    // Cierre o fallo del stream: se reconecta con backoff si se sigue analizando, y si no queda en
-    // idle. El asset se mantiene en el inventario en cualquier caso.
+    // Stream close or failure: it reconnects with backoff while analysis continues, and otherwise goes
+    // idle. The asset stays in the inventory either way.
     private handleStreamClosed(instance: IInstance, asset: IAsset, closed: PassThrough): void {
         if (asset.passThroughStream !== closed) return
         asset.passThroughStream = undefined
@@ -930,7 +931,7 @@ export class CensorChannel {
         }, delay)
     }
 
-    // Cierra el stream de un asset (abortando la petición al api server) sin tocar el inventario
+    // Closes an asset's stream (aborting the request to the api server) without touching the inventory
     private stopAssetStream(asset: IAsset): void {
         if (asset.reconnectTimer) { clearTimeout(asset.reconnectTimer); asset.reconnectTimer = undefined }
         const logStream = asset.passThroughStream
@@ -942,13 +943,13 @@ export class CensorChannel {
             logStream.destroy()
         }
         asset.reconnectAttempts = 0
-        // Cierre deliberado (stop del análisis, baja del objeto): al volver a arrancar se analiza
-        // desde ese momento, no se recupera lo emitido mientras estaba parado
+        // Deliberate close (analysis stopped, object removed): on starting again the analysis picks up
+        // from that moment, and what was emitted while it was stopped is not recovered
         asset.streamClosedAt = undefined
         asset.state = ECensorAssetState.IDLE
     }
 
-    // Ajusta los streams al estado de análisis: abre los que faltan y cierra los que ya no hacen falta
+    // Adjusts the streams to the analysis state: opens the missing ones and closes those no longer needed
     private reconcileStreams(instance: IInstance): void {
         for (const asset of instance.assets) {
             const shouldStream = this.assetShouldStream(instance, asset)
@@ -964,7 +965,7 @@ export class CensorChannel {
         this.scheduleAssetsBroadcast(instance)
     }
 
-    // Baja del inventario (cerrando el stream si lo hubiera)
+    // Removal from the inventory (closing the stream if there was one)
     private removeAssets(instance: IInstance, matches: (asset: IAsset) => boolean): void {
         const toRemove = instance.assets.filter(matches)
         if (toRemove.length === 0) return
@@ -973,15 +974,15 @@ export class CensorChannel {
         this.scheduleAssetsBroadcast(instance)
     }
 
-    // Cluster: los assets que ya no casan con ningún runner salen del inventario (en resource manda la
-    // selección del usuario). Se llama tras sincronizar TODOS los runners, nunca dentro del bucle.
+    // Cluster: assets that no longer match any runner leave the inventory (in resource mode the user's
+    // selection rules). Called after synchronising ALL the runners, never inside the loop.
     private purgeUnmatchedAssets(instance: IInstance): void {
         if (instance.scope !== 'cluster') return
         this.removeAssets(instance, a => (a.runnerIds?.size ?? 0) === 0)
     }
 
     // Cluster-mode discovery: list all pods and inventory those matching any runner's logstream config
-    // (inventariar no abre streams: eso lo decide el estado de análisis)
+    // (inventorying opens no streams: that is decided by the analysis state)
     private async discoverClusterPods(instance: IInstance): Promise<void> {
         const runnerCfgs = [...instance.runners.values()].map(r => r.cfg).filter(c => c.logstreamEnabled)
         if (runnerCfgs.length === 0) return
@@ -1095,8 +1096,8 @@ export class CensorChannel {
         if (runner.flushTimer) { clearTimeout(runner.flushTimer); runner.flushTimer = undefined }
         if (runner.receivedTimer) { clearTimeout(runner.receivedTimer); runner.receivedTimer = undefined }
         instance.runners.delete(rk)
-        // Los assets quedan sin este runner, pero no se purgan aquí: un runner que entra después en la
-        // misma sincronización puede cubrirlos (de eso se encarga syncRunners al terminar)
+        // The assets are left without this runner, but they are not purged here: a runner entering later
+        // in the same synchronisation may cover them (syncRunners takes care of that at the end)
         for (const asset of instance.assets) asset.runnerIds?.delete(rk)
         this.sendEvent(instance, 'analyzing', { analyzing: false, runnerKey: rk })
     }
@@ -1129,8 +1130,8 @@ export class CensorChannel {
             instance.ephemeralDescription = generateSessionName(existing)
         }
         for (const cfg of allActive) this.createOrUpdateRunner(instance, cfg, llms)
-        // Autostart del ANÁLISIS (no del channel, que ya está arrancado si estamos aquí): con el
-        // flag puesto se arranca todo lo que esté activo, igual que pulsar Start en la topbar
+        // Autostart of the ANALYSIS (not of the channel, which is already started if we are here): with
+        // the flag set, everything active is started, exactly as pressing Start in the topbar does
         const autoStart: boolean = ((await this.backChannelObject.readStorage!(STORAGE_KEY_AUTOSTART, false)) ?? false) === true
         if (autoStart && this.someConfigHasSource(allActive)) instance.analyzing = true
         for (const [rk, runner] of instance.runners) {

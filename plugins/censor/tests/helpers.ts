@@ -1,11 +1,11 @@
-// Mocks comunes para los tests unit de censor (patrón montag/AgoraChannel.test.ts).
-// No se levanta infraestructura: se inyecta clusterInfo y backChannelObject y se captura el
-// tráfico WebSocket con una clase MockWs.
+// Common mocks for censor's unit tests (the montag/AgoraChannel.test.ts pattern).
+// No infrastructure is brought up: clusterInfo and backChannelObject are injected and the WebSocket
+// traffic is captured with a MockWs class.
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { PassThrough } from 'stream'
 import { ECensorCommand } from '../src/common/CensorTypes'
 
-// WebSocket falso: guarda cada send() como string JSON y permite filtrar por kind.
+// Fake WebSocket: it keeps every send() as a JSON string and allows filtering by kind.
 export class MockWs {
     readyState = 1
     bufferedAmount = 0
@@ -18,7 +18,7 @@ export class MockWs {
     clear(): void { this.sent = [] }
 }
 
-// backChannelObject con storage en memoria (own = readStorage, shared = readStorageCommon).
+// backChannelObject with in-memory storage (own = readStorage, shared = readStorageCommon).
 export const makeBackObj = () => {
     const own = new Map<string, unknown>()
     const shared = new Map<string, unknown>()
@@ -58,8 +58,8 @@ export interface IPodSpec {
     containers: string[]
 }
 
-// clusterInfo mínimo. logApi.log registra cada apertura de stream y devuelve un AbortController
-// (como el cliente real de k8s) para poder asertar que censor aborta las peticiones.
+// A minimal clusterInfo. logApi.log records every stream opening and returns an AbortController
+// (like the real k8s client) so it can be asserted that censor aborts the requests.
 export const makeClusterInfo = (pods: IPodSpec[] = []) => {
     const subs: Array<{ providerId: string; data: unknown }> = []
     const calls: ILogApiCall[] = []
@@ -88,7 +88,7 @@ export const makeClusterInfo = (pods: IPodSpec[] = []) => {
     return { ci, subs, calls, setFailure: (err: Error | undefined) => { failWith = err } }
 }
 
-// Envelope de comando front->back que espera processCommand.
+// The front->back command envelope processCommand expects.
 export const cmd = (instance: string, command: ECensorCommand, data?: unknown) => ({
     msgtype: 'censormessage',
     channel: 'censor',

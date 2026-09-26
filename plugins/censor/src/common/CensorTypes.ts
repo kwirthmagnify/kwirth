@@ -59,8 +59,8 @@ export interface ICensorInstanceConfig {
     businessPath?: string
 }
 
-// Estado del stream de logs de un asset. El inventario de assets (qué containers casan con las
-// configs activas) es independiente del stream: el stream solo se abre mientras se analiza.
+// State of an asset's log stream. The asset inventory (which containers match the active configs) is
+// independent of the stream: the stream is only opened while analysis is running.
 export enum ECensorAssetState {
     IDLE = 'idle',
     STREAMING = 'streaming',

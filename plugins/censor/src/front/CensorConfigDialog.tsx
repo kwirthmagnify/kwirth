@@ -59,7 +59,7 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
     const [senderId, setSenderId] = useState('')
     const [senderConfigName, setSenderConfigName] = useState('')
     const [configActive, setConfigActive] = useState(false)
-    // Autostart del analisis: uno solo para todo el canal (no por config)
+    // Analysis autostart: a single one for the whole channel (not per config)
     const [autoStart, setAutoStart] = useState(data.autoStart)
 
     useEffect(() => {

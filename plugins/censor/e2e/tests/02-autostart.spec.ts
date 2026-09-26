@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { openCensor, openConfigDialog } from './helpers'
 
-// Autostart del ANALISIS: un unico switch para todo el canal, bajo la lista de configs.
+// Autostart of the ANALYSIS: a single switch for the whole channel, below the config list.
 //
-// NO DESTRUCTIVO y sin gasto de LLM: el spec comprueba el contrato de UI (que el switch existe, que
-// es unico, que esta fuera del editor de la config seleccionada y que se puede conmutar) y SIEMPRE
-// cierra con Cancel, asi que no persiste nada ni arranca un analisis contra el LLM real del usuario.
-// El comportamiento (que el flag arranca el analisis al arrancar el channel) esta cubierto de forma
-// determinista por el harness: tests/back/CensorAutostart.test.ts.
+// NON-DESTRUCTIVE and with no LLM spend: the spec checks the UI contract (that the switch exists, that
+// there is only one, that it sits outside the selected config's editor and that it can be toggled) and
+// ALWAYS closes with Cancel, so nothing is persisted and no analysis is started against the user's real
+// LLM. The behaviour (that the flag starts the analysis when the channel starts) is covered
+// deterministically by the harness: tests/back/CensorAutostart.test.ts.
 test.describe('Censor — autostart del analisis', () => {
 
     test('el switch de autostart existe, es unico y vive fuera del editor de config', async ({ page }) => {
@@ -18,7 +18,7 @@ test.describe('Censor — autostart del analisis', () => {
         await expect(autoStart).toHaveCount(1)
         await expect(autoStart).toBeVisible()
 
-        // Esta en el panel de la lista (aplica a todas las configs), no en la pestana General del editor
+        // It lives in the list panel (it applies to every config), not in the editor's General tab
         await expect(dialog.getByRole('tab', { name: 'General' })).toBeVisible()
         await dialog.getByRole('tab', { name: 'General' }).click()
         await expect(dialog.getByText('Active')).toBeVisible()
@@ -40,7 +40,7 @@ test.describe('Censor — autostart del analisis', () => {
         await dialog.getByRole('button', { name: 'Cancel' }).click()
         await expect(dialog).toBeHidden()
 
-        // Reabrir: al no haber pulsado OK, el valor sigue siendo el original
+        // Reopen: as OK was never pressed, the value is still the original one
         const reopened = await openConfigDialog(page)
         expect(await reopened.locator('input[type="checkbox"]').last().isChecked()).toBe(before)
         await reopened.getByRole('button', { name: 'Cancel' }).click()

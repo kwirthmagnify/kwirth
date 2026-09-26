@@ -1,6 +1,6 @@
 // Unit test runner for censor (patrón montag/Agora).
-// Bundlea tests/**/*.test.ts con esbuild -> tests/.out (ESM node20) y ejecuta con `node --test`.
-// Los tests importan directamente de ../src (código real, no el dist).
+// It bundles tests/**/*.test.ts with esbuild -> tests/.out (ESM node20) and runs `node --test`.
+// The tests import straight from ../src (the real code, not the dist).
 import esbuild from 'esbuild'
 import { readdirSync, mkdirSync, rmSync } from 'fs'
 import { execFileSync } from 'child_process'
@@ -9,7 +9,7 @@ import path from 'path'
 const TEST_DIR = 'tests'
 const OUT_DIR = 'tests/.out'
 
-// 1) Descubre todos los tests/**/*.test.ts
+// 1) Discover every tests/**/*.test.ts
 const entries = readdirSync(TEST_DIR, { recursive: true })
     .map(String)
     .filter(f => f.endsWith('.test.ts'))
@@ -21,8 +21,8 @@ if (entries.length === 0) { console.log('No tests (tests/**/*.test.ts).'); proce
 rmSync(OUT_DIR, { recursive: true, force: true })
 mkdirSync(OUT_DIR, { recursive: true })
 
-// 3) Bundle TS -> ESM node20. Se externalizan los paquetes @kwirthmagnify/* (se resuelven en
-//    runtime desde node_modules; censor no usa knex/pg).
+// 3) Bundle TS -> ESM node20. The @kwirthmagnify/* packages are externalised (they are resolved at
+//    runtime from node_modules; censor does not use knex/pg).
 await esbuild.build({
     entryPoints: entries,
     bundle: true, format: 'esm', platform: 'node', target: 'node20',
@@ -39,7 +39,7 @@ await esbuild.build({
     loader: { '.ts': 'ts', '.tsx': 'tsx' },
 })
 
-// 4) Ejecuta los bundles con el runner nativo (cada fichero en su propio proceso)
+// 4) Run the bundles with the native runner (each file in its own process)
 const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String)
     .filter(f => f.endsWith('.mjs')).map(f => path.join(OUT_DIR, f))
 const covArgs = process.env.COVERAGE ? ['--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**'] : []

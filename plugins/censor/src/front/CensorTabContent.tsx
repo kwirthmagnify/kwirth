@@ -10,8 +10,8 @@ import { ECensorAssetState, ECensorCommand, ERegexOrigin } from './CensorConfig'
 import { CensorConfigDialog } from './CensorConfigDialog'
 import { CensorAddRegexDialog } from './CensorAddRegexDialog'
 
-// El estado del stream se pinta sobre el inventario: un container que casa con la configuración
-// sigue listado aunque su stream esté parado, reconectando o caído
+// The stream state is drawn on top of the inventory: a container matching the configuration stays
+// listed even when its stream is stopped, reconnecting or down
 const assetStateColor = (state: ECensorAssetState): string => {
     switch (state) {
         case ECensorAssetState.STREAMING: return 'success.main'

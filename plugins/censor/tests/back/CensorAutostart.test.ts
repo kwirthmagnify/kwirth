@@ -1,7 +1,7 @@
-// Autostart del ANALISIS (no del channel). El channel lo arranca el core (a mano, por login o al
-// restaurar un workspace); una vez arrancado, si el flag de autostart esta puesto se arranca el
-// analisis de TODAS las configs activas, igual que pulsar Start en la topbar.
-// El flag es uno solo para todo el canal y vive en su propia clave de storage.
+// Autostart of the ANALYSIS (not of the channel). The core starts the channel (by hand, on login or
+// when restoring a workspace); once started, if the autostart flag is set, the analysis of ALL the
+// active configs is started, exactly as pressing Start in the topbar does.
+// The flag is a single one for the whole channel and lives under its own storage key.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -37,7 +37,7 @@ const PODS: IPodSpec[] = [
     { namespace: 'ns-a', pod: 'pod-b', containers: ['c1'] }
 ]
 
-// Arranque del channel: el core da de alta un objeto por container (vista namespace)
+// Channel startup: the core registers one object per container (namespace view)
 const startChannel = async (cfgs: ICensorInstanceConfig[], autoStart?: boolean, pods: IPodSpec[] = PODS) => {
     const { ci, calls } = makeClusterInfo(pods)
     const { obj, own } = makeBackObj()
