@@ -140,7 +140,7 @@ copyFileSync(join(__dir, 'package.json'), join(distDir, 'package.json'))
 copyFileSync(join(__dir, 'login.json'), join(distDir, 'login.json'))
 
 /*
- * DOS fondos posibles, y solo uno tiene tope:
+ * TWO possible backgrounds, and only one has a ceiling:
  *
  *   · background.png    — the one that has to fit ANYWHERE, including a Kubernetes ConfigMap, which
  *                         does not go beyond ~1 MiB per object and stores the image IN BASE64 (a third

@@ -493,7 +493,7 @@ test('toda invocacion deja traza, con sus argumentos', async () => {
 })
 `)
 
-// ─── verify.mjs (opcional, solo k8s) ───────────────────────────────────────
+// ─── verify.mjs (optional, k8s only) ───────────────────────────────────────
 
 if (wantsVerify) {
     const verify = [

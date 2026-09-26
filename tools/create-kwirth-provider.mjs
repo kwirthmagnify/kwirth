@@ -82,7 +82,7 @@ const providerDir = path.resolve('providers', id)
 
 const hasFront   = configMode === 'front'
 const hasSchema  = configMode === 'schema'
-// configRouter y router publico son dos vias distintas, pero ambas necesitan express bundleado.
+// configRouter and the public router are two different paths, but both need express bundled.
 const usesExpress = wantsRouter || hasFront
 
 if (fs.existsSync(providerDir)) {
