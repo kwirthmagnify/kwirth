@@ -57,7 +57,7 @@ export class Poller {
 
     start = (): void => {
         if (this.timer) return
-        // primer pull inmediato: quien acaba de suscribirse no deberia esperar un intervalo entero
+        // first pull immediately: whoever just subscribed should not wait a whole interval
         void this.tick()
         this.timer = setInterval(() => { void this.tick() }, this.config.intervalSeconds * 1000)
     }
@@ -67,11 +67,11 @@ export class Poller {
         this.timer = undefined
     }
 
-    // ¿Sigue sirviendo este poller para la configuracion dada, o hay que recrearlo?
+    // Does this poller still serve the given configuration, or does it need recreating?
     matches = (config: IHttpPullConfig): boolean => fingerprint(this.config) === fingerprint(config)
 
-    // Un ciclo. Si el anterior sigue en vuelo se salta este, para no encadenar peticiones sobre un
-    // endpoint lento (el intervalo manda, no la latencia).
+    // One cycle. If the previous one is still in flight this one is skipped, so requests do not pile up
+    // on a slow endpoint (the interval rules, not the latency).
     tick = async (): Promise<void> => {
         if (this.running) return
         this.running = true
@@ -118,14 +118,14 @@ export class Poller {
             return JSON.parse(body)
         }
         catch {
-            // respuesta declarada como json pero que no lo es: se entrega el texto en crudo en vez de
-            // perder el resultado (el suscriptor decide que hacer con el)
+            // a response declared as json that is not: the raw text is delivered instead of losing the
+            // result (the subscriber decides what to do with it)
             return body
         }
     }
 
-    // En modo onChange se compara el cuerpo crudo con el del ciclo anterior: es exacto y no depende de
-    // como serialice el objeto parseado.
+    // In onChange mode the raw body is compared with the previous cycle's: it is exact and does not
+    // depend on how the parsed object serialises.
     private shouldEmit = (status: number, body: string): boolean => {
         if (this.config.emitMode === EEmitMode.ALWAYS) return true
         const payload = `${status}:${body}`

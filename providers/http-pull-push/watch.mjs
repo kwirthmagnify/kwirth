@@ -43,7 +43,7 @@ const backCtx = await esbuild.context({
     minify: false,
 })
 
-// El front es opcional mientras se desarrolla el back (ver build.mjs).
+// The front end is optional while the back end is being developed (see build.mjs).
 const frontCtx = fs.existsSync('src/front/index.tsx')
     ? await esbuild.context({
         entryPoints: ['src/front/index.tsx'],

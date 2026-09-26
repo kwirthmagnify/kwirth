@@ -4,7 +4,7 @@ import { Poller } from '../src/back/Poller'
 import { buildHeaders } from '../src/back/HttpFetcher'
 import { EAuthType, EEmitMode, EHttpMethod, EResponseType, IHttpPullConfig, IHttpPullPushEvent, newHttpPullConfig } from '../src/common/HttpPullPush'
 
-// Los ciclos se disparan a mano con tick() para no depender de temporizadores reales.
+// The cycles are fired by hand with tick() so as not to depend on real timers.
 
 const collect = (config: IHttpPullConfig, fetcher: any) => {
     const events: IHttpPullPushEvent[] = []
@@ -171,11 +171,11 @@ test('matches() keeps the poller alive on cosmetic changes and recreates it on r
     const config: IHttpPullConfig = { ...newHttpPullConfig('x'), url: 'https://x/1', headers: { a: '1', b: '2' } }
     const { poller } = collect(config, async () => ({ status: 200, body: '' }))
 
-    // mismo contenido, distinto orden de claves en las cabeceras
+    // same content, different key order in the headers
     assert.equal(poller.matches({ ...config, headers: { b: '2', a: '1' } }), true)
-    // 'enabled' lo gestiona el provider, no obliga a recrear
+    // 'enabled' is managed by the provider, it does not force a recreation
     assert.equal(poller.matches({ ...config, enabled: false }), true)
-    // parametros que si cambian el pull
+    // parameters that do change the pull
     assert.equal(poller.matches({ ...config, url: 'https://x/2' }), false)
     assert.equal(poller.matches({ ...config, intervalSeconds: 5 }), false)
     assert.equal(poller.matches({ ...config, method: EHttpMethod.POST }), false)

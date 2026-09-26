@@ -18,7 +18,7 @@ interface IHttpPullPushConfigDialogProps {
     accessString: string
 }
 
-// Formato del fichero de export/import. 'version' permite evolucionarlo sin romper ficheros antiguos.
+// Format of the export/import file. 'version' allows it to evolve without breaking older files.
 interface IConfigExportFile {
     provider: string
     version: number
@@ -26,8 +26,8 @@ interface IConfigExportFile {
     configs: IHttpPullConfig[]
 }
 
-// El provider es dueño de su configuracion: este dialogo habla con SU router, montado por el core detras
-// de validacion de accessKey, y no con el endpoint de config generico del core.
+// The provider owns its configuration: this dialog talks to ITS router, mounted by the core behind
+// accessKey validation, and not to the core's generic config endpoint.
 const CONFIG_URL = (backendUrl: string) => `${backendUrl}/core/providerconfig/http-pull-push/configs`
 const TEST_URL = (backendUrl: string) => `${backendUrl}/core/providerconfig/http-pull-push/test`
 
@@ -40,7 +40,7 @@ const authHeaders = (accessString: string) => ({
     'X-Kwirth-App': 'true'
 })
 
-// Deja una conexion sin sus campos secretos, para exportarla sin credenciales.
+// Strips a connection of its secret fields, so it can be exported without credentials.
 const stripCredentials = (config: IHttpPullConfig): IHttpPullConfig => ({
     ...config,
     auth: {
@@ -59,12 +59,12 @@ const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ on
     const [error, setError] = useState<string | undefined>()
     const [errors, setErrors] = useState<string[]>([])
 
-    // Formulario: 'editingName' con valor = editando esa conexion; undefined con showForm = alta nueva.
+    // Form: 'editingName' with a value = editing that connection; undefined with showForm = a new one.
     const [showForm, setShowForm] = useState(false)
     const [editingName, setEditingName] = useState<string | undefined>()
     const [form, setForm] = useState<IHttpPullConfig>(newHttpPullConfig(''))
 
-    // Prueba de la conexion, ejecutada en el back
+    // Connection test, executed on the back end
     const [testing, setTesting] = useState(false)
     const [testResult, setTestResult] = useState<IHttpPullTestResult | undefined>()
 
@@ -235,7 +235,7 @@ const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ on
         if (importFileRef.current) importFileRef.current.value = ''
     }
 
-    // Importar reemplaza las conexiones cuyo nombre ya exista y añade las nuevas.
+    // Importing replaces connections whose name already exists and adds the new ones.
     const doImport = async () => {
         if (!importData) return
         const chosen = importData.configs.filter(c => importSelected.has(c.name))

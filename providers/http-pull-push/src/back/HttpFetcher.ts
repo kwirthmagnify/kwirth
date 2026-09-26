@@ -19,7 +19,7 @@ export type TFetcher = (config: IHttpPullConfig) => Promise<IFetchResult>
 
 const METHODS_WITH_BODY = [EHttpMethod.POST, EHttpMethod.PUT, EHttpMethod.PATCH]
 
-// Cabeceras de la conexion mas las que impone el modo de autenticacion elegido.
+// The connection's headers plus the ones the chosen authentication mode imposes.
 export const buildHeaders = (config: IHttpPullConfig): Record<string, string> => {
     const headers: Record<string, string> = { ...(config.headers ?? {}) }
     const auth = config.auth

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { validateConfigs } from '../src/common/Validation'
 import { EAuthType, newHttpPullConfig } from '../src/common/HttpPullPush'
 
-// La validacion vive en common porque la aplican los dos lados: el back en el PUT (un cliente puede
-// saltarse el dialogo) y el front antes de guardar.
+// Validation lives in common because both sides apply it: the back end on the PUT (a client can skip
+// the dialog) and the front end before saving.
 
 const ok = () => ({ ...newHttpPullConfig('good'), url: 'https://example.com/x' })
 

@@ -9,8 +9,8 @@ interface ISecretFieldProps {
     width?: number | string
 }
 
-// Campo de credencial: oculto por defecto, con ojo para revelarlo. Lo que se escriba aqui acaba en un
-// Secret, no en el ConfigMap (el back separa las dos mitades al guardar).
+// Credential field: hidden by default, with an eye to reveal it. Whatever is typed here ends up in a
+// Secret, not in the ConfigMap (the back end splits the two halves on save).
 const SecretField: React.FC<ISecretFieldProps> = ({ label, value, onChange, width }) => {
     const [visible, setVisible] = useState(false)
 

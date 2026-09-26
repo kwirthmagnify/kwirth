@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { HttpPullPushProvider } from '../src/back/index'
 import { EHttpMethod, IHttpPullConfig, IHttpPullPushEvent, newHttpPullConfig } from '../src/common/HttpPullPush'
 
-// Aqui se prueban las DOS capas y como se relacionan: las conexiones (capa 1, persistidas, con enabled)
-// y las suscripciones (capa 2, en memoria). El fetcher es de mentira: no se toca la red.
+// Both LAYERS and how they relate are tested here: the connections (layer 1, persisted, with enabled)
+// and the subscriptions (layer 2, in memory). The fetcher is a fake: the network is never touched.
 
 const makeStorage = () => {
     const data = new Map<string, any>()
@@ -16,7 +16,7 @@ const makeStorage = () => {
     }
 }
 
-// Suscriptor espia: guarda todo lo que le llega.
+// Spy subscriber: it keeps everything that reaches it.
 const makeSubscriber = () => {
     const received: IHttpPullPushEvent[] = []
     return {
@@ -33,7 +33,7 @@ const conn = (name: string, extra: Partial<IHttpPullConfig> = {}): IHttpPullConf
     ...extra
 })
 
-// Espera activa corta: el primer pull de un poller es asincrono.
+// A short busy wait: a poller's first pull is asynchronous.
 const settle = async (): Promise<void> => {
     for (let i = 0; i < 20; i++) await new Promise(resolve => setImmediate(resolve))
 }
@@ -120,7 +120,7 @@ test('two subscribers of the same connection cause ONE request and two deliverie
     await provider.addSubscriber(second.subscriber, { configs: ['stocks'] })
     await settle()
 
-    // el segundo se suscribe a un poller que ya corre: no se relanza la peticion
+    // the second subscribes to a poller that is already running: the request is not fired again
     assert.deepEqual(calls, ['stocks'])
     assert.equal(first.received.length, 1)
     assert.equal(second.received.length, 0, 'the second one will get the next cycle, not the one already served')
@@ -262,8 +262,8 @@ test('connections survive a provider restart, credentials included', async () =>
     await second.stopProvider()
 })
 
-// El boton Test del dialogo llama a este metodo EN EL BACK, que es quien tiene la red y los certificados
-// con los que se hara el pull de verdad.
+// The dialog's Test button calls this method ON THE BACK END, which is what has the network and the
+// certificates the real pull will be made with.
 
 test('testConnection runs the request and reports status, timing, size and a preview', async () => {
     const { provider } = await makeProvider([])
@@ -298,13 +298,13 @@ test('testConnection validates before firing, and does not care about the interv
         return { status: 200, body: 'ok' }
     })
 
-    // url invalida: no se lanza ninguna peticion
+    // invalid url: no request is fired at all
     const bad = await provider.testConnection({ ...conn('bad'), url: 'ftp://nope' })
     assert.equal(bad.ok, false)
     assert.match(bad.error!, /http/)
     assert.deepEqual(calls, [])
 
-    // un timeout mayor que el intervalo bloquea el GUARDADO, pero no debe bloquear una prueba puntual
+    // a timeout larger than the interval blocks SAVING, but must not block a one-off test
     const ok = await provider.testConnection({ ...conn('fine'), url: 'https://x/1', intervalSeconds: 1, timeoutMs: 30000 })
     assert.equal(ok.ok, true)
     assert.deepEqual(calls, ['fine'])
@@ -356,9 +356,9 @@ test('getConfigNames reports the names, and only the names', async () => {
 
     const names = provider.getConfigNames()
 
-    // incluye las deshabilitadas: el contador de la tarjeta cuenta lo definido, no lo que esta corriendo
+    // disabled ones included: the card's counter counts what is defined, not what is running
     assert.deepEqual(names.sort(), ['rss', 'stocks'])
-    // y no se filtra nada mas: son cadenas, no objetos con credenciales dentro
+    // and nothing else leaks: they are strings, not objects with credentials inside
     assert.ok(names.every(n => typeof n === 'string'))
     assert.ok(!JSON.stringify(names).includes('tok-secret'))
     await provider.stopProvider()
@@ -380,7 +380,7 @@ test('the published subscription help matches the real behaviour', async () => {
     const { provider, calls } = await makeProvider([conn('stocks'), conn('rss')])
     const help = provider.getSubscriptionHelp()
 
-    // el ejemplo tiene que ser un payload que de verdad funcione, no una ilustracion
+    // the example has to be a payload that really works, not an illustration
     const { subscriber, received } = makeSubscriber()
     await provider.applyConfigs([conn('stocks'), conn('rss')])
     await provider.addSubscriber(subscriber, help.example as { configs?: string[] })
@@ -388,11 +388,11 @@ test('the published subscription help matches the real behaviour', async () => {
     assert.deepEqual(calls.sort(), ['rss', 'stocks'], 'the example payload must deliver those connections')
     assert.deepEqual([...new Set(received.map(e => e.config))].sort(), ['rss', 'stocks'])
 
-    // el gotcha que nadie adivina tiene que estar dicho
+    // the gotcha nobody guesses has to be spelled out
     assert.match(help.usage, /empty array/i)
     assert.match(help.usage, /LAZY/i)
 
-    // 'configs' declarado como el unico campo, y con el tipo que se acepta
+    // 'configs' declared as the only field, and with the type that is accepted
     assert.deepEqual(help.fields?.map(f => f.name), ['configs'])
     assert.equal(help.fields?.[0].type, 'string[]')
 

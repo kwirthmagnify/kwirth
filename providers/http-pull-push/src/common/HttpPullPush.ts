@@ -102,9 +102,9 @@ export interface IHttpPullTestResult {
     status?: number
     durationMs: number
     bytes?: number
-    /** primeros caracteres del cuerpo, recortado; solo para que el usuario reconozca la respuesta */
+    /** first characters of the body, trimmed; only so the user recognises the response */
     preview?: string
-    /** true si el cuerpo se pudo parsear como JSON (relevante con responseType=json) */
+    /** true when the body could be parsed as JSON (relevant with responseType=json) */
     jsonParsed?: boolean
     error?: string
 }

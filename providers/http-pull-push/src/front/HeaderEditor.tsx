@@ -7,8 +7,8 @@ interface IHeaderEditorProps {
     onChange: (headers: Record<string, string>) => void
 }
 
-// Editor de cabeceras clave/valor. Las cabeceras de autenticacion NO se tocan aqui: las pone el back
-// segun el modo de auth elegido, para que las credenciales no viajen mezcladas con el resto.
+// Key/value header editor. Authentication headers are NOT touched here: the back end adds them
+// according to the chosen auth mode, so credentials do not travel mixed in with the rest.
 const HeaderEditor: React.FC<IHeaderEditorProps> = ({ headers, onChange }) => {
     const [name, setName] = useState('')
     const [value, setValue] = useState('')

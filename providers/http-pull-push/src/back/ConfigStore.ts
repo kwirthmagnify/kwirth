@@ -15,7 +15,7 @@ import { EAuthType, IHttpAuth, IHttpPullConfig } from '../common/HttpPullPush'
 const STORAGE_CONFIGS = 'http-pull-push-configs'
 const STORAGE_CREDS = 'http-pull-push-creds'
 
-// La mitad secreta de unas credenciales, indexada por nombre de conexion.
+// The secret half of a set of credentials, indexed by connection name.
 interface IStoredCredential {
     password?: string
     token?: string

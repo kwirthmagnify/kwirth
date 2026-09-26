@@ -48,7 +48,7 @@ export const validateConfigs = (configs: IHttpPullConfig[]): string[] => {
         if (!(config.intervalSeconds > 0)) errors.push(`'${name}': interval must be greater than zero`)
         if (!(config.timeoutMs > 0)) errors.push(`'${name}': timeout must be greater than zero`)
         if (config.retries < 0) errors.push(`'${name}': retries cannot be negative`)
-        // el timeout no puede comerse el intervalo: si tarda mas de lo que dura el ciclo, los pulls se pisan
+        // the timeout must not eat the interval: if it takes longer than the cycle, pulls overlap
         if (config.timeoutMs > config.intervalSeconds * 1000) errors.push(`'${name}': timeout is longer than the polling interval`)
 
         switch (config.auth?.type) {

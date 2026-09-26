@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { ConfigStore } from '../src/back/ConfigStore'
 import { EAuthType, EHttpMethod, IHttpPullConfig, newHttpPullConfig } from '../src/common/HttpPullPush'
 
-// El criterio de reparto es el mismo que usan los canales: lo que no es sensible queda en un ConfigMap
-// (auditable con kubectl) y las credenciales van a un Secret. Lo que se comprueba aqui es que el reparto
-// es real y que la lectura vuelve a componer la conexion completa.
+// The split follows the same criterion channels use: what is not sensitive stays in a ConfigMap
+// (auditable with kubectl) and the credentials go to a Secret. What is checked here is that the split
+// is real and that reading composes the complete connection back again.
 
 interface IFakeStorage {
     plain: Map<string, any>

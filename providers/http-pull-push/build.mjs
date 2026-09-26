@@ -23,10 +23,10 @@ const kwirthGlobalsPlugin = {
     },
 }
 
-// express se mapea a la instancia compartida del host (back-global). El core carga el back de la
-// extension desde /tmp, donde no hay node_modules: un require('express') ahi no se resuelve y el
-// back no arranca. ⛔ Por eso express NO puede ir en 'external': en esbuild external gana a los
-// plugins y dejaria el require sin mapear.
+// express is mapped onto the host's shared instance (the back-global). The core loads the extension's
+// back end from /tmp, where there are no node_modules: a require('express') there does not resolve and
+// the back end fails to start. ⛔ That is why express can NOT go in 'external': in esbuild, external
+// beats plugins and would leave the require unmapped.
 const kwirthBackGlobalsPlugin = {
     name: 'kwirth-back-globals',
     setup(build) {
@@ -38,8 +38,8 @@ const kwirthBackGlobalsPlugin = {
     },
 }
 
-// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
-// El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
+// esbuild erases the types without looking at them: without this step the build would pass broken TS.
+// watch.mjs deliberately leaves it out, so that saving stays instantaneous.
 const TSC = 'node_modules/typescript/lib/tsc.js'
 if (fs.existsSync(TSC)) {
     try {
@@ -70,8 +70,8 @@ await esbuild.build({
 })
 console.log('Built dist/back.js')
 
-// El front (dialogo de configuracion) es opcional durante el desarrollo: mientras no exista, se construye
-// solo el back y el gestor de providers no ofrece la rueda dentada.
+// The front end (the configuration dialog) is optional during development: while it does not exist,
+// only the back end is built and the provider manager does not offer the gear icon.
 if (fs.existsSync('src/front/index.tsx')) {
     await esbuild.build({
         entryPoints: ['src/front/index.tsx'],
@@ -93,8 +93,8 @@ else {
 }
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
-// publishConfig.access=public: un paquete con scope se publica PRIVADO por defecto y npm responde
-// 402 Payment Required. Declararlo aqui evita tener que acordarse del flag --access en cada publish.
+// publishConfig.access=public: a scoped package is published PRIVATE by default and npm answers
+// 402 Payment Required. Declaring it here saves having to remember the --access flag on every publish.
 const distMeta = { type: 'commonjs', extensionType: 'provider', publishConfig: { access: 'public' },
     id: meta.id,
     name: meta.name,

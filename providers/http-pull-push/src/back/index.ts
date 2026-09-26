@@ -19,7 +19,7 @@ import { Poller } from './Poller'
       - suscripcion : en memoria, cada canal dice que conexiones quiere
 */
 
-// Un suscriptor con su seleccion. 'configs' undefined = todas las habilitadas (tambien las futuras).
+// A subscriber with its selection. An undefined 'configs' means all the enabled ones (future ones too).
 interface ISubscriberEntry {
     configs: Set<string> | undefined
 }
@@ -93,7 +93,7 @@ export class HttpPullPushProvider implements IProvider {
             this.log.error(`Could not load connections: ${err}`)
         }
         this.started = true
-        // no se arranca ningun poller aqui: son lazy, esperan al primer suscriptor
+        // no poller is started here: they are lazy, they wait for the first subscriber
         this.reconcile()
     }
 
@@ -115,7 +115,7 @@ export class HttpPullPushProvider implements IProvider {
         this.reconcile()
     }
 
-    // Permite a un canal cambiar su seleccion sin desuscribirse y volver a suscribirse.
+    // Lets a channel change its selection without unsubscribing and subscribing again.
     updateSubscription = async (c: IProviderSubscriber, data: IHttpPullPushSubscription): Promise<void> => {
         if (!this.subscribers.has(c)) return
         this.subscribers.set(c, { configs: this.parseSelection(data) })
@@ -161,7 +161,7 @@ export class HttpPullPushProvider implements IProvider {
     private addConfigRoutes = (): void => {
         this.configRouter.route('/configs')
             .get(async (_req: Request, res: Response) => {
-                // el core ya ha validado el accessKey antes de llegar aqui
+                // the core has already validated the accessKey before reaching here
                 res.status(200).json([...this.configs.values()])
             })
             .put(async (req: Request, res: Response) => {
@@ -312,15 +312,15 @@ export class HttpPullPushProvider implements IProvider {
         const resultado = new Map(this.configs)
         for (const entrante of entrantes as IHttpPullConfig[]) resultado.set(entrante.name, conservarSecretos(entrante))
 
-        // applyConfigs guarda Y aplica en caliente: las conexiones importadas empiezan a sondearse sin
-        // reiniciar nada.
+        // applyConfigs saves AND applies hot: imported connections start being polled without
+        // restarting anything.
         await this.applyConfigs([...resultado.values()])
         return { applied: entrantes.length, skipped: 0, warnings }
     }
 
     getConfigs = (): IHttpPullConfig[] => [...this.configs.values()]
 
-    // Solo los nombres: alimenta el contador de la tarjeta en el gestor de extensiones.
+    // Names only: it feeds the counter on the card in the extension manager.
     getConfigNames = (): string[] => [...this.configs.keys()]
 
     // ── Reconciliacion de pollers ───────────────────────────────────────────────
@@ -391,7 +391,7 @@ export class HttpPullPushProvider implements IProvider {
         return new Set(data.configs)
     }
 
-    // Suscribirse a algo que no existe (o que se borro despues) no es un error: se ignora y se deja traza.
+    // Subscribing to something that does not exist (or was deleted later) is not an error: it is ignored and traced.
     private warnUnknown = (data: IHttpPullPushSubscription | undefined): void => {
         if (!data?.configs) return
         for (const name of data.configs) {
