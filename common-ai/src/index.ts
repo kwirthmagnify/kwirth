@@ -47,48 +47,48 @@ export interface IAgent {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────
-// Contrato de toolsets de IA (plan: plans/ai-tools/PLAN.md, S1)
+// AI toolset contract (plan: plans/ai-tools/PLAN.md, S1)
 //
-// La unidad es el TOOLSET, no la tool: ninguna tool es alcanzable fuera de uno. Para gestionar una tool
-// sola se empaqueta un toolset con una sola tool, y asi no existe el concepto de 'tool suelta' ni en el
-// modelo, ni en la configuracion, ni en la UI.
+// The unit is the TOOLSET, not the tool: no tool is reachable outside one. To manage a single tool you
+// package a toolset holding just that tool, and so the notion of a 'loose tool' does not exist in the
+// model, in the configuration, or in the UI.
 //
-// Lo de aqui es ISOMORFICO: lo que hace falta para DECIDIR sobre una tool (mostrarla, agruparla,
-// autorizarla, configurarla). Lo que hace falta para EJECUTARLA —inputSchema y execute— vive en back.ts,
-// porque el front ni lo necesita ni debe cargarlo.
+// What lives here is ISOMORPHIC: what it takes to DECIDE about a tool (show it, group it, authorize it,
+// configure it). What it takes to RUN it — inputSchema and execute — lives in back.ts, because the front
+// end neither needs it nor should load it.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** Que le hace una tool al mundo. */
+/** What a tool does to the world. */
 export enum EToolEffect {
     READ = 'read',
     WRITE = 'write'
 }
 
-// Que EXPONE una tool, que no es lo mismo que que le hace al mundo. El caso que obliga a separarlo es
-// get_secret: lee Secrets de Kubernetes, o sea que es READ y es lo mas peligroso del catalogo. Con una
-// sola dimension no hay forma de denegarla sin denegar tambien 'listar namespaces'.
+// What a tool EXPOSES, which is not the same as what it does to the world. The case that forces the split
+// is get_secret: it reads Kubernetes Secrets, so it is READ and it is the most dangerous thing in the
+// catalogue. With a single dimension there is no way to deny it without also denying 'list namespaces'.
 export enum EToolSensitivity {
-    PUBLIC = 'public',          // inventario, formas, nombres
-    INTERNAL = 'internal',      // configuracion, eventos, logs
-    SECRET = 'secret'           // credenciales y material sensible
+    PUBLIC = 'public',          // inventory, shapes, names
+    INTERNAL = 'internal',      // configuration, events, logs
+    SECRET = 'secret'           // credentials and sensitive material
 }
 
-// Lo que un toolset necesita del host para funcionar. El host provisiona SOLO lo declarado, que es lo que
-// evita el cajon de sastre de hoy (siete campos que recibe todo el mundo por si acaso, con 'sourceRepos'
-// existiendo para una sola de las 43 tools).
+// What a toolset needs from the host in order to work. The host provisions ONLY what was declared, which
+// is what avoids today's catch-all (seven fields everyone receives just in case, with 'sourceRepos'
+// existing for one single tool out of the 43).
 export enum ECapability {
-    K8S = 'k8s',                // acceso al cluster
-    METRICS = 'metrics',        // metricas, actuales e historicas
-    EVENTS = 'events',          // buffer de eventos del cluster
-    REPOS = 'repos'             // credenciales de repositorios fuente
+    K8S = 'k8s',                // cluster access
+    METRICS = 'metrics',        // metrics, current and historical
+    EVENTS = 'events',          // cluster event buffer
+    REPOS = 'repos'             // source repository credentials
 }
 
-/** Separador de una referencia cualificada a una tool: '<toolset>/<tool>'. */
+/** Separator of a qualified reference to a tool: '<toolset>/<tool>'. */
 export const TOOL_REF_SEPARATOR = '/'
 
-// ⚠️ Una tool se referencia SIEMPRE cualificada por su toolset ('k8s-inventory/list_namespaces'), nunca
-// por su nombre a secas. Es lo que se persiste en la configuracion de agentes y techos, asi que no puede
-// volverse ambiguo el dia que dos toolsets de terceros traigan los dos un 'get_pod_logs'.
+// ⚠️ A tool is ALWAYS referenced qualified by its toolset ('k8s-inventory/list_namespaces'), never by its
+// bare name. This is what gets persisted in agent and ceiling configuration, so it cannot turn ambiguous
+// the day two third-party toolsets both bring a 'get_pod_logs'.
 export const toolRef = (toolsetId: string, toolName: string): string =>
     `${toolsetId}${TOOL_REF_SEPARATOR}${toolName}`
 
@@ -98,7 +98,7 @@ export const parseToolRef = (ref: string): { toolsetId: string, toolName: string
     return { toolsetId: ref.slice(0, i), toolName: ref.slice(i + 1) }
 }
 
-/** Una tool, sin lo necesario para ejecutarla. Es lo que viaja al front. */
+/** A tool, without what it takes to run it. This is what travels to the front end. */
 export interface IAiToolInfo {
     name: string
     description: string
@@ -106,7 +106,7 @@ export interface IAiToolInfo {
     sensitivity: EToolSensitivity
 }
 
-/** Un toolset, sin lo necesario para ejecutar sus tools. Es lo que viaja al front. */
+/** A toolset, without what it takes to run its tools. This is what travels to the front end. */
 export interface IAiToolsetInfo {
     id: string
     version: string
@@ -116,9 +116,9 @@ export interface IAiToolsetInfo {
     tools: IAiToolInfo[]
 }
 
-// El techo de un plugin, en dos capas: los toolsets que puede usar, menos las tools que se le apagan
-// dentro de ellos. Lo guarda el plugin con el resto de SU configuracion; el core solo pone el editor.
+// A plugin's ceiling, in two layers: the toolsets it may use, minus the tools turned off inside them.
+// The plugin stores it along with the rest of ITS configuration; the core only provides the editor.
 export interface IToolsetConfig {
-    activeToolsets: string[]    // ids de toolset
-    disabledTools: string[]     // referencias cualificadas '<toolset>/<tool>'
+    activeToolsets: string[]    // toolset ids
+    disabledTools: string[]     // qualified references '<toolset>/<tool>'
 }

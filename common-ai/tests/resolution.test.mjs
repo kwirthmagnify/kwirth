@@ -47,8 +47,8 @@ const fakeContext = () => ({
 
 // ── precedencia ──────────────────────────────────────────────────────────────────────────────────────
 //
-// El caso que planteo el usuario, literal: ts1(ta tb tc td) + ts2(tf td tg), asignados [ts1, ts2] →
-// se usan ta tb tc td(de ts1) tf tg, y la td de ts2 queda TAPADA.
+// The case the user raised, verbatim: ts1(ta tb tc td) + ts2(tf td tg), assigned [ts1, ts2] →
+// what runs is ta tb tc td(from ts1) tf tg, and ts2's td is SHADOWED.
 
 const conTresToolsets = () => {
     registerToolset(fakeToolset('ts1', ['ta', 'tb', 'tc', 'td']))
@@ -69,8 +69,8 @@ test('con solape, manda el toolset de mas precedencia', () => {
 })
 
 test('cambiar el orden cambia QUE CODIGO se ejecuta', () => {
-    // No es cosmetico: con [ts2, ts1] la 'td' que corre es otra. De ahi que el editor tenga que avisar al
-    // reordenar, y que la traza guarde el toolset y no solo el nombre.
+    // Not cosmetic: with [ts2, ts1] a different 'td' runs. Hence the editor must warn when reordering,
+    // and the trace must record the toolset and not just the name.
     conTresToolsets()
     const r = resolveTools({ activeToolsets: ['ts2', 'ts1'], disabledTools: [] })
 
@@ -81,7 +81,7 @@ test('cambiar el orden cambia QUE CODIGO se ejecuta', () => {
 })
 
 test('apagar una tool NO mata el nombre: aflora la del siguiente toolset', () => {
-    // Se apaga una REFERENCIA ('ts1/td'), no un nombre.
+    // What gets turned off is a REFERENCE ('ts1/td'), not a name.
     conTresToolsets()
     const r = resolveTools({ activeToolsets: ['ts1', 'ts2'], disabledTools: ['ts1/td'] })
 
@@ -102,8 +102,8 @@ test('para que un nombre desaparezca hay que apagarlo en los dos', () => {
 })
 
 test('un toolset asignado que no esta instalado se REPORTA, no se ignora', () => {
-    // Un techo que nombra algo desinstalado es una config rota. Sin esto el sintoma seria "el agente
-    // responde peor" y no habria forma de saber por que.
+    // A ceiling naming something uninstalled is a broken config. Without this the symptom would be "the
+    // agent answers worse", with no way of knowing why.
     conTresToolsets()
     const r = resolveTools({ activeToolsets: ['ts1', 'no-instalado', 'ts3'], disabledTools: [] })
 
@@ -114,16 +114,16 @@ test('un toolset asignado que no esta instalado se REPORTA, no se ignora', () =>
 })
 
 test('un cliente sin toolsets asignados no tiene tools', () => {
-    // "Un plugin sin config no tiene tools": denegar por defecto, no heredar.
+    // "A plugin with no config has no tools": deny by default, do not inherit.
     conTresToolsets()
     assert.deepEqual(resolveTools({ activeToolsets: [], disabledTools: [] }).effective, [])
     limpiar('ts1', 'ts2', 'ts3')
 })
 
-// ── el camino unico de invocacion y sus dos ganchos ──────────────────────────────────────────────────
+// ── the single invocation path and its two hooks ─────────────────────────────────────────────────────
 
 test('lo que se le ofrece al LLM lleva el nombre CORTO', () => {
-    // Una referencia cualificada ('ts1/ta') no pasaria el filtro de nombres de los proveedores.
+    // A qualified reference ('ts1/ta') would not pass the providers' name filter.
     conTresToolsets()
     const tools = buildAgentTools({ activeToolsets: ['ts1', 'ts2'], disabledTools: [] }, fakeContext())
 
@@ -148,8 +148,8 @@ test('el gancho de autorizacion puede negar, y entonces NO se ejecuta', async ()
     const res = await tools.peligrosa.execute({}, {})
 
     assert.equal(ejecutada, false)
-    // Como DATO, no como excepcion: una excepcion corta la conversacion en vez de dejar al modelo
-    // enterarse de que esa via esta cerrada y probar otra.
+    // As DATA, not as an exception: an exception cuts the conversation short instead of letting the model
+    // learn that route is closed and try another.
     assert.match(res.error, /not allowed: sin permiso en produccion/)
 
     limpiar('auth-ts')
@@ -179,7 +179,7 @@ test('el gancho de observacion ve la referencia cualificada, los argumentos y el
     await tools.mide.execute({ n: 21 }, {})
 
     assert.equal(visto.length, 1)
-    // CUALIFICADA: con precedencia, el nombre corto no dice que codigo corrio.
+    // QUALIFIED: under precedence, the short name does not say which code ran.
     assert.equal(visto[0].inv.ref, 'obs-ts/mide')
     assert.deepEqual(visto[0].inv.args, { n: 21 })
     assert.equal(visto[0].outcome.ok, true)
@@ -229,7 +229,7 @@ test('si una tool revienta, se observa el fallo y el modelo recibe el error como
 })
 
 test('cada tool recibe el host de SU toolset, no el del vecino', async () => {
-    // Dos toolsets con `requires` distintos en la misma tanda: el reparto es por toolset, no global.
+    // Two toolsets with different `requires` in the same batch: provisioning is per toolset, not global.
     const recibido = {}
     registerToolset({
         ...fakeToolset('caps-k8s'), requires: [ECapability.K8S],
@@ -251,13 +251,13 @@ test('cada tool recibe el host de SU toolset, no el del vecino', async () => {
 })
 
 test('una tool escrita contra el contrato VIEJO tambien funciona por este camino', async () => {
-    // Las 43 de hoy no reciben `host`: leen ctx() de un AsyncLocalStorage privado. buildAgentTools envuelve
-    // la ejecucion en runWithToolContext, y eso es lo que permite migrar los ocho paquetes de S3 de uno en
-    // uno en vez de reescribirlas todas antes de poder usar el camino nuevo.
+    // Today's 43 do not receive `host`: they read ctx() from a private AsyncLocalStorage. buildAgentTools
+    // wraps the run in runWithToolContext, and that is what allows S3's eight packages to be migrated one
+    // at a time instead of rewriting them all before the new path can be used.
     //
-    // Se prueba con una de VERDAD (`list_namespaces`), no con una imitacion: el accesor del contexto no se
-    // exporta —a proposito, para no repartir el saco entero a paquetes de terceros— asi que una tool de
-    // pega no podria leerlo aunque quisiera, y el test no probaria nada.
+    // Tested with a REAL one (`list_namespaces`), not with an imitation: the context accessor is not
+    // exported — on purpose, so the whole bag is not handed to third-party packages — so a fake tool could
+    // not read it even if it wanted to, and the test would prove nothing.
     registerToolset({
         ...fakeToolset('viejo-ts'),
         tools: [fakeTool('ala_antigua', { execute: async () => tools43.list_namespaces.execute({}, {}) })]
@@ -271,15 +271,15 @@ test('una tool escrita contra el contrato VIEJO tambien funciona por este camino
     limpiar('viejo-ts')
 })
 
-// ── como se le entregan las tools al SDK ─────────────────────────────────────────────────────────────
+// ── how the tools are handed to the SDK ──────────────────────────────────────────────────────────────
 
 test('🔴 las tools que se le pasan al SDK NO son dinamicas', async () => {
-    // Parece un detalle y no lo es. En el SDK:
-    //     tool(t)        => t                          (solo ayuda de tipos)
-    //     dynamicTool(t) => { ...t, type: 'dynamic' }  (marca la tool en RUNTIME)
-    // Una tool marcada como dinamica se trata por otro camino y, combinada con Output.object, la
-    // invocacion acaba en AI_NoOutputGeneratedError: la tool se ejecuta, devuelve, y la respuesta
-    // estructurada nunca llega. Lo detecto el QA de S3 con pinocchio, que usa salida estructurada.
+    // It looks like a detail and it is not. In the SDK:
+    //     tool(t)        => t                          (types only)
+    //     dynamicTool(t) => { ...t, type: 'dynamic' }  (marks the tool at RUNTIME)
+    // A tool marked as dynamic is handled through another path and, combined with Output.object, the
+    // invocation ends in AI_NoOutputGeneratedError: the tool runs, returns, and the structured response
+    // never arrives. S3's QA caught it with pinocchio, which uses structured output.
     registerToolset({ ...fakeToolset('sdk-ts'), tools: [fakeTool('plana')] })
 
     const tools = buildAgentTools({ activeToolsets: ['sdk-ts'], disabledTools: [] }, fakeContext())
@@ -291,15 +291,15 @@ test('🔴 las tools que se le pasan al SDK NO son dinamicas', async () => {
     limpiar('sdk-ts')
 })
 
-// ── la concesion: quien puede usar cada toolset (fase 1 del techo) ───────────────────────────────────
+// ── the grant: who may use each toolset (phase 1 of the ceiling) ─────────────────────────────────────
 //
-// Se concede DESDE el toolset, no desde el plugin: `k8s-ops` es lo peligroso y se gobierna en un solo
-// sitio. Y por defecto no lo usa nadie — instalar no es conceder.
+// Granting happens FROM the toolset, not from the plugin: `k8s-ops` is the dangerous one and it is
+// governed in a single place. And by default nobody uses it — installing is not granting.
 
 const { setToolsetGrants, getToolsetGrants, isToolsetGrantedTo } = back
 
 test('🔴 por defecto un toolset recien registrado no lo puede usar NADIE', () => {
-    // Instalar k8s-ops no puede dar escritura a nadie por accidente.
+    // Installing k8s-ops must not give anyone write access by accident.
     registerToolset(fakeToolset('grant-nuevo', ['ta']))
 
     assert.deepEqual(getToolsetGrants('grant-nuevo'), [])
@@ -328,7 +328,7 @@ test('concedido a un plugin, ese lo ve y los demas no', () => {
 })
 
 test('"no concedido" y "no instalado" se reportan POR SEPARADO', () => {
-    // Al admin hay que mandarlo al sitio correcto: uno se arregla instalando, el otro concediendo.
+    // The admin has to be sent to the right place: one is fixed by installing, the other by granting.
     registerToolset(fakeToolset('grant-dos', ['ta']))
     setToolsetGrants('grant-dos', ['otro-plugin'])
 
@@ -341,7 +341,7 @@ test('"no concedido" y "no instalado" se reportan POR SEPARADO', () => {
 })
 
 test('🔴 un plugin NO puede servirse lo que no le han concedido', () => {
-    // Aunque lo pida explicitamente en su config: el filtro esta del lado que el plugin no controla.
+    // Even when it asks for it explicitly in its config: the filter sits on the side the plugin does not control.
     registerToolset({ ...fakeToolset('grant-ops'), tools: [fakeTool('borrar')] })
     setToolsetGrants('grant-ops', ['otro'])
 
@@ -352,7 +352,7 @@ test('🔴 un plugin NO puede servirse lo que no le han concedido', () => {
 })
 
 test('sin solicitante NO se filtra: es el core pintando, no ejecutando', () => {
-    // El editor necesita ver el catalogo entero para poder ofrecerlo; quien ejecuta siempre se identifica.
+    // The editor needs to see the whole catalogue in order to offer it; whoever executes always identifies itself.
     registerToolset(fakeToolset('grant-pintar', ['ta']))
 
     const paraPintar = resolveTools({ activeToolsets: ['grant-pintar'], disabledTools: [] })
@@ -371,7 +371,7 @@ test('reordenar la concesion la REEMPLAZA, no la acumula', () => {
 })
 
 test('desinstalar se lleva la concesion por delante', () => {
-    // Si quedara huerfana, reinstalar el toolset resucitaria permisos que nadie ha vuelto a conceder.
+    // If it were left orphaned, reinstalling the toolset would resurrect permissions nobody granted again.
     registerToolset(fakeToolset('grant-vuelve', ['ta']))
     setToolsetGrants('grant-vuelve', ['pinocchio'])
     unregisterToolset('grant-vuelve')

@@ -1,6 +1,6 @@
 import { ILlm, ILlmModel, ILlmProvider, IAgent, ECapability, EToolEffect, EToolSensitivity, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, parseToolRef, toolRef } from './index'
-// Solo TIPOS: se borran al compilar, asi que common-ai no arrastra el cliente de Kubernetes (~6,6 MB) a
-// ningun bundle. Por eso @kubernetes/client-node es peer opcional y no dependencia.
+// TYPES ONLY: the compiler erases them, so common-ai does not drag the Kubernetes client (~6.6 MB) into
+// any bundle. That is why @kubernetes/client-node is an optional peer and not a dependency.
 import type { AppsV1Api, CoreV1Api, NetworkingV1Api } from '@kubernetes/client-node'
 
 interface ILogChannel {
@@ -41,9 +41,9 @@ export const buildModel = (llm: ILlm, providers: ILlmProvider[]): LanguageModel 
         case 'openrouter': return createOpenRouter({ apiKey: key })(llm.model)
         case 'anthropic': return createAnthropic({ apiKey: key })(llm.model)
         case 'openai-compat': {
-            // baseURL debe terminar en /v1 (el SDK añade el path). Y usamos .chat() → Chat Completions API
-            // (/v1/chat/completions): los endpoints OpenAI-compatibles (Huawei MaaS, etc.) NO exponen la
-            // Responses API (/v1/responses) → si no, 404 APIG.0101.
+            // baseURL must end in /v1 (the SDK appends the path). And we use .chat() → Chat Completions API
+            // (/v1/chat/completions): OpenAI-compatible endpoints (Huawei MaaS and the like) do NOT expose the
+            // Responses API (/v1/responses) → otherwise, 404 APIG.0101.
             const b = (prov?.endpoint ?? '').replace(/\/+$/, '')
             return createOpenAI({ apiKey: key, baseURL: b.endsWith('/v1') ? b : `${b}/v1` }).chat(llm.model)
         }
@@ -54,28 +54,28 @@ export const buildModel = (llm: ILlm, providers: ILlmProvider[]): LanguageModel 
 }
 
 export interface IVisionResult<T> {
-    object: T | null       // salida estructurada validada por el schema (null si el modelo no la produjo)
-    text: string           // texto crudo del modelo (por si hay que inspeccionar/loggear)
-    usage?: unknown        // tokens usados (coste)
-    error?: string         // mensaje si la llamada falló
+    object: T | null       // structured output validated by the schema (null when the model did not produce it)
+    text: string           // raw model text (in case it needs inspecting or logging)
+    usage?: unknown        // tokens spent (cost)
+    error?: string         // message when the call failed
 }
 
 type TJsonValue = string | number | boolean | null | TJsonValue[] | { [k: string]: TJsonValue }
 
 export interface IVisionOptions<T> {
     model: LanguageModel
-    image: string                                          // data URL, base64 crudo o URL http(s) de la imagen
-    prompt: string                                         // instrucción de usuario (qué extraer)
-    schema: z.ZodType<T>                                   // contrato de salida estructurada (Output.object)
+    image: string                                          // data URL, raw base64 or http(s) URL of the image
+    prompt: string                                         // user instruction (what to extract)
+    schema: z.ZodType<T>                                   // structured output contract (Output.object)
     system?: string
     temperature?: number
-    providerOptions?: Record<string, Record<string, TJsonValue>>   // p.ej. { google: { structuredOutputs: true } }
-    mediaType?: string                                     // p.ej. 'image/png' (opcional; se infiere de un data URL)
+    providerOptions?: Record<string, Record<string, TJsonValue>>   // e.g. { google: { structuredOutputs: true } }
+    mediaType?: string                                     // e.g. 'image/png' (optional; inferred from a data URL)
 }
 
-// Llamada MULTIMODAL genérica: manda una imagen + prompt a un LLM y devuelve salida ESTRUCTURADA validada por
-// un schema Zod (patrón Output.object). Reutilizable por toda la plataforma (Iter la usa para extraer un mapa
-// de un diagrama). No lanza: los errores vuelven en `error`.
+// Generic MULTIMODAL call: sends an image plus a prompt to an LLM and returns STRUCTURED output validated by
+// a Zod schema (the Output.object pattern). Reusable across the whole platform (Iter uses it to extract a map
+// from a diagram). It never throws: errors come back in `error`.
 export const generateVision = async <T>(opts: IVisionOptions<T>): Promise<IVisionResult<T>> => {
     try {
         const imagePart = opts.mediaType
@@ -104,13 +104,13 @@ export const generateVision = async <T>(opts: IVisionOptions<T>): Promise<IVisio
     catch (err) {
         const e = err as any
         const body = typeof e?.responseBody === 'string' ? e.responseBody : (e?.responseBody ? JSON.stringify(e.responseBody) : undefined)
-        // Serializa el body ENVIADO truncando cadenas largas (el base64 de la imagen) para ver la ESTRUCTURA
-        // de content[] (qué campos lleva cada parte) sin volcar megas.
+        // Serializes the body that was SENT, truncating long strings (the image base64), so the STRUCTURE
+        // of content[] (which fields each part carries) is visible without dumping megabytes.
         const trunc = (o: unknown): string => {
             try { return JSON.stringify(o, (_k, v) => (typeof v === 'string' && v.length > 120 ? `${v.slice(0, 60)}…[${v.length} chars]` : v)).slice(0, 4000) }
             catch { return String(o) }
         }
-        // TRAZA COMPLETA del fallo de la llamada al LLM (URL, status, cuerpo de respuesta, causa, request).
+        // FULL TRACE of the failed LLM call (URL, status, response body, cause, request).
         console.error('[generateVision] FAILED', {
             name: e?.name, message: e?.message, statusCode: e?.statusCode, url: e?.url,
             responseBody: body, cause: e?.cause?.message ?? e?.cause,
@@ -242,8 +242,8 @@ const inferZod = (value: unknown): z.ZodTypeAny => {
 }
 
 // Re-export AI SDK symbols so plugins can use them without bundling the SDK
-// Se re-exportan tambien los TIPOS que necesita quien escriba un helper alrededor de generateText: sin
-// LanguageModel y ToolSet, un plugin no puede tipar sus propias funciones y acaba con 'any'.
+// The TYPES needed by anyone writing a helper around generateText are re-exported too: without
+// LanguageModel and ToolSet a plugin cannot type its own functions and ends up with 'any'.
 export { generateText, Output, stepCountIs, tool } from 'ai'
 export type { LanguageModel, ToolSet } from 'ai'
 export { z } from 'zod'
@@ -304,9 +304,9 @@ const fetchSourceFile = async (cred: ISourceRepoCred, projectPath: string, ref: 
     return await resp.text()
 }
 
-// EToolEffect vive ahora en el contrato isomorfo (./index): el front tambien tiene que saber que hace una
-// tool para poder marcarla en el selector, y hasta ahora no le llegaba. Se re-exporta para no romper a
-// quien lo importe desde aqui.
+// EToolEffect now lives in the isomorphic contract (./index): the front end also needs to know what a tool
+// does in order to flag it in the selector, and until now it never got there. It is re-exported so that
+// whoever imports it from here keeps working.
 export { EToolEffect } from './index'
 
 export interface IToolInfo {
@@ -394,44 +394,44 @@ const configRefsOfPodSpec = (spec: any): { kind: 'ConfigMap' | 'Secret'; name: s
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────
-// Registro de toolsets (plan: plans/ai-tools/PLAN.md, S1)
+// Toolset registry (plan: plans/ai-tools/PLAN.md, S1)
 //
-// UNA SOLA PUERTA, a proposito: built-in e instalados entran por la MISMA funcion. Si los built-in
-// entraran por un camino privilegiado —un import y un push a un array— el dia que llegue el tipo de
-// extension habria que rehacer el registro entero, y ese es justo el retrabajo que este orden evita.
+// ONE SINGLE DOOR, on purpose: built-in and installed toolsets come in through the SAME function. Had the
+// built-in ones taken a privileged path — an import and a push into an array — the day the extension type
+// arrived the whole registry would have to be redone, and that is exactly the rework this order avoids.
 //
-// Y NADIE SE AUTO-REGISTRA: un modulo de toolset solo EXPORTA su definicion, y quien la registra es el
-// host. Registrarse en el import convertiria el alta en un efecto secundario —el orden de carga pasaria a
-// importar, un modulo ajeno podria dar de alta lo que quisiera, y el manager no sabria que registro, con
-// lo que desinstalar seria adivinar—. Asi el que controla el ciclo de vida es el que abre la puerta.
+// AND NOTHING REGISTERS ITSELF: a toolset module only EXPORTS its definition, and the host is what registers
+// it. Registering on import would turn it into a side effect — load order would start to matter, a foreign
+// module could register whatever it liked, and the manager would not know what it holds, so uninstalling
+// would be guesswork. This way whoever owns the lifecycle is whoever opens the door.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-// ── Lo que el host le presta a una tool ──────────────────────────────────────────────────────────────
+// ── What the host lends to a tool ────────────────────────────────────────────────────────────────────
 //
-// Una tool empaquetada NO puede leer el AsyncLocalStorage de aqui: `ctx()` es privado a proposito, y
-// exportarlo repartiria el saco entero (token de service account, senders, webhooks, docker...) a
-// cualquier paquete de terceros. En su lugar el host le pasa un `IToolHost` construido a partir de lo que
-// el toolset DECLARO en `requires`: quien no pide cluster no recibe cluster.
+// A packaged tool can NOT read the AsyncLocalStorage from here: `ctx()` is private on purpose, and
+// exporting it would hand out the entire bag (service account token, senders, webhooks, docker...) to any
+// third-party package. Instead the host passes it an `IToolHost` built from what the toolset DECLARED in
+// `requires`: whoever does not ask for the cluster does not get the cluster.
 //
-// ⚠️ Es una FACHADA, no el interior de Kwirth: se elige que se presta y con que nombre. `ClusterInfo`
-// tiene mas de veinte clientes de API ademas de credenciales; aqui se prestan tres clientes y la
-// identidad del cluster. Ampliarla es una decision consciente; ceder el objeto entero no lo seria.
+// ⚠️ This is a FACADE, not Kwirth's insides: what is lent, and under which name, is a choice. `ClusterInfo`
+// holds more than twenty API clients besides credentials; what is lent here is three clients and the
+// cluster identity. Widening it is a deliberate decision; handing over the whole object would not be.
 
-/** Un nodo del cluster, tal y como lo ve una tool. Compatible con el `INodeInfo` del core. */
+/** A cluster node, as a tool sees it. Compatible with the core's `INodeInfo`. */
 export interface IK8sNodeInfo {
     name: string
     ip: string
     maxPods: number
 }
 
-/** Acceso a Kubernetes (`ECapability.K8S`). */
+/** Access to Kubernetes (`ECapability.K8S`). */
 export interface IK8sCapability {
-    /** Nombre del cluster tal y como lo conoce Kwirth. */
+    /** Cluster name, as Kwirth knows it. */
     name: string
-    /** Sabor detectado: aks, eks, gke, k3s, k3d… */
+    /** Detected flavour: aks, eks, gke, k3s, k3d… */
     flavour: string
     vcpus: number
-    /** Memoria total del cluster, en bytes. */
+    /** Total cluster memory, in bytes. */
     memory: number
     nodes: Map<string, IK8sNodeInfo>
     coreApi: CoreV1Api
@@ -439,10 +439,10 @@ export interface IK8sCapability {
     networkApi: NetworkingV1Api
 }
 
-// Una muestra de metricas, tal y como la ve una tool. Es una FACHADA del modelo del core
-// (back/src/providers/metrics/IMetricsModel.ts), no una copia: se tipan los campos que se prestan y punto.
-// El modelo real trae ademas swap, filesystem, interfaces de red, procesos y los mapas de metricas
-// crudas; ampliar esto es una decision consciente, igual que con el cluster.
+// A metrics sample, as a tool sees it. This is a FACADE over the core model
+// (back/src/providers/metrics/IMetricsModel.ts), not a copy: only the fields that are lent get typed.
+// The real model also carries swap, filesystem, network interfaces, processes and the raw metric maps;
+// widening this is a deliberate decision, just as with the cluster.
 
 export interface IMetricsPodSample {
     podRef?: { name?: string, namespace?: string }
@@ -462,12 +462,12 @@ export interface IMetricsNodeSample {
 }
 
 export interface IMetricsSample {
-    /** Segundos entre lecturas. Sin esto, una serie de numeros no dice a que ritmo pasa el tiempo. */
+    /** Seconds between readings. Without it, a series of numbers says nothing about how fast time passes. */
     metricsInterval?: number
     cluster: {
         vcpus: number
         memory: number
-        /** Porcentajes, 0-100. */
+        /** Percentages, 0-100. */
         cpuUsage: number
         memoryUsage: number
         txmbps: number
@@ -476,40 +476,40 @@ export interface IMetricsSample {
     nodes: IMetricsNodeSample[]
 }
 
-/** Metricas del cluster (`ECapability.METRICS`). */
+/** Cluster metrics (`ECapability.METRICS`). */
 export interface IMetricsCapability {
-    /** Muestras que el core mantiene en memoria. La mas reciente, al final. */
+    /** Samples the core keeps in memory. The most recent one last. */
     samples: IMetricsSample[]
 }
 
 /**
- * Un elemento del buffer de eventos del core: el tipo de cambio y el objeto tal y como vino de la API.
- * `obj` se deja generico a proposito —ahi caben Events de kube y objetos de cualquier kind— pero tipado
- * como objeto, no como `any`: quien lo lea tiene que mirar el `kind` antes de creerse nada.
+ * One entry of the core's event buffer: the kind of change and the object exactly as it came from the API.
+ * `obj` is left generic on purpose — kube Events and objects of any kind fit in there — but typed as an
+ * object rather than as `any`: whoever reads it must check `kind` before believing anything.
  */
 export interface IClusterEvent {
-    /** ADDED | MODIFIED | DELETED para cambios de objeto; los Event de kube tambien viajan aqui. */
+    /** ADDED | MODIFIED | DELETED for object changes; kube Events travel through here too. */
     type?: string
     obj?: Record<string, any>
 }
 
-/** Eventos recientes del cluster (`ECapability.EVENTS`). */
+/** Recent cluster events (`ECapability.EVENTS`). */
 export interface IEventsCapability {
-    /** Buffer que el core va acumulando. El mas reciente, al final. */
+    /** Buffer the core keeps accumulating. The most recent one last. */
     recent: IClusterEvent[]
 }
 
-/** Credenciales de repositorios fuente (`ECapability.REPOS`). */
+/** Source repository credentials (`ECapability.REPOS`). */
 export interface IReposCapability {
     creds: ISourceRepoCred[]
 }
 
 /**
- * Lo que recibe una tool al ejecutarse. Solo vienen rellenas las capabilities declaradas por su toolset:
- * un `requires: []` recibe unicamente `trace`.
+ * What a tool receives when it runs. Only the capabilities its toolset declared come filled in:
+ * a `requires: []` receives nothing but `trace`.
  */
 export interface IToolHost {
-    /** Deja constancia de la invocacion. NO es una capability: se presta siempre, y no se declara. */
+    /** Records the invocation. NOT a capability: it is always lent, and never declared. */
     trace: (toolName: string, args: Record<string, unknown>) => void
     k8s?: IK8sCapability
     metrics?: IMetricsCapability
@@ -517,26 +517,27 @@ export interface IToolHost {
     repos?: IReposCapability
 }
 
-/** Una tool ejecutable: lo que viaja al front (IAiToolInfo) mas lo que hace falta para invocarla. */
+/** An executable tool: what travels to the front end (IAiToolInfo) plus what it takes to invoke it. */
 export interface IAiTool extends IAiToolInfo {
     inputSchema: z.ZodTypeAny
     execute: (args: Record<string, unknown>, host: IToolHost) => Promise<unknown>
 }
 
-/** Un toolset ejecutable: su ficha (IAiToolsetInfo) con las tools de verdad dentro. */
+/** An executable toolset: its descriptor (IAiToolsetInfo) with the real tools inside. */
 export interface IAiToolset extends Omit<IAiToolsetInfo, 'tools'> {
     tools: IAiTool[]
 }
 
 /**
- * Declara una tool infiriendo el tipo de sus argumentos DESDE su propio `inputSchema`.
+ * Declares a tool, inferring the type of its arguments FROM its own `inputSchema`.
  *
- * Sin esto, `execute` recibe `Record<string, unknown>` y cada tool acaba llena de `String(args.namespace)`
- * y castings sueltos: treinta tools asi son treinta sitios donde equivocarse en silencio, y el compilador
- * no puede ayudar. Con esto, el esquema es la unica fuente de verdad y `args` viene tipado.
+ * Without this, `execute` receives `Record<string, unknown>` and every tool fills up with
+ * `String(args.namespace)` and loose casts: thirty tools like that are thirty places to go wrong in
+ * silence, with no help from the compiler. With this, the schema is the single source of truth and `args`
+ * arrives typed.
  *
- * El registro sigue guardando el tipo suelto (`IAiTool`): quien lo invoca no conoce el esquema, y ahi la
- * comprobacion la hace zod en tiempo de ejecucion, como debe ser.
+ * The registry still stores the loose type (`IAiTool`): whoever invokes it does not know the schema, and
+ * there the check is done by zod at run time, as it should be.
  */
 export const defineTool = <S extends z.ZodTypeAny>(definition: {
     name: string
@@ -549,58 +550,58 @@ export const defineTool = <S extends z.ZodTypeAny>(definition: {
 
 const toolsetRegistry = new Map<string, IAiToolset>()
 
-// Los ids de los toolsets built-in del core estan RESERVADOS: un `aitoolset` de un tercero no puede
-// ocuparlos. Sin esta regla, instalar un toolset ajeno llamado 'k8s-inventory' obligaria a renombrar el
-// built-in, y con el se romperia todo techo y todo agente que lo tuviera configurado.
+// The ids of the core's built-in toolsets are RESERVED: a third-party `aitoolset` cannot take them.
+// Without this rule, installing a foreign toolset called 'k8s-inventory' would force renaming the built-in
+// one, and with it would break every grant and every agent configured against it.
 const builtInToolsetIds = new Set<string>()
 
 /*
-    Quien puede usar cada toolset (plan: "El techo en dos fases", fase 1).
+    Who may use each toolset (plan: "The grant in two phases", phase 1).
 
-    ⚠️ La concesion vive AQUI, en el registro, y no en la llamada. Si cada plugin armara su propia lista de
-    toolsets, podria pedir los que no se le han concedido: el filtro tiene que estar del lado que el plugin
-    no controla. El registro lo puebla el core, y un paquete de terceros no puede tocarlo.
+    ⚠️ The grant lives HERE, in the registry, and not at the call site. If each plugin assembled its own list
+    of toolsets it could ask for ones it was never granted: the filter has to sit on the side the plugin does
+    not control. The registry is populated by the core, and a third-party package cannot touch it.
 
-    Y por defecto NO lo usa nadie (decision del usuario, 2026-09-17): instalar un toolset lo deja
-    disponible, no concedido. Instalar `k8s-ops` no puede dar escritura a nadie por accidente.
+    And by default nobody uses it (user's decision, 2026-09-17): installing a toolset leaves it available,
+    not granted. Installing `k8s-ops` must not give anyone write access by accident.
 */
-const toolsetGrants = new Map<string, Set<string>>()   // toolsetId → plugins invitados
+const toolsetGrants = new Map<string, Set<string>>()   // toolsetId → invited plugins
 
 export const isBuiltInToolsetId = (id: string): boolean => builtInToolsetIds.has(id)
 
-/** Concede un toolset a una lista de plugins. Reemplaza la concesion anterior; `[]` se la quita a todos. */
+/** Grants a toolset to a list of plugins. Replaces the previous grant; `[]` takes it away from everyone. */
 export const setToolsetGrants = (toolsetId: string, pluginIds: string[]): void => {
     toolsetGrants.set(toolsetId, new Set(pluginIds))
 }
 
-/** A quien esta concedido un toolset. Vacio = a nadie, que es el estado por defecto. */
+/** Who a toolset is granted to. Empty = nobody, which is the default state. */
 export const getToolsetGrants = (toolsetId: string): string[] => [...(toolsetGrants.get(toolsetId) ?? [])]
 
-/** Si ESE plugin puede usar ESE toolset. */
+/** Whether THAT plugin may use THAT toolset. */
 export const isToolsetGrantedTo = (toolsetId: string, pluginId: string): boolean =>
     toolsetGrants.get(toolsetId)?.has(pluginId) ?? false
 
 /**
- * Registra un toolset. `builtIn` solo lo usa el core para los suyos: marca el id como reservado.
- * Lanza si el id ya esta ocupado — registrar dos veces el mismo id es un error de empaquetado, no algo
- * que deba resolverse en silencio pisando al primero.
+ * Registers a toolset. `builtIn` is only used by the core for its own: it marks the id as reserved.
+ * Throws if the id is already taken — registering the same id twice is a packaging error, not something
+ * to be resolved silently by overwriting the first one.
  */
 export const registerToolset = (toolset: IAiToolset, builtIn = false): void => {
-    // El id reservado se comprueba ANTES que el duplicado, y el orden importa: un built-in siempre esta
-    // registrado, asi que chocar con uno da SIEMPRE duplicado tambien. Al reves, quien instala un toolset
-    // ajeno leeria 'already registered' —que suena a que lo instalo dos veces— en vez de enterarse de que
-    // ese id es del core y no lo puede ocupar.
+    // The reserved id is checked BEFORE the duplicate, and the order matters: a built-in is always
+    // registered, so clashing with one ALWAYS yields a duplicate as well. The other way round, whoever
+    // installs a foreign toolset would read 'already registered' — which sounds like they installed it
+    // twice — instead of learning that the id belongs to the core and cannot be taken.
     if (!builtIn && builtInToolsetIds.has(toolset.id)) throw new Error(`[common-ai] toolset id '${toolset.id}' is reserved by a built-in toolset`)
     if (toolsetRegistry.has(toolset.id)) throw new Error(`[common-ai] toolset '${toolset.id}' already registered`)
     toolsetRegistry.set(toolset.id, toolset)
     if (builtIn) builtInToolsetIds.add(toolset.id)
 }
 
-/** Retira un toolset del registro (desinstalacion). Los built-in no se retiran. */
+/** Removes a toolset from the registry (uninstall). Built-in ones are never removed. */
 export const unregisterToolset = (id: string): boolean => {
     if (builtInToolsetIds.has(id)) return false
-    // La concesion se va con el toolset: dejarla huerfana haria que reinstalarlo resucitara permisos que
-    // nadie ha vuelto a conceder.
+    // The grant goes with the toolset: leaving it orphaned would make reinstalling resurrect permissions
+    // nobody has granted again.
     toolsetGrants.delete(id)
     return toolsetRegistry.delete(id)
 }
@@ -609,7 +610,7 @@ export const getToolset = (id: string): IAiToolset | undefined => toolsetRegistr
 
 export const listToolsets = (): IAiToolset[] => [...toolsetRegistry.values()]
 
-/** Lo que se le manda al front: las fichas, sin inputSchema ni execute. */
+/** What is sent to the front end: the descriptors, without inputSchema or execute. */
 export const listToolsetInfos = (): IAiToolsetInfo[] =>
     listToolsets().map(t => ({
         id: t.id,
@@ -621,17 +622,17 @@ export const listToolsetInfos = (): IAiToolsetInfo[] =>
     }))
 
 /**
- * Construye el host de un toolset a partir del contexto del core, provisionando SOLO lo declarado.
+ * Builds a toolset's host from the core context, provisioning ONLY what was declared.
  *
- * Que el reparto se haga aqui y no en cada llamada es lo que hace cumplible la promesa de `ECapability`:
- * si cada sitio armara su propio objeto, bastaria con que uno se pasara de generoso para que la
- * declaracion dejara de significar nada.
+ * Doing the handing-out here and not at each call site is what makes the `ECapability` promise keepable:
+ * if every site assembled its own object, one of them being too generous would be enough for the
+ * declaration to stop meaning anything.
  */
 export const buildToolHost = (requires: ECapability[], context: IToolContext): IToolHost => {
     const host: IToolHost = { trace: context.trace }
     const ci = context.clusterInfo
-    // Sin cluster no hay capability de cluster, aunque se declare: es preferible que la tool reciba
-    // 'undefined' y lo diga, a entregarle una fachada a medio montar que falle por dentro.
+    // No cluster means no cluster capability, even when declared: better that the tool receives
+    // 'undefined' and says so, than handing it a half-built facade that fails from the inside.
     if (requires.includes(ECapability.K8S) && ci) {
         host.k8s = {
             name: ci.name,
@@ -651,8 +652,8 @@ export const buildToolHost = (requires: ECapability[], context: IToolContext): I
 }
 
 /**
- * Invoca una tool por su referencia cualificada. Un unico camino de invocacion para built-in e
- * instalado, con el host construido segun el `requires` de SU toolset.
+ * Invokes a tool by its qualified reference. A single invocation path for built-in and installed alike,
+ * with the host built according to the `requires` of ITS toolset.
  */
 export const invokeToolRef = async (ref: string, args: Record<string, unknown>, context: IToolContext): Promise<unknown> => {
     const resolved = resolveToolRef(ref)
@@ -660,7 +661,7 @@ export const invokeToolRef = async (ref: string, args: Record<string, unknown>, 
     return resolved.tool.execute(args, buildToolHost(resolved.toolset.requires, context))
 }
 
-/** Resuelve una referencia cualificada '<toolset>/<tool>' contra el registro. */
+/** Resolves a qualified reference '<toolset>/<tool>' against the registry. */
 export const resolveToolRef = (ref: string): { toolset: IAiToolset, tool: IAiTool } | undefined => {
     const parsed = parseToolRef(ref)
     if (!parsed) return undefined
@@ -670,58 +671,58 @@ export const resolveToolRef = (ref: string): { toolset: IAiToolset, tool: IAiToo
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────
-// Resolucion de tools para un cliente (plan: plans/ai-tools/PLAN.md, S2)
+// Resolving tools for a client (plan: plans/ai-tools/PLAN.md, S2)
 //
-// De "estos toolsets, en este orden" a "estas tools, listas para el LLM". Un solo camino, con sus dos
-// ganchos: autorizar antes y observar despues. Hoy permisivos — los llenan S4 y S6 — pero el sitio ya
-// existe, que es lo que evita que cada plugin se invente el suyo.
+// From "these toolsets, in this order" to "these tools, ready for the LLM". A single path, with its two
+// hooks: authorise before and observe after. Permissive for now — S4 and S6 fill them in — but the place
+// already exists, which is what stops each plugin from inventing its own.
 //
-// ⚠️ PRECEDENCIA (decision del usuario, 2026-09-17). Dos toolsets pueden traer una tool con el mismo
-// nombre y NO se renombra ninguna: manda el orden de `activeToolsets`. El nombre que ve el modelo es
-// siempre el corto, porque los proveedores solo aceptan [a-zA-Z0-9_-] y una referencia cualificada
-// ('toolset/tool') no pasaria el filtro.
+// ⚠️ PRECEDENCE (user's decision, 2026-09-17). Two toolsets may carry a tool with the same name and
+// NEITHER gets renamed: the order of `activeToolsets` decides. The name the model sees is always the short
+// one, because providers only accept [a-zA-Z0-9_-] and a qualified reference ('toolset/tool') would not
+// pass that filter.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** Una tool que SI se le ofrece al modelo. */
+/** A tool that IS offered to the model. */
 export interface IEffectiveTool {
-    /** El nombre corto: lo que viaja al LLM. */
+    /** The short name: what travels to the LLM. */
     name: string
-    /** La referencia cualificada: lo que se persiste. */
+    /** The qualified reference: what gets persisted. */
     ref: string
     toolsetId: string
     tool: IAiTool
 }
 
-/** Una tool que existe pero NO se ofrece, porque otro toolset de mas precedencia trae ese nombre. */
+/** A tool that exists but is NOT offered, because a toolset with higher precedence carries that name. */
 export interface IShadowedTool {
     name: string
     ref: string
     toolsetId: string
-    /** Quien la tapa. El editor tiene que decirlo: si no, apagar esta parece hacer algo y no hace nada. */
+    /** Who shadows it. The editor must say so: otherwise turning this one off looks like it does something. */
     shadowedBy: string
 }
 
 export interface IToolResolution {
     effective: IEffectiveTool[]
     shadowed: IShadowedTool[]
-    /** Toolsets asignados que no estan registrados (desinstalados, o nunca instalados). */
+    /** Assigned toolsets that are not registered (uninstalled, or never installed). */
     missing: string[]
     /**
-     * Toolsets que SI estan instalados pero que a este plugin no se le han concedido.
+     * Toolsets that ARE installed but have not been granted to this plugin.
      *
-     * Se reporta aparte de `missing` a proposito: "no esta instalado" lo arregla el admin instalandolo, y
-     * "no te lo han concedido" lo arregla concediendolo. Meterlos en el mismo saco manda al admin a buscar
-     * en el sitio equivocado.
+     * Reported apart from `missing` on purpose: "it is not installed" the admin fixes by installing it, and
+     * "it has not been granted to you" the admin fixes by granting it. Lumping them together sends the admin
+     * looking in the wrong place.
      */
     notGranted: string[]
 }
 
 /**
- * Aplica el techo de un cliente sobre el registro. Pura: ni ejecuta ni toca el contexto, asi que el
- * editor puede llamarla para PINTAR lo mismo que se va a ejecutar.
+ * Applies a client's ceiling over the registry. Pure: it neither executes nor touches the context, so the
+ * editor can call it to DRAW exactly what is going to run.
  *
- * Una tool apagada no tapa: se apaga una referencia concreta ('ts1/td'), no un nombre, asi que si `ts1/td`
- * esta apagada y `ts2` trae otra `td`, aflora la de `ts2`.
+ * A disabled tool does not shadow: what gets disabled is a concrete reference ('ts1/td'), not a name, so if
+ * `ts1/td` is off and `ts2` carries another `td`, the one from `ts2` surfaces.
  */
 export const resolveTools = (config: IToolsetConfig, requesterId?: string): IToolResolution => {
     const disabled = new Set(config.disabledTools)
@@ -729,19 +730,19 @@ export const resolveTools = (config: IToolsetConfig, requesterId?: string): IToo
     const shadowed: IShadowedTool[] = []
     const missing: string[] = []
     const notGranted: string[] = []
-    const taken = new Map<string, string>()   // nombre corto → toolset que lo sirve
+    const taken = new Map<string, string>()   // short name → toolset serving it
 
     for (const toolsetId of config.activeToolsets) {
         const toolset = toolsetRegistry.get(toolsetId)
         if (!toolset) {
-            // No se calla: un techo que nombra algo que no esta instalado es una config rota, y el
-            // sintoma sin esto seria "el agente responde peor" sin que nadie sepa por que.
+            // It does not stay quiet: a ceiling naming something that is not installed is a broken config,
+            // and without this the symptom would be "the agent answers worse" with nobody knowing why.
             missing.push(toolsetId)
             continue
         }
-        // La concesion se comprueba AQUI y no la aporta quien llama: el plugin no puede concederse a si
-        // mismo lo que el admin no le dio. Sin `requesterId` no se filtra — es el caso del core
-        // resolviendo para PINTAR (el editor), no para ejecutar.
+        // The grant is checked HERE and not supplied by the caller: a plugin cannot grant itself what the
+        // admin never gave it. Without `requesterId` nothing is filtered — that is the core resolving in
+        // order to DRAW (the editor), not to execute.
         if (requesterId !== undefined && !isToolsetGrantedTo(toolsetId, requesterId)) {
             notGranted.push(toolsetId)
             continue
@@ -761,7 +762,7 @@ export const resolveTools = (config: IToolsetConfig, requesterId?: string): IToo
     return { effective, shadowed, missing, notGranted }
 }
 
-/** Una invocacion concreta, tal y como la ven los dos ganchos. */
+/** One concrete invocation, as the two hooks see it. */
 export interface IToolInvocation {
     ref: string
     toolsetId: string
@@ -771,38 +772,38 @@ export interface IToolInvocation {
 
 export interface IToolAuthorization {
     allowed: boolean
-    /** Por que no. Viaja al modelo, asi que se escribe para que pueda decidir otra cosa. */
+    /** Why not. It travels to the model, so it is written so the model can decide otherwise. */
     reason?: string
 }
 
-/** Como acabo una invocacion. `ms` incluido: una tool lenta es un problema aunque devuelva bien. */
+/** How an invocation ended. `ms` included: a slow tool is a problem even when it returns correctly. */
 export interface IToolOutcome {
     ok: boolean
     result?: unknown
     error?: string
     ms: number
-    /** Si no llego a ejecutarse por el gancho de autorizacion. */
+    /** Whether it never ran at all, because of the authorisation hook. */
     denied?: boolean
 }
 
 export interface IAgentToolHooks {
-    /** ANTES de ejecutar. Sin gancho, se permite todo: hoy el techo lo pone la seleccion (S4 lo llena). */
+    /** BEFORE running. With no hook, everything is allowed: today the ceiling is the selection (S4 fills it). */
     authorize?: (invocation: IToolInvocation, tool: IAiTool) => IToolAuthorization | Promise<IToolAuthorization>
-    /** DESPUES, pase lo que pase. No puede romper la invocacion (S6 lo llena). */
+    /** AFTER, whatever happened. It cannot break the invocation (S6 fills it). */
     observe?: (invocation: IToolInvocation, outcome: IToolOutcome) => void
 }
 
 /**
- * Las tools listas para pasarselas al SDK de IA, ya resueltas por precedencia y con los dos ganchos
- * puestos. La clave del objeto es el nombre CORTO, que es lo unico que el proveedor acepta.
+ * The tools ready to hand to the AI SDK, already resolved by precedence and with both hooks in place.
+ * The object key is the SHORT name, which is the only thing the provider accepts.
  */
 export const buildAgentTools = (
     config: IToolsetConfig,
     context: IToolContext,
     hooks: IAgentToolHooks = {},
     /**
-     * Quien pide las tools. Sin esto no se filtra por concesion, asi que un plugin DEBE pasar su id: es lo
-     * que impide que se sirva a si mismo un toolset que no le han concedido.
+     * Who is asking for the tools. Without it nothing is filtered by grant, so a plugin MUST pass its id:
+     * that is what stops it from serving itself a toolset it was never granted.
      */
     requesterId?: string
 ): ToolSet => {
@@ -811,14 +812,14 @@ export const buildAgentTools = (
         const invocationOf = (args: Record<string, unknown>): IToolInvocation =>
             ({ ref: e.ref, toolsetId: e.toolsetId, toolName: e.name, args })
 
-        // ⚠️ Un objeto PLANO, no `dynamicTool`. Parece equivalente y no lo es:
-        //     tool(t)        => t                            (solo ayuda de tipos, no toca nada)
-        //     dynamicTool(t) => { ...t, type: 'dynamic' }     (marca la tool en RUNTIME)
-        // Una tool marcada como dinamica la trata el SDK por otro camino, y con `Output.object` la
-        // ejecucion acaba en AI_NoOutputGeneratedError: la tool corre, devuelve, y la respuesta
-        // estructurada no se genera. Se uso `dynamicTool` para esquivar una friccion de tipos —el helper
-        // `tool()` infiere `never` con un ZodTypeAny generico— y el precio fue cambiar el comportamiento.
-        // El casteo es la forma honesta: lo que el SDK necesita es exactamente este objeto.
+        // ⚠️ A PLAIN object, not `dynamicTool`. It looks equivalent and it is not:
+        //     tool(t)        => t                            (types only, touches nothing)
+        //     dynamicTool(t) => { ...t, type: 'dynamic' }     (marks the tool at RUNTIME)
+        // A tool marked as dynamic is handled by the SDK through another path, and with `Output.object` the
+        // run ends in AI_NoOutputGeneratedError: the tool executes, returns, and the structured response is
+        // never generated. `dynamicTool` was used to dodge a typing friction — the `tool()` helper infers
+        // `never` with a generic ZodTypeAny — and the price was a change in behaviour. The cast is the
+        // honest way: what the SDK needs is exactly this object.
         return [e.name, {
             description: e.tool.description,
             inputSchema: e.tool.inputSchema,
@@ -829,8 +830,8 @@ export const buildAgentTools = (
 
                 const verdict = hooks.authorize ? await hooks.authorize(invocation, e.tool) : { allowed: true }
                 if (!verdict.allowed) {
-                    // Se devuelve como DATO, no como excepcion: una excepcion corta la conversacion, y lo
-                    // que queremos es que el modelo sepa que esa via esta cerrada y pruebe otra.
+                    // Returned as DATA, not as an exception: an exception cuts the conversation short, and
+                    // what we want is for the model to learn that route is closed and try another.
                     const denial = { error: `tool '${e.name}' not allowed${verdict.reason ? `: ${verdict.reason}` : ''}` }
                     hooks.observe?.(invocation, { ok: false, error: denial.error, ms: Date.now() - started, denied: true })
                     return denial
@@ -838,9 +839,9 @@ export const buildAgentTools = (
 
                 const host = buildToolHost(getToolset(e.toolsetId)?.requires ?? [], context)
                 try {
-                    // El runWithToolContext envuelve tambien a las tools escritas contra el contrato VIEJO
-                    // (las que leen ctx()). Es lo que permite migrar las 43 paquete a paquete en S3 en vez
-                    // de tener que reescribirlas todas antes de poder usar este camino.
+                    // runWithToolContext also wraps the tools written against the OLD contract (the ones
+                    // that read ctx()). That is what lets the 43 be migrated package by package in S3,
+                    // instead of having to rewrite them all before this path can be used at all.
                     const result = await runWithToolContext(context, () => e.tool.execute(args, host))
                     hooks.observe?.(invocation, { ok: true, result, ms: Date.now() - started })
                     return result

@@ -1,8 +1,8 @@
-// S1: contrato y registro de toolsets. Corre contra el dist compilado (build antes), como agent.test.mjs.
+// S1: toolset contract and registry. Runs against the compiled dist (build first), like agent.test.mjs.
 //
-// Lo que se fija aqui no es "que las funciones no revienten", sino los tres invariantes que el plan
-// (plans/ai-tools/PLAN.md) senala como caros de arreglar tarde: una sola puerta de registro, ids de
-// built-in reservados, y referencias a tools SIEMPRE cualificadas.
+// What this pins down is not "that the functions do not blow up", but the three invariants the plan
+// (plans/ai-tools/PLAN.md) flags as expensive to fix late: a single registration door, reserved built-in
+// ids, and tool references ALWAYS qualified.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -44,7 +44,7 @@ test('una referencia de tool se construye y se parsea cualificada', () => {
 })
 
 test('un nombre a secas NO es una referencia valida', () => {
-    // Es el invariante que evita la ambiguedad el dia que dos toolsets traigan un 'get_pod_logs'
+    // This is the invariant that avoids ambiguity the day two toolsets both bring a 'get_pod_logs'
     assert.equal(parseToolRef('list_namespaces'), undefined)
     assert.equal(parseToolRef(''), undefined)
     assert.equal(parseToolRef('/list_namespaces'), undefined)
@@ -77,7 +77,7 @@ test('un toolset de tercero NO puede ocupar el id de un built-in', () => {
 })
 
 test('un built-in no se puede retirar; uno instalado si', () => {
-    // 'reg-builtin' sigue registrado del test anterior: retirarlo debe fallar y dejarlo donde esta
+    // 'reg-builtin' is still registered from the previous test: removing it must fail and leave it in place
     assert.equal(unregisterToolset('reg-builtin'), false)
     assert.ok(getToolset('reg-builtin'))
 
@@ -102,11 +102,11 @@ test('resolveToolRef encuentra toolset y tool, y falla entero si cualquiera de l
     unregisterToolset('reg-resolve')
 })
 
-// ── lo que viaja al front ────────────────────────────────────────────────────────────────────────────
+// ── what travels to the front end ────────────────────────────────────────────────────────────────────
 
 test('las fichas que van al front NO llevan execute ni inputSchema', () => {
-    // El front necesita decidir (mostrar, agrupar, marcar), no ejecutar. Si se le colara el execute,
-    // estariamos mandando codigo del back en una respuesta HTTP.
+    // The front end needs to decide (show, group, flag), not execute. If execute slipped through, we would
+    // be shipping back-end code inside an HTTP response.
     registerToolset(fakeToolset('reg-info', ['alpha']))
 
     const info = listToolsetInfos().find(t => t.id === 'reg-info')
@@ -119,9 +119,9 @@ test('las fichas que van al front NO llevan execute ni inputSchema', () => {
 
 // ── reparto de capabilities ──────────────────────────────────────────────────────────────────────────
 //
-// La promesa de ECapability es "el host da lo declarado y NADA MAS". Se comprueba de verdad porque es una
-// promesa facil de romper sin enterarse: basta con que alguien arme el host a mano en otro sitio y sea
-// generoso. Si un dia un toolset sin declarar nada recibe cluster, estos tests caen.
+// The ECapability promise is "the host gives what was declared and NOTHING ELSE". It is checked for real
+// because it is an easy promise to break without noticing: all it takes is someone assembling the host by
+// hand elsewhere and being generous. The day a toolset declaring nothing receives a cluster, these fail.
 
 const fakeContext = (over = {}) => ({
     origin: 'test',
@@ -156,15 +156,15 @@ test('solo se provisiona lo declarado en requires', () => {
 })
 
 test('la fachada de cluster NO deja pasar las credenciales del core', () => {
-    // clusterInfo lleva saToken, token, senders y webhooks. Un toolset de terceros no tiene por que verlos,
-    // y ceder el objeto entero seria justo el cajon de sastre que este contrato viene a cerrar.
+    // clusterInfo carries saToken, token, senders and webhooks. A third-party toolset has no business
+    // seeing them, and handing over the whole object is exactly the catch-all this contract came to close.
     const host = buildToolHost([ECapability.K8S], fakeContext())
     assert.deepEqual(Object.keys(host.k8s).sort(), ['appsApi', 'coreApi', 'flavour', 'memory', 'name', 'networkApi', 'nodes', 'vcpus'])
     assert.equal(JSON.stringify(host.k8s).includes('NO-DEBE-SALIR'), false)
 })
 
 test('sin cluster no se inventa la capability aunque se declare', () => {
-    // Mejor que la tool reciba undefined y lo diga, a darle una fachada a medio montar que reviente dentro.
+    // Better the tool receives undefined and says so, than handing it a half-built facade that blows up inside.
     const host = buildToolHost([ECapability.K8S], fakeContext({ clusterInfo: undefined }))
     assert.equal(host.k8s, undefined)
     assert.equal(typeof host.trace, 'function')
