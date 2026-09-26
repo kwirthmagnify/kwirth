@@ -25,8 +25,8 @@ const kwirthGlobalsPlugin = {
     },
 }
 
-// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
-// El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
+// esbuild erases the types without looking at them: without this step the build would pass broken TS.
+// watch.mjs deliberately leaves it out, so that saving stays instantaneous.
 const TSC = 'node_modules/typescript/lib/tsc.js'
 if (fs.existsSync(TSC)) {
     try {
