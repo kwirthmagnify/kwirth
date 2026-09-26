@@ -3,7 +3,7 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 
-// Modo no interactivo: en cuanto llega --id no se pregunta nada, util para CI y para repetir un scaffold.
+// Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
 const flag = (n) => {
     const i = argv.indexOf(`--${n}`)
@@ -158,7 +158,7 @@ dist
 
 // ─── build.mjs / watch.mjs ─────────────────────────────────────────────────
 
-// El core resuelve express desde su propio runtime: bundlearlo rompe el binario de escritorio.
+// The core resolves express from its own runtime: bundling it breaks the desktop binary.
 const backGlobalsPlugin = `
 // Map express to the host's shared instance so the provider also loads inside the desktop binary.
 const kwirthBackGlobalsPlugin = {
@@ -173,7 +173,7 @@ const kwirthBackGlobalsPlugin = {
 }
 `
 
-// React y MUI los pone la pagina anfitriona: bundlearlos rompe @emotion y dispara el peso.
+// React and MUI are provided by the host page: bundling them breaks @emotion and inflates the size.
 const frontGlobalsPlugin = `
 // Front deps come from the host page (kwirth globals): never bundle react/MUI into a provider.
 const kwirthGlobalsPlugin = {
@@ -475,8 +475,8 @@ const portabilityBlock = hasConfig ? `
         que, y avisa de lo que se aplico pero apunta a algo que falta.
     \*/
     exportConfig = async (options: IExtensionExportOptions): Promise<unknown> => {
-        // TODO: si tu configuracion lleva credenciales, vacialas cuando 'options.includeCredentials'
-        // sea false — vaciarlas, no quitarlas, para que el destino sepa cuales rellenar.
+        // TODO: if your configuration carries credentials, empty them when 'options.includeCredentials'
+        // is false — empty them, do not drop them, so the destination knows which ones to fill in.
         void options
         return { config: this.config }
     }
@@ -487,10 +487,10 @@ const portabilityBlock = hasConfig ? `
             return { applied: 0, skipped: 0, warnings: ['no configuration found in the imported data'] }
         }
 
-        // Los defaults por delante: un fichero de una version anterior puede no traer campos nuevos.
+        // Defaults first: a file from an earlier version may not carry newer fields.
         this.config = { ...${constPrefix}_DEFAULT_CONFIG, ...incoming }
         await this.saveConfig()
-        // Aplicar en caliente: quien importa no deberia tener que reiniciar Kwirth.
+        // Apply it hot: whoever imports should not have to restart Kwirth.
         this.restartTimer()
         return { applied: 1, skipped: 0, warnings: [] }
     }
@@ -566,7 +566,7 @@ ${configureMethod}${routerBlock}${configRouterBlock}
                 subscriber.processProviderEvent(PROVIDER_ID, event)
             }
             catch (err) {
-                // Un subscriber que revienta no puede tumbar la difusion al resto.
+                // A subscriber that blows up must not bring down the broadcast to the rest.
                 console.log(\`[\${PROVIDER_ID}] Subscriber threw while processing an event: \${err}\`)
             }
         }
@@ -593,7 +593,7 @@ ${configureMethod}${routerBlock}${configRouterBlock}
 
     private saveConfig = async (): Promise<void> => {
         if (!this.storage) return
-        // 'secret' decide el destino: true -> Secret de Kubernetes, false -> ConfigMap.
+        // 'secret' decides the destination: true -> Kubernetes Secret, false -> ConfigMap.
         await this.storage.writeStorage(E${className}StorageKey.CONFIG, ${wantsRouter ? 'true' : 'false'}, this.config)
     }
 ${portabilityBlock}}
@@ -683,7 +683,7 @@ const ${className}ConfigDialog: React.FC<I${className}ConfigDialogProps> = ({ on
         }
     }
 
-    // Un campo vacio no debe convertirse en 0: se conserva el valor previo hasta que escriban un numero.
+    // An empty field must not turn into 0: the previous value is kept until a number is typed.
     const setInterval = (value: string) => {
         const parsed = Number(value)
         if (value === '' || Number.isNaN(parsed)) return

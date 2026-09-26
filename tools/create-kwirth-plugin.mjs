@@ -3,7 +3,7 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 
-// Modo no interactivo: en cuanto llega --id no se pregunta nada, util para CI y para repetir un scaffold.
+// Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
 const flag = (n) => {
     const i = argv.indexOf(`--${n}`)
@@ -101,8 +101,8 @@ write('package.json', `{
 
 // ─── tsconfig.json ─────────────────────────────────────────────────────────
 
-// No es decorativo: el build lo ejecuta con 'tsc --noEmit' antes de empaquetar. Lleva jsx y lib
-// DOM porque src/front tiene .tsx, igual que el tsconfig de cualquier extension con front.
+// It is not decorative: the build runs it with 'tsc --noEmit' before packaging. It carries jsx and lib
+// DOM because src/front has .tsx, just like the tsconfig of any extension with a front end.
 write('tsconfig.json', `{
     "compilerOptions": {
         "target": "ES2020",
@@ -162,8 +162,8 @@ const kwirthBackGlobalsPlugin = {
     },
 }
 
-// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
-// El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
+// esbuild erases the types without looking at them: without this step the build would pass broken TS.
+// watch.mjs deliberately leaves it out, so that saving stays instantaneous.
 const TSC = 'node_modules/typescript/lib/tsc.js'
 if (fs.existsSync(TSC)) {
     try {

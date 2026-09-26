@@ -3,7 +3,7 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 
-// Modo no interactivo: en cuanto llega --id no se pregunta nada, util para CI y para repetir un scaffold.
+// Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
 const flag = (n) => {
     const i = argv.indexOf(`--${n}`)
@@ -183,9 +183,9 @@ import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
-// Los paquetes comunes NO se bundlean: los sirve el global del back del core, como el resto de
-// extensiones de kwirth. Asi un toolset no arrastra su copia de zod ni de common-ai, y usa exactamente la
-// misma que el core — que es lo que hace que el registro sea uno solo.
+// The common packages are NOT bundled: the core's back-end global serves them, as with every other
+// kwirth extension. That way a toolset does not drag its own copy of zod or common-ai, and uses exactly
+// the same one as the core — which is what makes the registry a single one.
 const kwirthBackGlobalsPlugin = {
     name: 'kwirth-back-globals',
     setup(build) {
@@ -205,7 +205,7 @@ const kwirthBackGlobalsPlugin = {
     },
 }
 
-// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
+// esbuild erases the types without looking at them: without this step the build would pass broken TS.
 const TSC = 'node_modules/typescript/lib/tsc.js'
 if (fs.existsSync(TSC)) {
     try {
@@ -254,15 +254,15 @@ const distMeta = {
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
-// ⚠️ El core NO vigila el dist de un aitoolset: lo lee UNA vez, al arrancar. Construir no basta.
+// ⚠️ The core does NOT watch an aitoolset's dist: it reads it ONCE, at startup. Building is not enough.
 console.log('')
 console.log('Restart the kwirth back to load this build — AI toolsets have no hot reload.')
 `)
 
 // ─── src/index.ts ──────────────────────────────────────────────────────────
 
-// Cada capability trae su propio ejemplo: el scaffold tiene que COMPILAR y pasar su harness tal cual
-// sale, y para eso la tool de muestra debe usar de verdad lo que el toolset declara.
+// Each capability brings its own example: the scaffold has to COMPILE and pass its harness exactly as
+// it comes out, and for that the sample tool must really use what the toolset declares.
 const ejemplos = {
     k8s: {
         importa: 'IK8sCapability',
@@ -292,7 +292,7 @@ const ejemplos = {
 }`,
         schema: 'z.object({})',
         cuerpo: `                const m = metrics(host, '${toolName}', {})
-                // La muestra mas reciente va al FINAL del buffer.
+                // The most recent sample goes at the END of the buffer.
                 const last = m.samples[m.samples.length - 1]
                 if (!last) return { error: 'no metric samples yet: the core collects them periodically' }
                 return { sample: last, samplesHeld: m.samples.length }`,
@@ -307,7 +307,7 @@ const ejemplos = {
 }`,
         schema: `z.object({ limit: z.number().optional().describe('How many events to return, newest last (default 20)') })`,
         cuerpo: `                const e = events(host, '${toolName}', { limit })
-                // El buffer crece por el final: los ultimos son los mas recientes.
+                // The buffer grows at the end: the last ones are the most recent.
                 const n = limit ?? 20
                 return { events: e.recent.slice(-n), buffered: e.recent.length }`,
         descr: 'Returns the most recent entries of the cluster event buffer.'
@@ -321,7 +321,7 @@ const ejemplos = {
 }`,
         schema: 'z.object({})',
         cuerpo: `                const r = repos(host, '${toolName}', {})
-                // Nunca se devuelven los tokens: lo util para el modelo es SABER que hosts puede leer.
+                // The tokens are never returned: what is useful to the model is KNOWING which hosts it can read.
                 return { hosts: r.creds.map(c => ({ host: c.host, type: c.type })) }`,
         descr: 'Lists the Git hosts this channel has credentials for, so you know what can be read.'
     },
@@ -363,8 +363,8 @@ const ${camelId}: IAiToolset = {
     tools: [
         defineTool({
             name: '${toolName}',
-            // Esta descripcion la lee el MODELO, y es lo unico que tiene para decidir si llamarte: di
-            // cuando usarla y con que, no solo que hace.
+            // The MODEL reads this description, and it is all it has to decide whether to call you: say
+            // when to use it and with what, not just what it does.
             description: '${ej.descr}',
             effect: ${effectRef},
             sensitivity: ${sensRef},
@@ -435,7 +435,7 @@ const asercion = {
 
 const sinCapability = primary === 'none' ? '' : `
 test('sin la capability provisionada, la tool lo dice', async () => {
-    // El host presta SOLO lo declarado: una tool que no comprueba lo suyo peta con un TypeError opaco.
+    // The host lends ONLY what was declared: a tool that does not check its own blows up with an opaque TypeError.
     await assert.rejects(
         () => tool.execute(${llamada}, { trace: () => {} }),
         /${primary === 'repos' ? 'source repository credentials' : primary === 'k8s' ? 'cluster access' : primary}/
@@ -457,7 +457,7 @@ const require = createRequire(import.meta.url)
 const commonAi = require('@kwirthmagnify/kwirth-common-ai')
 const commonAiBack = require('@kwirthmagnify/kwirth-common-ai/back')
 
-// El dist espera encontrar los comunes en el global del back, que es como se los sirve el core.
+// The dist expects to find the common packages in the back-end global, which is how the core serves them.
 globalThis.__kwirth_back__ = { kwirthCommonAi: commonAi, kwirthCommonAiBack: commonAiBack }
 
 const toolset = require('../dist/back.js').default
@@ -465,7 +465,7 @@ const tool = toolset.tools[0]
 
 ${mocks[primary]}
 
-// ── el contrato ──────────────────────────────────────────────────────────────────────────────────────
+// ── the contract ─────────────────────────────────────────────────────────────────────────────────────
 
 test('el toolset declara lo que necesita, y su tool', () => {
     assert.equal(toolset.id, '${id}')
@@ -476,7 +476,7 @@ test('el toolset declara lo que necesita, y su tool', () => {
     assert.equal(tool.sensitivity, commonAi.EToolSensitivity.${sensitivity.toUpperCase()})
 })
 ${sinCapability}
-// ── lo que hace ──────────────────────────────────────────────────────────────────────────────────────
+// ── what it does ─────────────────────────────────────────────────────────────────────────────────────
 
 test('${toolName} devuelve lo que promete', async () => {
     const { host } = fakeHost()

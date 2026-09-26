@@ -49,7 +49,7 @@ if (!mdPath || !pngPath) {
     process.exit(1)
 }
 const title = titleArg ?? 'Test coverage over time'
-// el PNG de tamaño de suite vive al lado del de cobertura y se nombra a partir de él
+// the suite-size PNG lives next to the coverage one and is named after it
 const testsPngPath = /coverage/i.test(path.basename(pngPath))
     ? path.join(path.dirname(pngPath), path.basename(pngPath).replace(/coverage/i, 'tests'))
     : pngPath.replace(/\.png$/i, '') + '-tests.png'
@@ -78,8 +78,8 @@ const parseHarness = (cell) => {
     return first ? parseInt(first[1], 10) : undefined
 }
 
-// Cuantos casos e2e EXISTEN. '13 specs · 39 casos · 38 ✅, 1 saltado' -> 39 (los escritos, no los verdes);
-// '2 / 5' -> 5; '8 / 12 (7 funcionales + 1 captura)' -> 12; '✔ manual (...)' -> nada.
+// How many e2e cases EXIST. '13 specs · 39 casos · 38 ✅, 1 saltado' -> 39 (the written ones, not the
+// green ones); '2 / 5' -> 5; '8 / 12 (7 funcionales + 1 captura)' -> 12; '✔ manual (...)' -> nothing.
 const parseE2eCases = (cell) => {
     if (cell === undefined) return undefined
     const casos = /(\d+)\s*casos?\b/i.exec(cell)
@@ -133,8 +133,8 @@ const buildSvg = (chartTitle, chartRows, series, yAxis, xLabel) => {
     svg += `<line x1="${ML}" y1="${MT}" x2="${ML}" y2="${MT + plotH}" stroke="#999"/>`
     svg += `<line x1="${ML}" y1="${MT + plotH}" x2="${ML + plotW}" y2="${MT + plotH}" stroke="#999"/>`
     for (const s of series) {
-        // Una fila sin dato para esta serie (harness 'n/a', e2e manual) parte la linea en vez de inventar
-        // un valor: el punto simplemente no existe.
+        // A row with no datum for this series (harness 'n/a', manual e2e) breaks the line instead of
+        // making a value up: the point simply does not exist.
         let run = []
         const flush = () => {
             if (run.length > 1) svg += `<polyline points="${run.join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.5"/>`
@@ -159,7 +159,7 @@ const buildSvg = (chartTitle, chartRows, series, yAxis, xLabel) => {
     return svg
 }
 
-// eje de porcentajes: marcas de 5 en 5 alrededor de los valores, recortado a [0, 100]
+// percentage axis: ticks every 5 around the values, clamped to [0, 100]
 const percentAxis = (vals) => {
     const min = Math.max(0, Math.floor(Math.min(...vals) / 5) * 5 - 5)
     let max = Math.min(100, Math.ceil(Math.max(...vals) / 5) * 5 + 5)
@@ -169,7 +169,7 @@ const percentAxis = (vals) => {
     return { min, max, ticks }
 }
 
-// eje de conteos: siempre desde 0 (una suite que crece de 500 a 507 no debe parecer que se duplica)
+// count axis: always from 0 (a suite growing from 500 to 507 must not look like it doubled)
 const countAxis = (vals) => {
     const top = Math.max(...vals)
     const step = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find(s => top / s <= 8) ?? 2000

@@ -14,7 +14,7 @@ import path from 'path'
     fondos, con el tope aplicado al que tiene que caber en cualquier sitio.
 */
 
-// Modo no interactivo: en cuanto llega --id no se pregunta nada, util para CI y para repetir un scaffold.
+// Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
 const flag = (n) => {
     const i = argv.indexOf(`--${n}`)
@@ -142,17 +142,18 @@ copyFileSync(join(__dir, 'login.json'), join(distDir, 'login.json'))
 /*
  * DOS fondos posibles, y solo uno tiene tope:
  *
- *   · background.png    — el que tiene que caber EN CUALQUIER SITIO, incluido un ConfigMap de Kubernetes,
- *                         que no pasa de ~1 MiB por objeto y guarda la imagen EN BASE64 (un tercio mas
- *                         grande). El core corta en 800 KB de base64, o sea ~600 KB de PNG. Si te pasas,
- *                         este build falla a proposito: pasarse no rompe la instalacion —y eso es lo
- *                         malo—, el login se instala A MEDIAS, sin fondo, y solo se nota al abrir.
- *   · background-hi.png — OPCIONAL y sin tope. Se usa donde el almacenamiento lo admita (desktop, docker
- *                         o KWIRTH_STORE); donde no quepa, Kwirth se queda con el normal. Que no quepa
- *                         NO es un fallo: es justo para lo que existe el otro.
+ *   · background.png    — the one that has to fit ANYWHERE, including a Kubernetes ConfigMap, which
+ *                         does not go beyond ~1 MiB per object and stores the image IN BASE64 (a third
+ *                         bigger). The core cuts off at 800 KB of base64, that is ~600 KB of PNG. Go
+ *                         over and this build fails on purpose: going over does not break the install —
+ *                         and that is the bad part — the login installs HALFWAY, with no background,
+ *                         and it only shows when you open it.
+ *   · background-hi.png — OPTIONAL and with no ceiling. It is used wherever storage allows it (desktop,
+ *                         docker or KWIRTH_STORE); where it does not fit, Kwirth keeps the normal one.
+ *                         Not fitting is NOT a failure: it is exactly what the other one exists for.
  *
- * Si el normal no cabe: reencodear a paleta (PNG de 8 bits) antes que recortar el tamano. Un fondo de
- * 1200x896 en truecolor con degradados baja de 1,9 MB a 430 KB sin diferencia apreciable.
+ * If the normal one does not fit: re-encode to a palette (8-bit PNG) rather than cropping the size. A
+ * 1200x896 truecolor background with gradients drops from 1.9 MB to 430 KB with no visible difference.
  */
 const CONFIGMAP_BACKGROUND_LIMIT = 600 * 1024
 

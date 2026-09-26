@@ -25,8 +25,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const icons = [...readFileSync(join(root, 'common-front/src/kwirthicons.ts'), 'utf8')
     .matchAll(/export \{ default as (\w+) \}/g)].map(m => m[1])
 
-// 'bundle', 'target' y back/front son COPIAS DEL FRONT COMPILADO: llevan el barrel entero dentro,
-// asi que barrerlas da positivo en los 149 nombres. Es ruido, no uso.
+// 'bundle', 'target' and back/front are COPIES OF THE COMPILED FRONT END: they carry the whole barrel
+// inside, so sweeping them hits all 149 names. That is noise, not use.
 const SKIP = ['node_modules', '.git', 'dist', 'build', 'bundle', 'target', 'resources', 'test-results', '.cache']
 
 const walk = (dir, out = []) => {
@@ -70,7 +70,7 @@ for (const f of files) {
     }
 }
 
-// Orden alfabetico, y sin depender de como esten escritos los exports en el barrel
+// Alphabetical order, and without depending on how the exports are written in the barrel
 const filas = icons.map(i => ({
     icono: i,
     code: [...uso.get(i).code].sort(),

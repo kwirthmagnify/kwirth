@@ -10,8 +10,8 @@
  * Example (Tauri):     node ../tools/scripts/fetch-bundled.mjs ../back/kwirth-bundled.json resources/bundled
  * Example (Docker):    node fetch-bundled.mjs kwirth-bundled.json /usr/kwirth/bundled
  *
- * El de Docker no lleva ruta a proposito: el build copia este fichero DENTRO de docker/ y la imagen
- * lo ejecuta desde ahi (ver docker/build-image.mjs y el COPY del Dockerfile).
+ * Docker's carries no path on purpose: the build copies this file INTO docker/ and the image runs it
+ * from there (see docker/build-image.mjs and the Dockerfile's COPY).
  */
 
 import { createWriteStream, mkdirSync, existsSync, writeFileSync, copyFileSync } from 'fs'
