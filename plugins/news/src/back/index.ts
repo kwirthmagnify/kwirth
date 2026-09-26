@@ -212,8 +212,8 @@ class NewsChannel {
 
     private pollFeeds = async (ws: WebSocket, instance: IInstance): Promise<void> => {
         if (instance.paused) return
-        // Object.values(ENewsFeed) y no Object.keys(FEEDS): keys() devuelve string[] y pierde el
-        // tipo de la clave, asi que FEEDS[category] quedaba indexado con un string cualquiera.
+        // Object.values(ENewsFeed) and not Object.keys(FEEDS): keys() returns string[] and loses the
+        // key's type, so FEEDS[category] ended up indexed with just any string.
         for (const category of Object.values(ENewsFeed).filter(f => instance.selectedFeeds.includes(f))) {
             const feed = FEEDS[category]
             try {
