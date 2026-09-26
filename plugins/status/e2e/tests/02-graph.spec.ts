@@ -44,7 +44,7 @@ test.afterEach(async ({}, testInfo) => {
 })
 
 test('el grafo se dibuja, con nodos y aristas', async () => {
-    // El layout es asincrono (elk se descarga la primera vez), asi que se espera al resultado.
+    // The layout is asynchronous (elk is downloaded the first time), so the result is awaited.
     await expect(page.locator('.react-flow__node').first()).toBeVisible({ timeout: 30000 })
     expect(await page.locator('.react-flow__node').count()).toBeGreaterThan(1)
     expect(await page.locator('.react-flow__edge').count()).toBeGreaterThan(0)
@@ -59,7 +59,7 @@ test('los productores quedan ARRIBA y los consumidores DEBAJO', async () => {
     const aristas = page.locator('.react-flow__edge')
     expect(await aristas.count()).toBeGreaterThan(0)
 
-    // De la primera arista se sacan sus dos extremos y se comparan sus alturas.
+    // The first edge.s two endpoints are taken and their heights compared.
     const ids = await aristas.first().getAttribute('data-id')
     expect(ids, 'la arista no dice a quien une').toBeTruthy()
 
@@ -88,7 +88,7 @@ test('🔴 con una sola foto no se anima nada: no hay con que comparar', async (
 
 test('y la pantalla dice que significa una linea, y que significa que se mueva', async () => {
     await expect(page.getByText(/A line means .*active subscription/i)).toBeVisible()
-    // lo importante: que se mueva NO dice cuanto va a cada consumidor
+    // the point: movement does NOT say how much goes to each consumer
     await expect(page.getByText(/not how much goes to each consumer/i)).toBeVisible()
 })
 
@@ -107,7 +107,7 @@ test('al seleccionar un nodo se resaltan sus lineas y se atenua el resto', async
     const total = await aristas.count()
     expect(total).toBeGreaterThan(0)
 
-    // Sin seleccion, ninguna arista esta atenuada.
+    // With no selection, no edge is dimmed.
     const opacidadesAntes = await aristas.evaluateAll(els => els.map(e => (e as SVGElement).style.opacity))
     expect(opacidadesAntes.every(o => o === '' || o === '1'), 'hay aristas atenuadas sin haber seleccionado nada').toBe(true)
 
@@ -126,12 +126,12 @@ test('al seleccionar un nodo se resaltan sus lineas y se atenua el resto', async
         opacity: (e as SVGElement).style.opacity,
         width: (e as SVGElement).style.strokeWidth
     })))
-    // Con una seleccion tiene que haber DOS grupos: lo resaltado y lo apagado.
-    // El navegador puede normalizar el ancho como '3' o como '3px' segun como se serialice.
+    // With a selection there must be TWO groups: what is highlighted and what is dimmed.
+    // The browser may normalise the width as '3' or as '3px' depending on how it serialises.
     expect(despues.some(d => d.width === '3px' || d.width === '3'), 'ninguna arista se resalta al seleccionar').toBe(true)
     if (total > 1) expect(despues.some(d => d.opacity === '0.2'), 'no se atenua nada: todo sigue igual de visible').toBe(true)
 
-    // Y el fondo limpia la seleccion.
+    // And the background clears the selection.
     await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
     await page.waitForTimeout(600)
     const vueltaAtras = await aristas.evaluateAll(els => els.map(e => (e as SVGElement).style.opacity))
@@ -178,7 +178,7 @@ test('🔴 if there is consumption, it either draws it or says why it cannot', a
     ).toBeVisible()
 })
 
-/** Animación CSS que tiene aplicada ahora mismo la primera línea viva, o undefined si no hay ninguna. */
+/** The CSS animation currently applied to the first live line, or undefined when there is none. */
 interface IAnimacionLinea {
     nombre: string
     duracion: string
@@ -196,12 +196,12 @@ const animacionDeLineaViva = async (): Promise<IAnimacionLinea | undefined> => {
 
 const elegirRefresco = async (opcion: string): Promise<void> => {
     await page.locator('[aria-label="Auto refresh"]').click()
-    // El menu de MUI entra con animacion: sin esperar, el clic llega a un elemento que aun se mueve.
+    // The MUI menu animates in: without waiting, the click lands on an element that is still moving.
     await page.waitForTimeout(500)
     await page.getByRole('option', { name: opcion }).click()
 }
 
-/** Refresca a mano hasta que haya alguna línea viva: hacen falta dos fotos y que algo haya entregado entre ellas. */
+/** Refreshes by hand until some line is live: it takes two snapshots with something delivered between them. */
 const esperarLineaViva = async (): Promise<IAnimacionLinea> => {
     for (let i = 0; i < 10; i++) {
         await page.locator('button[aria-label="Take a new snapshot"]').click()
@@ -233,7 +233,7 @@ test('🔴 con auto-refresco, la linea viva FRENA y se para justo al acabar el i
     expect(primera!.repeticiones, 'la animacion se repite: no se para nunca').toBe('1')
     expect(primera!.relleno, 'al acabar vuelve al principio en vez de quedarse parada').toBe('forwards')
 
-    // En la foto siguiente, si sigue viva, la animacion se ha relanzado con el otro nombre.
+    // In the next snapshot, if it is still live, the animation has been relaunched under the other name.
     await page.waitForTimeout(5500)
     const segunda = await animacionDeLineaViva()
     if (segunda) expect(segunda.nombre, 'la foto nueva no ha relanzado el movimiento').not.toBe(primera!.nombre)

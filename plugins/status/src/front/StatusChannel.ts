@@ -48,8 +48,8 @@ export class StatusChannel implements IChannel {
         switch (msg.type) {
             case EInstanceMessageType.DATA:
                 if (msg.payloadType === EStatusPayload.INVENTORY && msg.inventory) {
-                    // La que había pasa a ser la anterior: con dos fotos se puede calcular una tasa.
-                    // Solo se guarda UNA; esto no es una serie temporal.
+                    // The one that was there becomes the previous one: with two snapshots a rate can be
+                    // computed. Only ONE is kept; this is not a time series.
                     data.previous = data.inventory
                     data.inventory = msg.inventory
                 }
@@ -70,7 +70,7 @@ export class StatusChannel implements IChannel {
     }
 
     async initChannel(channelObject: IChannelObject): Promise<boolean> {
-        // Sin esto, TabContent pinta sobre un 'data' que no existe: el core no lo crea por su cuenta.
+        // Without this, TabContent draws onto a 'data' that does not exist: the core does not create it.
         channelObject.data = new StatusData()
         return true
     }

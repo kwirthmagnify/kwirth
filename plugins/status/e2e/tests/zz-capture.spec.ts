@@ -15,10 +15,10 @@ const MEDIA = path.resolve(__dirname, '../../../../docs/0.6.31/_media/ch-images'
 
 test('captura del inventario', async ({ browser }) => {
     test.setTimeout(240000)
-    // Alto generoso a proposito: las filas ACTIVE van al final —lo que va bien se mira al ultimo— y con
-    // 900px se quedaban fuera de la imagen, justo lo que la guia esta explicando.
+    // Deliberately generous height: the ACTIVE rows go last — what works is looked at last — and at
+    // 900px they fell outside the image, which is exactly what the guide is explaining.
     const page: Page = await browser.newPage({ viewport: { width: 1400, height: 1180 } })
-    // La guía va en oscuro, como el resto de sus imágenes.
+    // The guide is in dark mode, like the rest of its images.
     await page.addInitScript(() => { try { localStorage.setItem('kwirth.mode', 'dark') } catch { /* */ } })
     await login(page)
 
@@ -27,7 +27,7 @@ test('captura del inventario', async ({ browser }) => {
     await page.getByRole('button', { name: 'ADD' }).click()
     await page.waitForTimeout(2000)
 
-    // Añadir la pestaña no arranca el canal: hay que darle a Start, igual que haría un usuario.
+    // Adding the tab does not start the channel: Start has to be pressed, just as a user would.
     await openTabMenu(page)
     const start = page.getByText('Start', { exact: true })
     if (await start.isVisible().catch(() => false)) await start.click()

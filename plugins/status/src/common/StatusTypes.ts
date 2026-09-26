@@ -5,7 +5,7 @@
     lado, un cambio en uno se descubriría en tiempo de ejecución y no al compilar.
 */
 
-/** Qué clase de pieza es. Determina de dónde sale en ClusterInfo y cómo se pinta. */
+/** What kind of piece it is. It determines where it comes from in ClusterInfo and how it is drawn. */
 export enum EComponentKind {
     PROVIDER = 'provider',
     PLUVIDER = 'pluvider',
@@ -15,99 +15,100 @@ export enum EComponentKind {
 }
 
 /*
-    Cómo está una pieza AHORA.
+    How a piece is RIGHT NOW.
 
-    El objetivo de esta enumeración es que un administrador no confunda casos que hoy se parecen: una
-    extensión instalada que nunca arrancó, una que arrancó y se cayó, y una que funciona pero tiene el
-    router sin montar. Los tres se ven igual desde fuera —"no va"— y se arreglan de forma distinta.
+    The point of this enumeration is that an administrator should not confuse cases that look alike
+    today: an installed extension that never started, one that started and fell over, and one that works
+    but has its router unmounted. All three look the same from outside — "it does not work" — and are
+    fixed in different ways.
 
-    ACTIVE e IDLE aparecieron en S2, cuando 'IProvider.getStats()' hizo posible preguntar cuántos
-    suscriptores tiene un provider. INSTANTIATED sigue existiendo y NO es un resto: es lo que se muestra
-    cuando el componente no implementa ese método opcional — está corriendo, y si alguien lo consume o no,
-    no se sabe. Un estado que no se puede saber no se adivina.
+    ACTIVE and IDLE appeared in S2, when 'IProvider.getStats()' made it possible to ask how many
+    subscribers a provider has. INSTANTIATED still exists and is NOT a leftover: it is what is shown when
+    the component does not implement that optional method — it is running, and whether anybody consumes
+    it is unknown. A state that cannot be known is not guessed.
 */
 export enum EComponentHealth {
-    /** Instanciado y con al menos un consumidor. */
+    /** Instantiated and with at least one consumer. */
     ACTIVE = 'active',
-    /** Instanciado y sin nadie escuchando: está emitiendo para nadie. */
+    /** Instantiated and with nobody listening: it is emitting to nobody. */
     IDLE = 'idle',
-    /** Instanciado, pero no dice cuántos consumidores tiene (no implementa getStats). */
+    /** Instantiated, but it does not say how many consumers it has (it does not implement getStats). */
     INSTANTIATED = 'instantiated',
-    /** Instalado, pero el core nunca lo puso en marcha. `reason` dice por qué. */
+    /** Installed, but the core never set it going. `reason` says why. */
     NOT_INSTANTIATED = 'not-instantiated',
-    /** Corriendo, pero algo suyo necesita un reinicio del servidor para estar disponible. */
+    /** Running, but something of its own needs a server restart to be available. */
     PENDING_RESTART = 'pending-restart',
-    /** Se intentó arrancar y falló. `reason` lleva el error. */
+    /** It tried to start and failed. `reason` carries the error. */
     FAILED = 'failed',
-    /** No hay forma de saberlo. Distinto de "está mal": es que el dato no existe (RNF2). */
+    /** There is no way to know. Different from "it is broken": the datum does not exist (RNF2). */
     UNKNOWN = 'unknown'
 }
 
-/** Una pieza del inventario. */
+/** One piece of the inventory. */
 export interface IStatusComponent {
     kind: EComponentKind
     id: string
     displayName: string
     health: EComponentHealth
     /**
-     * POR QUÉ está en ese estado, en lenguaje de quien lo lee. Es el campo que justifica la pantalla
-     * entera: un 'not running' a secas es lo que ya hay hoy y no resuelve nada.
+     * WHY it is in that state, in the language of whoever reads it. It is the field that justifies the
+     * whole screen: a bare 'not running' is what there already is today, and it solves nothing.
      */
     reason?: string
     version?: string
-    /** De dónde vino: un marketplace, 'dev', 'bundled'… lo mismo que muestran los gestores. */
+    /** Where it came from: a marketplace, 'dev', 'bundled'… the same the managers show. */
     installedFrom?: string
     /**
-     * Cuántos consumidores tiene, cuando el componente sabe decirlo (S2).
+     * How many consumers it has, when the component can say (S2).
      *
-     * `undefined` significa **no lo dice**, que es distinto de 0 — cero es una afirmación, y quien la
-     * lea puede ir a desinstalar algo. Por eso es opcional y no un número con valor por defecto.
+     * `undefined` means **it does not say**, which is different from 0 — zero is a claim, and whoever
+     * reads it may go and uninstall something. Hence it is optional and not a number with a default.
      */
     subscribers?: number
     /**
-     * Entregas acumuladas desde que el componente arrancó (S4), cuando sabe decirlo.
+     * Deliveries accumulated since the component started (S4), when it can say.
      *
-     * Acumulado, no tasa: la tasa la calcula quien lee restando dos fotos. Y `undefined` sigue siendo
-     * "no lo dice", nunca 0 — misma regla que con los consumidores.
+     * A running total, not a rate: the rate is computed by whoever reads it, subtracting two snapshots.
+     * And `undefined` still means "it does not say", never 0 — the same rule as with consumers.
      */
     events?: number
     /**
-     * Cuántos de esos consumidores están IDENTIFICADOS en el grafo (S3).
+     * How many of those consumers are IDENTIFIED in the graph (S3).
      *
-     * Si es menor que `subscribers`, hay consumidores que el core no intermedió y de los que solo se
-     * sabe que existen. La pantalla lo dice en vez de dibujar los que conoce y dar a entender que son
-     * todos.
+     * When it is lower than `subscribers`, there are consumers the core did not intermediate and about
+     * which all that is known is that they exist. The screen says so rather than drawing the ones it
+     * knows and implying they are all of them.
      */
     knownConsumers?: number
 }
 
 /**
- * El inventario completo, tal y como viaja al front.
+ * The complete inventory, exactly as it travels to the front end.
  *
- * `cluster` va desde el primer día aunque hoy siempre sea el mismo: el día que haya vista federada, los
- * tipos no tienen que cambiar. Cuesta un campo ahora y ahorra rehacer el front después.
+ * `cluster` is there from day one even though today it is always the same one: the day there is a
+ * federated view, the types need not change. It costs a field now and saves redoing the front end later.
  */
 export interface IStatusInventory {
     cluster: string
     takenAt: number
     components: IStatusComponent[]
     /**
-     * Quién consume a quién. Puede quedarse corto respecto a `IStatusComponent.subscribers`, y eso es
-     * un dato, no un fallo: quien se suscriba a un provider **sin pasar por el core** no aparece aquí.
-     * Lo hace `provider-debug` a propósito, con su propio proxy.
+     * Who consumes whom. It may fall short of `IStatusComponent.subscribers`, and that is a datum, not a
+     * fault: whoever subscribes to a provider **without going through the core** does not appear here.
+     * `provider-debug` does exactly that, on purpose, with its own proxy.
      */
     edges: IStatusEdge[]
 }
 
 /**
- * Una arista del grafo: quién produce y quién consume.
+ * One edge of the graph: who produces and who consumes.
  *
- * Sale del registro del CORE (`ClusterInfo.getSubscriptions()`), no de los providers: la suscripción
- * pasa por el core con el canal delante, así que ahí es donde se conocen las dos puntas. Un provider
- * solo sabe cuántos suscriptores tiene, no quiénes son.
+ * It comes from the CORE's registry (`ClusterInfo.getSubscriptions()`), not from the providers: the
+ * subscription goes through the core with the channel up front, so that is where both ends are known.
+ * A provider only knows how many subscribers it has, not who they are.
  */
 export interface IStatusEdge {
-    /** Quién produce: un provider ('events') o un pluvider ('plugin:agora'). */
+    /** Who produces: a provider ('events') or a pluvider ('plugin:agora'). */
     providerId: string
     /**
      * Who consumes: a channel id ('agora'), or another provider with the core's prefix ('provider:aws')
@@ -130,16 +131,16 @@ export enum EGraphLayer {
     LAST = 'LAST'
 }
 
-/** Qué trae un mensaje de datos de este canal. Hoy solo hay uno; el diagrama y los contadores vendrán. */
+/** What a data message of this channel carries. Today there is only one; the diagram and counters will come. */
 export enum EStatusPayload {
     INVENTORY = 'inventory'
 }
 
 /**
- * Mensaje de datos del back al front.
+ * Data message from the back end to the front end.
  *
- * La cabecera (msgtype, channel, action, flow, type, instance) es la que el core espera de cualquier
- * canal; lo propio de este plugin es 'payloadType' y lo que cuelga de él.
+ * The header (msgtype, channel, action, flow, type, instance) is what the core expects from any channel;
+ * what belongs to this plugin is 'payloadType' and whatever hangs off it.
  */
 export interface IStatusMessageResponse {
     msgtype: string
@@ -152,7 +153,7 @@ export interface IStatusMessageResponse {
     inventory?: IStatusInventory
 }
 
-/** Lo que el front puede pedir. El inventario se manda al arrancar; esto es para volver a pedirlo. */
+/** What the front end can ask for. The inventory is sent on start; this is for asking again. */
 export enum EStatusCommand {
     REFRESH = 'refresh'
 }

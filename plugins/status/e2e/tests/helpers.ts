@@ -6,9 +6,9 @@ export const CLUSTER = process.env.STATUS_E2E_CLUSTER ?? 'inCluster'
 export const CHANNEL = 'status'
 
 /**
- * Login. El dev server del front recompila y puede tardar en pintar, así que se espera a que
- * aparezca el formulario o el selector de recursos con margen amplio, y tras enviar se espera al
- * selector en vez de a un timeout fijo (era la causa de fallos intermitentes por página en blanco).
+ * Login. The front end's dev server recompiles and can take a while to draw, so it waits generously for
+ * either the form or the resource selector to appear, and after submitting it waits for the selector
+ * rather than a fixed timeout (that was the cause of intermittent blank-page failures).
  */
 export async function login(page: Page, user = USER, pass = PASS): Promise<void> {
     await page.goto('/')
@@ -26,7 +26,7 @@ export async function login(page: Page, user = USER, pass = PASS): Promise<void>
     await expect(combo).toBeVisible({ timeout: 60000 })
 }
 
-/** Cluster → View=cluster → deja abierto el combo de canales y devuelve la opción provider-debug. */
+/** Cluster → View=cluster → leaves the channel combo open and returns the provider-debug option. */
 export async function openChannelPicker(page: Page): Promise<Locator> {
     await page.getByRole('combobox').first().click()
     await page.getByRole('option', { name: CLUSTER }).click()
@@ -40,9 +40,9 @@ export async function openChannelPicker(page: Page): Promise<Locator> {
 }
 
 /**
- * Abre el menú de la pestaña activa (icono de engranaje).
- * No hace falta limpiar pestañas al terminar: no se persisten entre sesiones de navegador, así
- * que cada test arranca con el workspace del usuario intacto.
+ * Opens the active tab's menu (the gear icon).
+ * There is no need to clean up tabs afterwards: they are not persisted between browser sessions, so
+ * every test starts with the user's workspace intact.
  */
 export async function openTabMenu(page: Page): Promise<void> {
     await page.locator('[data-testid="SettingsIcon"]').first().click({ force: true })

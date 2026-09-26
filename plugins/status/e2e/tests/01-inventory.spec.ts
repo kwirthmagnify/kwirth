@@ -51,7 +51,7 @@ test.afterEach(async ({}, testInfo) => {
 
 test('al abrir el canal llega el inventario, sin pedir nada', async () => {
     await expect(page.getByText('What this Kwirth has inside')).toBeVisible({ timeout: 30000 })
-    // La cabecera cuenta cuantos componentes hay; en un Kwirth de desarrollo hay varios.
+    // The header counts how many components there are; on a development Kwirth there are several.
     await expect(page.getByText(/\d+ components/)).toBeVisible()
 })
 
@@ -62,7 +62,7 @@ test('la tabla trae la columna QUE justifica la pantalla', async () => {
 })
 
 test('se listan providers y senders del Kwirth de verdad', async () => {
-    // Contra el back real: lo que salga depende del entorno, pero tiene que haber filas de varios tipos.
+    // Against the real back end: what shows depends on the environment, but there must be rows of several kinds.
     const filas = page.locator('table tbody tr')
     expect(await filas.count()).toBeGreaterThan(0)
     const texto = await page.locator('table tbody').innerText()
@@ -89,12 +89,12 @@ test('la columna de consumidores distingue "ninguno" de "no lo dice"', async () 
         else throw new Error(`la columna de consumidores dice '${consumidores}', que no es ni un numero ni un guion`)
     }
     expect(conNumero + sinDato).toBe(n)
-    // Los senders y webhooks no informan (el contrato es de providers), asi que siempre hay guiones.
+    // Senders and webhooks do not report (the contract belongs to providers), so there are always dashes.
     expect(sinDato, 'nadie sale como "no informa", y eso significa que se esta inventando el dato').toBeGreaterThan(0)
 })
 
 test('🔴 un provider cableado dice si esta ACTIVO o si emite para nadie', async () => {
-    // Con los providers del repo cableados, la tabla tiene que poder decirlo de alguno.
+    // With the repo.s providers wired up, the table has to be able to say it for at least one.
     const texto = await page.locator('table tbody').innerText()
     expect(texto, 'ningun provider informa: el cableado de getStats no ha llegado').toMatch(/Active|Idle/)
 })
@@ -106,7 +106,7 @@ test('🔴 no se filtra ninguna URL de webhook: llevan el token dentro', async (
 })
 
 test('la pantalla dice de cuando es la foto y si se refresca sola', async () => {
-    // En manual —lo de por defecto— dice que no se actualiza solo. No es un defecto que se esconde.
+    // In manual mode — the default — it says it does not refresh by itself. Not a default that hides.
     await expect(page.getByText(/Snapshot taken at .* it does not refresh on its own/)).toBeVisible()
 })
 
@@ -123,18 +123,18 @@ test('el selector de auto-refresco esta a la izquierda del boton de refrescar', 
 })
 
 test('🔴 al elegir un intervalo, la pantalla deja de decir que no se refresca sola', async () => {
-    // La frase era una afirmacion fija; con auto-refresco seria falsa, y una pantalla que miente sobre
-    // si se actualiza es peor que una que no se actualiza.
+    // The sentence used to be a fixed claim; with auto-refresh it would be false, and a screen that lies
+    // about whether it refreshes is worse than one that does not refresh.
     await page.locator('[aria-label="Auto refresh"]').click()
-    // El menu de MUI entra con animacion: sin esperar, el clic llega a un elemento que aun se mueve.
+    // The MUI menu animates in: without waiting, the click lands on an element that is still moving.
     await page.waitForTimeout(500)
     await page.getByRole('option', { name: 'Every 5s' }).click()
     await expect(page.getByText(/refreshing every 5s while this tab is open/)).toBeVisible()
     await expect(page.getByText(/it does not refresh on its own/)).toHaveCount(0)
 
-    // y se deja como estaba, que los demas casos cuentan con el modo manual
+    // and it is left as it was, since the other cases rely on manual mode
     await page.locator('[aria-label="Auto refresh"]').click()
-    // El menu de MUI entra con animacion: sin esperar, el clic llega a un elemento que aun se mueve.
+    // The MUI menu animates in: without waiting, the click lands on an element that is still moving.
     await page.waitForTimeout(500)
     await page.getByRole('option', { name: 'Manual' }).click()
     await expect(page.getByText(/it does not refresh on its own/)).toBeVisible()
@@ -156,7 +156,7 @@ test('la columna de entregas distingue un numero de "no lo dice"', async () => {
 test('refrescar trae una foto nueva', async () => {
     const antes = await page.getByText(/Snapshot taken at/).innerText()
     await page.locator('button[aria-label="Take a new snapshot"]').click()
-    // La hora se pinta con segundos, asi que hay que dejar pasar uno para que el texto cambie.
+    // The time is drawn with seconds, so one has to pass for the text to change.
     await page.waitForTimeout(1500)
     await page.locator('button[aria-label="Take a new snapshot"]').click()
     await expect(async () => {

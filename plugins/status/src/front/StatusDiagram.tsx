@@ -16,7 +16,7 @@ import { CHANNEL_NODE_PREFIX, channelsOf, consumerNodeId, elkGraphOf, layerOf } 
     añaden un byte al bundle de este plugin.
 */
 
-/** Los colores del estado, alineados con los chips de la tabla para que no haya dos lenguajes. */
+/** The state colours, aligned with the table's chips so there are not two languages. */
 const COLOR: Record<EComponentHealth, string> = {
     [EComponentHealth.ACTIVE]: '#2e7d32',
     [EComponentHealth.IDLE]: '#616161',
@@ -33,11 +33,11 @@ interface IPosicion {
 }
 
 /**
- * Coloca el grafo con elk, que el core sirve con carga diferida (~1,4 MB en su propio chunk): quien no
- * abra esta vista no lo descarga nunca.
+ * Lays the graph out with elk, which the core serves lazily (~1.4 MB in its own chunk): whoever never
+ * opens this view never downloads it.
  *
- * Si falla —no carga, o el grafo es raro— se cae a dos columnas. Un diagrama mal colocado sigue diciendo
- * quién consume a quién; una pantalla en blanco, no.
+ * If it fails — it does not load, or the graph is odd — it falls back to two columns. A badly laid out
+ * diagram still says who consumes whom; a blank screen does not.
  */
 const colocar = async (nodos: Node[], aristas: Edge[]): Promise<Record<string, IPosicion>> => {
     const destinos = new Set(aristas.map(a => a.target))
@@ -77,11 +77,11 @@ const colocar = async (nodos: Node[], aristas: Edge[]): Promise<Record<string, I
 interface IDiagramProps {
     inventory: IStatusInventory
     /**
-     * Componentes cuyo contador de entregas CAMBIO respecto al refresco anterior. Quien no esta aqui
-     * es que no ha movido nada, o que no se puede saber.
+     * Components whose delivery counter CHANGED since the previous refresh. Whoever is not here has
+     * moved nothing, or cannot be known.
      */
     active: Set<string>
-    /** Segundos entre refrescos; 0 = manual. Marca cuánto dura el movimiento de las líneas vivas. */
+    /** Seconds between refreshes; 0 = manual. It sets how long the live lines keep moving. */
     autoRefresh: number
 }
 
@@ -90,7 +90,7 @@ interface INodoPintado {
     nodo: Node
 }
 
-/** Velocidad de arranque de la línea viva, la misma que la animación de serie de React Flow (10 px en 0,5 s). */
+/** Starting speed of a live line, the same as React Flow's stock animation (10 px in 0.5 s). */
 const VELOCIDAD_INICIAL = 20
 
 const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh }) => {
@@ -103,7 +103,7 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
     const vueltas = React.useRef({ inventario: inventory, n: 0 })
     if (vueltas.current.inventario !== inventory) vueltas.current = { inventario: inventory, n: vueltas.current.n + 1 }
     const frenada = `statusFrenada${vueltas.current.n % 2}`
-    // Último objeto entregado a React Flow por cada nodo, con la firma de lo que pinta (ver 'colocados').
+    // The last object handed to React Flow per node, with the signature of what it draws (see 'colocados').
     const nodosPintados = React.useRef(new Map<string, INodoPintado>())
     const [posiciones, setPosiciones] = React.useState<Record<string, IPosicion> | undefined>(undefined)
     /*
@@ -133,7 +133,7 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
         const productores = inventory.components.filter(c => c.kind === EComponentKind.PROVIDER || c.kind === EComponentKind.PLUVIDER)
         const idsProductores = new Set(productores.map(p => p.id))
 
-        // Los canales no salen en el inventario: se deducen de las aristas, que es donde aparecen.
+        // Channels do not appear in the inventory: they are derived from the edges, where they do appear.
         // A consumer that is a provider is not a channel: its line ends on the provider's own node.
         const canales = channelsOf(inventory.edges)
 
@@ -170,8 +170,8 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                     'colocados'), un contador que variaba entre fotos hacía parpadear nodos idénticos.
                 */
                 data: { label: p.displayName, esProductor: true },
-                // Con el grafo en vertical, la arista tiene que salir por ABAJO y entrar por ARRIBA; si
-                // no, React Flow las saca por los lados y los cables dan un rodeo absurdo.
+                // With the graph laid out vertically, an edge has to leave from the BOTTOM and enter at
+                // the TOP; otherwise React Flow takes them out sideways and the cables detour absurdly.
                 sourcePosition: Position.Bottom,
                 targetPosition: Position.Top,
                 style: {
@@ -239,7 +239,7 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                 */
                 const punta = 16 / ancho
                 return {
-                    // Mismo realce que el mapa de Iter: mas grosor, sombra y por delante de las demás.
+                    // The same highlight as Iter's map: thicker, a glow, and in front of the rest.
                     style: tocaAlSeleccionado
                         ? { stroke: color, strokeWidth: ancho, filter: `drop-shadow(0 0 3px ${color})`, opacity: 1 }
                         : { stroke: color, strokeWidth: ancho, opacity: seleccionado ? 0.2 : 1 },
@@ -252,12 +252,12 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
             // Both ends must be drawn: a channel node always is, a provider consumer only if it is installed.
             .filter(e => idsProductores.has(e.source) && (e.target.startsWith(CHANNEL_NODE_PREFIX) || idsProductores.has(e.target)))
 
-        // Aristas cuyo productor ya no está en el inventario: se descartan, pero se cuentan para decirlo.
+        // Edges whose producer is no longer in the inventory: discarded, but counted so it can be said.
         const canalesSueltos = inventory.edges.length - aristas.length
 
         return { nodos, aristas, canalesSueltos }
-        // 'active' entra en las dependencias: si no, el grafo se quedaria con el ultimo reparto de
-        // animaciones y las lineas no se apagarian nunca.
+        // 'active' goes into the dependencies: otherwise the graph would keep the last set of animations
+        // and the lines would never go quiet.
     }, [inventory, active, seleccionado, colores.fondoNodo, colores.fondoCanal, colores.texto, colores.bordeCanal])
 
     /*
@@ -399,8 +399,8 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                     connectOnClick={false}
                     deleteKeyCode={null}
                     onNodeClick={(_e, nodo) => setSeleccionado(nodo.id)}
-                    // Clic en el fondo = quitar la selección. Sin esto no habría forma de volver a
-                    // verlo todo sin cerrar la pestaña.
+                    // Clicking the background = clear the selection. Without this there would be no way
+                    // to see everything again short of closing the tab.
                     onPaneClick={() => setSeleccionado(undefined)}
                 >
                     <Background />

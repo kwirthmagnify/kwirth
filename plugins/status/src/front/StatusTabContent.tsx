@@ -16,8 +16,8 @@ import { StatusDiagram } from './StatusDiagram'
 */
 const HEALTH_LABEL: Record<EComponentHealth, { label: string, color: 'success' | 'warning' | 'error' | 'default' }> = {
     [EComponentHealth.ACTIVE]: { label: 'Active', color: 'success' },
-    // Ocioso NO es un error, es información: funciona, pero no le sirve a nadie. De ahí 'default' y no
-    // 'warning' — quien mire tiene que poder distinguir "hay que arreglar esto" de "esto sobra".
+    // Idle is NOT an error, it is information: it works, but it is of use to nobody. Hence 'default' and
+    // not 'warning' — whoever looks must be able to tell "this needs fixing" from "this is superfluous".
     [EComponentHealth.IDLE]: { label: 'Idle', color: 'default' },
     [EComponentHealth.INSTANTIATED]: { label: 'Running', color: 'success' },
     [EComponentHealth.NOT_INSTANTIATED]: { label: 'Not started', color: 'warning' },

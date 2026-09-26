@@ -14,10 +14,10 @@ import { SvgIcon, SvgIconProps } from '@mui/material'
 */
 
 /**
- * Una pantalla con un latido dentro: el estado de Kwirth mirado desde fuera.
+ * A screen with a heartbeat inside: Kwirth's state seen from outside.
  *
- * Se dibuja con trazo y no con relleno a propósito — el marco tiene que leerse como un contorno, y a
- * 20 px una silueta maciza no distingue el pulso del borde.
+ * It is drawn with a stroke and not a fill on purpose — the frame has to read as an outline, and at
+ * 20 px a solid silhouette does not tell the pulse apart from the border.
  */
 export const StatusIcon = (props: SvgIconProps) => (
     <SvgIcon {...props} viewBox='0 0 24 24'>

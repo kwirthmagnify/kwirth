@@ -10,32 +10,32 @@ import { IStatusComponent, IStatusInventory } from '../common/StatusTypes'
 */
 export interface IStatusData {
     /**
-     * Tabla o grafo. Vive aqui y no en el componente porque al cambiar de pestaña este se desmonta: en
-     * un useState, volver al tab te devolvia siempre a la tabla aunque estuvieras mirando el grafo.
+     * Table or graph. It lives here and not in the component because switching tabs unmounts it: with a
+     * useState, coming back to the tab always returned you to the table even if you were on the graph.
      */
     view: 'table' | 'graph'
-    /** Lo tecleado en el filtro, por el mismo motivo. */
+    /** What was typed into the filter, for the same reason. */
     filter: string
     /**
-     * Cada cuantos SEGUNDOS pedir una foto nueva. 0 = solo a mano, y es el valor por defecto.
+     * How many SECONDS between asking for a new snapshot. 0 = manual only, and it is the default.
      *
-     * Vive aqui para sobrevivir al cambio de pestaña, como los demas. Que arranque en 0 no es timidez:
-     * el producto es "echar un ojo", y quien quiera vigilar lo enciende sabiendo que lo enciende.
+     * It lives here to survive a tab switch, like the rest. Starting at 0 is not timidity: the product
+     * is "having a look", and whoever wants to watch turns it on knowing they are turning it on.
      */
     autoRefresh: number
     inventory?: IStatusInventory
     /**
-     * La foto anterior, y solo ella.
+     * The previous snapshot, and only that one.
      *
-     * Con dos fotos se puede dar una tasa —entregas por segundo entre una y otra—, que es lo que de
-     * verdad dice si algo se mueve: un acumulado de siete millones no distingue un provider a tope de
-     * uno que estuvo a tope hace tres días. Guardar MÁS de una sería empezar una serie temporal, que
-     * está explícitamente fuera del producto.
+     * With two snapshots a rate can be given — deliveries per second between one and the other — which
+     * is what really says whether something is moving: a running total of seven million does not tell a
+     * provider at full tilt from one that was at full tilt three days ago. Keeping MORE than one would
+     * be starting a time series, which is explicitly outside the product.
      */
     previous?: IStatusInventory
-    /** Señales que hay que enseñar como texto: errores del canal, sobre todo. */
+    /** Signals to be shown as text: channel errors, above all. */
     signals: string[]
-    /** El core aceptó la configuración de la instancia (respuesta al start). */
+    /** The core accepted the instance's configuration (the reply to the start). */
     configAccepted: boolean
     started: boolean
 }

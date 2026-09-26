@@ -1,6 +1,7 @@
-// Los consumidores que el core no intermedió. Es el numero que decide si el grafo puede presentarse
-// como completo o tiene que avisar de que le faltan piezas, asi que lo importante aqui es que NO
-// invente: ni cuente huecos como ceros, ni convierta un desfase al reves en un anonimo.
+// The consumers the core did not intermediate. It is the number that decides whether the graph can
+// present itself as complete or has to warn that pieces are missing, so what matters here is that it
+// does NOT make things up: neither counting gaps as zeros, nor turning a reversed mismatch into an
+// anonymous consumer.
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -44,7 +45,7 @@ test('un componente sin knownConsumers tampoco suma', () => {
 })
 
 test('el desfase al reves no produce anonimos negativos', () => {
-    // El core registro una arista que el provider ya no cuenta: una baja a medio aplicar, no un anonimo.
+    // The core recorded an edge the provider no longer counts: a half-applied removal, not an anonymous one.
     const componentes = [
         componente('trivy', { subscribers: 1, knownConsumers: 3 }),
         componente('events', { subscribers: 2, knownConsumers: 1 })

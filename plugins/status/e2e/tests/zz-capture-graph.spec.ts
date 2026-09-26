@@ -29,9 +29,9 @@ test('captura del grafo', async ({ browser }) => {
 
     await page.locator('button[aria-label="Graph view"]').click()
     await expect(page.locator('.react-flow__node').first()).toBeVisible({ timeout: 30000 })
-    // El layout es asincrono y hace un fitView despues: se le deja acomodarse antes de disparar.
+    // The layout is asynchronous and does a fitView afterwards: it is left to settle before shooting.
     await page.waitForTimeout(2500)
-    // Y se aparta el raton: si se queda sobre el boton, su tooltip sale en la imagen de la guia.
+    // And the mouse is moved away: left over the button, its tooltip shows up in the guide.s image.
     await page.mouse.move(700, 620)
     await page.waitForTimeout(800)
 

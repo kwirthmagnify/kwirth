@@ -18,14 +18,14 @@ interface IEnviado {
     mensajes: IStatusMessageResponse[]
 }
 
-/** Un socket de mentira que solo apunta lo que se le manda. */
+/** A fake socket that only records what is sent to it. */
 const socketFalso = (enviado: IEnviado) => ({
     send: (raw: string) => { enviado.mensajes.push(JSON.parse(raw)) }
 }) as unknown as WebSocket
 
 const configFalsa = (instance: string) => ({ instance }) as never
 
-/** Arranca una instancia contra el clusterInfo que se le dé y devuelve el último inventario enviado. */
+/** Starts an instance against the given clusterInfo and returns the last inventory that was sent. */
 const inventarioDe = async (clusterInfo: unknown) => {
     const enviado: IEnviado = { mensajes: [] }
     const canal = new StatusChannel(clusterInfo as never, {} as never)
@@ -96,14 +96,14 @@ test('🔴 un provider que revienta al preguntarle no tumba la pantalla', async 
 })
 
 test('y si devuelve una basura en vez de un número, tampoco se la cree', async () => {
-    // El contrato dice 'subscribers: number'; TypeScript no vigila a un provider ya compilado.
+    // The contract says 'subscribers: number'; TypeScript does not police an already compiled provider.
     const inv = await inventarioDe({ providers: [{ id: 'raro', started: true, getStats: () => ({ subscribers: 'muchos' }) }] })
     assert.equal(inv.components[0].subscribers, undefined)
     assert.equal(inv.components[0].health, EComponentHealth.INSTANTIATED)
 })
 
 test('un provider PARADO no se marca ocioso aunque diga que tiene cero', async () => {
-    // El orden importa: 'no arrancado' manda sobre 'sin consumidores', porque es la causa, no el efecto.
+    // Order matters: 'not started' beats 'no consumers', because it is the cause, not the effect.
     const inv = await inventarioDe({ providers: [{ id: 'azure', started: false, getStats: () => ({ subscribers: 0 }) }] })
     assert.equal(inv.components[0].health, EComponentHealth.NOT_INSTANTIATED)
 })
@@ -112,7 +112,7 @@ test('un provider que el core nunca arrancó dice POR QUÉ', async () => {
     const inv = await inventarioDe({ providers: [{ id: 'trivy', started: false }] })
     const c = inv.components[0]
     assert.equal(c.health, EComponentHealth.NOT_INSTANTIATED)
-    // El motivo es la columna que justifica la pantalla: un 'not running' a secas ya existe hoy.
+    // The reason is the column that justifies the screen: a bare 'not running' already exists today.
     assert.match(c.reason ?? '', /declares this provider/i)
 })
 
@@ -192,7 +192,7 @@ test('🔴 de los webhooks no sale la URL por ninguna parte', async () => {
     assert.ok(!JSON.stringify(inv).includes('SECRETO'), 'un token ha acabado en el inventario')
 })
 
-// ── el caudal (S4) ─────────────────────────────────────────────────────────────
+// ── throughput (S4) ────────────────────────────────────────────────────────────
 
 test('un provider que cuenta entregas las publica en el inventario', async () => {
     const inv = await inventarioDe({
@@ -234,7 +234,7 @@ test('un provider que revienta no deja a los demás sin caudal', async () => {
     assert.equal(inv.components.find(c => c.id === 'bueno')!.events, 42)
 })
 
-// ── el grafo (S3) ──────────────────────────────────────────────────────────────
+// ── the graph (S3) ─────────────────────────────────────────────────────────────
 
 test('el inventario trae las aristas que el core conoce', async () => {
     const inv = await inventarioDe({
@@ -246,7 +246,7 @@ test('el inventario trae las aristas que el core conoce', async () => {
     })
     assert.equal(inv.edges.length, 2)
     assert.deepEqual(inv.edges.map(e => e.consumerId).sort(), ['agora', 'montag'])
-    // y el provider dice cuántos de sus consumidores están identificados
+    // and the provider says how many of its consumers are identified
     assert.equal(inv.components[0].subscribers, 2)
     assert.equal(inv.components[0].knownConsumers, 2)
 })
@@ -293,7 +293,7 @@ test('🔴 si el provider dice más consumidores de los que el core conoce, se n
 })
 
 test('un pluvider con consumidores sale ACTIVO, y sin ellos OCIOSO', async () => {
-    // Un pluvider no implementa IProvider, así que no hay getStats: el grafo es su ÚNICA fuente.
+    // A pluvider does not implement IProvider, so there is no getStats: the graph is its ONLY source.
     const conConsumidor = await inventarioDe({
         pluviders: new Map([['plugin:agora', {}]]),
         getSubscriptions: () => [{ providerId: 'plugin:agora', consumerId: 'montag', since: 1 }]
@@ -307,7 +307,7 @@ test('un pluvider con consumidores sale ACTIVO, y sin ellos OCIOSO', async () =>
 })
 
 test('un core que no sabe de aristas no rompe la pantalla', async () => {
-    // getSubscriptions es opcional: un core anterior a S3 no lo tiene y el inventario sigue saliendo.
+    // getSubscriptions is optional: a core older than S3 does not have it and the inventory still comes out.
     const inv = await inventarioDe({ providers: [{ id: 'events', started: true }] })
     assert.deepEqual(inv.edges, [])
     assert.equal(inv.components.length, 1)
@@ -338,7 +338,7 @@ test('refrescar manda una foto NUEVA, y solo si la instancia existe', async () =
     assert.equal(enviado.mensajes.length, 2, 'el refresco no mandó una foto nueva')
     assert.ok(enviado.mensajes[1].inventory!.takenAt >= enviado.mensajes[0].inventory!.takenAt)
 
-    // Una instancia que no es de este socket se rechaza con una señal, no con otra foto.
+    // An instance that does not belong to this socket is rejected with a signal, not another snapshot.
     await canal.processCommand(ws, { instance: 'no-existe', action: 'command', flow: 'request' } as never)
     assert.equal(enviado.mensajes.length, 3)
     assert.equal(enviado.mensajes[2].payloadType, undefined, 'una instancia inexistente no puede recibir inventario')

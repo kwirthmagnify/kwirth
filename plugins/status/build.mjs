@@ -20,11 +20,11 @@ const kwirthGlobalsPlugin = {
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
             '@kwirthmagnify/kwirth-common-front/icons': 'window.__kwirth__.MUI.icons',
-            // El diagrama: React Flow lo publica el core, y su CSS ya lo carga el front del core en
-            // index.tsx, asi que aqui no hay que importar ningun estilo.
+            // The diagram: the core publishes React Flow, and the core's front end already loads its
+            // CSS in index.tsx, so no style needs importing here.
             '@xyflow/react': 'window.__kwirth__.reactFlow',
         }
-        // Sin namespace en el filtro, para que intercepte tambien lo que llegue desde node_modules.
+        // No namespace in the filter, so it also intercepts whatever arrives from node_modules.
         for (const pkg of Object.keys(globals)) {
             build.onResolve({ filter: new RegExp(`^${pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }, () => ({
                 path: pkg,
@@ -55,7 +55,7 @@ const kwirthBackGlobalsPlugin = {
     },
 }
 
-// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
+// esbuild erases the types without looking at them: without this step the build would pass broken TS.
 const TSC = 'node_modules/typescript/lib/tsc.js'
 if (fs.existsSync(TSC)) {
     try {

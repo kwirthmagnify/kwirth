@@ -11,11 +11,11 @@ import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, ISt
 */
 
 /**
- * Lo que este canal necesita de ClusterInfo, y solo eso.
+ * What this channel needs from ClusterInfo, and nothing else.
  *
- * Se declara aquí en vez de usar 'any' porque es lo único que hace este plugin: leer estos cuatro
- * registros. El tipo real vive en el core y no se publica a las extensiones, así que la alternativa
- * honesta a una vista mínima sería un 'any' que no dice nada y no avisa de nada.
+ * It is declared here instead of using 'any' because this is all the plugin does: read these four
+ * registries. The real type lives in the core and is not published to extensions, so the honest
+ * alternative to a minimal view would be an 'any' that says nothing and warns about nothing.
  */
 interface IProviderLike {
     id: string
@@ -24,8 +24,8 @@ interface IProviderLike {
     providesRouter?: boolean
     configRouter?: unknown
     /**
-     * OPCIONAL en el contrato (kwirth-common-back >= 0.5.50) y opcional de verdad: la mayoría de los
-     * providers publicados no lo tienen. Quien no lo implemente sale como "no informa".
+     * OPTIONAL in the contract (kwirth-common-back >= 0.5.50) and genuinely optional: most published
+     * providers do not have it. Whoever does not implement it shows up as "not reported".
      */
     getStats?(): { subscribers: number, events?: number }
 }
@@ -68,18 +68,18 @@ interface IClusterInfoView {
     senders?: { listSenders(): IListing[] }
     webhooks?: { listWebhooks(): IListing[] }
     /**
-     * OPCIONAL porque un core anterior a este stream no lo tiene: sin él, el inventario sigue saliendo y
-     * lo único que falta es el grafo. Mejor sin diagrama que con una pantalla rota.
+     * OPTIONAL because a core older than this stream does not have it: without it the inventory still
+     * comes out and the only thing missing is the graph. Better without a diagram than with a broken screen.
      */
     getSubscriptions?(): ISubscriptionLike[]
 }
 
 /**
- * Lo que un provider dice de si mismo, o undefined si no lo dice o si revienta al preguntarle.
+ * What a provider says about itself, or undefined when it does not say or blows up on being asked.
  *
- * Es codigo de terceros: si lanza, esta pantalla tiene que seguir dando el resto del inventario. Y si
- * devuelve algo que no cuadra con el contrato, se descarta en vez de creerselo — TypeScript no vigila a
- * un provider ya compilado.
+ * It is third-party code: if it throws, this screen must still deliver the rest of the inventory. And if
+ * it returns something that does not match the contract, it is discarded rather than believed —
+ * TypeScript does not police an already compiled provider.
  */
 const statsOf = (p: { getStats?(): { subscribers: number, events?: number } }): { subscribers?: number, events?: number } | undefined => {
     if (!p.getStats) return undefined
@@ -219,7 +219,7 @@ class StatusChannel implements IChannel {
         return false
     }
 
-    // ---- el inventario -------------------------------------------------------
+    // ---- the inventory -------------------------------------------------------
 
     /*
         Estado de un provider con lo que el core sabe HOY.
@@ -229,10 +229,10 @@ class StatusChannel implements IChannel {
         peor que no darlo — un administrador que lea "ocioso" va a ir a desinstalar algo.
     */
     /**
-     * Cuántos consumidores tiene, o undefined si no lo dice.
+     * How many consumers it has, or undefined when it does not say.
      *
-     * Se protege con try/catch porque esto es código de una extensión de terceros: un provider que
-     * reviente al preguntarle no puede llevarse por delante la pantalla entera. Si falla, no informa.
+     * It is guarded with try/catch because this is third-party extension code: a provider that blows up
+     * on being asked must not take the whole screen down with it. If it fails, it does not report.
      */
     private subscribersOf = (p: IProviderLike): number | undefined => statsOf(p)?.subscribers
 
@@ -260,12 +260,12 @@ class StatusChannel implements IChannel {
             }
             return {
                 health: EComponentHealth.NOT_INSTANTIATED,
-                // El core solo instancia los providers que algún canal declara en sus requirements.
+                // The core only instantiates the providers some channel declares in its requirements.
                 reason: 'No installed channel declares this provider, so the core never started it'
             }
         }
-        // Corriendo, pero con su router de configuración sin montar: los routers se enganchan SOLO al
-        // arrancar el servidor, así que su configuración responderá 404 hasta que se reinicie.
+        // Running, but with its configuration router unmounted: routers are hooked in ONLY at server
+        // startup, so its configuration will answer 404 until it is restarted.
         if (p.configRouter && p.configRouterStarted !== true) {
             return {
                 health: EComponentHealth.PENDING_RESTART,
@@ -370,8 +370,8 @@ class StatusChannel implements IChannel {
     }
 
     /**
-     * Las aristas que el core conoce. Protegido igual que getStats: si el core es anterior a esto o
-     * revienta, se devuelve vacío y la pantalla enseña el inventario sin grafo.
+     * The edges the core knows about. Guarded just like getStats: if the core predates this or blows up,
+     * an empty list is returned and the screen shows the inventory without a graph.
      */
     private subscriptionsOf = (): IStatusEdge[] => {
         if (!this.clusterInfo.getSubscriptions) return []
