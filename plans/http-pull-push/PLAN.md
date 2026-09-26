@@ -175,3 +175,7 @@ the generic dialog is out of the question.
   failures. Deliberate and documented; revisit if a consumer would rather treat a 5xx as a failed pull.
 - **No `Test` from the connection list**, only from the form being edited. If it turns out to be useful,
   a per-row test would need the poller's own state to avoid overlapping a running cycle.
+- **Browser autofill on credential fields.** `SecretField` sets no `autocomplete`, so a browser can fill in
+  the saved Kwirth login next to a user field and Save would store it as the connection's credentials. Found
+  on another provider that copied this field: the fix is `autocomplete="new-password"` on the secret (`off`
+  is ignored on password inputs) and `off` on the user field, asserted in the e2e.

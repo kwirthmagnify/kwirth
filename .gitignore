@@ -59,6 +59,7 @@ kwirth-bundled.json
 /providers/sugarless/
 /iria/
 /providers/service-flow/
+/providers/flight-status/
 
 # AI toolsets de pago: mismo criterio que el resto de artefactos de pago — repo propio, fuera del publico
 /aitoolsets/k8s-ops/

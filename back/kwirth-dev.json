@@ -14,7 +14,8 @@
         "fluentbit": "../providers/fluentbit/dist",
         "sugarless": "../providers/sugarless/dist",
         "aws": "../providers/aws/dist",
-        "cloud-config": "../providers/cloud-config/dist"
+        "cloud-config": "../providers/cloud-config/dist",
+        "flight-status": "../providers/flight-status/dist"
     },
     "senders": {
         "file": "../senders/file/dist",
