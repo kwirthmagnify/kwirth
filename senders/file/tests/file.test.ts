@@ -74,7 +74,7 @@ test('sin pod, el origen se identifica por su servicio', async () => {
     const ruta = tmp()
     const sender = await crea({ name: 'c', filePath: ruta, timestamps: false, levels: false, origin: true })
 
-    // un evento de negocio, o log de un servidor sin contenedores
+    // a business event, or the log of a server with no containers
     await sender.sendBatch!('c', [{ body: 'linea', origin: { service: 'facturacion' } }])
 
     assert.deepEqual(lee(ruta), ['[facturacion] linea'])
@@ -99,7 +99,7 @@ test('y una de un cluster sigue siendo namespace/pod/container', async () => {
     const ruta = tmp()
     const sender = await crea({ name: 'c', filePath: ruta, timestamps: false, levels: false, origin: true })
 
-    // el servicio NO se cuela aqui: dentro de un cluster el container ya dice que es
+    // the service does NOT sneak in here: inside a cluster the container already says what it is
     await sender.sendBatch!('c', [{ body: 'linea', origin: { namespace: 'produccion', pod: 'api-7', container: 'api', service: 'pagos' } }])
 
     assert.deepEqual(lee(ruta), ['[produccion/api-7/api] linea'])
@@ -121,7 +121,7 @@ test('la rotacion cuenta el lote ENTERO, no lo deja pasar por ser una sola escri
     await sender.sendBatch!('c', [{ body: '1' }, { body: '2' }, { body: '3' }])
     await sender.sendBatch!('c', [{ body: '4' }, { body: '5' }, { body: '6' }])
 
-    // el segundo lote cruza el limite: rota ANTES de escribirlo, y el fichero vivo se queda con el
+    // the second batch crosses the limit: it rotates BEFORE writing it, and the live file keeps it
     assert.deepEqual(lee(ruta), ['4', '5', '6'])
     const rotados = fs.readdirSync(path.dirname(ruta)).filter(f => f.includes('.bak'))
     assert.equal(rotados.length, 1, 'y lo anterior no se pierde: queda en el .bak')
@@ -149,7 +149,7 @@ test('send y sendBatch comparten el contador de lineas', async () => {
 
     await sender.send('c', { body: 'a' })
     await sender.send('c', { body: 'b' })
-    // este lote cruza el limite contando tambien las dos sueltas anteriores
+    // this batch crosses the limit counting the two loose ones before it as well
     await sender.sendBatch!('c', [{ body: 'c' }, { body: 'd' }, { body: 'e' }])
 
     assert.deepEqual(lee(ruta), ['c', 'd', 'e'])
@@ -159,7 +159,7 @@ test('cada linea lleva SU hora, no la del momento en que se escribio el lote', a
     const ruta = tmp()
     const sender = await crea({ name: 'c', filePath: ruta, timestamps: true, levels: false })
 
-    // dos lineas de momentos distintos, entregadas en el MISMO lote
+    // two lines from different moments, delivered in the SAME batch
     await sender.sendBatch!('c', [
         { body: 'antes', origin: { timestamp: Date.parse('2026-09-23T08:00:00.000Z') } },
         { body: 'despues', origin: { timestamp: Date.parse('2026-09-23T08:00:05.000Z') } }
@@ -181,8 +181,8 @@ test('sin hora propia se usa la de escritura: una linea sin fecha sigue siendo u
 
 test('levels apagado EXPLICITAMENTE no pinta el nivel', async () => {
     const ruta = tmp()
-    // el caso que fallaba: el dialogo omitia la clave al desmarcarla y el sender aplicaba su
-    // defecto (true), asi que el interruptor se veia apagado y el nivel salia igual
+    // the case that failed: the dialog omitted the key when it was unchecked and the sender applied
+    // its default (true), so the switch looked off and the level came out all the same
     const sender = await crea({ name: 'c', filePath: ruta, timestamps: false, levels: false })
 
     await sender.sendBatch!('c', [{ body: 'sin nivel', level: 'warn' }])
