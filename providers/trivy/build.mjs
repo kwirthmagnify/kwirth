@@ -22,6 +22,35 @@ else {
 
 fs.mkdirSync('dist', { recursive: true })
 
+/*
+    The common packages come from the global the core publishes; they are not bundled.
+
+    This provider imports createCrdInformer from kwirth-common-back, which is a FUNCTION and not a
+    type, so esbuild resolved the whole package — and inside it sits KubernetesTools, which imports
+    @kubernetes/client-node. The result was a 15 MB back.js carrying the entire Kubernetes client,
+    openid-client and rxjs included, while the core already has it loaded. Importing only TYPES costs
+    nothing (the compiler erases them); one function is enough to drag in the whole barrel.
+
+    ⚠️ This resolves at RUNTIME: an artifact built this way needs a core that publishes
+    'global.__kwirth_back__'. That is already the case for the other providers on this pattern.
+*/
+const kwirthBackGlobalsPlugin = {
+    name: 'kwirth-back-globals',
+    setup(build) {
+        const backGlobals = {
+            '@kwirthmagnify/kwirth-common': 'global.__kwirth_back__.kwirthCommon',
+            '@kwirthmagnify/kwirth-common-back': 'global.__kwirth_back__.kwirthCommonBack',
+        }
+        build.onResolve({ filter: /^@kwirthmagnify\/kwirth-common(-back)?$/ }, (args) => {
+            if (backGlobals[args.path]) return { path: args.path, namespace: 'kwirth-back-globals' }
+        })
+        build.onLoad({ filter: /.*/, namespace: 'kwirth-back-globals' }, (args) => ({
+            contents: 'module.exports = ' + backGlobals[args.path],
+            loader: 'js',
+        }))
+    },
+}
+
 await esbuild.build({
     entryPoints: ['src/index.ts'],
     bundle: true,
@@ -30,6 +59,7 @@ await esbuild.build({
     target: 'node20',
     outfile: 'dist/back.js',
     external: ['express'],
+    plugins: [kwirthBackGlobalsPlugin],
     loader: { '.ts': 'ts' },
     minify: false,
 })
