@@ -1,7 +1,7 @@
 import { ISenderDebugInstanceConfig } from '../common/SenderDebugTypes'
 
 export interface ISenderDebugConfig {
-    /** cuantos envios se guardan en el historial de la pestaña */
+    /** how many sends are kept in the tab.s history */
     maxHistory: number
 }
 

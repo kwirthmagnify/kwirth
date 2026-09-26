@@ -2,9 +2,9 @@ import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClus
 import { ESenderDebugCommand, ESenderDebugKind, ESenderDebugPayload, ISenderDebugCommandMessage, ISenderDebugMessageResponse, ISenderDebugResult, ISenderDebugSendRequest, ISenderDebugSenderInfo } from '../common/SenderDebugTypes'
 
 /**
- * Lo unico que este canal necesita de un sender. Se declara aqui, y no se importa ISender, porque
- * lo que llega es lo que haya instanciado el core: un sender publicado hace meses puede no traer
- * los metodos opcionales, y aqui se comprueban uno a uno antes de llamarlos.
+ * The only thing this channel needs from a sender. It is declared here rather than importing ISender,
+ * because what arrives is whatever the core instantiated: a sender published months ago may not carry
+ * the optional methods, and here they are checked one by one before being called.
  */
 interface ISenderLike {
     readonly id: string
@@ -15,7 +15,7 @@ interface ISenderLike {
     sendBatch?(configName: string, messages: ISenderMessage[]): Promise<ISenderResult | void>
 }
 
-/** Una fila de lo instalado, tal y como la devuelve el manager del core. */
+/** One row of what is installed, exactly as the core's manager returns it. */
 interface ISenderInstalledMeta {
     id: string
     displayName?: string
@@ -24,26 +24,26 @@ interface ISenderInstalledMeta {
 }
 
 /**
- * El registro de senders del core (su SenderManager), tal y como lo ve este canal.
+ * The core's sender registry (its SenderManager), as this channel sees it.
  *
- * Se accede por 'clusterInfo.senders' y NO por 'backChannelObject.senders', que es la via oficial,
- * por el motivo que justifica el plugin entero: SenderManager.send() captura la excepcion del
- * sender, la escribe en el log del core y devuelve undefined — que es lo MISMO que devuelve un
- * envio correcto de un sender de aviso. Por la via oficial, un depurador no puede distinguir
- * entregado de reventado, que es justo lo unico que se viene a ver aqui.
+ * It is reached through 'clusterInfo.senders' and NOT through 'backChannelObject.senders', which is
+ * the official route, for the very reason that justifies the whole plugin: SenderManager.send()
+ * catches the sender's exception, writes it to the core's log and returns undefined — which is the
+ * SAME thing a successful send of a notification sender returns. Through the official route a
+ * debugger cannot tell delivered from blown up, which is precisely the only thing one comes here to see.
  *
- * Con el registro en crudo se obtiene el sender de verdad y se llama a su send() capturando aqui la
- * excepcion. Mismo precedente que provider-debug con 'clusterInfo.providers'.
+ * With the raw registry the real sender is obtained and its send() is called, catching the exception
+ * here. The same precedent as provider-debug with 'clusterInfo.providers'.
  */
 interface ISenderRegistry {
     getSender(id: string): ISenderLike | undefined
-    /** solo los YA instanciados: getSender() es perezoso, asi que esto no es la lista de instalados */
+    /** only the ALREADY instantiated ones: getSender() is lazy, so this is not the list of installed ones */
     listSenders(): Array<{ id: string, configNames: string[] }>
-    /** los instalados, con su version y sus configuraciones. Es lo que sirve GET /core/senders */
+    /** the installed ones, with their version and configurations. It is what GET /core/senders serves */
     listInstalled?(): Promise<ISenderInstalledMeta[]>
 }
 
-/** Lo que este canal usa del clusterInfo que le inyecta el core. */
+/** What this channel uses from the clusterInfo the core injects into it. */
 interface IClusterInfoLike {
     senders?: ISenderRegistry
 }
@@ -59,7 +59,7 @@ interface IInstance {
     accessKey: AccessKey
 }
 
-/** Tope de mensajes por lote. Un depurador no es un generador de carga. */
+/** Ceiling on messages per batch. A debugger is not a load generator. */
 const MAX_BATCH = 100
 
 class SenderDebugChannel implements IChannel {
@@ -103,7 +103,7 @@ class SenderDebugChannel implements IChannel {
 
     websocketRequest(_newWebSocket: WebSocket, _instanceId: string, _instanceConfig: IInstanceConfig): void {}
 
-    // ---- registro: los canales cluster llegan aqui via addObject('*all') ----
+    // ---- registration: cluster channels arrive here through addObject('*all') ----
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, _ns: string, _pod: string, _container: string): Promise<boolean> => {
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
@@ -121,7 +121,7 @@ class SenderDebugChannel implements IChannel {
         if (!this.registry()) {
             this.sendSignalMessage(socket.ws, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, 'Sender registry is not available on this Kwirth: senders cannot be listed nor invoked')
         }
-        // el catalogo va siempre al arrancar: es lo que puebla los dos desplegables de la pestaña
+        // the catalogue always goes out on start: it is what populates the tab's two dropdowns
         await this.sendSenders(socket, instance)
         return true
     }
@@ -218,13 +218,13 @@ class SenderDebugChannel implements IChannel {
     private registry = (): ISenderRegistry | undefined => this.clusterInfo?.senders
 
     /**
-     * El catalogo: lo INSTALADO (con su version y sus configuraciones) marcado con quien esta ya
-     * instanciado.
+     * The catalogue: what is INSTALLED (with its version and configurations) flagged with who is already
+     * instantiated.
      *
-     * Son dos preguntas distintas y por eso hay dos fuentes. listSenders() solo ve los senders ya
-     * instanciados, y getSender() es perezoso: un sender recien configurado al que nadie ha enviado
-     * todavia no aparece ahi — que es justo el caso de quien viene a probarlo. listInstalled() es la
-     * lista de verdad (la misma que sirve GET /core/senders).
+     * They are two different questions and that is why there are two sources. listSenders() only sees
+     * the already instantiated senders, and getSender() is lazy: a freshly configured sender nobody has
+     * sent anything to yet does not appear there — which is exactly the case of whoever comes to test
+     * it. listInstalled() is the real list (the same one GET /core/senders serves).
      */
     private buildSenders = async (): Promise<ISenderDebugSenderInfo[]> => {
         const registry = this.registry()
@@ -247,7 +247,7 @@ class SenderDebugChannel implements IChannel {
                 this.backChannelObject.logWarning?.(`Sender debug could not list installed senders: ${String(err)}`)
             }
         }
-        // Sin listInstalled (un core anterior) queda lo instanciado, que es poco pero es cierto.
+        // Without listInstalled (an older core) what is left is the instantiated ones: little, but true.
         if (installed.length === 0) installed = Array.from(live.entries()).map(([id, configNames]) => ({ id, configNames }))
 
         /*
@@ -263,8 +263,8 @@ class SenderDebugChannel implements IChannel {
 
         return Array.from(unique.values()).map(meta => {
             const instantiated = live.has(meta.id)
-            // El sender solo se pide si YA estaba instanciado: pedirlo por getSender() lo crearia y
-            // lo arrancaria, y listar no puede arrancar nada.
+            // The sender is only asked for when it was ALREADY instantiated: asking through getSender()
+            // would create and start it, and listing must not start anything.
             const sender = instantiated ? this.resolve(meta.id) : undefined
             return {
                 id: meta.id,
@@ -278,13 +278,13 @@ class SenderDebugChannel implements IChannel {
         }).sort((a, b) => a.id.localeCompare(b.id))
     }
 
-    /** senderType es opcional en ISender: no declararlo no es un error, es lo normal. */
+    /** senderType is optional on ISender: not declaring it is not an error, it is the norm. */
     private kindOf = (sender: ISenderLike | undefined): ESenderDebugKind => {
         if (!sender || !sender.senderType) return ESenderDebugKind.UNKNOWN
         return sender.senderType === 'filter' ? ESenderDebugKind.FILTER : ESenderDebugKind.OUTPUT
     }
 
-    /** getSender() instancia y arranca el sender si aun no lo estaba, asi que puede reventar. */
+    /** getSender() instantiates and starts the sender when it was not already, so it can blow up. */
     private resolve = (senderId: string): ISenderLike | undefined => {
         try {
             return this.registry()?.getSender(senderId)
@@ -312,9 +312,9 @@ class SenderDebugChannel implements IChannel {
 
     // ---- envio ---------------------------------------------------------------
     /**
-     * Entrega el mensaje y contesta SIEMPRE con un resultado, tanto si salio bien como si no. Que el
-     * fallo suba con su texto es el motivo de existir de este canal: por la via del core se quedaria
-     * en un logError que nadie ve.
+     * Delivers the message and ALWAYS answers with a result, whether it went well or not. That the
+     * failure comes back with its text is this channel's reason to exist: through the core's route it
+     * would end up as a logError nobody sees.
      */
     private executeSend = async (socket: ISocketEntry, instance: IInstance, request: ISenderDebugSendRequest | undefined, batch: boolean): Promise<void> => {
         if (!request) {
@@ -359,8 +359,8 @@ class SenderDebugChannel implements IChannel {
             : [request.message]
 
         try {
-            // Sin sendBatch el core entrega uno a uno, asi que aqui se hace lo mismo y se MARCA: quien
-            // depura tiene que saber si recorrio la ruta de lote del sender o la emulacion.
+            // Without sendBatch the core delivers one by one, so the same is done here and FLAGGED:
+            // whoever debugs has to know whether the sender's batch path or the emulation was taken.
             const emulated = batch && typeof sender.sendBatch !== 'function'
             let result: ISenderResult | void = undefined
             if (batch && !emulated) result = await sender.sendBatch!(request.configName, messages)
@@ -381,8 +381,9 @@ class SenderDebugChannel implements IChannel {
     }
 
     /**
-     * En un lote todos los mensajes serian identicos, y entonces no se sabe cual llego ni si llegaron
-     * todos. Se numeran en el asunto y en el origen, que es lo que hace util mirar el destino.
+     * In a batch every message would be identical, and then there is no telling which one arrived or
+     * whether they all did. They are numbered in the subject and in the origin, which is what makes
+     * looking at the destination useful.
      */
     private numbered = (message: ISenderMessage, index: number, total: number): ISenderMessage => ({
         ...message,

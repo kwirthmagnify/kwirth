@@ -6,18 +6,18 @@ export const CLUSTER = process.env.SENDER_DEBUG_E2E_CLUSTER ?? 'inCluster'
 export const CHANNEL = 'sender-debug'
 
 /**
- * ⛔ REGLA DE ESTE E2E: no se envía NADA por un sender que salga a la red.
+ * ⛔ THE RULE OF THIS E2E: NOTHING is sent through a sender that reaches the network.
  *
- * Un envío de este canal es un envío real — un correo sale, un ticket se crea, una sala de Teams
- * recibe un mensaje — y un e2e que los dispare manda avisos de verdad a personas de verdad. El único
- * sender que se toca aquí es 'console', que solo escribe en el log del core.
+ * A send from this channel is a real send — an email goes out, a ticket is created, a Teams room
+ * receives a message — and an e2e that fires them sends real alerts to real people. The only sender
+ * touched here is 'console', which only writes to the core.s log.
  */
 export const SAFE_SENDER = 'console'
 
 /**
- * Login. El dev server del front recompila y puede tardar en pintar, así que se espera a que
- * aparezca el formulario o el selector de recursos con margen amplio, y tras enviar se espera al
- * selector en vez de a un timeout fijo.
+ * Login. The front end.s dev server recompiles and can take a while to draw, so it waits generously
+ * for either the form or the resource selector to appear, and after submitting it waits for the
+ * selector rather than a fixed timeout.
  */
 export async function login(page: Page, user = USER, pass = PASS): Promise<void> {
     await page.goto('/')
@@ -35,7 +35,7 @@ export async function login(page: Page, user = USER, pass = PASS): Promise<void>
     await expect(combo).toBeVisible({ timeout: 60000 })
 }
 
-/** Cluster → View=cluster → deja abierto el combo de canales y devuelve la opción sender-debug. */
+/** Cluster → View=cluster → leaves the channel combo open and returns the sender-debug option. */
 export async function openChannelPicker(page: Page): Promise<Locator> {
     await page.getByRole('combobox').first().click()
     await page.getByRole('option', { name: CLUSTER }).click()
@@ -49,9 +49,9 @@ export async function openChannelPicker(page: Page): Promise<Locator> {
 }
 
 /**
- * Abre el menú de la pestaña activa (icono de engranaje).
- * No hace falta limpiar pestañas al terminar: no se persisten entre sesiones de navegador, así
- * que cada test arranca con el workspace del usuario intacto.
+ * Opens the active tab.s menu (the gear icon).
+ * There is no need to clean up tabs afterwards: they are not persisted between browser sessions, so
+ * every test starts with the user.s workspace intact.
  */
 export async function openTabMenu(page: Page): Promise<void> {
     await page.locator('[data-testid="SettingsIcon"]').first().click({ force: true })

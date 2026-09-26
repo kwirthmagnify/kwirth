@@ -1,53 +1,53 @@
 import { ESenderDebugLevel, ISenderDebugResult, ISenderDebugSendRequest, ISenderDebugSenderInfo } from '../common/SenderDebugTypes'
 
 /**
- * Una linea del historial: lo que se PIDIO enviar y lo que contesto el sender.
+ * One row of the history: what was ASKED to be sent and what the sender answered.
  *
- * Las dos mitades viven juntas porque en un banco de pruebas valen lo mismo: saber que contesto el
- * destino no sirve de nada si hay que reconstruir de memoria que se le mando. La peticion ademas no
- * vuelve del back — la tiene el front, que es quien la compuso —, asi que este es el unico sitio
- * donde pueden estar las dos.
+ * The two halves live together because in a test bench they are worth the same: knowing what the
+ * destination answered is useless if what was sent to it has to be reconstructed from memory. Besides,
+ * the request does not come back from the back end — the front end has it, since it composed it — so
+ * this is the only place where both can be.
  */
 export interface ISenderDebugHistoryEntry {
-    /** ausente solo si llegase una respuesta sin su peticion (una sesion anterior, un rearranque) */
+    /** absent only if a reply arrived without its request (an earlier session, a restart) */
     request?: ISenderDebugSendRequest
-    /** ausente mientras el envio esta EN VUELO: la fila ya se ve, y se completa al contestar */
+    /** absent while the send is IN FLIGHT: the row is already visible, and is completed on reply */
     result?: ISenderDebugResult
     /**
-     * El canal se paro con este envio todavia en vuelo, asi que su respuesta ya no va a llegar. Es un
-     * dato del FRONT, no del sender: por eso no se inventa un resultado — no se sabe si llego o no.
+     * The channel was stopped with this send still in flight, so its reply is never going to arrive. It
+     * is a FRONT-end fact, not the sender.s: that is why no result is made up — whether it arrived is unknown.
      */
     abandoned?: boolean
 }
 
 /**
- * El mensaje que se esta componiendo, en crudo (tal y como se teclea). Vive en el data del canal y no
- * en el estado de React porque la pestaña se desmonta al cambiar de pestaña, y perder un cuerpo
- * escrito a mano por ir a mirar otra cosa es exactamente lo que no puede pasar en un banco de pruebas.
+ * The message being composed, raw (exactly as it is typed). It lives in the channel.s data and not in
+ * React state because the tab unmounts when switching tabs, and losing a hand-written body just for
+ * going to look at something else is exactly what must not happen in a test bench.
  */
 export interface ISenderDebugForm {
     senderId: string
     configName: string
     subject: string
     body: string
-    /** destinatarios separados por comas; que signifique cada uno lo decide el sender */
+    /** recipients separated by commas; what each one means is decided by the sender */
     to: string
     level: ESenderDebugLevel
-    /** JSON libre; vacio = sin metadata */
+    /** free-form JSON; empty = no metadata */
     metadata: string
-    /** entregar por sendBatch() en vez de por send() */
+    /** deliver through sendBatch() instead of through send() */
     batch: boolean
     count: number
 }
 
 export interface ISenderDebugData {
-    /** catalogo que manda el back al arrancar la instancia y en cada LIST */
+    /** catalogue the back end sends when the instance starts and on every LIST */
     senders: ISenderDebugSenderInfo[]
-    /** envios de la sesion, el mas reciente primero, recortado a maxHistory */
+    /** sends of the session, most recent first, trimmed to maxHistory */
     history: ISenderDebugHistoryEntry[]
-    /** señales que quedan por mostrar como texto (registro no disponible, instancia perdida...) */
+    /** signals still to be shown as text (registry unavailable, instance lost...) */
     signals: string[]
-    /** el core acepto la configuracion de la instancia (respuesta al start) */
+    /** the core accepted the instance.s configuration (the reply to the start) */
     configAccepted: boolean
     started: boolean
     form: ISenderDebugForm

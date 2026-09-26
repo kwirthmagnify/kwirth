@@ -7,7 +7,7 @@ import { ESenderDebugCommand, ESenderDebugKind, ESenderDebugLevel, ISenderDebugS
 import { ISenderDebugConfig } from './SenderDebugConfig'
 import { ISenderDebugData, ISenderDebugHistoryEntry } from './SenderDebugData'
 
-/** Origen que se estampa en todo lo que sale de aqui, para que el destino sepa de donde vino. */
+/** Origin stamped on everything that leaves here, so the destination knows where it came from. */
 const ORIGIN_SOURCE = 'sender-debug'
 
 export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentProps) => {
@@ -16,11 +16,11 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
     const form = data.form
     const boxRef = useRef<HTMLDivElement | null>(null)
     const [boxTop, setBoxTop] = useState(0)
-    // El canal repinta cuando llega un mensaje del back; escribir en el formulario, limpiar o
-    // desplegar una fila son acciones locales y necesitan su propio disparador de render.
+    // The channel repaints when a message arrives from the back end; typing in the form, clearing or
+    // expanding a row are local actions and need their own render trigger.
     const [, forceRender] = useState(0)
-    // Expansión por REFERENCIA a la entrada, no por índice: el historial crece por arriba y los
-    // índices bailan con cada envío, así que una fila abierta acabaría siendo otra.
+    // Expansion by REFERENCE to the entry, not by index: the history grows from the top and the
+    // indices shift with every send, so an expanded row would end up being a different one.
     const [expanded, setExpanded] = useState<Set<ISenderDebugHistoryEntry>>(new Set())
 
     useEffect(() => {
@@ -29,7 +29,7 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
 
     const refresh = () => forceRender(n => n + 1)
 
-    /** envíos lanzados que todavía no han contestado (y que no se quedaron colgados de un Stop) */
+    /** sends fired that have not answered yet (and that were not left hanging by a Stop) */
     const inFlight = (): number => data.history.filter(e => !e.result && !e.abandoned).length
 
     const selected = data.senders.find(s => s.id === form.senderId)
@@ -37,8 +37,9 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
 
     const setSender = (senderId: string) => {
         form.senderId = senderId
-        // La configuracion elegida era de OTRO sender: si el nuevo trae una sola, se elige sola, y si
-        // trae varias se vacia — dejar la anterior puesta seria ofrecer algo que no existe.
+        // The chosen configuration belonged to ANOTHER sender: if the new one carries a single config it
+        // is selected on its own, and if it carries several it is cleared — leaving the previous one in
+        // place would be offering something that does not exist.
         const names = data.senders.find(s => s.id === senderId)?.configNames ?? []
         form.configName = names.length === 1 ? names[0] : ''
         refresh()
@@ -65,7 +66,7 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
         !invalidMetadata() &&
         !invalidCount()
 
-    /** Los destinatarios se teclean separados por comas; que signifique cada uno lo decide el sender. */
+    /** Recipients are typed separated by commas; what each one means is decided by the sender. */
     const recipients = (): string | string[] | undefined => {
         const list = form.to.split(',').map(s => s.trim()).filter(Boolean)
         if (list.length === 0) return undefined
@@ -78,8 +79,8 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
             ...(form.subject.trim() === '' ? {} : { subject: form.subject }),
             body: form.body,
             ...(recipients() === undefined ? {} : { to: recipients() }),
-            // El enum del plugin es espejo exacto de la union de literales de ISenderMessage.level; el
-            // cast es por eso, y no porque aqui pueda llegar cualquier cosa.
+            // The plugin.s enum is an exact mirror of the union of literals of ISenderMessage.level; the
+            // cast is for that reason, and not because anything at all could arrive here.
             level: form.level as ISenderMessage['level'],
             ...(metadata ? { metadata } : {}),
             origin: { source: ORIGIN_SOURCE, timestamp: Date.now() }
@@ -145,14 +146,14 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
         return sender?.displayName ? `${id} — ${sender.displayName}` : id
     }
 
-    /** Qué se ve en la línea de estado de una fila, sin desplegarla. */
+    /** What is visible on a row.s status line, without expanding it. */
     const summaryOf = (entry: ISenderDebugHistoryEntry): string => {
         if (!entry.result) return entry.abandoned ? 'no answer — the channel was stopped' : 'sending…'
         if (!entry.result.ok) return entry.result.error ?? 'failed'
         return entry.result.result ? 'delivered, with a result' : 'delivered'
     }
 
-    /** Lo que contestó el sender, en JSON. Un sender de aviso no devuelve nada, y eso se dice. */
+    /** What the sender answered, in JSON. A notification sender returns nothing, and that is said. */
     const answerOf = (entry: ISenderDebugHistoryEntry): string => {
         if (!entry.result) return entry.abandoned ? 'No answer: the channel was stopped before the sender replied.' : 'Waiting for the sender…'
         if (!entry.result.ok) return entry.result.error ?? 'Failed, with no error text.'

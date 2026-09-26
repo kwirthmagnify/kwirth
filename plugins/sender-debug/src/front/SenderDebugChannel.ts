@@ -111,8 +111,8 @@ export class SenderDebugChannel implements IChannel {
     stopChannel(channelObject: IChannelObject): boolean {
         const data: ISenderDebugData = channelObject.data
         data.configAccepted = false
-        // lo que estuviera en vuelo ya no va a contestar: se marca, en vez de dejarlo 'enviando' para
-        // siempre y en vez de inventarle un resultado que nadie ha dado
+        // whatever was in flight is not going to answer any more: it is flagged, instead of leaving it
+        // 'sending' forever and instead of making up a result nobody gave
         for (const entry of data.history) {
             if (!entry.result) entry.abandoned = true
         }

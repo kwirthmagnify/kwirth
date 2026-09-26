@@ -2,17 +2,17 @@ import { test, expect, Page } from '@playwright/test'
 import { login, openChannelPicker, openTabMenu, CHANNEL, SAFE_SENDER } from './helpers'
 
 /**
- * Serial y con UNA sola página para todo el fichero. El coste dominante no es Playwright sino
- * recargar la SPA contra el dev server de react-scripts, así que se paga una vez. El precio es que
- * los tests comparten estado y el orden importa: van de "sin arrancar" a "arrancado", y el que
- * limpia el historial va el último.
+ * Serial, and with ONE single page for the whole file. The dominant cost is not Playwright but
+ * reloading the SPA against react-scripts.. dev server, so it is paid once. The price is that the
+ * tests share state and order matters: they go from "not started" to "started", and the one that
+ * clears the history goes last.
  *
- * ⛔ Aquí solo se envía por 'console' (ver helpers.ts): un envío de este canal es REAL.
+ * ⛔ Only 'console' is sent through here (see helpers.ts): a send from this channel is REAL.
  */
 test.describe.configure({ mode: 'serial' })
 
-// Trace y video apagados: la SPA mantiene el websocket vivo y el cierre de la pagina se queda
-// colgado finalizando el trace. Las capturas de fallo las adjunta el afterEach a mano.
+// Trace and video off: the SPA keeps the websocket alive and closing the page hangs finalising the
+// trace. Failure screenshots are attached by hand in the afterEach.
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
 
 let page: Page
@@ -29,7 +29,7 @@ test.beforeAll(async ({ browser }) => {
 })
 
 test.afterAll(async () => {
-    // navegar fuera suelta el websocket; cerrar el CONTEXTO no espera al cierre ordenado de la pagina
+    // navigating away releases the websocket; closing the CONTEXT does not wait for an orderly page close
     await page?.goto('about:blank').catch(() => { })
     await page?.context().close().catch(() => { })
 })
@@ -42,12 +42,12 @@ test.afterEach(async ({}, testInfo) => {
 
 const senderSelect = () => page.getByRole('combobox', { name: 'Sender', exact: true })
 const configSelect = () => page.getByRole('combobox', { name: 'Configuration', exact: true })
-// exact: true SIEMPRE — getByRole casa el nombre accesible por SUBSTRING, y 'SEND' casa tambien con
-// el boton 'Reload senders'. Sin el exact, esto resuelve a dos elementos y revienta en modo estricto.
+// exact: true ALWAYS — getByRole matches the accessible name by SUBSTRING, and 'SEND' also matches
+// the 'Reload senders' button. Without exact, this resolves to two elements and blows up in strict mode.
 const sendButton = () => page.getByRole('button', { name: 'SEND', exact: true })
 const historyRows = () => page.locator('.MuiPaper-root').filter({ hasText: new RegExp(`${SAFE_SENDER} /`) })
 
-/** El canal declara setup, así que Start abre primero el diálogo y el canal arranca al aceptarlo. */
+/** The channel declares a setup, so Start opens the dialog first and the channel starts on accepting it. */
 const start = async (): Promise<void> => {
     await openTabMenu(page)
     await page.getByText('Start', { exact: true }).click()
@@ -56,7 +56,7 @@ const start = async (): Promise<void> => {
     await page.waitForTimeout(2500)
 }
 
-/** Elige una opción de una Select de MUI (cada opción lleva su data-value). */
+/** Picks an option from a MUI Select (each option carries its data-value). */
 const pick = async (combo: () => ReturnType<typeof page.getByRole>, value: string): Promise<void> => {
     await combo().click()
     await page.locator(`li[data-value="${value}"]`).click()
@@ -89,7 +89,7 @@ test('the setup only configures the channel, and warns that sending is real', as
     await expect(page.getByText('Configure Sender Debug channel')).toBeVisible()
     await expect(page.getByLabel('Max history')).toHaveValue('100')
     await expect(page.getByText(/Sending from this channel is a REAL send/)).toBeVisible()
-    // el sender NO se elige aquí: eso es de la pestaña
+    // the sender is NOT chosen here: that belongs to the tab
     await expect(page.getByRole('combobox', { name: 'Sender', exact: true })).toHaveCount(0)
     await page.getByRole('button', { name: 'CANCEL' }).click()
     await page.waitForTimeout(500)
@@ -105,7 +105,7 @@ test('once started the catalogue arrives and offers the installed senders', asyn
 })
 
 test('SEND stays disabled until a sender AND a configuration are picked', async () => {
-    // sin nada elegido no se puede enviar, y la configuración ni siquiera se puede desplegar
+    // with nothing chosen there is no sending, and the configuration cannot even be expanded
     await expect(sendButton()).toBeDisabled()
     await expect(configSelect()).toHaveAttribute('aria-disabled', 'true')
 
@@ -121,7 +121,7 @@ test('invalid metadata blocks the send and says why', async () => {
     await expect(page.getByText('Not a valid JSON object')).toBeVisible()
     await expect(sendButton()).toBeDisabled()
 
-    // un array tampoco vale: metadata es un objeto
+    // an array is not valid either: metadata is an object
     await page.getByLabel('Metadata (JSON)').fill('[1,2,3]')
     await expect(sendButton()).toBeDisabled()
 
@@ -158,8 +158,8 @@ test('the batch count only applies in batch mode, and is bounded', async () => {
     await expect(count).toBeDisabled()
 })
 
-// A partir de aquí se ENVÍA, y solo por 'console': escribe en el log del core y no sale a ninguna
-// parte. Ningún otro sender se toca en este fichero.
+// From here on things are SENT, and only through 'console': it writes to the core.s log and goes
+// nowhere else. No other sender is touched in this file.
 test('a real send through console lands in the history as delivered', async () => {
     await page.getByLabel('Subject').fill('e2e sender-debug')
     await page.getByLabel('Body').fill('message from the e2e suite')
@@ -175,7 +175,7 @@ test('a batch through a sender without sendBatch is delivered and marked as emul
     await page.getByLabel('Messages').fill('3')
     await sendButton().click()
 
-    // console no implementa sendBatch: el canal entrega uno a uno y lo dice, que es el dato útil
+    // console does not implement sendBatch: the channel delivers one by one and says so, which is the useful fact
     await expect(page.getByText('batch 3 (emulated)')).toBeVisible({ timeout: 30000 })
     await expect(page.getByText(/Sends: 2/)).toBeVisible()
     await page.getByRole('checkbox', { name: 'Batch' }).uncheck()
@@ -192,11 +192,11 @@ test('a row opens and shows what was sent and what came back', async () => {
 
     await expect(page.getByText('Sent', { exact: true }).first()).toBeVisible()
     await expect(page.getByText('Answered', { exact: true }).first()).toBeVisible()
-    // el cuerpo que se escribió, dentro del JSON del mensaje enviado
+    // the body that was typed, inside the JSON of the sent message
     await expect(page.getByText(/"body":/).first()).toBeVisible()
-    // y el origen que este canal estampa en todo lo que sale
+    // and the origin this channel stamps on everything that leaves
     await expect(page.getByText(/"source": "sender-debug"/).first()).toBeVisible()
-    // console entrega y devuelve void: la respuesta lo dice con todas las letras
+    // console delivers and returns void: the reply says so in plain words
     await expect(page.getByText(/The sender returned void/).first()).toBeVisible()
 
     await page.locator('button[aria-label="Collapse send"]').first().click()
@@ -211,7 +211,7 @@ test('reloading the catalogue keeps the history', async () => {
     await expect(page.getByText(/Senders: [1-9]/)).toBeVisible()
 })
 
-// El último: deja la pestaña limpia.
+// The last one: it leaves the tab clean.
 test('clearing empties the history and disables its own button', async () => {
     const clear = page.locator('button[aria-label="Clear history"]')
     await clear.click()

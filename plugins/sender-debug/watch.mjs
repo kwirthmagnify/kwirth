@@ -2,7 +2,7 @@ import esbuild from 'esbuild'
 import fs from 'fs'
 import path from 'path'
 
-// Mismos globals que build.mjs. Aqui NO hay typecheck a proposito: guardar tiene que ser instantaneo.
+// The same globals as build.mjs. There is deliberately NO typecheck here: saving has to be instantaneous.
 const kwirthGlobalsPlugin = {
     name: 'kwirth-globals',
     setup(build) {

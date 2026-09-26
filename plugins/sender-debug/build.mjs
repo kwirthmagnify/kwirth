@@ -18,7 +18,7 @@ const kwirthGlobalsPlugin = {
             '@mui/icons-material': 'window.__kwirth__.MUI.icons',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
-            // el barrel curado de iconos: window.__kwirth__.MUI.icons es un superset suyo
+            // the curated icon barrel: window.__kwirth__.MUI.icons is a superset of it
             '@kwirthmagnify/kwirth-common-front/icons': 'window.__kwirth__.MUI.icons',
         }
         for (const pkg of Object.keys(globals)) {
@@ -51,8 +51,8 @@ const kwirthBackGlobalsPlugin = {
     },
 }
 
-// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
-// El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
+// esbuild erases the types without looking at them: without this step the build would pass broken TS.
+// watch.mjs deliberately leaves it out, so that saving stays instantaneous.
 const TSC = 'node_modules/typescript/lib/tsc.js'
 if (fs.existsSync(TSC)) {
     try {

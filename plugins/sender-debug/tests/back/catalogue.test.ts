@@ -40,7 +40,7 @@ describe('channel contract', () => {
         assert.equal(data.routable, false)
         assert.deepEqual(data.endpoints, [])
         assert.deepEqual(data.sources, [EClusterType.KUBERNETES])
-        // vacío es la decisión: un depurador no arranca nada por estar instalado
+        // empty is the decision: a debugger does not start anything just for being installed
         assert.deepEqual(channel.requirements.providers, [])
         assert.equal(channel.requirements.storage, false)
     })
@@ -123,7 +123,7 @@ describe('sender catalogue', () => {
         const senders = ws.senders()!
         assert.equal(senders.length, 1)
         assert.equal(senders[0].id, 'console')
-        // gana la ultima, que es la de dev: es la que el core acaba resolviendo por getSender()
+        // the last one wins, which is the dev one: it is what the core ends up resolving through getSender()
         assert.equal(senders[0].version, 'dev')
     })
 
@@ -136,7 +136,7 @@ describe('sender catalogue', () => {
         const { channel } = makeChannel(registry)
         await start(channel, ws)
 
-        // 'teams' está instalado pero no instanciado: sin listInstalled no hay forma de saberlo
+        // 'teams' is installed but not instantiated: without listInstalled there is no way to know
         assert.deepEqual(ws.senders(), [
             { id: 'console', configNames: ['dev-console'], instantiated: true, kind: ESenderDebugKind.UNKNOWN, supportsBatch: false }
         ])

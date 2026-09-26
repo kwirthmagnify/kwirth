@@ -8,10 +8,10 @@ import { ISenderDebugInstanceConfig } from '../common/SenderDebugTypes'
 export const SenderDebugIcon = <Send />
 
 /**
- * El setup es deliberadamente corto: aqui solo esta lo que es configuracion del CANAL. El sender, la
- * configuracion y el mensaje se eligen en la pestaña, porque un banco de pruebas se usa enviando,
- * mirando, corrigiendo y volviendo a enviar — y esto no es 'modifiable', asi que tenerlo aqui
- * obligaria a parar y rearrancar la instancia por cada cambio de texto.
+ * The setup is deliberately short: only what is CHANNEL configuration lives here. The sender, the
+ * configuration and the message are chosen in the tab, because a test bench is used by sending,
+ * looking, correcting and sending again — and this is not 'modifiable', so keeping it here would
+ * force stopping and restarting the instance for every change of text.
  */
 export const SenderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     const instanceConfig: ISenderDebugInstanceConfig = props.setupConfig?.channelInstanceConfig || new SenderDebugInstanceConfig()

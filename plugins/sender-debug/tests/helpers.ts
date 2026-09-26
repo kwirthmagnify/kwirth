@@ -1,10 +1,10 @@
-// Mocks comunes para los tests unit de sender-debug (patrón provider-debug).
-// No se levanta infraestructura: se inyecta un clusterInfo con un registro de senders falso y se
-// captura el tráfico WebSocket con MockWs.
+// Common mocks for sender-debug.s unit tests (the provider-debug pattern).
+// No infrastructure is brought up: a clusterInfo with a fake sender registry is injected and the
+// WebSocket traffic is captured with MockWs.
 import { EInstanceMessageType, ISenderMessage, ISenderResult } from '@kwirthmagnify/kwirth-common-back'
 import { ESenderDebugPayload, ISenderDebugMessageResponse, ISenderDebugResult, ISenderDebugSenderInfo } from '../src/common/SenderDebugTypes'
 
-// WebSocket falso: guarda cada send() como string JSON y ofrece vistas tipadas del tráfico.
+// Fake WebSocket: it keeps every send() as a JSON string and offers typed views of the traffic.
 export class MockWs {
     readyState = 1
     bufferedAmount = 0
@@ -29,22 +29,22 @@ export class MockWs {
         return this.data().filter(m => m.payloadType === ESenderDebugPayload.RESULT).map(m => m.result as ISenderDebugResult)
     }
 
-    /** el último resultado de envío */
+    /** the last send result */
     lastResult(): ISenderDebugResult | undefined {
         const all = this.results()
         return all.length === 0 ? undefined : all[all.length - 1]
     }
 
-    /** textos de las señales emitidas por el canal */
+    /** texts of the signals emitted by the channel */
     signals(): string[] {
         return this.parsed().filter(m => m.type === EInstanceMessageType.SIGNAL).map(m => String(m.text))
     }
 }
 
 /**
- * Sender falso. Reproduce lo que el canal mira del contrato real: las configuraciones dadas de alta,
- * el tipo declarado (opcional), y si implementa o no sendBatch — que es lo que distingue la ruta de
- * lote de verdad de la emulación uno a uno.
+ * Fake sender. It reproduces what the channel looks at in the real contract: the registered
+ * configurations, the declared type (optional), and whether it implements sendBatch — which is what
+ * tells the genuine batch path from the one-by-one emulation.
  */
 export class FakeSender {
     readonly id: string
@@ -64,25 +64,25 @@ export class FakeSender {
         this.configNames = configNames
     }
 
-    /** el sender devuelve un ISenderResult (un sender de ticketing devuelve la clave del ticket) */
+    /** the sender returns an ISenderResult (a ticketing sender returns the ticket key) */
     withResult(result: ISenderResult): FakeSender {
         this.result = result
         return this
     }
 
-    /** el sender revienta al enviar. Es EL caso: por la vía del core esto se perdía en un log */
+    /** the sender blows up on send. It is THE case: through the core.s route this was lost in a log */
     withSendError(message = 'boom sending'): FakeSender {
         this.failure = message
         return this
     }
 
-    /** el sender revienta al preguntarle por su configuración */
+    /** the sender blows up when asked for its configuration */
     withConfigError(message = 'boom checking config'): FakeSender {
         this.configFailure = message
         return this
     }
 
-    /** el sender implementa sendBatch(): la ruta de lote es suya, no la emulación del core */
+    /** the sender implements sendBatch(): the batch path is its own, not the core.s emulation */
     withBatch(): FakeSender {
         this.sendBatch = async (configName: string, messages: ISenderMessage[]) => {
             this.receivedBatches.push({ configName, messages })
@@ -112,20 +112,20 @@ export class FakeSender {
 }
 
 /**
- * El registro de senders del core, falseado. Reproduce el detalle que da sentido al catálogo:
- * getSender() es PEREZOSO — instancia al pedirlo — y listSenders() solo ve lo ya instanciado, así
- * que un sender instalado al que nadie ha enviado todavía no sale ahí.
+ * The core.s sender registry, faked. It reproduces the detail that gives the catalogue its meaning:
+ * getSender() is LAZY — it instantiates on request — and listSenders() only sees what is already
+ * instantiated, so an installed sender nobody has sent anything to yet does not show up there.
  */
 export class FakeRegistry {
     private senders = new Map<string, FakeSender>()
     private instantiated = new Set<string>()
-    /** si se pone, listInstalled() revienta (un core que no puede leer su ConfigMap) */
+    /** when set, listInstalled() blows up (a core that cannot read its ConfigMap) */
     private installedFailure: string | undefined = undefined
-    /** si se pone, listSenders() revienta */
+    /** when set, listSenders() blows up */
     private liveFailure: string | undefined = undefined
-    /** si se pone, getSender() revienta para ese id */
+    /** when set, getSender() blows up for that id */
     private resolveFailures = new Set<string>()
-    /** metadatos de instalación, por id */
+    /** installation metadata, by id */
     private metas = new Map<string, { displayName?: string, version?: string }>()
 
     /*
@@ -135,7 +135,7 @@ export class FakeRegistry {
     */
     listInstalled?: () => Promise<Array<{ id: string, displayName?: string, version?: string, configNames: string[] }>>
 
-    /** ids que el registro devuelve DOS veces, como hace el core con un sender instalado y en dev */
+    /** ids the registry returns TWICE, as the core does with a sender both installed and in dev */
     private duplicated = new Map<string, { displayName?: string, version?: string }>()
 
     constructor() {
@@ -159,20 +159,20 @@ export class FakeRegistry {
         }
     }
 
-    /** el mismo sender, otra vez al final de la lista, como lo sirve el core en un entorno de dev */
+    /** the same sender, again at the end of the list, as the core serves it in a dev environment */
     withDuplicate(id: string, meta: { displayName?: string, version?: string } = { version: 'dev' }): FakeRegistry {
         this.duplicated.set(id, meta)
         return this
     }
 
-    /** da de alta un sender INSTALADO pero todavía no instanciado */
+    /** registers a sender that is INSTALLED but not instantiated yet */
     install(sender: FakeSender, meta: { displayName?: string, version?: string } = {}): FakeRegistry {
         this.senders.set(sender.id, sender)
         this.metas.set(sender.id, meta)
         return this
     }
 
-    /** da de alta un sender ya INSTANCIADO (alguien le envió antes) */
+    /** registers a sender that is already INSTANTIATED (somebody sent to it earlier) */
     instantiate(sender: FakeSender, meta: { displayName?: string, version?: string } = {}): FakeRegistry {
         this.install(sender, meta)
         this.instantiated.add(sender.id)
@@ -194,7 +194,7 @@ export class FakeRegistry {
         return this
     }
 
-    /** un core anterior a listInstalled(): solo sabe decir qué hay instanciado */
+    /** a core older than listInstalled(): all it can say is what is instantiated */
     withoutListInstalled(): FakeRegistry {
         delete this.listInstalled
         return this
@@ -213,7 +213,7 @@ export class FakeRegistry {
         return Array.from(this.instantiated).map(id => ({ id, configNames: this.senders.get(id)!.getConfigNames() }))
     }
 
-    /** ¿está instanciado ahora mismo? (para asertar el efecto perezoso del primer envío) */
+    /** is it instantiated right now? (to assert the lazy effect of the first send) */
     isInstantiated(id: string): boolean { return this.instantiated.has(id) }
 }
 

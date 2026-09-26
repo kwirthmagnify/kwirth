@@ -2,8 +2,8 @@ import { defineConfig } from '@playwright/test'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-// Carga URL/credenciales de un fichero LOCAL (.creds.json, gitignorado) para no pasarlas por línea de
-// comandos (así el comando de playwright es un string fijo) ni commitearlas. Sin fichero, defaults.
+// Loads URL and credentials from a LOCAL file (.creds.json, gitignored) so they need not be passed on
+// the command line (which keeps the playwright command a fixed string) nor committed. No file, defaults.
 try {
     const c = JSON.parse(readFileSync(join(__dirname, '.creds.json'), 'utf-8'))
     const put = (k: string, v: unknown): void => { if (v !== undefined && v !== null && process.env[k] === undefined) process.env[k] = String(v) }
@@ -14,7 +14,7 @@ try {
 }
 catch { /* no file → env/defaults */ }
 
-// e2e AISLADO del plugin Sender Debug. Ataca la app ya levantada por HTTP; el build nunca lo importa.
+// ISOLATED e2e for the Sender Debug plugin. It hits the already running app over HTTP; the build never imports it.
 export default defineConfig({
     testDir: './tests',
     timeout: 180_000,   // el dev server del front recompila; el login solo ya puede tardar ~1 min

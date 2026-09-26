@@ -1,42 +1,42 @@
 import { IInstanceMessage, ISenderMessage } from '@kwirthmagnify/kwirth-common'
 
 /**
- * Lo que el front le pide al back. Un COMMAND del core, con este 'command' dentro.
+ * What the front end asks the back end for. A core COMMAND, with this 'command' inside.
  *
- * ⚠️ Todo comando tiene que viajar con su 'accessKey': el core los descarta ANTES de llegar al
- * plugin si no la lleva, y desde aqui solo se ve un timeout sin ninguna pista.
+ * ⚠️ Every command must travel with its 'accessKey': the core discards them BEFORE they reach the
+ * plugin when it is missing, and from here all that can be seen is a timeout with no clue at all.
  */
 export enum ESenderDebugCommand {
-    /** devuelve el catalogo de senders, con sus configuraciones */
+    /** returns the sender catalogue, with their configurations */
     LIST = 'list',
-    /** entrega UN mensaje por send() */
+    /** delivers ONE message through send() */
     SEND = 'send',
-    /** entrega N mensajes por sendBatch() — la ruta de lote, la que usan los destinos de log */
+    /** delivers N messages through sendBatch() — the batch path, the one log destinations use */
     SENDBATCH = 'sendbatch'
 }
 
-/** Naturaleza del mensaje que el back manda al front: o es el catalogo, o es el resultado de un envio. */
+/** Nature of the message the back end sends the front end: either the catalogue or a send result. */
 export enum ESenderDebugPayload {
     SENDERS = 'senders',
     RESULT = 'result'
 }
 
 /**
- * Que clase de sender es. Lo declara la extension en 'senderType' (opcional en ISender): un 'filter'
- * —regex, ratelimit, timed— NO entrega, encadena, asi que mandarle algo no prueba lo que parece.
- * Se marca en la lista por eso.
+ * What kind of sender it is. The extension declares it in 'senderType' (optional on ISender): a
+ * 'filter' — regex, ratelimit, timed — does NOT deliver, it chains, so sending it something does not
+ * prove what it looks like it proves. That is why it is flagged in the list.
  */
 export enum ESenderDebugKind {
     OUTPUT = 'output',
     FILTER = 'filter',
-    /** la extension no lo declara: se asume salida, que es lo que es la mayoria */
+    /** the extension does not declare it: output is assumed, which is what most of them are */
     UNKNOWN = 'unknown'
 }
 
 /**
- * Nivel del mensaje. Espejo EXACTO de los valores de ISenderMessage.level, que en kwirth-common es
- * una union de literales: se redeclara como enum porque estos valores se comparan y se asignan en
- * los dos lados, y una union de strings suelta se escribe mal tarde o temprano.
+ * The message's level. An EXACT mirror of the values of ISenderMessage.level, which in kwirth-common
+ * is a union of literals: it is redeclared as an enum because these values are compared and assigned
+ * on both sides, and a loose union of strings gets mistyped sooner or later.
  */
 export enum ESenderDebugLevel {
     DEBUG = 'debug',
@@ -45,24 +45,24 @@ export enum ESenderDebugLevel {
     ERROR = 'error'
 }
 
-/** Un sender tal y como lo ve este canal: lo instalado, mas lo que el core sabe de el ahora mismo. */
+/** A sender as this channel sees it: what is installed, plus what the core knows about it right now. */
 export interface ISenderDebugSenderInfo {
     id: string
     displayName?: string
     version?: string
-    /** configuraciones dadas de alta para este sender */
+    /** configurations registered for this sender */
     configNames: string[]
     /**
-     * true si el core ya lo tiene instanciado. NO impide enviar: getSender() es perezoso, asi que el
-     * primer envio lo instancia y lo arranca — igual que haria cualquier plugin al enviarle algo.
+     * true when the core already has it instantiated. It does NOT prevent sending: getSender() is lazy,
+     * so the first send instantiates and starts it — just as any plugin sending it something would.
      */
     instantiated: boolean
     kind: ESenderDebugKind
-    /** implementa sendBatch(): el lote es suyo de verdad, y no la entrega una a una que emula el core */
+    /** implements sendBatch(): the batch is genuinely its own, not the one-by-one delivery the core emulates */
     supportsBatch: boolean
 }
 
-/** Una fila de GET /core/senders, con solo lo que a este plugin le interesa. */
+/** One row of GET /core/senders, with only what this plugin cares about. */
 export interface ISenderDebugCatalogueEntry {
     id: string
     displayName?: string
@@ -71,39 +71,39 @@ export interface ISenderDebugCatalogueEntry {
     configNames?: string[]
 }
 
-/** Lo que el front pide enviar. El mensaje viaja ya compuesto y validado desde el front. */
+/** What the front end asks to send. The message travels already composed and validated from the front. */
 export interface ISenderDebugSendRequest {
-    /** id local del envio, para casar la respuesta con su fila del historial */
+    /** local id of the send, to match the reply with its row in the history */
     id: string
     senderId: string
     configName: string
     message: ISenderMessage
-    /** solo SENDBATCH: cuantas copias del mensaje se entregan en el lote */
+    /** SENDBATCH only: how many copies of the message are delivered in the batch */
     count?: number
 }
 
-/** Que contesto el sender. Es el unico motivo de existir del plugin, asi que va entero. */
+/** What the sender answered. It is the plugin's only reason to exist, so it goes back whole. */
 export interface ISenderDebugResult {
-    /** el mismo id que traia la peticion */
+    /** the same id the request carried */
     id: string
     ts: number
     senderId: string
     configName: string
-    /** el envio fue por sendBatch() */
+    /** the send went through sendBatch() */
     batch: boolean
-    /** mensajes entregados en este envio (1 si no es lote) */
+    /** messages delivered in this send (1 when it is not a batch) */
     count: number
     ok: boolean
-    /** lo que devolvio el sender. Ausente = devolvio void, que es lo normal en un sender de aviso */
+    /** what the sender returned. Absent = it returned void, which is normal in a notification sender */
     result?: Record<string, unknown>
-    /** texto del error: la excepcion del sender, o por que no se pudo ni intentar */
+    /** the error text: the sender's exception, or why it could not even be attempted */
     error?: string
     /**
-     * Solo en lote: el sender NO implementa sendBatch(), asi que se entrego uno a uno — igual que
-     * haria el core. Se marca porque no es lo mismo: no se recorrio la ruta de lote del sender.
+     * Batch only: the sender does NOT implement sendBatch(), so delivery went one by one — just as the
+     * core would do. It is flagged because it is not the same thing: the sender's batch path was not taken.
      */
     emulated?: boolean
-    /** cuanto tardo, en ms */
+    /** how long it took, in ms */
     elapsed: number
 }
 
@@ -123,12 +123,12 @@ export interface ISenderDebugCommandMessage extends IInstanceMessage {
 }
 
 /**
- * Preseleccion del setup. El mensaje NO vive aqui: se compone en la pestaña, porque un banco de
- * pruebas se usa enviando, mirando, corrigiendo y volviendo a enviar — y meterlo en el setup
- * obligaria a parar y rearrancar la instancia por cada cambio de texto.
+ * The setup's preselection. The message does NOT live here: it is composed in the tab, because a test
+ * bench is used by sending, looking, correcting and sending again — and putting it in the setup would
+ * force stopping and restarting the instance for every change of text.
  */
 export interface ISenderDebugInstanceConfig {
-    /** sender preseleccionado al abrir la pestaña; vacio = ninguno */
+    /** sender preselected when the tab opens; empty = none */
     senderId: string
     /** configuracion preseleccionada; vacio = ninguna */
     configName: string
