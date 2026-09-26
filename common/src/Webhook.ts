@@ -1,23 +1,24 @@
-// Tipo de extensión WEBHOOK: ingesta HTTP entrante, contraparte inbound de los senders (que son
-// salientes). Un artefacto webhook sabe verificar y parsear los callbacks de un proveedor (Jira,
-// ServiceNow, GitHub…) y entrega un evento NORMALIZADO a un consumidor (un channel/plugin).
-// Direccionamiento: {host}{envRootPath}/webhook/<provider>/<token-opaco>. Ver plans/webhook-extension/PLAN.md.
+// The WEBHOOK extension type: inbound HTTP ingestion, the inbound counterpart of senders (which are
+// outbound). A webhook artifact knows how to verify and parse a provider's callbacks (Jira, ServiceNow,
+// GitHub…) and delivers a NORMALISED event to a consumer (a channel/plugin).
+// Addressing: {host}{envRootPath}/webhook/<provider>/<opaque-token>. See plans/webhook-extension/PLAN.md.
 
-// Evento normalizado que un webhook entrega a su consumidor. Agnóstico del proveedor.
+// Normalised event a webhook delivers to its consumer. Provider-agnostic.
 export interface IWebhookEvent {
-    provider: string                          // id del webhook que lo produjo, p.ej. 'jira'
-    configName: string                        // config concreta (instancia) que recibió el callback (el token de la URL la resuelve)
-    kind: string                              // tipo normalizado, p.ej. 'issue.updated' | 'issue.transitioned'
-    externalId: string                        // id de la entidad en el proveedor, p.ej. issue key 'SEC-42'
-    status?: string                           // estado normalizado si aplica, p.ej. 'Done'
+    provider: string                          // id of the webhook that produced it, e.g. 'jira'
+    configName: string                        // the concrete config (instance) that received the callback (the URL token resolves it)
+    kind: string                              // normalised type, e.g. 'issue.updated' | 'issue.transitioned'
+    externalId: string                        // id of the entity at the provider, e.g. the issue key 'SEC-42'
+    status?: string                           // normalised status where applicable, e.g. 'Done'
     receivedAt: string                        // ISO
     headers?: Record<string, string>
-    raw: unknown                              // payload original parseado (para necesidades específicas del consumidor)
+    raw: unknown                              // the original parsed payload (for the consumer's specific needs)
 }
 
-// Config de una instancia de webhook. Los campos los define CADA tipo de webhook vía getConfigSchema()
-// (apiKey, secreto HMAC…). NO lleva `target`: la entrega es por SUSCRIPCIÓN (modelo provider-like) — el
-// consumidor se suscribe al webhook por su id y recibe sus eventos; el que no se suscribe, no los recibe.
+// Config of a webhook instance. The fields are defined by EACH webhook type through getConfigSchema()
+// (apiKey, HMAC secret…). It carries NO `target`: delivery goes by SUBSCRIPTION (a provider-like model) —
+// the consumer subscribes to the webhook by its id and receives its events; whoever does not subscribe
+// receives none.
 export interface IWebhookConfig {
     name: string
     [key: string]: unknown
@@ -28,16 +29,17 @@ export interface IWebhookStoredConfig {
     [key: string]: unknown
 }
 
-// Consumidor de eventos: lo implementa el channel/plugin destino y se registra vía IWebhookAccess.
+// Event consumer: implemented by the destination channel/plugin and registered through IWebhookAccess.
 export interface IWebhookConsumer {
     processWebhookEvent(event: IWebhookEvent): void
 }
 
-// Handle que el core inyecta en los consumidores (contraparte de ISenderAccess). Modelo provider-like:
-// un consumidor se SUSCRIBE a una CONFIG concreta de un webhook (par webhookId+configName); el core le
-// entrega solo los eventos de ESA config, ya verificados y parseados. El que no se suscribe, no recibe nada.
-// La suscripción es por par estricto (no por tipo): los webhooks son generales de Kwirth y puede haber varias
-// configs/consumidores del mismo tipo → cada consumidor fija exactamente la instancia que le corresponde.
+// Handle the core injects into consumers (the counterpart of ISenderAccess). A provider-like model: a
+// consumer SUBSCRIBES to a concrete CONFIG of a webhook (the pair webhookId+configName); the core hands
+// it only the events of THAT config, already verified and parsed. Whoever does not subscribe gets
+// nothing. The subscription is by strict pair (not by type): webhooks are general to Kwirth and there
+// may be several configs/consumers of the same type → each consumer pins exactly the instance that is
+// its own.
 export interface IWebhookAccess {
     subscribe(webhookId: string, configName: string, consumer: IWebhookConsumer): void
     unsubscribe(webhookId: string, configName: string, consumer: IWebhookConsumer): void

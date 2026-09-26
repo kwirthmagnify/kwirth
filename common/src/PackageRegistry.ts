@@ -1,38 +1,41 @@
-// Un registro de paquetes es de donde se DESCARGAN los tarballs, y no tiene por que ser el sitio donde
-// vive el manifest que los lista. El marketplace publico ya funciona asi: los manifests estan en GitHub
-// y los paquetes en npmjs. Por eso esto es una lista aparte de la de marketplaces, y no una propiedad
-// suya: un mismo manifest puede listar extensiones alojadas en registros distintos.
+// A package registry is where tarballs are DOWNLOADED from, and it need not be the place where the
+// manifest listing them lives. The public marketplace already works this way: the manifests are on
+// GitHub and the packages on npmjs. That is why this is a list of its own, separate from the
+// marketplaces list and not a property of it: one manifest can list extensions hosted in different
+// registries.
 //
-// Al descargar se elige el registro CASANDO LA URL del tarball contra su `url`, tratada como prefijo.
+// When downloading, the registry is chosen by MATCHING THE URL of the tarball against its `url`,
+// treated as a prefix.
 
 export enum EPackageRegistryAuthType {
     NONE = 'none',
-    BASIC = 'basic',     // Authorization: Basic — usuario y contraseña de la cuenta
-    BEARER = 'bearer'    // Authorization: Bearer — un user token opaco
+    BASIC = 'basic',     // Authorization: Basic — the account's username and password
+    BEARER = 'bearer'    // Authorization: Bearer — an opaque user token
 }
 
-// El secreto —contraseña o token, segun el tipo— se trata como cualquier otro dato: viaja al front, se
-// pre-rellena enmascarado con ojo para revelar, y se reenvia tal cual al guardar. En reposo lo guarda el
-// back en ISecrets (cifrado en filesystem, RBAC en k8s), nunca en el configmap.
+// The secret — password or token, depending on the type — is handled like any other piece of data: it
+// travels to the front end, is pre-filled masked with an eye to reveal it, and is sent back as it is on
+// save. At rest the back end keeps it in ISecrets (encrypted on the filesystem, RBAC on k8s), never in
+// the configmap.
 //
-// ⚠️ El endpoint npm de un Nexus con user tokens NO acepta Basic: verificado contra el servidor real, la
-// misma credencial da 200 como Bearer y 401 como Basic. Y el token es OPACO — no es un base64 de
-// 'usuario:contraseña', asi que no se puede convertir de un tipo al otro.
+// ⚠️ The npm endpoint of a Nexus with user tokens does NOT accept Basic: verified against the real
+// server, the same credential gives 200 as Bearer and 401 as Basic. And the token is OPAQUE — it is not
+// a base64 of 'user:password', so one type cannot be converted into the other.
 export interface IPackageRegistryAuth {
     type: EPackageRegistryAuthType
-    // Solo en BASIC
+    // BASIC only
     username?: string
     password?: string
-    // Solo en BEARER
+    // BEARER only
     token?: string
 }
 
 export interface IPackageRegistry {
     id: string
     label: string
-    // PREFIJO de las URLs que sirve este registro, no solo el host: un mismo Nexus aloja varios repos y
-    // puede que solo uno pida credenciales. Cuando varios casan, gana el prefijo mas largo, para que una
-    // regla especifica pueda ganarle a una general.
+    // The PREFIX of the URLs this registry serves, not just the host: one Nexus hosts several repos and
+    // perhaps only one of them asks for credentials. When several match, the longest prefix wins, so a
+    // specific rule can beat a general one.
     url: string
     enabled: boolean
     auth?: IPackageRegistryAuth

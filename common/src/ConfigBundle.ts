@@ -17,75 +17,75 @@ import { EExtensionType } from './ExtensionType'
     Ver `plans/config-portability/PRD.md`.
 */
 
-/** Que se le pide a una extension cuando se le pide su configuracion. */
+/** What is asked of an extension when its configuration is requested. */
 export interface IExtensionExportOptions {
     /*
-        Si es false, la extension debe devolver sus campos secreto VACIOS, no omitirlos: el destino
-        necesita saber que existen para pedir que se rellenen. Por defecto va desmarcado en la UI —un
-        bundle con credenciales acaba en la carpeta de descargas de alguien.
+        When false, the extension must return its secret fields EMPTY, not omit them: the destination
+        needs to know they exist in order to ask for them to be filled in. It is unchecked by default in
+        the UI — a bundle with credentials ends up in somebody's downloads folder.
     */
     includeCredentials: boolean
 }
 
 /*
-    Lo que una extension responde al importar. Es lo UNICO que el core sabe del contenido, asi que es
-    lo unico que puede enseñar en el informe final: de ahi que sea igual para todas.
+    What an extension answers on import. It is the ONLY thing the core knows about the content, so it is
+    the only thing it can show in the final report: hence it being the same for all of them.
 */
 export interface IExtensionImportResult {
     applied: number
     skipped: number
-    /** Por que se descarto algo, o que hay que revisar. Se muestra tal cual al usuario. */
+    /** Why something was discarded, or what needs reviewing. Shown to the user as it is. */
     warnings: string[]
 }
 
-/** Estado de una entrada, tanto al listar lo exportable como al previsualizar un import. */
+/** State of an entry, both when listing what is exportable and when previewing an import. */
 export enum EBundleEntryStatus {
-    /** Se puede exportar / se va a aplicar. */
+    /** It can be exported / it is going to be applied. */
     AVAILABLE = 'available',
-    /** La extension esta, pero no implementa el metodo: `IExtension` es opcional. */
+    /** The extension is there, but does not implement the method: `IExtension` is optional. */
     NOT_SUPPORTED = 'not-supported',
     /*
-        Instalada pero sin instancia viva a la que preguntar. Pasa con los canales: solo se instancian
-        los requeridos, y nunca los anunciados como REMOTE. No se instancia una temporal a proposito:
-        un constructor de canal puede abrir informers y conexiones, y despertar medio plugin para leerle
-        una configuracion es un efecto secundario desproporcionado.
+        Installed but with no live instance to ask. It happens with channels: only the required ones are
+        instantiated, and never those announced as REMOTE. A temporary one is not instantiated on
+        purpose: a channel constructor may open informers and connections, and waking half a plugin up
+        to read a configuration off it is a disproportionate side effect.
     */
     NOT_INSTANTIATED = 'not-instantiated',
-    /** Solo al importar: el bundle la trae y aqui no esta instalada. El core NO instala nada. */
+    /** Import only: the bundle carries it and it is not installed here. The core installs NOTHING. */
     NOT_INSTALLED = 'not-installed',
-    /** Se aplicara, pero la version de aqui no es la de origen. Avisa; no transforma nada. */
+    /** It will be applied, but the version here is not the source's. It warns; it transforms nothing. */
     VERSION_DIFFERS = 'version-differs'
 }
 
-/** Una extension dentro del bundle. */
+/** An extension inside the bundle. */
 export interface IConfigBundleEntry {
     type: EExtensionType
     id: string
-    /** La del origen. No sirve para instalar —el core no instala—, sirve para saber que falta. */
+    /** The source's. Not useful for installing — the core does not install — but for knowing what is missing. */
     version?: string
-    /** De donde vino en el origen, por el mismo motivo. */
+    /** Where it came from at the source, for the same reason. */
     marketplace?: string
     /*
-        OPACO para el core: lo produce `exportConfig` de la extension y se lo come su `importConfig`.
-        De ahi el `unknown`: no es dejadez de tipos, es que tiparlo seria mentir.
+        OPAQUE to the core: the extension's `exportConfig` produces it and its `importConfig` eats it.
+        Hence the `unknown`: it is not type sloppiness, it is that typing it would be a lie.
     */
     config: unknown
 }
 
-/** Lo que aporta el core por su cuenta. Nada de esto pertenece a una extension. */
+/** What the core contributes on its own. None of this belongs to an extension. */
 export interface IConfigBundleCore {
-    /** Intervalo de metricas, marketplaces y registros de paquetes. */
+    /** Metrics interval, marketplaces and package registries. */
     settings?: unknown
-    /** El almacen comun: proveedores y modelos de IA. No es de nadie, asi que va aparte. */
+    /** The common store: AI providers and models. It belongs to nobody, so it goes apart. */
     sharedAi?: unknown
 }
 
 export interface IConfigBundleMeta {
     exportedAt: string
     kwirthVersion: string
-    /** Etiqueta libre del origen, para saber de donde salio el fichero al abrirlo meses despues. */
+    /** Free-form source label, to know where the file came from when opening it months later. */
     source?: string
-    /** El fichero declara si lleva secretos dentro. Quien lo guarda merece saberlo. */
+    /** The file declares whether it carries secrets. Whoever stores it deserves to know. */
     includesCredentials: boolean
 }
 
@@ -114,7 +114,7 @@ export const CORE_SETTINGS_KEY = 'core/settings'
 export const CORE_SHARED_AI_KEY = 'core/sharedAi'
 export const bundleEntryKey = (type: EExtensionType, id: string): string => `${type}/${id}`
 
-/** Una linea del dialogo de export: que hay para exportar y si se puede. */
+/** A row of the export dialog: what there is to export and whether it can be. */
 export interface IExportableEntry {
     type: EExtensionType
     id: string
@@ -124,26 +124,26 @@ export interface IExportableEntry {
     status: EBundleEntryStatus
 }
 
-/** Una linea de la vista previa del import: que pasaria con ella. */
+/** A row of the import preview: what would happen to it. */
 export interface IImportPreviewEntry {
     type: EExtensionType
     id: string
     displayName: string
-    /** La que trae el bundle. */
+    /** The one the bundle carries. */
     version?: string
-    /** La que hay aqui, si esta instalada. */
+    /** The one that is here, if it is installed. */
     installedVersion?: string
     status: EBundleEntryStatus
 }
 
-/** Lo que devuelve el import: que hizo cada entrada. */
+/** What the import returns: what each entry did. */
 export interface IImportEntryOutcome {
     type: EExtensionType
     id: string
     status: EBundleEntryStatus
-    /** Lo que respondio la extension, cuando se la pudo llamar. */
+    /** What the extension answered, when it could be called. */
     result?: IExtensionImportResult
-    /** Por que no se pudo, o que fallo. Una entrada rota NO detiene a las demas. */
+    /** Why it could not be, or what failed. A broken entry does NOT stop the others. */
     error?: string
 }
 

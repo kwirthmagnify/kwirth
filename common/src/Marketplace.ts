@@ -1,30 +1,31 @@
 import { EExtensionType } from './ExtensionType'
 
-// Como se autentica la LECTURA DEL MANIFEST. Un marketplace SOLO sirve manifests; de donde se bajan los
-// paquetes lo dice la url de cada entrada, y sus credenciales viven aparte, en IPackageRegistry.
+// How READING THE MANIFEST is authenticated. A marketplace serves manifests ONLY; where the packages
+// are downloaded from is said by each entry's url, and their credentials live apart, in IPackageRegistry.
 export enum EManifestAuthType {
     NONE = 'none',
-    PRIVATE_TOKEN = 'privateToken',   // cabecera PRIVATE-TOKEN (GitLab API)
-    BEARER = 'bearer',                // cabecera Authorization: Bearer (GitHub Contents API)
-    BASIC = 'basic'                   // cabecera Authorization: Basic (Azure DevOps: PAT como contraseña)
+    PRIVATE_TOKEN = 'privateToken',   // PRIVATE-TOKEN header (GitLab API)
+    BEARER = 'bearer',                // Authorization: Bearer header (GitHub Contents API)
+    BASIC = 'basic'                   // Authorization: Basic header (Azure DevOps: the PAT as password)
 }
 
-// El token se trata igual que la contraseña: viaja al front y se muestra enmascarado con ojo.
-// En reposo lo guarda el back en ISecrets, no en el configmap.
+// The token is handled just like the password: it travels to the front end and is shown masked with an
+// eye. At rest the back end keeps it in ISecrets, not in the configmap.
 export interface IMarketplaceManifestAuth {
     type: EManifestAuthType
     token?: string
-    // Solo en BASIC: la parte de usuario. Azure DevOps ignora el usuario y solo mira el PAT, asi que
-    // puede quedar vacio; otros hosts que usen Basic si lo necesitan.
+    // BASIC only: the user part. Azure DevOps ignores the user and looks only at the PAT, so it can be
+    // left empty; other hosts using Basic do need it.
     username?: string
 }
 
-// Un marketplace registrado por el administrador. La url apunta a UN manifest, que puede contener
-// extensiones de varios tipos: cada entrada lleva su extensionType y los managers filtran por el suyo.
+// A marketplace registered by the administrator. The url points at ONE manifest, which may contain
+// extensions of several types: each entry carries its extensionType and the managers filter by theirs.
 //
-// Aqui SOLO se configura como leer el manifest. Donde vive cada paquete lo dice la url de su entrada, y
-// las credenciales para bajarlo salen de IPackageRegistry casando esa url — porque manifest y paquetes
-// son sitios distintos: el marketplace publico tiene los manifests en GitHub y los tarballs en npmjs.
+// Only how to READ THE MANIFEST is configured here. Where each package lives is said by its entry's url,
+// and the credentials to download it come from IPackageRegistry by matching that url — because manifest
+// and packages are different places: the public marketplace has the manifests on GitHub and the tarballs
+// on npmjs.
 export interface IMarketplace {
     id: string
     url: string
@@ -33,13 +34,13 @@ export interface IMarketplace {
     manifestAuth?: IMarketplaceManifestAuth
 }
 
-// Una entrada de manifest ya resuelta por el back, con la procedencia estampada. marketplaceId
-// undefined = viene del marketplace publico OSS.
+// A manifest entry already resolved by the back end, with its provenance stamped on. An undefined
+// marketplaceId means it comes from the public OSS marketplace.
 export interface IMarketplaceEntry {
     extensionType: EExtensionType
-    // Solo en 'docs': el TIPO de la extension documentada. La documentacion se identifica por el par
-    // (targetType, id), porque el id es el de esa extension y puede repetirse entre tipos: un plugin
-    // y un theme pueden llamarse igual y traer cada uno su guia.
+    // 'docs' only: the TYPE of the documented extension. Documentation is identified by the pair
+    // (targetType, id), because the id is that extension's own and can repeat across types: a plugin
+    // and a theme may share a name and each bring its own guide.
     targetType?: string
     id: string
     version: string

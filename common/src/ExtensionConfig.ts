@@ -53,24 +53,24 @@ export type TConfigFieldType = 'text' | 'number' | 'boolean' | 'password' | 'sel
     los 64 campos de los artefactos publicados.
 */
 export interface IConfigFieldDef {
-    /** Clave con la que el valor se guarda en la configuracion. */
+    /** The key the value is stored under in the configuration. */
     name: string
-    /** Etiqueta que ve el usuario en el formulario. */
+    /** The label the user sees on the form. */
     label: string
-    /** Ausente = 'text'. */
+    /** Absent = 'text'. */
     type?: TConfigFieldType
     required?: boolean
-    /** Valores admitidos cuando 'type' es 'select'. Ignorado en el resto. */
+    /** Accepted values when 'type' is 'select'. Ignored otherwise. */
     options?: string[]
     /*
-        Etiquetas a mostrar para cada 'options', posicion a posicion; si falta una, se pinta el valor
-        crudo. Sirve para desplegables cuyo valor no es presentable tal cual (p.ej. el sender 'timed'
-        guarda 'Europe/Madrid' pero muestra 'Europe/Madrid (UTC+2)').
+        Labels to show for each of 'options', position by position; when one is missing, the raw value is
+        drawn. It serves dropdowns whose value is not presentable as it is (the 'timed' sender, for
+        instance, stores 'Europe/Madrid' but shows 'Europe/Madrid (UTC+2)').
     */
     labels?: string[]
-    /** Valor con el que se precarga el campo mientras no haya nada guardado. */
+    /** The value the field is pre-filled with while nothing has been saved. */
     default?: string | number | boolean
-    /** El campo es comun a TODAS las configuraciones de la extension, no propio de cada una. */
+    /** The field is common to ALL of the extension's configurations, not specific to each one. */
     common?: boolean
 }
 

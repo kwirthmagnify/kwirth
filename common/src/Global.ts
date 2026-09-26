@@ -28,8 +28,8 @@ interface ILoginResponse {
     enabledChannels?: string[]
 }
 
-// Subset SEGURO de IUser expuesto a los plugins/consumidores (nunca password/accessKey/resources).
-// Lo devuelve IBackChannelObject.getUsers(). Suficiente para display y referencia de owner.
+// SAFE subset of IUser exposed to plugins and consumers (never password/accessKey/resources).
+// Returned by IBackChannelObject.getUsers(). Enough for display and for referencing an owner.
 interface IUserInfo {
     id: string
     name: string
@@ -40,16 +40,16 @@ interface IClusterMetricsConfig {
     metricsInterval: number
 }
 
-// Configuracion del propio Kwirth, persistida por el back bajo la clave 'kwirth.settings' y
-// servida por /core/settings. No confundir con los settings del usuario, que van por /store.
-// Todos los campos son opcionales: unos settings guardados antes de que existiera un campo no lo
-// tendran, y el back resuelve el valor efectivo con su propia precedencia antes de devolverlos.
+// Kwirth's own configuration, persisted by the back end under the key 'kwirth.settings' and served by
+// /core/settings. Not to be confused with the user's settings, which go through /store.
+// Every field is optional: settings saved before a field existed will not have it, and the back end
+// resolves the effective value with its own precedence before returning them.
 interface IKwirthSettings {
     metricsInterval?: number
-    // De donde se LEEN los manifests
+    // Where the manifests are READ from
     marketplaces?: IMarketplace[]
-    // De donde se DESCARGAN los paquetes, y con que credenciales. Lista aparte porque no hay relacion
-    // uno-a-uno: un manifest puede listar tarballs alojados en varios registros distintos.
+    // Where the packages are DOWNLOADED from, and with which credentials. A separate list because there
+    // is no one-to-one relation: one manifest can list tarballs hosted in several different registries.
     packageRegistries?: IPackageRegistry[]
     /*
         Cuantas lineas del log del contenedor ANTERIOR se leen al arrancar (kubernetes, in-cluster).

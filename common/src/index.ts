@@ -33,7 +33,7 @@ export * from './ConfigBundle'
 export * from './ExtensionScope'
 export * from './Marketplace'
 export * from './PackageRegistry'
-// (daemons eliminados: se retira export * from './Daemon')
+// (daemons removed: export * from './Daemon' has been dropped)
 export * from './Version'
 export * from './FrontChannel'
 export * from './nameGenerator'

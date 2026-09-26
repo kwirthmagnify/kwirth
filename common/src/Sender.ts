@@ -7,16 +7,16 @@
     linea que entra por un recolector externo tienen orígenes distintos, y cada uno rellena lo que sabe.
 */
 export interface ISenderMessageOrigin {
-    /** cluster del que salio, cuando hay mas de uno en juego */
+    /** the cluster it came from, when more than one is in play */
     cluster?: string
     namespace?: string
     pod?: string
     container?: string
-    /** por donde ENTRO en Kwirth: el id del provider o del canal (p.ej. 'fluentbit', 'log') */
+    /** where it ENTERED Kwirth: the id of the provider or the channel (e.g. 'fluentbit', 'log') */
     source?: string
-    /** nombre del servicio o del controlador, cuando se conoce */
+    /** name of the service or the controller, where known */
     service?: string
-    /** marca de tiempo original de la linea, si la traia; en ms desde epoch */
+    /** the line's original timestamp, if it carried one; in ms since the epoch */
     timestamp?: number
 }
 
@@ -44,9 +44,9 @@ export interface ISenderStoredConfig {
     [key: string]: unknown
 }
 
-// Retorno OPCIONAL de un send: JSON libre que el sender puede devolver al llamante (p.ej. un sender
-// de ticketing devuelve { issueKey, url } tras crear el ticket). Los senders de notificación pura
-// siguen devolviendo void; el llamante decide si usa el resultado. Ver plans/webhook-extension/PLAN.md.
+// OPTIONAL return of a send: free-form JSON the sender may give back to the caller (a ticketing sender,
+// for instance, returns { issueKey, url } after creating the ticket). Pure notification senders keep
+// returning void; the caller decides whether to use the result. See plans/webhook-extension/PLAN.md.
 export interface ISenderResult {
     [key: string]: unknown
 }
@@ -63,10 +63,11 @@ export interface ISenderAccess {
         el core lo entrega mensaje a mensaje: nadie tiene que cambiar para seguir funcionando.
     */
     sendBatch?(senderId: string, configName: string, messages: ISenderMessage[]): Promise<ISenderResult | void>
-    // OPCIONAL: consulta el estado actual de una entidad externa creada por el sender (p.ej. un ticket de
-    // ticketing → su status). Contraparte de pull del webhook (push): permite RECONCILIAR estados perdidos
-    // (core caído / sin suscriptor cuando llegó el callback). Devuelve undefined si el sender no lo soporta,
-    // la config no existe, o no se pudo resolver. Ver plans/webhook-extension/PLAN.md (H3b-recon).
+    // OPTIONAL: queries the current state of an external entity created by the sender (a ticketing
+    // ticket → its status, say). The pull counterpart of the webhook (push): it allows lost states to be
+    // RECONCILED (core down, or no subscriber when the callback arrived). Returns undefined when the
+    // sender does not support it, the config does not exist, or it could not be resolved. See
+    // plans/webhook-extension/PLAN.md (H3b-recon).
     fetchStatus?(senderId: string, configName: string, externalId: string): Promise<string | undefined>
     addConfig(senderId: string, config: ISenderConfig): boolean
     listSenders(): Array<{ id: string; configNames: string[] }>

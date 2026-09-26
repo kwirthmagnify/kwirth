@@ -1,9 +1,9 @@
-// Tipo de extensión de Kwirth. Enum (regla: no string-literals para valores enumerados que cruzan
-// back↔front). Nombre y valores en SINGULAR.
+// Kwirth's extension type. An enum (the rule: no string literals for enumerated values that cross
+// back↔front). Name and values in the SINGULAR.
 //
-// OJO: no confundir estos valores con las RUTAS HTTP (plurales: `/plugins`, `/providers`, …) ni con
-// las CLAVES del JSON de licencia (`channels`/`providers`/…): esos contratos se mantienen literales.
-// El enum ordena el CÓDIGO (tipo); rutas/claves quedan como strings en su frontera.
+// CAREFUL: do not confuse these values with the HTTP ROUTES (plural: `/plugins`, `/providers`, …) or
+// with the KEYS of the licence JSON (`channels`/`providers`/…): those contracts stay literal.
+// The enum orders the CODE (the type); routes and keys remain strings at their boundary.
 export enum EExtensionType {
     PLUGIN = 'plugin',
     PROVIDER = 'provider',
@@ -15,7 +15,7 @@ export enum EExtensionType {
     LOGIN = 'login',
     PACK = 'pack',
     WEBHOOK = 'webhook',
-    // Conjunto tematico de tools para los modelos de IA. Es solo back: su front —el selector y el dialogo
-    // de configuracion— lo pone el core y lo comparten todos los plugins que usan IA.
+    // A themed set of tools for the AI models. Back-end only: its front end — the selector and the
+    // configuration dialog — is provided by the core and shared by every plugin that uses AI.
     AITOOLSET = 'aitoolset'
 }
