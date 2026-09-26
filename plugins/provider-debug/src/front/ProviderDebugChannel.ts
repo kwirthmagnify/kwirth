@@ -57,12 +57,12 @@ export class ProviderDebugChannel implements IChannel {
                 const startResponse = signalMessage.flow === EInstanceMessageFlow.RESPONSE && signalMessage.action === EInstanceMessageAction.START
                 if (startResponse) channelObject.instanceId = signalMessage.instance
 
-                // Los dos hitos del arranque se muestran como chips, no como líneas de texto, y se
-                // distinguen por ESTRUCTURA, no por su literal:
-                //  - el core responde al start config con un IInstanceConfigResponse, que NO lleva
-                //    'level' (back/src/index.ts, sendInstanceConfigSignalMessage)
-                //  - este canal siempre manda ISignalMessage CON 'level': INFO al suscribirse y
-                //    ERROR en los fallos, que sí deben seguir leyéndose como texto
+                // The two startup milestones are shown as chips, not as lines of text, and they are
+                // told apart by STRUCTURE, not by their literal text:
+                //  - the core answers the start config with an IInstanceConfigResponse, which carries
+                //    NO 'level' (back/src/index.ts, sendInstanceConfigSignalMessage)
+                //  - this channel always sends an ISignalMessage WITH 'level': INFO on subscribing and
+                //    ERROR on failures, which do have to keep being read as text
                 if (startResponse && signalMessage.level === undefined) {
                     data.configAccepted = true
                     return { action: EChannelRefreshAction.REFRESH }
@@ -91,12 +91,12 @@ export class ProviderDebugChannel implements IChannel {
         const data: IProviderDebugData = channelObject.data
         data.events = []
         data.signals = []
-        // los dos hitos se apagan en cada arranque: se vuelven a encender con sus respuestas
+        // both milestones go off on every start: they light up again with their replies
         data.configAccepted = false
         data.subscribed = false
-        // 'providers' NO se limpia a propósito: es lo que puebla la Select del setup, que se abre
-        // ANTES de arrancar. Perderlo aquí dejaría el desplegable sin los providers de core en cada
-        // rearranque. El back manda el catálogo fresco justo después, así que se sobreescribe solo.
+        // 'providers' is deliberately NOT cleared: it is what populates the setup's Select, which is
+        // opened BEFORE starting. Losing it here would leave the dropdown without the core providers
+        // on every restart. The back end sends a fresh catalogue right after, so it overwrites itself.
         data.paused = false
         data.started = true
         return true

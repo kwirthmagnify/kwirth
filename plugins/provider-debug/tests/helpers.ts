@@ -1,10 +1,10 @@
-// Mocks comunes para los tests unit de provider-debug (patrón censor).
-// No se levanta infraestructura: se inyecta un clusterInfo con providers falsos y se captura
-// el tráfico WebSocket con MockWs.
+// Common mocks for provider-debug's unit tests (the censor pattern).
+// No infrastructure is brought up: a clusterInfo with fake providers is injected and the WebSocket
+// traffic is captured with MockWs.
 import { EInstanceMessageType, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 import { EProviderDebugPayload, IProviderDebugEvent, IProviderDebugMessageResponse, IProviderDebugProviderInfo, IProviderDebugSubscriptionHelp } from '../src/common/ProviderDebugTypes'
 
-// WebSocket falso: guarda cada send() como string JSON y ofrece vistas tipadas del tráfico.
+// Fake WebSocket: it keeps every send() as a JSON string and offers typed views of the traffic.
 export class MockWs {
     readyState = 1
     bufferedAmount = 0
@@ -29,16 +29,16 @@ export class MockWs {
         return all.length === 0 ? undefined : all[all.length - 1].providers
     }
 
-    /** textos de las señales emitidas por el canal */
+    /** texts of the signals emitted by the channel */
     signals(): string[] {
         return this.parsed().filter(m => m.type === EInstanceMessageType.SIGNAL).map(m => String(m.text))
     }
 }
 
 /**
- * Provider falso que reproduce el detalle que importa del contrato real: los subscribers se
- * guardan en un Map indexado por el OBJETO subscriber, con su propio payload. Es lo que hace
- * que el proxy por instancia sea necesario, así que el mock no puede simplificarlo.
+ * A fake provider reproducing the detail that matters in the real contract: subscribers are kept in
+ * a Map indexed by the subscriber OBJECT, each with its own payload. That is what makes the
+ * per-instance proxy necessary, so the mock cannot simplify it away.
  */
 export class FakeProvider implements IProvider {
     readonly id: string
@@ -48,7 +48,7 @@ export class FakeProvider implements IProvider {
     routerAlias: string | undefined = undefined
     apiKeyApi: unknown = undefined
     subscribers: Map<IProviderSubscriber, unknown> = new Map()
-    /** si se define, el provider publica ayuda de suscripción; si no, no implementa el método */
+    /** when defined, the provider publishes subscription help; otherwise it does not implement the method */
     getSubscriptionHelp?: () => IProviderDebugSubscriptionHelp
 
     constructor(id: string, providesRouter = false) {
@@ -56,13 +56,13 @@ export class FakeProvider implements IProvider {
         this.providesRouter = providesRouter
     }
 
-    /** hace que el provider publique esta ayuda (encadenable) */
+    /** makes the provider publish this help (chainable) */
     withHelp(help: IProviderDebugSubscriptionHelp): FakeProvider {
         this.getSubscriptionHelp = () => help
         return this
     }
 
-    /** hace que el provider reviente al pedirle la ayuda (encadenable) */
+    /** makes the provider blow up when asked for its help (chainable) */
     withBrokenHelp(err = 'boom'): FakeProvider {
         this.getSubscriptionHelp = () => { throw new Error(err) }
         return this
@@ -88,23 +88,23 @@ export class FakeProvider implements IProvider {
     startProvider = async () => {}
     stopProvider = async () => {}
 
-    /** dispara un evento a todos los subscribers, igual que hace un provider real */
+    /** fires an event at every subscriber, just as a real provider does */
     emit(event: unknown): void {
         for (const subscriber of this.subscribers.keys()) subscriber.processProviderEvent(this.id, event)
     }
 
-    /** payload con el que se suscribió un subscriber concreto */
+    /** the payload a particular subscriber subscribed with */
     dataOf(c: IProviderSubscriber): unknown { return this.subscribers.get(c) }
 }
 
 /**
- * Pluvider falso: un plugin que además produce. A diferencia de un provider NO tiene 'id' propio
- * (el core se lo compone como 'plugin:<channelId>' y lo usa como clave del registro), ni routers, ni
- * nada de la maquinaria de providers. Lo único que comparte es la pareja addSubscriber/removeSubscriber
- * — que es justo lo que hace que se pueda depurar igual que un provider.
+ * A fake pluvider: a plugin that also produces. Unlike a provider it has NO 'id' of its own (the core
+ * composes it as 'plugin:<channelId>' and uses it as the registry key), no routers, nothing of the
+ * provider machinery. All it shares is the addSubscriber/removeSubscriber pair — which is precisely
+ * what makes it debuggable just like a provider.
  */
 export class FakePluvider {
-    /** el id compuesto por el core; aquí solo sirve para construir el registro, como hace él */
+    /** the id composed by the core; here it only serves to build the registry, as the core does */
     readonly id: string
     readonly description: string
     subscribers: Map<IProviderSubscriber, unknown> = new Map()
@@ -127,7 +127,7 @@ export class FakePluvider {
     startProvider = async () => {}
     stopProvider = async () => {}
 
-    /** dispara un evento a todos los subscribers, con el id compuesto como origen */
+    /** fires an event at every subscriber, with the composed id as its origin */
     emit(event: unknown): void {
         for (const subscriber of this.subscribers.keys()) subscriber.processProviderEvent(this.id, event)
     }

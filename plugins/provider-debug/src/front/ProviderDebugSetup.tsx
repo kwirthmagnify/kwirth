@@ -9,10 +9,11 @@ import { EProviderDebugProviderState, IProviderDebugCatalogueEntry, IProviderDeb
 export const ProviderDebugIcon = <DataObjectOutlined />
 
 /**
- * Las tres vistas del productor elegido. Nunca comparar contra literales sueltos.
+ * The three views of the chosen producer. Never compare against loose literals.
  *
- * OVERVIEW es la que se abre al elegir uno: primero se lee QUÉ entrega y CÓMO se pide, y solo después
- * se escribe el payload — en formulario si el productor describe sus campos, o a mano si no.
+ * OVERVIEW is the one that opens on choosing one: first you read WHAT it delivers and HOW to ask for
+ * it, and only then do you write the payload — in a form when the producer describes its fields, or
+ * by hand when it does not.
  */
 enum ESetupTab {
     OVERVIEW = 'overview',
@@ -33,9 +34,9 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
     const [tab, setTab] = useState<ESetupTab>(ESetupTab.OVERVIEW)
     const defaultRef = useRef<HTMLInputElement | null>(null)
 
-    // GET /core/providers es la vista COMPLETA del core: instalados + los de core (events, metrics),
-    // cada uno con si está vivo y con la ayuda que publica. Está disponible sin arrancar nada, así
-    // que el desplegable sale poblado y marcado desde el primer momento.
+    // GET /core/providers is the core's COMPLETE view: installed ones plus the core's own (events,
+    // metrics), each with whether it is alive and with the help it publishes. It is available without
+    // starting anything, so the dropdown comes out populated and flagged from the very first moment.
     useEffect(() => {
         const url = props.channelObject.clusterUrl
         if (!url) return
@@ -50,8 +51,9 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
     }, [])
 
     const options = (): IProviderDebugProviderOption[] => {
-        // Si el endpoint no responde queda el catálogo que el canal manda por websocket, que solo
-        // contiene providers vivos y solo existe tras haber arrancado la instancia una vez.
+        // If the endpoint does not answer, what is left is the catalogue the channel sends over the
+        // websocket, which only holds live providers and only exists after the instance has been
+        // started once.
         const source: IProviderDebugProviderOption[] = catalogueLoaded
             ? catalogue.map(e => ({
                 id: e.id,
@@ -62,7 +64,7 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
             }))
             : (data?.providers ?? []).map(p => ({ id: p.id, state: EProviderDebugProviderState.UNKNOWN, help: p.help, pluvider: p.pluvider, description: p.description }))
 
-        // el provider ya configurado se mantiene aunque haya desaparecido del catálogo
+        // the already configured provider is kept even if it has vanished from the catalogue
         if (providerId && !source.some(o => o.id === providerId)) source.push({ id: providerId, state: EProviderDebugProviderState.UNKNOWN })
         return source.sort((a, b) => a.id.localeCompare(b.id))
     }
@@ -81,8 +83,8 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
         }
     }
 
-    // El JSON es la única fuente de verdad; el formulario solo lo lee y lo reescribe. Así se puede
-    // saltar de una vista a otra sin sincronizar dos estados que se contradigan.
+    // The JSON is the single source of truth; the form only reads and rewrites it. That way one can
+    // jump from one view to another without synchronising two states that contradict each other.
     const payload = (): Record<string, unknown> => {
         if (!subscriptionData || subscriptionData.trim() === '') return {}
         try {
@@ -256,8 +258,8 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
                             }
 
                             {providerId && (tab === ESetupTab.JSON || (tab === ESetupTab.FORM && fields.length === 0)) &&
-                                /* Sin maxRows: el editor crece con el cuadro, que es lo que da sitio a un
-                                   payload largo sin obligar a desplazarse dentro de cuatro lineas. */
+                                /* No maxRows: the editor grows with the box, which is what makes room for a
+                                   long payload without forcing you to scroll inside four lines. */
                                 <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                                     <TextField value={subscriptionData} onChange={(e) => setSubscriptionData(e.target.value)} variant='standard' label='Subscription payload (JSON)' placeholder='{}' multiline minRows={4} error={invalidJson()} helperText={invalidJson() ? 'Not valid JSON' : 'Empty means {} — note most providers deliver nothing without a payload'} fullWidth />
                                 </Box>

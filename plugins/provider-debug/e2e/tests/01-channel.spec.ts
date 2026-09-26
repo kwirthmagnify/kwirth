@@ -2,17 +2,17 @@ import { test, expect, Page } from '@playwright/test'
 import { login, openChannelPicker, openTabMenu, CHANNEL } from './helpers'
 
 /**
- * Serial y con UNA sola página para todo el fichero. El coste dominante de este e2e no es
- * Playwright sino recargar la SPA contra el dev server de react-scripts (decenas de segundos por
- * carga), así que abrir una página por test multiplicaba ese coste por el número de tests. Aquí se
- * paga una vez. El precio es que los tests comparten estado y el orden importa: van de "sin
- * arrancar" hacia "arrancado", y el que limpia el buffer va el último.
+ * Serial, and with ONE single page for the whole file. The dominant cost of this e2e is not
+ * Playwright but reloading the SPA against react-scripts' dev server (tens of seconds per load), so
+ * opening one page per test multiplied that cost by the number of tests. Here it is paid once. The
+ * price is that the tests share state and order matters: they go from "not started" towards
+ * "started", and the one that clears the buffer goes last.
  */
 test.describe.configure({ mode: 'serial' })
 
-// Trace y video apagados: la SPA mantiene el websocket vivo (metrics empuja cada 15 s) y el cierre
-// de la pagina se queda colgado finalizando el trace. Las capturas de fallo no se pierden: las
-// adjunta el afterEach a mano, porque la pagina se crea fuera de la fixture.
+// Trace and video off: the SPA keeps the websocket alive (metrics pushes every 15 s) and closing the
+// page hangs finalising the trace. Failure screenshots are not lost: the afterEach attaches them by
+// hand, because the page is created outside the fixture.
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
 
 let page: Page
@@ -29,25 +29,25 @@ test.beforeAll(async ({ browser }) => {
 })
 
 test.afterAll(async () => {
-    // La SPA deja el websocket vivo (metrics empuja cada 15 s) y page.close() se queda colgado
-    // finalizando el trace. Se navega fuera para soltar el socket y se cierra el CONTEXTO, que no
-    // espera al cierre ordenado de la pagina.
+    // The SPA leaves the websocket alive (metrics pushes every 15 s) and page.close() hangs
+    // finalising the trace. We navigate away to release the socket and close the CONTEXT, which does
+    // not wait for an orderly page close.
     await page?.goto('about:blank').catch(() => { })
     await page?.context().close().catch(() => { })
 })
 
-// La página se crea a mano, así que Playwright no le adjunta capturas solo: se hace aquí.
+// The page is created by hand, so Playwright does not attach screenshots on its own: it is done here.
 test.afterEach(async ({}, testInfo) => {
     if (testInfo.status !== testInfo.expectedStatus && page) {
         await testInfo.attach('screenshot', { body: await page.screenshot(), contentType: 'image/png' })
     }
 })
 
-// El canal declara requirements.setup = true, así que "Start" abre primero el diálogo de setup
-// (front/src/App.tsx:1337, onClickChannelStart) y el canal arranca al aceptarlo.
+// The channel declares requirements.setup = true, so "Start" opens the setup dialog first
+// (front/src/App.tsx:1337, onClickChannelStart) and the channel starts on accepting it.
 /**
- * Abre el setup. Si el canal ya está arrancado hay que pararlo primero: el menú deshabilita Start
- * mientras corre, así que reconfigurar es siempre Stop -> Start (es el flujo real del plugin, con
+ * Opens the setup. If the channel is already started it has to be stopped first: the menu disables
+ * Start while it runs, so reconfiguring is always Stop -> Start (it is the plugin's real flow, with
  * modifiable: false).
  */
 const openSetup = async (): Promise<void> => {
@@ -62,11 +62,11 @@ const openSetup = async (): Promise<void> => {
     await expect(page.getByText('Configure Provider Debug channel')).toBeVisible()
 }
 
-// Por rol y no por label: el título del diálogo ("Configure Provider Debug channel") también casa
-// con getByLabel('Provider') y rompe el modo estricto.
+// By role and not by label: the dialog's title ("Configure Provider Debug channel") also matches
+// getByLabel('Provider') and breaks strict mode.
 const providerSelect = () => page.getByRole('combobox', { name: 'Provider', exact: true })
 
-/** Cierra el desplegable abierto y, si el diálogo sigue vivo, lo cancela. */
+/** Closes the open dropdown and, if the dialog is still alive, cancels it. */
 const closeSetup = async (): Promise<void> => {
     await page.keyboard.press('Escape')
     await page.waitForTimeout(400)
@@ -75,13 +75,13 @@ const closeSetup = async (): Promise<void> => {
     await page.waitForTimeout(400)
 }
 
-/** Selecciona un provider de la Select (MUI pinta cada opción con data-value). */
+/** Selects a provider from the Select (MUI draws each option with a data-value). */
 const selectProvider = async (providerId: string): Promise<void> => {
     await providerSelect().click()
     await page.locator(`li[data-value="${providerId}"]`).click()
 }
 
-/** El editor JSON vive en su pestaña: elegir productor abre Overview, así que hay que ir a él. */
+/** The JSON editor lives in its own tab: choosing a producer opens Overview, so we have to go to it. */
 const openJsonTab = async (): Promise<void> => {
     await page.getByRole('tab', { name: 'JSON' }).click()
     await expect(page.getByLabel('Subscription payload (JSON)')).toBeVisible()
@@ -98,23 +98,23 @@ const startWith = async (providerId: string, payload = ''): Promise<void> => {
     await page.waitForTimeout(2500)
 }
 
-/** Chip de hito del arranque ('config' / 'subscribed'), por texto exacto de su etiqueta. */
+/** Startup milestone chip ('config' / 'subscribed'), by the exact text of its label. */
 const statusChip = (label: string) => page.locator('.MuiChip-root').filter({ hasText: new RegExp('^' + label + '$') }).first()
 
 const METRICS_PAYLOAD = '{"pod":true,"container":true,"machine":true}'
 const eventsArrived = () => expect(page.getByText(/Events: [1-9]\d* \/ 200/)).toBeVisible({ timeout: 90000 })
 
-// El estado vacío pasó a ser el mismo patrón que Agora e Iter: titular y instrucción en DOS
-// elementos (antes era una sola frase), centrado en el área de contenido.
+// The empty state moved to the same pattern as Agora and Iter: headline and instruction in TWO
+// elements (it used to be a single sentence), centred in the content area.
 test('the tab explains that the channel must be started', async () => {
     await expect(page.getByText('Provider Debug not started', { exact: true })).toBeVisible()
     await expect(page.getByText(/Start the channel .* to subscribe to a provider/)).toBeVisible()
 })
 
 
-// GET /core/providers es la vista completa del core, así que todo lo de la Select (ids, estado y
-// ayuda) está disponible SIN haber arrancado el canal ni una vez. Estos tests van antes del primer
-// Start a propósito: si alguien vuelve a atar la Select al catálogo por websocket, se ponen rojos.
+// GET /core/providers is the core's complete view, so everything in the Select (ids, state and help)
+// is available WITHOUT the channel ever having been started. These tests go before the first Start on
+// purpose: if anybody ties the Select back to the websocket catalogue, they turn red.
 /*
     No se nombra ningún provider INSTALADO a propósito. La versión anterior exigía 'kafka' y 'otel' por
     id, y se puso roja el día que kafka dejó de estar instalado en el entorno — un fallo que no decía
@@ -128,15 +128,15 @@ test('before any start the select offers core providers and resolves their state
     await openSetup()
     await providerSelect().click()
 
-    // de core: no son extensiones, los sirve el mismo endpoint marcados como core
+    // core ones: they are not extensions, the same endpoint serves them flagged as core
     await expect(page.locator('li[data-value="events"]')).toBeVisible()
     await expect(page.locator('li[data-value="metrics"]')).toBeVisible()
-    // y además de los dos de core hay productores instalados: si la Select volviera a colgar del
-    // catálogo por websocket, sin arrancar el canal solo estaría la opción vacía
+    // and besides the two core ones there are installed producers: were the Select to hang off the
+    // websocket catalogue again, without starting the channel only the empty option would be there
     expect(await page.locator('li[data-value]:not([data-value=""])').count()).toBeGreaterThan(2)
 
-    // el estado ya viene resuelto sin arrancar nada: 'metrics' corre —lo requiere el canal de
-    // métricas— así que no lleva la marca
+    // the state comes already resolved without starting anything: 'metrics' runs — the metrics channel
+    // requires it — so it does not carry the mark
     await expect(page.locator('li[data-value="metrics"]')).not.toContainText('not running')
     await expect(page.getByText(/Only the ones not marked as "not running" can be subscribed to/)).toBeVisible()
 
@@ -159,7 +159,7 @@ test('the example button fills the payload', async () => {
     await openSetup()
     await selectProvider('metrics')
 
-    // MetricsProvider publica usage + example, sin fields: el formulario no aplica
+    // MetricsProvider publishes usage + example, with no fields: the form does not apply
     await expect(page.getByText(/Pushes on its own clock/)).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Form' })).toBeDisabled()
 
@@ -172,7 +172,7 @@ test('the example button fills the payload', async () => {
 test('the generated form writes into the payload', async () => {
     await openSetup()
     await selectProvider('events')
-    // Elegir productor abre Overview: el formulario está en su propia pestaña.
+    // Choosing a producer opens Overview: the form is in its own tab.
     await page.getByRole('tab', { name: 'Form' }).click()
     await page.getByLabel(/^kinds/).fill('Pod, Event')
 
@@ -185,8 +185,9 @@ test('the generated form writes into the payload', async () => {
 
 test('a provider without help says so instead of leaving the user guessing', async () => {
     await openSetup()
-    // 'business' es hoy el unico provider vivo que NO publica getSubscriptionHelp (antes se usaba
-    // 'otel', que ya no esta instalado). Si algun dia lo publica, hay que elegir otro sin ayuda.
+    // 'business' is today the only live provider that does NOT publish getSubscriptionHelp ('otel'
+    // used to be used, and is no longer installed). If it ever publishes it, another one without help
+    // has to be chosen.
     await selectProvider('business')
 
     await expect(page.getByText(/does not publish subscription help/)).toBeVisible()
@@ -249,9 +250,9 @@ test('a malformed subscription payload blocks the dialog instead of reaching the
 })
 
 test('subscribing to a running provider is confirmed and streams its raw events', async () => {
-    // 'metrics' es el provider determinista del core: su tick empuja a TODOS sus subscribers cada
-    // metricsInterval (15 s por defecto), sin filtro, así que el tráfico no depende de la actividad
-    // del cluster (back/src/providers/metrics/MetricsProvider.ts, tick()).
+    // 'metrics' is the core's deterministic provider: its tick pushes to ALL its subscribers every
+    // metricsInterval (15 s by default), with no filter, so the traffic does not depend on the
+    // cluster's activity (back/src/providers/metrics/MetricsProvider.ts, tick()).
     await startWith('metrics', METRICS_PAYLOAD)
 
     await expect(statusChip('subscribed')).toHaveClass(/MuiChip-filledSuccess/)
@@ -260,16 +261,16 @@ test('subscribing to a running provider is confirmed and streams its raw events'
 })
 
 test('the start milestones are chips, not text lines', async () => {
-    // los dos hitos se encienden en verde...
+    // both milestones light up green...
     await expect(statusChip('config')).toHaveClass(/MuiChip-filledSuccess/)
     await expect(statusChip('subscribed')).toHaveClass(/MuiChip-filledSuccess/)
 
-    // ...y sus antiguas lineas *** ... *** ya no se pintan
+    // ...and their old *** ... *** lines are no longer drawn
     await expect(page.getByText(/^\*\*\* .* \*\*\*$/)).toHaveCount(0)
 })
 
 test('each event is collapsed behind a summary and expands to its raw JSON', async () => {
-    // el resumen enseña las claves de primer nivel sin desplegar
+    // the summary shows the top-level keys without expanding
     await expect(page.getByText(/metricsInterval, cluster/).first()).toBeVisible()
 
     await page.locator('button[aria-label="Expand event"]').first().click()
@@ -278,9 +279,9 @@ test('each event is collapsed behind a summary and expands to its raw JSON', asy
 })
 
 test('a rendered event never goes past the line cap', async () => {
-    // Invariante: da igual lo gordo que sea el evento, nunca se pintan mas de 1000 lineas. El test
-    // NO exige que este evento concreto se recorte (depende del cluster); si se recorta, comprueba
-    // ademas que el aviso es coherente con lo pintado.
+    // Invariant: however big the event is, more than 1000 lines are never drawn. The test does NOT
+    // require this particular event to be trimmed (that depends on the cluster); if it is trimmed, it
+    // also checks that the notice is consistent with what was drawn.
     const painted = await page.locator('pre').first().evaluate(el => (el.textContent ?? '').split('\n').length)
     console.log('DIAG lineas pintadas en la tarjeta:', painted)
     expect(painted).toBeLessThanOrEqual(1000)
@@ -297,24 +298,24 @@ test('a rendered event never goes past the line cap', async () => {
 })
 
 test('each event can be copied without collapsing its card', async () => {
-    // writeText() exige documento con foco; sin bringToFront la promesa se rechaza en silencio.
+    // writeText() demands a focused document; without bringToFront the promise is silently rejected.
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
     await page.bringToFront()
-    // OJO: por rol NO vale. El AccordionSummary es role="button" y su nombre accesible incluye el
-    // aria-label de este botón, así que getByRole casaba con la cabecera y solo plegaba la tarjeta.
+    // CAREFUL: by role does NOT work. The AccordionSummary is role="button" and its accessible name
+    // includes this button's aria-label, so getByRole matched the header and merely collapsed the card.
     const copyButton = page.locator('button[aria-label="Copy event JSON"]').first()
     await expect(copyButton).toBeVisible()
 
     await copyButton.click()
 
-    // se asserta el contenido real del portapapeles, no el tick visual de "copiado": ese solo dura
-    // 1,5 s y compite con los repintados del stream de eventos.
+    // the clipboard's real content is asserted, not the visual "copied" tick: that one lasts only
+    // 1.5 s and competes with the repaints of the event stream.
     await expect.poll(async () => {
         const text = await page.evaluate(() => navigator.clipboard.readText())
         try { return Object.keys(JSON.parse(text)) }
         catch { return [] }
     }, { timeout: 10000 }).toContain('metricsInterval')
-    // el botón vive dentro del summary, así que el click no debe plegar la tarjeta abierta
+    // the button lives inside the summary, so the click must not collapse the expanded card
     await expect(page.getByText('"metricsInterval"').first()).toBeVisible()
 })
 
@@ -338,17 +339,17 @@ test('the notice warns about matches that fall past the cut', async () => {
     await expect(notice).toContainText(/\d+ match(es)? falls? past the cut and cannot be highlighted here/)
     await expect(notice).toContainText('Use the copy button to get the whole object')
 
-    // y sin busqueda el aviso vuelve a ser el corto, sin hablar de coincidencias
+    // and with no search the notice goes back to the short one, saying nothing about matches
     await page.getByRole('button', { name: 'Clear search' }).click()
     await expect(notice).not.toContainText('past the cut')
 })
 
 test('expanding a card is not animated', async () => {
-    // Un evento puede traer miles de lineas: animar el despliegue lo deja ilegible mientras crece.
-    // MUI vuelca el timeout del Collapse a transition-duration, asi que es asertable de verdad.
-    // El detalle se renderiza directamente, sin Collapse de por medio: si el JSON desplegado no
-    // cuelga de ningun Collapse, no hay transicion que pueda animarlo. Se comprueba sobre el
-    // elemento real en vez de sobre duraciones CSS, que MUI escribe en estilo inline.
+    // An event may carry thousands of lines: animating the expansion leaves it unreadable while it
+    // grows. MUI dumps the Collapse's timeout into transition-duration, so it really is assertable.
+    // The detail is rendered directly, with no Collapse in between: if the expanded JSON hangs off no
+    // Collapse, there is no transition that could animate it. It is checked against the real element
+    // rather than against CSS durations, which MUI writes in inline style.
     const expand = page.locator('button[aria-label="Expand event"]').first()
     if (await expand.isVisible().catch(() => false)) await expand.click()
 
@@ -362,7 +363,7 @@ test('expanding a card is not animated', async () => {
 test('the match counter sits left of the search box and starts at 0/0', async () => {
     await expect(page.getByText('0/0')).toBeVisible()
 
-    // se comprueba el orden REAL en el DOM, no solo que ambos existan
+    // the REAL order in the DOM is checked, not just that both exist
     const order = await page.evaluate(() => {
         const input = document.querySelector('input[aria-label="Search events"]')
         const counter = [...document.querySelectorAll('span,p')].find(el => el.textContent?.trim() === '0/0')
@@ -375,7 +376,7 @@ test('the match counter sits left of the search box and starts at 0/0', async ()
 test('the search box reports how many events match', async () => {
     await page.getByLabel('Search events').fill('metricsInterval')
 
-    // aun no se ha saltado a ninguna, asi que la posicion es 0 y el total el numero de eventos
+    // none has been jumped to yet, so the position is 0 and the total is the number of events
     await expect(page.getByText(/^0\/[1-9]\d*$/)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Next match' })).toBeEnabled()
 })
@@ -390,17 +391,17 @@ test('a search with no hits disables the navigation', async () => {
 
 test('next and previous walk the matches and open the card', async () => {
     await page.getByLabel('Search events').fill('metricsInterval')
-    // se pliega lo que hubiera abierto de tests anteriores, para probar que navegar despliega
+    // whatever earlier tests left expanded is collapsed, to prove that navigating expands
     const openCard = page.locator('button[aria-label="Collapse event"]').first()
     if (await openCard.isVisible().catch(() => false)) await openCard.click()
 
     await page.getByRole('button', { name: 'Next match' }).click()
 
     await expect(page.getByText(/^1\/[1-9]\d*$/)).toBeVisible()
-    // la coincidencia se abre sola: su JSON queda a la vista
+    // the match expands on its own: its JSON is left in view
     await expect(page.getByText('"metricsInterval"').first()).toBeVisible()
 
-    // previous desde la primera da la vuelta a la ultima
+    // previous from the first wraps around to the last
     await page.getByRole('button', { name: 'Previous match' }).click()
     await expect(page.getByText(/^\d+\/\d+$/)).toBeVisible()
 })
@@ -409,7 +410,7 @@ test('the searched text is highlighted inside the expanded card', async () => {
     await page.getByLabel('Search events').fill('maxPods')
     await page.getByRole('button', { name: 'Next match' }).click()
 
-    // el termino se pinta en video inverso: su span lleva fondo propio, no el transparente heredado
+    // the term is drawn in reverse video: its span carries its own background, not the inherited transparent one
     const marked = page.locator('pre span').filter({ hasText: /^maxPods$/ }).first()
     await expect(marked).toBeVisible()
 
@@ -427,10 +428,10 @@ test('clearing the search empties the box and resets the counter', async () => {
     await page.getByRole('button', { name: 'Clear search' }).click()
 
     await expect(page.getByLabel('Search events')).toHaveValue('')
-    // el contador no se esconde: se queda en 0/0 para que el hueco no baile
+    // the counter does not hide: it stays at 0/0 so the gap does not shift
     await expect(page.getByText('0/0')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Next match' })).toBeDisabled()
-    // el boton de limpiar tampoco desaparece, solo se deshabilita
+    // the clear button does not disappear either, it is merely disabled
     await expect(page.getByRole('button', { name: 'Clear search' })).toBeDisabled()
 })
 

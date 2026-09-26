@@ -1,9 +1,9 @@
 import { IInstanceMessage } from '@kwirthmagnify/kwirth-common'
 
 /**
- * Naturaleza del mensaje que el back del canal manda al front. El canal no interpreta
- * los eventos de provider, así que solo hay dos cosas que puede enviar: el catálogo de
- * providers a los que se puede enganchar, y los eventos tal cual llegan.
+ * Nature of the message the channel.s back end sends the front end. The channel does not interpret
+ * provider events, so there are only two things it can send: the catalogue of providers it can hook
+ * onto, and the events exactly as they arrive.
  */
 export enum EProviderDebugPayload {
     PROVIDERS = 'providers',
@@ -11,9 +11,9 @@ export enum EProviderDebugPayload {
 }
 
 /**
- * Ayuda de suscripción que publica un provider. Es un espejo de IProviderSubscriptionHelp de
- * kwirth-common-back: se redeclara aquí porque este tipo también viaja al front por websocket, y
- * porque el método es OPCIONAL — un provider que no lo implemente simplemente no manda nada.
+ * Subscription help a provider publishes. It mirrors IProviderSubscriptionHelp from
+ * kwirth-common-back: it is redeclared here because this type also travels to the front end over the
+ * websocket, and because the method is OPTIONAL — a provider that does not implement it sends nothing.
  */
 export interface IProviderDebugSubscriptionField {
     name: string
@@ -28,28 +28,28 @@ export interface IProviderDebugSubscriptionHelp {
     fields?: IProviderDebugSubscriptionField[]
 }
 
-/** Un productor vivo en el core (provider o pluvider), tal y como lo ve el canal. */
+/** A producer alive in the core (provider or pluvider), exactly as the channel sees it. */
 export interface IProviderDebugProviderInfo {
     id: string
     providesRouter: boolean
     routerAlias?: string
-    /** presente solo si el productor implementa getSubscriptionHelp() */
+    /** present only when the producer implements getSubscriptionHelp() */
     help?: IProviderDebugSubscriptionHelp
     /**
-     * true si no es un provider sino un PLUVIDER: un plugin que ademas produce y expone su
-     * informacion in-process. Su id lleva el prefijo 'plugin:' y no se puede instalar ni desinstalar
-     * por separado — se va con su plugin.
+     * true when it is not a provider but a PLUVIDER: a plugin that also produces and exposes its
+     * information in-process. Its id carries the 'plugin:' prefix and it cannot be installed or
+     * uninstalled separately — it goes with its plugin.
      */
     pluvider?: boolean
-    /** Que produce, en una linea. Solo lo traen los pluviders (de su getPluviderData). */
+    /** What it produces, in one line. Only pluviders carry it (from their getPluviderData). */
     description?: string
 }
 
 /**
- * Estado de un provider en la lista del setup. Lo dice GET /core/providers, que es la vista
- * completa del core: instalados + los de core, cada uno con si está vivo y con su ayuda de
- * suscripción. UNKNOWN solo aparece si ese endpoint no responde y hay que tirar del catálogo que
- * manda el canal por websocket.
+ * State of a provider in the setup.s list. GET /core/providers says it, and that is the core.s
+ * complete view: installed ones plus the core.s own, each with whether it is alive and with its
+ * subscription help. UNKNOWN only shows up when that endpoint does not answer and the catalogue the
+ * channel sends over the websocket has to be used instead.
  */
 export enum EProviderDebugProviderState {
     RUNNING = 'running',          // instanciado y arrancado en el core
@@ -57,33 +57,33 @@ export enum EProviderDebugProviderState {
     UNKNOWN = 'unknown'           // el endpoint no respondió; no se sabe
 }
 
-/** Una entrada de la Select del setup: el productor más lo que sabemos de él. */
+/** One entry of the setup.s Select: the producer plus what we know about it. */
 export interface IProviderDebugProviderOption {
     id: string
     state: EProviderDebugProviderState
     help?: IProviderDebugSubscriptionHelp
-    /** true si es un pluvider: un plugin que además produce. */
+    /** true when it is a pluvider: a plugin that also produces. */
     pluvider?: boolean
-    /** qué produce, en una línea. Solo la traen los pluviders. */
+    /** what it produces, in one line. Only pluviders carry it. */
     description?: string
 }
 
-/** Una fila de GET /core/providers, con solo lo que a este plugin le interesa. */
+/** One row of GET /core/providers, with only what this plugin cares about. */
 export interface IProviderDebugCatalogueEntry {
     id: string
     running?: boolean
     core?: boolean
     subscriptionHelp?: IProviderDebugSubscriptionHelp
     /**
-     * true si la fila no es un provider sino un PLUVIDER. El endpoint los sirve en la misma lista a
-     * propósito —quien consume no tiene por qué saber que hay dos clases— pero aquí se marcan, para
-     * que quien depura vea de dónde sale cada uno.
+     * true when the row is not a provider but a PLUVIDER. The endpoint serves them in the same list on
+     * purpose — whoever consumes need not know there are two classes — but here they are flagged, so
+     * whoever debugs can see where each one comes from.
      */
     pluvider?: boolean
     description?: string
 }
 
-/** Un evento tal y como llegó a processProviderEvent, sin transformar. */
+/** An event exactly as it reached processProviderEvent, untransformed. */
 export interface IProviderDebugEvent {
     ts: number
     providerId: string
@@ -100,8 +100,8 @@ export interface IProviderDebugMessageResponse extends IInstanceMessage {
 }
 
 export interface IProviderDebugInstanceConfig {
-    /** id del provider al que se suscribe la instancia; vacío = todavía ninguno */
+    /** id of the provider the instance subscribes to; empty = none yet */
     providerId: string
-    /** payload de suscripción en crudo (JSON tecleado por el usuario); vacío = {} */
+    /** raw subscription payload (JSON typed by the user); empty = {} */
     subscriptionData: string
 }

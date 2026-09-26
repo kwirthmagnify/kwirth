@@ -2,12 +2,12 @@ import { test, expect, Page } from '@playwright/test'
 import { login, openChannelPicker, openTabMenu, CHANNEL } from './helpers'
 
 /**
- * Depurar PLUVIDERS: plugins que además producen y publican su información in-process. Para quien
- * depura son un productor más —se listan, se suscribe uno y llegan eventos— y eso es justo lo que se
- * verifica aquí, contra el pluvider real de Agora.
+ * Debugging PLUVIDERS: plugins that also produce and publish their information in-process. To whoever
+ * debugs they are just another producer — they are listed, you subscribe to one and events arrive —
+ * and that is exactly what is verified here, against Agora's real pluvider.
  *
- * Serial y con UNA página para todo el fichero, por el mismo motivo que 01-channel: el coste
- * dominante es recargar la SPA contra el dev server, no Playwright.
+ * Serial, and with ONE page for the whole file, for the same reason as 01-channel: the dominant cost
+ * is reloading the SPA against the dev server, not Playwright.
  */
 test.describe.configure({ mode: 'serial' })
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
@@ -67,7 +67,7 @@ const closeSetup = async (): Promise<void> => {
 test('with no producer chosen the three tabs are disabled', async () => {
     await openSetup()
 
-    // Sin productor no hay nada que describir ni payload que escribir.
+    // With no producer there is nothing to describe and no payload to write.
     await expect(page.getByRole('tab', { name: 'Overview' })).toBeDisabled()
     await expect(page.getByRole('tab', { name: 'Form' })).toBeDisabled()
     await expect(page.getByRole('tab', { name: 'JSON' })).toBeDisabled()
@@ -77,17 +77,17 @@ test('with no producer chosen the three tabs are disabled', async () => {
 })
 
 test('a pluvider is offered in the same list as the providers, marked as coming from a plugin', async () => {
-    // GET /core/providers sirve pluviders y providers en la MISMA lista: quien consume no tiene por
-    // qué saber que hay dos clases de productor.
+    // GET /core/providers serves pluviders and providers in the SAME list: whoever consumes need not
+    // know there are two classes of producer.
     await openSetup()
     await providerSelect().click()
 
     const option = page.locator(`li[data-value="${PLUVIDER}"]`)
     await expect(option).toBeVisible()
-    // el chip dice de dónde sale, y la descripción qué produce
+    // the chip says where it comes from, and the description what it produces
     await expect(option.getByText('plugin', { exact: true })).toBeVisible()
     await expect(option.getByText(/Proactive alerts/)).toBeVisible()
-    // está vivo: no lleva la marca de 'not running'
+    // it is alive: it does not carry the 'not running' mark
     await expect(option.getByText('not running')).toHaveCount(0)
 
     await page.keyboard.press('Escape')
@@ -98,11 +98,11 @@ test('choosing a pluvider opens Overview with the help it publishes', async () =
     await openSetup()
     await selectProvider(PLUVIDER)
 
-    // Overview es la pestaña que se abre al elegir productor
+    // Overview is the tab that opens on choosing a producer
     await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
-    // el cuadro se titula con el id, para que se vea que lo de dentro es del productor y no del diálogo
+    // the box is titled with the id, so it is clear that what is inside belongs to the producer and not to the dialog
     await expect(page.getByText(`Subscription — declared by '${PLUVIDER}'`)).toBeVisible()
-    // la ayuda que publica Agora: qué entrega, y las dos advertencias que más despistan
+    // the help Agora publishes: what it delivers, and the two warnings that mislead the most
     await expect(page.getByText(/artifacts/)).toBeVisible()
     await expect(page.getByText(/ADMINISTRATOR has enabled/)).toBeVisible()
 
@@ -114,11 +114,11 @@ test('USE EXAMPLE fills the payload and lands on the form', async () => {
     await selectProvider(PLUVIDER)
     await page.getByRole('button', { name: 'USE EXAMPLE' }).click()
 
-    // salta a donde se sigue trabajando, y el campo declarado por el pluvider está relleno
+    // it jumps to where work continues, and the field declared by the pluvider is filled in
     await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByLabel(/^alerts/)).toHaveValue(/artifacts/)
 
-    // y el mismo payload está en el JSON: form y JSON editan el MISMO estado
+    // and the same payload is in the JSON: form and JSON edit the SAME state
     await page.getByRole('tab', { name: 'JSON' }).click()
     await expect(page.getByLabel('Subscription payload (JSON)')).toHaveValue(/"alerts"/)
 
@@ -126,8 +126,8 @@ test('USE EXAMPLE fills the payload and lands on the form', async () => {
 })
 
 test('you can go back to Form after JSON', async () => {
-    // Regresión: el Tab de Form estaba envuelto en un Tooltip, así que no era hijo directo de Tabs y
-    // no recibía su onChange — se salía a JSON y no se podía volver.
+    // Regression: the Form Tab was wrapped in a Tooltip, so it was not a direct child of Tabs and did
+    // not receive its onChange — you left for JSON and could not come back.
     await openSetup()
     await selectProvider(PLUVIDER)
 

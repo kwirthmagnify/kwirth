@@ -160,7 +160,7 @@ describe('subscription', () => {
         channel.stopInstance(ws as unknown as WebSocket, config)
         await new Promise(resolve => setImmediate(resolve))
 
-        // la instancia se va igual: la baja en el provider es cosa suya, no puede bloquear el cierre
+        // the instance leaves anyway: removal at the provider is its own business and must not block the close
         assert.equal(channel.containsInstance('i1'), false)
     })
 

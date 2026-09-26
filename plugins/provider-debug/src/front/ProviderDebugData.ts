@@ -3,13 +3,13 @@ import { IProviderDebugEvent, IProviderDebugProviderInfo } from '../common/Provi
 export interface IProviderDebugData {
     /** eventos crudos recibidos, recortados a maxEvents */
     events: IProviderDebugEvent[]
-    /** catálogo de providers en marcha, tal cual lo manda el back al arrancar la instancia */
+    /** catalogue of running providers, exactly as the back end sends it when the instance starts */
     providers: IProviderDebugProviderInfo[]
-    /** señales que quedan por mostrar como texto: errores (provider caído, JSON inválido...) */
+    /** signals still to be shown as text: errors (provider down, invalid JSON...) */
     signals: string[]
-    /** el core aceptó la configuración de la instancia (respuesta al start) */
+    /** the core accepted the instance's configuration (the reply to the start) */
     configAccepted: boolean
-    /** el canal confirmó la suscripción al provider */
+    /** the channel confirmed the subscription to the provider */
     subscribed: boolean
     paused: boolean
     started: boolean

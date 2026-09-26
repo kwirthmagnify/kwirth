@@ -3,9 +3,9 @@ import { readdirSync } from 'fs'
 import path from 'path'
 import { login, openChannelPicker, openTabMenu } from './helpers'
 
-// Capturas para la guía (docs/<versión viva>/_media/guide/). Tema OSCURO y 1600x900, como el resto.
-// No entra en el suite normal (fichero zz-, se lanza a mano). Trazas y vídeo apagados: la SPA deja
-// el websocket abierto y el teardown de Playwright se queda colgado con ellos activos.
+// Screenshots for the guide (docs/<live version>/_media/guide/). DARK theme and 1600x900, like the
+// rest. It is not part of the normal suite (a zz- file, launched by hand). Traces and video off: the
+// SPA leaves the websocket open and Playwright's teardown hangs with them enabled.
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
 
 /*
@@ -45,19 +45,19 @@ test('capture', async ({ page }) => {
     await page.getByRole('button', { name: 'ADD' }).click()
     await page.waitForTimeout(1500)
 
-    // 1) setup con la ayuda de 'events' y el formulario generado
+    // 1) setup with the help of 'events' and the generated form
     await openTabMenu(page)
     await page.getByText('Start', { exact: true }).click()
     await page.getByRole('combobox', { name: 'Provider', exact: true }).click()
     await page.locator('li[data-value="events"]').click()
     await page.getByRole('button', { name: 'USE EXAMPLE' }).click()
-    // rellenar el ejemplo enfoca un campo y MUI desplaza el contenido: vuelve arriba para que la
-    // captura no salga con la etiqueta 'Provider' cortada
+    // filling in the example focuses a field and MUI scrolls the content: go back to the top so the
+    // screenshot does not come out with the 'Provider' label cut off
     await page.locator('.MuiDialogContent-root').first().evaluate(el => { el.scrollTop = 0 })
     await page.waitForTimeout(900)
     await page.screenshot({ path: `${MEDIA}/channel-provider-debug-setup.png` })
 
-    // 2) la pestaña con eventos reales. Se usa 'metrics', que empuja cada 15 s pase lo que pase.
+    // 2) the tab with real events. 'metrics' is used, which pushes every 15 s no matter what.
     await page.getByRole('button', { name: 'CANCEL' }).click()
     await page.waitForTimeout(600)
     await openTabMenu(page)
@@ -67,11 +67,11 @@ test('capture', async ({ page }) => {
     await page.getByRole('button', { name: 'USE EXAMPLE' }).click()
     await page.getByRole('button', { name: 'OK' }).click()
     await expect(page.getByText(/Events: [1-9]\d* \/ 200/)).toBeVisible({ timeout: 90000 })
-    // se busca un termino y se salta a el: la captura ensena el buscador, el contador y el
-    // resaltado en video inverso dentro de la tarjeta desplegada
+    // a term is searched for and jumped to: the screenshot shows the search box, the counter and the
+    // reverse-video highlight inside the expanded card
     await page.getByLabel('Search events').fill('maxPods')
     await page.getByRole('button', { name: 'Next match' }).click()
-    // se aparta el raton: si no, el tooltip del boton sale en la captura de la guia
+    // the mouse is moved away: otherwise the button's tooltip shows up in the guide's screenshot
     await page.mouse.move(800, 700)
     await page.waitForTimeout(1200)
     await page.screenshot({ path: `${MEDIA}/channel-provider-debug-view.png` })
@@ -90,6 +90,6 @@ test('capture', async ({ page }) => {
     await page.waitForTimeout(900)
     await page.screenshot({ path: `${MEDIA}/channel-provider-debug-trimmed.png` })
 
-    // la SPA mantiene el websocket vivo; sin esto el teardown se cuelga
+    // the SPA keeps the websocket alive; without this the teardown hangs
     await page.goto('about:blank')
 })

@@ -13,19 +13,19 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
     const instanceConfig: IProviderDebugInstanceConfig = props.channelObject.instanceConfig
     const boxRef = useRef<HTMLDivElement | null>(null)
     const [boxTop, setBoxTop] = useState(0)
-    // El canal solo repinta cuando llega un mensaje del back; limpiar es una acción local, así que
-    // necesita su propio disparador de render.
+    // The channel only repaints when a message arrives from the back end; clearing is a local action,
+    // so it needs its own render trigger.
     const [, forceRender] = useState(0)
     const [copied, setCopied] = useState<IProviderDebugEvent | null>(null)
     const [search, setSearch] = useState('')
-    // -1 = todavía no se ha saltado a ninguna coincidencia (solo se muestra el total)
+    // -1 = no match has been jumped to yet (only the total is shown)
     const [matchPos, setMatchPos] = useState(-1)
-    // Expansión CONTROLADA y por referencia al evento, no por índice: el buffer es circular y los
-    // índices bailan con cada evento nuevo, así que una tarjeta abierta acabaría siendo otra.
+    // CONTROLLED expansion, and by reference to the event rather than by index: the buffer is circular
+    // and the indices shift with every new event, so an expanded card would end up being another one.
     const [expanded, setExpanded] = useState<Set<IProviderDebugEvent>>(new Set())
     const cardRefs = useRef<Map<IProviderDebugEvent, HTMLElement>>(new Map())
-    // El texto de búsqueda de cada evento se serializa UNA vez: con 200 eventos de metrics,
-    // re-stringificar en cada tecla y en cada evento entrante costaria megas por render.
+    // Each event's search text is serialised ONCE: with 200 metrics events, re-stringifying on every
+    // keystroke and on every incoming event would cost megabytes per render.
     const searchText = useRef<WeakMap<IProviderDebugEvent, string>>(new WeakMap())
 
     useEffect(() => {
@@ -66,7 +66,7 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
         return needle !== '' && textOf(event).includes(needle)
     }
 
-    /** Salta a la coincidencia 'pos' (con vuelta al principio), la despliega y la centra. */
+    /** Jumps to match 'pos' (wrapping around), expands it and centres it. */
     const goToMatch = (pos: number) => {
         const found = matches()
         if (found.length === 0) return
@@ -74,9 +74,9 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
         const target = found[next]
         setMatchPos(next)
         setExpanded(prev => new Set(prev).add(target))
-        // El scroll va tras el render que despliega la tarjeta, y apunta a la primera coincidencia
-        // resaltada, no a la tarjeta: centrar una tarjeta de miles de líneas deja el resultado
-        // fuera de pantalla. Sin scroll animado, por lo mismo que el despliegue.
+        // The scroll happens after the render that expands the card, and it targets the first
+        // highlighted match, not the card: centring a card of thousands of lines leaves the result off
+        // screen. No animated scrolling, for the same reason as the expansion.
         setTimeout(() => {
             const card = cardRefs.current.get(target)
             const hit = card?.querySelector('[data-pd-hit]')
@@ -86,9 +86,9 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
 
 
     /**
-     * La API asíncrona del portapapeles se rechaza en bastantes contextos (permiso denegado, iframe,
-     * origen no seguro), así que hay un plan B con textarea + execCommand, que no pide permisos.
-     * Devuelve si se pudo copiar, para no pintar el tick de "copiado" cuando no se copió nada.
+     * The asynchronous clipboard API is rejected in quite a few contexts (permission denied, iframe,
+     * insecure origin), so there is a plan B with a textarea + execCommand, which asks no permissions.
+     * It returns whether the copy succeeded, so the "copied" tick is not drawn when nothing was copied.
      */
     const writeClipboard = async (text: string): Promise<boolean> => {
         try {
@@ -113,8 +113,8 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
         }
     }
 
-    // Se marca el evento por referencia y no por índice: el buffer es circular y los índices bailan
-    // con cada evento nuevo, así que el tick de "copiado" acabaría señalando a otra fila.
+    // The event is flagged by reference and not by index: the buffer is circular and the indices shift
+    // with every new event, so the "copied" tick would end up pointing at a different row.
     const copy = (event: IProviderDebugEvent) => {
         writeClipboard(JSON.stringify(event.event, null, 2)).then(ok => {
             if (!ok) return
@@ -123,7 +123,7 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
         })
     }
 
-    // Resumen de una línea para la cabecera del acordeón, sin tener que desplegarlo.
+    // A one-line summary for the accordion's header, without having to expand it.
     const summaryOf = (event: unknown): string => {
         if (event === null) return 'null'
         if (Array.isArray(event)) return `array · ${event.length} items`
@@ -151,10 +151,11 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
     })
 
     /**
-     * Desplegable propio en vez de Accordion. Un evento puede traer miles de líneas de JSON y el
-     * Collapse de MUI las anima midiendo su altura, lo que deja la tarjeta ilegible mientras crece;
-     * además su transición va en estilo inline y no se deja quitar ni con timeout 0 ni con CSS.
-     * Renderizando el detalle a mano no hay transición que quitar, y el DOM plegado ni existe.
+     * A hand-rolled expander instead of Accordion. An event may carry thousands of lines of JSON, and
+     * MUI's Collapse animates them by measuring their height, which leaves the card unreadable while
+     * it grows; besides, its transition goes in inline style and cannot be removed with timeout 0 nor
+     * with CSS. Rendering the detail by hand means there is no transition to remove, and the collapsed
+     * DOM does not even exist.
      */
     const formatEvent = (event: IProviderDebugEvent, index: number, current: IProviderDebugEvent | undefined) => {
         const open = expanded.has(event)
@@ -204,7 +205,7 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
         )
     }
 
-    // Se resuelven una sola vez por render: 'matches' recorre todo el buffer.
+    // Resolved once per render: 'matches' walks the whole buffer.
     const found = matches()
     const current = matchPos >= 0 && matchPos < found.length ? found[matchPos] : undefined
 
@@ -235,8 +236,8 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
                                 htmlInput: { 'aria-label': 'Search events' },
                                 input: {
                                     startAdornment: <InputAdornment position='start'><Search fontSize='small' /></InputAdornment>,
-                                    // siempre presente y deshabilitado: si se renderiza en
-                                    // condicional desaparece bajo el propio click que lo pulsa
+                                    // always present and disabled: rendered conditionally it would
+                                    // vanish under the very click that presses it
                                     endAdornment: <InputAdornment position='end'>
                                         <IconButton size='small' aria-label='Clear search' disabled={search === ''} onClick={() => { setSearch(''); setMatchPos(-1) }}><Close fontSize='small' /></IconButton>
                                     </InputAdornment>

@@ -1,7 +1,8 @@
-// Depurar PLUVIDERS: plugins que además producen y exponen su información in-process. Para quien
-// depura son lo mismo que un provider —algo a lo que suscribirse— pero viven en otro registro y su id
-// lleva el prefijo 'plugin:'. Lo que se verifica aquí es que se listan, que se puede uno suscribir a
-// ellos, y que no se confunden con los providers ni cuando comparten nombre.
+// Debugging PLUVIDERS: plugins that also produce and expose their information in-process. To whoever
+// debugs they are the same as a provider — something to subscribe to — but they live in a different
+// registry and their id carries the 'plugin:' prefix. What is verified here is that they are listed,
+// that one can subscribe to them, and that they are not confused with providers even when they share
+// a name.
 
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
@@ -43,8 +44,8 @@ describe('catalogo con pluviders', () => {
     })
 
     test('la ayuda viaja ENTERA: el ejemplo y los campos llegan al catalogo', async () => {
-        // de esto vive el dialogo de setup: el ejemplo alimenta el boton USE EXAMPLE y los campos
-        // deciden si la pestaña Form esta disponible o hay que escribir el JSON a mano
+        // the setup dialog lives off this: the example feeds the USE EXAMPLE button and the fields
+        // decide whether the Form tab is available or the JSON has to be written by hand
         const help = {
             usage: 'subscribe with the configs you care about',
             example: { configs: ['payments', 'orders'] },
@@ -103,7 +104,7 @@ describe('suscripcion a un pluvider', () => {
         const signals = ws.signals()
         assert.equal(signals.length, 1)
         assert.match(signals[0], /Pluvider 'plugin:situs' is not available/)
-        // el motivo no es el de un provider parado: su plugin puede sencillamente no estar aqui
+        // the reason is not a stopped provider.s: its plugin may simply not be here at all
         assert.match(signals[0], /not installed, or is not hosted by this Kwirth/)
     })
 
@@ -127,8 +128,8 @@ describe('suscripcion a un pluvider', () => {
     })
 
     test('un provider y un pluvider con el MISMO nombre no se confunden', async () => {
-        // 'agora' como provider instalado y 'plugin:agora' como pluvider del plugin: dos cosas
-        // distintas, cada una con sus eventos
+        // 'agora' as an installed provider and 'plugin:agora' as the plugin.s pluvider: two different
+        // things, each with its own events
         const provider = new FakeProvider('agora')
         const pluvider = new FakePluvider('plugin:agora')
         const channel = makeChannel([provider], [pluvider])
