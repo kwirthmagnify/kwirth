@@ -13,7 +13,8 @@
         "azure": "../providers/azure/dist",
         "fluentbit": "../providers/fluentbit/dist",
         "sugarless": "../providers/sugarless/dist",
-        "aws": "../providers/aws/dist"
+        "aws": "../providers/aws/dist",
+        "cloud-config": "../providers/cloud-config/dist"
     },
     "senders": {
         "file": "../senders/file/dist",
